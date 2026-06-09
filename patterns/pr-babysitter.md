@@ -47,7 +47,7 @@ Example state entry:
 ## Verification Strategy
 
 - Never let the implementer sub-agent mark its own work "done".
-- Use a separate reviewer sub-agent (or a stronger model on higher effort) that must explicitly confirm:
+- Use a separate verifier sub-agent (maker/checker) (or a stronger model on higher effort) that must explicitly confirm:
   - The change addresses the comment/failure.
   - No unrelated files were touched.
   - Tests/lint still pass in the worktree.
@@ -78,7 +78,7 @@ Example state entry:
 
 ## Failure Modes & Mitigations
 
-- **Loop proposes bad fixes** → Strong reviewer sub-agent + human review gate for anything beyond trivial.
+- **Loop proposes bad fixes** → Strong verifier sub-agent (maker/checker) + human review gate for anything beyond trivial.
 - **Infinite rebase loops** → Limit number of automated rebase attempts per PR.
 - **Stale state** → The loop should prune closed/merged PRs on every run.
 - **Notification fatigue** → Use selective notifications (only when human action is truly required).

@@ -10,7 +10,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check registry covers all pattern files
         run: |
@@ -26,12 +26,13 @@ jobs:
 
       - name: Verify CONTRIBUTING + template compliance (basic)
         run: |
+          set -e
           echo "Checking that key sections exist in patterns (lightweight)"
           for f in patterns/*.md; do
             if [[ "$f" == *"README.md" ]]; then continue; fi
-            grep -q "^## Scheduling" "$f" || (echo "Missing Scheduling in $f"; exit 1)
-            grep -q "^## Required Skills" "$f" || (echo "Missing Required Skills in $f"; exit 1)
-            grep -q "maker.*checker\|verifier\|Maker / Checker" "$f" || (echo "Missing verifier strategy in $f"; exit 1)
+            grep -q "^## Scheduling" "$f" || { echo "Missing Scheduling in $f"; exit 1; }
+            grep -q "^## Required Skills" "$f" || { echo "Missing Required Skills in $f"; exit 1; }
+            grep -Eq "maker.*checker|verifier|Maker / Checker|Verification Strategy|reviewer sub-agent" "$f" || { echo "Missing verifier strategy (maker/checker) mention in $f"; exit 1; }
           done
           echo "Basic pattern structure checks passed ✓"
 

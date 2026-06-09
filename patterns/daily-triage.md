@@ -68,7 +68,7 @@ Fields the loop must update every run:
 
 **Grok Build TUI**:
 ```bash
-/loop 1d Run the loop-triage skill. Append high-priority items to STATE.md. For obvious small bugfixes only: worktree + minimal-fix + reviewer sub-agent. Flag ambiguous items for human review.
+/loop 1d Run the loop-triage skill. Append high-priority items to STATE.md. For obvious small bugfixes only: worktree + minimal-fix + verifier sub-agent (maker/checker). Flag ambiguous items for human review.
 ```
 
 **Claude Code**:
