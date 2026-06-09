@@ -1,6 +1,16 @@
 # Loop Engineering
 
 <p align="center">
+  <a href="https://cobusgreyling.github.io/loop-engineering/">
+    <img src="https://img.shields.io/badge/✨_Explore_the_Showcase-Design_systems_that_prompt_your_agents-0d1117?style=for-the-badge&labelColor=111a28&color=3ee8c5" alt="Explore the Showcase" />
+  </a>
+</p>
+
+<p align="center">
+  <strong><a href="https://cobusgreyling.github.io/loop-engineering/">→ cobusgreyling.github.io/loop-engineering</a></strong>
+</p>
+
+<p align="center">
   <img src="assets/cobus-greyling.jpg" alt="Cobus Greyling" width="640" />
 </p>
 
@@ -9,8 +19,6 @@
 **Loop engineering is replacing yourself as the person who prompts the agent. You design the system that does it instead.**
 
 A loop is a recursive goal: you define a purpose and the AI iterates (often with sub-agents, verification, and external state) until the goal is complete or the loop decides to hand off to you.
-
-📖 **Docs site**: [cobusgreyling.github.io/loop-engineering](https://cobusgreyling.github.io/loop-engineering/) (GitHub Pages)
 
 ## Quick Links
 
