@@ -118,6 +118,11 @@ Evidence tools and raw resources remain resolver-backed:
 - `loop://skills/{skillName}`
 - `loop://state/{stateFile}`
 
+Resolver-backed evidence surfaces keep MCP compatibility while consuming core
+`ProjectFileSystem` primitives for project-relative reads and directory lists.
+The resolver owns path safety checks, URI/tool compatibility, and text response
+shaping; it does not own a separate project filesystem abstraction.
+
 Raw resources are intentional. They answer "show me the source" and provide an
 audit trail when a structured answer needs inspection. Semantic tools answer
 "what does this mean for agentic loop working?"
@@ -273,6 +278,9 @@ The architecture-improvement roadmap produced these durable outcomes:
   policy and presentation.
 - MCP semantic tools now consume core semantic queries while preserving existing
   tool names and raw resource access.
+- MCP resolver evidence surfaces now consume core project filesystem primitives
+  for project-relative registry, pattern, skill, state, config, budget, run-log,
+  and safety reads while preserving raw resource compatibility.
 - `recommendPatterns()` recommendation weights, boost rules, reason codes, and
   confidence bands are now represented as a core-owned typed policy interpreted
   by the semantic query.
