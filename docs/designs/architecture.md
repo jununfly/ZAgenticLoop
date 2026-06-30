@@ -17,8 +17,8 @@ The architecture has four layers:
 | Layer | Owns | Does not own |
 | --- | --- | --- |
 | `patterns/registry.yaml` | Machine-readable pattern facts: ids, names, cadences, risk, skills, human gates, starters, state files, and cost metadata. | Long-form pattern guidance or tool-specific runtime behavior. |
-| `@jununfly/zj-loop-core` | Registry loading, schema validation, shared domain types, project evidence primitives, and pure semantic queries. | CLI parsing, process exits, MCP protocol behavior, direct project-root reads inside semantic queries, readiness score presentation. |
-| Product tools | CLI or MCP-specific IO, argument parsing, response formatting, root resolution, and compatibility surfaces. | Duplicated pattern facts, duplicated cost formulas, duplicated recommendation policy. |
+| `@jununfly/zj-loop-core` | Registry loading, schema validation, shared domain types, project evidence primitives, pure semantic queries, and the narrow shared single-command CLI harness. | MCP protocol behavior, direct project-root reads inside semantic queries, product-specific output, scaffold side effects, readiness score presentation. |
+| Product tools | CLI or MCP-specific option metadata, IO wiring, response formatting, root resolution, side effects, and compatibility surfaces. | Duplicated pattern facts, duplicated cost formulas, duplicated recommendation policy, duplicated CLI lifecycle plumbing. |
 | Docs and starters | Human-facing explanation, copyable project scaffolds, and operating guidance. | The canonical machine contract for pattern metadata or readiness policy. |
 
 The main boundary rule is simple: core semantic functions answer what a loop
@@ -54,7 +54,8 @@ index, not a replacement for the pattern markdown files.
 
 Core does not own:
 
-- CLI argv parsing, help text, exit codes, or process termination
+- product-specific CLI output, side effects, root resolution, or business
+  validation
 - MCP resource registration, stdio transport, or MCP response formatting
 - direct reads from project roots inside semantic query functions
 - readiness scoring presentation or findings text
@@ -160,21 +161,41 @@ The `zj-loop-*` CLIs have overlapping product concerns:
 - `zj-loop-cost`: token cost estimation
 - `zj-loop-sync`: configuration drift detection
 
-They currently parse argv and render help independently. A future shared CLI
-harness should standardize:
+They now consume a shared single-command CLI harness from
+`@jununfly/zj-loop-core`. The harness standardizes the lifecycle mechanics that
+had been duplicated across tools:
 
 - option metadata and aliases
 - positional parsing
 - unknown-option and missing-value behavior
 - help text rendering
-- structured output conventions
 - error presentation
 - exit semantics
 
-The first harness can live in `@jununfly/zj-loop-core` and move out later if it
-starts to feel unrelated to domain utilities. The first migration candidate is
-`zj-loop-cost`, because it has a small command surface and already consumes core
-cost semantics.
+The harness intentionally stays small:
+
+- single-command CLIs only; no subcommands, command registry, nested option
+  groups, or shell completion
+- injectable `io` for tests, with a default implementation backed by
+  `console` and process stdio behavior
+- optional async help text so commands such as `zj-loop-init` can render
+  registry-backed pattern lists
+- handler execution and thrown-error formatting
+
+Product tools still own the product contract:
+
+- `zj-loop-cost` owns human and JSON cost output, and preserves `--list` as
+  tab-separated output.
+- `zj-loop-sync` owns drift report formatting and level-to-exit-code mapping;
+  `--json` emits the already-declared JSON report.
+- `zj-loop-audit` owns readiness scoring, suggestions, badge/markdown/json
+  output, and the low-score exit code `2`.
+- `zj-loop-init` owns scaffold file writes, dry-run progress output, dynamic
+  registry-backed help, and next-step guidance.
+
+Unknown options and missing option values fail fast only for commands that have
+been migrated to the harness. As of this design snapshot, `zj-loop-cost`,
+`zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` are migrated.
 
 `zj-loop-mcp-server` is intentionally excluded from the first human-facing CLI
 harness. It is a long-running stdio server, not a normal user command workflow.
@@ -218,6 +239,8 @@ Treat these as architecture drift:
 - MCP handlers compute recommendation scores directly
 - CLI tools duplicate cost or recommendation formulas
 - evidence adapters emit human recommendations instead of facts
+- product tools reimplement CLI help/parse/error lifecycle instead of using the
+  shared single-command harness
 - readiness policy changes without parity tests against current audit output
 - raw MCP resources are removed before structured replacements are proven
 
@@ -235,5 +258,8 @@ The architecture-improvement roadmap produced these durable outcomes:
   policy and presentation.
 - MCP semantic tools now consume core semantic queries while preserving existing
   tool names and raw resource access.
-- Readiness rule schema and CLI harness work remain future implementation
-  slices, with boundaries recorded here.
+- `zj-loop-cost`, `zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` now share
+  the core single-command CLI harness while preserving their product-specific
+  output and side effects.
+- Readiness rule schema work remains a future implementation slice, with
+  boundaries recorded here.
