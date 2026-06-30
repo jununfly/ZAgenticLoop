@@ -1,33 +1,6 @@
 # ZAgenticLoop
 
 
-<p align="center">
-  <a href="https://jununfly.github.io/ZAgenticLoop/">
-    <img src="https://img.shields.io/badge/✨_Explore_the_Showcase-Design_systems_that_prompt_your_agents-0d1117?style=for-the-badge&labelColor=111a28&color=3ee8c5" alt="Explore the Showcase" />
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/jununfly/ZAgenticLoop/stargazers"><img src="https://img.shields.io/github/stars/jununfly/ZAgenticLoop?style=social" alt="GitHub stars"></a>
-  <a href="https://github.com/jununfly/ZAgenticLoop/actions/workflows/audit.yml"><img src="https://img.shields.io/github/actions/workflow/status/jununfly/ZAgenticLoop/audit.yml?label=zj-loop-audit%20dogfood" alt="zj-loop-audit dogfood"></a>
-  <a href="https://www.npmjs.com/package/@jununfly/zj-loop-audit"><img src="https://img.shields.io/npm/v/@jununfly/zj-loop-audit?label=zj-loop-audit" alt="zj-loop-audit npm"></a>
-  <a href="https://www.npmjs.com/package/@jununfly/zj-loop-init"><img src="https://img.shields.io/npm/v/@jununfly/zj-loop-init?label=zj-loop-init" alt="zj-loop-init npm"></a>
-  <a href="https://www.npmjs.com/package/@jununfly/zj-loop-cost"><img src="https://img.shields.io/npm/v/@jununfly/zj-loop-cost?label=zj-loop-cost" alt="zj-loop-cost npm"></a>
-  <a href="https://github.com/jununfly/ZAgenticLoop/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
-  <a href="https://jununfly.github.io/ZAgenticLoop/"><img src="https://img.shields.io/badge/GitHub_Pages-live%20%7C%20interactive-3ee8c5" alt="Pages"></a>
-</p>
-
-
-<p align="center">
-  <a href="https://jununfly.github.io/ZAgenticLoop/">
-    <img src="assets/visuals/zagenticloop-logo.svg" alt="ZAgenticLoop logo" width="88" />
-  </a>
-</p>
-
-<p align="center">
-  <img src="assets/visuals/LE5.jpeg" alt="ZAgenticLoop — design the system that prompts your agents" width="100%" />
-</p>
-
 **Agentic Loop Working is replacing yourself as the person who prompts the agent. You design the system that does it instead.**
 
 **New here?** [Quickstart (5 min)](docs/QUICKSTART.md) · [Interactive picker](https://jununfly.github.io/ZAgenticLoop/#interactive)
@@ -36,15 +9,6 @@ For developers using Grok, Claude Code, Codex, Cursor, and other AI coding agent
 
 A loop is a recursive goal: you define a purpose and the AI iterates (often with sub-agents, verification, and external state) until the goal is complete or the loop decides to hand off to you.
 
-
-
-<p align="center">
-  <strong><a href="https://jununfly.github.io/ZAgenticLoop/">→ Interactive showcase + pattern picker</a></strong>
-  <br>
-  <strong><a href="https://jununfly.github.io/ZAgenticLoop">→ ZAgenticLoop essay (Substack)</a></strong>
-  <br>
-  <a href="https://addyosmani.com/blog/zagenticloop/">Canonical essay by Addy Osmani</a>
-</p>
 
 ## Contents
 
@@ -81,10 +45,6 @@ A loop is a recursive goal: you define a purpose and the AI iterates (often with
 | [Stories](stories/) | Real wins and honest failures |
 | [Community update](https://github.com/jununfly/ZAgenticLoop/discussions/89) | **New:** 7 community PRs merged — zj-loop-sync, constraints, MCP server |
 
-<p align="center">
-  <img src="assets/visuals/section-divider.svg" alt="" width="100%" />
-</p>
-
 ## Why This Matters
 
 Peter Steinberger:
@@ -110,15 +70,7 @@ Full detail: [docs/primitives.md](docs/primitives.md) · Cross-tool matrix: [doc
 
 ### Visual Overview
 
-<p align="center">
-  <img src="assets/visuals/primitives-infographic.jpg" alt="Five Loop Primitives + Memory — ZAgenticLoop" width="100%" />
-</p>
-
 ### Anatomy of a Loop
-
-<p align="center">
-  <img src="assets/visuals/loop-cycle-animated.svg" alt="Animated loop flow — schedule, triage, state, worktree, implement, verify, MCP, human gate" width="100%" />
-</p>
 
 <details>
 <summary>Mermaid diagram (copy-friendly)</summary>
@@ -143,10 +95,6 @@ flowchart LR
 **This reference repo now runs its own `validate-patterns` + `audit` workflows on every push/PR** (see `.github/workflows/`). We also added `LOOP.md` describing the loops that will maintain it.
 
 ## Patterns
-
-<p align="center">
-  <img src="assets/visuals/patterns-overview.svg" alt="Seven production loop patterns with cadence and token cost" width="100%" />
-</p>
 
 | Pattern | Cadence | Starter | Week 1 | Token cost |
 |---------|---------|---------|--------|------------|
@@ -245,20 +193,3 @@ MIT
 
 *Practical, tool-aware reference for agentic loop working, patterns you can clone, checklists you can ship against, and stories that include what broke.*
 
-<p align="center">
-  <a href="https://jununfly.github.io/ZAgenticLoop">Essay</a>
-  ·
-  <a href="https://jununfly.github.io/ZAgenticLoop/">Showcase</a>
-  ·
-  <a href="https://github.com/jununfly">Jununfly</a>
-</p>
-
-<p align="center">
-  <a href="https://www.star-history.com/?repos=jununfly%2FZAgenticLoop&type=timeline&legend=top-left">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=jununfly/ZAgenticLoop&type=timeline&theme=dark&legend=top-left" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=jununfly/ZAgenticLoop&type=timeline&legend=top-left" />
-      <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=jununfly/ZAgenticLoop&type=timeline&legend=top-left" />
-    </picture>
-  </a>
-</p>
