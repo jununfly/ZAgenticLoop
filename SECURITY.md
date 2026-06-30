@@ -1,13 +1,13 @@
 # Security Policy
 
-Loop engineering runs unattended automation against your codebase. Treat loops like production operators.
+Agentic Loop Working runs unattended automation against your codebase. Treat loops like production operators.
 
 ## Reporting vulnerabilities
 
 Report security issues **privately** — do not open public issues for exploitable vulnerabilities.
 
-- **Preferred:** [GitHub private vulnerability reporting](https://github.com/cobusgreyling/loop-engineering/security/advisories/new)
-- **Email:** security@cobusgreyling.me (PGP on request)
+- **Preferred:** [GitHub private vulnerability reporting](https://github.com/jununfly/ZAgenticLoop/security/advisories/new)
+- **GitHub:** report through the private advisory form above so the fix can stay coordinated.
 
 For general loop safety guidance, see [docs/safety.md](docs/safety.md).
 
@@ -33,6 +33,6 @@ For general loop safety guidance, see [docs/safety.md](docs/safety.md).
 
 | Package | Supported |
 |---------|-----------|
-| `@cobusgreyling/loop-audit` | Latest release on npm |
-| `@cobusgreyling/loop-init` | Latest release on npm |
+| `@jununfly/zj-loop-audit` | Latest release on npm |
+| `@jununfly/zj-loop-init` | Latest release on npm |
 | Reference repo `main` | Current HEAD |

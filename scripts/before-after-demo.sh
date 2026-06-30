@@ -3,13 +3,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-AUDIT="$ROOT/tools/loop-audit/dist/cli.js"
+AUDIT="$ROOT/tools/zj-loop-audit/dist/cli.js"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 if [[ ! -f "$AUDIT" ]]; then
-  echo "Building loop-audit..."
-  (cd "$ROOT/tools/loop-audit" && npm ci --silent && npm run build --silent)
+  echo "Building zj-loop-audit..."
+  (cd "$ROOT/tools/zj-loop-audit" && npm ci --silent && npm run build --silent)
 fi
 
 run_audit() {
@@ -53,4 +53,4 @@ echo "  Grok:        cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/
 echo "  Claude Code: cp -r starters/minimal-loop-claude/.claude/skills/loop-triage .claude/skills/"
 echo "  Codex:       cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/"
 echo ""
-echo "Audit your project: npx @cobusgreyling/loop-audit . --suggest"
+echo "Audit your project: npx @jununfly/zj-loop-audit . --suggest"

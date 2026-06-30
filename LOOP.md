@@ -1,6 +1,6 @@
-# LOOP.md — Loop Engineering Reference
+# LOOP.md — ZAgenticLoop Reference
 
-This file documents how the **loop-engineering** reference repository is operated with loop engineering patterns.
+This file documents how the **zagenticloop** reference repository is operated with agentic loop working patterns.
 
 The goal of this repo is to be the canonical, copyable, high-signal collection of patterns, starters, and tooling. It eats its own dogfood aggressively.
 
@@ -55,7 +55,7 @@ See [docs/multi-loop.md](docs/multi-loop.md). Priority: CI Sweeper → PR Babysi
 
 - Token caps: `loop-budget.md`
 - Run history: `loop-run-log.md` (appended each weekday run by `daily-triage.yml`)
-- Estimate: `npx @cobusgreyling/loop-cost --pattern daily-triage`
+- Estimate: `npx @jununfly/zj-loop-cost --pattern daily-triage`
 - Kill switch: `loop-pause-all` label or flag in `STATE.md`
 
 ## Safety & Gates (this repo)
@@ -67,8 +67,8 @@ See [docs/multi-loop.md](docs/multi-loop.md). Priority: CI Sweeper → PR Babysi
 ## How to run locally
 
 ```bash
-node tools/loop-audit/dist/cli.js . --suggest
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok  # after npm publish
+node tools/zj-loop-audit/dist/cli.js . --suggest
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok  # after npm publish
 bash scripts/before-after-demo.sh
 ```
 

@@ -24,13 +24,13 @@ Thumbs.db
 tmp/
 temp/
 
-# Build / dist (loop-audit dist is committed for zero-install runs)
+# Build / dist (zj-loop-audit dist is committed for zero-install runs)
 build/
 **/node_modules/
-!tools/loop-audit/dist/
-!tools/loop-cost/dist/
-!tools/loop-init/dist/
-!tools/mcp-server/dist/
+!tools/zj-loop-audit/dist/
+!tools/zj-loop-cost/dist/
+!tools/zj-loop-init/dist/
+!tools/zj-loop-mcp-server/dist/
 !tools/goal-audit/dist/
 *.egg-info/
 
@@ -51,4 +51,4 @@ state.json
 !starters/**/.codex/
 !starters/**/.codex/**
 *.session
-!tools/loop-sync/dist/
+!tools/zj-loop-sync/dist/

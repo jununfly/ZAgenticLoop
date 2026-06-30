@@ -1,6 +1,6 @@
 ---
 name: Share a production story (wins or failures)
-about: Real-world loop engineering experience. Failures and surprises are first-class.
+about: Real-world agentic loop working experience. Failures and surprises are first-class.
 labels: story
 ---
 

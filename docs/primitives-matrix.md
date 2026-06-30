@@ -12,7 +12,7 @@ Tool-agnostic loop design: the **capability** is what matters, not the product n
 | **Sub-agents** | Maker / checker split | `Task` tool with `subagent_type`, worktree isolation | Task subagents in `.claude/agents/`, agent teams | Subagents as TOML in `.codex/agents/` | `agents.list` multi-agent routing; isolated cron subagent orchestration; separate verifier agent id | Multi-agent mode, review mode, custom agents in `.cursor/agents/` | Multiple Cascades in parallel; workflow-orchestrated implementer → reviewer steps |
 | **State / Memory** | Track what's done across runs | `STATE.md`, todos, durable scheduler state | `AGENTS.md`, progress files, Linear via MCP | Markdown or Linear via connector | `STATE.md`, `HEARTBEAT.md` in workspace; cron persisted in Gateway SQLite; Skill Workshop for skill proposals | `STATE.md`, `LOOP.md`, Cloud Agent memories | `STATE.md`, Cascade **Memories**, workflow run notes |
 
-**Reference MCP server:** this repo ships [`tools/mcp-server/`](../tools/mcp-server/) — patterns, skills, state, budget, and safety docs as runtime-queryable MCP resources (reduces prompt stuffing). Config example: [`examples/mcp/loop-engineering.mcp.json`](../examples/mcp/loop-engineering.mcp.json).
+**Reference MCP server:** this repo ships [`tools/zj-loop-mcp-server/`](../tools/zj-loop-mcp-server/) — patterns, skills, state, budget, and safety docs as runtime-queryable MCP resources (reduces prompt stuffing). Config example: [`examples/mcp/zagenticloop.mcp.json`](../examples/mcp/zagenticloop.mcp.json).
 
 ## Scheduling Quick Reference
 
@@ -72,12 +72,12 @@ See [examples/](../examples/) for the same pattern implemented across tools.
 | Grok | [starters/minimal-loop](../starters/minimal-loop/) |
 | Claude Code | [starters/minimal-loop-claude](../starters/minimal-loop-claude/) |
 | Codex | [starters/minimal-loop-codex](../starters/minimal-loop-codex/) |
-| OpenClaw | [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md) — copy `skills/` + `STATE.md`; no `loop-init` yet |
+| OpenClaw | [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md) — copy `skills/` + `STATE.md`; no `zj-loop-init` yet |
 | Cursor / Windsurf | Copy `SKILL.md` + `STATE.md` from any starter; map scheduling to editor Automations or Workflows (see appendix) |
 
-Audit after copying: `npx @cobusgreyling/loop-audit . --suggest`
+Audit after copying: `npx @jununfly/zj-loop-audit . --suggest`
 
-Scaffold automatically: `npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok`
+Scaffold automatically: `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok`
 
 ## Goals (run-until-done)
 

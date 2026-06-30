@@ -74,7 +74,7 @@ Example state entry:
 
 **General**:
 - Expose the state file in the repo or a shared doc so the whole team can see what the loop is doing.
-- Make the loop's comments on PRs clearly signed (e.g. "🤖 Loop Engineering — PR Babysitter").
+- Make the loop's comments on PRs clearly signed (e.g. "🤖 ZAgenticLoop — PR Babysitter").
 
 ## Failure Modes & Mitigations
 
@@ -94,7 +94,7 @@ Example state entry:
 **Cadence**: 5m–15m · **Tier**: high · **Suggested daily cap**: 2M tokens · **Early exit required**
 
 ```bash
-npx @cobusgreyling/loop-cost --pattern pr-babysitter --cadence 10m --level L1 --conservative
+npx @jununfly/zj-loop-cost --pattern pr-babysitter --cadence 10m --level L1 --conservative
 ```
 
 High cadence without early-exit burns tokens fast. Use `loop-budget` skill + `loop-run-log.md`.

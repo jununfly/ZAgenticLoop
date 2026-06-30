@@ -6,7 +6,7 @@ Scaffold for the [PR Babysitter](../../patterns/pr-babysitter.md) loop (L2 — a
 
 1. Copy into your repo:
    ```bash
-   npx @cobusgreyling/loop-init . --pattern pr-babysitter --tool grok
+   npx @jununfly/zj-loop-init . --pattern pr-babysitter --tool grok
    # Or manual:
    cp -r starters/pr-babysitter/.grok/skills/* .grok/skills/
    cp starters/pr-babysitter/pr-babysitter-state.md.example pr-babysitter-state.md
@@ -20,7 +20,7 @@ Scaffold for the [PR Babysitter](../../patterns/pr-babysitter.md) loop (L2 — a
    /loop 5m Check open PRs. Update pr-babysitter-state.md. For CI failures or actionable review comments on allowlisted PRs: worktree + minimal-fix + loop-verifier. Never merge — propose only. Escalate after 3 attempts per PR.
    ```
 
-4. Sign PR comments: `🤖 Loop Engineering — PR Babysitter`
+4. Sign PR comments: `🤖 ZAgenticLoop — PR Babysitter`
 
 ## Files
 

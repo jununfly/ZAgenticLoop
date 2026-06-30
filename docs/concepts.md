@@ -1,8 +1,8 @@
 # Concepts & Vocabulary
 
-Loop engineering sits in a family of ideas about agentic software development. This glossary links them so you can design loops with the right mental model.
+Agentic Loop Working sits in a family of ideas about agentic software development. This glossary links them so you can design loops with the right mental model.
 
-## Loop Engineering
+## ZAgenticLoop
 
 **Replacing yourself as the prompter.** You design a system that discovers work, assigns it, verifies results, and persists state — instead of typing the next prompt yourself.
 
@@ -21,7 +21,7 @@ Loop    = harness + schedule + state + verification chain
 
 ### The Factory Model
 
-The system that **builds** the software: pipelines, agents, checks, and handoffs. Loop engineering is how you operate the factory floor — not manually assembling each unit.
+The system that **builds** the software: pipelines, agents, checks, and handoffs. Agentic Loop Working is how you operate the factory floor — not manually assembling each unit.
 
 ### Intent Debt
 
@@ -43,7 +43,7 @@ The human cost of coordinating parallel agents: review bandwidth, merge conflict
 
 Structural pattern: different agents with different roles (explore, implement, verify). The implementer must never grade its own homework. Critical for **unattended** loops.
 
-## The Six Primitives (+ Memory)
+## Five Loop Primitives + Memory
 
 See [primitives.md](./primitives.md) and [primitives-matrix.md](./primitives-matrix.md).
 

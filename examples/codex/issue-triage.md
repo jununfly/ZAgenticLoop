@@ -33,7 +33,7 @@ Flag anything touching auth, payments, or public API for human review.
 
 ## Skills
 
-Install `issue-triage` per [Codex Agent Skills](https://developers.openai.com/codex/skills) — scaffold with `loop-init` or copy `templates/SKILL.md.issue-triage` to `.codex/skills/issue-triage/SKILL.md`.
+Install `issue-triage` per [Codex Agent Skills](https://developers.openai.com/codex/skills) — scaffold with `zj-loop-init` or copy `templates/SKILL.md.issue-triage` to `.codex/skills/issue-triage/SKILL.md`.
 
 Define light verifier in `.codex/agents/verifier.toml` before enabling L2.
 

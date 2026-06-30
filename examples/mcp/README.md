@@ -30,7 +30,7 @@ See the files in this directory:
 ```
 
 Always:
-- Declare the bot identity in comments ("🤖 Loop Engineering — Changelog Drafter").
+- Declare the bot identity in comments ("🤖 ZAgenticLoop — Changelog Drafter").
 - Record the MCP action + result in STATE or the pattern-specific state file.
 - Have an explicit denylist in the skill or LOOP.md.
 

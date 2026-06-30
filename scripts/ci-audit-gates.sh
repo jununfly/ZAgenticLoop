@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$REPO_ROOT/tools/loop-audit"
+cd "$REPO_ROOT/tools/zj-loop-audit"
 npm ci
 npm test
 echo "=== Audit of repo root ==="

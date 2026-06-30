@@ -22,9 +22,9 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: tools/loop-audit/package-lock.json
+          cache-dependency-path: tools/zj-loop-audit/package-lock.json
 
-      - name: Build, test & run loop-audit on the reference + starters
+      - name: Build, test & run zj-loop-audit on the reference + starters
         run: bash scripts/ci-audit-gates.sh
 
       - name: Comment PR with loop readiness score
@@ -50,7 +50,7 @@ jobs:
               '',
               recs.length ? '### Top suggestions\n' + recs.map(r => `- ${r}`).join('\n') : '_No suggestions — looking good._',
               '',
-              '<sub>Posted by `audit.yml` · [loop-audit docs](https://github.com/cobusgreyling/loop-engineering/tree/main/tools/loop-audit)</sub>',
+              '<sub>Posted by `audit.yml` · [zj-loop-audit docs](https://github.com/jununfly/ZAgenticLoop/tree/main/tools/zj-loop-audit)</sub>',
             ].join('\n');
             await github.rest.issues.createComment({
               owner: context.repo.owner,

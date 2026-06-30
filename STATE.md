@@ -1,18 +1,18 @@
-# Loop State — loop-engineering reference
+# Loop State — zagenticloop reference
 
 Last run: 2026-06-29T12:19:22Z (automated daily-triage workflow)
 
 ## High Priority (loop is acting or waiting on human)
 
 - Maintain loop readiness score ≥ 58 (current: **100**, level **L3**).
-- Keep npm packages current after tool changes (tag `loop-audit-v*`, `loop-init-v*`, `loop-cost-v*` — see docs/RELEASE.md).
+- Keep npm packages current after tool changes (tag `zj-loop-audit-v*`, `zj-loop-init-v*`, `zj-loop-cost-v*` — see docs/RELEASE.md).
 
 
 ## Watch List
 
 - Expand contributor failure stories (dependency sweeper, multi-loop).
 - Collect a production story for Post-Merge Cleanup.
-- Validate `loop-init` scaffolds on fresh projects across all patterns.
+- Validate `zj-loop-init` scaffolds on fresh projects across all patterns.
 
 ## Recent Noise (ignored this run)
 

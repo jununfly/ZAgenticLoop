@@ -1,17 +1,17 @@
 {
-  "name": "loop-engineering",
+  "name": "zagenticloop",
   "private": true,
   "type": "module",
   "scripts": {
     "validate:registry": "node scripts/validate-registry.mjs",
-    "check:loop-init": "node scripts/check-loop-init-sync.mjs",
-    "test:loop-audit": "cd tools/loop-audit && npm test",
-    "test:loop-init": "cd tools/loop-init && npm test",
-    "test:loop-cost": "cd tools/loop-cost && npm test",
-    "test:loop-sync": "cd tools/loop-sync && npm test",
-    "test:mcp-server": "cd tools/mcp-server && npm test",
-    "test:tools": "npm run test:loop-audit && npm run test:loop-init && npm run test:loop-cost && npm run test:loop-sync && npm run test:mcp-server",
-    "build:tools": "cd tools/loop-audit && npm run build && cd ../loop-init && npm run build && cd ../loop-cost && npm run build && cd ../loop-sync && npm run build && cd ../mcp-server && npm run build"
+    "check:zj-loop-init": "node scripts/check-zj-loop-init-sync.mjs",
+    "test:zj-loop-audit": "cd tools/zj-loop-audit && npm test",
+    "test:zj-loop-init": "cd tools/zj-loop-init && npm test",
+    "test:zj-loop-cost": "cd tools/zj-loop-cost && npm test",
+    "test:zj-loop-sync": "cd tools/zj-loop-sync && npm test",
+    "test:tools": "npm run test:zj-loop-audit && npm run test:zj-loop-init && npm run test:zj-loop-cost && npm run test:zj-loop-sync && npm run test:zj-loop-mcp-server",
+    "build:tools": "cd tools/zj-loop-audit && npm run build && cd ../zj-loop-init && npm run build && cd ../zj-loop-cost && npm run build && cd ../zj-loop-sync && npm run build && cd ../zj-loop-mcp-server && npm run build",
+    "test:zj-loop-mcp-server": "cd tools/zj-loop-mcp-server && npm test"
   },
   "devDependencies": {
     "ajv": "^8.17.1",

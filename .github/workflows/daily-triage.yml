@@ -25,18 +25,18 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: tools/loop-audit/package-lock.json
+          cache-dependency-path: tools/zj-loop-audit/package-lock.json
 
-      - name: Build loop-audit
+      - name: Build zj-loop-audit
         run: |
-          cd tools/loop-audit
+          cd tools/zj-loop-audit
           npm ci
           npm run build
 
       - name: Run reference audit
         id: audit
         run: |
-          cd tools/loop-audit
+          cd tools/zj-loop-audit
           node dist/cli.js ../.. --json > /tmp/audit.json
           SCORE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('/tmp/audit.json','utf8')).score)")
           LEVEL=$(node -e "console.log(JSON.parse(require('fs').readFileSync('/tmp/audit.json','utf8')).level)")
@@ -63,21 +63,21 @@ jobs:
           LEVEL="${{ steps.audit.outputs.level }}"
           FAILING="${{ steps.workflows.outputs.failing }}"
           cat > STATE.md <<EOF
-          # Loop State — loop-engineering reference
+          # Loop State — zagenticloop reference
 
           Last run: ${DATE} (automated daily-triage workflow)
 
           ## High Priority (loop is acting or waiting on human)
 
           - Maintain loop readiness score ≥ 58 (current: **${SCORE}**, level **${LEVEL}**).
-          - Keep npm packages current after tool changes (tag \`loop-audit-v*\`, \`loop-init-v*\`, \`loop-cost-v*\` — see docs/RELEASE.md).
+          - Keep npm packages current after tool changes (tag \`zj-loop-audit-v*\`, \`zj-loop-init-v*\`, \`zj-loop-cost-v*\` — see docs/RELEASE.md).
           $([ "$FAILING" -gt 0 ] && echo "- **${FAILING}** dogfood workflow(s) failing — investigate CI.")
 
           ## Watch List
 
           - Expand contributor failure stories (dependency sweeper, multi-loop).
           - Collect a production story for Post-Merge Cleanup.
-          - Validate \`loop-init\` scaffolds on fresh projects across all patterns.
+          - Validate \`zj-loop-init\` scaffolds on fresh projects across all patterns.
 
           ## Recent Noise (ignored this run)
 
