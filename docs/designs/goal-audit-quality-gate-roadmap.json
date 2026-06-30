@@ -1,0 +1,91 @@
+{
+  "title": "Goal Audit 质量门纳入架构优化",
+  "description": "继续架构优化：将 companion tool goal-audit 纳入根 build:tools/test:tools 质量门，避免 repo 内工具发布流绕过主验证路径。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Goal Audit 质量门纳入架构优化",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4"
+      ],
+      "decisions": [
+        {
+          "q": "下一段架构优化聚焦哪里？",
+          "answer": "聚焦 goal-audit 纳入根 build:tools/test:tools 质量门，而不是迁移它到 core。",
+          "note": "goal-audit 是 repo 内 companion package，拥有独立 @cobusgreyling 发布流和 release workflow；但根 package.json 的 build:tools/test:tools 未覆盖它。先补质量门可降低发布漂移风险，且不引入跨品牌 package 依赖。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "审计 goal-audit 根质量门覆盖缺口",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "goal-audit 的根质量门缺口是什么？",
+          "answer": "goal-audit 有独立 release workflow 和 npm package，但根 package.json 的 build:tools/test:tools 没覆盖它。",
+          "note": "本地运行 goal-audit npm test 起初因未安装 package-local deps 缺少 tsc；npm ci 后可作为独立工具质量门运行。缺口是根验证路径与发布路径不一致。"
+        }
+      ],
+      "notes": "Audited root quality gates. goal-audit release workflow validates the package, but root build:tools/test:tools omit it."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "设计 goal-audit 最小质量门接入",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "goal-audit 最小质量门接入怎么做？",
+          "answer": "在根 package.json 增加 test:goal-audit，并把 goal-audit build/test 串进 build:tools/test:tools；不把它改名或迁入 @jununfly/zj-loop-* 系列。",
+          "note": "goal-audit 是 companion package，最小接入只对齐验证路径，不改变 package.json name、release workflow、代码边界或依赖关系。"
+        }
+      ],
+      "notes": "Minimal contract: add root test/build script coverage for goal-audit only. Do not change package identity or introduce core coupling."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "实现 goal-audit build/test 根质量门接入",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "如何把 goal-audit 纳入根质量门？",
+          "answer": "新增 root test:goal-audit，并把它串入 test:tools；build:tools 在现有 zj-loop 工具链后追加 tools/goal-audit build。",
+          "note": "保留 @cobusgreyling/goal-audit 包名、目录和独立发布流，只做根质量门覆盖。"
+        }
+      ],
+      "notes": "已接入 root build/test 质量门；验证通过：tools/goal-audit npm test、npm run build:tools、npm run test:tools、git diff --check。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "合并设计记录并删除 goal-audit 质量门 roadmap",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-01 01:15:06",
+    "updated": "2026-07-01 01:23:19",
+    "md_file": "docs/designs/goal-audit-quality-gate-roadmap.md"
+  }
+}
