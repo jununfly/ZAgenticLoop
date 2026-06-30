@@ -78,6 +78,17 @@ This release merges work from 7 community PRs. Read the full story in [Discussio
 
 ---
 
-## Companion
+## Companion — Goal Engineering
 
-Loops discover ongoing work. Goals finish bounded tasks → [goal-engineering](https://github.com/cobusgreyling/goal-engineering)
+Loops discover ongoing work. **Goals finish bounded tasks.**
+
+| Layer | Repo | Command |
+|-------|------|---------|
+| Discover (cadence) | [loop-engineering](https://github.com/cobusgreyling/loop-engineering) | `npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok` |
+| Finish (run-until-done) | [goal-engineering](https://github.com/cobusgreyling/goal-engineering) | `npx @cobusgreyling/goal init . --pattern fix-bug --tool grok` |
+
+**Stack cookbook:** [loop → goal → fleet day rhythm](https://github.com/cobusgreyling/goal-engineering/blob/main/docs/stack-cookbook.md)
+
+```
+/goal Read STATE.md top priority. Done when verifier PASS. goal-verifier before completed: true.
+```
