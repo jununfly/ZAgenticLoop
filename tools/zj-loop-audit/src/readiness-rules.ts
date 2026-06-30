@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import type { LoopSignals } from './auditor.js';
+import type { Finding, LoopSignals } from './auditor.js';
 
 export type ReadinessLevel = 'L0' | 'L1' | 'L2' | 'L3';
 
@@ -36,6 +36,12 @@ type AssessmentRule = {
   message: string;
 };
 
+type GuidanceRule = {
+  when?: Condition;
+  finding?: Finding;
+  recommendations?: string[];
+};
+
 export type ReadinessPolicy = {
   schemaVersion: 1;
   score: {
@@ -45,12 +51,18 @@ export type ReadinessPolicy = {
   predicates: Record<string, Condition>;
   levels: LevelRule[];
   assessments: AssessmentRule[];
+  guidance?: GuidanceRule[];
 };
 
 export type ReadinessEvaluation = {
   score: number;
   level: ReadinessLevel;
   assessment: string;
+};
+
+export type ReadinessGuidance = {
+  findings: Finding[];
+  recommendations: string[];
 };
 
 const DEFAULT_POLICY_PATH = path.resolve(
@@ -91,6 +103,32 @@ export function evaluateReadinessPolicy(
     'Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).';
 
   return { score, level, assessment };
+}
+
+export function evaluateReadinessGuidance(
+  signals: LoopSignals,
+  score: number,
+  policy: ReadinessPolicy = loadDefaultReadinessPolicy(),
+): ReadinessGuidance {
+  const findings: Finding[] = [];
+  const recommendations: string[] = [];
+
+  for (const rule of policy.guidance ?? []) {
+    if (rule.when && !evaluateCondition(rule.when, { signals, policy, score })) continue;
+
+    if (rule.finding) {
+      findings.push({
+        level: rule.finding.level,
+        message: renderTemplate(rule.finding.message, signals),
+      });
+    }
+
+    for (const recommendation of rule.recommendations ?? []) {
+      recommendations.push(renderTemplate(recommendation, signals));
+    }
+  }
+
+  return { findings, recommendations };
 }
 
 function evaluateCondition(
@@ -134,6 +172,15 @@ function readPath(source: unknown, dotPath: string): unknown {
   }, source);
 }
 
+function renderTemplate(template: string, signals: LoopSignals): string {
+  return template.replace(/\{([a-zA-Z0-9_.]+)\}/g, (_match, key: string) => {
+    const value = readPath(signals, key);
+    if (Array.isArray(value)) return value.join(', ');
+    if (value === undefined || value === null) return '';
+    return String(value);
+  });
+}
+
 function clampScore(score: number): number {
   return Math.min(100, Math.max(0, score));
 }
@@ -144,4 +191,5 @@ function assertPolicy(policy: ReadinessPolicy): void {
   if (!Array.isArray(policy.score?.contributions)) throw new Error('Readiness policy score.contributions must be an array.');
   if (!Array.isArray(policy.levels)) throw new Error('Readiness policy levels must be an array.');
   if (!Array.isArray(policy.assessments)) throw new Error('Readiness policy assessments must be an array.');
+  if (policy.guidance !== undefined && !Array.isArray(policy.guidance)) throw new Error('Readiness policy guidance must be an array.');
 }

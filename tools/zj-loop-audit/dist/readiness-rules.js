@@ -25,6 +25,24 @@ export function evaluateReadinessPolicy(signals, policy = loadDefaultReadinessPo
         'Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).';
     return { score, level, assessment };
 }
+export function evaluateReadinessGuidance(signals, score, policy = loadDefaultReadinessPolicy()) {
+    const findings = [];
+    const recommendations = [];
+    for (const rule of policy.guidance ?? []) {
+        if (rule.when && !evaluateCondition(rule.when, { signals, policy, score }))
+            continue;
+        if (rule.finding) {
+            findings.push({
+                level: rule.finding.level,
+                message: renderTemplate(rule.finding.message, signals),
+            });
+        }
+        for (const recommendation of rule.recommendations ?? []) {
+            recommendations.push(renderTemplate(recommendation, signals));
+        }
+    }
+    return { findings, recommendations };
+}
 function evaluateCondition(condition, context) {
     if (typeof condition === 'string') {
         return Boolean(readPath(context.signals, condition));
@@ -62,6 +80,16 @@ function readPath(source, dotPath) {
         return undefined;
     }, source);
 }
+function renderTemplate(template, signals) {
+    return template.replace(/\{([a-zA-Z0-9_.]+)\}/g, (_match, key) => {
+        const value = readPath(signals, key);
+        if (Array.isArray(value))
+            return value.join(', ');
+        if (value === undefined || value === null)
+            return '';
+        return String(value);
+    });
+}
 function clampScore(score) {
     return Math.min(100, Math.max(0, score));
 }
@@ -76,4 +104,6 @@ function assertPolicy(policy) {
         throw new Error('Readiness policy levels must be an array.');
     if (!Array.isArray(policy.assessments))
         throw new Error('Readiness policy assessments must be an array.');
+    if (policy.guidance !== undefined && !Array.isArray(policy.guidance))
+        throw new Error('Readiness policy guidance must be an array.');
 }

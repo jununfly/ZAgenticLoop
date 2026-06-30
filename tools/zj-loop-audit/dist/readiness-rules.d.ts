@@ -1,4 +1,4 @@
-import type { LoopSignals } from './auditor.js';
+import type { Finding, LoopSignals } from './auditor.js';
 export type ReadinessLevel = 'L0' | 'L1' | 'L2' | 'L3';
 type Condition = string | {
     path?: string;
@@ -24,6 +24,11 @@ type AssessmentRule = {
     when?: Condition;
     message: string;
 };
+type GuidanceRule = {
+    when?: Condition;
+    finding?: Finding;
+    recommendations?: string[];
+};
 export type ReadinessPolicy = {
     schemaVersion: 1;
     score: {
@@ -33,13 +38,19 @@ export type ReadinessPolicy = {
     predicates: Record<string, Condition>;
     levels: LevelRule[];
     assessments: AssessmentRule[];
+    guidance?: GuidanceRule[];
 };
 export type ReadinessEvaluation = {
     score: number;
     level: ReadinessLevel;
     assessment: string;
 };
+export type ReadinessGuidance = {
+    findings: Finding[];
+    recommendations: string[];
+};
 export declare function loadDefaultReadinessPolicy(): ReadinessPolicy;
 export declare function parseReadinessPolicy(source: string): ReadinessPolicy;
 export declare function evaluateReadinessPolicy(signals: LoopSignals, policy?: ReadinessPolicy): ReadinessEvaluation;
+export declare function evaluateReadinessGuidance(signals: LoopSignals, score: number, policy?: ReadinessPolicy): ReadinessGuidance;
 export {};

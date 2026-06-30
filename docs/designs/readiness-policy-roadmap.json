@@ -75,12 +75,23 @@
     "1-4": {
       "id": "1-4",
       "label": "迁移 findings 和 recommendations 到规则文件",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "findings/recommendations 迁移是否引入模板语言？",
+          "answer": "不引入完整模板语言，只支持简单 signal path 占位。",
+          "note": "当前动态文案只有 state file 列表和 loop activity evidence 数量；用 、 这类占位即可覆盖，避免把报告文案规则文件变成第二门语言。"
+        },
+        {
+          "q": "findings/recommendations 模板占位符更正",
+          "answer": "使用简单 signal path 占位，不引入完整模板语言。",
+          "note": "动态文案只需要 {stateFile.paths} 和 {loopActivity.evidence.length} 这类占位即可覆盖；占位符按 signal path 读取，数组默认用 comma+space 连接。"
+        }
+      ],
+      "notes": "Migrated audit findings and recommendations into readiness.v1.yaml guidance rules. auditProject now collects evidence, computes score/level/assessment, and asks the rule engine for findings/recommendations. Guidance supports simple signal path templates only."
     },
     "1-5": {
       "id": "1-5",
@@ -95,7 +106,7 @@
   },
   "metadata": {
     "created": "2026-07-01 00:03:14",
-    "updated": "2026-07-01 00:13:07",
+    "updated": "2026-07-01 00:22:24",
     "md_file": "docs/designs/readiness-policy-roadmap.md"
   }
 }

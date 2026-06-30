@@ -6,7 +6,7 @@ import path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { auditProject, computeScore } from '../dist/auditor.js';
-import { evaluateReadinessPolicy, parseReadinessPolicy } from '../dist/readiness-rules.js';
+import { evaluateReadinessGuidance, evaluateReadinessPolicy, parseReadinessPolicy } from '../dist/readiness-rules.js';
 import { formatBadge } from '../dist/reporter.js';
 
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
@@ -140,6 +140,37 @@ assessments:
 `);
   const result = evaluateReadinessPolicy({ ...emptySignals(), stateFile: { present: true, paths: ['STATE.md'] } }, policy);
   assert.deepEqual(result, { score: 11, level: 'L1', assessment: 'Custom no activity' });
+});
+
+test('readiness rules: evaluates guidance findings, recommendations, and signal templates', () => {
+  const policy = parseReadinessPolicy(`
+schemaVersion: 1
+score:
+  base: 0
+  contributions: []
+predicates: {}
+levels:
+  - level: L0
+    threshold: 0
+assessments:
+  - message: Default
+guidance:
+  - when: stateFile.present
+    finding:
+      level: ok
+      message: "State files: {stateFile.paths}"
+    recommendations:
+      - "Review {stateFile.paths}"
+`);
+  const result = evaluateReadinessGuidance(
+    { ...emptySignals(), stateFile: { present: true, paths: ['STATE.md', 'ci-sweeper-state.md'] } },
+    0,
+    policy,
+  );
+  assert.deepEqual(result, {
+    findings: [{ level: 'ok', message: 'State files: STATE.md, ci-sweeper-state.md' }],
+    recommendations: ['Review STATE.md, ci-sweeper-state.md'],
+  });
 });
 
 test('auditProject: empty directory scores low', async () => {

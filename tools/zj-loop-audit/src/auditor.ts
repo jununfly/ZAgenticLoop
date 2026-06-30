@@ -7,7 +7,7 @@ import {
   listProjectSkillNames,
   type ProjectFileSystem,
 } from '@jununfly/zj-loop-core';
-import { evaluateReadinessPolicy } from './readiness-rules.js';
+import { evaluateReadinessGuidance, evaluateReadinessPolicy } from './readiness-rules.js';
 
 export interface LoopSignals {
   stateFile: { present: boolean; paths: string[] };
@@ -153,8 +153,6 @@ export function computeScore(signals: LoopSignals): { score: number; level: 'L0'
 export async function auditProject(target: string): Promise<AuditResult> {
   const root = path.resolve(target);
   const fs = createNodeProjectFileSystem(root);
-  const findings: Finding[] = [];
-  const recommendations: string[] = [];
 
   const statePaths = await findExistingProjectPaths(fs, STATE_FILES);
 
@@ -248,139 +246,8 @@ export async function auditProject(target: string): Promise<AuditResult> {
     loopActivity,
   };
 
-  if (!signals.stateFile.present) {
-    findings.push({ level: 'fail', message: 'No state file (STATE.md or pattern-specific state).' });
-    recommendations.push('Copy starters/minimal-loop/STATE.md.example (or -claude / -codex variant) to STATE.md');
-  } else {
-    findings.push({ level: 'ok', message: `State file(s): ${statePaths.join(', ')}` });
-  }
-
-  if (!signals.triage.present) {
-    findings.push({ level: 'warn', message: 'No triage skill detected.' });
-    recommendations.push('Install loop-triage from starters/minimal-loop, minimal-loop-claude, or minimal-loop-codex');
-  } else {
-    findings.push({ level: 'ok', message: 'Triage skill present.' });
-  }
-
-  if (!signals.verifier.present) {
-    findings.push({ level: 'warn', message: 'No loop-verifier skill — maker/checker split incomplete.' });
-    recommendations.push('Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, or .codex/agents/verifier.toml');
-  } else {
-    findings.push({ level: 'ok', message: 'Verifier skill present.' });
-  }
-
-  if (!signals.loopConfig.present) {
-    findings.push({ level: 'warn', message: 'No LOOP.md documenting cadence, limits, and gates.' });
-    recommendations.push('Copy starters/minimal-loop/LOOP.md and customize');
-  }
-
-  if (!signals.agentsMd.present) {
-    findings.push({ level: 'warn', message: 'No AGENTS.md / CLAUDE.md for project conventions.' });
-    recommendations.push('Add AGENTS.md with build/test commands and review norms');
-  }
-
-  if (!signals.safety.loopMdMentionsSafety) {
-    findings.push({ level: 'warn', message: 'LOOP.md does not mention safety gates or auto-merge policy.' });
-    recommendations.push('Document human gates per docs/safety.md in LOOP.md');
-  }
-
-  if (!signals.safety.safetyDocPresent) {
-    findings.push({ level: 'warn', message: 'No safety.md or docs/safety.md found.' });
-    recommendations.push('Copy or create docs/safety.md (denylists, auto-merge policy, MCP scopes)');
-  } else {
-    findings.push({ level: 'ok', message: 'Safety documentation present.' });
-  }
-
-
-  if (!signals.constraints.present) {
-    findings.push({ level: 'warn', message: 'No loop-constraints.md — structured constraints file missing.' });
-    recommendations.push('Create loop-constraints.md with denylist paths, push/merge rules, and human gates (see templates/loop-constraints.md)');
-  } else {
-    findings.push({ level: 'ok', message: 'loop-constraints.md present.' });
-  }
-
-  if (signals.constraints.present && !signals.constraints.hasConstraintsSkill) {
-    findings.push({ level: 'warn', message: 'loop-constraints.md exists but no loop-constraints skill — rules not enforced at runtime.' });
-    recommendations.push('Add loop-constraints skill via zj-loop-init or templates/SKILL.md.loop-constraints');
-  }
-  if (!signals.github.present) {
-    findings.push({ level: 'warn', message: 'No .github/ directory (templates, workflows for dogfooding).' });
-    recommendations.push('Add .github/ISSUE_TEMPLATE, PULL_REQUEST_TEMPLATE, and workflows (see this repo for examples)');
-  } else if (!signals.github.workflows) {
-    findings.push({ level: 'warn', message: '.github/ exists but no workflows/ (CI dogfood opportunity).' });
-    recommendations.push('Add GitHub Actions that run zj-loop-audit and validate patterns (dogfood the reference)');
-  } else {
-    findings.push({ level: 'ok', message: '.github/ with workflows present (strong dogfooding signal).' });
-  }
-
-  if (!signals.mcp.present) {
-    findings.push({ level: 'warn', message: 'No MCP / connector config or mentions detected.' });
-    recommendations.push('Document MCP usage (or note "MCP not required for this pattern") in LOOP.md or skills');
-  }
-
-  if (!signals.worktreeEvidence.present) {
-    findings.push({ level: 'warn', message: 'Little evidence of worktree usage in docs or state.' });
-    recommendations.push('Add worktree isolation notes to LOOP.md or pattern docs (see primitives and starters)');
-  }
-
-  if (!signals.registry.present) {
-    findings.push({ level: 'warn', message: 'No patterns/registry.yaml (machine-readable index for future tools).' });
-    recommendations.push('Add patterns/registry.yaml following the existing format');
-  }
-
-  if (!signals.cost.budgetDoc) {
-    findings.push({ level: 'warn', message: 'No loop-budget.md — token caps and kill switch undocumented.' });
-    recommendations.push('Scaffold with zj-loop-init or copy templates/loop-budget.md.template');
-  } else {
-    findings.push({ level: 'ok', message: 'loop-budget.md present.' });
-  }
-
-  if (!signals.cost.runLog) {
-    findings.push({ level: 'warn', message: 'No loop-run-log.md — run history not persisted.' });
-    recommendations.push('Copy templates/loop-run-log.md.template to loop-run-log.md');
-  } else {
-    findings.push({ level: 'ok', message: 'loop-run-log.md present.' });
-  }
-
-  if (!signals.cost.loopMdBudget) {
-    findings.push({ level: 'warn', message: 'LOOP.md does not mention budget, token caps, or kill switch.' });
-    recommendations.push('Add a Budget section to LOOP.md (see starters/*/LOOP.md)');
-  }
-
-  if (!signals.cost.budgetSkill) {
-    findings.push({ level: 'warn', message: 'No loop-budget skill — budget checks are not automated at runtime.' });
-    recommendations.push('Add loop-budget skill via zj-loop-init or templates/SKILL.md.loop-budget');
-  } else {
-    findings.push({ level: 'ok', message: 'loop-budget skill present.' });
-  }
-
-  if (!signals.loopActivity.present) {
-    findings.push({ level: 'warn', message: 'No evidence of actual loop runs detected (no "Last run" entries in state, loop-related git activity, or scheduled workflows yet).' });
-    recommendations.push('Run one loop (report-only), update + commit STATE.md (or pattern state). This turns structure into proven usage.');
-  } else {
-    findings.push({ level: 'ok', message: `Loop activity detected — real usage signals present (${signals.loopActivity.evidence.length} sources).` });
-  }
-
   const { score, level, assessment } = computeScore(signals);
-
-  const costReady =
-    signals.cost.budgetDoc &&
-    signals.cost.runLog &&
-    signals.cost.loopMdBudget;
-
-  if (score >= 78 && signals.verifier.present && signals.stateFile.present && !costReady) {
-    findings.push({
-      level: 'warn',
-      message: 'Score qualifies for L3 but cost observability is incomplete — capped at L2 until budget + run log + LOOP.md budget exist.',
-    });
-  }
-
-  if (score >= 78 && signals.verifier.present && signals.stateFile.present && costReady && !signals.loopActivity.present) {
-    findings.push({
-      level: 'warn',
-      message: 'Score qualifies for L3 but no proven loop activity yet — capped at L2 until you run and commit at least one loop cycle.',
-    });
-  }
+  const { findings, recommendations } = evaluateReadinessGuidance(signals, score);
 
   return {
     target: root,

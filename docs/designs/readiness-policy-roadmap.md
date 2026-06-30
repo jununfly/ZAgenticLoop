@@ -1,13 +1,13 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `readiness-policy-roadmap.json` | 最后更新: 2026-07-01 00:13:07
+> 数据文件: `readiness-policy-roadmap.json` | 最后更新: 2026-07-01 00:22:24
 
 [~][X+] 1. Readiness Policy 规则化架构优化
 ├── [x][X+] 1-1. 审计现有 readiness policy 硬编码边界
 ├── [x][X+] 1-2. 设计 readiness.v1.yaml 最小规则契约
 ├── [x][Y+] 1-3. 实现规则引擎 tracer bullet
-├── [ ][Y+] 1-4. 迁移 findings 和 recommendations 到规则文件
+├── [x][Y+] 1-4. 迁移 findings 和 recommendations 到规则文件
 └── [ ][Y+] 1-5. 合并设计记录并删除 readiness policy roadmap
 
 ### 当前施工：1. Readiness Policy 规则化架构优化
@@ -19,6 +19,6 @@
 ├── [x][X+] 1-1. 审计现有 readiness policy 硬编码边界
 ├── [x][X+] 1-2. 设计 readiness.v1.yaml 最小规则契约
 ├── [x][Y+] 1-3. 实现规则引擎 tracer bullet
-├── [ ][Y+] 1-4. 迁移 findings 和 recommendations 到规则文件
+├── [x][Y+] 1-4. 迁移 findings 和 recommendations 到规则文件
 └── [ ][Y+] 1-5. 合并设计记录并删除 readiness policy roadmap
 <!-- ROADMAP_SECTION_END -->
