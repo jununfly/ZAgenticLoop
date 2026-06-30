@@ -50,6 +50,8 @@ index, not a replacement for the pattern markdown files.
 - registry parsing and validation
 - project filesystem primitives and evidence helpers
 - registry-only semantic queries
+- the canonical pattern recommendation policy consumed by MCP and future
+  selection surfaces
 - the canonical cost estimate policy consumed by cost and MCP surfaces
 
 Core does not own:
@@ -71,12 +73,18 @@ The first stable semantic query set is registry-first:
 | --- | --- |
 | `listPatternSummaries()` | Stable pattern cards for selection UIs, MCP summaries, and docs indexes. |
 | `getPatternProfile()` | Registry facts plus optional raw pattern documentation supplied by an adapter. |
-| `recommendPatterns()` | Pattern recommendation with scores, confidence, and machine-readable reason codes. |
+| `recommendPatterns()` | Pattern recommendation with scores, confidence, and machine-readable reason codes from a core-owned typed policy. |
 | `estimatePatternCost()` | Structured token estimates, warning codes, and typed input errors. |
 | `listRequiredSkills()` | Required skills projected from registry facts. |
 
 Semantic query results should be structured first. MCP, CLI, docs, and future
 agents can format those results differently without changing domain policy.
+
+`recommendPatterns()` keeps its policy internal to core for now. The first
+structured policy is a typed table of field matches, boost rules, and
+confidence bands. It is not an external YAML file and does not extend
+`patterns/registry.yaml`; the registry remains pattern facts, while the core
+semantic layer interprets those facts for a use case.
 
 Expected typed errors include unknown pattern ids, invalid readiness levels, and
 invalid cadence strings. Adapters convert those expected errors into their
@@ -253,7 +261,8 @@ Treat these as architecture drift:
 The architecture-improvement roadmap produced these durable outcomes:
 
 - `@jununfly/zj-loop-core` became the shared package for registry parsing,
-  project evidence primitives, semantic queries, and canonical cost policy.
+  project evidence primitives, semantic queries, canonical recommendation
+  policy, and canonical cost policy.
 - `patterns/registry.yaml` became the single machine-readable source for
   pattern metadata consumed by cost, init, audit, sync, and MCP surfaces.
 - `zj-loop-init` moved pattern scaffolding facts behind registry metadata while
@@ -262,6 +271,9 @@ The architecture-improvement roadmap produced these durable outcomes:
   policy and presentation.
 - MCP semantic tools now consume core semantic queries while preserving existing
   tool names and raw resource access.
+- `recommendPatterns()` recommendation weights, boost rules, reason codes, and
+  confidence bands are now represented as a core-owned typed policy interpreted
+  by the semantic query.
 - `zj-loop-cost`, `zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` now share
   the core single-command CLI harness while preserving their product-specific
   output and side effects.
