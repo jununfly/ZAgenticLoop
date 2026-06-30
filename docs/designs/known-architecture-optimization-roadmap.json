@@ -1,0 +1,163 @@
+{
+  "title": "已知架构优化路线图",
+  "description": "盘点并排序当前已知的 ZAgenticLoop 架构优化机会；先把所有方向放到 explore/exploit 地图上，再逐刀执行。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "已知架构优化路线图",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6",
+        "1-7"
+      ],
+      "decisions": [
+        {
+          "q": "已知架构优化如何排序？",
+          "answer": "按质量门漂移风险优先：先继续收敛 CI validate gates，再处理 release workflow 清单、init registry 同步、sync/audit evidence 边界、MCP raw resource 替代、readiness policy 测试矩阵、generated artifact 策略。",
+          "note": "依据当前代码证据：根 tool gate runner 已完成，但 CI shell、release workflows、字符串同步检查、evidence 模型、raw resources 和生成物策略仍是已知漂移点。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "收敛 CI validate gates 工具清单",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "为什么 CI validate gates 进入 exploit？",
+          "answer": "它紧接刚完成的 tool gate runner，目标明确：让 scripts/ci-validate-gates.sh 的工具测试部分复用或对齐 runner，减少 package.json 与 CI shell 的清单漂移。",
+          "note": "边界：先不改 release workflows，不改变 CI 的 npm install/cache 策略。"
+        },
+        {
+          "q": "CI validate gates 如何复用 tool gate runner？",
+          "answer": "给 scripts/run-tool-package-scripts.mjs 增加 --gate=validate 和 --install；validate gate 子集固定为 zj-loop-init、zj-loop-sync、zj-loop-mcp-server，ci-validate-gates.sh 调用 runner 而不再手写三段 cd/npm test。",
+          "note": "保持 package-local npm ci 行为；不改变 release workflows，也不把 audit gate 混入 validate gate。"
+        },
+        {
+          "q": "CI 验证暴露的 zj-loop-init 同步检查怎么处理？",
+          "answer": "旧 check-zj-loop-init-sync.mjs grep cli.ts pattern id，但 init 已改为 registry-driven；本刀将它改为比较 patterns/registry.yaml 与 tools/zj-loop-init/registry.yaml 的 pattern id 覆盖。",
+          "note": "这是 1-1 验证路径上的 blocker，同时也消化了 1-3 的一部分风险；不改变 init CLI 行为。"
+        }
+      ],
+      "notes": "已让 ci-validate-gates.sh 通过 scripts/run-tool-package-scripts.mjs test --gate=validate --install 运行 validate 工具子集；验证通过：npm run test:tool-gates、bash scripts/ci-validate-gates.sh。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "收敛 release workflow 发布清单",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "release workflow 为什么先 explore？",
+          "answer": "多个 package 的 release workflows 结构相似，但涉及 trusted publishing、tag 触发、package-local cache 和 goal-audit companion 身份，先盘点发布契约再决定是否抽 runner 或只做 drift check。",
+          "note": "边界：不直接生成/重写 workflow；先保护发布语义。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "下沉 zj-loop-init registry 同步检查",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "zj-loop-init registry 同步检查为什么先 explore？",
+          "answer": "当前 scripts/check-zj-loop-init-sync.mjs 通过源码字符串检查 pattern id，脆弱但影响面较小；先确认 init 的真实消费路径和 bundle 输出，再决定下沉到结构化测试还是删除检查。",
+          "note": "推荐方向：检查公开 registry/bundle 结果，而不是 grep src/cli.ts。"
+        },
+        {
+          "q": "zj-loop-init registry 同步检查是否还需要单独一刀？",
+          "answer": "不需要单独一刀；第 1 刀验证 ci-validate-gates.sh 时已暴露并修复。检查已从 grep cli.ts 改为比较 root registry 与 tools/zj-loop-init bundled registry 的 pattern id 覆盖。",
+          "note": "剩余更深的 init 架构优化可后续另开，但本 roadmap 中这个已知同步检查风险已关闭。"
+        }
+      ],
+      "notes": "已在第 1 刀中修复：同步检查改为 root registry 与 init bundled registry 的结构化 pattern id 覆盖检查。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "统一 sync 与 audit evidence 模型边界",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "sync 与 audit evidence 为什么先 explore？",
+          "answer": "两者都解释 repo 证据，但 audit 已有 LoopSignals/readiness policy，sync 有 DriftReport 和 drift-specific checks；需要先画边界，避免把报告策略错误上移到 core。",
+          "note": "推荐方向：只抽共享 evidence primitives 或 normalized facts，不抽 findings/recommendations。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "设计 MCP raw resources 结构化替代路线",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "MCP raw resources 替代路线为什么先 explore？",
+          "answer": "architecture.md 明确 raw resources 在结构化替代证明前不能移除；需要先选择高价值 resource 做 summary tool 试点，验证结构化返回能覆盖常见问题。",
+          "note": "推荐顺序：safety/config/budget/run-log summary 优先，patterns/skills/state raw source 保留。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "加强 readiness policy fixture 测试矩阵",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "readiness policy 测试矩阵为什么可 exploit？",
+          "answer": "readiness.v1.yaml 与 local rule engine 已稳定，优化目标明确：用 fixture matrix 覆盖 gates、predicates、findings、recommendations，降低 YAML 改动风险。",
+          "note": "边界：不改评分语义，先补测试保护当前输出。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "明确 dist 与 generated artifacts 提交策略",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "generated artifacts 策略为什么先 explore？",
+          "answer": "repo 同时存在 dist、bundled registry/templates、生成 preview 等 artifact；需要先分类哪些是发布必需、哪些是本地 build 产物，再决定 gitignore 或 consistency check。",
+          "note": "推荐方向：先写策略和检查，避免误删发布需要的 dist。"
+        }
+      ],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-01 01:45:23",
+    "updated": "2026-07-01 01:59:47",
+    "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
+  }
+}

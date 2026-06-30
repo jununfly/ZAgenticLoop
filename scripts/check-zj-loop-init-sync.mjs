@@ -12,11 +12,13 @@ function fail(msg) {
 }
 
 const registry = yaml.parse(await readFile(path.join(ROOT, 'patterns/registry.yaml'), 'utf8'));
-const cli = await readFile(path.join(ROOT, 'tools/zj-loop-init/src/cli.ts'), 'utf8');
+const initRegistry = yaml.parse(await readFile(path.join(ROOT, 'tools/zj-loop-init/registry.yaml'), 'utf8'));
 
-for (const p of registry.patterns) {
-  if (!cli.includes(`'${p.id}'`)) {
-    fail(`zj-loop-init cli.ts missing pattern id: ${p.id}`);
+const initPatternIds = new Set(initRegistry.patterns.map((pattern) => pattern.id));
+
+for (const pattern of registry.patterns) {
+  if (!initPatternIds.has(pattern.id)) {
+    fail(`zj-loop-init bundled registry missing pattern id: ${pattern.id}`);
   }
 }
 

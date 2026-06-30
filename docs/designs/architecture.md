@@ -248,6 +248,13 @@ git diff --check
 family and the `tools/goal-audit` companion package. That coverage is a quality
 gate only; it does not imply a shared package namespace or release lifecycle.
 
+The root build/test aggregation is owned by
+`scripts/run-tool-package-scripts.mjs`. It keeps the ordered tool package list
+and package roles in one repo-local place, then runs `npm --prefix <dir> run
+build|test` for each package. This runner is quality-gate orchestration, not
+domain semantics, so it does not live in `@jununfly/zj-loop-core` and does not
+replace package-local build, test, or release scripts.
+
 Test strategy:
 
 - Core semantic tests assert structured contracts, reason codes, warning codes,
@@ -302,3 +309,6 @@ The architecture-improvement roadmap produced these durable outcomes:
 - `zj-loop-audit` readiness score, level gates, assessment bands, findings, and
   recommendations now live in the package-owned `readiness.v1.yaml` policy and
   are evaluated by a local rule engine over collected evidence.
+- Root `build:tools` and `test:tools` now run through a repo-local tool gate
+  runner that centralizes `zj-loop-*` and `goal-audit` coverage without changing
+  package identities or release lifecycles.
