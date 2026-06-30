@@ -14,3 +14,7 @@ option parsing, help dispatch, injected IO, fail-fast parse errors, handler
 execution, and thrown-error formatting. It does not move product contracts into
 core: cost output, sync reports, audit readiness policy, scaffold file writes,
 and MCP protocol behavior stay in their adapters.
+
+`zj-loop-audit` may keep its own package-local readiness rule engine and
+`readiness.v1.yaml` policy. That rule engine consumes collected evidence and
+formats audit guidance, but it does not move readiness policy into core.

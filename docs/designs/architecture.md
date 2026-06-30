@@ -124,11 +124,11 @@ Compatibility rules:
 
 ## Readiness Policy
 
-`zj-loop-audit` currently owns the Loop Readiness Score and readiness level
-presentation. The policy is based on project evidence signals such as state
-files, triage skills, verifier skills, safety docs, workflow evidence, MCP
-mentions, worktree evidence, registry presence, budget docs, run logs, budget
-skills, constraints, and loop activity.
+`zj-loop-audit` owns the Loop Readiness Score, readiness level presentation,
+findings, and recommendations. The policy is based on project evidence signals
+such as state files, triage skills, verifier skills, safety docs, workflow
+evidence, MCP mentions, worktree evidence, registry presence, budget docs, run
+logs, budget skills, constraints, and loop activity.
 
 Important policy decisions:
 
@@ -139,8 +139,8 @@ Important policy decisions:
 - L3 is capped when cost observability or operational proof is missing, even if
   the numeric score is high.
 
-The future direction is a declarative readiness rule file in
-`tools/zj-loop-audit/rules/readiness.v1.yaml`. That rule file should express:
+The declarative policy lives in
+`tools/zj-loop-audit/rules/readiness.v1.yaml`. It expresses:
 
 - evidence selectors over a `LoopSignals`-like object
 - derived predicates such as `costReady`, `hasRealActivity`, and `l3Ready`
@@ -149,8 +149,12 @@ The future direction is a declarative readiness rule file in
 - ordered assessment bands
 - findings and recommendations tied to predicates
 
-The rule engine should consume evidence. It should not read project files
-directly.
+`tools/zj-loop-audit/src/readiness-rules.ts` evaluates that policy. It consumes
+the evidence object produced by `auditProject()` and does not read project files
+directly. `auditProject()` still owns project inspection and dynamic evidence
+collection, including git/workflow/activity checks. Guidance text may use simple
+signal-path placeholders such as `{stateFile.paths}`; the rule file should not
+grow a general template or expression language.
 
 ## CLI Product Surface
 
@@ -261,5 +265,6 @@ The architecture-improvement roadmap produced these durable outcomes:
 - `zj-loop-cost`, `zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` now share
   the core single-command CLI harness while preserving their product-specific
   output and side effects.
-- Readiness rule schema work remains a future implementation slice, with
-  boundaries recorded here.
+- `zj-loop-audit` readiness score, level gates, assessment bands, findings, and
+  recommendations now live in the package-owned `readiness.v1.yaml` policy and
+  are evaluated by a local rule engine over collected evidence.
