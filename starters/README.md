@@ -14,6 +14,7 @@ npx @cobusgreyling/loop-init . -p pr-babysitter -t claude
 | [minimal-loop](./minimal-loop/) | Grok | `.grok/skills/` |
 | [minimal-loop-claude](./minimal-loop-claude/) | Claude Code | `.claude/skills/` + `.claude/agents/` |
 | [minimal-loop-codex](./minimal-loop-codex/) | Codex | `.codex/skills/` + `.codex/agents/` |
+| [minimal-loop-opencode](./minimal-loop-opencode/) | Opencode | `skills/` + `AGENTS.md` |
 
 ## L2 assisted patterns
 

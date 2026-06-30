@@ -83,10 +83,11 @@ For developers using Grok, Claude Code, Codex, Cursor, and other AI coding agent
 | [Quickstart (5 min)](docs/QUICKSTART.md) | Scaffold → cost check → audit → first loop — **start here if you just landed** |
 | [Loop Engineering essay](https://cobusgreyling.substack.com/p/loop-engineering) | The concept, primitives, and Grok mapping — read for the why |
 | [Pattern Picker](docs/pattern-picker.md) | Which loop to run first — **start here if unsure** |
-| [Primitives Matrix](docs/primitives-matrix.md) | Grok vs Claude Code vs Codex — bookmark this |
+| [Primitives Matrix](docs/primitives-matrix.md) | Cross-tool loop primitive mapping — bookmark this |
 | [Loop Design Checklist](docs/loop-design-checklist.md) | Ship readiness rubric |
 | [Patterns](patterns/README.md) | 7 production patterns + [interactive picker](https://cobusgreyling.github.io/loop-engineering/#interactive) |
-| [Starters](starters/) | Clone-and-run kits (Grok, Claude Code, Codex) |
+| [Starters](starters/) | Clone-and-run kits (Grok, Claude Code, Codex, Opencode) |
+| [Opencode examples](examples/opencode/) | CLI-first loops: cron/systemd + `opencode run`, skills, worktrees |
 | [loop-audit](tools/loop-audit/) | Loop Readiness Score CLI (v1.5 + constraints scoring) — `npx @cobusgreyling/loop-audit . --suggest` · `--badge` for README |
 | [loop-init](tools/loop-init/) | Scaffold starters + budget/run-log + constraints (v1.2) — `npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok` |
 | [loop-cost](tools/loop-cost/) | Token spend estimator — `npx @cobusgreyling/loop-cost` |
@@ -218,6 +219,7 @@ Phased rollout: **L1 report → L2 assisted fixes → L3 unattended** — see [l
 - [Claude Code](examples/claude-code/)
 - [Codex](examples/codex/)
 - [OpenClaw](examples/openclaw/daily-triage.md)
+- [Opencode](examples/opencode/)
 - [GitHub Actions](examples/github-actions/)
 
 ## Operating & Safety

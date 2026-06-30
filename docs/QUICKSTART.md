@@ -70,7 +70,7 @@ No `loop-init --tool openclaw` yet — copy `skills/loop-triage/SKILL.md` and `S
 
 ### Cursor or Windsurf
 
-No `loop-init --tool cursor` yet — copy skills and state from any starter, then map scheduling to editor Automations or Workflows. See the [Cursor & Windsurf appendix](./primitives-matrix.md#appendix-editor-transfer-recipes-cursor--windsurf) in the primitives matrix.
+No `loop-init --tool cursor` yet — copy skills and state from any starter, then map scheduling to editor Automations or Workflows. See the [Opencode, Cursor & Windsurf appendix](./primitives-matrix.md#appendix-editor-transfer-recipes-opencode-cursor--windsurf) in the primitives matrix.
 
 ### GitHub Actions only
 

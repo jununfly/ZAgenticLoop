@@ -8,6 +8,7 @@ Same patterns, different tools. Skills and state schemas are shared; only schedu
 | Claude Code | [claude-code/](./claude-code/) |
 | Codex App | [codex/](./codex/) |
 | OpenClaw | [openclaw/](./openclaw/) |
+| Opencode | [opencode/](./opencode/) |
 | GitHub Actions | [github-actions/](./github-actions/) |
 | MCP connectors | [mcp/](./mcp/) — config example; reference server in [tools/mcp-server/](../tools/mcp-server/) |
 
@@ -15,15 +16,15 @@ Start with [primitives-matrix.md](../docs/primitives-matrix.md) to map capabilit
 
 ## Pattern coverage
 
-| Pattern | Grok | Claude | Codex | OpenClaw | GH Actions |
-|---------|------|--------|-------|----------|------------|
-| Daily Triage | [grok/daily-triage.md](./grok/daily-triage.md) | [claude-code/daily-triage.md](./claude-code/daily-triage.md) | [codex/daily-triage.md](./codex/daily-triage.md) | [openclaw/daily-triage.md](./openclaw/daily-triage.md) | [github-actions/daily-triage.yml](./github-actions/daily-triage.yml) |
-| PR Babysitter | [grok/pr-babysitter.md](./grok/pr-babysitter.md) | [claude-code/pr-babysitter.md](./claude-code/pr-babysitter.md) | [codex/pr-babysitter.md](./codex/pr-babysitter.md) | [github-actions/pr-babysitter.yml](./github-actions/pr-babysitter.yml) |
-| CI Sweeper | [grok/ci-sweeper.md](./grok/ci-sweeper.md) | [claude-code/ci-sweeper.md](./claude-code/ci-sweeper.md) | [codex/ci-sweeper.md](./codex/ci-sweeper.md) | [github-actions/ci-sweeper.yml](./github-actions/ci-sweeper.yml) |
-| Post-Merge Cleanup | [grok/post-merge-cleanup.md](./grok/post-merge-cleanup.md) | [claude-code/post-merge-cleanup.md](./claude-code/post-merge-cleanup.md) | [codex/post-merge-cleanup.md](./codex/post-merge-cleanup.md) | [github-actions/post-merge-cleanup.yml](./github-actions/post-merge-cleanup.yml) |
-| Dependency Sweeper | [grok/dependency-sweeper.md](./grok/dependency-sweeper.md) | [claude-code/dependency-sweeper.md](./claude-code/dependency-sweeper.md) | [codex/dependency-sweeper.md](./codex/dependency-sweeper.md) | [github-actions/dependency-sweeper.yml](./github-actions/dependency-sweeper.yml) |
-| Changelog Drafter | [grok/changelog-drafter.md](./grok/changelog-drafter.md) | [claude-code/changelog-drafter.md](./claude-code/changelog-drafter.md) | [codex/changelog-drafter.md](./codex/changelog-drafter.md) | [github-actions/changelog-drafter.yml](./github-actions/changelog-drafter.yml) |
-| Issue Triage | [grok/issue-triage.md](./grok/issue-triage.md) | [claude-code/issue-triage.md](./claude-code/issue-triage.md) | [codex/issue-triage.md](./codex/issue-triage.md) | [github-actions/issue-triage.yml](./github-actions/issue-triage.yml) |
+| Pattern | Grok | Claude | Codex | OpenClaw | Opencode | GH Actions |
+|---------|------|--------|-------|----------|----------|------------|
+| Daily Triage | [grok/daily-triage.md](./grok/daily-triage.md) | [claude-code/daily-triage.md](./claude-code/daily-triage.md) | [codex/daily-triage.md](./codex/daily-triage.md) | [openclaw/daily-triage.md](./openclaw/daily-triage.md) | [opencode/daily-triage.md](./opencode/daily-triage.md) | [github-actions/daily-triage.yml](./github-actions/daily-triage.yml) |
+| PR Babysitter | [grok/pr-babysitter.md](./grok/pr-babysitter.md) | [claude-code/pr-babysitter.md](./claude-code/pr-babysitter.md) | [codex/pr-babysitter.md](./codex/pr-babysitter.md) | — | [opencode/pr-babysitter.md](./opencode/pr-babysitter.md) | [github-actions/pr-babysitter.yml](./github-actions/pr-babysitter.yml) |
+| CI Sweeper | [grok/ci-sweeper.md](./grok/ci-sweeper.md) | [claude-code/ci-sweeper.md](./claude-code/ci-sweeper.md) | [codex/ci-sweeper.md](./codex/ci-sweeper.md) | — | [opencode/ci-sweeper.md](./opencode/ci-sweeper.md) | [github-actions/ci-sweeper.yml](./github-actions/ci-sweeper.yml) |
+| Post-Merge Cleanup | [grok/post-merge-cleanup.md](./grok/post-merge-cleanup.md) | [claude-code/post-merge-cleanup.md](./claude-code/post-merge-cleanup.md) | [codex/post-merge-cleanup.md](./codex/post-merge-cleanup.md) | — | — | [github-actions/post-merge-cleanup.yml](./github-actions/post-merge-cleanup.yml) |
+| Dependency Sweeper | [grok/dependency-sweeper.md](./grok/dependency-sweeper.md) | [claude-code/dependency-sweeper.md](./claude-code/dependency-sweeper.md) | [codex/dependency-sweeper.md](./codex/dependency-sweeper.md) | — | — | [github-actions/dependency-sweeper.yml](./github-actions/dependency-sweeper.yml) |
+| Changelog Drafter | [grok/changelog-drafter.md](./grok/changelog-drafter.md) | [claude-code/changelog-drafter.md](./claude-code/changelog-drafter.md) | [codex/changelog-drafter.md](./codex/changelog-drafter.md) | — | — | [github-actions/changelog-drafter.yml](./github-actions/changelog-drafter.yml) |
+| Issue Triage | [grok/issue-triage.md](./grok/issue-triage.md) | [claude-code/issue-triage.md](./claude-code/issue-triage.md) | [codex/issue-triage.md](./codex/issue-triage.md) | — | — | [github-actions/issue-triage.yml](./github-actions/issue-triage.yml) |
 
 L2 patterns ship multi-tool skills inside one starter folder — see `starters/<pattern>/`.
 
@@ -35,3 +36,4 @@ L2 patterns ship multi-tool skills inside one starter folder — see `starters/<
 | Claude Code | [starters/minimal-loop-claude](../starters/minimal-loop-claude/) |
 | Codex | [starters/minimal-loop-codex](../starters/minimal-loop-codex/) |
 | OpenClaw | [openclaw/daily-triage.md](./openclaw/daily-triage.md) (manual setup) |
+| Opencode | [starters/minimal-loop-opencode](../starters/minimal-loop-opencode/) |
