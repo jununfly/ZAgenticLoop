@@ -141,12 +141,12 @@
     "1-4-2": {
       "id": "1-4-2",
       "label": "迁移 zj-loop-audit 消费 shared CLI harness",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Migrated zj-loop-audit to shared CLI harness. Preserved output formats, --fix alias for --suggest, and low-score exit code 2. Added spawn-level CLI coverage for help, unknown option fail-fast, JSON output, and --fix suggested actions."
     },
     "1-4-3": {
       "id": "1-4-3",
@@ -161,7 +161,7 @@
   },
   "metadata": {
     "created": "2026-06-30 23:04:08",
-    "updated": "2026-06-30 23:39:34",
+    "updated": "2026-06-30 23:48:40",
     "md_file": "docs/designs/shared-cli-harness-roadmap.md"
   }
 }

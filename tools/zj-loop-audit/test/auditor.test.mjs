@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { auditProject, computeScore } from '../dist/auditor.js';
 import { formatBadge } from '../dist/reporter.js';
+
+const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
 function emptySignals() {
   return {
@@ -184,6 +187,53 @@ test('auditProject: L2 with verifier skill', async () => {
     const result = await auditProject(dir);
     assert.equal(result.level, 'L2');
     assert.ok(result.signals.verifier.present);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+function runCli(args) {
+  return spawnSync(process.execPath, [CLI, ...args], {
+    cwd: new URL('..', import.meta.url),
+    encoding: 'utf8',
+  });
+}
+
+test('cli: --help exits without auditing', () => {
+  const result = runCli(['--help']);
+  assert.equal(result.status, 0);
+  assert.equal(result.stderr, '');
+  assert.match(result.stdout, /zj-loop-audit — Loop Readiness Score CLI/);
+});
+
+test('cli: unknown options fail fast', () => {
+  const result = runCli(['--wat']);
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /Unknown option: --wat/);
+});
+
+test('cli: empty project JSON exits 2 and remains parseable', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-cli-empty-'));
+  try {
+    const result = runCli([dir, '--json']);
+    assert.equal(result.status, 2);
+    assert.equal(result.stderr, '');
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.level, 'L0');
+    assert.ok(report.score < 40);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('cli: --fix remains an alias for --suggest', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-cli-fix-'));
+  try {
+    const result = runCli([dir, '--fix']);
+    assert.equal(result.status, 2);
+    assert.match(result.stdout, /Suggested actions/);
+    assert.match(result.stdout, /zj-loop-init/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

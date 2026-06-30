@@ -1,15 +1,8 @@
 #!/usr/bin/env node
 import { auditProject } from './auditor.js';
 import { formatBadge, formatHuman, formatJson, formatMarkdown } from './reporter.js';
-const args = process.argv.slice(2);
-const target = args.find((a) => !a.startsWith('-')) || '.';
-const json = args.includes('--json');
-const md = args.includes('--md');
-const suggest = args.includes('--suggest') || args.includes('--fix');
-const badge = args.includes('--badge');
-const help = args.includes('--help') || args.includes('-h');
-if (help) {
-    console.log(`zj-loop-audit — Loop Readiness Score CLI (v1.4+)
+import { runCli } from '@jununfly/zj-loop-core';
+const HELP_TEXT = `zj-loop-audit — Loop Readiness Score CLI (v1.4+)
 
 Usage:
   zj-loop-audit [path] [options]
@@ -37,63 +30,79 @@ Examples:
   npx @jununfly/zj-loop-audit . --json
   npx @jununfly/zj-loop-audit starters/minimal-loop --suggest
   bash scripts/before-after-demo.sh
-`);
-    process.exit(0);
-}
-try {
+`;
+async function handleAuditCommand({ io, options }) {
+    const target = typeof options.target === 'string' ? options.target : '.';
+    const json = options.json === true;
+    const md = options.md === true;
+    const suggest = options.suggest === true || options.fix === true;
+    const badge = options.badge === true;
     const result = await auditProject(target);
     if (badge)
-        console.log(formatBadge(result));
+        io.stdout(formatBadge(result));
     else if (json)
-        console.log(formatJson(result));
+        io.stdout(formatJson(result));
     else if (md)
-        console.log(formatMarkdown(result));
+        io.stdout(formatMarkdown(result));
     else
-        console.log(formatHuman(result));
+        io.stdout(formatHuman(result));
     if (suggest) {
-        console.log('\n=== Suggested actions (copy & customize) ===');
-        console.log('From the root of this repo (or after cloning the reference):');
-        console.log('');
-        console.log('  # Minimal L1 daily triage — pick your tool');
-        console.log('  # Grok:');
-        console.log('  cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/skills/');
-        console.log('  # Claude Code:');
-        console.log('  cp -r starters/minimal-loop-claude/.claude/skills/loop-triage .claude/skills/');
-        console.log('  cp starters/minimal-loop-claude/.claude/agents/loop-verifier.md .claude/agents/');
-        console.log('  # Codex:');
-        console.log('  cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/');
-        console.log('  cp starters/minimal-loop-codex/.codex/agents/verifier.toml .codex/agents/');
-        console.log('  # All tools:');
-        console.log('  cp starters/minimal-loop/STATE.md.example STATE.md   # or -claude / -codex variant');
-        console.log('  cp starters/minimal-loop/LOOP.md .');
-        console.log('  cp templates/loop-budget.md.template loop-budget.md');
-        console.log('  cp templates/loop-run-log.md.template loop-run-log.md');
-        console.log('');
-        console.log('  # Maker/checker verifier (Grok / generic skills dir)');
-        console.log('  mkdir -p .grok/skills/loop-verifier');
-        console.log('  cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md');
-        console.log('');
-        console.log('  # Common minimal fix action');
-        console.log('  mkdir -p .grok/skills/minimal-fix');
-        console.log('  cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md');
-        console.log('');
-        console.log('  # For PR babysitter / CI sweeper patterns, copy the corresponding starter');
-        console.log('  # Then run:  zj-loop-audit . --suggest   (again after changes)');
-        console.log('');
-        console.log('  # Or scaffold automatically:');
-        console.log('  npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok');
-        console.log('  npx @jununfly/zj-loop-cost --pattern daily-triage --level L1');
-        console.log('');
-        console.log('  # IMPORTANT (v1.4): After scaffolding, actually RUN a loop (report-only) and commit the updated STATE.md.');
-        console.log('  # This creates the "loopActivity" evidence that pushes you toward real L2/L3 scores.');
-        console.log('');
-        console.log('See docs/loop-design-checklist.md and patterns/ for full guidance.');
+        io.stdout(SUGGEST_TEXT);
     }
-    if (result.score < 40)
-        process.exitCode = 2;
+    return result.score < 40 ? 2 : 0;
 }
-catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('Audit failed:', msg);
-    process.exitCode = 1;
-}
+const SUGGEST_TEXT = `
+=== Suggested actions (copy & customize) ===
+From the root of this repo (or after cloning the reference):
+
+  # Minimal L1 daily triage — pick your tool
+  # Grok:
+  cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/skills/
+  # Claude Code:
+  cp -r starters/minimal-loop-claude/.claude/skills/loop-triage .claude/skills/
+  cp starters/minimal-loop-claude/.claude/agents/loop-verifier.md .claude/agents/
+  # Codex:
+  cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/
+  cp starters/minimal-loop-codex/.codex/agents/verifier.toml .codex/agents/
+  # All tools:
+  cp starters/minimal-loop/STATE.md.example STATE.md   # or -claude / -codex variant
+  cp starters/minimal-loop/LOOP.md .
+  cp templates/loop-budget.md.template loop-budget.md
+  cp templates/loop-run-log.md.template loop-run-log.md
+
+  # Maker/checker verifier (Grok / generic skills dir)
+  mkdir -p .grok/skills/loop-verifier
+  cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md
+
+  # Common minimal fix action
+  mkdir -p .grok/skills/minimal-fix
+  cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md
+
+  # For PR babysitter / CI sweeper patterns, copy the corresponding starter
+  # Then run:  zj-loop-audit . --suggest   (again after changes)
+
+  # Or scaffold automatically:
+  npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+  npx @jununfly/zj-loop-cost --pattern daily-triage --level L1
+
+  # IMPORTANT (v1.4): After scaffolding, actually RUN a loop (report-only) and commit the updated STATE.md.
+  # This creates the "loopActivity" evidence that pushes you toward real L2/L3 scores.
+
+See docs/loop-design-checklist.md and patterns/ for full guidance.`;
+const SPEC = {
+    name: 'zj-loop-audit',
+    usage: 'zj-loop-audit [path] [options]',
+    helpText: HELP_TEXT,
+    options: [
+        { name: 'target', type: 'positional', description: 'Project path', default: '.' },
+        { name: 'json', type: 'boolean', description: 'JSON output' },
+        { name: 'md', type: 'boolean', description: 'Markdown report' },
+        { name: 'suggest', type: 'boolean', description: 'Show copy-from-template commands' },
+        { name: 'fix', type: 'boolean', description: 'Alias for --suggest' },
+        { name: 'badge', type: 'boolean', description: 'Markdown README badge' },
+    ],
+    handler: handleAuditCommand,
+};
+runCli(SPEC).then((exitCode) => {
+    process.exitCode = exitCode;
+});

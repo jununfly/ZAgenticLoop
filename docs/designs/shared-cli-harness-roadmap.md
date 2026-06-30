@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `shared-cli-harness-roadmap.json` | 最后更新: 2026-06-30 23:39:34
+> 数据文件: `shared-cli-harness-roadmap.json` | 最后更新: 2026-06-30 23:48:40
 
 [~][X+] 1. Shared CLI Harness 架构优化
 ├── [x][X+] 1-1. 审计 zj-loop CLI 外壳重复与兼容风险
@@ -9,7 +9,7 @@
 ├── [x][Y+] 1-3. 迁移 zj-loop-cost 消费 shared CLI harness
 ├── [~][X+] 1-4. 评估 sync-audit-init 后续迁移顺序
 │   ├── [x][Y+] 1-4-1. 迁移 zj-loop-sync 消费 shared CLI harness
-│   ├── [ ][Y+] 1-4-2. 迁移 zj-loop-audit 消费 shared CLI harness
+│   ├── [x][Y+] 1-4-2. 迁移 zj-loop-audit 消费 shared CLI harness
 │   └── [ ][Y+] 1-4-3. 迁移 zj-loop-init 消费 shared CLI harness
 └── [ ][Y+] 1-5. 合并设计记录并删除 shared CLI harness roadmap
 
@@ -20,6 +20,6 @@
 
 **当前子树：**
 ├── [x][Y+] 1-4-1. 迁移 zj-loop-sync 消费 shared CLI harness
-├── [ ][Y+] 1-4-2. 迁移 zj-loop-audit 消费 shared CLI harness
+├── [x][Y+] 1-4-2. 迁移 zj-loop-audit 消费 shared CLI harness
 └── [ ][Y+] 1-4-3. 迁移 zj-loop-init 消费 shared CLI harness
 <!-- ROADMAP_SECTION_END -->
