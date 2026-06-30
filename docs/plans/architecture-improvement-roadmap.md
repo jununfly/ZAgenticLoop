@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 19:58:36
+> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 20:05:46
 
 [~][X+] 1. ZAgenticLoop 架构设计与技术选型深化
 ├── [x][X+] 1-1. 绘制当前 Agentic Loop Working 系统地图
@@ -12,7 +12,7 @@
 │   └── [x][Y+] 1-2-4. 按 cost-init-audit-sync-MCP 顺序接入 core
 ├── [ ][Y+] 1-3. 提升 patterns/registry.yaml 为单一事实源
 │   ├── [x][Y+] 1-3-1. 扩展 registry schema 承载 starter-state-budget-command
-│   ├── [~][Y+] 1-3-2. 迁移 init-cost-MCP 的硬编码 pattern 事实
+│   ├── [x][Y+] 1-3-2. 迁移 init-cost-MCP 的硬编码 pattern 事实
 │   └── [ ][Y+] 1-3-3. 补齐 registry 校验与兼容性测试
 ├── [ ][X+] 1-4. 设计 readiness 策略规则引擎
 │   ├── [ ][X+] 1-4-1. 盘点现有 readiness signals 与分数来源
@@ -27,15 +27,16 @@
     ├── [x][Y+] 1-7-1. 规划 audit-init 最小纵切迁移
     └── [x][Y+] 1-7-2. 更新质量门禁与 before-after demo 证据
 
-### 当前施工：1-3-2. 迁移 init-cost-MCP 的硬编码 pattern 事实
+### 当前施工：1-2. 抽取 zj-loop-core 共享领域内核
 
-第 2 刀已完成 zj-loop-init 迁移：registry init 子结构承载 starter/state/budget/templates/firstLoopCommand；zj-loop-init 通过 @jununfly/zj-loop-core loader 读取 registry。MCP 迁移仍待后续。
+首个建议 exploit 区：建立共享领域内核，先承载 registry loading、公共类型、项目证据探测，不在第一步承载 readiness scoring 策略。
 
 **决策：**
-- Q: 第 2 刀迁移范围是什么？ → 第 2 刀迁移 zj-loop-init 的 pattern facts 到 registry：starter/state/budget/templates/firstLoopCommand 由 registry init 子结构承载；CLI 文件复制流程保持在 zj-loop-init。 (保留 audit/sync/MCP 不动，避免第二刀过宽；MCP registry facts 作为 1-3-2-3 后续切片。)
+- Q: zj-loop-core 第一版是否作为独立 workspace package？ → 要。第一版采用独立 workspace package，例如 tools/zj-loop-core / @jununfly/zj-loop-core。 (core 是 audit/init/sync/cost/MCP 的共同依赖，不归属于任一 CLI；独立包可以保持领域语言和事实模型的中立 owner。)
 
 **当前子树：**
-├── [x][Y+] 1-3-2-1. 迁移 zj-loop-cost 消费 core registry loader
-├── [x][Y+] 1-3-2-2. 迁移 zj-loop-init pattern facts 到 registry
-└── [ ][Y+] 1-3-2-3. 迁移 MCP registry facts 到 core API
+├── [x][Y+] 1-2-1. 定义 zj-loop-core 包边界与公共类型
+├── [x][Y+] 1-2-2. 抽取 registry loader 与领域模型
+├── [ ][Y+] 1-2-3. 抽取项目证据探测与文件系统适配器
+└── [x][Y+] 1-2-4. 按 cost-init-audit-sync-MCP 顺序接入 core
 <!-- ROADMAP_SECTION_END -->

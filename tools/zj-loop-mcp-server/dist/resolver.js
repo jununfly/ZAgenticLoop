@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { loadPatternRegistry } from '@jununfly/zj-loop-core';
 const STATE_FILE_CANDIDATES = [
     'STATE.md',
     'pr-babysitter-state.md',
@@ -47,11 +48,9 @@ export async function readFileIfExists(filePath) {
 }
 export async function loadRegistry(root) {
     const registryPath = path.join(root, 'patterns', 'registry.yaml');
-    const content = await readFileIfExists(registryPath);
-    if (!content)
+    if (!(await fileExists(registryPath)))
         return null;
-    const { parse } = await import('yaml');
-    return parse(content);
+    return loadPatternRegistry({ candidates: [registryPath] });
 }
 export async function loadPatternDoc(root, patternId) {
     try {

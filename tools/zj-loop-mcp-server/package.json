@@ -43,8 +43,8 @@
     "access": "public"
   },
   "dependencies": {
+    "@jununfly/zj-loop-core": "file:../zj-loop-core",
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "yaml": "^2.8.0",
     "zod": "^3.25 || ^4.0"
   },
   "devDependencies": {

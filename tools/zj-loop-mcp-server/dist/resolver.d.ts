@@ -1,34 +1,11 @@
+import { type PatternRegistry, type RegistryPattern } from '@jununfly/zj-loop-core';
 /** Reject path segments that could escape the project root. */
 export declare function assertSafeSegment(name: string, label: string): void;
 export declare function fileExists(p: string): Promise<boolean>;
 export declare function resolveProjectRoot(hint?: string): Promise<string>;
 export declare function readFileIfExists(filePath: string): Promise<string | null>;
-export interface PatternInfo {
-    id: string;
-    name: string;
-    file: string;
-    goal: string;
-    cadence: string;
-    risk: string;
-    tools: string[];
-    skills: string[];
-    state: string;
-    phases: string[];
-    human_gates: string[];
-    starter: string;
-    week_one_mode: string;
-    token_cost: string;
-    cost: {
-        tokens_noop: number;
-        tokens_report: number;
-        tokens_action: number;
-        suggested_daily_cap: number;
-        early_exit_required: boolean;
-    };
-}
-export interface RegistryData {
-    patterns: PatternInfo[];
-}
+export type PatternInfo = RegistryPattern;
+export type RegistryData = PatternRegistry;
 export interface SkillInfo {
     name: string;
     path: string;

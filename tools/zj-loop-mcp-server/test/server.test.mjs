@@ -30,7 +30,8 @@ async function setup() {
   await mkdir(path.join(tmpRoot, 'patterns'), { recursive: true });
   await writeFile(
     path.join(tmpRoot, 'patterns', 'registry.yaml'),
-    `patterns:
+    `schemaVersion: 1
+patterns:
   - id: daily-triage
     name: Daily Triage
     file: daily-triage.md
