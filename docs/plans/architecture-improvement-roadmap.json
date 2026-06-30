@@ -570,12 +570,18 @@
     "1-6-4": {
       "id": "1-6-4",
       "label": "迁移 MCP tools 消费 core semantic queries",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": "后续 exploit：MCP tools 调用 core semantic queries，协议层只做 input validation、root/evidence loading、markdown/JSON formatting；保留现有 tool 名称以降低破坏性。"
+      "decisions": [
+        {
+          "q": "第18刀迁移哪些 MCP tools？",
+          "answer": "只迁移 semantic tools：loop_list_patterns、loop_get_pattern、loop_recommend_pattern、loop_estimate_cost；保留现有 tool 名称和 raw/evidence tools 的 resolver 路径。",
+          "note": "第17刀已提供 core P0 semantic queries；第18刀执行 1-6-2-4 的兼容映射，不引入新增 MCP tool。"
+        }
+      ],
+      "notes": "第18刀完成：MCP semantic tools 已消费 core semantic queries：loop_list_patterns -> listPatternSummaries，loop_get_pattern -> getPatternProfile，loop_recommend_pattern -> recommendPatterns，loop_estimate_cost -> estimatePatternCost；保留 tool 名称、raw resources、skills/state evidence tools 的 resolver 路径；新增 MCP stdio 兼容测试覆盖 get_pattern、recommend_pattern、invalid cadence。验收：Gate C core/cost/MCP tests、build:tools、test:tools、validate:registry、audit CLI、before-after demo、git diff --check、roadmap validate。"
     },
     "1-6-5": {
       "id": "1-6-5",
@@ -590,7 +596,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 21:44:53",
+    "updated": "2026-06-30 21:53:25",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

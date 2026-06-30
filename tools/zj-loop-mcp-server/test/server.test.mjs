@@ -381,6 +381,38 @@ test('loop_list_patterns tool returns registry patterns', async () => {
   }
 });
 
+test('loop_get_pattern tool returns metadata and documentation', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'tools/call',
+      params: { name: 'loop_get_pattern', arguments: { patternId: 'daily-triage' } },
+    }]);
+    const text = res.get(1).result.content[0].text;
+    assert.ok(text.includes('Registry Metadata'));
+    assert.ok(text.includes('Pattern Documentation'));
+    assert.ok(text.includes('# Daily Triage'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('loop_recommend_pattern tool returns ranked recommendations', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'tools/call',
+      params: { name: 'loop_recommend_pattern', arguments: { useCase: 'daily triage scan' } },
+    }]);
+    const text = res.get(1).result.content[0].text;
+    assert.ok(text.includes('Recommended Patterns'));
+    assert.ok(text.includes('Daily Triage'));
+    assert.ok(text.includes('match.name'));
+  } finally {
+    await cleanup();
+  }
+});
+
 test('loop_estimate_cost tool computes a cost table', async () => {
   const root = await setup();
   try {
@@ -391,6 +423,20 @@ test('loop_estimate_cost tool computes a cost table', async () => {
     const text = res.get(1).result.content[0].text;
     assert.ok(text.includes('Cost Estimate'));
     assert.ok(text.includes('runs/day'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('loop_estimate_cost tool returns content for invalid cadence', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'tools/call',
+      params: { name: 'loop_estimate_cost', arguments: { patternId: 'daily-triage', level: 'L2', cadence: 'soon' } },
+    }]);
+    const text = res.get(1).result.content[0].text;
+    assert.ok(text.includes('Invalid cadence'));
   } finally {
     await cleanup();
   }
