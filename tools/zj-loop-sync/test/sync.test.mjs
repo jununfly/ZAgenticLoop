@@ -80,6 +80,14 @@ describe('runSync', () => {
     const report = await runSync({ targetDir: testDir, ...baseOpts });
     assert.ok(report.suggestions.length > 0);
   });
+
+  test('detects empty skills directory through project evidence filesystem', async () => {
+    await mkdir(path.join(testDir, 'skills'), { recursive: true });
+
+    const report = await runSync({ targetDir: testDir, ...baseOpts });
+
+    assert.ok(report.suggestions.includes('No skills found. Run zj-loop-init to scaffold skills.'));
+  });
 });
 
 describe('formatReport', () => {

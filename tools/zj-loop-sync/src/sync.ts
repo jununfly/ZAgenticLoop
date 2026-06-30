@@ -8,9 +8,11 @@
  * 4. Configuration drift from starters
  */
 
-import { readFile, writeFile, access, mkdir } from 'node:fs/promises';
-import { readdir, stat } from 'node:fs/promises';
-import path from 'node:path';
+import {
+  createNodeProjectFileSystem,
+  hasAnyProjectPath,
+  type ProjectFileSystem,
+} from '@jununfly/zj-loop-core';
 
 export interface DriftReport {
   score: number;           // 0-100 consistency score
@@ -37,28 +39,7 @@ export interface SyncOptions {
   json?: boolean;
 }
 
-/**
- * Check if a file exists
- */
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Read file content
- */
-async function readFileContent(filePath: string): Promise<string | null> {
-  try {
-    return await readFile(filePath, 'utf8');
-  } catch {
-    return null;
-  }
-}
+const SYNC_SKILL_DIRS = ['skills', '.grok/skills', '.claude/skills', '.codex/skills'] as const;
 
 /**
  * Extract frontmatter from markdown files
@@ -158,36 +139,19 @@ function compareMarkdownFiles(
 /**
  * Scan skills directory for version information
  */
-async function scanSkillsDirectory(targetDir: string): Promise<Map<string, string>> {
+async function scanSkillsDirectory(fs: ProjectFileSystem): Promise<Map<string, string>> {
   const skillsVersions = new Map<string, string>();
-  const skillDirs = [
-    path.join(targetDir, 'skills'),
-    path.join(targetDir, '.grok', 'skills'),
-    path.join(targetDir, '.claude', 'skills'),
-    path.join(targetDir, '.codex', 'skills'),
-  ];
 
-  for (const skillsDir of skillDirs) {
-    if (!await fileExists(skillsDir)) continue;
+  for (const skillsDir of SYNC_SKILL_DIRS) {
+    const entries = await fs.listEntries(skillsDir);
+    for (const entry of entries) {
+      if (entry.kind !== 'directory') continue;
+      const content = await fs.readTextIfExists(`${skillsDir}/${entry.name}/SKILL.md`);
 
-    try {
-      const entries = await readdir(skillsDir);
-      for (const entry of entries) {
-        const skillPath = path.join(skillsDir, entry);
-        const statResult = await stat(skillPath);
-
-        if (statResult.isDirectory()) {
-          const skillMd = path.join(skillPath, 'SKILL.md');
-          const content = await readFileContent(skillMd);
-
-          if (content) {
-            const { frontmatter } = extractFrontmatter(content);
-            skillsVersions.set(entry, frontmatter.version || 'unknown');
-          }
-        }
+      if (content) {
+        const { frontmatter } = extractFrontmatter(content);
+        skillsVersions.set(entry.name, frontmatter.version || 'unknown');
       }
-    } catch {
-      // Ignore unreadable dirs
     }
   }
 
@@ -199,6 +163,7 @@ async function scanSkillsDirectory(targetDir: string): Promise<Map<string, strin
  */
 export async function runSync(options: SyncOptions): Promise<DriftReport> {
   const { targetDir, autoFix, dryRun, verbose } = options;
+  const fs = createNodeProjectFileSystem(targetDir);
   const issues: DriftIssue[] = [];
   const suggestions: string[] = [];
   
@@ -211,8 +176,7 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
   
   // Check for missing required files
   for (const file of requiredFiles) {
-    const filePath = path.join(targetDir, file);
-    if (!await fileExists(filePath)) {
+    if (!await fs.exists(file)) {
       issues.push({
         type: 'missing',
         file,
@@ -224,12 +188,9 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
   }
   
   // Check STATE.md ↔ LOOP.md consistency
-  const statePath = path.join(targetDir, 'STATE.md');
-  const loopPath = path.join(targetDir, 'LOOP.md');
-  
-  if (await fileExists(statePath) && await fileExists(loopPath)) {
-    const stateContent = await readFileContent(statePath);
-    const loopContent = await readFileContent(loopPath);
+  if (await fs.exists('STATE.md') && await fs.exists('LOOP.md')) {
+    const stateContent = await fs.readTextIfExists('STATE.md');
+    const loopContent = await fs.readTextIfExists('LOOP.md');
     
     if (stateContent && loopContent) {
       // Extract patterns from LOOP.md
@@ -276,12 +237,9 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
   }
   
   // Scan skills for version information
-  const skillsVersions = await scanSkillsDirectory(targetDir);
+  const skillsVersions = await scanSkillsDirectory(fs);
   
-  const hasSkillsDir = await fileExists(path.join(targetDir, 'skills'))
-    || await fileExists(path.join(targetDir, '.grok', 'skills'))
-    || await fileExists(path.join(targetDir, '.claude', 'skills'))
-    || await fileExists(path.join(targetDir, '.codex', 'skills'));
+  const hasSkillsDir = await hasAnyProjectPath(fs, SYNC_SKILL_DIRS);
 
   if (skillsVersions.size === 0 && hasSkillsDir) {
     suggestions.push('No skills found. Run zj-loop-init to scaffold skills.');

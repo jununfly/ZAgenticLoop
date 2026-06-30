@@ -1,0 +1,91 @@
+{
+  "title": "Sync Evidence 边界收拢架构优化",
+  "description": "继续架构优化：将 zj-loop-sync 的项目文件访问迁移到 @jununfly/zj-loop-core ProjectFileSystem，保持 drift 判断和报告格式仍由 sync 包拥有。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Sync Evidence 边界收拢架构优化",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4"
+      ],
+      "decisions": [
+        {
+          "q": "下一段架构优化聚焦哪里？",
+          "answer": "聚焦 zj-loop-sync 的项目 evidence 访问边界，迁移到 @jununfly/zj-loop-core ProjectFileSystem。",
+          "note": "代码事实显示 sync 已经依赖 core 和共享 CLI harness，但 sync.ts 仍直接导入 fs/promises 并实现 fileExists/readFileContent/readdir/stat。架构文档规定 core 拥有 project evidence primitives，product tool 拥有 report formatting 和 side effects；这一刀能收窄边界且风险小。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "审计 zj-loop-sync 项目文件访问边界",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "zj-loop-sync 哪些项目文件访问应迁到 core evidence primitive？",
+          "answer": "STATE/LOOP/AGENTS 存在检查、STATE/LOOP 文本读取、skills 目录枚举和 SKILL.md 读取应通过 ProjectFileSystem；drift 判断和 report formatting 留在 sync。",
+          "note": "sync.ts 当前直接使用 access/readFile/readdir/stat，并把 targetDir 拼进每个文件路径。core 已提供 createNodeProjectFileSystem、exists、readTextIfExists、listEntries、hasAnyProjectPath，可覆盖本刀访问需求。"
+        }
+      ],
+      "notes": "Audited sync file access. Project-root file IO can move behind ProjectFileSystem while drift policy and reporting stay package-local."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "设计 sync evidence adapter 最小迁移契约",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "sync evidence adapter 是否需要新 public API？",
+          "answer": "不需要；保持 runSync(options) API 不变，在函数内部创建 ProjectFileSystem，并让 package-local helper 接收 ProjectFileSystem。",
+          "note": "这能把项目文件访问收拢到 core，同时避免让 sync 暴露新的测试/注入 API。后续若多个 sync-like 工具需要内存 FS，再评估显式注入。"
+        }
+      ],
+      "notes": "Minimal contract: runSync keeps its public options shape; it creates a core ProjectFileSystem for targetDir and passes it to internal helpers."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "实现 sync ProjectFileSystem tracer bullet",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "tracer bullet 如何保持 sync 行为兼容？",
+          "answer": "只替换项目文件访问层，不改变 runSync(options)、DriftReport、评分规则、issue 文案或 CLI exit code。",
+          "note": "sync.ts 现在通过 createNodeProjectFileSystem(targetDir) 访问项目相对路径；scanSkillsDirectory 接收 ProjectFileSystem。新增测试覆盖空 skills 目录建议，现有 CLI JSON/help/exit tests 保持通过。"
+        }
+      ],
+      "notes": "Implemented ProjectFileSystem tracer bullet in zj-loop-sync. Removed package-local fs existence/read/list helpers from sync.ts and added behavior coverage for empty skills directories."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "合并设计记录并删除 sync evidence roadmap",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-01 00:46:33",
+    "updated": "2026-07-01 00:50:55",
+    "md_file": "docs/designs/sync-evidence-roadmap.md"
+  }
+}
