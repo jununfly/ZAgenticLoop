@@ -47,6 +47,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@jununfly/zj-loop-core": "file:../zj-loop-core",
     "yaml": "^2.8.0"
   },
   "devDependencies": {

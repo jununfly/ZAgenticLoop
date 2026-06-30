@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import yaml from 'yaml';
+import { loadPatternRegistry } from '@jununfly/zj-loop-core';
 import { assertValidLevel, estimateCost, formatEstimateHuman, } from './estimator.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
@@ -32,25 +31,6 @@ function parseArgs(argv) {
     }
     return { help: false, pattern, cadence, level, conservative, json, list };
 }
-async function loadRegistry() {
-    const candidates = [
-        path.join(PACKAGE_ROOT, 'registry.json'),
-        path.resolve(PACKAGE_ROOT, '../../patterns/registry.yaml'),
-    ];
-    for (const p of candidates) {
-        try {
-            await access(p);
-            const raw = await readFile(p, 'utf8');
-            if (p.endsWith('.json'))
-                return JSON.parse(raw);
-            return yaml.parse(raw);
-        }
-        catch {
-            /* try next */
-        }
-    }
-    throw new Error('Pattern registry not found. Run from zagenticloop repo or install @jununfly/zj-loop-cost.');
-}
 async function main() {
     const args = parseArgs(process.argv.slice(2));
     if (args.help) {
@@ -75,7 +55,12 @@ Examples:
 `);
         process.exit(0);
     }
-    const registry = await loadRegistry();
+    const registry = await loadPatternRegistry({
+        candidates: [
+            path.join(PACKAGE_ROOT, 'registry.json'),
+            path.resolve(PACKAGE_ROOT, '../../patterns/registry.yaml'),
+        ],
+    });
     if (args.list) {
         for (const p of registry.patterns) {
             console.log(`${p.id}\t${p.token_cost}\t${p.cadence}`);

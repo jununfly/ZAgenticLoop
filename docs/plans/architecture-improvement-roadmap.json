@@ -171,7 +171,7 @@
     "1-2-2": {
       "id": "1-2-2",
       "label": "抽取 registry loader 与领域模型",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
@@ -190,14 +190,19 @@
           "q": "registry loader/domain model 与 registry schema 是否作为同一实现切片完成？",
           "answer": "要一起完成。1-2-2 和 1-3-1 作为同一个 tracer bullet：registry 增字段、core loader 校验、至少 zj-loop-cost 消费一小块。",
           "note": "schema 没有 loader 校验会退化成文档式约定；loader 没有 schema 扩展没有真实价值；用 cost 作为低风险消费者验证切片端到端成立。"
+        },
+        {
+          "q": "第 1 刀是否开始施工？",
+          "answer": "开始。第 1 刀只实现 core registry loader、registry schemaVersion=1/schema 字段扩展、zj-loop-cost 最小消费；不迁移 zj-loop-init。",
+          "note": "这是已确认 tracer bullet 的执行阶段，范围保持窄：一个共享 package、一个 registry 数据源、一个低风险只读消费者。"
         }
       ],
-      "notes": "registry loader/domain model 与 registry schema 作为同一 tracer bullet：registry 增字段，core loader 使用 zod 校验 schemaVersion=1 并输出稳定领域类型，zj-loop-cost 最小消费 budget/cost 字段。"
+      "notes": "第 1 刀已完成：新增 tools/zj-loop-core / @jununfly/zj-loop-core，提供 zod 校验的 schemaVersion=1 registry loader 与领域类型；zj-loop-cost 通过 core loader 读取 registry。"
     },
     "1-2-3": {
       "id": "1-2-3",
       "label": "抽取项目证据探测与文件系统适配器",
-      "status": "completed",
+      "status": "pending",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
@@ -208,7 +213,7 @@
           "note": "core 保持中立的证据层；audit 继续负责 policy/scoring。未来 readiness rule engine 可以消费同一 evidence，但不会把规则污染进 core。"
         }
       ],
-      "notes": "project evidence detection 边界已确认：core 只产出事实 evidence，不产出 readiness score、level 或 assessment；scoring 留在 zj-loop-audit/未来 rule engine。"
+      "notes": "边界已确认但尚未实现：core 未来只产出事实 evidence，不产出 readiness score、level 或 assessment；第 1 刀未包含 evidence detection 实现。"
     },
     "1-2-4": {
       "id": "1-2-4",
@@ -229,7 +234,7 @@
     "1-3-1": {
       "id": "1-3-1",
       "label": "扩展 registry schema 承载 starter-state-budget-command",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
@@ -245,17 +250,17 @@
           "note": "这是第一阶段的 tracer bullet，用最小消费者证明 registry 单一事实源不是只停在数据结构设计。"
         }
       ],
-      "notes": "registry schema 第一版与 core loader 同切片完成：根层 schemaVersion: 1；pattern 根层放稳定领域事实；tools.* 子结构放工具差异；core loader fail-fast；zj-loop-cost 最小消费。"
+      "notes": "第 1 刀已完成：patterns/registry.yaml 与 registry.schema.json 增加 schemaVersion: 1；zj-loop-cost bundled registry.json 同步；core loader 对版本和 cost 字段 fail-fast 校验。"
     },
     "1-3-2": {
       "id": "1-3-2",
       "label": "迁移 init-cost-MCP 的硬编码 pattern 事实",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "第 1 刀已迁移 zj-loop-cost 消费 core registry loader；zj-loop-init 与 MCP 的硬编码 pattern 事实迁移仍待后续切片。"
     },
     "1-3-3": {
       "id": "1-3-3",
@@ -362,7 +367,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 19:27:30",
+    "updated": "2026-06-30 19:41:48",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

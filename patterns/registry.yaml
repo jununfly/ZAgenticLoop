@@ -1,6 +1,8 @@
 # Machine-readable pattern registry for zagenticloop
 # Used by zj-loop-audit, zj-loop-cost, docs site, and tooling.
 
+schemaVersion: 1
+
 patterns:
   - id: pr-babysitter
     name: PR Babysitter

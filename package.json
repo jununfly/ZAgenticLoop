@@ -5,12 +5,13 @@
   "scripts": {
     "validate:registry": "node scripts/validate-registry.mjs",
     "check:zj-loop-init": "node scripts/check-zj-loop-init-sync.mjs",
+    "test:zj-loop-core": "cd tools/zj-loop-core && npm test",
     "test:zj-loop-audit": "cd tools/zj-loop-audit && npm test",
     "test:zj-loop-init": "cd tools/zj-loop-init && npm test",
     "test:zj-loop-cost": "cd tools/zj-loop-cost && npm test",
     "test:zj-loop-sync": "cd tools/zj-loop-sync && npm test",
-    "test:tools": "npm run test:zj-loop-audit && npm run test:zj-loop-init && npm run test:zj-loop-cost && npm run test:zj-loop-sync && npm run test:zj-loop-mcp-server",
-    "build:tools": "cd tools/zj-loop-audit && npm run build && cd ../zj-loop-init && npm run build && cd ../zj-loop-cost && npm run build && cd ../zj-loop-sync && npm run build && cd ../zj-loop-mcp-server && npm run build",
+    "test:tools": "npm run test:zj-loop-core && npm run test:zj-loop-audit && npm run test:zj-loop-init && npm run test:zj-loop-cost && npm run test:zj-loop-sync && npm run test:zj-loop-mcp-server",
+    "build:tools": "cd tools/zj-loop-core && npm run build && cd ../zj-loop-audit && npm run build && cd ../zj-loop-init && npm run build && cd ../zj-loop-cost && npm run build && cd ../zj-loop-sync && npm run build && cd ../zj-loop-mcp-server && npm run build",
     "test:zj-loop-mcp-server": "cd tools/zj-loop-mcp-server && npm test"
   },
   "devDependencies": {

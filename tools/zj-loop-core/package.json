@@ -1,0 +1,54 @@
+{
+  "name": "@jununfly/zj-loop-core",
+  "version": "0.1.0",
+  "description": "Shared Agentic Loop Working domain models and registry loading utilities.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test test/registry.test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "zagenticloop",
+    "agentic-loop-working",
+    "registry",
+    "coding-agents"
+  ],
+  "author": "Jununfly",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jununfly/ZAgenticLoop.git",
+    "directory": "tools/zj-loop-core"
+  },
+  "homepage": "https://jununfly.github.io/ZAgenticLoop/",
+  "bugs": {
+    "url": "https://github.com/jununfly/ZAgenticLoop/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "yaml": "^2.8.0",
+    "zod": "^3.25 || ^4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

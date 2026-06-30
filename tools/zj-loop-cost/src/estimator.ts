@@ -1,3 +1,5 @@
+import type { PatternCost, RegistryPattern } from '@jununfly/zj-loop-core';
+
 export type ReadinessLevel = 'L1' | 'L2' | 'L3';
 
 export const VALID_READINESS_LEVELS: ReadinessLevel[] = ['L1', 'L2', 'L3'];
@@ -8,25 +10,7 @@ export function assertValidLevel(level: string): asserts level is ReadinessLevel
   }
 }
 
-export interface PatternCost {
-  tokens_noop: number;
-  tokens_report: number;
-  tokens_action: number;
-  suggested_daily_cap: number;
-  early_exit_required: boolean;
-}
-
-export interface RegistryPattern {
-  id: string;
-  name: string;
-  cadence: string;
-  token_cost: string;
-  cost: PatternCost;
-}
-
-export interface RegistryDoc {
-  patterns: RegistryPattern[];
-}
+export type { PatternCost, RegistryPattern };
 
 export interface EstimateInput {
   pattern: RegistryPattern;
