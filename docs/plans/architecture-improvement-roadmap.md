@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 21:33:05
+> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 21:44:53
 
 [~][X+] 1. ZAgenticLoop 架构设计与技术选型深化
 ├── [x][X+] 1-1. 绘制当前 Agentic Loop Working 系统地图
@@ -23,7 +23,7 @@
 ├── [ ][X+] 1-6. 升级 MCP 为 Agentic Loop Working 语义 API
 │   ├── [x][X+] 1-6-1. 审计 MCP resources-tools 的语义边界
 │   ├── [x][X+] 1-6-2. 设计基于 core 的语义查询 API
-│   ├── [ ][Y+] 1-6-3. 实现 core semantic query module
+│   ├── [x][Y+] 1-6-3. 实现 core semantic query module
 │   ├── [ ][Y+] 1-6-4. 迁移 MCP tools 消费 core semantic queries
 │   └── [ ][Y+] 1-6-5. 补齐 MCP 语义 API 文档与兼容性测试
 └── [x][Y+] 1-7. 制定验证与迁移切片

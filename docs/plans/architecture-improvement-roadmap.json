@@ -554,12 +554,18 @@
     "1-6-3": {
       "id": "1-6-3",
       "label": "实现 core semantic query module",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": "后续 exploit：在 @jununfly/zj-loop-core 中新增 semantic query module，优先迁入 cost estimator 与 pattern summary/recommendation 逻辑，保持 CLI/MCP 可共享。"
+      "decisions": [
+        {
+          "q": "第17刀实现范围是什么？",
+          "answer": "实现 @jununfly/zj-loop-core 的 P0 registry-only semantic query module，并让 zj-loop-cost 消费 core canonical cost estimator；不迁移 MCP、不移动 readiness scoring。",
+          "note": "这对应 Gate B：先保护 core semantic contract 与 cost parity，再进入 1-6-4 MCP adapter migration。"
+        }
+      ],
+      "notes": "第17刀完成：在 @jununfly/zj-loop-core 新增 semantic query module，提供 listPatternSummaries、getPatternProfile、recommendPatterns、estimatePatternCost、listRequiredSkills 与 canonical cost estimator；新增 semantic contract tests；zj-loop-cost estimator 改为复用 core cost policy 并保留 formatter。暂不迁移 MCP/readiness。验收：Gate B core npm test + test:zj-loop-cost；build:tools、test:tools、validate:registry、audit CLI、before-after demo、git diff --check、roadmap validate。"
     },
     "1-6-4": {
       "id": "1-6-4",
@@ -584,7 +590,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 21:33:05",
+    "updated": "2026-06-30 21:44:53",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }
