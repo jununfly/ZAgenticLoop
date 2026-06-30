@@ -199,7 +199,9 @@ Product tools still own the product contract:
 - `zj-loop-cost` owns human and JSON cost output, and preserves `--list` as
   tab-separated output.
 - `zj-loop-sync` owns drift report formatting and level-to-exit-code mapping;
-  `--json` emits the already-declared JSON report.
+  `--json` emits the already-declared JSON report. It consumes core
+  `ProjectFileSystem` primitives for project-relative evidence access instead
+  of owning raw filesystem helpers.
 - `zj-loop-audit` owns readiness scoring, suggestions, badge/markdown/json
   output, and the low-score exit code `2`.
 - `zj-loop-init` owns scaffold file writes, dry-run progress output, dynamic
@@ -277,6 +279,9 @@ The architecture-improvement roadmap produced these durable outcomes:
 - `zj-loop-cost`, `zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` now share
   the core single-command CLI harness while preserving their product-specific
   output and side effects.
+- `zj-loop-sync` now uses the core project filesystem primitives for
+  project-relative existence, read, and directory evidence while keeping drift
+  policy and reporting package-local.
 - `zj-loop-audit` readiness score, level gates, assessment bands, findings, and
   recommendations now live in the package-owned `readiness.v1.yaml` policy and
   are evaluated by a local rule engine over collected evidence.
