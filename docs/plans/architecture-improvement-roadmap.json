@@ -110,7 +110,7 @@
     "1-5": {
       "id": "1-5",
       "label": "统一 zj-loop CLI 产品族外壳",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -344,12 +344,18 @@
     "1-5-2": {
       "id": "1-5-2",
       "label": "设计共享 CLI harness 的最小 API",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "第9刀是否实现共享 CLI harness？",
+          "answer": "不实现。第9刀只设计共享 CLI harness 的最小 API、包边界、类型模型、解析/帮助/错误/退出码语义、测试契约和迁移顺序；运行时代码迁移留给后续 exploit 切片。",
+          "note": "1-5-2 是 explore 节点，先把 CLI harness 作为产品外壳协议定清楚，避免过早把它塞进 core 或重写现有 CLI。"
+        }
+      ],
+      "notes": "第9刀完成：新增 docs/cli-harness-api-draft.md，设计共享 CLI harness 最小 API，包括 package boundary、defineCli/CliSpec 类型、option/positional parsing rules、help renderer、exit semantics、error presentation、zj-loop-cost 首迁形状、迁移顺序与测试契约。本刀不实现运行时代码。验收：validate:registry、build:tools、test:tools、audit CLI、before-after demo、git diff --check。"
     },
     "1-6-1": {
       "id": "1-6-1",
@@ -442,7 +448,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 20:45:46",
+    "updated": "2026-06-30 20:53:40",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

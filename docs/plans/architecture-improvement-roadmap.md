@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 20:45:46
+> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 20:53:40
 
 [~][X+] 1. ZAgenticLoop 架构设计与技术选型深化
 ├── [x][X+] 1-1. 绘制当前 Agentic Loop Working 系统地图
@@ -17,9 +17,9 @@
 ├── [x][X+] 1-4. 设计 readiness 策略规则引擎
 │   ├── [x][X+] 1-4-1. 盘点现有 readiness signals 与分数来源
 │   └── [x][X+] 1-4-2. 设计声明式 readiness rule schema 草案
-├── [ ][X+] 1-5. 统一 zj-loop CLI 产品族外壳
+├── [x][X+] 1-5. 统一 zj-loop CLI 产品族外壳
 │   ├── [x][X+] 1-5-1. 盘点 zj-loop CLI 参数与输出体验重复
-│   └── [ ][X+] 1-5-2. 设计共享 CLI harness 的最小 API
+│   └── [x][X+] 1-5-2. 设计共享 CLI harness 的最小 API
 ├── [ ][X+] 1-6. 升级 MCP 为 Agentic Loop Working 语义 API
 │   ├── [ ][X+] 1-6-1. 审计 MCP resources-tools 的语义边界
 │   └── [ ][X+] 1-6-2. 设计基于 core 的语义查询 API
@@ -42,7 +42,7 @@
 │   ... 3 more child nodes; run tree 1-3 --depth 2 for full view
 ├── [x][X+] 1-4. 设计 readiness 策略规则引擎
 │   ... 2 more child nodes; run tree 1-4 --depth 2 for full view
-├── [ ][X+] 1-5. 统一 zj-loop CLI 产品族外壳
+├── [x][X+] 1-5. 统一 zj-loop CLI 产品族外壳
 │   ... 2 more child nodes; run tree 1-5 --depth 2 for full view
 ├── [ ][X+] 1-6. 升级 MCP 为 Agentic Loop Working 语义 API
 │   ... 2 more child nodes; run tree 1-6 --depth 2 for full view
