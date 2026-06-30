@@ -128,13 +128,21 @@
       "parent": "1",
       "children": [
         "1-6-1",
-        "1-6-2"
+        "1-6-2",
+        "1-6-3",
+        "1-6-4",
+        "1-6-5"
       ],
       "decisions": [
         {
           "q": "MCP server 是否现在重构为语义 API？",
           "answer": "先 explore 语义边界，不直接重构。",
           "note": "MCP 应消费 core/registry 的稳定概念；否则只是把当前文件读取能力改写成另一层硬编码。"
+        },
+        {
+          "q": "MCP 语义 API 的架构方向是什么？",
+          "answer": "语义能力优先归属 @jununfly/zj-loop-core，MCP server 只做 read-only protocol adapter；raw resources 保留为可审计逃生通道。",
+          "note": "这样避免 recommend/cost/readiness/context pack 逻辑在 MCP、CLI、docs 之间重复。"
         }
       ],
       "notes": ""
@@ -376,12 +384,24 @@
     "1-6-2": {
       "id": "1-6-2",
       "label": "设计基于 core 的语义查询 API",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "explore",
       "parent": "1-6",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-6-2-1",
+        "1-6-2-2",
+        "1-6-2-3",
+        "1-6-2-4",
+        "1-6-2-5"
+      ],
+      "decisions": [
+        {
+          "q": "第11刀是否直接实现 core semantic query API？",
+          "answer": "否。本刀继续拓展 roadmap：把 1-6-2 拆成 query universe、result contracts、core/evidence 边界、MCP adapter mapping、verification plan；实现留到后续 exploit 节点。",
+          "note": "用户明确说还是拓展 roadmap；本刀保持 explore，不写运行时代码。"
+        }
+      ],
+      "notes": "第11刀施工中：拓展 core semantic query API 设计 roadmap，不实现运行时代码。"
     },
     "1-7-1": {
       "id": "1-7-1",
@@ -450,11 +470,103 @@
         }
       ],
       "notes": "第3刀完成：zj-loop-mcp-server/resolver 通过 @jununfly/zj-loop-core loadPatternRegistry 加载 patterns/registry.yaml，复用 RegistryPattern/PatternRegistry 类型；server fixture 补 schemaVersion: 1；package 依赖从 yaml 转为 core。验收：MCP npm test、validate:registry、build:tools、test:tools、audit CLI、before-after demo、git diff --check。"
+    },
+    "1-6-2-1": {
+      "id": "1-6-2-1",
+      "label": "定义 Agentic Loop Working 语义查询问题宇宙",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-6-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "语义查询问题宇宙应该按 MCP tool surface 还是按 loop working 问题建模？",
+          "answer": "按 loop working 问题建模。MCP tool surface 只是适配层，不能反向定义 core semantic API。",
+          "note": "这样 API 能同时服务 MCP、CLI、docs 与未来 agent workflows。"
+        }
+      ],
+      "notes": "第12刀完成：新增 docs/core-semantic-query-universe.md，按 Agentic Loop Working 问题而非 MCP tool surface 定义语义查询宇宙；分为 pattern discovery、selection、cost/cadence、readiness、human gates/safety、state/run evidence、context pack planning；明确 P0 first cut 为 listPatternSummaries、getPatternProfile、recommendPatterns、estimatePatternCost、listRequiredSkills，优先 registry-only，readiness scoring 后移。"
+    },
+    "1-6-2-2": {
+      "id": "1-6-2-2",
+      "label": "设计 transport-neutral 语义查询结果契约",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-6-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "transport-neutral result contract 应该返回 markdown 还是结构化数据？",
+          "answer": "返回结构化数据优先，包含 machine-readable reasons、warnings、sources、confidence；MCP/CLI 再负责把它格式化为 markdown/text。",
+          "note": "当前 MCP 和 cost CLI 都有文本输出压力，但 core API 要服务多 transport，不能把 presentation 固化进领域契约。"
+        }
+      ],
+      "notes": "第13刀完成：新增 docs/core-semantic-query-contracts.md，设计 P0 semantic query 的 transport-neutral TypeScript request/result contracts；定义 shared meta/source/reason/warning primitives、PatternSummary/Profile/Recommendation/CostEstimate/RequiredSkills 契约、typed domain errors、formatter boundary、当前 MCP/CLI 兼容映射与契约测试形状。"
+    },
+    "1-6-2-3": {
+      "id": "1-6-2-3",
+      "label": "划分 core semantics 与 project evidence 边界",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6-2",
+      "children": [],
+      "decisions": [],
+      "notes": "产出：明确 core 可以拥有 registry facts、cost policy、recommendation policy、readiness query orchestration；project evidence collection 保持 adapter 化，MCP 只负责 root resolution 与 protocol formatting。"
+    },
+    "1-6-2-4": {
+      "id": "1-6-2-4",
+      "label": "规划 MCP tools 到 core semantic queries 的适配映射",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6-2",
+      "children": [],
+      "decisions": [],
+      "notes": "产出：给出现有 loop_list_patterns、loop_get_pattern、loop_recommend_pattern、loop_estimate_cost 等 tools 到 core query 的映射表，并标出保持兼容的输出策略。"
+    },
+    "1-6-2-5": {
+      "id": "1-6-2-5",
+      "label": "定义语义查询 API 的契约测试与迁移门禁",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6-2",
+      "children": [],
+      "decisions": [],
+      "notes": "产出：定义 core query contract tests、MCP stdio compatibility tests、fixture strategy，以及迁移门禁：build:tools、test:tools、MCP tests、audit CLI、before-after demo。"
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "实现 core semantic query module",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "后续 exploit：在 @jununfly/zj-loop-core 中新增 semantic query module，优先迁入 cost estimator 与 pattern summary/recommendation 逻辑，保持 CLI/MCP 可共享。"
+    },
+    "1-6-4": {
+      "id": "1-6-4",
+      "label": "迁移 MCP tools 消费 core semantic queries",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "后续 exploit：MCP tools 调用 core semantic queries，协议层只做 input validation、root/evidence loading、markdown/JSON formatting；保留现有 tool 名称以降低破坏性。"
+    },
+    "1-6-5": {
+      "id": "1-6-5",
+      "label": "补齐 MCP 语义 API 文档与兼容性测试",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "后续 exploit：更新 tools/zj-loop-mcp-server/README.md、examples/mcp、server.test.mjs，证明 raw resources 兼容且 semantic tools 输出稳定。"
     }
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 21:01:43",
+    "updated": "2026-06-30 21:16:51",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }
