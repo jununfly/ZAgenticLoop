@@ -6,6 +6,7 @@ import path from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { auditProject, computeScore } from '../dist/auditor.js';
+import { evaluateReadinessPolicy, parseReadinessPolicy } from '../dist/readiness-rules.js';
 import { formatBadge } from '../dist/reporter.js';
 
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
@@ -109,6 +110,36 @@ test('computeScore: high structure without activity caps at L2', () => {
   s.cost = { budgetDoc: true, runLog: true, loopMdBudget: true, budgetSkill: true };
   const { level } = computeScore(s);
   assert.equal(level, 'L2');
+});
+
+test('readiness rules: evaluates custom score, predicates, gates, and assessment bands', () => {
+  const policy = parseReadinessPolicy(`
+schemaVersion: 1
+score:
+  base: 1
+  contributions:
+    - id: state
+      when: stateFile.present
+      points: 10
+predicates:
+  missingActivity:
+    not: loopActivity.present
+levels:
+  - level: L1
+    threshold: 10
+    when: stateFile.present
+  - level: L0
+    threshold: 0
+assessments:
+  - when:
+      all:
+        - scoreGte: 10
+        - predicate: missingActivity
+    message: Custom no activity
+  - message: Custom default
+`);
+  const result = evaluateReadinessPolicy({ ...emptySignals(), stateFile: { present: true, paths: ['STATE.md'] } }, policy);
+  assert.deepEqual(result, { score: 11, level: 'L1', assessment: 'Custom no activity' });
 });
 
 test('auditProject: empty directory scores low', async () => {

@@ -7,6 +7,7 @@ import {
   listProjectSkillNames,
   type ProjectFileSystem,
 } from '@jununfly/zj-loop-core';
+import { evaluateReadinessPolicy } from './readiness-rules.js';
 
 export interface LoopSignals {
   stateFile: { present: boolean; paths: string[] };
@@ -56,38 +57,6 @@ const STATE_FILES = [
   'changelog-drafter-state.md',
   'issue-triage-state.md',
 ];
-
-/** Score contribution for each readiness signal (see computeScore). */
-const SCORE_WEIGHTS = {
-  base: 10,
-  stateFile: 18,
-  triage: 14,
-  loopConfig: 9,
-  agentsMd: 9,
-  skillsTwoPlus: 14,
-  skillsOne: 7,
-  verifier: 14,
-  safetyLoopMd: 4,
-  safetyDoc: 4,
-  github: 6,
-  githubWorkflows: 4,
-  mcp: 3,
-  worktree: 3,
-  registry: 2,
-  budgetDoc: 3,
-  runLog: 3,
-  loopMdBudget: 2,
-  budgetSkill: 2,
-  constraintsFile: 4,
-  constraintsSkill: 2,
-  loopActivity: 6,
-} as const;
-
-const LEVEL_THRESHOLDS = {
-  L1: 38,
-  L2: 58,
-  L3: 78,
-} as const;
 
 const LOOP_SKILL_NAMES = [
   'loop-triage',
@@ -178,60 +147,7 @@ async function detectLoopActivity(
 }
 
 export function computeScore(signals: LoopSignals): { score: number; level: 'L0' | 'L1' | 'L2' | 'L3'; assessment: string } {
-  const w = SCORE_WEIGHTS;
-  let score: number = w.base;
-
-  if (signals.stateFile.present) score += w.stateFile;
-  if (signals.triage.present) score += w.triage;
-  if (signals.loopConfig.present) score += w.loopConfig;
-  if (signals.agentsMd.present) score += w.agentsMd;
-  if (signals.skills.count >= 2) score += w.skillsTwoPlus;
-  else if (signals.skills.count === 1) score += w.skillsOne;
-  if (signals.verifier.present) score += w.verifier;
-  if (signals.safety.loopMdMentionsSafety) score += w.safetyLoopMd;
-  if (signals.safety.safetyDocPresent) score += w.safetyDoc;
-  if (signals.github.present) score += w.github;
-  if (signals.github.workflows) score += w.githubWorkflows;
-  if (signals.mcp.present) score += w.mcp;
-  if (signals.worktreeEvidence.present) score += w.worktree;
-  if (signals.registry.present) score += w.registry;
-  if (signals.cost.budgetDoc) score += w.budgetDoc;
-  if (signals.cost.runLog) score += w.runLog;
-  if (signals.cost.loopMdBudget) score += w.loopMdBudget;
-  if (signals.cost.budgetSkill) score += w.budgetSkill;
-  if (signals.constraints.present) score += w.constraintsFile;
-  if (signals.constraints.hasConstraintsSkill) score += w.constraintsSkill;
-  if (signals.loopActivity.present) score += w.loopActivity;
-
-  score = Math.min(100, Math.max(0, score));
-
-  const costReady =
-    signals.cost.budgetDoc &&
-    signals.cost.runLog &&
-    signals.cost.loopMdBudget;
-  const hasRealActivity = signals.loopActivity.present;
-  const l3Ready = costReady && hasRealActivity;
-
-  let level: 'L0' | 'L1' | 'L2' | 'L3' = 'L0';
-  if (score >= LEVEL_THRESHOLDS.L3 && signals.verifier.present && signals.stateFile.present && l3Ready) level = 'L3';
-  else if (score >= LEVEL_THRESHOLDS.L2 && signals.triage.present) level = 'L2';
-  else if (score >= LEVEL_THRESHOLDS.L1 && signals.stateFile.present) level = 'L1';
-  else level = 'L0';
-
-  const assessment =
-    score >= 82 && l3Ready
-      ? 'Strong loop readiness — good candidate for L3 with explicit gates.'
-      : score >= 82 && !costReady
-        ? 'Strong signals but missing cost observability (loop-budget.md, loop-run-log.md, LOOP.md budget) — add before L3.'
-        : score >= 82 && !hasRealActivity
-          ? 'Strong structure but no proven loop runs yet — run one L1 cycle and commit state before L3.'
-          : score >= 62
-            ? 'Good foundation — add missing verifier + safety docs for L3.'
-            : score >= 42
-              ? 'Early loop setup — focus on L1 state + triage before enabling actions.'
-              : 'Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).';
-
-  return { score, level, assessment };
+  return evaluateReadinessPolicy(signals);
 }
 
 export async function auditProject(target: string): Promise<AuditResult> {

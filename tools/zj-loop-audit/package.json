@@ -8,6 +8,7 @@
   },
   "files": [
     "dist",
+    "rules",
     "README.md"
   ],
   "scripts": {
@@ -47,7 +48,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@jununfly/zj-loop-core": "file:../zj-loop-core"
+    "@jununfly/zj-loop-core": "file:../zj-loop-core",
+    "yaml": "^2.8.0"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

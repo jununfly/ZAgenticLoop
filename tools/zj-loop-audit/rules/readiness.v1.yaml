@@ -1,0 +1,123 @@
+schemaVersion: 1
+score:
+  base: 10
+  contributions:
+    - id: stateFile
+      when: stateFile.present
+      points: 18
+    - id: triage
+      when: triage.present
+      points: 14
+    - id: loopConfig
+      when: loopConfig.present
+      points: 9
+    - id: agentsMd
+      when: agentsMd.present
+      points: 9
+    - id: skillsTwoPlus
+      when:
+        path: skills.count
+        gte: 2
+      points: 14
+    - id: skillsOne
+      when:
+        path: skills.count
+        eq: 1
+      points: 7
+    - id: verifier
+      when: verifier.present
+      points: 14
+    - id: safetyLoopMd
+      when: safety.loopMdMentionsSafety
+      points: 4
+    - id: safetyDoc
+      when: safety.safetyDocPresent
+      points: 4
+    - id: github
+      when: github.present
+      points: 6
+    - id: githubWorkflows
+      when: github.workflows
+      points: 4
+    - id: mcp
+      when: mcp.present
+      points: 3
+    - id: worktree
+      when: worktreeEvidence.present
+      points: 3
+    - id: registry
+      when: registry.present
+      points: 2
+    - id: budgetDoc
+      when: cost.budgetDoc
+      points: 3
+    - id: runLog
+      when: cost.runLog
+      points: 3
+    - id: loopMdBudget
+      when: cost.loopMdBudget
+      points: 2
+    - id: budgetSkill
+      when: cost.budgetSkill
+      points: 2
+    - id: constraintsFile
+      when: constraints.present
+      points: 4
+    - id: constraintsSkill
+      when: constraints.hasConstraintsSkill
+      points: 2
+    - id: loopActivity
+      when: loopActivity.present
+      points: 6
+predicates:
+  costReady:
+    all:
+      - cost.budgetDoc
+      - cost.runLog
+      - cost.loopMdBudget
+  hasRealActivity: loopActivity.present
+  l3Ready:
+    all:
+      - predicate: costReady
+      - predicate: hasRealActivity
+levels:
+  - level: L3
+    threshold: 78
+    when:
+      all:
+        - verifier.present
+        - stateFile.present
+        - predicate: l3Ready
+  - level: L2
+    threshold: 58
+    when: triage.present
+  - level: L1
+    threshold: 38
+    when: stateFile.present
+  - level: L0
+    threshold: 0
+assessments:
+  - when:
+      all:
+        - scoreGte: 82
+        - predicate: l3Ready
+    message: Strong loop readiness — good candidate for L3 with explicit gates.
+  - when:
+      all:
+        - scoreGte: 82
+        - not:
+            predicate: costReady
+    message: Strong signals but missing cost observability (loop-budget.md, loop-run-log.md, LOOP.md budget) — add before L3.
+  - when:
+      all:
+        - scoreGte: 82
+        - not:
+            predicate: hasRealActivity
+    message: Strong structure but no proven loop runs yet — run one L1 cycle and commit state before L3.
+  - when:
+      scoreGte: 62
+    message: Good foundation — add missing verifier + safety docs for L3.
+  - when:
+      scoreGte: 42
+    message: Early loop setup — focus on L1 state + triage before enabling actions.
+  - message: Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).

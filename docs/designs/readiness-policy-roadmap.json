@@ -1,0 +1,101 @@
+{
+  "title": "Readiness Policy 规则化架构优化",
+  "description": "继续架构优化：将 zj-loop-audit 中硬编码 readiness score/gates/findings 逐步迁移为声明式规则文件和规则引擎。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Readiness Policy 规则化架构优化",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [
+        {
+          "q": "下一段架构优化聚焦哪里？",
+          "answer": "聚焦 zj-loop-audit readiness policy 规则化。",
+          "note": "稳定架构文档已经把 CLI harness 收口；剩余明确 future slice 是 tools/zj-loop-audit/rules/readiness.v1.yaml。代码事实显示 computeScore/findings/recommendations 仍硬编码在 auditor.ts，且架构文档要求 rule engine 消费 evidence、不直接读项目文件。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "审计现有 readiness policy 硬编码边界",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "readiness policy 硬编码边界如何分层迁移？",
+          "answer": "先迁 score、level gates、assessment bands；findings/recommendations 后迁。",
+          "note": "代码事实显示 computeScore 是纯函数且已有直接单元测试，适合作为规则引擎 tracer bullet；auditProject 同时负责 evidence 收集、finding 文案、recommendation 文案和动态 git/activity 检测，第一刀迁移会扩大风险。"
+        }
+      ],
+      "notes": "Audited auditor.ts. Policy is hardcoded across SCORE_WEIGHTS/LEVEL_THRESHOLDS, computeScore gates and assessment bands, plus auditProject findings/recommendations. First tracer bullet should keep evidence collection and report text stable while moving score/level/assessment into a declarative rule contract."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "设计 readiness.v1.yaml 最小规则契约",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "readiness.v1.yaml 是否引入完整表达式语言？",
+          "answer": "不引入。第一版只支持命名 predicates、signal path 条件、all/any/not 组合、score contributions、level gates 和 assessment bands。",
+          "note": "当前 computeScore 的逻辑可由固定 DSL 覆盖：boolean signal、count threshold、derived predicates、score add、level gate、assessment band。完整表达式语言会增加解析、安全和测试复杂度，没有真实需求。"
+        },
+        {
+          "q": "规则引擎放在 core 还是 zj-loop-audit？",
+          "answer": "放在 zj-loop-audit 包内。",
+          "note": "架构边界要求 core 不拥有 readiness scoring presentation；第一版规则引擎只服务 audit policy，放 audit 包可避免 core 变成所有策略的收纳处。以后若多个工具消费同一 readiness contract，再评估抽到 core。"
+        }
+      ],
+      "notes": "Defined a minimal readiness.v1.yaml contract: score base/contributions, named predicates, all/any/not/path conditions, ordered level gates, and ordered assessment bands. No general expression language."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "实现规则引擎 tracer bullet",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented the tracer bullet: added tools/zj-loop-audit/rules/readiness.v1.yaml and src/readiness-rules.ts, moved computeScore to evaluate the declarative score/level/assessment policy, kept auditProject evidence collection and report text unchanged, and added direct rules DSL coverage."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "迁移 findings 和 recommendations 到规则文件",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "合并设计记录并删除 readiness policy roadmap",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-01 00:03:14",
+    "updated": "2026-07-01 00:13:07",
+    "md_file": "docs/designs/readiness-policy-roadmap.md"
+  }
+}
