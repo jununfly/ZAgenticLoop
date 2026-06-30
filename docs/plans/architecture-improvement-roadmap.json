@@ -506,12 +506,18 @@
     "1-6-2-3": {
       "id": "1-6-2-3",
       "label": "划分 core semantics 与 project evidence 边界",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6-2",
       "children": [],
-      "decisions": [],
-      "notes": "产出：明确 core 可以拥有 registry facts、cost policy、recommendation policy、readiness query orchestration；project evidence collection 保持 adapter 化，MCP 只负责 root resolution 与 protocol formatting。"
+      "decisions": [
+        {
+          "q": "core semantics 与 project evidence 的边界应如何划分？",
+          "answer": "core semantics 拥有纯领域查询和策略计算；project evidence adapter 拥有文件/目录/状态/技能/安全文档等事实采集；MCP/CLI adapter 拥有 root resolution、协议输入校验和格式化。",
+          "note": "当前 core 已有 ProjectFileSystem primitives，但 readiness scoring 仍在 audit、MCP file loading 仍在 resolver；第14刀先定边界，不迁移代码。"
+        }
+      ],
+      "notes": "第14刀完成：新增 docs/core-semantics-evidence-boundary.md，明确 core registry model、core evidence primitives、project evidence adapters、core semantic queries、readiness policy、MCP/CLI adapters 的 ownership matrix；定义 LoopProjectEvidence 草案、P0/P1 semantic query 边界、MCP/CLI adapter 边界、迁移含义与 anti-boundaries。未迁移运行时代码。"
     },
     "1-6-2-4": {
       "id": "1-6-2-4",
@@ -566,7 +572,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 21:16:51",
+    "updated": "2026-06-30 21:21:49",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

@@ -313,3 +313,7 @@ P0 contract tests should assert:
 
 These tests should use a minimal inline registry fixture plus one full
 `patterns/registry.yaml` integration test.
+
+Boundary follow-up: see `docs/core-semantics-evidence-boundary.md` for the
+ownership split between pure semantic queries, project evidence adapters,
+readiness policy, and MCP/CLI formatting.

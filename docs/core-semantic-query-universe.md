@@ -168,3 +168,6 @@ runtime components. Core should answer questions, not perform operations.
 
 Follow-up: see `docs/core-semantic-query-contracts.md` for the P0 contract
 design.
+
+Boundary follow-up: see `docs/core-semantics-evidence-boundary.md` for the
+ownership split between semantics, evidence, readiness policy, and adapters.
