@@ -117,4 +117,5 @@ The server reads from the local filesystem at `LOOP_PROJECT_ROOT`. It is read-on
 - [ZAgenticLoop Patterns](../../patterns/)
 - [MCP Examples](../../examples/mcp/)
 - [Primitives: Plugins & Connectors](../../docs/primitives.md)
+- [Architecture: MCP Server Boundary](../../docs/designs/architecture.md#mcp-server-boundary)
 - [Safety: MCP Least Privilege](../../docs/safety.md)

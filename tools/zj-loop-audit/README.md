@@ -83,4 +83,5 @@ L3 requires verifier + state + cost observability (budget + run log + LOOP.md bu
 | L2 | Assisted auto-fix with verifier |
 | L3 | Unattended-capable (with human gates) |
 
-See [docs/loop-design-checklist.md](../../docs/loop-design-checklist.md).
+See [docs/loop-design-checklist.md](../../docs/loop-design-checklist.md) and
+[docs/designs/architecture.md](../../docs/designs/architecture.md#readiness-policy).

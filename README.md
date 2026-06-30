@@ -34,6 +34,7 @@ A loop is a recursive goal: you define a purpose and the AI iterates (often with
 | [Pattern Picker](docs/pattern-picker.md) | Which loop to run first — **start here if unsure** |
 | [Primitives Matrix](docs/primitives-matrix.md) | Grok vs Claude Code vs Codex — bookmark this |
 | [Loop Design Checklist](docs/loop-design-checklist.md) | Ship readiness rubric |
+| [Architecture](docs/designs/architecture.md) | Shared registry, core semantics, MCP/CLI boundaries |
 | [Patterns](patterns/README.md) | 7 production patterns + [interactive picker](https://jununfly.github.io/ZAgenticLoop/#interactive) |
 | [Starters](starters/) | Clone-and-run kits (Grok, Claude Code, Codex) |
 | [zj-loop-audit](tools/zj-loop-audit/) | Loop Readiness Score CLI (v1.4 + activity detection) — `npx @jununfly/zj-loop-audit . --suggest` · `--badge` for README |
@@ -161,6 +162,7 @@ Phased rollout: **L1 report → L2 assisted fixes → L3 unattended** — see [l
 - [Safety](docs/safety.md) — denylist, auto-merge, MCP scopes
 - [Security](SECURITY.md) — reporting and unattended automation risks
 - [Concepts](docs/concepts.md) — intent debt, comprehension debt, harness vs loop
+- [Architecture](docs/designs/architecture.md) — registry, core, readiness, MCP, CLI boundaries
 - [MCP Cookbook](examples/mcp/) — connector examples by pattern
 
 ## Caveats
@@ -192,4 +194,3 @@ MIT
 ---
 
 *Practical, tool-aware reference for agentic loop working, patterns you can clone, checklists you can ship against, and stories that include what broke.*
-

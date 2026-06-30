@@ -12,7 +12,7 @@ Tool-agnostic loop design: the **capability** is what matters, not the product n
 | **Sub-agents** | Maker / checker split | `Task` tool with `subagent_type`, worktree isolation | Task subagents in `.claude/agents/`, agent teams | Subagents as TOML in `.codex/agents/` | `agents.list` multi-agent routing; isolated cron subagent orchestration; separate verifier agent id | Multi-agent mode, review mode, custom agents in `.cursor/agents/` | Multiple Cascades in parallel; workflow-orchestrated implementer → reviewer steps |
 | **State / Memory** | Track what's done across runs | `STATE.md`, todos, durable scheduler state | `AGENTS.md`, progress files, Linear via MCP | Markdown or Linear via connector | `STATE.md`, `HEARTBEAT.md` in workspace; cron persisted in Gateway SQLite; Skill Workshop for skill proposals | `STATE.md`, `LOOP.md`, Cloud Agent memories | `STATE.md`, Cascade **Memories**, workflow run notes |
 
-**Reference MCP server:** this repo ships [`tools/zj-loop-mcp-server/`](../tools/zj-loop-mcp-server/) — patterns, skills, state, budget, and safety docs as runtime-queryable MCP resources (reduces prompt stuffing). Config example: [`examples/mcp/zagenticloop.mcp.json`](../examples/mcp/zagenticloop.mcp.json).
+**Reference MCP server:** this repo ships [`tools/zj-loop-mcp-server/`](../tools/zj-loop-mcp-server/) — patterns, skills, state, budget, and safety docs as runtime-queryable MCP resources (reduces prompt stuffing). Config example: [`examples/mcp/zj-loop.mcp.json`](../examples/mcp/zj-loop.mcp.json).
 
 ## Scheduling Quick Reference
 
