@@ -522,12 +522,18 @@
     "1-6-2-4": {
       "id": "1-6-2-4",
       "label": "规划 MCP tools 到 core semantic queries 的适配映射",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6-2",
       "children": [],
-      "decisions": [],
-      "notes": "产出：给出现有 loop_list_patterns、loop_get_pattern、loop_recommend_pattern、loop_estimate_cost 等 tools 到 core query 的映射表，并标出保持兼容的输出策略。"
+      "decisions": [
+        {
+          "q": "MCP semantic migration 是否应重命名现有 tools？",
+          "answer": "否。保留现有 MCP tool 名称，先把实现内部改为 core semantic query adapter；新增 semantic tool 只能在兼容映射稳定后作为后续扩展。",
+          "note": "MCP clients 可能已经依赖 loop_list_patterns、loop_get_pattern、loop_recommend_pattern、loop_estimate_cost；第15刀只规划映射和兼容策略。"
+        }
+      ],
+      "notes": "第15刀完成：新增 docs/mcp-core-semantic-adapter-map.md，按 raw resource、evidence-only tool、semantic adapter 分类当前 MCP surface；规划 loop_list_patterns/get_pattern/recommend_pattern/estimate_cost 到 core P0 queries 的兼容映射；明确保留现有 MCP tool 名称、raw resources 与错误输出兼容策略；给 1-6-4 提供实现顺序与风险缓解。未迁移运行时代码。"
     },
     "1-6-2-5": {
       "id": "1-6-2-5",
@@ -572,7 +578,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 21:21:49",
+    "updated": "2026-06-30 21:27:12",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

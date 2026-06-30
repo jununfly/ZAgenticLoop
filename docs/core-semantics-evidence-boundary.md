@@ -199,3 +199,6 @@ These are signs the architecture is drifting:
 - readiness policy changes without parity tests against current audit output
 
 These anti-boundaries should fail review once `1-6-3` starts implementation.
+
+MCP adapter follow-up: see `docs/mcp-core-semantic-adapter-map.md` for the
+compatibility-preserving migration map for current MCP resources and tools.

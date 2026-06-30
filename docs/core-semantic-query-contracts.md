@@ -317,3 +317,7 @@ These tests should use a minimal inline registry fixture plus one full
 Boundary follow-up: see `docs/core-semantics-evidence-boundary.md` for the
 ownership split between pure semantic queries, project evidence adapters,
 readiness policy, and MCP/CLI formatting.
+
+MCP adapter follow-up: see `docs/mcp-core-semantic-adapter-map.md` for the
+compatibility-preserving mapping from current MCP tools to core semantic
+queries.
