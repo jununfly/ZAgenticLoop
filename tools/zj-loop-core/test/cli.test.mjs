@@ -25,18 +25,20 @@ const SPEC = {
   options: [
     { name: 'name', alias: '-n', type: 'string', description: 'Name', default: 'world' },
     { name: 'level', alias: '-l', type: 'enum', description: 'Level', values: ['L1', 'L2'], default: 'L1' },
+    { name: 'dryRun', flag: 'dry-run', type: 'boolean', description: 'Dry run' },
+    { name: 'targetDir', type: 'positional', description: 'Target directory', default: '.' },
     { name: 'json', type: 'boolean', description: 'JSON output' },
   ],
   handler({ io, options }) {
-    io.stdout(`${options.name}:${options.level}:${options.json === true}`);
+    io.stdout(`${options.name}:${options.level}:${options.targetDir}:${options.dryRun === true}:${options.json === true}`);
   },
 };
 
 test('runCli executes a single-command handler with parsed options and injected io', async () => {
   const captured = createIo();
-  const exitCode = await runCli(SPEC, ['--name', 'Ada', '--level', 'L2', '--json'], captured.io);
+  const exitCode = await runCli(SPEC, ['target', '--name', 'Ada', '--level', 'L2', '--dry-run', '--json'], captured.io);
   assert.equal(exitCode, 0);
-  assert.deepEqual(captured.stdout, ['Ada:L2:true']);
+  assert.deepEqual(captured.stdout, ['Ada:L2:target:true:true']);
   assert.deepEqual(captured.stderr, []);
 });
 

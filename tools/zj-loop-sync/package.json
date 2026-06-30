@@ -36,6 +36,9 @@
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "@jununfly/zj-loop-core": "file:../zj-loop-core"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3"

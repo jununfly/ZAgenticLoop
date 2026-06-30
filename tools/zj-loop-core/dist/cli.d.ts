@@ -5,12 +5,14 @@ export type CliIo = {
 export declare const defaultCliIo: CliIo;
 export type CliOptionSpec = {
     name: string;
+    flag?: string;
     alias?: string;
     type: 'boolean';
     description: string;
     default?: boolean;
 } | {
     name: string;
+    flag?: string;
     alias?: string;
     type: 'string';
     description: string;
@@ -18,11 +20,18 @@ export type CliOptionSpec = {
     default?: string;
 } | {
     name: string;
+    flag?: string;
     alias?: string;
     type: 'enum';
     description: string;
     valueName?: string;
     values: readonly string[];
+    default?: string;
+} | {
+    name: string;
+    type: 'positional';
+    description: string;
+    valueName?: string;
     default?: string;
 };
 export type CliOptions = Record<string, string | boolean | undefined>;

@@ -6,33 +6,9 @@
  */
 
 import { runSync, formatReport, type SyncOptions, type DriftReport } from './sync.js';
+import { runCli, type CliHandlerContext, type CliSpec } from '@jununfly/zj-loop-core';
 
-function parseArgs(argv: string[]): SyncOptions {
-  let targetDir = '.';
-  let autoFix = false;
-  let dryRun = false;
-  let verbose = false;
-  let json = false;
-  let help = false;
-
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--help' || a === '-h') help = true;
-    else if (a === '--auto-fix' || a === '-a') autoFix = true;
-    else if (a === '--dry-run' || a === '-d') dryRun = true;
-    else if (a === '--verbose' || a === '-v') verbose = true;
-    else if (a === '--json') json = true;
-    else if (!a.startsWith('-')) targetDir = a;
-  }
-
-  return { targetDir, autoFix, dryRun, verbose, help };
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-
-  if (args.help) {
-    console.log(`zj-loop-sync — detect and sync drift between Loop configuration files
+const HELP_TEXT = `zj-loop-sync — detect and sync drift between Loop configuration files
 
 Usage:
   zj-loop-sync [target-dir] [options]
@@ -61,29 +37,48 @@ Score interpretation:
   - 0-69: Critical (major issues need attention)
 
 Docs: https://github.com/jununfly/ZAgenticLoop/tree/main/tools/zj-loop-sync
-`);
-    process.exit(0);
+`;
+
+async function handleSyncCommand({ io, options }: CliHandlerContext) {
+  const args: SyncOptions = {
+    targetDir: typeof options.targetDir === 'string' ? options.targetDir : '.',
+    autoFix: options.autoFix === true,
+    dryRun: options.dryRun === true,
+    verbose: options.verbose === true,
+    json: options.json === true,
+  };
+
+  const report = await runSync(args);
+
+  if (args.json) {
+    io.stdout(JSON.stringify(report, null, 2));
+  } else {
+    io.stdout(formatReport(report));
   }
 
-  try {
-    const report = await runSync(args);
-
-    if (args.json) {
-      console.log(JSON.stringify(report, null, 2));
-    } else {
-      console.log(formatReport(report));
-    }
-
-    // Exit with appropriate code
-    if (report.level === 'critical') {
-      process.exit(1);
-    } else if (report.level === 'warning') {
-      process.exit(2);
-    }
-  } catch (error) {
-    console.error('zj-loop-sync failed:', error instanceof Error ? error.message : error);
-    process.exit(1);
+  if (report.level === 'critical') {
+    return 1;
   }
+  if (report.level === 'warning') {
+    return 2;
+  }
+  return 0;
 }
 
-main();
+const SPEC: CliSpec = {
+  name: 'zj-loop-sync',
+  usage: 'zj-loop-sync [target-dir] [options]',
+  helpText: HELP_TEXT,
+  options: [
+    { name: 'targetDir', type: 'positional', description: 'Project directory', default: '.' },
+    { name: 'autoFix', alias: '-a', flag: 'auto-fix', type: 'boolean', description: 'Attempt to auto-fix issues' },
+    { name: 'dryRun', alias: '-d', flag: 'dry-run', type: 'boolean', description: 'Show what would be done without making changes' },
+    { name: 'verbose', alias: '-v', type: 'boolean', description: 'Show detailed information' },
+    { name: 'json', type: 'boolean', description: 'Output JSON format' },
+  ],
+  handler: handleSyncCommand,
+};
+
+runCli(SPEC).then((exitCode) => {
+  process.exitCode = exitCode;
+});

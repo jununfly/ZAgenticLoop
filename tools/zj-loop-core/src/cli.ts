@@ -15,6 +15,7 @@ export const defaultCliIo: CliIo = {
 export type CliOptionSpec =
   | {
       name: string;
+      flag?: string;
       alias?: string;
       type: 'boolean';
       description: string;
@@ -22,6 +23,7 @@ export type CliOptionSpec =
     }
   | {
       name: string;
+      flag?: string;
       alias?: string;
       type: 'string';
       description: string;
@@ -30,11 +32,19 @@ export type CliOptionSpec =
     }
   | {
       name: string;
+      flag?: string;
       alias?: string;
       type: 'enum';
       description: string;
       valueName?: string;
       values: readonly string[];
+      default?: string;
+    }
+  | {
+      name: string;
+      type: 'positional';
+      description: string;
+      valueName?: string;
       default?: string;
     };
 
@@ -93,8 +103,10 @@ export async function runCli(
 
 export function parseCliOptions(spec: CliSpec, argv: readonly string[]): CliOptions {
   const byFlag = new Map<string, CliOptionSpec | { name: 'help'; type: 'boolean' }>();
+  const positionals = spec.options.filter((option) => option.type === 'positional');
   for (const option of spec.options) {
-    byFlag.set(`--${option.name}`, option);
+    if (option.type === 'positional') continue;
+    byFlag.set(`--${option.flag ?? option.name}`, option);
     if (option.alias) byFlag.set(option.alias, option);
   }
   byFlag.set('--help', { name: 'help', type: 'boolean' });
@@ -104,13 +116,18 @@ export function parseCliOptions(spec: CliSpec, argv: readonly string[]): CliOpti
   for (const option of spec.options) {
     if ('default' in option) values[option.name] = option.default;
   }
+  let positionalIndex = 0;
 
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index];
     const option = byFlag.get(arg);
     if (!option) {
       if (arg.startsWith('-')) throw new CliUsageError(`Unknown option: ${arg}`);
-      throw new CliUsageError(`Unexpected argument: ${arg}`);
+      const positional = positionals[positionalIndex];
+      if (!positional) throw new CliUsageError(`Unexpected argument: ${arg}`);
+      values[positional.name] = arg;
+      positionalIndex++;
+      continue;
     }
 
     if (option.type === 'boolean') {
@@ -147,9 +164,10 @@ export function formatCliHelp(spec: CliSpec): string {
 
   lines.push('Usage:', `  ${spec.usage ?? spec.name}`, '', 'Options:');
   for (const option of spec.options) {
+    if (option.type === 'positional') continue;
     const alias = option.alias ? `${option.alias}, ` : '';
     const value = option.type === 'boolean' ? '' : ` <${option.valueName ?? 'value'}>`;
-    lines.push(`  ${alias}--${option.name}${value}  ${option.description}`);
+    lines.push(`  ${alias}--${option.flag ?? option.name}${value}  ${option.description}`);
   }
   lines.push('  -h, --help  This help');
 
