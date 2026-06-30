@@ -1,6 +1,5 @@
-import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { loadPatternRegistry } from '@jununfly/zj-loop-core';
+import { createNodeProjectFileSystem, loadPatternRegistry, } from '@jununfly/zj-loop-core';
 const STATE_FILE_CANDIDATES = [
     'STATE.md',
     'pr-babysitter-state.md',
@@ -22,14 +21,11 @@ async function allowedPatternIds(root) {
         return new Set(registry.patterns.map((p) => p.id));
     return new Set(await listPatternDocs(root));
 }
+function fsFor(root) {
+    return createNodeProjectFileSystem(root);
+}
 export async function fileExists(p) {
-    try {
-        await stat(p);
-        return true;
-    }
-    catch {
-        return false;
-    }
+    return fsFor(path.dirname(p)).exists(path.basename(p));
 }
 export async function resolveProjectRoot(hint) {
     if (hint)
@@ -39,18 +35,13 @@ export async function resolveProjectRoot(hint) {
         : process.cwd();
 }
 export async function readFileIfExists(filePath) {
-    try {
-        return await readFile(filePath, 'utf8');
-    }
-    catch {
-        return null;
-    }
+    return fsFor(path.dirname(filePath)).readTextIfExists(path.basename(filePath));
 }
 export async function loadRegistry(root) {
-    const registryPath = path.join(root, 'patterns', 'registry.yaml');
-    if (!(await fileExists(registryPath)))
+    const fs = fsFor(root);
+    if (!(await fs.exists('patterns/registry.yaml')))
         return null;
-    return loadPatternRegistry({ candidates: [registryPath] });
+    return loadPatternRegistry({ candidates: [fs.resolve('patterns/registry.yaml')] });
 }
 export async function loadPatternDoc(root, patternId) {
     try {
@@ -62,33 +53,28 @@ export async function loadPatternDoc(root, patternId) {
     const allowed = await allowedPatternIds(root);
     if (!allowed.has(patternId))
         return null;
-    const filePath = path.join(root, 'patterns', `${patternId}.md`);
-    return readFileIfExists(filePath);
+    return fsFor(root).readTextIfExists(`patterns/${patternId}.md`);
 }
 export async function listSkills(root) {
+    const fs = fsFor(root);
     const skillDirs = [
-        path.join(root, 'skills'),
-        path.join(root, '.grok', 'skills'),
-        path.join(root, '.claude', 'skills'),
-        path.join(root, '.codex', 'skills'),
+        'skills',
+        '.grok/skills',
+        '.claude/skills',
+        '.codex/skills',
     ];
     const results = [];
     for (const dir of skillDirs) {
-        if (!(await fileExists(dir)))
-            continue;
-        try {
-            const entries = await readdir(dir, { withFileTypes: true });
-            for (const e of entries) {
-                if (!e.isDirectory())
-                    continue;
-                const skillMd = path.join(dir, e.name, 'SKILL.md');
-                const content = await readFileIfExists(skillMd);
-                if (content) {
-                    results.push({ name: e.name, path: skillMd, content });
-                }
+        const entries = await fs.listEntries(dir);
+        for (const e of entries) {
+            if (e.kind !== 'directory')
+                continue;
+            const skillPath = `${dir}/${e.name}/SKILL.md`;
+            const content = await fs.readTextIfExists(skillPath);
+            if (content) {
+                results.push({ name: e.name, path: fs.resolve(skillPath), content });
             }
         }
-        catch { /* dir unreadable */ }
     }
     return results;
 }
@@ -106,44 +92,38 @@ export async function loadState(root, stateFile) {
     }
     if (!STATE_FILE_CANDIDATES.includes(target))
         return null;
-    return readFileIfExists(path.join(root, target));
+    return fsFor(root).readTextIfExists(target);
 }
 export async function listStateFiles(root) {
+    const fs = fsFor(root);
     const found = [];
     for (const f of STATE_FILE_CANDIDATES) {
-        if (await fileExists(path.join(root, f)))
+        if (await fs.exists(f))
             found.push(f);
     }
     return found;
 }
 export async function loadLoopConfig(root) {
-    return readFileIfExists(path.join(root, 'LOOP.md'));
+    return fsFor(root).readTextIfExists('LOOP.md');
 }
 export async function loadBudget(root) {
-    return readFileIfExists(path.join(root, 'loop-budget.md'));
+    return fsFor(root).readTextIfExists('loop-budget.md');
 }
 export async function loadRunLog(root) {
-    return readFileIfExists(path.join(root, 'loop-run-log.md'));
+    return fsFor(root).readTextIfExists('loop-run-log.md');
 }
 export async function loadSafetyDoc(root) {
+    const fs = fsFor(root);
     for (const f of ['docs/safety.md', 'safety.md', 'SECURITY.md']) {
-        const content = await readFileIfExists(path.join(root, f));
+        const content = await fs.readTextIfExists(f);
         if (content)
             return content;
     }
     return null;
 }
 export async function listPatternDocs(root) {
-    const patternsDir = path.join(root, 'patterns');
-    if (!(await fileExists(patternsDir)))
-        return [];
-    try {
-        const entries = await readdir(patternsDir);
-        return entries
-            .filter(e => e.endsWith('.md') && e !== 'README.md')
-            .map(e => e.replace('.md', ''));
-    }
-    catch {
-        return [];
-    }
+    const entries = await fsFor(root).listEntries('patterns');
+    return entries
+        .filter(e => e.kind === 'file' && e.name.endsWith('.md') && e.name !== 'README.md')
+        .map(e => e.name.replace('.md', ''));
 }
