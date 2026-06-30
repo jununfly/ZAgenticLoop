@@ -360,12 +360,18 @@
     "1-6-1": {
       "id": "1-6-1",
       "label": "审计 MCP resources-tools 的语义边界",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "第10刀是否直接实现 MCP 语义 API？",
+          "answer": "否。本刀只审计现有 MCP resources/tools 的语义边界，输出 inventory；1-6-2 再设计基于 core 的语义查询 API。",
+          "note": "避免把探索刀扩大成协议与实现迁移。"
+        }
+      ],
+      "notes": "第10刀完成：新增 docs/mcp-semantic-boundary-inventory.md，审计 MCP resources/tools/resolver 的语义边界；将当前 surface 分类为 raw project documents、registry-backed facts、filesystem evidence、heuristic semantic tools；明确 recommend/cost 等语义逻辑应下沉 core，MCP 保持 read-only protocol adapter。验收：validate:registry、build:tools、test:tools、audit CLI、before-after demo、git diff --check、roadmap validate。"
     },
     "1-6-2": {
       "id": "1-6-2",
@@ -448,7 +454,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 20:53:40",
+    "updated": "2026-06-30 21:01:43",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }
