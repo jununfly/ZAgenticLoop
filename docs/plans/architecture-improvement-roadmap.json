@@ -91,7 +91,7 @@
     "1-4": {
       "id": "1-4",
       "label": "设计 readiness 策略规则引擎",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -312,12 +312,18 @@
     "1-4-2": {
       "id": "1-4-2",
       "label": "设计声明式 readiness rule schema 草案",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "第7刀是否实现 readiness rule engine？",
+          "answer": "不实现。第7刀只产出声明式 readiness rule schema 草案：表达 evidence selectors、derived predicates、score contributions、level gates、assessment bands、findings/recommendations、兼容迁移路径；运行时迁移留到后续 exploit 切片。",
+          "note": "先冻结规则语言和迁移边界，避免把 schema 设计与 computeScore 重写耦合在同一刀。"
+        }
+      ],
+      "notes": "第7刀完成：新增 docs/readiness-rule-schema-draft.md，定义 readiness.v1.yaml 草案，包括 predicate language、derived predicates、score contributions、exclusive score groups、level gates、ordered assessment bands、findings/recommendations、现有 score mapping、parity tests、docs simulator 同源策略与迁移计划。本刀不实现运行时 rule engine。验收：validate:registry、build:tools、test:tools、audit CLI、before-after demo、git diff --check。"
     },
     "1-5-1": {
       "id": "1-5-1",
@@ -430,7 +436,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 20:31:54",
+    "updated": "2026-06-30 20:39:18",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 20:31:54
+> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 20:39:18
 
 [~][X+] 1. ZAgenticLoop 架构设计与技术选型深化
 ├── [x][X+] 1-1. 绘制当前 Agentic Loop Working 系统地图
@@ -14,9 +14,9 @@
 │   ├── [x][Y+] 1-3-1. 扩展 registry schema 承载 starter-state-budget-command
 │   ├── [x][Y+] 1-3-2. 迁移 init-cost-MCP 的硬编码 pattern 事实
 │   └── [x][Y+] 1-3-3. 补齐 registry 校验与兼容性测试
-├── [ ][X+] 1-4. 设计 readiness 策略规则引擎
+├── [x][X+] 1-4. 设计 readiness 策略规则引擎
 │   ├── [x][X+] 1-4-1. 盘点现有 readiness signals 与分数来源
-│   └── [ ][X+] 1-4-2. 设计声明式 readiness rule schema 草案
+│   └── [x][X+] 1-4-2. 设计声明式 readiness rule schema 草案
 ├── [ ][X+] 1-5. 统一 zj-loop CLI 产品族外壳
 │   ├── [ ][X+] 1-5-1. 盘点 zj-loop CLI 参数与输出体验重复
 │   └── [ ][X+] 1-5-2. 设计共享 CLI harness 的最小 API
@@ -40,7 +40,7 @@
 │   ... 4 more child nodes; run tree 1-2 --depth 2 for full view
 ├── [x][Y+] 1-3. 提升 patterns/registry.yaml 为单一事实源
 │   ... 3 more child nodes; run tree 1-3 --depth 2 for full view
-├── [ ][X+] 1-4. 设计 readiness 策略规则引擎
+├── [x][X+] 1-4. 设计 readiness 策略规则引擎
 │   ... 2 more child nodes; run tree 1-4 --depth 2 for full view
 ├── [ ][X+] 1-5. 统一 zj-loop CLI 产品族外壳
 │   ... 2 more child nodes; run tree 1-5 --depth 2 for full view
