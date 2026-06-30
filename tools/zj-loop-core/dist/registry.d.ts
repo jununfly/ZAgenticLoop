@@ -29,6 +29,27 @@ declare const patternSchema: z.ZodObject<{
         suggested_daily_cap: z.ZodNumber;
         early_exit_required: z.ZodBoolean;
     }, z.core.$strip>;
+    init: z.ZodOptional<z.ZodObject<{
+        tool_starters: z.ZodOptional<z.ZodRecord<z.ZodEnum<{
+            grok: "grok";
+            claude: "claude";
+            codex: "codex";
+        }>, z.ZodString>>;
+        templates: z.ZodDefault<z.ZodObject<{
+            minimal_fix: z.ZodDefault<z.ZodBoolean>;
+            verifier: z.ZodDefault<z.ZodBoolean>;
+        }, z.core.$strip>>;
+        budget: z.ZodObject<{
+            max_runs_per_day: z.ZodNumber;
+            max_spawns_l1: z.ZodNumber;
+            max_spawns_l2: z.ZodNumber;
+        }, z.core.$strip>;
+        first_loop_command: z.ZodRecord<z.ZodEnum<{
+            grok: "grok";
+            claude: "claude";
+            codex: "codex";
+        }>, z.ZodString>;
+    }, z.core.$strip>>;
 }, z.core.$strip>;
 declare const registrySchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<1>;
@@ -54,6 +75,27 @@ declare const registrySchema: z.ZodObject<{
             suggested_daily_cap: z.ZodNumber;
             early_exit_required: z.ZodBoolean;
         }, z.core.$strip>;
+        init: z.ZodOptional<z.ZodObject<{
+            tool_starters: z.ZodOptional<z.ZodRecord<z.ZodEnum<{
+                grok: "grok";
+                claude: "claude";
+                codex: "codex";
+            }>, z.ZodString>>;
+            templates: z.ZodDefault<z.ZodObject<{
+                minimal_fix: z.ZodDefault<z.ZodBoolean>;
+                verifier: z.ZodDefault<z.ZodBoolean>;
+            }, z.core.$strip>>;
+            budget: z.ZodObject<{
+                max_runs_per_day: z.ZodNumber;
+                max_spawns_l1: z.ZodNumber;
+                max_spawns_l2: z.ZodNumber;
+            }, z.core.$strip>;
+            first_loop_command: z.ZodRecord<z.ZodEnum<{
+                grok: "grok";
+                claude: "claude";
+                codex: "codex";
+            }>, z.ZodString>;
+        }, z.core.$strip>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 export type PatternCost = z.infer<typeof costSchema>;

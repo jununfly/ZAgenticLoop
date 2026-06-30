@@ -101,6 +101,50 @@
               "suggested_daily_cap": { "type": "integer", "minimum": 10000 },
               "early_exit_required": { "type": "boolean" }
             }
+          },
+          "init": {
+            "type": "object",
+            "required": ["budget", "first_loop_command"],
+            "additionalProperties": false,
+            "properties": {
+              "tool_starters": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "grok": { "type": "string", "minLength": 1 },
+                  "claude": { "type": "string", "minLength": 1 },
+                  "codex": { "type": "string", "minLength": 1 }
+                }
+              },
+              "templates": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "minimal_fix": { "type": "boolean" },
+                  "verifier": { "type": "boolean" }
+                }
+              },
+              "budget": {
+                "type": "object",
+                "required": ["max_runs_per_day", "max_spawns_l1", "max_spawns_l2"],
+                "additionalProperties": false,
+                "properties": {
+                  "max_runs_per_day": { "type": "integer", "minimum": 1 },
+                  "max_spawns_l1": { "type": "integer", "minimum": 0 },
+                  "max_spawns_l2": { "type": "integer", "minimum": 0 }
+                }
+              },
+              "first_loop_command": {
+                "type": "object",
+                "required": ["grok", "claude", "codex"],
+                "additionalProperties": false,
+                "properties": {
+                  "grok": { "type": "string", "minLength": 1 },
+                  "claude": { "type": "string", "minLength": 1 },
+                  "codex": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
           }
         }
       }

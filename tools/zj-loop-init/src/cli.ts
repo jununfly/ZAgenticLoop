@@ -2,81 +2,32 @@
 import { cp, mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadPatternRegistry, type RegistryPattern } from '@jununfly/zj-loop-core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const MONOREPO_STARTERS = path.resolve(PACKAGE_ROOT, '../../starters');
 const MONOREPO_TEMPLATES = path.resolve(PACKAGE_ROOT, '../../templates');
 
-type Pattern =
-  | 'daily-triage'
-  | 'pr-babysitter'
-  | 'ci-sweeper'
-  | 'dependency-sweeper'
-  | 'post-merge-cleanup'
-  | 'changelog-drafter'
-  | 'issue-triage';
-
 type Tool = 'grok' | 'claude' | 'codex';
 
-const PATTERN_STARTERS: Record<Pattern, string> = {
-  'daily-triage': 'minimal-loop',
-  'pr-babysitter': 'pr-babysitter',
-  'ci-sweeper': 'ci-sweeper',
-  'dependency-sweeper': 'dependency-sweeper',
-  'post-merge-cleanup': 'post-merge-cleanup',
-  'changelog-drafter': 'changelog-drafter',
-  'issue-triage': 'issue-triage',
+type InitPattern = RegistryPattern & {
+  state: string;
+  starter: string;
+  init: NonNullable<RegistryPattern['init']>;
 };
 
-const TOOL_SUFFIX: Record<Tool, string> = {
-  grok: '',
-  claude: '-claude',
-  codex: '-codex',
-};
-
-const L2_PATTERNS = new Set<Pattern>(['ci-sweeper', 'dependency-sweeper']);
-
-const PATTERNS_NEEDING_FIX: Set<Pattern> = new Set([
-  'pr-babysitter',
-  'ci-sweeper',
-  'dependency-sweeper',
-  'post-merge-cleanup',
-]);
-
-const STATE_FILES: Record<Pattern, string> = {
-  'daily-triage': 'STATE.md',
-  'pr-babysitter': 'pr-babysitter-state.md',
-  'ci-sweeper': 'ci-sweeper-state.md',
-  'dependency-sweeper': 'dependency-sweeper-state.md',
-  'post-merge-cleanup': 'post-merge-state.md',
-  'changelog-drafter': 'changelog-drafter-state.md',
-  'issue-triage': 'issue-triage-state.md',
-};
-
-/** Mirrors patterns/registry.yaml cost caps — used when scaffolding observability files. */
-const PATTERN_BUDGET: Record<
-  Pattern,
-  { name: string; maxRunsPerDay: number; dailyCap: number; maxSpawnsL1: number; maxSpawnsL2: number }
-> = {
-  'daily-triage': { name: 'Daily Triage', maxRunsPerDay: 2, dailyCap: 100_000, maxSpawnsL1: 0, maxSpawnsL2: 2 },
-  'pr-babysitter': { name: 'PR Babysitter', maxRunsPerDay: 288, dailyCap: 2_000_000, maxSpawnsL1: 0, maxSpawnsL2: 3 },
-  'ci-sweeper': { name: 'CI Sweeper', maxRunsPerDay: 96, dailyCap: 1_000_000, maxSpawnsL1: 0, maxSpawnsL2: 3 },
-  'dependency-sweeper': { name: 'Dependency Sweeper', maxRunsPerDay: 4, dailyCap: 500_000, maxSpawnsL1: 0, maxSpawnsL2: 3 },
-  'post-merge-cleanup': { name: 'Post-Merge Cleanup', maxRunsPerDay: 1, dailyCap: 200_000, maxSpawnsL1: 0, maxSpawnsL2: 2 },
-  'changelog-drafter': { name: 'Changelog Drafter', maxRunsPerDay: 1, dailyCap: 100_000, maxSpawnsL1: 0, maxSpawnsL2: 2 },
-  'issue-triage': { name: 'Issue Triage', maxRunsPerDay: 12, dailyCap: 80_000, maxSpawnsL1: 0, maxSpawnsL2: 1 },
-};
+const VALID_TOOLS: Tool[] = ['grok', 'claude', 'codex'];
 
 function parseArgs(argv: string[]) {
-  let pattern: Pattern = 'daily-triage';
+  let pattern = 'daily-triage';
   let tool: Tool = 'grok';
   let target = '.';
   let dryRun = false;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--pattern' || a === '-p') pattern = argv[++i] as Pattern;
+    if (a === '--pattern' || a === '-p') pattern = argv[++i];
     else if (a === '--tool' || a === '-t') tool = argv[++i] as Tool;
     else if (a === '--dry-run') dryRun = true;
     else if (a === '--help' || a === '-h') return { help: true as const, pattern, tool, target, dryRun };
@@ -84,6 +35,26 @@ function parseArgs(argv: string[]) {
   }
 
   return { help: false as const, pattern, tool, target, dryRun };
+}
+
+async function loadRegistry() {
+  return loadPatternRegistry({
+    candidates: [
+      path.join(PACKAGE_ROOT, 'registry.yaml'),
+      path.resolve(PACKAGE_ROOT, '../../patterns/registry.yaml'),
+    ],
+  });
+}
+
+function requireInitPattern(pattern: RegistryPattern): InitPattern {
+  if (!pattern.state) throw new Error(`Pattern ${pattern.id} is missing state in registry.`);
+  if (!pattern.starter) throw new Error(`Pattern ${pattern.id} is missing starter in registry.`);
+  if (!pattern.init) throw new Error(`Pattern ${pattern.id} is missing init block in registry.`);
+  return pattern as InitPattern;
+}
+
+function starterName(starterPath: string): string {
+  return starterPath.replace(/^starters\//, '');
 }
 
 async function exists(p: string): Promise<boolean> {
@@ -165,17 +136,20 @@ async function copyTemplateVerifier(
 }
 
 async function copyL2Templates(
-  pattern: Pattern,
+  pattern: InitPattern,
   tool: Tool,
   targetDir: string,
   templatesRoot: string,
   dryRun: boolean,
 ) {
-  if (!PATTERNS_NEEDING_FIX.has(pattern) && !L2_PATTERNS.has(pattern)) return;
+  const templates = pattern.init.templates;
+  if (!templates.minimal_fix && !templates.verifier) return;
 
-  await copyTemplateSkill(templatesRoot, 'SKILL.md.minimal-fix', targetDir, tool, 'minimal-fix', dryRun);
+  if (templates.minimal_fix) {
+    await copyTemplateSkill(templatesRoot, 'SKILL.md.minimal-fix', targetDir, tool, 'minimal-fix', dryRun);
+  }
 
-  if (L2_PATTERNS.has(pattern) || pattern === 'dependency-sweeper') {
+  if (templates.verifier) {
     await copyTemplateVerifier(templatesRoot, targetDir, tool, dryRun);
   }
 }
@@ -186,17 +160,17 @@ function formatTokenCap(n: number): string {
   return String(n);
 }
 
-function buildLoopBudgetMd(pattern: Pattern): string {
-  const b = PATTERN_BUDGET[pattern];
+function buildLoopBudgetMd(pattern: InitPattern): string {
+  const { budget } = pattern.init;
   return `# Loop Budget — YOUR_PROJECT
 
-> Primary loop: **${b.name}** (scaffolded by zj-loop-init)
+> Primary loop: **${pattern.name}** (scaffolded by zj-loop-init)
 
 ## Daily limits
 
 | Loop | Max runs/day | Max tokens/day | Max sub-agent spawns/run |
 |------|--------------|----------------|--------------------------|
-| ${b.name} | ${b.maxRunsPerDay} | ${formatTokenCap(b.dailyCap)} | ${b.maxSpawnsL1} (L1) / ${b.maxSpawnsL2} (L2) |
+| ${pattern.name} | ${budget.max_runs_per_day} | ${formatTokenCap(pattern.cost.suggested_daily_cap)} | ${budget.max_spawns_l1} (L1) / ${budget.max_spawns_l2} (L2) |
 
 ## On budget exceed
 
@@ -212,13 +186,13 @@ function buildLoopBudgetMd(pattern: Pattern): string {
 ## Estimate spend
 
 \`\`\`bash
-npx @jununfly/zj-loop-cost --pattern ${pattern}
+npx @jununfly/zj-loop-cost --pattern ${pattern.id}
 \`\`\`
 `;
 }
 
 async function scaffoldObservability(
-  pattern: Pattern,
+  pattern: InitPattern,
   tool: Tool,
   targetDir: string,
   templatesRoot: string,
@@ -273,64 +247,24 @@ async function copyFile(src: string, dest: string, dryRun: boolean) {
   return true;
 }
 
-function firstLoopCommand(pattern: Pattern, tool: Tool): string {
-  const cmds: Record<Pattern, Record<Tool, string>> = {
-    'daily-triage': {
-      grok: '/loop 1d Run loop-triage. Update STATE.md. No auto-fix in week one.',
-      claude: '/loop 1d $loop-triage — update STATE.md. Report-only week one.',
-      codex: 'Automation daily: $loop-triage → update STATE.md. Report-only.',
-    },
-    'pr-babysitter': {
-      grok: '/loop 10m Run pr-review-triage. Update pr-babysitter-state.md. Worktree + minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.',
-      claude: '/loop 10m $pr-review-triage — update pr-babysitter-state.md. No auto-merge.',
-      codex: 'Automation 10m: pr-review-triage → pr-babysitter-state.md. No auto-merge.',
-    },
-    'ci-sweeper': {
-      grok: '/loop 15m Run ci-triage on failing CI. Update ci-sweeper-state.md. Fix only regressions in worktree. Max 3 attempts.',
-      claude: '/loop 15m $ci-triage — update ci-sweeper-state.md. Max 3 fix attempts.',
-      codex: 'Automation 15m: ci-triage on CI failures. Max 3 attempts.',
-    },
-    'dependency-sweeper': {
-      grok: '/loop 6h Run dependency-triage. Patch-only auto-fix in worktree + verifier. Escalate majors and denylist.',
-      claude: '/loop 6h $dependency-triage — patch-only with verifier. Escalate risky bumps.',
-      codex: 'Automation 6h: dependency-triage. Patch-only with verifier.',
-    },
-    'post-merge-cleanup': {
-      grok: '/loop 1d Run post-merge-scan on recent merges. Update post-merge-state.md. Small fixes only in worktree.',
-      claude: '/loop 1d $post-merge-scan — update post-merge-state.md. Small fixes only.',
-      codex: 'Automation daily: post-merge-scan → post-merge-state.md.',
-    },
-    'changelog-drafter': {
-      grok: '/loop 1d Run changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using draft-release-notes. Update changelog-drafter-state.md. Human review only.',
-      claude: '/loop 1d $changelog-scan + draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.',
-      codex: 'Automation daily: changelog-scan + draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review.',
-    },
-    'issue-triage': {
-      grok: '/loop 2h Run issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.',
-      claude: '/loop 2h $issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.',
-      codex: 'Automation 2h: issue-triage → issue-triage-state.md. Propose only.',
-    },
-  };
-  return cmds[pattern][tool];
+function firstLoopCommand(pattern: InitPattern, tool: Tool): string {
+  return pattern.init.first_loop_command[tool];
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const registry = await loadRegistry();
+  const patterns = registry.patterns.map(requireInitPattern);
 
   if (args.help) {
+    const patternList = patterns.map((p) => `  ${p.id}`).join('\n');
     console.log(`zj-loop-init — scaffold agentic loop working starters
 
 Usage:
   zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
 
 Patterns:
-  daily-triage (default)
-  pr-babysitter
-  ci-sweeper
-  dependency-sweeper
-  post-merge-cleanup
-  changelog-drafter (new low-risk release notes pattern)
-  issue-triage (new low-risk issue queue health companion to daily triage)
+${patternList}
 
 Options:
   -p, --pattern   Pattern to scaffold
@@ -347,24 +281,22 @@ Examples:
 
   const { pattern, tool, target, dryRun } = args;
 
-  const validPatterns = Object.keys(PATTERN_STARTERS) as Pattern[];
-  const validTools = Object.keys(TOOL_SUFFIX) as Tool[];
-  if (!validPatterns.includes(pattern)) {
-    console.error(`Unknown pattern: ${pattern}. Valid: ${validPatterns.join(', ')}`);
+  const selectedPattern = patterns.find((p) => p.id === pattern);
+  if (!selectedPattern) {
+    console.error(`Unknown pattern: ${pattern}. Valid: ${patterns.map((p) => p.id).join(', ')}`);
     process.exit(1);
   }
-  if (!validTools.includes(tool)) {
-    console.error(`Unknown tool: ${tool}. Valid: ${validTools.join(', ')}`);
+  if (!VALID_TOOLS.includes(tool)) {
+    console.error(`Unknown tool: ${tool}. Valid: ${VALID_TOOLS.join(', ')}`);
     process.exit(1);
   }
 
   const targetDir = path.resolve(target);
-  const baseStarter = PATTERN_STARTERS[pattern];
-  const suffix = TOOL_SUFFIX[tool];
-  const starterName = pattern === 'daily-triage' ? `minimal-loop${suffix}` : baseStarter;
+  const baseStarter = starterName(selectedPattern.starter);
+  const starterNameForTool = starterName(selectedPattern.init.tool_starters?.[tool] ?? selectedPattern.starter);
   const startersRoot = await resolveBundledOrMonorepo('starters');
   const templatesRoot = await resolveBundledOrMonorepo('templates');
-  const starterRoot = path.join(startersRoot, starterName);
+  const starterRoot = path.join(startersRoot, starterNameForTool);
 
   if (!(await exists(starterRoot))) {
     const fallback = path.join(startersRoot, baseStarter);
@@ -417,7 +349,7 @@ Examples:
     }
   }
 
-  const stateFile = STATE_FILES[pattern];
+  const stateFile = selectedPattern.state;
   const stateExample = path.join(effectiveStarter, `${stateFile}.example`);
   if (await exists(stateExample)) {
     await copyFile(stateExample, path.join(targetDir, stateFile), dryRun);
@@ -433,8 +365,8 @@ Examples:
     await copyFile(loopMd, path.join(targetDir, 'LOOP.md'), dryRun);
   }
 
-  await copyL2Templates(pattern, tool, targetDir, templatesRoot, dryRun);
-  await scaffoldObservability(pattern, tool, targetDir, templatesRoot, dryRun);
+  await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun);
+  await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun);
 
   await scaffoldConstraints(targetDir, templatesRoot, tool, dryRun);
   if (!dryRun && !(await exists(path.join(targetDir, 'AGENTS.md')))) {
@@ -455,7 +387,7 @@ npm run lint
   console.log('\n=== Next steps ===');
   console.log(`  npx @jununfly/zj-loop-audit ${target === '.' ? '.' : target} --suggest`);
   console.log(`  npx @jununfly/zj-loop-cost --pattern ${pattern}`);
-  console.log(`  First loop command (${tool}):\n  ${firstLoopCommand(pattern, tool)}\n`);
+  console.log(`  First loop command (${tool}):\n  ${firstLoopCommand(selectedPattern, tool)}\n`);
 }
 
 async function readDirNames(dir: string): Promise<string[]> {

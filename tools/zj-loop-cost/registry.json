@@ -42,6 +42,22 @@
         "tokens_action": 250000,
         "suggested_daily_cap": 2000000,
         "early_exit_required": true
+      },
+      "init": {
+        "templates": {
+          "minimal_fix": true,
+          "verifier": false
+        },
+        "budget": {
+          "max_runs_per_day": 288,
+          "max_spawns_l1": 0,
+          "max_spawns_l2": 3
+        },
+        "first_loop_command": {
+          "grok": "/loop 10m Run pr-review-triage. Update pr-babysitter-state.md. Worktree + minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.",
+          "claude": "/loop 10m $pr-review-triage — update pr-babysitter-state.md. No auto-merge.",
+          "codex": "Automation 10m: pr-review-triage → pr-babysitter-state.md. No auto-merge."
+        }
       }
     },
     {
@@ -80,6 +96,27 @@
         "tokens_action": 200000,
         "suggested_daily_cap": 100000,
         "early_exit_required": false
+      },
+      "init": {
+        "tool_starters": {
+          "grok": "starters/minimal-loop",
+          "claude": "starters/minimal-loop-claude",
+          "codex": "starters/minimal-loop-codex"
+        },
+        "templates": {
+          "minimal_fix": false,
+          "verifier": false
+        },
+        "budget": {
+          "max_runs_per_day": 2,
+          "max_spawns_l1": 0,
+          "max_spawns_l2": 2
+        },
+        "first_loop_command": {
+          "grok": "/loop 1d Run loop-triage. Update STATE.md. No auto-fix in week one.",
+          "claude": "/loop 1d $loop-triage — update STATE.md. Report-only week one.",
+          "codex": "Automation daily: $loop-triage → update STATE.md. Report-only."
+        }
       }
     },
     {
@@ -121,6 +158,22 @@
         "tokens_action": 200000,
         "suggested_daily_cap": 1000000,
         "early_exit_required": true
+      },
+      "init": {
+        "templates": {
+          "minimal_fix": true,
+          "verifier": true
+        },
+        "budget": {
+          "max_runs_per_day": 96,
+          "max_spawns_l1": 0,
+          "max_spawns_l2": 3
+        },
+        "first_loop_command": {
+          "grok": "/loop 15m Run ci-triage on failing CI. Update ci-sweeper-state.md. Fix only regressions in worktree. Max 3 attempts.",
+          "claude": "/loop 15m $ci-triage — update ci-sweeper-state.md. Max 3 fix attempts.",
+          "codex": "Automation 15m: ci-triage on CI failures. Max 3 attempts."
+        }
       }
     },
     {
@@ -161,6 +214,22 @@
         "tokens_action": 150000,
         "suggested_daily_cap": 200000,
         "early_exit_required": false
+      },
+      "init": {
+        "templates": {
+          "minimal_fix": true,
+          "verifier": false
+        },
+        "budget": {
+          "max_runs_per_day": 1,
+          "max_spawns_l1": 0,
+          "max_spawns_l2": 2
+        },
+        "first_loop_command": {
+          "grok": "/loop 1d Run post-merge-scan on recent merges. Update post-merge-state.md. Small fixes only in worktree.",
+          "claude": "/loop 1d $post-merge-scan — update post-merge-state.md. Small fixes only.",
+          "codex": "Automation daily: post-merge-scan → post-merge-state.md."
+        }
       }
     },
     {
@@ -204,6 +273,22 @@
         "tokens_action": 300000,
         "suggested_daily_cap": 500000,
         "early_exit_required": true
+      },
+      "init": {
+        "templates": {
+          "minimal_fix": true,
+          "verifier": true
+        },
+        "budget": {
+          "max_runs_per_day": 4,
+          "max_spawns_l1": 0,
+          "max_spawns_l2": 3
+        },
+        "first_loop_command": {
+          "grok": "/loop 6h Run dependency-triage. Patch-only auto-fix in worktree + verifier. Escalate majors and denylist.",
+          "claude": "/loop 6h $dependency-triage — patch-only with verifier. Escalate risky bumps.",
+          "codex": "Automation 6h: dependency-triage. Patch-only with verifier."
+        }
       }
     },
     {
@@ -247,6 +332,22 @@
         "tokens_action": 80000,
         "suggested_daily_cap": 100000,
         "early_exit_required": false
+      },
+      "init": {
+        "templates": {
+          "minimal_fix": false,
+          "verifier": false
+        },
+        "budget": {
+          "max_runs_per_day": 1,
+          "max_spawns_l1": 0,
+          "max_spawns_l2": 2
+        },
+        "first_loop_command": {
+          "grok": "/loop 1d Run changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using draft-release-notes. Update changelog-drafter-state.md. Human review only.",
+          "claude": "/loop 1d $changelog-scan + draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.",
+          "codex": "Automation daily: changelog-scan + draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review."
+        }
       }
     },
     {
@@ -289,6 +390,22 @@
         "tokens_action": 60000,
         "suggested_daily_cap": 80000,
         "early_exit_required": false
+      },
+      "init": {
+        "templates": {
+          "minimal_fix": false,
+          "verifier": false
+        },
+        "budget": {
+          "max_runs_per_day": 12,
+          "max_spawns_l1": 0,
+          "max_spawns_l2": 1
+        },
+        "first_loop_command": {
+          "grok": "/loop 2h Run issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.",
+          "claude": "/loop 2h $issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.",
+          "codex": "Automation 2h: issue-triage → issue-triage-state.md. Propose only."
+        }
       }
     }
   ]

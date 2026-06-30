@@ -10,6 +10,7 @@
     "dist",
     "starters",
     "templates",
+    "registry.yaml",
     "README.md"
   ],
   "scripts": {
@@ -47,6 +48,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@jununfly/zj-loop-core": "file:../zj-loop-core"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

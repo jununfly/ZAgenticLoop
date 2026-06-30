@@ -18,6 +18,15 @@ patterns:
       tokens_action: 200000
       suggested_daily_cap: 100000
       early_exit_required: false
+    init:
+      budget:
+        max_runs_per_day: 2
+        max_spawns_l1: 0
+        max_spawns_l2: 2
+      first_loop_command:
+        grok: /loop 1d Run loop-triage.
+        claude: /loop 1d $loop-triage
+        codex: "Automation daily: loop-triage"
 `;
 
 test('parsePatternRegistry: validates schemaVersion and pattern cost fields', () => {
@@ -26,6 +35,7 @@ test('parsePatternRegistry: validates schemaVersion and pattern cost fields', ()
   assert.equal(registry.schemaVersion, 1);
   assert.equal(registry.patterns[0].id, 'daily-triage');
   assert.equal(registry.patterns[0].cost.suggested_daily_cap, 100000);
+  assert.equal(registry.patterns[0].init.budget.max_runs_per_day, 2);
 });
 
 test('parsePatternRegistry: fails fast on unsupported schema versions', () => {

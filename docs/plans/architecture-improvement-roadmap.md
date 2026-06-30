@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 19:41:48
+> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 19:58:36
 
 [~][X+] 1. ZAgenticLoop 架构设计与技术选型深化
 ├── [x][X+] 1-1. 绘制当前 Agentic Loop Working 系统地图
@@ -29,5 +29,13 @@
 
 ### 当前施工：1-3-2. 迁移 init-cost-MCP 的硬编码 pattern 事实
 
-第 1 刀已迁移 zj-loop-cost 消费 core registry loader；zj-loop-init 与 MCP 的硬编码 pattern 事实迁移仍待后续切片。
+第 2 刀已完成 zj-loop-init 迁移：registry init 子结构承载 starter/state/budget/templates/firstLoopCommand；zj-loop-init 通过 @jununfly/zj-loop-core loader 读取 registry。MCP 迁移仍待后续。
+
+**决策：**
+- Q: 第 2 刀迁移范围是什么？ → 第 2 刀迁移 zj-loop-init 的 pattern facts 到 registry：starter/state/budget/templates/firstLoopCommand 由 registry init 子结构承载；CLI 文件复制流程保持在 zj-loop-init。 (保留 audit/sync/MCP 不动，避免第二刀过宽；MCP registry facts 作为 1-3-2-3 后续切片。)
+
+**当前子树：**
+├── [x][Y+] 1-3-2-1. 迁移 zj-loop-cost 消费 core registry loader
+├── [x][Y+] 1-3-2-2. 迁移 zj-loop-init pattern facts 到 registry
+└── [ ][Y+] 1-3-2-3. 迁移 MCP registry facts 到 core API
 <!-- ROADMAP_SECTION_END -->

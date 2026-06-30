@@ -12,6 +12,24 @@ const costSchema = z.object({
   early_exit_required: z.boolean(),
 });
 
+const toolTargetSchema = z.enum(['grok', 'claude', 'codex']);
+
+const initSchema = z.object({
+  tool_starters: z.record(toolTargetSchema, z.string().min(1)).optional(),
+  templates: z
+    .object({
+      minimal_fix: z.boolean().default(false),
+      verifier: z.boolean().default(false),
+    })
+    .default({ minimal_fix: false, verifier: false }),
+  budget: z.object({
+    max_runs_per_day: z.number().int().positive(),
+    max_spawns_l1: z.number().int().nonnegative(),
+    max_spawns_l2: z.number().int().nonnegative(),
+  }),
+  first_loop_command: z.record(toolTargetSchema, z.string().min(1)),
+});
+
 const patternSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -28,6 +46,7 @@ const patternSchema = z.object({
   week_one_mode: z.string().min(1).optional(),
   token_cost: z.string().min(1),
   cost: costSchema,
+  init: initSchema.optional(),
 });
 
 const registrySchema = z.object({
