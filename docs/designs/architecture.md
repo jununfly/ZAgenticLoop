@@ -25,6 +25,11 @@ The main boundary rule is simple: core semantic functions answer what a loop
 fact means; adapters decide how a particular surface reads inputs and formats
 outputs.
 
+`tools/goal-audit` is a companion package, not part of the `@jununfly/zj-loop-*`
+tool family. It keeps its `@cobusgreyling/goal-audit` package identity and
+separate release workflow, while the root repository quality gates still build
+and test it to avoid drift between the monorepo and the published package.
+
 ## Registry
 
 `patterns/registry.yaml` is the shared pattern index. It carries stable metadata
@@ -238,6 +243,10 @@ cd tools/zj-loop-audit && npm run build && node dist/cli.js ../../
 bash scripts/before-after-demo.sh
 git diff --check
 ```
+
+`npm run build:tools` and `npm run test:tools` cover both the `zj-loop-*` tool
+family and the `tools/goal-audit` companion package. That coverage is a quality
+gate only; it does not imply a shared package namespace or release lifecycle.
 
 Test strategy:
 
