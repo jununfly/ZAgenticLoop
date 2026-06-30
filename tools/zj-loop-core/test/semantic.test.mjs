@@ -115,6 +115,10 @@ test('recommendPatterns returns deterministic ranked results with reason codes',
 
   const weak = recommendPatterns(REGISTRY, { useCase: 'morning scan' });
   assert.ok(weak.recommendations.length > 0);
+  assert.equal(weak.recommendations[0].pattern.id, 'daily-triage');
+  assert.equal(weak.recommendations[0].score, 4);
+  assert.equal(weak.recommendations[0].confidence, 'medium');
+  assert.ok(weak.recommendations[0].reasons.every((r) => r.code === 'match.goal' && r.scoreImpact === 2));
 });
 
 test('estimatePatternCost exposes structured estimate, warnings, and typed errors', () => {

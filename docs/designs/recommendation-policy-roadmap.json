@@ -1,0 +1,91 @@
+{
+  "title": "Recommendation Policy 规则化架构优化",
+  "description": "继续架构优化：将 @jununfly/zj-loop-core 中 recommendPatterns 的硬编码推荐 boost 和匹配权重收拢成可测试、可解释的策略结构。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Recommendation Policy 规则化架构优化",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4"
+      ],
+      "decisions": [
+        {
+          "q": "下一段架构优化聚焦哪里？",
+          "answer": "聚焦 @jununfly/zj-loop-core 的 pattern recommendation policy 规则化。",
+          "note": "代码事实显示 recommendPatterns 在 semantic.ts 中混合了字段匹配、boost 权重、reason code 和 ranking；architecture.md 已把 duplicated recommendation policy 列为 product tool 反边界。相比 sync 漂移检测，这一刀更贴近已确立的 core semantic contract，切面更小。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "审计 recommendPatterns 硬编码策略边界",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "recommendation policy 的硬编码边界是什么？",
+          "answer": "字段匹配、boost 触发词、权重、reason code、confidence 阈值和排序都集中在 recommendPatterns；MCP 只消费结构化结果。",
+          "note": "rg 显示 recommendPatterns 只有 core semantic 和 MCP markdown formatter 调用；semantic.test.mjs 只要求 ci/dependency 排名和 boost reason code 存在。下一步可先把策略表内置为常量/类型化结构，不引入外部规则文件，避免 core registry schema 和发布资产一起扩大。"
+        }
+      ],
+      "notes": "Audited recommendPatterns boundary: policy facts are centralized in core semantic.ts; MCP and tests consume structured output. The safest next slice is an internal typed policy object, not an external rules asset."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "设计 recommendation policy 最小契约",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "recommendation policy 第一版放外部文件还是 core 内部 typed policy？",
+          "answer": "先放 core 内部 typed policy。",
+          "note": "推荐策略是 core semantic contract 的一部分，但还没有多包复用或用户配置需求；外部 YAML 会引入资产打包、schema 版本、加载错误和 registry 边界问题。第一版应只把字段匹配权重、boost 规则和 confidence bands 表格化，recommendPatterns 仍保持同步纯函数。"
+        }
+      ],
+      "notes": "Minimal contract: internal typed policy with match fields, boost rules, confidence bands, and stable reason/source construction. No external YAML or registry schema changes in this slice."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "实现推荐策略 tracer bullet",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "tracer bullet 如何保持行为兼容？",
+          "answer": "只把推荐策略表格化，不改变 recommendPatterns 的输入输出、排序、reason code 或 MCP 格式化调用。",
+          "note": "实现为 RECOMMENDATION_POLICY 内置常量，包含 minWordLength、matchFields、boostRules、confidenceBands；applyWordMatches/applyBoosts 解释该表。新增测试锁定 morning scan 的字段匹配分值和 confidence。"
+        }
+      ],
+      "notes": "Implemented tracer bullet in tools/zj-loop-core/src/semantic.ts: recommendation policy is now a typed internal table interpreted by helper functions, with compatible output and additional semantic test coverage."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "合并设计记录并删除 recommendation policy roadmap",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-01 00:30:12",
+    "updated": "2026-07-01 00:35:50",
+    "md_file": "docs/designs/recommendation-policy-roadmap.md"
+  }
+}

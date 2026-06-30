@@ -61,47 +61,104 @@ function pushReason(reasons, code, message, scoreImpact, source) {
 function includesNeedle(haystack, needle) {
     return Boolean(haystack?.toLowerCase().includes(needle));
 }
+const RECOMMENDATION_POLICY = {
+    minWordLength: 3,
+    matchFields: [
+        {
+            code: 'match.id',
+            sourceField: 'id',
+            points: 2,
+            values: (pattern) => [pattern.id],
+            message: (_matchedValue, word) => `Matched pattern id: ${word}`,
+        },
+        {
+            code: 'match.name',
+            sourceField: 'name',
+            points: 2,
+            values: (pattern) => [pattern.name],
+            message: (_matchedValue, word) => `Matched pattern name: ${word}`,
+        },
+        {
+            code: 'match.goal',
+            sourceField: 'goal',
+            points: 2,
+            values: (pattern) => (pattern.goal ? [pattern.goal] : []),
+            message: (_matchedValue, word) => `Matched pattern goal: ${word}`,
+        },
+        {
+            code: 'match.skill',
+            sourceField: 'skills',
+            points: 2,
+            values: (pattern) => pattern.skills,
+            message: (matchedValue) => `Matched required skill: ${matchedValue}`,
+        },
+        {
+            code: 'match.phase',
+            sourceField: 'phases',
+            points: 2,
+            values: (pattern) => pattern.phases,
+            message: (matchedValue) => `Matched phase: ${matchedValue}`,
+        },
+    ],
+    boostRules: [
+        { useCaseIncludes: 'ci', patternIdIncludes: 'ci', code: 'boost.ci', message: 'CI use case boost', points: 5 },
+        { useCaseIncludes: 'pr', patternIdIncludes: 'pr', code: 'boost.pr', message: 'PR use case boost', points: 5 },
+        { useCaseIncludes: 'review', patternIdIncludes: 'pr', code: 'boost.pr', message: 'Review use case boost', points: 3 },
+        {
+            useCaseIncludes: 'depend',
+            patternIdIncludes: 'dependency',
+            code: 'boost.dependency',
+            message: 'Dependency use case boost',
+            points: 5,
+        },
+        { useCaseIncludes: 'issue', patternIdIncludes: 'issue', code: 'boost.issue', message: 'Issue use case boost', points: 5 },
+        {
+            useCaseIncludes: 'changelog',
+            patternIdIncludes: 'changelog',
+            code: 'boost.changelog',
+            message: 'Changelog use case boost',
+            points: 5,
+        },
+    ],
+    confidenceBands: [
+        { minScore: 8, confidence: 'high' },
+        { minScore: 4, confidence: 'medium' },
+        { minScore: 0, confidence: 'low' },
+    ],
+};
 function confidenceFor(score) {
-    if (score >= 8)
-        return 'high';
-    if (score >= 4)
-        return 'medium';
-    return 'low';
+    return RECOMMENDATION_POLICY.confidenceBands.find((band) => score >= band.minScore)?.confidence ?? 'low';
+}
+function applyWordMatches(pattern, word, reasons) {
+    let score = 0;
+    for (const field of RECOMMENDATION_POLICY.matchFields) {
+        for (const value of field.values(pattern)) {
+            if (!includesNeedle(value, word))
+                continue;
+            score += pushReason(reasons, field.code, field.message(value, word), field.points, registrySource(field.sourceField, pattern.id));
+        }
+    }
+    return score;
+}
+function applyBoosts(pattern, lowerUseCase, reasons) {
+    let score = 0;
+    for (const boost of RECOMMENDATION_POLICY.boostRules) {
+        if (!lowerUseCase.includes(boost.useCaseIncludes) || !pattern.id.includes(boost.patternIdIncludes))
+            continue;
+        score += pushReason(reasons, boost.code, boost.message, boost.points, { kind: 'recommendation-policy', patternId: pattern.id });
+    }
+    return score;
 }
 export function recommendPatterns(registry, request) {
     const lower = request.useCase.toLowerCase();
-    const words = lower.split(/\s+/).filter((w) => w.length >= 3);
+    const words = lower.split(/\s+/).filter((w) => w.length >= RECOMMENDATION_POLICY.minWordLength);
     const recommendations = registry.patterns.map((pattern) => {
         const reasons = [];
         let score = 0;
         for (const word of words) {
-            if (includesNeedle(pattern.id, word))
-                score += pushReason(reasons, 'match.id', `Matched pattern id: ${word}`, 2, registrySource('id', pattern.id));
-            if (includesNeedle(pattern.name, word))
-                score += pushReason(reasons, 'match.name', `Matched pattern name: ${word}`, 2, registrySource('name', pattern.id));
-            if (includesNeedle(pattern.goal, word))
-                score += pushReason(reasons, 'match.goal', `Matched pattern goal: ${word}`, 2, registrySource('goal', pattern.id));
-            for (const skill of pattern.skills) {
-                if (includesNeedle(skill, word))
-                    score += pushReason(reasons, 'match.skill', `Matched required skill: ${skill}`, 2, registrySource('skills', pattern.id));
-            }
-            for (const phase of pattern.phases) {
-                if (includesNeedle(phase, word))
-                    score += pushReason(reasons, 'match.phase', `Matched phase: ${phase}`, 2, registrySource('phases', pattern.id));
-            }
+            score += applyWordMatches(pattern, word, reasons);
         }
-        if (lower.includes('ci') && pattern.id.includes('ci'))
-            score += pushReason(reasons, 'boost.ci', 'CI use case boost', 5, { kind: 'recommendation-policy', patternId: pattern.id });
-        if (lower.includes('pr') && pattern.id.includes('pr'))
-            score += pushReason(reasons, 'boost.pr', 'PR use case boost', 5, { kind: 'recommendation-policy', patternId: pattern.id });
-        if (lower.includes('review') && pattern.id.includes('pr'))
-            score += pushReason(reasons, 'boost.pr', 'Review use case boost', 3, { kind: 'recommendation-policy', patternId: pattern.id });
-        if (lower.includes('depend') && pattern.id.includes('dependency'))
-            score += pushReason(reasons, 'boost.dependency', 'Dependency use case boost', 5, { kind: 'recommendation-policy', patternId: pattern.id });
-        if (lower.includes('issue') && pattern.id.includes('issue'))
-            score += pushReason(reasons, 'boost.issue', 'Issue use case boost', 5, { kind: 'recommendation-policy', patternId: pattern.id });
-        if (lower.includes('changelog') && pattern.id.includes('changelog'))
-            score += pushReason(reasons, 'boost.changelog', 'Changelog use case boost', 5, { kind: 'recommendation-policy', patternId: pattern.id });
+        score += applyBoosts(pattern, lower, reasons);
         return {
             pattern: patternToSummary(pattern),
             score,
