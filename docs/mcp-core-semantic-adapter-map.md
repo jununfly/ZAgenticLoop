@@ -172,3 +172,7 @@ can expose more structured semantics without surprising old clients.
 - every P0 semantic query has a target MCP tool or explicit non-MCP consumer
 - compatibility risks are documented
 - `1-6-4` has an implementation order that preserves current tool names
+
+Test gate follow-up: see `docs/core-semantic-query-test-gates.md` for the
+contract, parity, and MCP compatibility gates that should protect this
+migration.

@@ -384,7 +384,7 @@
     "1-6-2": {
       "id": "1-6-2",
       "label": "设计基于 core 的语义查询 API",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6",
       "children": [
@@ -538,12 +538,18 @@
     "1-6-2-5": {
       "id": "1-6-2-5",
       "label": "定义语义查询 API 的契约测试与迁移门禁",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6-2",
       "children": [],
-      "decisions": [],
-      "notes": "产出：定义 core query contract tests、MCP stdio compatibility tests、fixture strategy，以及迁移门禁：build:tools、test:tools、MCP tests、audit CLI、before-after demo。"
+      "decisions": [
+        {
+          "q": "语义查询 API 的迁移门禁应保护什么？",
+          "answer": "分四层保护：core semantic contract tests、cost estimator parity tests、MCP stdio compatibility tests、repo-level tool gates。文档设计刀不新增运行时代码，后续实现刀必须按这些门禁推进。",
+          "note": "现有测试已覆盖 registry/cost/MCP smoke，但缺少 semantic query contract、recommendation reason codes、MCP 输出兼容与 cost canonical policy parity。"
+        }
+      ],
+      "notes": "第16刀完成：新增 docs/core-semantic-query-test-gates.md，定义 core semantic contract tests、cost policy parity gate、MCP stdio compatibility tests、repo-level migration gates、fixture strategy 与 intentional behavior-change policy；明确后续 1-6-3/1-6-4 的 Gate A-D 验收命令。未改运行时代码。"
     },
     "1-6-3": {
       "id": "1-6-3",
@@ -578,7 +584,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 21:27:12",
+    "updated": "2026-06-30 21:33:05",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

@@ -321,3 +321,6 @@ readiness policy, and MCP/CLI formatting.
 MCP adapter follow-up: see `docs/mcp-core-semantic-adapter-map.md` for the
 compatibility-preserving mapping from current MCP tools to core semantic
 queries.
+
+Test gate follow-up: see `docs/core-semantic-query-test-gates.md` for the
+contract tests, parity tests, MCP compatibility checks, and migration gates.
