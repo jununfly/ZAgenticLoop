@@ -16,7 +16,7 @@ export async function runCli(spec, argv = process.argv.slice(2), io = defaultCli
     try {
         const options = parseCliOptions(spec, argv);
         if (options.help === true) {
-            io.stdout(formatCliHelp(spec));
+            io.stdout(await formatCliHelp(spec));
             return 0;
         }
         const result = await spec.handler({ argv, io, options });
@@ -81,7 +81,7 @@ export function parseCliOptions(spec, argv) {
     }
     return values;
 }
-export function formatCliHelp(spec) {
+export async function formatCliHelp(spec) {
     if (typeof spec.helpText === 'function')
         return spec.helpText();
     if (typeof spec.helpText === 'string')

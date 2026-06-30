@@ -101,7 +101,7 @@
     "1-4": {
       "id": "1-4",
       "label": "评估 sync-audit-init 后续迁移顺序",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -151,17 +151,17 @@
     "1-4-3": {
       "id": "1-4-3",
       "label": "迁移 zj-loop-init 消费 shared CLI harness",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Migrated zj-loop-init to shared CLI harness. Preserved scaffold file writes, dry-run output, dynamic pattern help, invalid pattern/tool business validation, and next-step output. Extended harness helpText to allow async registry-backed help."
     }
   },
   "metadata": {
     "created": "2026-06-30 23:04:08",
-    "updated": "2026-06-30 23:48:40",
+    "updated": "2026-06-30 23:56:00",
     "md_file": "docs/designs/shared-cli-harness-roadmap.md"
   }
 }

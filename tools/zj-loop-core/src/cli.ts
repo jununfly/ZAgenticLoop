@@ -63,7 +63,7 @@ export type CliSpec = {
   description?: string;
   usage?: string;
   options: readonly CliOptionSpec[];
-  helpText?: string | (() => string);
+  helpText?: string | (() => string | Promise<string>);
   handler(context: CliHandlerContext): CliHandlerResult | Promise<CliHandlerResult>;
 };
 
@@ -82,7 +82,7 @@ export async function runCli(
   try {
     const options = parseCliOptions(spec, argv);
     if (options.help === true) {
-      io.stdout(formatCliHelp(spec));
+      io.stdout(await formatCliHelp(spec));
       return 0;
     }
 
@@ -151,7 +151,7 @@ export function parseCliOptions(spec: CliSpec, argv: readonly string[]): CliOpti
   return values;
 }
 
-export function formatCliHelp(spec: CliSpec): string {
+export async function formatCliHelp(spec: CliSpec): Promise<string> {
   if (typeof spec.helpText === 'function') return spec.helpText();
   if (typeof spec.helpText === 'string') return spec.helpText;
 

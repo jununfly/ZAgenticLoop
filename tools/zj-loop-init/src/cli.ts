@@ -2,7 +2,7 @@
 import { cp, mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPatternRegistry, type RegistryPattern } from '@jununfly/zj-loop-core';
+import { loadPatternRegistry, runCli, type CliHandlerContext, type CliIo, type CliSpec, type RegistryPattern } from '@jununfly/zj-loop-core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
@@ -18,24 +18,6 @@ type InitPattern = RegistryPattern & {
 };
 
 const VALID_TOOLS: Tool[] = ['grok', 'claude', 'codex'];
-
-function parseArgs(argv: string[]) {
-  let pattern = 'daily-triage';
-  let tool: Tool = 'grok';
-  let target = '.';
-  let dryRun = false;
-
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--pattern' || a === '-p') pattern = argv[++i];
-    else if (a === '--tool' || a === '-t') tool = argv[++i] as Tool;
-    else if (a === '--dry-run') dryRun = true;
-    else if (a === '--help' || a === '-h') return { help: true as const, pattern, tool, target, dryRun };
-    else if (!a.startsWith('-')) target = a;
-  }
-
-  return { help: false as const, pattern, tool, target, dryRun };
-}
 
 async function loadRegistry() {
   return loadPatternRegistry({
@@ -66,15 +48,15 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
-async function copyDir(src: string, dest: string, dryRun: boolean) {
+async function copyDir(src: string, dest: string, dryRun: boolean, io: CliIo) {
   if (!(await exists(src))) return false;
   if (dryRun) {
-    console.log(`  would copy: ${src} → ${dest}`);
+    io.stdout(`  would copy: ${src} → ${dest}`);
     return true;
   }
   await mkdir(path.dirname(dest), { recursive: true });
   await cp(src, dest, { recursive: true });
-  console.log(`  copied: ${src} → ${dest}`);
+  io.stdout(`  copied: ${src} → ${dest}`);
   return true;
 }
 
@@ -91,6 +73,7 @@ async function copyTemplateSkill(
   tool: Tool,
   skillName: string,
   dryRun: boolean,
+  io: CliIo,
 ) {
   const src = path.join(templatesRoot, templateFile);
   const destByTool: Record<Tool, string> = {
@@ -100,7 +83,7 @@ async function copyTemplateSkill(
   };
   const dest = destByTool[tool];
   if (await exists(dest)) return;
-  await copyFile(src, dest, dryRun);
+  await copyFile(src, dest, dryRun, io);
 }
 
 async function copyTemplateVerifier(
@@ -108,6 +91,7 @@ async function copyTemplateVerifier(
   targetDir: string,
   tool: Tool,
   dryRun: boolean,
+  io: CliIo,
 ) {
   const verifierPaths: Record<Tool, string> = {
     grok: path.join(targetDir, '.grok', 'skills', 'loop-verifier', 'SKILL.md'),
@@ -122,17 +106,17 @@ async function copyTemplateVerifier(
     const body = await readFile(src, 'utf8');
     const toml = `name = "loop-verifier"\ndescription = "Independent verification agent for loop-produced changes."\n\n[system_prompt]\ncontent = """\n${body}\n"""\n`;
     if (dryRun) {
-      console.log(`  would write verifier: ${dest}`);
+      io.stdout(`  would write verifier: ${dest}`);
       return;
     }
     await mkdir(path.dirname(dest), { recursive: true });
     await writeFile(dest, toml);
-    console.log(`  created: ${dest} (from verifier template)`);
+    io.stdout(`  created: ${dest} (from verifier template)`);
     return;
   }
 
   const src = path.join(templatesRoot, 'SKILL.md.verifier');
-  await copyFile(src, dest, dryRun);
+  await copyFile(src, dest, dryRun, io);
 }
 
 async function copyL2Templates(
@@ -141,16 +125,17 @@ async function copyL2Templates(
   targetDir: string,
   templatesRoot: string,
   dryRun: boolean,
+  io: CliIo,
 ) {
   const templates = pattern.init.templates;
   if (!templates.minimal_fix && !templates.verifier) return;
 
   if (templates.minimal_fix) {
-    await copyTemplateSkill(templatesRoot, 'SKILL.md.minimal-fix', targetDir, tool, 'minimal-fix', dryRun);
+    await copyTemplateSkill(templatesRoot, 'SKILL.md.minimal-fix', targetDir, tool, 'minimal-fix', dryRun, io);
   }
 
   if (templates.verifier) {
-    await copyTemplateVerifier(templatesRoot, targetDir, tool, dryRun);
+    await copyTemplateVerifier(templatesRoot, targetDir, tool, dryRun, io);
   }
 }
 
@@ -197,6 +182,7 @@ async function scaffoldObservability(
   targetDir: string,
   templatesRoot: string,
   dryRun: boolean,
+  io: CliIo,
 ) {
   const budgetPath = path.join(targetDir, 'loop-budget.md');
   const runLogTemplate = path.join(templatesRoot, 'loop-run-log.md.template');
@@ -205,18 +191,18 @@ async function scaffoldObservability(
   if (!(await exists(budgetPath))) {
     const content = buildLoopBudgetMd(pattern);
     if (dryRun) {
-      console.log(`  would write: ${budgetPath}`);
+      io.stdout(`  would write: ${budgetPath}`);
     } else {
       await writeFile(budgetPath, content);
-      console.log(`  created: loop-budget.md`);
+      io.stdout(`  created: loop-budget.md`);
     }
   }
 
   if (!(await exists(runLogPath))) {
-    await copyFile(runLogTemplate, runLogPath, dryRun);
+    await copyFile(runLogTemplate, runLogPath, dryRun, io);
   }
 
-  await copyTemplateSkill(templatesRoot, 'SKILL.md.loop-budget', targetDir, tool, 'loop-budget', dryRun);
+  await copyTemplateSkill(templatesRoot, 'SKILL.md.loop-budget', targetDir, tool, 'loop-budget', dryRun, io);
 }
 
 async function scaffoldConstraints(
@@ -224,26 +210,27 @@ async function scaffoldConstraints(
   templatesRoot: string,
   tool: Tool,
   dryRun: boolean,
+  io: CliIo,
 ) {
   const constraintsPath = path.join(targetDir, 'loop-constraints.md');
   const constraintsTemplate = path.join(templatesRoot, 'loop-constraints.md');
 
   if (!(await exists(constraintsPath)) && (await exists(constraintsTemplate))) {
-    await copyFile(constraintsTemplate, constraintsPath, dryRun);
+    await copyFile(constraintsTemplate, constraintsPath, dryRun, io);
   }
 
-  await copyTemplateSkill(templatesRoot, 'SKILL.md.loop-constraints', targetDir, tool, 'loop-constraints', dryRun);
+  await copyTemplateSkill(templatesRoot, 'SKILL.md.loop-constraints', targetDir, tool, 'loop-constraints', dryRun, io);
 }
 
-async function copyFile(src: string, dest: string, dryRun: boolean) {
+async function copyFile(src: string, dest: string, dryRun: boolean, io: CliIo) {
   if (!(await exists(src))) return false;
   if (dryRun) {
-    console.log(`  would copy: ${src} → ${dest}`);
+    io.stdout(`  would copy: ${src} → ${dest}`);
     return true;
   }
   await mkdir(path.dirname(dest), { recursive: true });
   await cp(src, dest);
-  console.log(`  copied: ${src} → ${dest}`);
+  io.stdout(`  copied: ${src} → ${dest}`);
   return true;
 }
 
@@ -251,44 +238,23 @@ function firstLoopCommand(pattern: InitPattern, tool: Tool): string {
   return pattern.init.first_loop_command[tool];
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+async function handleInitCommand({ io, options }: CliHandlerContext) {
   const registry = await loadRegistry();
   const patterns = registry.patterns.map(requireInitPattern);
 
-  if (args.help) {
-    const patternList = patterns.map((p) => `  ${p.id}`).join('\n');
-    console.log(`zj-loop-init — scaffold agentic loop working starters
-
-Usage:
-  zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
-
-Patterns:
-${patternList}
-
-Options:
-  -p, --pattern   Pattern to scaffold
-  -t, --tool      Tool target (default: grok)
-  --dry-run       Print actions without copying
-  -h, --help      This help
-
-Examples:
-  npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-  npx @jununfly/zj-loop-init . -p pr-babysitter -t claude
-`);
-    process.exit(0);
-  }
-
-  const { pattern, tool, target, dryRun } = args;
+  const pattern = String(options.pattern ?? 'daily-triage');
+  const tool = String(options.tool ?? 'grok') as Tool;
+  const target = typeof options.target === 'string' ? options.target : '.';
+  const dryRun = options.dryRun === true;
 
   const selectedPattern = patterns.find((p) => p.id === pattern);
   if (!selectedPattern) {
-    console.error(`Unknown pattern: ${pattern}. Valid: ${patterns.map((p) => p.id).join(', ')}`);
-    process.exit(1);
+    io.stderr(`Unknown pattern: ${pattern}. Valid: ${patterns.map((p) => p.id).join(', ')}`);
+    return 1;
   }
   if (!VALID_TOOLS.includes(tool)) {
-    console.error(`Unknown tool: ${tool}. Valid: ${VALID_TOOLS.join(', ')}`);
-    process.exit(1);
+    io.stderr(`Unknown tool: ${tool}. Valid: ${VALID_TOOLS.join(', ')}`);
+    return 1;
   }
 
   const targetDir = path.resolve(target);
@@ -301,17 +267,17 @@ Examples:
   if (!(await exists(starterRoot))) {
     const fallback = path.join(startersRoot, baseStarter);
     if (!(await exists(fallback))) {
-      console.error(`Starter not found: ${starterRoot}`);
-      process.exit(1);
+      io.stderr(`Starter not found: ${starterRoot}`);
+      return 1;
     }
-    console.log(`Note: no ${tool} variant for ${pattern} — using ${baseStarter} (Grok paths)`);
+    io.stdout(`Note: no ${tool} variant for ${pattern} — using ${baseStarter} (Grok paths)`);
   }
 
   const effectiveStarter = (await exists(starterRoot))
     ? starterRoot
     : path.join(startersRoot, baseStarter);
 
-  console.log(`\nzj-loop-init: ${pattern} → ${targetDir} (${tool})${dryRun ? ' [dry-run]' : ''}\n`);
+  io.stdout(`\nzj-loop-init: ${pattern} → ${targetDir} (${tool})${dryRun ? ' [dry-run]' : ''}\n`);
 
   const skillRoots = [
     path.join(effectiveStarter, '.grok', 'skills'),
@@ -332,6 +298,7 @@ Examples:
         path.join(skillsDir, entry),
         path.join(targetDir, toolPrefix, entry),
         dryRun,
+        io,
       );
     }
   }
@@ -344,7 +311,7 @@ Examples:
     if (await exists(src)) {
       const entries = await readDirNames(src);
       for (const entry of entries) {
-        await copyFile(path.join(src, entry), path.join(dest, entry), dryRun);
+        await copyFile(path.join(src, entry), path.join(dest, entry), dryRun, io);
       }
     }
   }
@@ -352,23 +319,23 @@ Examples:
   const stateFile = selectedPattern.state;
   const stateExample = path.join(effectiveStarter, `${stateFile}.example`);
   if (await exists(stateExample)) {
-    await copyFile(stateExample, path.join(targetDir, stateFile), dryRun);
+    await copyFile(stateExample, path.join(targetDir, stateFile), dryRun, io);
   } else {
     const alt = path.join(effectiveStarter, 'STATE.md.example');
     if (await exists(alt)) {
-      await copyFile(alt, path.join(targetDir, stateFile), dryRun);
+      await copyFile(alt, path.join(targetDir, stateFile), dryRun, io);
     }
   }
 
   const loopMd = path.join(effectiveStarter, 'LOOP.md');
   if (await exists(loopMd)) {
-    await copyFile(loopMd, path.join(targetDir, 'LOOP.md'), dryRun);
+    await copyFile(loopMd, path.join(targetDir, 'LOOP.md'), dryRun, io);
   }
 
-  await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun);
-  await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun);
+  await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
+  await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
 
-  await scaffoldConstraints(targetDir, templatesRoot, tool, dryRun);
+  await scaffoldConstraints(targetDir, templatesRoot, tool, dryRun, io);
   if (!dryRun && !(await exists(path.join(targetDir, 'AGENTS.md')))) {
     const agentsTemplate = `# AGENTS.md
 
@@ -381,13 +348,17 @@ npm run lint
 - See LOOP.md for cadence and human gates
 `;
     await writeFile(path.join(targetDir, 'AGENTS.md'), agentsTemplate);
-    console.log('  created: AGENTS.md (template)');
+    io.stdout('  created: AGENTS.md (template)');
   }
 
-  console.log('\n=== Next steps ===');
-  console.log(`  npx @jununfly/zj-loop-audit ${target === '.' ? '.' : target} --suggest`);
-  console.log(`  npx @jununfly/zj-loop-cost --pattern ${pattern}`);
-  console.log(`  First loop command (${tool}):\n  ${firstLoopCommand(selectedPattern, tool)}\n`);
+  io.stdout(`\n=== Next steps ===
+  npx @jununfly/zj-loop-audit ${target === '.' ? '.' : target} --suggest
+  npx @jununfly/zj-loop-cost --pattern ${pattern}
+  First loop command (${tool}):
+  ${firstLoopCommand(selectedPattern, tool)}
+`);
+
+  return 0;
 }
 
 async function readDirNames(dir: string): Promise<string[]> {
@@ -396,7 +367,43 @@ async function readDirNames(dir: string): Promise<string[]> {
   return entries.filter((e) => e.isDirectory() || e.isFile()).map((e) => e.name);
 }
 
-main().catch((err) => {
-  console.error('zj-loop-init failed:', err instanceof Error ? err.message : err);
-  process.exit(1);
+async function helpText() {
+  const registry = await loadRegistry();
+  const patterns = registry.patterns.map(requireInitPattern);
+  const patternList = patterns.map((p) => `  ${p.id}`).join('\n');
+  return `zj-loop-init — scaffold agentic loop working starters
+
+Usage:
+  zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
+
+Patterns:
+${patternList}
+
+Options:
+  -p, --pattern   Pattern to scaffold
+  -t, --tool      Tool target (default: grok)
+  --dry-run       Print actions without copying
+  -h, --help      This help
+
+Examples:
+  npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+  npx @jununfly/zj-loop-init . -p pr-babysitter -t claude
+`;
+}
+
+const SPEC: CliSpec = {
+  name: 'zj-loop-init',
+  usage: 'zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>',
+  helpText,
+  options: [
+    { name: 'target', type: 'positional', description: 'Target directory', default: '.' },
+    { name: 'pattern', alias: '-p', type: 'string', description: 'Pattern to scaffold', default: 'daily-triage' },
+    { name: 'tool', alias: '-t', type: 'string', description: 'Tool target', default: 'grok' },
+    { name: 'dryRun', flag: 'dry-run', type: 'boolean', description: 'Print actions without copying' },
+  ],
+  handler: handleInitCommand,
+};
+
+runCli(SPEC).then((exitCode) => {
+  process.exitCode = exitCode;
 });

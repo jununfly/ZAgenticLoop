@@ -71,6 +71,18 @@ test('zj-loop-init rejects unknown tool', async () => {
   );
 });
 
+test('zj-loop-init fails fast on unknown option and missing option value', async () => {
+  await assert.rejects(
+    () => exec('node', [CLI, '--wat']),
+    (err) => err.stderr?.includes('Unknown option: --wat') || err.message?.includes('Unknown option: --wat'),
+  );
+
+  await assert.rejects(
+    () => exec('node', [CLI, '--pattern']),
+    (err) => err.stderr?.includes('Missing value for option: --pattern') || err.message?.includes('Missing value for option: --pattern'),
+  );
+});
+
 test('zj-loop-init scaffolds ci-sweeper with bundled assets', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-'));
   try {

@@ -48,9 +48,9 @@ export type CliSpec = {
     description?: string;
     usage?: string;
     options: readonly CliOptionSpec[];
-    helpText?: string | (() => string);
+    helpText?: string | (() => string | Promise<string>);
     handler(context: CliHandlerContext): CliHandlerResult | Promise<CliHandlerResult>;
 };
 export declare function runCli(spec: CliSpec, argv?: readonly string[], io?: CliIo): Promise<number>;
 export declare function parseCliOptions(spec: CliSpec, argv: readonly string[]): CliOptions;
-export declare function formatCliHelp(spec: CliSpec): string;
+export declare function formatCliHelp(spec: CliSpec): Promise<string>;
