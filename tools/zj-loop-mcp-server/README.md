@@ -1,12 +1,12 @@
 # @jununfly/zj-loop-mcp-server
 
-MCP (Model Context Protocol) server for **zagenticloop** — exposes patterns, skills, state, budget, and audit tools as runtime-queryable resources for AI agents.
+MCP (Model Context Protocol) server for **ZAgenticLoop** — exposes patterns, skills, state, budget, and audit tools as runtime-queryable resources for AI agents.
 
 Instead of stuffing all loop documentation into the prompt, agents can query only what they need on-demand via MCP.
 
 ## Quick Start
 
-**v1 ships from this repo** (npm publish pending). From a cloned `zagenticloop` repo:
+**v1 ships from this repo** (npm publish pending). From a cloned `ZAgenticLoop` repo:
 
 ```bash
 cd tools/zj-loop-mcp-server && npm ci && npm test
@@ -22,7 +22,7 @@ Add to your MCP config (`.mcp.json` or equivalent):
 ```json
 {
   "mcpServers": {
-    "zagenticloop": {
+    "zj-loop": {
       "command": "npx",
       "args": ["-y", "@jununfly/zj-loop-mcp-server"],
       "env": {
@@ -48,16 +48,35 @@ Add to your MCP config (`.mcp.json` or equivalent):
 
 ## Tools
 
-| Tool | Description |
-|------|-------------|
-| `loop_list_patterns` | List all patterns with goals, cadences, risk levels |
-| `loop_list_skills` | List available skills with locations |
-| `loop_list_state_files` | List state files in the project |
-| `loop_get_pattern` | Get full pattern docs + registry metadata |
-| `loop_get_skill` | Get SKILL.md content for a named skill |
-| `loop_get_state` | Read a state file for current loop status |
-| `loop_recommend_pattern` | Recommend patterns for a use case description |
-| `loop_estimate_cost` | Estimate daily token cost for a pattern at L1/L2/L3 |
+| Tool | Backing | Description |
+|------|---------|-------------|
+| `loop_list_patterns` | `@jununfly/zj-loop-core` semantic query | List all patterns with legacy snake_case fields for existing clients |
+| `loop_list_skills` | MCP resolver evidence | List available skills with locations |
+| `loop_list_state_files` | MCP resolver evidence | List state files in the project |
+| `loop_get_pattern` | `@jununfly/zj-loop-core` semantic query + raw doc evidence | Get full pattern docs + registry metadata |
+| `loop_get_skill` | MCP resolver evidence | Get SKILL.md content for a named skill |
+| `loop_get_state` | MCP resolver evidence | Read a state file for current loop status |
+| `loop_recommend_pattern` | `@jununfly/zj-loop-core` semantic query | Recommend patterns for a use case description |
+| `loop_estimate_cost` | `@jununfly/zj-loop-core` semantic query | Estimate daily token cost for a pattern at L1/L2/L3 |
+
+## Semantic API Compatibility
+
+The MCP server keeps the original tool names stable while moving domain logic
+behind `@jununfly/zj-loop-core` semantic queries.
+
+- Semantic tools answer "what does this mean for agentic loop working?"
+  (`loop_list_patterns`, `loop_get_pattern`, `loop_recommend_pattern`,
+  `loop_estimate_cost`).
+- Evidence tools and raw resources answer "show me the source" and continue to
+  read from `LOOP_PROJECT_ROOT` (`loop://patterns/{id}`,
+  `loop://skills/{name}`, `loop://state/{file}`, `loop_get_skill`,
+  `loop_get_state`).
+- `loop_list_patterns` intentionally returns the legacy JSON field names
+  (`week_one_mode`, `token_cost`, `state`) so existing clients can keep parsing
+  the response while the implementation consumes core summaries internally.
+- Typed core errors are formatted as text content responses in MCP. Expected
+  user/data problems such as unknown patterns or invalid cadences should not
+  crash the server.
 
 ## Environment
 
@@ -86,8 +105,9 @@ Agent (Claude Code / Grok / Codex)
   ▼
 zj-loop-mcp-server (stdio transport)
   │
-  ├─ resolver.ts ──→ reads patterns/, skills/, STATE.md, LOOP.md, etc.
-  └─ index.ts ──→ MCP protocol handlers
+  ├─ @jununfly/zj-loop-core ──→ semantic pattern, recommendation, and cost queries
+  ├─ resolver.ts ─────────────→ reads patterns/, skills/, STATE.md, LOOP.md, etc.
+  └─ index.ts ────────────────→ MCP protocol handlers and compatibility formatters
 ```
 
 The server reads from the local filesystem at `LOOP_PROJECT_ROOT`. It is read-only — it never writes to the project.

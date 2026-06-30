@@ -376,6 +376,12 @@ test('loop_list_patterns tool returns registry patterns', async () => {
     const text = res.get(1).result.content[0].text;
     const parsed = JSON.parse(text);
     assert.equal(parsed[0].id, 'daily-triage');
+    assert.equal(parsed[0].week_one_mode, 'L1');
+    assert.equal(parsed[0].token_cost, 'low');
+    assert.equal(parsed[0].state, 'STATE.md');
+    assert.equal(parsed[0].requiredSkills, undefined);
+    assert.equal(parsed[0].cost, undefined);
+    assert.equal(parsed[0].init, undefined);
   } finally {
     await cleanup();
   }
@@ -392,6 +398,21 @@ test('loop_get_pattern tool returns metadata and documentation', async () => {
     assert.ok(text.includes('Registry Metadata'));
     assert.ok(text.includes('Pattern Documentation'));
     assert.ok(text.includes('# Daily Triage'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('loop_get_pattern tool returns text content for unknown pattern', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'tools/call',
+      params: { name: 'loop_get_pattern', arguments: { patternId: 'missing-pattern' } },
+    }]);
+    const text = res.get(1).result.content[0].text;
+    assert.ok(text.includes('Pattern "missing-pattern" not found'));
+    assert.ok(text.includes('daily-triage'));
   } finally {
     await cleanup();
   }
@@ -451,6 +472,34 @@ test('pattern resource is readable over stdio', async () => {
     }]);
     const text = res.get(1).result.contents[0].text;
     assert.ok(text.includes('# Daily Triage'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('skill resource remains readable over stdio', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'resources/read',
+      params: { uri: 'loop://skills/loop-triage' },
+    }]);
+    const text = res.get(1).result.contents[0].text;
+    assert.ok(text.includes('# Loop Triage'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('state resource remains readable over stdio', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'resources/read',
+      params: { uri: 'loop://state/STATE.md' },
+    }]);
+    const text = res.get(1).result.contents[0].text;
+    assert.ok(text.includes('Fix CI'));
   } finally {
     await cleanup();
   }

@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "ZAgenticLoop 架构设计与技术选型深化",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -123,7 +123,7 @@
     "1-6": {
       "id": "1-6",
       "label": "升级 MCP 为 Agentic Loop Working 语义 API",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -586,17 +586,23 @@
     "1-6-5": {
       "id": "1-6-5",
       "label": "补齐 MCP 语义 API 文档与兼容性测试",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": "后续 exploit：更新 tools/zj-loop-mcp-server/README.md、examples/mcp、server.test.mjs，证明 raw resources 兼容且 semantic tools 输出稳定。"
+      "decisions": [
+        {
+          "q": "第19刀是否新增 MCP tool？",
+          "answer": "不新增。只补齐现有 core-backed semantic tools 的用户文档、适配关系说明与兼容性测试。",
+          "note": "避免把文档/兼容性收口扩张成新的语义 API 设计；新 tool 留给后续独立节点。"
+        }
+      ],
+      "notes": "第19刀完成：MCP README 记录 core-backed semantic tools 与 raw resource/evidence 工具边界；适配图更新为已迁移状态；examples/mcp 使用 zj-loop 配置键；server.test.mjs 补齐 legacy JSON 字段、unknown pattern text response、skill/state raw resource stdio 兼容性测试。"
     }
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 21:53:25",
+    "updated": "2026-06-30 22:02:58",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

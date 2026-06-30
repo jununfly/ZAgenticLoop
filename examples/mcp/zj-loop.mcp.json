@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "zagenticloop": {
+    "zj-loop": {
       "command": "npx",
       "args": ["-y", "@jununfly/zj-loop-mcp-server"],
       "env": {

@@ -1,9 +1,10 @@
 # MCP To Core Semantic Adapter Map
 
 This document maps the current `@jununfly/zj-loop-mcp-server` resources and
-tools to the future `@jununfly/zj-loop-core` semantic query API.
+tools to the `@jununfly/zj-loop-core` semantic query API.
 
-It is a design artifact for `1-6-2-4`. It does not change MCP runtime behavior.
+It started as the design artifact for `1-6-2-4` and now also records the
+compatibility outcome after `1-6-4` migrated the semantic tools.
 
 ## Migration Rule
 
@@ -16,7 +17,7 @@ when a structured semantic answer needs inspection.
 
 ## Current MCP Surface
 
-| Surface | Current role | Future owner |
+| Surface | Current role | Runtime owner after `1-6-4` |
 | --- | --- | --- |
 | `loop://registry` | Raw registry resource | MCP resource adapter over registry loader. |
 | `loop://config` | Raw `LOOP.md` resource | MCP resource adapter. |
@@ -32,8 +33,25 @@ when a structured semantic answer needs inspection.
 | `loop_get_pattern` | Registry metadata plus pattern docs | Core `getPatternProfile()`, with MCP loading optional doc input. |
 | `loop_get_skill` | Raw skill markdown lookup | MCP resolver for now. |
 | `loop_get_state` | Raw state markdown lookup | MCP resolver for now. |
-| `loop_recommend_pattern` | Inline keyword recommendation | Core `recommendPatterns()`, formatted by MCP. |
-| `loop_estimate_cost` | Inline cost estimate | Core `estimatePatternCost()`, formatted by MCP. |
+| `loop_recommend_pattern` | Pattern recommendation | Core `recommendPatterns()`, formatted by MCP. |
+| `loop_estimate_cost` | Pattern cost estimate | Core `estimatePatternCost()`, formatted by MCP. |
+
+## Migration Status
+
+`1-6-4` completed the first compatibility-preserving migration:
+
+- `loop_list_patterns` calls `listPatternSummaries()` and formats legacy
+  snake_case JSON.
+- `loop_get_pattern` calls `getPatternProfile()` after the MCP adapter loads
+  optional raw pattern docs.
+- `loop_recommend_pattern` calls `recommendPatterns()` and exposes reason codes
+  in markdown.
+- `loop_estimate_cost` calls `estimatePatternCost()` and formats typed errors as
+  text content.
+- Raw resources, skill tools, and state tools remain on the resolver path.
+
+`1-6-5` documents this runtime contract and adds stdio compatibility tests for
+legacy fields, unknown pattern text responses, and raw resource continuity.
 
 ## Tool Mapping
 
@@ -45,7 +63,7 @@ when a structured semantic answer needs inspection.
 | MCP responsibilities | Resolve root, load registry, call query, format `patterns` as JSON compatible with current response. |
 | Compatibility target | Preserve existing fields where possible: `id`, `name`, `goal`, `cadence`, `risk`, `week_one_mode`, `token_cost`, `state`. |
 | New semantic value | Can include stable summary contract internally: `requiredSkills`, `humanGates`, `starter`. |
-| Tests | Existing `loop_list_patterns tool returns registry patterns`; add assertion that output comes from summary shape without full registry leakage. |
+| Tests | Stdio compatibility asserts legacy field names and no full registry cost/init leakage. |
 
 The adapter can translate camelCase core fields back to current snake_case names
 if preserving exact JSON shape matters for clients.
@@ -58,7 +76,7 @@ if preserving exact JSON shape matters for clients.
 | MCP responsibilities | Resolve root, load registry, load optional pattern markdown through safe resolver, pass doc text to core, format metadata plus docs. |
 | Compatibility target | Preserve current "Registry Metadata" and "Pattern Documentation" markdown sections. |
 | New semantic value | Typed unknown-pattern errors and explicit separation of registry facts from documentation. |
-| Tests | Existing pattern resource test remains raw; add tool test for unknown pattern error and metadata/docs formatting. |
+| Tests | Stdio compatibility asserts metadata/docs formatting and unknown pattern text responses. |
 
 Core must not read `patterns/{id}.md`; MCP loads the optional doc because path
 safety and project root resolution belong to the adapter.
@@ -71,10 +89,10 @@ safety and project root resolution belong to the adapter.
 | MCP responsibilities | Validate `useCase`, call core, format top recommendations in current markdown style. |
 | Compatibility target | Preserve top-3 recommendation behavior and visible fields: goal, cadence, risk, start mode, skills, starter. |
 | New semantic value | Expose reasons internally and eventually include them in markdown output without breaking clients. |
-| Tests | Add deterministic cases for `ci`, `dependencies`, `issue triage`, `changelog`; assert stable top result and reason codes. |
+| Tests | Core contract tests cover common ranking cases; MCP stdio compatibility asserts visible fields and reason-code output. |
 
-The current inline scorer can seed the first core policy, but score reasons
-should become machine-readable before MCP formats them.
+The first core policy exposes machine-readable reason codes before MCP formats
+them.
 
 ### `loop_estimate_cost`
 
@@ -84,11 +102,11 @@ should become machine-readable before MCP formats them.
 | MCP responsibilities | Validate tool args, call core, format existing cost markdown table. |
 | Compatibility target | Preserve `patternId`, `level`, optional `cadence`, invalid cadence text, unknown pattern text, and table-style output. |
 | New semantic value | Share the same estimate policy as `zj-loop-cost`; warnings become structured in `meta.warnings`. |
-| Tests | Existing `loop_estimate_cost tool computes a cost table`; add parity test with core estimate fixture once implemented. |
+| Tests | Core cost tests own numerical policy; MCP stdio compatibility asserts table anchors plus typed-error formatting. |
 
-Important: the current MCP estimate mix differs from `zj-loop-cost`. During
-implementation, choose the `zj-loop-cost` estimator as the canonical policy and
-update MCP tests intentionally.
+Important: cost policy now belongs to core. MCP tests should avoid becoming the
+numerical oracle; they should prove adapter compatibility and leave exact cost
+policy to core tests.
 
 ## Evidence-Only Tools
 
@@ -134,15 +152,15 @@ source."
 7. Leave skill/state/raw resources on resolver paths.
 8. Run MCP stdio tests and full tool gates.
 
-This order starts with the least behaviorally risky query and leaves the cost
-policy migration until after the canonical estimator is in core.
+This order was used to start with the least behaviorally risky query and leave
+the cost policy migration until after the canonical estimator was in core.
 
 ## Compatibility Risks
 
 | Risk | Mitigation |
 | --- | --- |
 | Existing clients parse exact JSON field names from `loop_list_patterns`. | Keep adapter output snake_case during first migration. |
-| MCP cost output changes because core adopts `zj-loop-cost` policy. | Record intentional parity decision and update tests with before/after fixture. |
+| MCP cost output changes because core owns the policy. | Keep MCP tests on output anchors and typed text errors; keep numerical assertions in core/cost tests. |
 | Recommendation ranking changes. | Add deterministic recommendation contract tests before swapping MCP implementation. |
 | Unknown pattern errors change shape. | MCP formatter should preserve current plain-text error while core returns typed errors. |
 | Core query errors leak as stack traces. | MCP adapter must convert typed errors to text content responses. |
