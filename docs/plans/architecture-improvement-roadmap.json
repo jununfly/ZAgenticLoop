@@ -1,0 +1,368 @@
+{
+  "title": "ZAgenticLoop 架构设计与技术选型深化",
+  "description": "围绕 Agentic Loop Working 参考系统，梳理共享领域内核、registry 单一事实源、readiness 策略、CLI 产品族和 MCP 语义 API 的演进路线。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "ZAgenticLoop 架构设计与技术选型深化",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6",
+        "1-7"
+      ],
+      "decisions": [
+        {
+          "q": "第一阶段应该先 exploit 哪个架构瓶颈？",
+          "answer": "推荐先做 zj-loop-core + registry 单一事实源的最小纵切，暂不先做 readiness rule engine 或 MCP 语义 API。",
+          "note": "原因：core/registry 会直接降低 audit/init/sync/cost/MCP 的重复；readiness rule engine 和 MCP API 都会消费这些基础能力，过早做容易把硬编码换个地方放。"
+        },
+        {
+          "q": "Human 是否确认第一阶段只做 core + registry 最小纵切？",
+          "answer": "确认。第一阶段聚焦 zj-loop-core + patterns/registry.yaml 单一事实源，不先实现 readiness rule engine 和 MCP 语义 API。",
+          "note": "这是后续 exploit 的约束：先降低领域事实重复和迁移成本，再进入策略引擎/API 层。"
+        },
+        {
+          "q": "是否停止继续 grill 并提交当前 roadmap？",
+          "answer": "要。停止继续追问，把当前 roadmap 作为第一阶段架构实施计划提交到当前分支。",
+          "note": "关键边界、技术选型、迁移顺序和验收门禁已经收束；后续细节进入代码施工时再由具体实现反馈驱动。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "绘制当前 Agentic Loop Working 系统地图",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "当前架构的主要重复在哪里？",
+          "answer": "重复集中在项目文件探测、Pattern/Tool 枚举、starter/state/budget 映射、技能目录与安全信号读取。audit/init/sync/cost/MCP 都在不同程度上重复这些领域事实。",
+          "note": "codegraph explore 显示 zj-loop-init 仍内联 Pattern、Tool、PATTERN_STARTERS、STATE_FILES、PATTERN_BUDGET、firstLoopCommand；这类事实应迁移到 core + registry。"
+        }
+      ],
+      "notes": "已完成系统地图：docs/patterns/starters/templates/examples 提供参考系统素材；tools/zj-loop-* 提供 audit/init/cost/sync/MCP 能力；当前最明显的架构债是领域事实和文件探测逻辑分散。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "抽取 zj-loop-core 共享领域内核",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3",
+        "1-2-4"
+      ],
+      "decisions": [
+        {
+          "q": "zj-loop-core 第一版是否作为独立 workspace package？",
+          "answer": "要。第一版采用独立 workspace package，例如 tools/zj-loop-core / @jununfly/zj-loop-core。",
+          "note": "core 是 audit/init/sync/cost/MCP 的共同依赖，不归属于任一 CLI；独立包可以保持领域语言和事实模型的中立 owner。"
+        }
+      ],
+      "notes": "首个建议 exploit 区：建立共享领域内核，先承载 registry loading、公共类型、项目证据探测，不在第一步承载 readiness scoring 策略。"
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "提升 patterns/registry.yaml 为单一事实源",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2",
+        "1-3-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "设计 readiness 策略规则引擎",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2"
+      ],
+      "decisions": [
+        {
+          "q": "readiness 策略引擎现在是否进入 exploit？",
+          "answer": "先 explore，不进入 exploit。",
+          "note": "现有 readiness 分数直接影响用户看到的等级和 CI audit 结果；在 core/registry 稳定前，先盘点 signals 与兼容性要求，再决定规则 schema。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "统一 zj-loop CLI 产品族外壳",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "升级 MCP 为 Agentic Loop Working 语义 API",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2"
+      ],
+      "decisions": [
+        {
+          "q": "MCP server 是否现在重构为语义 API？",
+          "answer": "先 explore 语义边界，不直接重构。",
+          "note": "MCP 应消费 core/registry 的稳定概念；否则只是把当前文件读取能力改写成另一层硬编码。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "制定验证与迁移切片",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-7-1",
+        "1-7-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "定义 zj-loop-core 包边界与公共类型",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "@jununfly/zj-loop-core 第一版公共 API 范围是什么？",
+          "answer": "只包含三类能力：registry loading + domain types、project evidence detection、filesystem/path adapter。明确不包含 CLI parsing、readiness scoring、MCP protocol。",
+          "note": "core 第一版定位为领域事实与证据层；CLI harness、readiness rule engine、MCP semantic API 后续消费 core，但不反向进入 core。"
+        }
+      ],
+      "notes": "core 包边界已确认：独立 workspace package，第一版只暴露 registry loading + domain types、project evidence detection、filesystem/path adapter；排除 CLI parsing、readiness scoring、MCP protocol。"
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "抽取 registry loader 与领域模型",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "registry.yaml 是否在第一阶段承载 init 当前硬编码的 pattern 事实？",
+          "answer": "要，但分层承载。registry.yaml 承载 starter mapping、state file、budget defaults、first loop command、tool variants；稳定领域事实放 pattern 根层，工具特定体验放 tools.codex/grok/claude 等子结构。",
+          "note": "目标是让 registry 成为单一事实源，同时避免把某个工具的命令文案、路径约定和交互体验污染到 pattern 根字段。"
+        },
+        {
+          "q": "registry loader 第一版是否引入运行时 schema 校验库？",
+          "answer": "要。@jununfly/zj-loop-core 的 registry loader 第一版引入 zod 做运行时 schema 校验。",
+          "note": "patterns/registry.yaml 是外部 YAML 数据，TypeScript 类型不能保护文件内容；zod 用于 fail-fast、清晰错误和从 schema 推导领域类型。"
+        },
+        {
+          "q": "registry loader/domain model 与 registry schema 是否作为同一实现切片完成？",
+          "answer": "要一起完成。1-2-2 和 1-3-1 作为同一个 tracer bullet：registry 增字段、core loader 校验、至少 zj-loop-cost 消费一小块。",
+          "note": "schema 没有 loader 校验会退化成文档式约定；loader 没有 schema 扩展没有真实价值；用 cost 作为低风险消费者验证切片端到端成立。"
+        }
+      ],
+      "notes": "registry loader/domain model 与 registry schema 作为同一 tracer bullet：registry 增字段，core loader 使用 zod 校验 schemaVersion=1 并输出稳定领域类型，zj-loop-cost 最小消费 budget/cost 字段。"
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "抽取项目证据探测与文件系统适配器",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "project evidence detection 第一版是否只抽事实探测而不抽评分判断？",
+          "answer": "要。第一版只返回事实 evidence，例如 hasStateFile、skills、hasBudgetDoc、hasRunLog、hasConstraints、hasCi、hasTests；L0/L1/L2/L3 分数和 assessment 仍留在 zj-loop-audit。",
+          "note": "core 保持中立的证据层；audit 继续负责 policy/scoring。未来 readiness rule engine 可以消费同一 evidence，但不会把规则污染进 core。"
+        }
+      ],
+      "notes": "project evidence detection 边界已确认：core 只产出事实 evidence，不产出 readiness score、level 或 assessment；scoring 留在 zj-loop-audit/未来 rule engine。"
+    },
+    "1-2-4": {
+      "id": "1-2-4",
+      "label": "按 cost-init-audit-sync-MCP 顺序接入 core",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "第一刀实现是否只让 zj-loop-cost 消费 core registry loader？",
+          "answer": "要。第一刀只让 zj-loop-cost 消费新的 @jununfly/zj-loop-core registry loader，暂不同时迁 zj-loop-init。",
+          "note": "cost 是低风险只读消费者，可验证 schema、loader、package wiring；init 硬编码多且涉及文件写入，作为第二刀迁移。"
+        }
+      ],
+      "notes": "接入顺序已定：第一刀只迁 zj-loop-cost 到 core registry loader；第二刀迁 zj-loop-init；后续再迁 audit、sync/MCP。"
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "扩展 registry schema 承载 starter-state-budget-command",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "registry schema 第一版是否引入显式 schemaVersion？",
+          "answer": "要。registry 根层引入 schemaVersion: 1，由 @jununfly/zj-loop-core loader 做兼容性校验。",
+          "note": "第一版只做 fail-fast 校验：不支持复杂 migration；遇到缺失版本、未知版本或结构不兼容时给出明确错误。"
+        },
+        {
+          "q": "registry schema 与 core loader 是否作为同一实现切片完成？",
+          "answer": "要一起完成。schema 扩展、zod loader 校验、zj-loop-cost 最小消费要在同一切片闭环。",
+          "note": "这是第一阶段的 tracer bullet，用最小消费者证明 registry 单一事实源不是只停在数据结构设计。"
+        }
+      ],
+      "notes": "registry schema 第一版与 core loader 同切片完成：根层 schemaVersion: 1；pattern 根层放稳定领域事实；tools.* 子结构放工具差异；core loader fail-fast；zj-loop-cost 最小消费。"
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "迁移 init-cost-MCP 的硬编码 pattern 事实",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3": {
+      "id": "1-3-3",
+      "label": "补齐 registry 校验与兼容性测试",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "盘点现有 readiness signals 与分数来源",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "设计声明式 readiness rule schema 草案",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "盘点 zj-loop CLI 参数与输出体验重复",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "设计共享 CLI harness 的最小 API",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "审计 MCP resources-tools 的语义边界",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "设计基于 core 的语义查询 API",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-1": {
+      "id": "1-7-1",
+      "label": "规划 audit-init 最小纵切迁移",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [
+        {
+          "q": "第一阶段迁移顺序是否限定为 cost-init-audit-sync/MCP？",
+          "answer": "要。迁移顺序限定为 zj-loop-cost → zj-loop-init → zj-loop-audit → zj-loop-sync/MCP。",
+          "note": "先迁 cost 风险最低，主要消费 registry 的 budget/cost 字段；再迁 init，因为硬编码最多；audit 影响 readiness 输出，等 evidence detection 稳定后迁；sync/MCP 最后消费稳定 core API。"
+        }
+      ],
+      "notes": "迁移顺序已确认：zj-loop-cost → zj-loop-init → zj-loop-audit → zj-loop-sync/MCP。每一步保持 CLI 行为兼容，并以现有质量门禁验证。"
+    },
+    "1-7-2": {
+      "id": "1-7-2",
+      "label": "更新质量门禁与 before-after demo 证据",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [
+        {
+          "q": "第一阶段每个迁移切片的 done condition 是否强制包含三项质量门禁？",
+          "answer": "要。每个迁移切片必须包含 npm run build:tools、npm run test:tools、以及 AGENTS 指定的 zj-loop-audit + before-after-demo 质量门禁。",
+          "note": "架构迁移必须保护外部 CLI 和用户可见 readiness/demo 行为；三项门禁分别覆盖工具构建、测试和仓库级 loop readiness 演示。"
+        }
+      ],
+      "notes": "done condition 已确认：每个迁移切片必须跑 npm run build:tools、npm run test:tools、cd tools/zj-loop-audit && npm run build && node dist/cli.js ../../、bash scripts/before-after-demo.sh。"
+    }
+  },
+  "metadata": {
+    "created": "2026-06-30 18:57:25",
+    "updated": "2026-06-30 19:27:30",
+    "md_file": "docs/plans/architecture-improvement-roadmap.md"
+  }
+}
