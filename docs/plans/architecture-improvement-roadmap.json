@@ -56,7 +56,7 @@
     "1-2": {
       "id": "1-2",
       "label": "抽取 zj-loop-core 共享领域内核",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -202,7 +202,7 @@
     "1-2-3": {
       "id": "1-2-3",
       "label": "抽取项目证据探测与文件系统适配器",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
@@ -211,9 +211,14 @@
           "q": "project evidence detection 第一版是否只抽事实探测而不抽评分判断？",
           "answer": "要。第一版只返回事实 evidence，例如 hasStateFile、skills、hasBudgetDoc、hasRunLog、hasConstraints、hasCi、hasTests；L0/L1/L2/L3 分数和 assessment 仍留在 zj-loop-audit。",
           "note": "core 保持中立的证据层；audit 继续负责 policy/scoring。未来 readiness rule engine 可以消费同一 evidence，但不会把规则污染进 core。"
+        },
+        {
+          "q": "第5刀边界是什么？",
+          "answer": "抽取 core 的项目文件系统适配器与证据探测基础能力，并让 zj-loop-audit 消费它；只迁移路径存在、文本读取、目录扫描、skill 名称发现等 evidence primitives，不抽 computeScore/findings/readiness rule。",
+          "note": "这样完成 core v1 原定边界，同时避免提前进入 1-4 readiness 策略规则引擎。"
         }
       ],
-      "notes": "边界已确认但尚未实现：core 未来只产出事实 evidence，不产出 readiness score、level 或 assessment；第 1 刀未包含 evidence detection 实现。"
+      "notes": "第5刀完成：新增 core ProjectFileSystem/Node adapter、root-relative path helpers、skill evidence discovery；zj-loop-audit 改为消费 @jununfly/zj-loop-core 的 evidence primitives，保留 computeScore/findings/readiness policy 在 audit。验收：core build/test、audit build/test、validate:registry、build:tools、test:tools、audit CLI、before-after demo、git diff --check。"
     },
     "1-2-4": {
       "id": "1-2-4",
@@ -291,12 +296,18 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "盘点现有 readiness signals 与分数来源",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "第6刀是否实现 rule engine？",
+          "answer": "不实现。第6刀只盘点现有 readiness signals、score weights、level gates、recommendations 和 docs simulator drift；实现声明式 rule schema 留给 1-4-2。",
+          "note": "这是 explore 节点，先把隐式策略显性化，避免直接抽象出错误的规则模型。"
+        }
+      ],
+      "notes": "第6刀完成：新增 docs/readiness-signal-inventory.md，盘点 LoopSignals、score weights、level gates、assessment bands、findings/recommendations，以及 docs/index.html readiness simulator drift。确认本刀不实现 rule engine；1-4-2 再设计声明式 readiness rule schema。验收：validate:registry、build:tools、test:tools、audit CLI、before-after demo、git diff --check。"
     },
     "1-4-2": {
       "id": "1-4-2",
@@ -419,7 +430,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 20:14:09",
+    "updated": "2026-06-30 20:31:54",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }

@@ -1,6 +1,6 @@
-import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
+import { createNodeProjectFileSystem, findExistingProjectPaths, hasAnyProjectPath, listProjectSkillNames, } from '@jununfly/zj-loop-core';
 const STATE_FILES = [
     'STATE.md',
     'pr-babysitter-state.md',
@@ -58,63 +58,14 @@ const SAFETY_FILES = ['safety.md', 'docs/safety.md', 'SECURITY.md'];
 const MCP_FILES = ['.mcp.json', 'mcp.json', '.mcp/config.json'];
 const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 const BUDGET_HINTS = [/budget/i, /max tokens/i, /token cap/i, /kill switch/i, /loop-pause-all/i];
-async function fileExists(p) {
-    try {
-        await stat(p);
-        return true;
-    }
-    catch {
-        return false;
-    }
-}
-async function findSkills(root) {
-    const dirs = [
-        path.join(root, '.grok', 'skills'),
-        path.join(root, '.claude', 'skills'),
-        path.join(root, '.codex', 'skills'),
-        path.join(root, 'skills'),
-    ];
-    const found = [];
-    for (const dir of dirs) {
-        if (!(await fileExists(dir)))
-            continue;
-        const entries = await readdir(dir, { withFileTypes: true });
-        for (const e of entries) {
-            if (e.isDirectory())
-                found.push(e.name);
-            if (e.isFile() && e.name === 'SKILL.md')
-                found.push('root-skill');
-        }
-    }
-    // Claude Code agents and Codex subagents can host the verifier role
-    const agentDirs = [
-        path.join(root, '.claude', 'agents'),
-        path.join(root, '.codex', 'agents'),
-    ];
-    for (const dir of agentDirs) {
-        if (!(await fileExists(dir)))
-            continue;
-        const entries = await readdir(dir, { withFileTypes: true });
-        for (const e of entries) {
-            if (!e.isFile())
-                continue;
-            const base = e.name.replace(/\.(md|toml)$/i, '');
-            if (base.includes('verifier') || base === 'loop-verifier') {
-                found.push('loop-verifier');
-            }
-        }
-    }
-    return found;
-}
-async function detectLoopActivity(root) {
+async function detectLoopActivity(root, fs) {
     const evidence = [];
     const stateCandidates = [...STATE_FILES, 'STATE.md'];
     // 1. Look for "Last run" timestamps or dated entries inside state files (strong real-usage signal)
     for (const sf of stateCandidates) {
         try {
-            const p = path.join(root, sf);
-            if (await fileExists(p)) {
-                const txt = await readFile(p, 'utf8');
+            const txt = await fs.readTextIfExists(sf);
+            if (txt) {
                 if (/last\s*run|last updated|^\s*-\s*\d{4}-\d{2}-\d{2}/im.test(txt) || /triage|loop run|changelog drafter/i.test(txt)) {
                     evidence.push(`state:${sf}`);
                 }
@@ -125,20 +76,19 @@ async function detectLoopActivity(root) {
     // 2. Presence of run log artifacts or dedicated log templates being used
     const logHints = ['loop-run-log', 'run-log', 'loop.log', 'audit-report'];
     try {
-        const entries = await readdir(root, { withFileTypes: true });
-        for (const e of entries) {
-            if (e.isFile() && logHints.some(h => e.name.toLowerCase().includes(h))) {
-                evidence.push(`log:${e.name}`);
+        const entries = await fs.listEntries('.');
+        for (const entry of entries) {
+            if (entry.kind === 'file' && logHints.some(h => entry.name.toLowerCase().includes(h))) {
+                evidence.push(`log:${entry.name}`);
             }
         }
     }
     catch { }
     // 3. Workflow or LOOP evidence of scheduled execution
     try {
-        const wfDir = path.join(root, '.github', 'workflows');
-        if (await fileExists(wfDir)) {
-            const wfs = await readdir(wfDir);
-            if (wfs.some(w => /triage|changelog|daily|loop|audit|pr-babysit/i.test(w))) {
+        const workflows = await fs.listEntries('.github/workflows');
+        if (workflows.length > 0) {
+            if (workflows.some(w => /triage|changelog|daily|loop|audit|pr-babysit/i.test(w.name))) {
                 evidence.push('github:loop-workflows');
             }
         }
@@ -163,9 +113,8 @@ async function detectLoopActivity(root) {
     }
     // 5. Check LOOP.md or a state for explicit "Last run" human-readable proof
     try {
-        const loopP = path.join(root, 'LOOP.md');
-        if (await fileExists(loopP)) {
-            const txt = await readFile(loopP, 'utf8');
+        const txt = await fs.readTextIfExists('LOOP.md');
+        if (txt) {
             if (/last run|cadence|scheduled|automation/i.test(txt))
                 evidence.push('LOOP.md:active');
         }
@@ -248,17 +197,13 @@ export function computeScore(signals) {
 }
 export async function auditProject(target) {
     const root = path.resolve(target);
+    const fs = createNodeProjectFileSystem(root);
     const findings = [];
     const recommendations = [];
-    const statePaths = [];
-    for (const f of STATE_FILES) {
-        if (await fileExists(path.join(root, f)))
-            statePaths.push(f);
-    }
-    const loopMd = await fileExists(path.join(root, 'LOOP.md'));
-    const agentsMd = await fileExists(path.join(root, 'AGENTS.md')) ||
-        await fileExists(path.join(root, 'CLAUDE.md'));
-    const skillNames = await findSkills(root);
+    const statePaths = await findExistingProjectPaths(fs, STATE_FILES);
+    const loopMd = await fs.exists('LOOP.md');
+    const agentsMd = await hasAnyProjectPath(fs, ['AGENTS.md', 'CLAUDE.md']);
+    const skillNames = await listProjectSkillNames(fs);
     const loopSkills = skillNames.filter((s) => LOOP_SKILL_NAMES.includes(s));
     const verifier = skillNames.includes('loop-verifier');
     const triage = skillNames.includes('loop-triage') ||
@@ -270,23 +215,14 @@ export async function auditProject(target) {
         skillNames.includes('issue-triage');
     let loopMdContent = '';
     if (loopMd) {
-        loopMdContent = await readFile(path.join(root, 'LOOP.md'), 'utf8');
+        loopMdContent = (await fs.readTextIfExists('LOOP.md')) ?? '';
     }
     // New expanded signals
-    const githubDir = await fileExists(path.join(root, '.github'));
-    const hasWorkflows = await fileExists(path.join(root, '.github', 'workflows'));
+    const githubDir = await fs.exists('.github');
+    const hasWorkflows = await fs.exists('.github/workflows');
     // Proper safety doc detection
-    let safetyDocPresent = false;
-    for (const f of SAFETY_FILES) {
-        if (await fileExists(path.join(root, f))) {
-            safetyDocPresent = true;
-            break;
-        }
-    }
-    if (!safetyDocPresent) {
-        safetyDocPresent = await fileExists(path.join(root, 'docs', 'safety.md'));
-    }
-    const mcpPresent = (await Promise.all(MCP_FILES.map(f => fileExists(path.join(root, f))))).some(Boolean) ||
+    const safetyDocPresent = await hasAnyProjectPath(fs, SAFETY_FILES);
+    const mcpPresent = await hasAnyProjectPath(fs, MCP_FILES) ||
         /MCP|mcp server|plugins & connectors/i.test(loopMdContent);
     // Light evidence of worktree usage (common in patterns/starters/LOOP)
     let worktreeEvidence = false;
@@ -300,9 +236,8 @@ export async function auditProject(target) {
     ];
     for (const c of candidateMd) {
         try {
-            const p = path.join(root, c);
-            if (await fileExists(p)) {
-                const txt = await readFile(p, 'utf8');
+            const txt = await fs.readTextIfExists(c);
+            if (txt) {
                 if (WORKTREE_HINTS.some(h => txt.toLowerCase().includes(h))) {
                     worktreeEvidence = true;
                     break;
@@ -311,38 +246,24 @@ export async function auditProject(target) {
         }
         catch { }
     }
-    const registryPresent = await fileExists(path.join(root, 'patterns', 'registry.yaml'));
-    const budgetDoc = await fileExists(path.join(root, 'loop-budget.md'));
-    const runLog = await fileExists(path.join(root, 'loop-run-log.md'));
+    const registryPresent = await fs.exists('patterns/registry.yaml');
+    const budgetDoc = await fs.exists('loop-budget.md');
+    const runLog = await fs.exists('loop-run-log.md');
     const loopMdBudget = BUDGET_HINTS.some((re) => re.test(loopMdContent));
-    const budgetSkillDirs = [
-        path.join(root, 'skills', 'loop-budget'),
-        path.join(root, '.grok', 'skills', 'loop-budget'),
-        path.join(root, '.claude', 'skills', 'loop-budget'),
-        path.join(root, '.codex', 'skills', 'loop-budget'),
-    ];
-    let budgetSkill = false;
-    for (const dir of budgetSkillDirs) {
-        if (await fileExists(path.join(dir, 'SKILL.md'))) {
-            budgetSkill = true;
-            break;
-        }
-    }
-    const loopActivity = await detectLoopActivity(root);
-    const constraintsFile = await fileExists(path.join(root, 'loop-constraints.md'));
-    const constraintsSkillDirs = [
-        path.join(root, 'skills', 'loop-constraints'),
-        path.join(root, '.grok', 'skills', 'loop-constraints'),
-        path.join(root, '.claude', 'skills', 'loop-constraints'),
-        path.join(root, '.codex', 'skills', 'loop-constraints'),
-    ];
-    let constraintsSkill = false;
-    for (const dir of constraintsSkillDirs) {
-        if (await fileExists(path.join(dir, 'SKILL.md'))) {
-            constraintsSkill = true;
-            break;
-        }
-    }
+    const budgetSkill = await hasAnyProjectPath(fs, [
+        'skills/loop-budget/SKILL.md',
+        '.grok/skills/loop-budget/SKILL.md',
+        '.claude/skills/loop-budget/SKILL.md',
+        '.codex/skills/loop-budget/SKILL.md',
+    ]);
+    const loopActivity = await detectLoopActivity(root, fs);
+    const constraintsFile = await fs.exists('loop-constraints.md');
+    const constraintsSkill = await hasAnyProjectPath(fs, [
+        'skills/loop-constraints/SKILL.md',
+        '.grok/skills/loop-constraints/SKILL.md',
+        '.claude/skills/loop-constraints/SKILL.md',
+        '.codex/skills/loop-constraints/SKILL.md',
+    ]);
     const signals = {
         stateFile: { present: statePaths.length > 0, paths: statePaths },
         loopConfig: { present: loopMd, path: loopMd ? 'LOOP.md' : undefined },
