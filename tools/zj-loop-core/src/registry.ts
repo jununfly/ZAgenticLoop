@@ -10,7 +10,7 @@ const costSchema = z.object({
   tokens_action: z.number().int().nonnegative(),
   suggested_daily_cap: z.number().int().positive(),
   early_exit_required: z.boolean(),
-});
+}).strict();
 
 const toolTargetSchema = z.enum(['grok', 'claude', 'codex']);
 
@@ -21,14 +21,15 @@ const initSchema = z.object({
       minimal_fix: z.boolean().default(false),
       verifier: z.boolean().default(false),
     })
+    .strict()
     .default({ minimal_fix: false, verifier: false }),
   budget: z.object({
     max_runs_per_day: z.number().int().positive(),
     max_spawns_l1: z.number().int().nonnegative(),
     max_spawns_l2: z.number().int().nonnegative(),
-  }),
+  }).strict(),
   first_loop_command: z.record(toolTargetSchema, z.string().min(1)),
-});
+}).strict();
 
 const patternSchema = z.object({
   id: z.string().min(1),
@@ -47,12 +48,12 @@ const patternSchema = z.object({
   token_cost: z.string().min(1),
   cost: costSchema,
   init: initSchema.optional(),
-});
+}).strict();
 
 const registrySchema = z.object({
   schemaVersion: z.literal(REGISTRY_SCHEMA_VERSION),
   patterns: z.array(patternSchema).min(1),
-});
+}).strict();
 
 export type PatternCost = z.infer<typeof costSchema>;
 export type RegistryPattern = z.infer<typeof patternSchema>;

@@ -38,6 +38,12 @@ test('parsePatternRegistry: validates schemaVersion and pattern cost fields', ()
   assert.equal(registry.patterns[0].init.budget.max_runs_per_day, 2);
 });
 
+test('parsePatternRegistry: JSON and YAML share the same contract', () => {
+  const yamlRegistry = parsePatternRegistry(VALID_REGISTRY, 'registry.yaml');
+  const jsonRegistry = parsePatternRegistry(JSON.stringify(yamlRegistry), 'registry.json');
+  assert.deepEqual(jsonRegistry, yamlRegistry);
+});
+
 test('parsePatternRegistry: fails fast on unsupported schema versions', () => {
   assert.throws(
     () => parsePatternRegistry(VALID_REGISTRY.replace('schemaVersion: 1', 'schemaVersion: 2'), 'registry.yaml'),
@@ -49,5 +55,12 @@ test('parsePatternRegistry: reports missing cost fields', () => {
   assert.throws(
     () => parsePatternRegistry(VALID_REGISTRY.replace('tokens_action: 200000', ''), 'registry.yaml'),
     /tokens_action/,
+  );
+});
+
+test('parsePatternRegistry: rejects unknown fields', () => {
+  assert.throws(
+    () => parsePatternRegistry(VALID_REGISTRY.replace('token_cost: low', 'token_cost: low\n    surprise: nope'), 'registry.yaml'),
+    /surprise/,
   );
 });

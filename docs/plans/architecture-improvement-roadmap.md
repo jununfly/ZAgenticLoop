@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 20:05:46
+> 数据文件: `architecture-improvement-roadmap.json` | 最后更新: 2026-06-30 20:14:09
 
 [~][X+] 1. ZAgenticLoop 架构设计与技术选型深化
 ├── [x][X+] 1-1. 绘制当前 Agentic Loop Working 系统地图
@@ -10,10 +10,10 @@
 │   ├── [x][Y+] 1-2-2. 抽取 registry loader 与领域模型
 │   ├── [ ][Y+] 1-2-3. 抽取项目证据探测与文件系统适配器
 │   └── [x][Y+] 1-2-4. 按 cost-init-audit-sync-MCP 顺序接入 core
-├── [ ][Y+] 1-3. 提升 patterns/registry.yaml 为单一事实源
+├── [x][Y+] 1-3. 提升 patterns/registry.yaml 为单一事实源
 │   ├── [x][Y+] 1-3-1. 扩展 registry schema 承载 starter-state-budget-command
 │   ├── [x][Y+] 1-3-2. 迁移 init-cost-MCP 的硬编码 pattern 事实
-│   └── [ ][Y+] 1-3-3. 补齐 registry 校验与兼容性测试
+│   └── [x][Y+] 1-3-3. 补齐 registry 校验与兼容性测试
 ├── [ ][X+] 1-4. 设计 readiness 策略规则引擎
 │   ├── [ ][X+] 1-4-1. 盘点现有 readiness signals 与分数来源
 │   └── [ ][X+] 1-4-2. 设计声明式 readiness rule schema 草案

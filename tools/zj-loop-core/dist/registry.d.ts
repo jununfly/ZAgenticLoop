@@ -6,7 +6,7 @@ declare const costSchema: z.ZodObject<{
     tokens_action: z.ZodNumber;
     suggested_daily_cap: z.ZodNumber;
     early_exit_required: z.ZodBoolean;
-}, z.core.$strip>;
+}, z.core.$strict>;
 declare const patternSchema: z.ZodObject<{
     id: z.ZodString;
     name: z.ZodString;
@@ -28,7 +28,7 @@ declare const patternSchema: z.ZodObject<{
         tokens_action: z.ZodNumber;
         suggested_daily_cap: z.ZodNumber;
         early_exit_required: z.ZodBoolean;
-    }, z.core.$strip>;
+    }, z.core.$strict>;
     init: z.ZodOptional<z.ZodObject<{
         tool_starters: z.ZodOptional<z.ZodRecord<z.ZodEnum<{
             grok: "grok";
@@ -38,19 +38,19 @@ declare const patternSchema: z.ZodObject<{
         templates: z.ZodDefault<z.ZodObject<{
             minimal_fix: z.ZodDefault<z.ZodBoolean>;
             verifier: z.ZodDefault<z.ZodBoolean>;
-        }, z.core.$strip>>;
+        }, z.core.$strict>>;
         budget: z.ZodObject<{
             max_runs_per_day: z.ZodNumber;
             max_spawns_l1: z.ZodNumber;
             max_spawns_l2: z.ZodNumber;
-        }, z.core.$strip>;
+        }, z.core.$strict>;
         first_loop_command: z.ZodRecord<z.ZodEnum<{
             grok: "grok";
             claude: "claude";
             codex: "codex";
         }>, z.ZodString>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
+    }, z.core.$strict>>;
+}, z.core.$strict>;
 declare const registrySchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<1>;
     patterns: z.ZodArray<z.ZodObject<{
@@ -74,7 +74,7 @@ declare const registrySchema: z.ZodObject<{
             tokens_action: z.ZodNumber;
             suggested_daily_cap: z.ZodNumber;
             early_exit_required: z.ZodBoolean;
-        }, z.core.$strip>;
+        }, z.core.$strict>;
         init: z.ZodOptional<z.ZodObject<{
             tool_starters: z.ZodOptional<z.ZodRecord<z.ZodEnum<{
                 grok: "grok";
@@ -84,20 +84,20 @@ declare const registrySchema: z.ZodObject<{
             templates: z.ZodDefault<z.ZodObject<{
                 minimal_fix: z.ZodDefault<z.ZodBoolean>;
                 verifier: z.ZodDefault<z.ZodBoolean>;
-            }, z.core.$strip>>;
+            }, z.core.$strict>>;
             budget: z.ZodObject<{
                 max_runs_per_day: z.ZodNumber;
                 max_spawns_l1: z.ZodNumber;
                 max_spawns_l2: z.ZodNumber;
-            }, z.core.$strip>;
+            }, z.core.$strict>;
             first_loop_command: z.ZodRecord<z.ZodEnum<{
                 grok: "grok";
                 claude: "claude";
                 codex: "codex";
             }>, z.ZodString>;
-        }, z.core.$strip>>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
+        }, z.core.$strict>>;
+    }, z.core.$strict>>;
+}, z.core.$strict>;
 export type PatternCost = z.infer<typeof costSchema>;
 export type RegistryPattern = z.infer<typeof patternSchema>;
 export type PatternRegistry = z.infer<typeof registrySchema>;
