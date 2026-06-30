@@ -14,7 +14,7 @@
   "scripts": {
     "bundle": "node scripts/bundle-registry.mjs",
     "build": "npm run bundle && tsc && chmod +x dist/cli.js",
-    "test": "npm run build && node --test test/estimator.test.mjs",
+    "test": "npm run build && node --test test/estimator.test.mjs test/cli.test.mjs",
     "prepublishOnly": "npm test",
     "start": "node dist/cli.js"
   },

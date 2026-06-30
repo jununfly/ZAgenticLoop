@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPatternRegistry } from '@jununfly/zj-loop-core';
+import { loadPatternRegistry, runCli, type CliHandlerContext, type CliSpec } from '@jununfly/zj-loop-core';
 import {
   assertValidLevel,
   estimateCost,
@@ -12,33 +12,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 
-function parseArgs(argv: string[]) {
-  let pattern = 'daily-triage';
-  let cadence: string | undefined;
-  let level: ReadinessLevel = 'L1';
-  let conservative = false;
-  let json = false;
-  let list = false;
-
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '--pattern' || a === '-p') pattern = argv[++i];
-    else if (a === '--cadence' || a === '-c') cadence = argv[++i];
-    else if (a === '--level' || a === '-l') level = argv[++i] as ReadinessLevel;
-    else if (a === '--conservative') conservative = true;
-    else if (a === '--json') json = true;
-    else if (a === '--list') list = true;
-    else if (a === '--help' || a === '-h') return { help: true as const };
-  }
-
-  return { help: false as const, pattern, cadence, level, conservative, json, list };
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-
-  if (args.help) {
-    console.log(`zj-loop-cost — estimate daily token spend for loop patterns
+const HELP_TEXT = `zj-loop-cost — estimate daily token spend for loop patterns
 
 Usage:
   zj-loop-cost --pattern <id> [options]
@@ -56,9 +30,15 @@ Examples:
   zj-loop-cost --pattern ci-sweeper --cadence 15m --level L2
   zj-loop-cost --pattern daily-triage --level L1 --json
   zj-loop-cost --list
-`);
-    process.exit(0);
-  }
+`;
+
+async function handleCostCommand({ io, options }: CliHandlerContext) {
+  const patternId = String(options.pattern ?? 'daily-triage');
+  const cadence = typeof options.cadence === 'string' ? options.cadence : undefined;
+  const level = String(options.level ?? 'L1') as ReadinessLevel;
+  const conservative = options.conservative === true;
+  const json = options.json === true;
+  const list = options.list === true;
 
   const registry = await loadPatternRegistry({
     candidates: [
@@ -67,45 +47,58 @@ Examples:
     ],
   });
 
-  if (args.list) {
+  if (list) {
     for (const p of registry.patterns) {
-      console.log(`${p.id}\t${p.token_cost}\t${p.cadence}`);
+      io.stdout(`${p.id}\t${p.token_cost}\t${p.cadence}`);
     }
     return;
   }
 
-  const pattern = registry.patterns.find((p) => p.id === args.pattern);
+  const pattern = registry.patterns.find((p) => p.id === patternId);
   if (!pattern) {
-    console.error(`Unknown pattern: ${args.pattern}. Use --list for ids.`);
-    process.exit(1);
+    io.stderr(`Unknown pattern: ${patternId}. Use --list for ids.`);
+    return 1;
   }
 
   try {
-    assertValidLevel(args.level);
+    assertValidLevel(level);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(msg);
-    process.exit(1);
+    io.stderr(msg);
+    return 1;
   }
 
   if (!pattern.cost) {
-    console.error(`Pattern ${args.pattern} has no cost block in registry.`);
-    process.exit(1);
+    io.stderr(`Pattern ${patternId} has no cost block in registry.`);
+    return 1;
   }
 
   const result = estimateCost({
     pattern,
-    cadence: args.cadence,
-    level: args.level,
-    conservative: args.conservative,
+    cadence,
+    level,
+    conservative,
   });
 
-  if (args.json) console.log(JSON.stringify(result, null, 2));
-  else console.log(formatEstimateHuman(result));
+  if (json) io.stdout(JSON.stringify(result, null, 2));
+  else io.stdout(formatEstimateHuman(result));
 }
 
-main().catch((err: unknown) => {
-  const msg = err instanceof Error ? err.message : String(err);
-  console.error('zj-loop-cost failed:', msg);
-  process.exit(1);
+const SPEC: CliSpec = {
+  name: 'zj-loop-cost',
+  usage: 'zj-loop-cost --pattern <id> [options]',
+  helpText: HELP_TEXT,
+  options: [
+    { name: 'pattern', alias: '-p', type: 'string', valueName: 'id', description: 'Pattern id', default: 'daily-triage' },
+    { name: 'cadence', alias: '-c', type: 'string', valueName: 'spec', description: 'Override cadence' },
+    { name: 'level', alias: '-l', type: 'string', valueName: 'L1|L2|L3', description: 'Readiness level', default: 'L1' },
+    { name: 'conservative', type: 'boolean', description: 'Use slower cadence from ranges' },
+    { name: 'json', type: 'boolean', description: 'Machine-readable output' },
+    { name: 'list', type: 'boolean', description: 'List pattern ids' },
+  ],
+  handler: handleCostCommand,
+};
+
+runCli(SPEC).then((exitCode) => {
+  process.exitCode = exitCode;
 });
