@@ -328,12 +328,18 @@
     "1-5-1": {
       "id": "1-5-1",
       "label": "盘点 zj-loop CLI 参数与输出体验重复",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "第8刀是否实现共享 CLI harness？",
+          "answer": "不实现。第8刀只盘点 zj-loop CLI 参数、输出体验、错误处理、exit code、help 文案与重复实现；共享 CLI harness 的最小 API 留给 1-5-2。",
+          "note": "1-5-1 是 explore 节点，先把产品族外壳的重复与差异显性化，避免过早抽象。"
+        }
+      ],
+      "notes": "第8刀完成：新增 docs/cli-product-surface-inventory.md，盘点 zj-loop-audit/init/cost/sync 的 command surface、options、argv parsing、输出体验、错误/exit code、help 文案与重复实现；明确 zj-loop-mcp-server 与 goal-audit 暂不纳入第一版 harness；给 1-5-2 产出 harness API 输入与迁移顺序。验收：validate:registry、build:tools、test:tools、audit CLI、before-after demo、git diff --check。"
     },
     "1-5-2": {
       "id": "1-5-2",
@@ -436,7 +442,7 @@
   },
   "metadata": {
     "created": "2026-06-30 18:57:25",
-    "updated": "2026-06-30 20:39:18",
+    "updated": "2026-06-30 20:45:46",
     "md_file": "docs/plans/architecture-improvement-roadmap.md"
   }
 }
