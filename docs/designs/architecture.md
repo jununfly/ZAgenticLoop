@@ -266,6 +266,8 @@ Test strategy:
 
 - Core semantic tests assert structured contracts, reason codes, warning codes,
   and typed errors.
+- Audit readiness tests include a default-policy fixture matrix for L3 happy
+  path, cost cap, activity cap, and L1/L2 guidance anchors.
 - Cost tests own exact numerical policy.
 - MCP tests assert compatibility anchors and parse structured JSON only where
   the current surface already returns JSON.

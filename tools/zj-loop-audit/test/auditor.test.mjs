@@ -32,6 +32,28 @@ function emptySignals() {
   };
 }
 
+function l3CandidateSignals(overrides = {}) {
+  return {
+    ...emptySignals(),
+    stateFile: { present: true, paths: ['STATE.md'] },
+    loopConfig: { present: true, path: 'LOOP.md' },
+    skills: { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] },
+    verifier: { present: true },
+    triage: { present: true },
+    agentsMd: { present: true },
+    patterns: { documented: true },
+    safety: { loopMdMentionsSafety: true, safetyDocPresent: true },
+    github: { present: true, workflows: true },
+    mcp: { present: true },
+    worktreeEvidence: { present: true },
+    registry: { present: true },
+    constraints: { present: true, hasConstraintsSkill: true },
+    cost: { budgetDoc: true, runLog: true, loopMdBudget: true, budgetSkill: true },
+    loopActivity: { present: true, evidence: ['git:state update', 'state:STATE.md'] },
+    ...overrides,
+  };
+}
+
 test('computeScore: empty project is L0', () => {
   const { score, level } = computeScore(emptySignals());
   assert.equal(level, 'L0');
@@ -59,39 +81,15 @@ test('computeScore: full L2 signals', () => {
 });
 
 test('computeScore: L3 requires verifier, high score, cost observability, and activity', () => {
-  const s = emptySignals();
-  s.stateFile = { present: true, paths: ['STATE.md'] };
-  s.triage = { present: true };
-  s.loopConfig = { present: true, path: 'LOOP.md' };
-  s.agentsMd = { present: true };
-  s.skills = { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] };
-  s.verifier = { present: true };
-  s.safety = { loopMdMentionsSafety: true, safetyDocPresent: true };
-  s.github = { present: true, workflows: true };
-  s.mcp = { present: true };
-  s.worktreeEvidence = { present: true };
-  s.registry = { present: true };
-  s.cost = { budgetDoc: true, runLog: true, loopMdBudget: true, budgetSkill: true };
-  s.loopActivity = { present: true, evidence: ['git:state update', 'state:STATE.md'] };
-  const { level, score } = computeScore(s);
+  const { level, score } = computeScore(l3CandidateSignals());
   assert.equal(level, 'L3');
   assert.ok(score >= 78);
 });
 
 test('computeScore: L3 blocked without cost observability', () => {
-  const s = emptySignals();
-  s.stateFile = { present: true, paths: ['STATE.md'] };
-  s.triage = { present: true };
-  s.loopConfig = { present: true, path: 'LOOP.md' };
-  s.agentsMd = { present: true };
-  s.skills = { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] };
-  s.verifier = { present: true };
-  s.safety = { loopMdMentionsSafety: true, safetyDocPresent: true };
-  s.github = { present: true, workflows: true };
-  s.mcp = { present: true };
-  s.worktreeEvidence = { present: true };
-  s.registry = { present: true };
-  s.loopActivity = { present: true, evidence: ['state:STATE.md'] };
+  const s = l3CandidateSignals({
+    cost: { budgetDoc: false, runLog: false, loopMdBudget: false, budgetSkill: false },
+  });
   const { level } = computeScore(s);
   assert.equal(level, 'L2');
 });
@@ -110,6 +108,107 @@ test('computeScore: high structure without activity caps at L2', () => {
   s.cost = { budgetDoc: true, runLog: true, loopMdBudget: true, budgetSkill: true };
   const { level } = computeScore(s);
   assert.equal(level, 'L2');
+});
+
+test('readiness default policy matrix: gates, assessment bands, and guidance anchors', () => {
+  const cases = [
+    {
+      name: 'L3 happy path',
+      signals: l3CandidateSignals(),
+      expected: {
+        level: 'L3',
+        assessment: 'Strong loop readiness',
+        findings: [
+          { level: 'ok', message: 'Loop activity detected' },
+          { level: 'ok', message: 'loop-budget.md present' },
+        ],
+        recommendations: [],
+      },
+    },
+    {
+      name: 'high score capped at L2 without cost observability',
+      signals: l3CandidateSignals({
+        cost: { budgetDoc: false, runLog: false, loopMdBudget: false, budgetSkill: false },
+      }),
+      expected: {
+        level: 'L2',
+        assessment: 'Strong signals but missing cost observability',
+        findings: [
+          { level: 'warn', message: 'Score qualifies for L3 but cost observability is incomplete' },
+          { level: 'warn', message: 'No loop-budget.md' },
+          { level: 'warn', message: 'No loop-run-log.md' },
+        ],
+        recommendations: [
+          'Scaffold with zj-loop-init or copy templates/loop-budget.md.template',
+          'Copy templates/loop-run-log.md.template to loop-run-log.md',
+        ],
+      },
+    },
+    {
+      name: 'high score capped at L2 without proven activity',
+      signals: l3CandidateSignals({
+        loopActivity: { present: false, evidence: [] },
+      }),
+      expected: {
+        level: 'L2',
+        assessment: 'Strong structure but no proven loop runs yet',
+        findings: [
+          { level: 'warn', message: 'Score qualifies for L3 but no proven loop activity yet' },
+          { level: 'warn', message: 'No evidence of actual loop runs detected' },
+        ],
+        recommendations: [
+          'Run one loop (report-only), update + commit STATE.md (or pattern state). This turns structure into proven usage.',
+        ],
+      },
+    },
+    {
+      name: 'L1 foundation keeps setup recommendations visible',
+      signals: {
+        ...emptySignals(),
+        stateFile: { present: true, paths: ['STATE.md'] },
+        triage: { present: true },
+        skills: { count: 1, loopSkills: ['loop-triage'] },
+      },
+      expected: {
+        level: 'L1',
+        assessment: 'Early loop setup',
+        findings: [
+          { level: 'ok', message: 'State file(s): STATE.md' },
+          { level: 'ok', message: 'Triage skill present' },
+          { level: 'warn', message: 'No loop-verifier skill' },
+          { level: 'warn', message: 'No LOOP.md documenting cadence, limits, and gates' },
+        ],
+        recommendations: [
+          'Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, or .codex/agents/verifier.toml',
+          'Copy starters/minimal-loop/LOOP.md and customize',
+        ],
+      },
+    },
+  ];
+
+  for (const { name, signals, expected } of cases) {
+    const evaluation = computeScore(signals);
+    const guidance = evaluateReadinessGuidance(signals, evaluation.score);
+
+    assert.equal(evaluation.level, expected.level, name);
+    assert.match(evaluation.assessment, new RegExp(expected.assessment), name);
+
+    for (const finding of expected.findings) {
+      assert.ok(
+        guidance.findings.some((actual) =>
+          actual.level === finding.level && actual.message.includes(finding.message),
+        ),
+        `${name}: missing finding ${finding.level} ${finding.message}`,
+      );
+    }
+
+    for (const recommendation of expected.recommendations) {
+      assert.ok(
+        guidance.recommendations.includes(recommendation),
+        `${name}: missing recommendation ${recommendation}`,
+      );
+    }
+  }
 });
 
 test('readiness rules: evaluates custom score, predicates, gates, and assessment bands', () => {

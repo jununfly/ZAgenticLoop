@@ -145,7 +145,7 @@
     "1-6": {
       "id": "1-6",
       "label": "加强 readiness policy fixture 测试矩阵",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
@@ -154,9 +154,14 @@
           "q": "readiness policy 测试矩阵为什么可 exploit？",
           "answer": "readiness.v1.yaml 与 local rule engine 已稳定，优化目标明确：用 fixture matrix 覆盖 gates、predicates、findings、recommendations，降低 YAML 改动风险。",
           "note": "边界：不改评分语义，先补测试保护当前输出。"
+        },
+        {
+          "q": "readiness policy fixture matrix 应覆盖什么？",
+          "answer": "覆盖默认 readiness.v1.yaml 的高风险输出锚点：L3 happy path、high-score cost cap、high-score activity cap、L1/L2 缺口 guidance；不修改评分语义。",
+          "note": "这些 fixture 直接调用 computeScore/evaluateReadinessGuidance，作为 YAML policy 的 parity tests。"
         }
       ],
-      "notes": ""
+      "notes": "Added default readiness policy fixture matrix covering L3 happy path, cost cap, activity cap, and L1/L2 guidance anchors without changing scoring semantics."
     },
     "1-7": {
       "id": "1-7",
@@ -177,7 +182,7 @@
   },
   "metadata": {
     "created": "2026-07-01 01:45:23",
-    "updated": "2026-07-01 11:05:54",
+    "updated": "2026-07-01 11:12:40",
     "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
   }
 }
