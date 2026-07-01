@@ -16,7 +16,8 @@
         "1-4",
         "1-5",
         "1-6",
-        "1-7"
+        "1-7",
+        "1-8"
       ],
       "decisions": [
         {
@@ -188,11 +189,32 @@
         }
       ],
       "notes": "Documented committed vs release-time generated artifact policy and extended release workflow validation to enforce package files tracking/generation expectations."
+    },
+    "1-8": {
+      "id": "1-8",
+      "label": "收敛 core 发布生命周期与发布包依赖",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "为什么下一刀选 core 发布生命周期？",
+          "answer": "当前 @jununfly/zj-loop-audit/init/cost/mcp-server/sync 多个包依赖 @jununfly/zj-loop-core，但依赖仍是 file:../zj-loop-core；同时 core package.json 有 publishConfig 却不在 docs/RELEASE.md 与 release workflow manifest 中。发布包与共享 core 的生命周期不一致，是新的高风险架构漂移点。",
+          "note": "推荐最小刀：先把 core 纳入 release-managed package manifest/docs/workflow，再决定是否把发布包依赖从 file: 改成版本依赖。"
+        },
+        {
+          "q": "这一刀是否切换 file:../zj-loop-core 依赖？",
+          "answer": "不切换。本刀只补齐 @jununfly/zj-loop-core 的 release lifecycle；file: 依赖影响 monorepo 本地 npm ci、package-lock 和发布顺序，应单独作为下一刀评估。",
+          "note": "避免同一刀同时改变 release manifest 与 npm dependency resolution。"
+        }
+      ],
+      "notes": "Added zj-loop-core to release-managed package manifest, docs, and release workflow; left file: core dependencies unchanged for a separate dependency-publication alignment knife."
     }
   },
   "metadata": {
     "created": "2026-07-01 01:45:23",
-    "updated": "2026-07-01 11:19:12",
+    "updated": "2026-07-01 11:23:25",
     "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
   }
 }

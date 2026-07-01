@@ -1,9 +1,10 @@
 # Release playbook — npm packages
 
-This repo has four release-managed public npm packages from `tools/`:
+This repo has five release-managed public npm packages from `tools/`:
 
 | Package | Directory | Release tag |
 |---------|-----------|-------------|
+| `@jununfly/zj-loop-core` | `tools/zj-loop-core` | `zj-loop-core-v*` |
 | `@jununfly/zj-loop-audit` | `tools/zj-loop-audit` | `zj-loop-audit-v*` |
 | `@jununfly/zj-loop-init` | `tools/zj-loop-init` | `zj-loop-init-v*` |
 | `@jununfly/zj-loop-cost` | `tools/zj-loop-cost` | `zj-loop-cost-v*` |
@@ -15,6 +16,7 @@ Link npm to GitHub, then for **each package** on [npmjs.com](https://www.npmjs.c
 
 | Package | Repository | Workflow filename |
 |---------|--------------|-------------------|
+| `@jununfly/zj-loop-core` | `jununfly/ZAgenticLoop` | `release-zj-loop-core.yml` |
 | `@jununfly/zj-loop-audit` | `jununfly/ZAgenticLoop` | `release-zj-loop-audit.yml` |
 | `@jununfly/zj-loop-init` | `jununfly/ZAgenticLoop` | `release-zj-loop-init.yml` |
 | `@jununfly/zj-loop-cost` | `jununfly/ZAgenticLoop` | `release-zj-loop-cost.yml` |
@@ -58,6 +60,10 @@ publish artifact tracking/generation policy together.
 Tag pushes trigger the release workflows:
 
 ```bash
+# zj-loop-core (shared package used by zj-loop-* tools)
+git tag zj-loop-core-v0.1.0
+git push origin zj-loop-core-v0.1.0
+
 # zj-loop-audit (runs tests before publish)
 git tag zj-loop-audit-v1.3.0
 git push origin zj-loop-audit-v1.3.0
@@ -75,11 +81,12 @@ git tag goal-audit-v1.0.0
 git push origin goal-audit-v1.0.0
 ```
 
-Workflows: `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-goal-audit.yml`.
+Workflows: `.github/workflows/release-zj-loop-core.yml`, `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-goal-audit.yml`.
 
 ## Verify after publish
 
 ```bash
+npm view @jununfly/zj-loop-core version
 npx @jununfly/zj-loop-audit --help
 npx @jununfly/zj-loop-init --help
 npx @jununfly/zj-loop-cost --help

@@ -10,12 +10,17 @@ test('RELEASE_PACKAGES captures release-managed npm packages', () => {
       generatedAtRelease: releasePackage.generatedAtRelease ?? [],
     })),
     [
+      { packageName: '@jununfly/zj-loop-core', generatedAtRelease: [] },
       { packageName: '@jununfly/zj-loop-audit', generatedAtRelease: [] },
       { packageName: '@jununfly/zj-loop-init', generatedAtRelease: ['starters', 'templates'] },
       { packageName: '@jununfly/zj-loop-cost', generatedAtRelease: [] },
       { packageName: '@cobusgreyling/goal-audit', generatedAtRelease: [] },
     ],
   );
+});
+
+test('release manifest publishes core before packages that depend on it', () => {
+  assert.equal(RELEASE_PACKAGES[0].packageName, '@jununfly/zj-loop-core');
 });
 
 test('validateReleaseWorkflows keeps docs, packages, and workflows aligned', async () => {

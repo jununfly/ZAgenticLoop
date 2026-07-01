@@ -10,6 +10,14 @@ const execFileAsync = promisify(execFile);
 
 export const RELEASE_PACKAGES = [
   {
+    id: 'zj-loop-core',
+    packageName: '@jununfly/zj-loop-core',
+    directory: 'tools/zj-loop-core',
+    workflow: '.github/workflows/release-zj-loop-core.yml',
+    tagPattern: 'zj-loop-core-v*',
+    trustedPublishing: true,
+  },
+  {
     id: 'zj-loop-audit',
     packageName: '@jununfly/zj-loop-audit',
     directory: 'tools/zj-loop-audit',
