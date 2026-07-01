@@ -83,7 +83,7 @@
     "1-5": {
       "id": "1-5",
       "label": "定义可发布标准与发布包宇宙",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -203,12 +203,18 @@
     "1-5-3": {
       "id": "1-5-3",
       "label": "固定发布宇宙验收标准",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "发布宇宙验收标准是什么？",
+          "answer": "tools 下有 public publishConfig 或 npm bin 的 package，除非 private:true，否则必须被 RELEASE_PACKAGES 覆盖；release-managed package 必须 publishConfig.access=public，且 id/packageName/directory/workflow/tagPattern 唯一，workflow、tag、docs、files allowlist、trusted publishing 与 local file dependency blocker 都由 release validator 检查。",
+          "note": "本刀只固定发布宇宙标准，不迁移 @jununfly/zj-loop-core file: 依赖；依赖迁移进入 1-6/1-7。"
+        }
+      ],
+      "notes": "发布宇宙标准已进入 docs/RELEASE.md 与 validate-release-workflows。"
     },
     "1-6-1": {
       "id": "1-6-1",
@@ -333,7 +339,7 @@
   },
   "metadata": {
     "created": "2026-07-01 11:39:25",
-    "updated": "2026-07-01 11:54:42",
+    "updated": "2026-07-01 14:35:06",
     "md_file": "docs/designs/release-dependency-roadmap.md"
   }
 }

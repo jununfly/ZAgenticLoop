@@ -46,6 +46,13 @@ test('release manifest publishes core before packages that depend on it', () => 
   assert.equal(RELEASE_PACKAGES[0].packageName, '@jununfly/zj-loop-core');
 });
 
+test('release manifest has a unique package, directory, workflow, and tag universe', () => {
+  for (const field of ['id', 'packageName', 'directory', 'workflow', 'tagPattern']) {
+    const values = RELEASE_PACKAGES.map((releasePackage) => releasePackage[field]);
+    assert.equal(new Set(values).size, values.length, `${field} values must be unique`);
+  }
+});
+
 test('validateReleaseWorkflows keeps docs, packages, and workflows aligned', async () => {
   await assert.doesNotReject(() => validateReleaseWorkflows());
 });

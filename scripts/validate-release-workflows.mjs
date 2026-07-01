@@ -79,6 +79,21 @@ function assertIncludes(haystack, needle, label, errors) {
   }
 }
 
+function validateUniqueReleasePackageFields(errors) {
+  const uniqueFields = ['id', 'packageName', 'directory', 'workflow', 'tagPattern'];
+
+  for (const field of uniqueFields) {
+    const seen = new Map();
+    for (const releasePackage of RELEASE_PACKAGES) {
+      const value = releasePackage[field];
+      if (seen.has(value)) {
+        errors.push(`RELEASE_PACKAGES duplicate ${field}: ${value}`);
+      }
+      seen.set(value, releasePackage.packageName);
+    }
+  }
+}
+
 function localFileDependencies(packageJson) {
   return Object.entries(packageJson.dependencies ?? {})
     .filter(([, spec]) => typeof spec === 'string' && spec.startsWith('file:'))
@@ -201,6 +216,8 @@ export async function validateReleaseWorkflows(root = ROOT) {
   const releaseDirectories = new Set(RELEASE_PACKAGES.map((releasePackage) => releasePackage.directory));
   const packageDirectories = await listToolPackageDirectories(root);
 
+  validateUniqueReleasePackageFields(errors);
+
   for (const directory of packageDirectories) {
     const packageJson = JSON.parse(await readFile(path.join(root, directory, 'package.json'), 'utf8'));
     const hasPublicPublishConfig = packageJson.publishConfig?.access === 'public';
@@ -221,6 +238,14 @@ export async function validateReleaseWorkflows(root = ROOT) {
       errors.push(
         `${releasePackage.directory}/package.json name mismatch: ${packageJson.name} !== ${releasePackage.packageName}`,
       );
+    }
+
+    if (packageJson.private === true) {
+      errors.push(`${releasePackage.directory}/package.json release-managed package must not be private`);
+    }
+
+    if (packageJson.publishConfig?.access !== 'public') {
+      errors.push(`${releasePackage.directory}/package.json release-managed package must set publishConfig.access=public`);
     }
 
     await validatePackageFiles(root, releasePackage, packageJson, errors);

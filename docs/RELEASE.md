@@ -34,6 +34,23 @@ Names must match **exactly** (case-sensitive). No `NPM_TOKEN` secret is required
 
 **Trusted publishing (optional):** configure per package on npm; OIDC alone is not sufficient unless `NPM_TOKEN` is removed and trusted publishers are verified.
 
+## Release universe standard
+
+A package under `tools/` is part of the release universe when it has a public
+publish surface: `publishConfig.access: public` or an npm `bin` entry, unless
+the package explicitly sets `private: true`. Release-managed packages must have:
+
+- a unique entry in `RELEASE_PACKAGES`
+- `publishConfig.access: public`
+- a matching release workflow, tag pattern, docs row, and trusted publisher row
+- a non-empty `files` allowlist whose committed/generated artifacts are covered
+  by the generated artifacts policy below
+- no untracked local `file:` dependencies
+
+The root `test:release-workflows` gate enforces this standard and fails when a
+tool package exposes a publish surface without being covered by the release
+manifest.
+
 ## Version bump
 
 Edit `version` in the package `package.json`, update that package's `CHANGELOG.md` if present, and commit to `main` via PR.
