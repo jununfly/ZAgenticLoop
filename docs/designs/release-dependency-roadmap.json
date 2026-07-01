@@ -67,9 +67,14 @@
           "q": "是否现在迁移 release-managed packages 的 core 依赖？",
           "answer": "不现在迁移。该节点被 core registry 可解析性阻塞：在 @jununfly/zj-loop-core@0.1.0 发布并可被 npm ci 解析前，直接把 dependent packages 从 file:../zj-loop-core 改成 ^0.1.0 会制造不可复现的半迁移状态。",
           "note": "后续迁移条件已经沉淀在 1-6/1-7/1-8：core-first publish，然后迁移 package.json 与 package-lock，并运行 package-local npm ci、npm pack、test:release-ready。"
+        },
+        {
+          "q": "1-2 是否要继续 explore/exploit？",
+          "answer": "不继续 exploit，也不需要继续本地 explore。已通过 npm view @jununfly/zj-loop-core@0.1.0 version 联网确认 npmjs.org 返回 404，说明 core 版本当前不在 registry；dependent packages 仍有 5 处 file:../zj-loop-core 依赖。1-2 应保持 blocked，直到 core 发布并 registry-resolvable。",
+          "note": "执行证据：沙箱内 npmmirror DNS 失败只能说明环境网络问题；非沙箱 npmjs.org 查询返回 E404，足以确认当前不能做 registry dependency migration。"
         }
       ],
-      "notes": "Blocked until @jununfly/zj-loop-core@0.1.0 is published and registry-resolvable; migration instructions are captured by 1-6/1-7/1-8."
+      "notes": "Blocked until @jununfly/zj-loop-core@0.1.0 is published and registry-resolvable. Confirmed on 2026-07-01: npmjs.org returns E404 for @jununfly/zj-loop-core@0.1.0; 5 release-managed dependent packages still use file:../zj-loop-core."
     },
     "1-3": {
       "id": "1-3",
@@ -415,7 +420,7 @@
   },
   "metadata": {
     "created": "2026-07-01 11:39:25",
-    "updated": "2026-07-01 15:04:00",
+    "updated": "2026-07-01 15:09:20",
     "md_file": "docs/designs/release-dependency-roadmap.md"
   }
 }

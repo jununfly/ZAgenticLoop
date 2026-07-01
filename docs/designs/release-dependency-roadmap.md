@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 15:04:00
+> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 15:09:20
 
 [~][X+] 1. 发布依赖可发布化路线图
 ├── [x][Y+] 1-1. 确认发布依赖迁移边界
