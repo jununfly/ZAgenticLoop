@@ -4,13 +4,13 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Product experience report](https://jununfly.github.io/ZAgenticLoop/product-experience-report.html) · [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Product experience report](https://jununfly.github.io/ZAgenticLoop/docs/product-experience-report.html) · [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
 
 ## What You Get
 
 | Need | Start with |
 |------|------------|
-| Run a low-risk first loop | [Quickstart](docs/QUICKSTART.md) + Daily Triage |
+| Run a low-risk first loop | [Quickstart](docs/QUICKSTART.md) + [Daily Triage](patterns/daily-triage.md) |
 | Choose the right pattern | [Pattern picker](docs/pattern-picker.md) |
 | Map loops across tools | [Primitives matrix](docs/primitives-matrix.md) |
 | Check whether a repo is loop-ready | `npx @jununfly/zj-loop-audit . --suggest` |
