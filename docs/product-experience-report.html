@@ -1,0 +1,701 @@
+---
+layout: null
+title: ZAgenticLoop Product Experience Report
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAgenticLoop Product Experience Report</title>
+  <meta name="description" content="A product experience map for ZAgenticLoop: user stories, backbone design, technical advantages, core features, cases, and pattern showcase.">
+  <style>
+    :root {
+      --bg: #f7f5ef;
+      --paper: #fffdf7;
+      --ink: #162026;
+      --muted: #5e6a70;
+      --line: #d9d1c2;
+      --green: #1f7a66;
+      --blue: #315f9f;
+      --gold: #9b6b16;
+      --rose: #9a4c5f;
+      --shadow: 0 18px 60px rgba(22, 32, 38, 0.11);
+      --radius: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "SF Mono", "Fira Code", "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .wrap {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(247, 245, 239, 0.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 62px;
+    }
+
+    .brand {
+      color: var(--ink);
+      font-weight: 800;
+      letter-spacing: 0;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 0.92rem;
+    }
+
+    .hero {
+      padding: 72px 0 48px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0 0 14px;
+      color: var(--green);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 920px;
+      margin: 0;
+      font-size: clamp(2.4rem, 7vw, 5.2rem);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 760px;
+      margin: 28px 0 0;
+      color: var(--muted);
+      font-size: 1.18rem;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      gap: 28px;
+      align-items: end;
+      margin-top: 46px;
+    }
+
+    .thesis {
+      padding: 24px;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .thesis strong {
+      color: #b9e3d8;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 118px;
+      padding: 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .metric b {
+      display: block;
+      color: var(--green);
+      font-size: 1.7rem;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    section {
+      padding: 58px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+      gap: 36px;
+      align-items: start;
+      margin-bottom: 28px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(1.7rem, 4vw, 2.7rem);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid.cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .card {
+      padding: 22px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-flex;
+      margin-bottom: 12px;
+      color: var(--green);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .spine {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .spine-step {
+      position: relative;
+      min-height: 150px;
+      padding: 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .spine-step b {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--blue);
+    }
+
+    .spine-step span {
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .feature-table,
+    .pattern-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    th,
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--ink);
+      background: #ece6d9;
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      background: #ece6d9;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+    }
+
+    .takeaway {
+      border-left: 4px solid var(--gold);
+    }
+
+    .risk {
+      color: var(--rose);
+      font-weight: 700;
+    }
+
+    .path {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .path .card {
+      min-height: 176px;
+    }
+
+    .footer {
+      padding: 42px 0 54px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 920px) {
+      .hero-grid,
+      .section-head,
+      .grid.cols-2,
+      .grid.cols-3,
+      .grid.cols-4,
+      .spine,
+      .path {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-inner {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 14px 0;
+      }
+
+      .feature-table,
+      .pattern-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="{{ site.baseurl }}/">ZAgenticLoop</a>
+      <div class="nav-links">
+        <a href="#stories">User stories</a>
+        <a href="#backbone">Backbone</a>
+        <a href="#features">Features</a>
+        <a href="#patterns">Patterns</a>
+        <a href="#cases">Cases</a>
+        <a href="https://github.com/jununfly/ZAgenticLoop">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Product experience report</p>
+      <h1>From ad-hoc prompting to repeatable Agentic Loop Working.</h1>
+      <p class="lead">
+        This report explains how ZAgenticLoop should land for a new user: what problem it solves,
+        which mental model to learn first, which patterns to trust, and how the tool family lowers
+        the cost of adopting loops without hiding the safety work.
+      </p>
+      <div class="hero-grid">
+        <div class="thesis">
+          <strong>Product thesis:</strong> ZAgenticLoop is not another agent prompt collection. It is
+          a reference system for designing loops that schedule work, preserve memory, verify output,
+          control budgets, and hand off judgment to humans at the right boundary.
+        </div>
+        <div class="metric-strip">
+          <div class="metric"><b>7</b>Registry-backed production patterns</div>
+          <div class="metric"><b>L1-L3</b>Readiness ladder for rollout risk</div>
+          <div class="metric"><b>0.1.0</b>First public npm release surface</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="stories">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>User story map</h2>
+          <p>
+            The user experience should help people choose the smallest useful loop, run it in report-only
+            mode, then graduate only after state, verification, and budget signals are visible.
+          </p>
+        </div>
+        <div class="grid cols-3">
+          <article class="card">
+            <span class="tag">New adopter</span>
+            <h3>I want my first safe loop in five minutes.</h3>
+            <p>Start with Daily Triage, create <code>STATE.md</code>, run L1 report-only, and learn the loop's failure modes before allowing edits.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Maintainer</span>
+            <h3>I want recurring triage without losing judgment.</h3>
+            <p>Use Pattern, Skill, State, Run Log, Budget, and Human Gate language to keep recurring work auditable.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Team lead</span>
+            <h3>I want confidence before unattended automation.</h3>
+            <p>Use Loop Readiness Score, verifier separation, worktree evidence, and cost observability before L3.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Platform builder</span>
+            <h3>I want stable semantics across CLIs and MCP.</h3>
+            <p>Build on <code>@jununfly/zj-loop-core</code>, registry facts, semantic queries, and read-only MCP surfaces.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Goal operator</span>
+            <h3>I want bounded run-until-done readiness.</h3>
+            <p>Use <code>zj-goal-audit</code> separately from loop readiness when the work has an explicit stopping condition.</p>
+          </article>
+          <article class="card takeaway">
+            <span class="tag">Experience rule</span>
+            <h3>Teach calibration before autonomy.</h3>
+            <p>The product should make L1 feel like the normal first success, not a less impressive version of L2 or L3.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="backbone">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Backbone design</h2>
+          <p>
+            The core mental model is a pipeline from reusable operating model to real-world proof.
+            This is the spine README, Quickstart, starters, audit tooling, and stories should keep repeating.
+          </p>
+        </div>
+        <div class="spine">
+          <div class="spine-step"><b>Pattern</b><span>Goal, cadence, risk, phases, human gates, and cost metadata live in <code>patterns/registry.yaml</code>.</span></div>
+          <div class="spine-step"><b>Starter</b><span>Copyable scaffold turns a pattern into skills, state, budgets, run logs, and first command text.</span></div>
+          <div class="spine-step"><b>Memory</b><span>State and Run Log keep facts outside any one agent conversation and make loop activity inspectable.</span></div>
+          <div class="spine-step"><b>Verifier</b><span>Maker/checker split, worktrees, and readiness gates prevent the agent from grading its own work.</span></div>
+          <div class="spine-step"><b>Story</b><span>Proven Usage and failure stories calibrate trust, costs, escalation rules, and graduation criteria.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="advantages">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Technical advantages</h2>
+          <p>
+            ZAgenticLoop's strongest product advantage is that it turns loop design into shared
+            semantics instead of scattered instructions.
+          </p>
+        </div>
+        <div class="grid cols-3">
+          <article class="card">
+            <h3>Registry-first patterns</h3>
+            <p>Pattern facts are machine-readable, validated, and reused by audit, cost, docs, init, and MCP surfaces.</p>
+          </article>
+          <article class="card">
+            <h3>Tool-agnostic intent</h3>
+            <p>Patterns describe operating models; examples and starters map them to Grok, Claude Code, Codex, OpenClaw, and GitHub Actions.</p>
+          </article>
+          <article class="card">
+            <h3>Core-owned semantics</h3>
+            <p><code>@jununfly/zj-loop-core</code> centralizes registry loading, semantic queries, project evidence, and shared CLI harness behavior.</p>
+          </article>
+          <article class="card">
+            <h3>Readiness as product UX</h3>
+            <p><code>zj-loop-audit</code> converts abstract safety guidance into a score, level, findings, and concrete next steps.</p>
+          </article>
+          <article class="card">
+            <h3>Cost before cadence</h3>
+            <p><code>zj-loop-cost</code> makes token budget visible before a user schedules high-frequency loops.</p>
+          </article>
+          <article class="card">
+            <h3>Read-only MCP bridge</h3>
+            <p>The MCP server exposes local loop knowledge to agents while keeping semantic policy in core and side effects outside the protocol adapter.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Core feature map</h2>
+          <p>
+            The feature set should be presented as a learning path: initialize, estimate, audit,
+            synchronize, integrate, then handle goal-style work separately.
+          </p>
+        </div>
+        <table class="feature-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>User value</th>
+              <th>Best first use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>zj-loop-init</code></td>
+              <td>Creates starter files, state, budget, run log, and first command for a chosen pattern.</td>
+              <td>Use Daily Triage with a Codex, Grok, or Claude Code starter.</td>
+            </tr>
+            <tr>
+              <td><code>zj-loop-cost</code></td>
+              <td>Estimates token spend by pattern, level, and cadence before scheduling.</td>
+              <td>Compare Daily Triage at L1 with CI Sweeper at a 5-15 minute cadence.</td>
+            </tr>
+            <tr>
+              <td><code>zj-loop-audit</code></td>
+              <td>Scores Loop Readiness and suggests concrete upgrades.</td>
+              <td>Run after scaffold and after the first state update.</td>
+            </tr>
+            <tr>
+              <td><code>zj-loop-sync</code></td>
+              <td>Detects drift between loop configuration and current project evidence.</td>
+              <td>Use after editing loop config, budget, or state conventions.</td>
+            </tr>
+            <tr>
+              <td><code>zj-loop-mcp-server</code></td>
+              <td>Gives agents read-only access to patterns, skills, state, safety docs, and semantic loop tools.</td>
+              <td>Use when an agent needs to inspect loop knowledge without duplicating docs in prompt text.</td>
+            </tr>
+            <tr>
+              <td><code>zj-goal-audit</code></td>
+              <td>Audits bounded run-until-done goal readiness as a sibling package.</td>
+              <td>Use for explicit goals with stop conditions, not recurring cadence loops.</td>
+            </tr>
+            <tr>
+              <td><code>zj-loop-core</code></td>
+              <td>Shared domain kernel for registry, project evidence, semantic queries, and CLI harness.</td>
+              <td>Use when building a new product surface or adapter over loop knowledge.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="patterns">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Pattern showcase</h2>
+          <p>
+            The pattern catalog should be shown as a risk-aware menu, not as a flat list.
+            Users need to see cadence, risk, week-one posture, token cost, and starter path together.
+          </p>
+        </div>
+        <table class="pattern-table">
+          <thead>
+            <tr>
+              <th>Pattern</th>
+              <th>Best for</th>
+              <th>Cadence</th>
+              <th>Week one</th>
+              <th>Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/daily-triage.md">Daily Triage</a></td>
+              <td>Lowest-risk first loop and recurring project scan.</td>
+              <td>1d-2h</td>
+              <td>L1 report</td>
+              <td>Low</td>
+            </tr>
+            <tr>
+              <td><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/changelog-drafter.md">Changelog Drafter</a></td>
+              <td>Release-note drafts with human review.</td>
+              <td>1d or tag</td>
+              <td>L1 draft</td>
+              <td>Low</td>
+            </tr>
+            <tr>
+              <td><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/issue-triage.md">Issue Triage</a></td>
+              <td>Deduplicate, prioritize, and propose labels.</td>
+              <td>2h-1d</td>
+              <td>L1 propose-only</td>
+              <td>Low</td>
+            </tr>
+            <tr>
+              <td><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/post-merge-cleanup.md">Post-Merge Cleanup</a></td>
+              <td>Off-peak cleanup after merges reach main.</td>
+              <td>1d-6h</td>
+              <td>L1 off-peak</td>
+              <td>Low</td>
+            </tr>
+            <tr>
+              <td><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/dependency-sweeper.md">Dependency Sweeper</a></td>
+              <td>Patch-only dependency updates with verifier and gates.</td>
+              <td>6h-1d</td>
+              <td>L2 patch-only</td>
+              <td>Medium</td>
+            </tr>
+            <tr>
+              <td><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/pr-babysitter.md">PR Babysitter</a></td>
+              <td>Shepherd PRs through review, CI, rebase, and merge readiness.</td>
+              <td>5m-15m</td>
+              <td>L1 watch</td>
+              <td>High</td>
+            </tr>
+            <tr>
+              <td><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/ci-sweeper.md">CI Sweeper</a></td>
+              <td>React to failing CI with minimal fixes and escalation.</td>
+              <td>5m-15m</td>
+              <td>L2 cautious</td>
+              <td><span class="risk">Very high</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="cases">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Case evidence</h2>
+          <p>
+            Stories are part of the product surface because they teach the limits. They reduce
+            learning friction by showing what worked, what broke, and what changed in the operating model.
+          </p>
+        </div>
+        <div class="grid cols-2">
+          <article class="card">
+            <span class="tag">Failure story</span>
+            <h3><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/stories/why-we-killed-ci-sweeper.md">Why We Killed Our CI Sweeper</a></h3>
+            <p>Jumping straight to auto-fix created runaway spend and noisy PRs. The fix was report-only first, verifier separation, branch allowlist, and daily budget.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Graduation story</span>
+            <h3><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/stories/l1-to-l2-graduation.md">L1 to L2 Graduation</a></h3>
+            <p>Two weeks of L1 calibrated priority judgment before small assisted fixes. The story turns readiness into concrete adoption criteria.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Low-risk win</span>
+            <h3><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/stories/changelog-drafter-week-one.md">Changelog Drafter Week One</a></h3>
+            <p>Drafting release notes cut human review time while keeping publish behind a Human Gate.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Coordination lesson</span>
+            <h3><a href="https://github.com/jununfly/ZAgenticLoop/blob/main/stories/multi-loop-collision.md">Multi-Loop Collision</a></h3>
+            <p>Multiple loops require branch locks, collision detection, and explicit ownership boundaries before they become invisible background work.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="adoption">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Recommended learning funnel</h2>
+          <p>
+            The public README should keep this order visible. It builds user confidence while making the safety model feel like the product, not a warning label.
+          </p>
+        </div>
+        <div class="path">
+          <article class="card">
+            <span class="tag">Step 1</span>
+            <h3>Quickstart</h3>
+            <p>Scaffold Daily Triage and run report-only. The first win is a correct <code>STATE.md</code>, not an automated PR.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Step 2</span>
+            <h3>Pick by pain</h3>
+            <p>Use the Pattern picker to choose by risk, cadence, token cost, and team need.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Step 3</span>
+            <h3>Audit readiness</h3>
+            <p>Run audit and cost tools before increasing cadence or moving from L1 to L2.</p>
+          </article>
+          <article class="card">
+            <span class="tag">Step 4</span>
+            <h3>Calibrate with stories</h3>
+            <p>Read success and failure cases before unattended operation. They encode practical Human Gate and Escalation rules.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p>
+        Next actions: <a href="./QUICKSTART.md">Quickstart</a>,
+        <a href="./pattern-picker.md">Pattern picker</a>,
+        <a href="./primitives-matrix.md">Primitives matrix</a>,
+        <a href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/registry.yaml">Pattern registry</a>,
+        <a href="https://github.com/jununfly/ZAgenticLoop/tree/main/stories">Production stories</a>.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

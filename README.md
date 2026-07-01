@@ -4,7 +4,7 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Product experience report](https://jununfly.github.io/ZAgenticLoop/product-experience-report.html) · [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
 
 ## What You Get
 
@@ -18,6 +18,15 @@ It gives you a method, production patterns, starter kits, and small CLIs for mov
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Integrate loop knowledge through MCP | [zj-loop-mcp-server](tools/zj-loop-mcp-server/) |
+
+## Product Experience Map
+
+The shortest mental model: **Pattern -> Starter -> Memory -> Verifier -> Story**.
+
+- **User story:** move from ad-hoc prompting to repeatable Agentic Loop Working without giving up human judgment.
+- **Backbone:** choose a Pattern, copy a Starter, preserve Memory in state/run logs, add verifier separation, and use Human Gates for risky boundaries.
+- **Adoption path:** Quickstart with Daily Triage, run L1 report-only, audit readiness, estimate cost, then graduate toward L2/L3 only after real loop activity is visible.
+- **Evidence:** the pattern catalog is backed by [registry metadata](patterns/registry.yaml), [production stories](stories/), and a full [product experience report](https://jununfly.github.io/ZAgenticLoop/product-experience-report.html).
 
 ## Install And Run
 
