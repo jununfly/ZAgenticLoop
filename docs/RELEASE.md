@@ -32,6 +32,27 @@ Names must match **exactly** (case-sensitive). No `NPM_TOKEN` secret is required
 
 Edit `version` in the package `package.json`, update that package's `CHANGELOG.md` if present, and commit to `main` via PR.
 
+## Generated artifacts policy
+
+Release-managed packages have two artifact classes. For packages with a `files`
+allowlist in `package.json`, every listed entry must exist before publish and
+must be covered by one of these classes:
+
+- Commit `dist/` for release-managed CLI/library packages because package
+  entrypoints and npm `bin` fields point at built JavaScript.
+- Commit small package-bundled runtime data such as
+  `tools/zj-loop-init/registry.yaml` and `tools/zj-loop-cost/registry.json`.
+- Generate large mirrored package data during release tests, then publish it
+  from the package working tree. Today this applies to
+  `tools/zj-loop-init/starters/` and `tools/zj-loop-init/templates/`, which are
+  copied from the repo root by `npm test` / `npm run build` and ignored by git
+  inside the package.
+- Do not commit transient local outputs such as `node_modules/`, temporary
+  folders, logs, or ad hoc build scratch files.
+
+The root `test:release-workflows` gate checks package docs, workflows, and
+publish artifact tracking/generation policy together.
+
 ## Publish
 
 Tag pushes trigger the release workflows:

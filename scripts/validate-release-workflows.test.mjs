@@ -5,16 +5,23 @@ import { RELEASE_PACKAGES, validateReleaseWorkflows } from './validate-release-w
 
 test('RELEASE_PACKAGES captures release-managed npm packages', () => {
   assert.deepEqual(
-    RELEASE_PACKAGES.map((releasePackage) => releasePackage.packageName),
+    RELEASE_PACKAGES.map((releasePackage) => ({
+      packageName: releasePackage.packageName,
+      generatedAtRelease: releasePackage.generatedAtRelease ?? [],
+    })),
     [
-      '@jununfly/zj-loop-audit',
-      '@jununfly/zj-loop-init',
-      '@jununfly/zj-loop-cost',
-      '@cobusgreyling/goal-audit',
+      { packageName: '@jununfly/zj-loop-audit', generatedAtRelease: [] },
+      { packageName: '@jununfly/zj-loop-init', generatedAtRelease: ['starters', 'templates'] },
+      { packageName: '@jununfly/zj-loop-cost', generatedAtRelease: [] },
+      { packageName: '@cobusgreyling/goal-audit', generatedAtRelease: [] },
     ],
   );
 });
 
 test('validateReleaseWorkflows keeps docs, packages, and workflows aligned', async () => {
+  await assert.doesNotReject(() => validateReleaseWorkflows());
+});
+
+test('release-managed package files stay present, tracked, and publishable', async () => {
   await assert.doesNotReject(() => validateReleaseWorkflows());
 });

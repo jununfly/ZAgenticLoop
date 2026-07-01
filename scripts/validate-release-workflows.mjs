@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-import { readFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { access, readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const execFileAsync = promisify(execFile);
 
 export const RELEASE_PACKAGES = [
   {
@@ -21,6 +24,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-init.yml',
     tagPattern: 'zj-loop-init-v*',
     trustedPublishing: true,
+    generatedAtRelease: ['starters', 'templates'],
   },
   {
     id: 'zj-loop-cost',
@@ -46,6 +50,74 @@ function assertIncludes(haystack, needle, label, errors) {
   }
 }
 
+async function pathExists(filePath) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function hasTrackedContent(root, packageDirectory, packageFileEntry) {
+  const target = `${packageDirectory}/${packageFileEntry}`;
+  const { stdout } = await execFileAsync('git', ['ls-files', target], { cwd: root });
+  return stdout.trim().length > 0;
+}
+
+async function isIgnored(root, relativePath) {
+  const result = await execFileAsync('git', ['check-ignore', '-q', relativePath], { cwd: root })
+    .then(() => true)
+    .catch((error) => {
+      if (error.code === 1) return false;
+      throw error;
+    });
+  return result;
+}
+
+async function validatePackageFiles(root, releasePackage, packageJson, errors) {
+  if (!Array.isArray(packageJson.files) || packageJson.files.length === 0) {
+    errors.push(`${releasePackage.directory}/package.json files must list publish artifacts`);
+    return;
+  }
+
+  const generatedAtRelease = new Set(releasePackage.generatedAtRelease ?? []);
+
+  for (const entry of packageJson.files) {
+    const relativePath = `${releasePackage.directory}/${entry}`;
+    const absolutePath = path.join(root, relativePath);
+    const generated = generatedAtRelease.has(entry);
+
+    if (!(await pathExists(absolutePath))) {
+      errors.push(`${releasePackage.directory}/package.json files entry missing on disk: ${entry}`);
+      continue;
+    }
+
+    const entryStat = await stat(absolutePath);
+    if (entryStat.isDirectory()) {
+      if ((await readdir(absolutePath, { recursive: true })).length === 0) {
+        errors.push(`${releasePackage.directory}/package.json files entry has no contents: ${entry}`);
+        continue;
+      }
+    }
+
+    if (generated) {
+      if (!(await isIgnored(root, relativePath))) {
+        errors.push(`${releasePackage.directory}/package.json generated release entry should be ignored by git: ${entry}`);
+      }
+      continue;
+    }
+
+    if (!(await hasTrackedContent(root, releasePackage.directory, entry))) {
+      errors.push(`${releasePackage.directory}/package.json files entry is not tracked by git: ${entry}`);
+    }
+
+    if (await isIgnored(root, relativePath)) {
+      errors.push(`${releasePackage.directory}/package.json files entry is ignored by .gitignore: ${entry}`);
+    }
+  }
+}
+
 export async function validateReleaseWorkflows(root = ROOT) {
   const errors = [];
   const releaseDoc = await readFile(path.join(root, 'docs/RELEASE.md'), 'utf8');
@@ -61,6 +133,8 @@ export async function validateReleaseWorkflows(root = ROOT) {
         `${releasePackage.directory}/package.json name mismatch: ${packageJson.name} !== ${releasePackage.packageName}`,
       );
     }
+
+    await validatePackageFiles(root, releasePackage, packageJson, errors);
 
     assertIncludes(workflow, releasePackage.tagPattern, releasePackage.workflow, errors);
     assertIncludes(workflow, `working-directory: ${releasePackage.directory}`, releasePackage.workflow, errors);

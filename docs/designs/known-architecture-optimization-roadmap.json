@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "已知架构优化路线图",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -166,8 +166,8 @@
     "1-7": {
       "id": "1-7",
       "label": "明确 dist 与 generated artifacts 提交策略",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [],
       "decisions": [
@@ -175,14 +175,24 @@
           "q": "generated artifacts 策略为什么先 explore？",
           "answer": "repo 同时存在 dist、bundled registry/templates、生成 preview 等 artifact；需要先分类哪些是发布必需、哪些是本地 build 产物，再决定 gitignore 或 consistency check。",
           "note": "推荐方向：先写策略和检查，避免误删发布需要的 dist。"
+        },
+        {
+          "q": "dist/generated artifacts 策略落在哪里？",
+          "answer": "落在 docs/RELEASE.md 与 validateReleaseWorkflows()：dist 和 package-bundled registry/starters/templates 属于发布包内容，必须被 git 跟踪且不能被 .gitignore 屏蔽；临时 build/temp/node_modules 继续忽略。",
+          "note": "不删除 dist；用检查约束 package.json files、tracked files、.gitignore 三者一致。"
+        },
+        {
+          "q": "zj-loop-init starters/templates 是否必须提交？",
+          "answer": "不提交。它们是 release-time generated artifacts，由 zj-loop-init 的 npm test/build 从 repo root 复制到 package working tree，并由 package 内 .gitignore 忽略；dist、README、registry.yaml/registry.json 这类小型发布入口/运行数据仍必须提交。",
+          "note": "这是测试红灯后确认的分层策略：committed artifacts 与 generated-at-release artifacts 分开检查。"
         }
       ],
-      "notes": ""
+      "notes": "Documented committed vs release-time generated artifact policy and extended release workflow validation to enforce package files tracking/generation expectations."
     }
   },
   "metadata": {
     "created": "2026-07-01 01:45:23",
-    "updated": "2026-07-01 11:12:40",
+    "updated": "2026-07-01 11:19:12",
     "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
   }
 }
