@@ -4,9 +4,8 @@ Landed from the [repository](https://github.com/jununfly/ZAgenticLoop), a packag
 
 **Week one rule:** report only. No auto-fix, no auto-merge. Read what the loop writes before you let it act.
 
-The commands below use the public npm packages after first release. Before npm
-is live, contributors can run the same CLIs from this monorepo; see
-[Before npm is live](#before-npm-is-live) below.
+The commands below use the public npm packages. Contributors can also run the
+same CLIs from this monorepo; see [From source](#from-source) below.
 
 ## 1. Pick your pain (30 seconds)
 
@@ -131,10 +130,9 @@ npx @jununfly/zj-loop-audit . --suggest
 npx @jununfly/zj-loop-audit . --badge
 ```
 
-## Before npm is live
+## From source
 
-If the `@jununfly` packages have not been published yet, run the CLIs from a
-local checkout instead:
+When contributing to this repo, run the CLIs from a local checkout:
 
 ```bash
 cd tools/zj-loop-init && npm ci && npm test && node dist/cli.js /path/to/project --pattern daily-triage --tool grok

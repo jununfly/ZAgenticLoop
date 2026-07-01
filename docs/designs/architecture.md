@@ -286,24 +286,20 @@ Release artifacts are split into two classes:
 
 Known `file:../zj-loop-core` dependencies in publishable packages are explicit
 release blockers, not hidden assumptions. The validator rejects untracked new
-local `file:` dependencies. The normal release workflow gate allows documented
-local blockers so monorepo development can continue before core is published.
-The explicit release-ready gate, `npm run test:release-ready`, rejects every
-local `file:` dependency and is expected to fail until the dependent packages
-migrate from `file:../zj-loop-core` to a registry version dependency.
+local `file:` dependencies. The explicit release-ready gate,
+`npm run test:release-ready`, rejects every local `file:` dependency so public
+npm consumers never receive packages with monorepo-only links.
 
-The selected core dependency strategy is core-first publishing. After
-`@jununfly/zj-loop-core@0.1.0` is published, dependent `@jununfly/zj-loop-*`
-packages should migrate to `@jununfly/zj-loop-core: ^0.1.0`, regenerate
-package-local lockfiles against the registry dependency, and pass package-local
-`npm ci`, package tests, `npm pack`, and release workflow validation before
-tagging.
+The selected core dependency strategy is core-first publishing. The first
+release published `@jununfly/zj-loop-core@0.1.0`, waited until npm could resolve
+it, then migrated dependent `@jununfly/zj-loop-*` packages to
+`@jununfly/zj-loop-core: ^0.1.0` and regenerated package-local lockfiles against
+the registry tarball before tagging dependent packages.
 
-The release dependency roadmap is closed at the architecture level with one
-explicit external blocker: dependent package migration must wait until
-`@jununfly/zj-loop-core@0.1.0` is published and registry-resolvable. That
-migration should be handled as a release execution task after core publication,
-not as continuing architecture exploration.
+The release dependency roadmap is closed at the architecture level: release
+validation now treats registry-resolvable package dependencies as the publish
+boundary, with Trusted Publisher setup remaining as post-first-release
+hardening rather than architecture exploration.
 
 Test strategy:
 

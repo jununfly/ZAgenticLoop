@@ -6,7 +6,13 @@ Instead of stuffing all loop documentation into the prompt, agents can query onl
 
 ## Quick Start
 
-**v1 ships from this repo** (npm publish pending). From a cloned `ZAgenticLoop` repo:
+Run from npm:
+
+```bash
+npx @jununfly/zj-loop-mcp-server
+```
+
+Or from a cloned `ZAgenticLoop` repo:
 
 ```bash
 cd tools/zj-loop-mcp-server && npm ci && npm test

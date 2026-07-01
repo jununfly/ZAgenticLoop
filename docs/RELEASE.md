@@ -49,6 +49,11 @@ hardening change.
 
 **Retry without re-tagging:** Actions → Release workflow → **Run workflow** → enter the tag (e.g. `zj-loop-audit-v0.1.0`).
 
+For the first `0.1.0` release, the dependent package tag pushes were retried
+through `workflow_dispatch` after moving tags to the final release-ready commit.
+Keep that path available for release reruns, but prefer creating tags only
+after `main` is green.
+
 ## Release universe standard
 
 A package under `tools/` is part of the release universe when it has a public
@@ -127,6 +132,20 @@ was published and checked with
 which returned `0.1.0`. Dependent `@jununfly/zj-loop-*` packages now use
 `@jununfly/zj-loop-core: ^0.1.0` and package-local lockfiles resolved that
 registry version.
+
+The first release completed on July 1, 2026. These packages are published and
+registry-resolvable on the official npm registry:
+
+- `@jununfly/zj-loop-core@0.1.0`
+- `@jununfly/zj-loop-audit@0.1.0`
+- `@jununfly/zj-loop-init@0.1.0`
+- `@jununfly/zj-loop-cost@0.1.0`
+- `@jununfly/zj-loop-sync@0.1.0`
+- `@jununfly/zj-loop-mcp-server@0.1.0`
+- `@jununfly/zj-goal-audit@0.1.0`
+
+Smoke tests used `--registry https://registry.npmjs.org` because npm mirrors
+can lag immediately after a first publish.
 
 ## Publish
 
@@ -217,18 +236,24 @@ npx @jununfly/zj-loop-audit --help
 npx @jununfly/zj-loop-init --help
 npx @jununfly/zj-loop-cost --help
 npx @jununfly/zj-loop-sync --help
-npx @jununfly/zj-loop-mcp-server --help
 npx @jununfly/zj-goal-audit --help
 
 mkdir /tmp/zj-loop-init-test && cd /tmp/zj-loop-init-test
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok --dry-run
 ```
 
-## Before npm is live (local / monorepo)
+`@jununfly/zj-loop-mcp-server` is an MCP stdio server, not a regular help CLI.
+Verify it by checking the published manifest and configuring it in an MCP
+client:
 
-Local monorepo development may keep `file:../zj-loop-core` dependencies and
-package-lock links while `@jununfly/zj-loop-core` is not published. Root
-`npm run build:tools` and `npm run test:tools` run against the checked-in
+```bash
+npm view @jununfly/zj-loop-mcp-server version bin
+```
+
+## Local / monorepo development
+
+Local monorepo development can use package-local installs and source builds.
+Root `npm run build:tools` and `npm run test:tools` run against the checked-in
 package installs and do not refresh package-local locks by default.
 
 CI validate gates and release workflows do run package-local installs:
@@ -238,17 +263,16 @@ CI validate gates and release workflows do run package-local installs:
 - Release workflows run `npm ci` inside each package working directory before
   publishing.
 
-Before tagging a package that depends on `@jununfly/zj-loop-core`, first publish
-core, then migrate that package's dependency and lockfile from
-`file:../zj-loop-core` to a registry version range. A lockfile generated from an
-old `file:` lock can preserve the local link even after `package.json` is
-changed, so release migration must verify both `package.json` and
-`package-lock.json`.
+Before tagging a package that depends on `@jununfly/zj-loop-core`, verify that
+package's dependency and lockfile use a registry version range, not
+`file:../zj-loop-core`. A lockfile generated from an old `file:` lock can
+preserve the local link even after `package.json` is changed, so release
+migration must verify both `package.json` and `package-lock.json`.
 
-For the current core version, dependent packages should use
-`@jununfly/zj-loop-core: ^0.1.0` after core is published. In npm semver, `^0.1.0`
+For the current core version, dependent packages use
+`@jununfly/zj-loop-core: ^0.1.0`. In npm semver, `^0.1.0`
 accepts compatible `0.1.x` patches but not `0.2.0`, which is appropriate while
-core is still pre-1.0. Publish order is:
+core is still pre-1.0. The first-release publish order was:
 
 1. publish `@jununfly/zj-loop-core`
 2. regenerate each dependent package lockfile against the registry dependency
