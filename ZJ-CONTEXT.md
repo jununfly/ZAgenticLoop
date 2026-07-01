@@ -123,3 +123,15 @@ _Avoid_: Dogfooding
 **Example**:
 A teaching artifact that shows how a pattern or primitive maps to a specific tool, platform, or scenario. An example does not promise clone-and-run readiness.
 _Avoid_: Starter
+
+**Release Universe**:
+The set of packages this repository treats as public release surfaces. A package enters the release universe when it presents a public publish surface, not when a human remembers to list it in a release note.
+_Avoid_: Ad hoc release list, published tools
+
+**Release-managed Package**:
+A package in the release universe whose workflow, tag pattern, documentation, artifacts, and dependency blockers are checked as part of release validation.
+_Avoid_: Tool package when discussing release obligations
+
+**Release-ready Gate**:
+The stricter pre-tag validation boundary that rejects blockers tolerated by local development, especially local package dependencies that public npm consumers cannot resolve.
+_Avoid_: Normal test gate

@@ -298,6 +298,12 @@ package-local lockfiles against the registry dependency, and pass package-local
 `npm ci`, package tests, `npm pack`, and release workflow validation before
 tagging.
 
+The release dependency roadmap is closed at the architecture level with one
+explicit external blocker: dependent package migration must wait until
+`@jununfly/zj-loop-core@0.1.0` is published and registry-resolvable. That
+migration should be handled as a release execution task after core publication,
+not as continuing architecture exploration.
+
 Test strategy:
 
 - Core semantic tests assert structured contracts, reason codes, warning codes,
@@ -366,3 +372,5 @@ The architecture-improvement roadmap produced these durable outcomes:
 - Release-ready validation now exists as an explicit pre-tag gate that rejects
   local `file:` dependencies, while the normal development gate continues to
   allow documented monorepo blockers.
+- The release dependency roadmap closed with the core dependency migration left
+  as an explicit release blocker, not an unfinished architecture question.
