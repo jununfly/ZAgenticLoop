@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 14:51:42
+> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 14:56:00
 
 [~][X+] 1. 发布依赖可发布化路线图
 ├── [x][Y+] 1-1. 确认发布依赖迁移边界
@@ -20,10 +20,10 @@
 │   ├── [x][Y+] 1-7-1. 替换发布包 package.json 中的 core file 依赖
 │   ├── [x][Y+] 1-7-2. 收敛 package-lock 与 package-local npm ci
 │   └── [x][Y+] 1-7-3. 验证所有发布包 tarball 不含本地 file 依赖
-├── [ ][Y+] 1-8. 升级发布验证为可发布标准门
-│   ├── [ ][Y+] 1-8-1. 将 validator 从允许已知 blocker 改为拒绝发布 blocker
-│   ├── [ ][Y+] 1-8-2. 增加 pack-level 可发布契约测试
-│   └── [ ][X+] 1-8-3. 把 release gate 接入现有 test:tools 与 CI 语义
+├── [x][Y+] 1-8. 升级发布验证为可发布标准门
+│   ├── [x][Y+] 1-8-1. 将 validator 从允许已知 blocker 改为拒绝发布 blocker
+│   ├── [x][Y+] 1-8-2. 增加 pack-level 可发布契约测试
+│   └── [x][X+] 1-8-3. 把 release gate 接入现有 test:tools 与 CI 语义
 └── [ ][Y+] 1-9. 收尾发布文档与架构决策
     ├── [ ][Y+] 1-9-1. 更新 RELEASE 文档为无 blocker 状态
     ├── [ ][Y+] 1-9-2. 更新 architecture 发布边界结论
@@ -46,7 +46,7 @@
 │   ... 3 more child nodes; run tree 1-6 --depth 2 for full view
 ├── [x][Y+] 1-7. 建立发布前依赖迁移门
 │   ... 3 more child nodes; run tree 1-7 --depth 2 for full view
-├── [ ][Y+] 1-8. 升级发布验证为可发布标准门
+├── [x][Y+] 1-8. 升级发布验证为可发布标准门
 │   ... 3 more child nodes; run tree 1-8 --depth 2 for full view
 └── [ ][Y+] 1-9. 收尾发布文档与架构决策
     ... 3 more child nodes; run tree 1-9 --depth 2 for full view

@@ -55,3 +55,4 @@ state.json
 !starters/**/.codex/**
 *.session
 .zcodegraph/
+.npm-cache-release-validation/

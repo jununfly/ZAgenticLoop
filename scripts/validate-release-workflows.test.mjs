@@ -75,6 +75,10 @@ test('release-managed package files stay present, tracked, and publishable', asy
   await assert.doesNotReject(() => validateReleaseWorkflows());
 });
 
+test('release-managed package files are represented in npm pack output', async () => {
+  await assert.doesNotReject(() => validateReleaseWorkflows());
+});
+
 test('known local file dependencies are explicit release blockers', () => {
   const blockers = RELEASE_PACKAGES
     .filter((releasePackage) => (releasePackage.localFileDependencies ?? []).length > 0)

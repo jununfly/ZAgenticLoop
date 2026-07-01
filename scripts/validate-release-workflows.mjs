@@ -184,6 +184,43 @@ async function validatePackageFiles(root, releasePackage, packageJson, errors) {
   }
 }
 
+async function validatePackedFiles(root, releasePackage, packageJson, errors) {
+  const { stdout } = await execFileAsync(
+    'npm',
+    [
+      'pack',
+      `./${releasePackage.directory}`,
+      '--dry-run',
+      '--json',
+      '--cache',
+      path.join(root, '.npm-cache-release-validation'),
+    ],
+    { cwd: root },
+  );
+  const [packResult] = JSON.parse(stdout);
+  const packedFiles = new Set(packResult.files.map((file) => file.path));
+
+  if (!packedFiles.has('package.json')) {
+    errors.push(`${releasePackage.directory} npm pack output missing package.json`);
+  }
+
+  for (const entry of packageJson.files) {
+    if (releasePackage.generatedAtRelease?.includes(entry)) {
+      continue;
+    }
+
+    if (packedFiles.has(entry)) {
+      continue;
+    }
+
+    const prefix = `${entry.replace(/\/$/, '')}/`;
+    const hasChild = [...packedFiles].some((filePath) => filePath.startsWith(prefix));
+    if (!hasChild) {
+      errors.push(`${releasePackage.directory} npm pack output missing files entry: ${entry}`);
+    }
+  }
+}
+
 function validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, errors) {
   const failOnLocalFileDependencies = process.env.ZJ_LOOP_RELEASE_READY === '1';
   const allowed = new Set(releasePackage.localFileDependencies ?? []);
@@ -257,6 +294,7 @@ export async function validateReleaseWorkflows(root = ROOT) {
     }
 
     await validatePackageFiles(root, releasePackage, packageJson, errors);
+    await validatePackedFiles(root, releasePackage, packageJson, errors);
     validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, errors);
 
     assertIncludes(workflow, releasePackage.tagPattern, releasePackage.workflow, errors);

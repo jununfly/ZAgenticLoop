@@ -54,7 +54,7 @@ manifest.
 Use release-ready mode before tagging packages:
 
 ```bash
-ZJ_LOOP_RELEASE_READY=1 npm run test:release-workflows
+npm run test:release-ready
 ```
 
 Release-ready mode rejects every local `file:` dependency in a release-managed
