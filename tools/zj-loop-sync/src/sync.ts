@@ -9,8 +9,10 @@
  */
 
 import {
+  collectProjectEvidenceFacts,
   createNodeProjectFileSystem,
   hasAnyProjectPath,
+  DEFAULT_SKILL_DIRS,
   type ProjectFileSystem,
 } from '@jununfly/zj-loop-core';
 
@@ -38,8 +40,6 @@ export interface SyncOptions {
   help?: boolean;
   json?: boolean;
 }
-
-const SYNC_SKILL_DIRS = ['skills', '.grok/skills', '.claude/skills', '.codex/skills'] as const;
 
 /**
  * Extract frontmatter from markdown files
@@ -142,7 +142,7 @@ function compareMarkdownFiles(
 async function scanSkillsDirectory(fs: ProjectFileSystem): Promise<Map<string, string>> {
   const skillsVersions = new Map<string, string>();
 
-  for (const skillsDir of SYNC_SKILL_DIRS) {
+  for (const skillsDir of ['.grok/skills', '.claude/skills', '.codex/skills', 'skills']) {
     const entries = await fs.listEntries(skillsDir);
     for (const entry of entries) {
       if (entry.kind !== 'directory') continue;
@@ -164,33 +164,25 @@ async function scanSkillsDirectory(fs: ProjectFileSystem): Promise<Map<string, s
 export async function runSync(options: SyncOptions): Promise<DriftReport> {
   const { targetDir, autoFix, dryRun, verbose } = options;
   const fs = createNodeProjectFileSystem(targetDir);
+  const evidence = await collectProjectEvidenceFacts(fs);
   const issues: DriftIssue[] = [];
   const suggestions: string[] = [];
-  
-  // Define required files
-  const requiredFiles = [
-    'STATE.md',
-    'LOOP.md',
-    'AGENTS.md',
-  ];
-  
+
   // Check for missing required files
-  for (const file of requiredFiles) {
-    if (!await fs.exists(file)) {
-      issues.push({
-        type: 'missing',
-        file,
-        message: `${file} is missing`,
-        severity: 'error',
-        suggestion: `Run 'npx @jununfly/zj-loop-init . --pattern daily-triage' to scaffold required files`,
-      });
-    }
+  for (const file of evidence.missingRequiredLoopFiles) {
+    issues.push({
+      type: 'missing',
+      file,
+      message: `${file} is missing`,
+      severity: 'error',
+      suggestion: `Run 'npx @jununfly/zj-loop-init . --pattern daily-triage' to scaffold required files`,
+    });
   }
   
   // Check STATE.md ↔ LOOP.md consistency
-  if (await fs.exists('STATE.md') && await fs.exists('LOOP.md')) {
+  if (evidence.statePaths.includes('STATE.md') && evidence.loopConfig.present) {
     const stateContent = await fs.readTextIfExists('STATE.md');
-    const loopContent = await fs.readTextIfExists('LOOP.md');
+    const loopContent = evidence.loopConfig.content;
     
     if (stateContent && loopContent) {
       // Extract patterns from LOOP.md
@@ -238,10 +230,8 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
   
   // Scan skills for version information
   const skillsVersions = await scanSkillsDirectory(fs);
-  
-  const hasSkillsDir = await hasAnyProjectPath(fs, SYNC_SKILL_DIRS);
 
-  if (skillsVersions.size === 0 && hasSkillsDir) {
+  if (skillsVersions.size === 0 && await hasAnyProjectPath(fs, DEFAULT_SKILL_DIRS)) {
     suggestions.push('No skills found. Run zj-loop-init to scaffold skills.');
   }
   

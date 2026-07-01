@@ -7,8 +7,7 @@
  * 3. Missing required files
  * 4. Configuration drift from starters
  */
-import { createNodeProjectFileSystem, hasAnyProjectPath, } from '@jununfly/zj-loop-core';
-const SYNC_SKILL_DIRS = ['skills', '.grok/skills', '.claude/skills', '.codex/skills'];
+import { collectProjectEvidenceFacts, createNodeProjectFileSystem, hasAnyProjectPath, DEFAULT_SKILL_DIRS, } from '@jununfly/zj-loop-core';
 /**
  * Extract frontmatter from markdown files
  */
@@ -90,7 +89,7 @@ function compareMarkdownFiles(file1Content, file2Content, threshold = 0.5) {
  */
 async function scanSkillsDirectory(fs) {
     const skillsVersions = new Map();
-    for (const skillsDir of SYNC_SKILL_DIRS) {
+    for (const skillsDir of ['.grok/skills', '.claude/skills', '.codex/skills', 'skills']) {
         const entries = await fs.listEntries(skillsDir);
         for (const entry of entries) {
             if (entry.kind !== 'directory')
@@ -110,30 +109,23 @@ async function scanSkillsDirectory(fs) {
 export async function runSync(options) {
     const { targetDir, autoFix, dryRun, verbose } = options;
     const fs = createNodeProjectFileSystem(targetDir);
+    const evidence = await collectProjectEvidenceFacts(fs);
     const issues = [];
     const suggestions = [];
-    // Define required files
-    const requiredFiles = [
-        'STATE.md',
-        'LOOP.md',
-        'AGENTS.md',
-    ];
     // Check for missing required files
-    for (const file of requiredFiles) {
-        if (!await fs.exists(file)) {
-            issues.push({
-                type: 'missing',
-                file,
-                message: `${file} is missing`,
-                severity: 'error',
-                suggestion: `Run 'npx @jununfly/zj-loop-init . --pattern daily-triage' to scaffold required files`,
-            });
-        }
+    for (const file of evidence.missingRequiredLoopFiles) {
+        issues.push({
+            type: 'missing',
+            file,
+            message: `${file} is missing`,
+            severity: 'error',
+            suggestion: `Run 'npx @jununfly/zj-loop-init . --pattern daily-triage' to scaffold required files`,
+        });
     }
     // Check STATE.md ↔ LOOP.md consistency
-    if (await fs.exists('STATE.md') && await fs.exists('LOOP.md')) {
+    if (evidence.statePaths.includes('STATE.md') && evidence.loopConfig.present) {
         const stateContent = await fs.readTextIfExists('STATE.md');
-        const loopContent = await fs.readTextIfExists('LOOP.md');
+        const loopContent = evidence.loopConfig.content;
         if (stateContent && loopContent) {
             // Extract patterns from LOOP.md
             const patterns = extractLoopPatterns(loopContent);
@@ -174,8 +166,7 @@ export async function runSync(options) {
     }
     // Scan skills for version information
     const skillsVersions = await scanSkillsDirectory(fs);
-    const hasSkillsDir = await hasAnyProjectPath(fs, SYNC_SKILL_DIRS);
-    if (skillsVersions.size === 0 && hasSkillsDir) {
+    if (skillsVersions.size === 0 && await hasAnyProjectPath(fs, DEFAULT_SKILL_DIRS)) {
         suggestions.push('No skills found. Run zj-loop-init to scaffold skills.');
     }
     // Calculate score

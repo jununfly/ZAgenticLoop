@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   createNodeProjectFileSystem,
+  collectProjectEvidenceFacts,
   findExistingProjectPaths,
   hasAnyProjectPath,
   listProjectSkillNames,
@@ -55,5 +56,23 @@ test('listProjectSkillNames finds tool skills and verifier agents', async () => 
 
     const fs = createNodeProjectFileSystem(root);
     assert.deepEqual(await listProjectSkillNames(fs), ['loop-triage', 'loop-verifier']);
+  });
+});
+
+test('collectProjectEvidenceFacts returns shared loop evidence without policy interpretation', async () => {
+  await withProject(async (root) => {
+    await writeFile(path.join(root, 'STATE.md'), '# State\n');
+    await writeFile(path.join(root, 'LOOP.md'), '# Loop\n');
+    await mkdir(path.join(root, '.github', 'workflows'), { recursive: true });
+    await mkdir(path.join(root, '.codex', 'skills', 'issue-triage'), { recursive: true });
+
+    const fs = createNodeProjectFileSystem(root);
+    const facts = await collectProjectEvidenceFacts(fs);
+
+    assert.deepEqual(facts.statePaths, ['STATE.md']);
+    assert.deepEqual(facts.missingRequiredLoopFiles, ['AGENTS.md']);
+    assert.equal(facts.loopConfig.present, true);
+    assert.equal(facts.github.workflows, true);
+    assert.deepEqual(facts.loopSkillNames, ['issue-triage']);
   });
 });

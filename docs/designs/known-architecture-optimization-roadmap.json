@@ -103,8 +103,8 @@
     "1-4": {
       "id": "1-4",
       "label": "统一 sync 与 audit evidence 模型边界",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [],
       "decisions": [
@@ -112,9 +112,14 @@
           "q": "sync 与 audit evidence 为什么先 explore？",
           "answer": "两者都解释 repo 证据，但 audit 已有 LoopSignals/readiness policy，sync 有 DriftReport 和 drift-specific checks；需要先画边界，避免把报告策略错误上移到 core。",
           "note": "推荐方向：只抽共享 evidence primitives 或 normalized facts，不抽 findings/recommendations。"
+        },
+        {
+          "q": "sync 与 audit 共享边界落在哪里？",
+          "answer": "落在 @jununfly/zj-loop-core 的 project evidence facts：共享文件、目录、技能、LOOP.md、GitHub workflow 等事实采集；audit 继续拥有 readiness signals/score/guidance，sync 继续拥有 DriftReport/issues/suggestions。",
+          "note": "新增 collectProjectEvidenceFacts()；不把 findings、recommendations、drift policy 或 readiness policy 上移到 core。"
         }
       ],
-      "notes": ""
+      "notes": "已新增 core collectProjectEvidenceFacts()，audit/sync 消费共享事实层；readiness policy、drift issues 与建议仍留在产品包内。验证通过：core/audit/sync 测试、npm run build:tools、npm run test:tools。"
     },
     "1-5": {
       "id": "1-5",
@@ -167,7 +172,7 @@
   },
   "metadata": {
     "created": "2026-07-01 01:45:23",
-    "updated": "2026-07-01 02:06:10",
+    "updated": "2026-07-01 11:00:53",
     "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
   }
 }

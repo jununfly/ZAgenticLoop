@@ -1,10 +1,9 @@
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import {
+  collectProjectEvidenceFacts,
   createNodeProjectFileSystem,
-  findExistingProjectPaths,
   hasAnyProjectPath,
-  listProjectSkillNames,
   type ProjectFileSystem,
 } from '@jununfly/zj-loop-core';
 import { evaluateReadinessGuidance, evaluateReadinessPolicy } from './readiness-rules.js';
@@ -48,33 +47,6 @@ export interface AuditResult {
   recommendations: string[];
 }
 
-const STATE_FILES = [
-  'STATE.md',
-  'pr-babysitter-state.md',
-  'ci-sweeper-state.md',
-  'post-merge-state.md',
-  'dependency-sweeper-state.md',
-  'changelog-drafter-state.md',
-  'issue-triage-state.md',
-];
-
-const LOOP_SKILL_NAMES = [
-  'loop-triage',
-  'minimal-fix',
-  'loop-verifier',
-  'pr-review-triage',
-  'ci-triage',
-  'post-merge-scan',
-  'dependency-triage',
-  'rebase-and-clean',
-  'changelog-scan',
-  'loop-constraints',
-  'draft-release-notes',
-  'issue-triage',
-];
-
-const SAFETY_FILES = ['safety.md', 'docs/safety.md', 'SECURITY.md'];
-const MCP_FILES = ['.mcp.json', 'mcp.json', '.mcp/config.json'];
 const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 const BUDGET_HINTS = [/budget/i, /max tokens/i, /token cap/i, /kill switch/i, /loop-pause-all/i];
 
@@ -83,7 +55,15 @@ async function detectLoopActivity(
   fs: ProjectFileSystem,
 ): Promise<{ present: boolean; evidence: string[] }> {
   const evidence: string[] = [];
-  const stateCandidates = [...STATE_FILES, 'STATE.md'];
+  const stateCandidates = [
+    'STATE.md',
+    'pr-babysitter-state.md',
+    'ci-sweeper-state.md',
+    'post-merge-state.md',
+    'dependency-sweeper-state.md',
+    'changelog-drafter-state.md',
+    'issue-triage-state.md',
+  ];
 
   // 1. Look for "Last run" timestamps or dated entries inside state files (strong real-usage signal)
   for (const sf of stateCandidates) {
@@ -153,13 +133,13 @@ export function computeScore(signals: LoopSignals): { score: number; level: 'L0'
 export async function auditProject(target: string): Promise<AuditResult> {
   const root = path.resolve(target);
   const fs = createNodeProjectFileSystem(root);
+  const evidence = await collectProjectEvidenceFacts(fs);
 
-  const statePaths = await findExistingProjectPaths(fs, STATE_FILES);
-
-  const loopMd = await fs.exists('LOOP.md');
-  const agentsMd = await hasAnyProjectPath(fs, ['AGENTS.md', 'CLAUDE.md']);
-  const skillNames = await listProjectSkillNames(fs);
-  const loopSkills = skillNames.filter((s) => LOOP_SKILL_NAMES.includes(s));
+  const statePaths = evidence.statePaths;
+  const loopMd = evidence.loopConfig.present;
+  const agentsMd = evidence.agentsMd.present;
+  const skillNames = evidence.skillNames;
+  const loopSkills = evidence.loopSkillNames;
 
   const verifier = skillNames.includes('loop-verifier');
   const triage = skillNames.includes('loop-triage') ||
@@ -170,19 +150,16 @@ export async function auditProject(target: string): Promise<AuditResult> {
     skillNames.includes('changelog-scan') ||
     skillNames.includes('issue-triage');
 
-  let loopMdContent = '';
-  if (loopMd) {
-    loopMdContent = (await fs.readTextIfExists('LOOP.md')) ?? '';
-  }
+  const loopMdContent = evidence.loopConfig.content;
 
   // New expanded signals
-  const githubDir = await fs.exists('.github');
-  const hasWorkflows = await fs.exists('.github/workflows');
+  const githubDir = evidence.github.present;
+  const hasWorkflows = evidence.github.workflows;
 
   // Proper safety doc detection
-  const safetyDocPresent = await hasAnyProjectPath(fs, SAFETY_FILES);
+  const safetyDocPresent = evidence.safety.docPresent;
 
-  const mcpPresent = await hasAnyProjectPath(fs, MCP_FILES) ||
+  const mcpPresent = evidence.mcp.filePresent ||
     /MCP|mcp server|plugins & connectors/i.test(loopMdContent);
 
   // Light evidence of worktree usage (common in patterns/starters/LOOP)
