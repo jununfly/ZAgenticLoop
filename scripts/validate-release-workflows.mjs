@@ -24,6 +24,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-audit.yml',
     tagPattern: 'zj-loop-audit-v*',
     trustedPublishing: true,
+    localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'zj-loop-init',
@@ -33,6 +34,7 @@ export const RELEASE_PACKAGES = [
     tagPattern: 'zj-loop-init-v*',
     trustedPublishing: true,
     generatedAtRelease: ['starters', 'templates'],
+    localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'zj-loop-cost',
@@ -41,6 +43,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-cost.yml',
     tagPattern: 'zj-loop-cost-v*',
     trustedPublishing: true,
+    localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'goal-audit',
@@ -56,6 +59,12 @@ function assertIncludes(haystack, needle, label, errors) {
   if (!haystack.includes(needle)) {
     errors.push(`${label} missing: ${needle}`);
   }
+}
+
+function localFileDependencies(packageJson) {
+  return Object.entries(packageJson.dependencies ?? {})
+    .filter(([, spec]) => typeof spec === 'string' && spec.startsWith('file:'))
+    .map(([name, spec]) => ({ name, spec }));
 }
 
 async function pathExists(filePath) {
@@ -126,6 +135,32 @@ async function validatePackageFiles(root, releasePackage, packageJson, errors) {
   }
 }
 
+function validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, errors) {
+  const allowed = new Set(releasePackage.localFileDependencies ?? []);
+  const found = localFileDependencies(packageJson);
+
+  for (const dependency of found) {
+    if (!allowed.has(dependency.name)) {
+      errors.push(`${releasePackage.directory}/package.json has untracked local file dependency: ${dependency.name} ${dependency.spec}`);
+    }
+  }
+
+  for (const allowedDependency of allowed) {
+    const foundDependency = found.find((dependency) => dependency.name === allowedDependency);
+    if (!foundDependency) {
+      errors.push(`${releasePackage.directory} manifest expects local file dependency not found: ${allowedDependency}`);
+      continue;
+    }
+
+    assertIncludes(
+      releaseDoc,
+      `${releasePackage.packageName} -> ${allowedDependency} (${foundDependency.spec})`,
+      'docs/RELEASE.md',
+      errors,
+    );
+  }
+}
+
 export async function validateReleaseWorkflows(root = ROOT) {
   const errors = [];
   const releaseDoc = await readFile(path.join(root, 'docs/RELEASE.md'), 'utf8');
@@ -143,6 +178,7 @@ export async function validateReleaseWorkflows(root = ROOT) {
     }
 
     await validatePackageFiles(root, releasePackage, packageJson, errors);
+    validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, errors);
 
     assertIncludes(workflow, releasePackage.tagPattern, releasePackage.workflow, errors);
     assertIncludes(workflow, `working-directory: ${releasePackage.directory}`, releasePackage.workflow, errors);

@@ -55,6 +55,21 @@ must be covered by one of these classes:
 The root `test:release-workflows` gate checks package docs, workflows, and
 publish artifact tracking/generation policy together.
 
+## Local dependency blockers
+
+Several release-managed packages still depend on the shared core package through
+local monorepo paths:
+
+- `@jununfly/zj-loop-audit -> @jununfly/zj-loop-core (file:../zj-loop-core)`
+- `@jununfly/zj-loop-init -> @jununfly/zj-loop-core (file:../zj-loop-core)`
+- `@jununfly/zj-loop-cost -> @jununfly/zj-loop-core (file:../zj-loop-core)`
+
+`npm pack` preserves these `file:` dependency specs in the published
+`package.json`. Do not tag these packages for public npm release until the core
+dependency is migrated to a publishable version dependency or another explicit
+packaging strategy. The release workflow validator fails on any new untracked
+`file:` dependency and requires known blockers to stay documented here.
+
 ## Publish
 
 Tag pushes trigger the release workflows:

@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `known-architecture-optimization-roadmap.json` | 最后更新: 2026-07-01 11:23:25
+> 数据文件: `known-architecture-optimization-roadmap.json` | 最后更新: 2026-07-01 11:29:49
 
 [x][X+] 1. 已知架构优化路线图
 ├── [x][Y+] 1-1. 收敛 CI validate gates 工具清单
@@ -11,5 +11,6 @@
 ├── [x][Y+] 1-5. 设计 MCP raw resources 结构化替代路线
 ├── [x][Y+] 1-6. 加强 readiness policy fixture 测试矩阵
 ├── [x][Y+] 1-7. 明确 dist 与 generated artifacts 提交策略
-└── [x][Y+] 1-8. 收敛 core 发布生命周期与发布包依赖
+├── [x][Y+] 1-8. 收敛 core 发布生命周期与发布包依赖
+└── [x][Y+] 1-9. 收敛 core file 依赖与发布依赖策略
 <!-- ROADMAP_SECTION_END -->

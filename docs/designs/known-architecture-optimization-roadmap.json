@@ -17,7 +17,8 @@
         "1-5",
         "1-6",
         "1-7",
-        "1-8"
+        "1-8",
+        "1-9"
       ],
       "decisions": [
         {
@@ -210,11 +211,32 @@
         }
       ],
       "notes": "Added zj-loop-core to release-managed package manifest, docs, and release workflow; left file: core dependencies unchanged for a separate dependency-publication alignment knife."
+    },
+    "1-9": {
+      "id": "1-9",
+      "label": "收敛 core file 依赖与发布依赖策略",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "发布包里的 file:../zj-loop-core 风险是否真实存在？",
+          "answer": "真实存在。npm pack 生成的 tarball package.json 仍保留 @jununfly/zj-loop-core: file:../zj-loop-core，且 tarball 不 bundled core；发布消费者安装会继承不可解析的本地相对依赖。",
+          "note": "验证命令使用 npm pack --cache /private/tmp/... 和 tar -xOf 读取 tarball package.json。"
+        },
+        {
+          "q": "这一刀是否直接迁移 file: 依赖？",
+          "answer": "不直接迁移。先用 release validator 把已知 @jununfly/zj-loop-core file: 依赖登记为 release blockers，并禁止新增未登记 file: 依赖；真正迁移到版本依赖需要单独处理 package.json/package-lock、本地 npm ci 与发布顺序。",
+          "note": "最小安全落点：防误发布、防风险扩散、文档化 blocker。"
+        }
+      ],
+      "notes": "Documented current core file: dependencies as explicit release blockers and extended release validation to reject any new untracked local file dependency."
     }
   },
   "metadata": {
     "created": "2026-07-01 01:45:23",
-    "updated": "2026-07-01 11:23:25",
+    "updated": "2026-07-01 11:29:49",
     "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
   }
 }
