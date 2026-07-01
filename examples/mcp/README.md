@@ -17,11 +17,19 @@ Practical, scoped examples for connecting loops to real tools via MCP (or equiva
 
 See the files in this directory:
 
+- `zj-loop.mcp.json` — local ZAgenticLoop MCP server exposing loop resources,
+  core-backed semantic tools, and resolver-backed evidence tools.
 - `github-readonly.mcp.json` (existing) — safe starting point for discovery.
 - `github-propose.json` — read + limited write for comments and draft PRs (sign comments as the loop).
 - `linear.json` — example for creating/updating issues from loop state.
 - `slack-read.json` — ingest channel threads into triage.
 - `safe-write-pattern.md` — the recommended architecture for any mutating action.
+
+Use `zj-loop.mcp.json` when the agent needs to inspect local loop patterns,
+skills, state, budget, and safety docs without stuffing all project context into
+the prompt. The semantic tools keep stable MCP tool names while using
+`@jununfly/zj-loop-core` for pattern summaries, recommendations, pattern
+profiles, and cost estimates.
 
 ## Usage in a Loop Prompt (Grok example)
 
@@ -30,7 +38,7 @@ See the files in this directory:
 ```
 
 Always:
-- Declare the bot identity in comments ("🤖 Loop Engineering — Changelog Drafter").
+- Declare the bot identity in comments ("ZAgenticLoop - Changelog Drafter").
 - Record the MCP action + result in STATE or the pattern-specific state file.
 - Have an explicit denylist in the skill or LOOP.md.
 

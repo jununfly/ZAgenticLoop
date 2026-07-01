@@ -1,4 +1,4 @@
-# Loop Budget — loop-engineering (reference repo)
+# Loop Budget — zagenticloop (reference repo)
 
 > Dogfood file for the patterns that maintain this repository.
 
@@ -24,5 +24,5 @@
 ## Estimate spend
 
 ```bash
-npx @cobusgreyling/loop-cost --pattern daily-triage --level L1
+npx @jununfly/zj-loop-cost --pattern daily-triage --level L1
 ```

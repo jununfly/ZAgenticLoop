@@ -1,4 +1,4 @@
-# Contributing to Loop Engineering
+# Contributing to ZAgenticLoop
 
 This repo is a **practical engineering reference**, not a hype collection. We welcome patterns, stories, tool mappings, and honest failure reports.
 
@@ -8,7 +8,7 @@ This repo is a **practical engineering reference**, not a hype collection. We we
 |--------------|-------|
 | New loop pattern | `patterns/` + `patterns/registry.yaml` |
 | Production story | `stories/` |
-| Tool example | `examples/{grok,claude-code,codex,openclaw,opencode,github-actions}/` |
+| Tool example | `examples/{grok,claude-code,codex,openclaw,github-actions}/` |
 | Skill template | `templates/` |
 | Starter kit | `starters/` |
 | Doc improvement | `docs/` |
@@ -52,10 +52,10 @@ Also add an entry to `patterns/registry.yaml`.
 
 ## Community
 
-- **Questions**: [GitHub Discussions](https://github.com/cobusgreyling/loop-engineering/discussions) (preferred) or issue with label `question`
-- **Show your loop**: [Add Adopter issue](https://github.com/cobusgreyling/loop-engineering/issues/new?template=add-adopter.yml), Discussions, or a row in [docs/adopters.md](./docs/adopters.md)
-- **Loop Ready badge**: `npx @cobusgreyling/loop-audit . --badge` — paste into your README
-- **Good first issues**: look for label [`good first issue`](https://github.com/cobusgreyling/loop-engineering/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+- **Questions**: [GitHub Discussions](https://github.com/jununfly/ZAgenticLoop/discussions) (preferred) or issue with label `question`
+- **Show your loop**: [Add Adopter issue](https://github.com/jununfly/ZAgenticLoop/issues/new?template=add-adopter.yml), Discussions, or a row in [docs/adopters.md](./docs/adopters.md)
+- **Loop Ready badge**: `npx @jununfly/zj-loop-audit . --badge` — paste into your README
+- **Good first issues**: look for label [`good first issue`](https://github.com/jununfly/ZAgenticLoop/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 - **Security**: see [SECURITY.md](./SECURITY.md) — do not file public issues for exploitable vulnerabilities
 
-Thank you for helping make this the go-to reference for loop engineering.
+Thank you for helping make this the go-to reference for agentic loop working.

@@ -4,7 +4,7 @@
 ## Changes
 - [ ] New pattern or starter (followed `templates/pattern-template.md` + updated `registry.yaml`)
 - [ ] Doc / example improvement
-- [ ] Tool change (loop-audit)
+- [ ] Tool change (zj-loop-audit)
 - [ ] Story (includes real failure or surprise + lesson)
 
 ## Checklist (from CONTRIBUTING)
@@ -13,10 +13,10 @@
 - [ ] No secrets, tokens, internal company URLs
 - [ ] `STATE.md*` examples use `.example` suffix
 - [ ] Safety-related content references `docs/safety.md`
-- [ ] Ran `node tools/loop-audit/dist/cli.js .` (or on the starter) and addressed findings
+- [ ] Ran `node tools/zj-loop-audit/dist/cli.js .` (or on the starter) and addressed findings
 
 ## Testing / Dogfood
-- [ ] `loop-audit` passes on affected starters or this repo
+- [ ] `zj-loop-audit` passes on affected starters or this repo
 - [ ] Manual review of generated state / skill output
 
 ## Screenshots / Examples (if UI or command output)

@@ -28,20 +28,8 @@ echo "Templates present ✓"
 
 npm install --no-save yaml@2 ajv@8
 node scripts/validate-registry.mjs
-node scripts/check-loop-init-sync.mjs
-
-cd tools/loop-init
-npm ci
-npm test
-
-echo "Building and testing loop-sync…"
-cd ../loop-sync
-npm ci
-npm test
-
-echo "Building and testing mcp-server…"
-cd ../mcp-server
-npm ci
-npm test
+node scripts/check-zj-loop-init-sync.mjs
+node scripts/validate-release-workflows.mjs
+node scripts/run-tool-package-scripts.mjs test --gate=validate --install
 
 echo "validate gates passed ✓"

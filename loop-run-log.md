@@ -1,4 +1,4 @@
-# Loop Run Log — loop-engineering
+# Loop Run Log — zagenticloop
 
 Append one entry per run. Prune entries older than 30 days.
 

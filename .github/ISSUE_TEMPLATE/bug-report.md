@@ -1,5 +1,5 @@
 ---
-name: Bug report (for the reference, starters, loop-audit, or docs)
+name: Bug report (for the reference, starters, zj-loop-audit, or docs)
 about: Something is broken, inaccurate, or the audit gives wrong results
 labels: bug
 ---
@@ -12,7 +12,7 @@ labels: bug
 
 **Expected behavior**:
 
-**Actual behavior** (include output of `loop-audit --json` or command if relevant):
+**Actual behavior** (include output of `zj-loop-audit --json` or command if relevant):
 
 **Environment**:
 - OS:

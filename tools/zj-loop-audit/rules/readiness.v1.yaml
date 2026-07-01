@@ -1,0 +1,321 @@
+schemaVersion: 1
+score:
+  base: 10
+  contributions:
+    - id: stateFile
+      when: stateFile.present
+      points: 18
+    - id: triage
+      when: triage.present
+      points: 14
+    - id: loopConfig
+      when: loopConfig.present
+      points: 9
+    - id: agentsMd
+      when: agentsMd.present
+      points: 9
+    - id: skillsTwoPlus
+      when:
+        path: skills.count
+        gte: 2
+      points: 14
+    - id: skillsOne
+      when:
+        path: skills.count
+        eq: 1
+      points: 7
+    - id: verifier
+      when: verifier.present
+      points: 14
+    - id: safetyLoopMd
+      when: safety.loopMdMentionsSafety
+      points: 4
+    - id: safetyDoc
+      when: safety.safetyDocPresent
+      points: 4
+    - id: github
+      when: github.present
+      points: 6
+    - id: githubWorkflows
+      when: github.workflows
+      points: 4
+    - id: mcp
+      when: mcp.present
+      points: 3
+    - id: worktree
+      when: worktreeEvidence.present
+      points: 3
+    - id: registry
+      when: registry.present
+      points: 2
+    - id: budgetDoc
+      when: cost.budgetDoc
+      points: 3
+    - id: runLog
+      when: cost.runLog
+      points: 3
+    - id: loopMdBudget
+      when: cost.loopMdBudget
+      points: 2
+    - id: budgetSkill
+      when: cost.budgetSkill
+      points: 2
+    - id: constraintsFile
+      when: constraints.present
+      points: 4
+    - id: constraintsSkill
+      when: constraints.hasConstraintsSkill
+      points: 2
+    - id: loopActivity
+      when: loopActivity.present
+      points: 6
+predicates:
+  costReady:
+    all:
+      - cost.budgetDoc
+      - cost.runLog
+      - cost.loopMdBudget
+  hasRealActivity: loopActivity.present
+  l3Ready:
+    all:
+      - predicate: costReady
+      - predicate: hasRealActivity
+levels:
+  - level: L3
+    threshold: 78
+    when:
+      all:
+        - verifier.present
+        - stateFile.present
+        - predicate: l3Ready
+  - level: L2
+    threshold: 58
+    when: triage.present
+  - level: L1
+    threshold: 38
+    when: stateFile.present
+  - level: L0
+    threshold: 0
+assessments:
+  - when:
+      all:
+        - scoreGte: 82
+        - predicate: l3Ready
+    message: Strong loop readiness — good candidate for L3 with explicit gates.
+  - when:
+      all:
+        - scoreGte: 82
+        - not:
+            predicate: costReady
+    message: Strong signals but missing cost observability (loop-budget.md, loop-run-log.md, LOOP.md budget) — add before L3.
+  - when:
+      all:
+        - scoreGte: 82
+        - not:
+            predicate: hasRealActivity
+    message: Strong structure but no proven loop runs yet — run one L1 cycle and commit state before L3.
+  - when:
+      scoreGte: 62
+    message: Good foundation — add missing verifier + safety docs for L3.
+  - when:
+      scoreGte: 42
+    message: Early loop setup — focus on L1 state + triage before enabling actions.
+  - message: Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).
+guidance:
+  - when:
+      not: stateFile.present
+    finding:
+      level: fail
+      message: No state file (STATE.md or pattern-specific state).
+    recommendations:
+      - Copy starters/minimal-loop/STATE.md.example (or -claude / -codex variant) to STATE.md
+  - when: stateFile.present
+    finding:
+      level: ok
+      message: "State file(s): {stateFile.paths}"
+  - when:
+      not: triage.present
+    finding:
+      level: warn
+      message: No triage skill detected.
+    recommendations:
+      - Install loop-triage from starters/minimal-loop, minimal-loop-claude, or minimal-loop-codex
+  - when: triage.present
+    finding:
+      level: ok
+      message: Triage skill present.
+  - when:
+      not: verifier.present
+    finding:
+      level: warn
+      message: No loop-verifier skill — maker/checker split incomplete.
+    recommendations:
+      - "Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, or .codex/agents/verifier.toml"
+  - when: verifier.present
+    finding:
+      level: ok
+      message: Verifier skill present.
+  - when:
+      not: loopConfig.present
+    finding:
+      level: warn
+      message: No LOOP.md documenting cadence, limits, and gates.
+    recommendations:
+      - Copy starters/minimal-loop/LOOP.md and customize
+  - when:
+      not: agentsMd.present
+    finding:
+      level: warn
+      message: No AGENTS.md / CLAUDE.md for project conventions.
+    recommendations:
+      - Add AGENTS.md with build/test commands and review norms
+  - when:
+      not: safety.loopMdMentionsSafety
+    finding:
+      level: warn
+      message: LOOP.md does not mention safety gates or auto-merge policy.
+    recommendations:
+      - Document human gates per docs/safety.md in LOOP.md
+  - when:
+      not: safety.safetyDocPresent
+    finding:
+      level: warn
+      message: No safety.md or docs/safety.md found.
+    recommendations:
+      - Copy or create docs/safety.md (denylists, auto-merge policy, MCP scopes)
+  - when: safety.safetyDocPresent
+    finding:
+      level: ok
+      message: Safety documentation present.
+  - when:
+      not: constraints.present
+    finding:
+      level: warn
+      message: No loop-constraints.md — structured constraints file missing.
+    recommendations:
+      - Create loop-constraints.md with denylist paths, push/merge rules, and human gates (see templates/loop-constraints.md)
+  - when: constraints.present
+    finding:
+      level: ok
+      message: loop-constraints.md present.
+  - when:
+      all:
+        - constraints.present
+        - not: constraints.hasConstraintsSkill
+    finding:
+      level: warn
+      message: loop-constraints.md exists but no loop-constraints skill — rules not enforced at runtime.
+    recommendations:
+      - Add loop-constraints skill via zj-loop-init or templates/SKILL.md.loop-constraints
+  - when:
+      not: github.present
+    finding:
+      level: warn
+      message: No .github/ directory (templates, workflows for dogfooding).
+    recommendations:
+      - Add .github/ISSUE_TEMPLATE, PULL_REQUEST_TEMPLATE, and workflows (see this repo for examples)
+  - when:
+      all:
+        - github.present
+        - not: github.workflows
+    finding:
+      level: warn
+      message: .github/ exists but no workflows/ (CI dogfood opportunity).
+    recommendations:
+      - Add GitHub Actions that run zj-loop-audit and validate patterns (dogfood the reference)
+  - when: github.workflows
+    finding:
+      level: ok
+      message: .github/ with workflows present (strong dogfooding signal).
+  - when:
+      not: mcp.present
+    finding:
+      level: warn
+      message: No MCP / connector config or mentions detected.
+    recommendations:
+      - Document MCP usage (or note "MCP not required for this pattern") in LOOP.md or skills
+  - when:
+      not: worktreeEvidence.present
+    finding:
+      level: warn
+      message: Little evidence of worktree usage in docs or state.
+    recommendations:
+      - Add worktree isolation notes to LOOP.md or pattern docs (see primitives and starters)
+  - when:
+      not: registry.present
+    finding:
+      level: warn
+      message: No patterns/registry.yaml (machine-readable index for future tools).
+    recommendations:
+      - Add patterns/registry.yaml following the existing format
+  - when:
+      not: cost.budgetDoc
+    finding:
+      level: warn
+      message: No loop-budget.md — token caps and kill switch undocumented.
+    recommendations:
+      - Scaffold with zj-loop-init or copy templates/loop-budget.md.template
+  - when: cost.budgetDoc
+    finding:
+      level: ok
+      message: loop-budget.md present.
+  - when:
+      not: cost.runLog
+    finding:
+      level: warn
+      message: No loop-run-log.md — run history not persisted.
+    recommendations:
+      - Copy templates/loop-run-log.md.template to loop-run-log.md
+  - when: cost.runLog
+    finding:
+      level: ok
+      message: loop-run-log.md present.
+  - when:
+      not: cost.loopMdBudget
+    finding:
+      level: warn
+      message: LOOP.md does not mention budget, token caps, or kill switch.
+    recommendations:
+      - Add a Budget section to LOOP.md (see starters/*/LOOP.md)
+  - when:
+      not: cost.budgetSkill
+    finding:
+      level: warn
+      message: No loop-budget skill — budget checks are not automated at runtime.
+    recommendations:
+      - Add loop-budget skill via zj-loop-init or templates/SKILL.md.loop-budget
+  - when: cost.budgetSkill
+    finding:
+      level: ok
+      message: loop-budget skill present.
+  - when:
+      not: loopActivity.present
+    finding:
+      level: warn
+      message: No evidence of actual loop runs detected (no "Last run" entries in state, loop-related git activity, or scheduled workflows yet).
+    recommendations:
+      - Run one loop (report-only), update + commit STATE.md (or pattern state). This turns structure into proven usage.
+  - when: loopActivity.present
+    finding:
+      level: ok
+      message: Loop activity detected — real usage signals present ({loopActivity.evidence.length} sources).
+  - when:
+      all:
+        - scoreGte: 78
+        - verifier.present
+        - stateFile.present
+        - not:
+            predicate: costReady
+    finding:
+      level: warn
+      message: Score qualifies for L3 but cost observability is incomplete — capped at L2 until budget + run log + LOOP.md budget exist.
+  - when:
+      all:
+        - scoreGte: 78
+        - verifier.present
+        - stateFile.present
+        - predicate: costReady
+        - not: loopActivity.present
+    finding:
+      level: warn
+      message: Score qualifies for L3 but no proven loop activity yet — capped at L2 until you run and commit at least one loop cycle.

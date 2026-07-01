@@ -3,25 +3,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-AUDIT="$ROOT/tools/loop-audit/dist/cli.js"
+AUDIT="$ROOT/tools/zj-loop-audit/dist/cli.js"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 if [[ ! -f "$AUDIT" ]]; then
-  echo "Building loop-audit..."
-  (cd "$ROOT/tools/loop-audit" && npm ci --silent && npm run build --silent)
+  echo "Building zj-loop-audit..."
+  (cd "$ROOT/tools/zj-loop-audit" && npm ci --silent && npm run build --silent)
 fi
-
-score_bar() {
-  local score="$1"
-  local width=20
-  local filled=$(( (score * width + 50) / 100 ))
-  local bar=""
-  local i
-  for ((i=0; i<filled; i++)); do bar+="█"; done
-  for ((i=filled; i<width; i++)); do bar+="░"; done
-  echo "$bar  ${score}/100"
-}
 
 run_audit() {
   local label="$1"
@@ -31,16 +20,6 @@ run_audit() {
   echo "$label"
   echo "══════════════════════════════════════════════════"
   node "$AUDIT" "$path" || true
-  local json
-  json="$(node "$AUDIT" "$path" --json 2>/dev/null || true)"
-  if [[ -n "$json" ]]; then
-    local score level
-    score="$(python3 -c "import json,sys; print(json.load(sys.stdin)['score'])" <<<"$json")"
-    level="$(python3 -c "import json,sys; print(json.load(sys.stdin)['level'])" <<<"$json")"
-    echo ""
-    echo "▸ Loop Ready: ${score}/100 (${level})"
-    score_bar "$score"
-  fi
 }
 
 echo "Loop Readiness — before/after demo"
@@ -73,6 +52,5 @@ echo "Done. Copy a starter for your tool:"
 echo "  Grok:        cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/skills/"
 echo "  Claude Code: cp -r starters/minimal-loop-claude/.claude/skills/loop-triage .claude/skills/"
 echo "  Codex:       cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/"
-echo "  Opencode:    cp -r starters/minimal-loop-opencode/skills ."
 echo ""
-echo "Audit your project: npx @cobusgreyling/loop-audit . --suggest"
+echo "Audit your project: npx @jununfly/zj-loop-audit . --suggest"

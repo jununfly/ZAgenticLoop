@@ -1,6 +1,6 @@
-# The Five Primitives + Memory
+# Five Loop Primitives + Memory
 
-This document expands on the core building blocks of loop engineering.
+This document expands on the core building blocks of agentic loop working.
 
 ## 1. Automations / Scheduling
 

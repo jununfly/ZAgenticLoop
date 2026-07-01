@@ -20,11 +20,10 @@ const VALID_MODES = new Set(['L1', 'L2', 'L3']);
 const VALID_COST = new Set(['low', 'medium', 'high', 'very-high']);
 
 function fail(msg) {
-  console.error(`ERROR: ${msg}`);
-  process.exit(1);
+  throw new Error(msg);
 }
 
-function validatePattern(p, index) {
+export function validatePattern(p, index) {
   const prefix = `patterns[${index}]`;
   const required = ['id', 'name', 'file', 'goal', 'cadence', 'risk', 'tools', 'skills', 'state', 'phases', 'human_gates'];
   for (const key of required) {
@@ -59,9 +58,9 @@ function validatePattern(p, index) {
   }
 }
 
-async function main() {
-  const registryPath = path.join(ROOT, 'patterns', 'registry.yaml');
-  const schemaPath = path.join(ROOT, 'patterns', 'registry.schema.json');
+export async function validateRegistryAtRoot(root = ROOT) {
+  const registryPath = path.join(root, 'patterns', 'registry.yaml');
+  const schemaPath = path.join(root, 'patterns', 'registry.schema.json');
   const raw = await readFile(registryPath, 'utf8');
   const doc = yaml.parse(raw);
   const schema = JSON.parse(await readFile(schemaPath, 'utf8'));
@@ -72,7 +71,6 @@ async function main() {
   if (!validate(doc)) {
     fail(`registry schema: ${ajv.errorsText(validate.errors)}`);
   }
-  console.log('JSON Schema validation passed ✓');
 
   if (!doc?.patterns?.length) fail('registry.yaml must have patterns array');
 
@@ -82,7 +80,7 @@ async function main() {
   for (const p of doc.patterns) {
     if (ids.has(p.id)) fail(`duplicate pattern id: ${p.id}`);
     ids.add(p.id);
-    const mdPath = path.join(ROOT, 'patterns', p.file);
+    const mdPath = path.join(root, 'patterns', p.file);
     try {
       await readFile(mdPath, 'utf8');
     } catch {
@@ -90,7 +88,7 @@ async function main() {
     }
     if (p.starter) {
       try {
-        await stat(path.join(ROOT, p.starter));
+        await stat(path.join(root, p.starter));
       } catch {
         fail(`registry entry ${p.id} references missing starter: ${p.starter}`);
       }
@@ -99,7 +97,7 @@ async function main() {
     }
   }
 
-  const mdFiles = (await readdir(path.join(ROOT, 'patterns')))
+  const mdFiles = (await readdir(path.join(root, 'patterns')))
     .filter((f) => f.endsWith('.md') && f !== 'README.md');
   const registeredFiles = new Set(doc.patterns.map((p) => p.file.replace(/\.md$/, '')));
 
@@ -108,10 +106,18 @@ async function main() {
     if (!registeredFiles.has(base)) fail(`pattern file not in registry: ${f}`);
   }
 
-  console.log(`Registry valid: ${doc.patterns.length} patterns ✓`);
+  return { patternCount: doc.patterns.length };
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+async function main() {
+  const result = await validateRegistryAtRoot(ROOT);
+  console.log('JSON Schema validation passed ✓');
+  console.log(`Registry valid: ${result.patternCount} patterns ✓`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((e) => {
+    console.error(`ERROR: ${e.message}`);
+    process.exit(1);
+  });
+}

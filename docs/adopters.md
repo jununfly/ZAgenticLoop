@@ -9,14 +9,14 @@ Forks and stars mean people are trying this in their own stacks. If you run a lo
 Show your readiness level in your README:
 
 ```bash
-npx @cobusgreyling/loop-audit . --badge
+npx @jununfly/zj-loop-audit . --badge
 ```
 
 Paste the markdown output into your README. Re-run after you graduate L1 → L2 → L3.
 
 ## How to list your project
 
-**Fast path:** [open the Add Adopter issue](https://github.com/cobusgreyling/loop-engineering/issues/new?template=add-adopter.yml) — we'll add your row.
+**Fast path:** [open the Add Adopter issue](https://github.com/jununfly/ZAgenticLoop/issues/new?template=add-adopter.yml) — we'll add your row.
 
 Or open a PR that adds a row to the table below:
 
@@ -32,16 +32,16 @@ Or open a PR that adds a row to the table below:
 
 | Project | Pattern(s) | Tool | Level | Notes |
 |---------|------------|------|-------|-------|
-| [loop-engineering](https://github.com/cobusgreyling/loop-engineering) (this repo) | Daily Triage, Changelog Drafter, audit dogfood | GitHub Actions + Grok | L3 | Reference implementation — `loop-audit` on every PR; readiness score 100 |
-| [loop-engineering](https://github.com/cobusgreyling/loop-engineering) (maintainer) | Post-Merge Cleanup | Grok + GitHub Actions | L1→L2 | Off-peak scan; verifier caught doc/API drift — see [story](../stories/post-merge-cleanup-honest-win.md) |
-| [loop-engineering](https://github.com/cobusgreyling/loop-engineering) (maintainer) | Issue Triage + Daily Triage | Grok | L1 | Issue queue feeder: propose labels only week one; pairs with morning `STATE.md` triage |
-| [loop-engineering](https://github.com/cobusgreyling/loop-engineering) (maintainer) | PR Babysitter, Dependency Sweeper | Grok / Claude Code | L2 | Assisted fixes in worktrees; human gate on merges; patch-only deps |
+| [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (this repo) | Daily Triage, Changelog Drafter, audit dogfood | GitHub Actions + Grok | L3 | Reference implementation — `zj-loop-audit` on every PR; readiness score 100 |
+| [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (maintainer) | Post-Merge Cleanup | Grok + GitHub Actions | L1→L2 | Off-peak scan; verifier caught doc/API drift — see [story](../stories/post-merge-cleanup-honest-win.md) |
+| [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (maintainer) | Issue Triage + Daily Triage | Grok | L1 | Issue queue feeder: propose labels only week one; pairs with morning `STATE.md` triage |
+| [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (maintainer) | PR Babysitter, Dependency Sweeper | Grok / Claude Code | L2 | Assisted fixes in worktrees; human gate on merges; patch-only deps |
 
 *Your project here — see [CONTRIBUTING.md](../CONTRIBUTING.md).*
 
 ## Show & tell
 
-Prefer chat over a PR? Post in [GitHub Discussions → Show and tell](https://github.com/cobusgreyling/loop-engineering/discussions/categories/show-and-tell) with:
+Prefer chat over a PR? Post in [GitHub Discussions → Show and tell](https://github.com/jununfly/ZAgenticLoop/discussions/categories/show-and-tell) with:
 
 1. Which pattern you picked and why
 2. Your first `/loop` or scheduler command

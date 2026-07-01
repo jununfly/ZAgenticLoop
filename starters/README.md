@@ -1,10 +1,10 @@
 # Starters
 
-Clone-and-run scaffolds. Copy into your project — or use `loop-init`:
+Clone-and-run scaffolds. Copy into your project — or use `zj-loop-init`:
 
 ```bash
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok
-npx @cobusgreyling/loop-init . -p pr-babysitter -t claude
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+npx @jununfly/zj-loop-init . -p pr-babysitter -t claude
 ```
 
 ## Daily Triage (L1 report-only)
@@ -14,7 +14,6 @@ npx @cobusgreyling/loop-init . -p pr-babysitter -t claude
 | [minimal-loop](./minimal-loop/) | Grok | `.grok/skills/` |
 | [minimal-loop-claude](./minimal-loop-claude/) | Claude Code | `.claude/skills/` + `.claude/agents/` |
 | [minimal-loop-codex](./minimal-loop-codex/) | Codex | `.codex/skills/` + `.codex/agents/` |
-| [minimal-loop-opencode](./minimal-loop-opencode/) | Opencode | `skills/` + `AGENTS.md` |
 
 ## L2 assisted patterns
 
@@ -30,6 +29,6 @@ npx @cobusgreyling/loop-init . -p pr-babysitter -t claude
 After copying:
 
 ```bash
-npx @cobusgreyling/loop-audit .
-npx @cobusgreyling/loop-audit . --suggest
+npx @jununfly/zj-loop-audit .
+npx @jununfly/zj-loop-audit . --suggest
 ```

@@ -24,14 +24,17 @@ Thumbs.db
 tmp/
 temp/
 
-# Build / dist (loop-audit dist is committed for zero-install runs)
+# Build / dist
 build/
 **/node_modules/
-!tools/loop-audit/dist/
-!tools/loop-cost/dist/
-!tools/loop-init/dist/
-!tools/mcp-server/dist/
+# Release-managed npm packages commit dist and small bundled files.
+# Large mirrored package data may be generated at release time by package build scripts.
+!tools/zj-loop-audit/dist/
+!tools/zj-loop-cost/dist/
+!tools/zj-loop-init/dist/
+!tools/zj-loop-mcp-server/dist/
 !tools/goal-audit/dist/
+!tools/zj-loop-sync/dist/
 *.egg-info/
 
 # State files that should not be committed in consumer projects (reference repo dogfoods STATE.md)
@@ -51,4 +54,5 @@ state.json
 !starters/**/.codex/
 !starters/**/.codex/**
 *.session
-!tools/loop-sync/dist/
+.zcodegraph/
+.npm-cache-release-validation/

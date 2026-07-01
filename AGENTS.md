@@ -1,4 +1,4 @@
-# AGENTS.md — loop-engineering reference
+# AGENTS.md — zagenticloop reference
 
 Conventions for humans and loops maintaining this repository.
 
@@ -6,7 +6,7 @@ Conventions for humans and loops maintaining this repository.
 
 ```bash
 # Loop readiness audit CLI
-cd tools/loop-audit && npm ci && npm run build
+cd tools/zj-loop-audit && npm ci && npm run build
 node dist/cli.js ../..              # audit repo root
 node dist/cli.js ../.. --suggest    # show copy commands for gaps
 
@@ -19,7 +19,7 @@ CI runs `validate-patterns` and `audit` on every push/PR (see `.github/workflows
 ## Review norms
 
 - Patterns and starters must stay **tool-agnostic in intent**; tool-specific paths live under `examples/` and per-tool starters.
-- Never auto-merge changes to `docs/primitives*.md`, `tools/loop-audit/src/`, or showcase assets without human review.
+- Never auto-merge changes to `docs/primitives*.md`, `tools/zj-loop-audit/src/`, or showcase assets without human review.
 - Failure stories in `stories/` should include token cost, root cause, and remediation — not just wins.
 - New patterns require an entry in `patterns/registry.yaml`.
 
@@ -34,6 +34,6 @@ CI runs `validate-patterns` and `audit` on every push/PR (see `.github/workflows
 This repo has no application test suite. Quality gates:
 
 ```bash
-cd tools/loop-audit && npm run build && node dist/cli.js ../../
+cd tools/zj-loop-audit && npm run build && node dist/cli.js ../../
 bash scripts/before-after-demo.sh
 ```

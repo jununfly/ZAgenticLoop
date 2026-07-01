@@ -26,8 +26,8 @@ flowchart TD
 Estimate before you schedule:
 
 ```bash
-npx @cobusgreyling/loop-cost --pattern <id> --level L1
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok   # scaffolds loop-budget.md + loop-run-log.md
+npx @jununfly/zj-loop-cost --pattern <id> --level L1
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok   # scaffolds loop-budget.md + loop-run-log.md
 ```
 
 | Situation | Prefer | Avoid (until budget + early-exit) |
@@ -37,7 +37,7 @@ npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok   # scaffolds 
 | Many open PRs | PR Babysitter at 10–15m, L1 watch first | L2 fix loops on every tick |
 | Release week | Changelog Drafter daily | Dependency Sweeper + CI Sweeper unattended |
 
-`loop-audit` caps **L3** until `loop-budget.md`, `loop-run-log.md`, and a `LOOP.md` budget section exist.
+`zj-loop-audit` caps **L3** until `loop-budget.md`, `loop-run-log.md`, and a `LOOP.md` budget section exist.
 
 ## Quick reference
 
@@ -65,6 +65,6 @@ npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok   # scaffolds 
 If unsure, start with **Daily Triage at L1**. It teaches state discipline without auto-merge risk.
 
 ```bash
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok
-npx @cobusgreyling/loop-audit . --suggest
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+npx @jununfly/zj-loop-audit . --suggest
 ```

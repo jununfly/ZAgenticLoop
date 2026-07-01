@@ -5,7 +5,7 @@ Clone-and-run scaffold for the **Dependency Sweeper** pattern (L2 assisted, patc
 ## Quick Start
 
 ```bash
-npx @cobusgreyling/loop-init . --pattern dependency-sweeper --tool grok
+npx @jununfly/zj-loop-init . --pattern dependency-sweeper --tool grok
 ```
 
 Or manual copy:
@@ -19,7 +19,7 @@ cp starters/dependency-sweeper/dependency-sweeper-state.md.example dependency-sw
 cp starters/dependency-sweeper/LOOP.md .
 ```
 
-Claude Code / Codex: use `--tool claude` or `--tool codex` with `loop-init`.
+Claude Code / Codex: use `--tool claude` or `--tool codex` with `zj-loop-init`.
 
 Start (Grok):
 

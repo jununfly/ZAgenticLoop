@@ -10,7 +10,7 @@ Same patterns, different tools. Skills and state schemas are shared; only schedu
 | OpenClaw | [openclaw/](./openclaw/) |
 | Opencode | [opencode/](./opencode/) |
 | GitHub Actions | [github-actions/](./github-actions/) |
-| MCP connectors | [mcp/](./mcp/) — config example; reference server in [tools/mcp-server/](../tools/mcp-server/) |
+| MCP connectors | [mcp/](./mcp/) — config example; reference server in [tools/zj-loop-mcp-server/](../tools/zj-loop-mcp-server/) |
 
 Start with [primitives-matrix.md](../docs/primitives-matrix.md) to map capabilities.
 

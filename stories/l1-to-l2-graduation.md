@@ -32,6 +32,6 @@ Graduation criteria we now use:
 1. Two weeks of L1 with <20% noise in High Priority
 2. Verifier + worktree proven on **manual** fix attempts first
 3. Denylist and `AGENTS.md` test commands documented
-4. `loop-audit` score ≥ 58 before L2
+4. `zj-loop-audit` score ≥ 58 before L2
 
 Do not skip L1 because L2 feels more impressive. The report-only phase is the calibration phase.

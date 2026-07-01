@@ -50,11 +50,11 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 
 - [ ] Minimum permissions for connectors (read vs write)
 - [ ] Loop can **open/update PRs** or tickets if acting, not just suggest
-- [ ] Bot identity clear on PR comments (e.g. "Loop Engineering — PR Babysitter")
+- [ ] Bot identity clear on PR comments (e.g. "ZAgenticLoop — PR Babysitter")
 
 ## 8. Cost & Limits
 
-- [ ] **Token budget** estimated (`npx @cobusgreyling/loop-cost`, [operating-loops.md](./operating-loops.md))
+- [ ] **Token budget** estimated (`npx @jununfly/zj-loop-cost`, [operating-loops.md](./operating-loops.md))
 - [ ] **`loop-budget.md`** with daily caps and kill switch
 - [ ] **`loop-run-log.md`** for append-only run history
 - [ ] **`loop-budget` skill** checks spend at start/end of each run
@@ -85,7 +85,7 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 | **L2 — Assisted** | Small auto-fixes with verifier | §1–7 |
 | **L3 — Unattended** | Runs without you watching | All sections |
 
-Run `loop-audit` in `tools/loop-audit/` to get a numeric Loop Readiness Score for your project.
+Run `zj-loop-audit` in `tools/zj-loop-audit/` to get a numeric Loop Readiness Score for your project.
 
 ## Quick Red Flags
 

@@ -1,19 +1,19 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/tools/loop-audit"
+    directory: "/tools/zj-loop-audit"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
     commit-message:
       prefix: "chore(audit)"
   - package-ecosystem: "npm"
-    directory: "/tools/loop-init"
+    directory: "/tools/zj-loop-init"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
     commit-message:
-      prefix: "chore(loop-init)"
+      prefix: "chore(zj-loop-init)"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

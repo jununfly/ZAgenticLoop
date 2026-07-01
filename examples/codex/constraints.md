@@ -25,5 +25,5 @@ loop-constraints.md rules:
 ## Scaffold automatically
 
 ```bash
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool codex
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex
 ```
