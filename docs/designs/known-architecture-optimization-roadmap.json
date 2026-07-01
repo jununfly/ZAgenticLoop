@@ -56,8 +56,8 @@
     "1-2": {
       "id": "1-2",
       "label": "收敛 release workflow 发布清单",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [],
       "decisions": [
@@ -65,9 +65,19 @@
           "q": "release workflow 为什么先 explore？",
           "answer": "多个 package 的 release workflows 结构相似，但涉及 trusted publishing、tag 触发、package-local cache 和 goal-audit companion 身份，先盘点发布契约再决定是否抽 runner 或只做 drift check。",
           "note": "边界：不直接生成/重写 workflow；先保护发布语义。"
+        },
+        {
+          "q": "release workflow 清单收敛的最小落点是什么？",
+          "answer": "新增 repo-local release workflow manifest/check，覆盖 release-managed packages：zj-loop-audit、zj-loop-init、zj-loop-cost、goal-audit；检查 workflow 文件、tag pattern、package directory、cache path、publish working-directory 与 docs/RELEASE 文本。",
+          "note": "不抽发布 runner、不生成 workflow；先用 drift check 保护发布契约。goal-audit 作为 companion package 纳入 release 文档，但不改 @jununfly/zj-loop-* 包身份。"
+        },
+        {
+          "q": "release workflow 检查发现了什么漂移？",
+          "answer": "release-zj-loop-init.yml 缺少 cache-dependency-path: tools/zj-loop-init/package-lock.json；新增 validate-release-workflows 检查后已补齐。",
+          "note": "检查同时要求 docs/RELEASE.md、package.json name、workflow tag pattern、working-directory、cache path、publish 命令和 provenance 保持一致。"
         }
       ],
-      "notes": ""
+      "notes": "已新增 release workflow manifest/check 并接入 test:tools 与 ci-validate-gates；docs/RELEASE.md 纳入 goal-audit；修复 release-zj-loop-init cache-dependency-path 漂移。"
     },
     "1-3": {
       "id": "1-3",
@@ -157,7 +167,7 @@
   },
   "metadata": {
     "created": "2026-07-01 01:45:23",
-    "updated": "2026-07-01 01:59:47",
+    "updated": "2026-07-01 02:06:10",
     "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
   }
 }

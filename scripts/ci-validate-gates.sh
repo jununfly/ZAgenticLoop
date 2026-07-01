@@ -29,6 +29,7 @@ echo "Templates present ✓"
 npm install --no-save yaml@2 ajv@8
 node scripts/validate-registry.mjs
 node scripts/check-zj-loop-init-sync.mjs
+node scripts/validate-release-workflows.mjs
 node scripts/run-tool-package-scripts.mjs test --gate=validate --install
 
 echo "validate gates passed ✓"

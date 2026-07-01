@@ -6,6 +6,7 @@
     "validate:registry": "node scripts/validate-registry.mjs",
     "test:registry": "node --test scripts/validate-registry.test.mjs",
     "test:tool-gates": "node --test scripts/run-tool-package-scripts.test.mjs",
+    "test:release-workflows": "node --test scripts/validate-release-workflows.test.mjs",
     "check:zj-loop-init": "node scripts/check-zj-loop-init-sync.mjs",
     "test:zj-loop-core": "cd tools/zj-loop-core && npm test",
     "test:zj-loop-audit": "cd tools/zj-loop-audit && npm test",
@@ -14,7 +15,7 @@
     "test:zj-loop-sync": "cd tools/zj-loop-sync && npm test",
     "test:zj-loop-mcp-server": "cd tools/zj-loop-mcp-server && npm test",
     "test:goal-audit": "cd tools/goal-audit && npm test",
-    "test:tools": "npm run test:registry && npm run test:tool-gates && node scripts/run-tool-package-scripts.mjs test",
+    "test:tools": "npm run test:registry && npm run test:tool-gates && npm run test:release-workflows && node scripts/run-tool-package-scripts.mjs test",
     "build:tools": "node scripts/run-tool-package-scripts.mjs build"
   },
   "devDependencies": {
