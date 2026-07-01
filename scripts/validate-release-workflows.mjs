@@ -154,6 +154,13 @@ async function validatePackageFiles(root, releasePackage, packageJson, errors) {
     const absolutePath = path.join(root, relativePath);
     const generated = generatedAtRelease.has(entry);
 
+    if (generated) {
+      if (!(await isIgnored(root, relativePath))) {
+        errors.push(`${releasePackage.directory}/package.json generated release entry should be ignored by git: ${entry}`);
+      }
+      continue;
+    }
+
     if (!(await pathExists(absolutePath))) {
       errors.push(`${releasePackage.directory}/package.json files entry missing on disk: ${entry}`);
       continue;
@@ -165,13 +172,6 @@ async function validatePackageFiles(root, releasePackage, packageJson, errors) {
         errors.push(`${releasePackage.directory}/package.json files entry has no contents: ${entry}`);
         continue;
       }
-    }
-
-    if (generated) {
-      if (!(await isIgnored(root, relativePath))) {
-        errors.push(`${releasePackage.directory}/package.json generated release entry should be ignored by git: ${entry}`);
-      }
-      continue;
     }
 
     if (!(await hasTrackedContent(root, releasePackage.directory, entry))) {

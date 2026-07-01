@@ -93,7 +93,7 @@ test('known local file dependencies are explicit release blockers', () => {
   ]);
 });
 
-test('release-ready mode rejects every local file dependency', async () => {
+test('release-ready mode passes after local file dependencies are migrated', async () => {
   await withEnv('ZJ_LOOP_RELEASE_READY', '1', async () => {
     await assert.doesNotReject(() => validateReleaseWorkflows());
   });
