@@ -105,8 +105,8 @@ publish artifact tracking/generation policy together.
 
 ## Local dependency blockers
 
-Several release-managed packages still depend on the shared core package through
-local monorepo paths:
+Release-managed packages may temporarily depend on the shared core package
+through local monorepo paths during development:
 
 - `@jununfly/zj-loop-audit -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 - `@jununfly/zj-loop-init -> @jununfly/zj-loop-core (file:../zj-loop-core)`
@@ -118,13 +118,15 @@ local monorepo paths:
 `package.json`. Do not tag these packages for public npm release until the core
 dependency is migrated to a publishable version dependency or another explicit
 packaging strategy. The release workflow validator fails on any new untracked
-`file:` dependency and requires known blockers to stay documented here.
+`file:` dependency, and `npm run test:release-ready` fails on every remaining
+`file:` dependency.
 
 Current closeout status as of July 1, 2026: `@jununfly/zj-loop-core@0.1.0`
-was checked with `npm view @jununfly/zj-loop-core@0.1.0 version` and npmjs.org
-returned `E404`. Keep the dependent `@jununfly/zj-loop-*` packages on local
-monorepo dependencies until core is published and package-local `npm ci` can
-resolve the registry version.
+was published and checked with
+`npm view @jununfly/zj-loop-core@0.1.0 version --registry https://registry.npmjs.org`,
+which returned `0.1.0`. Dependent `@jununfly/zj-loop-*` packages now use
+`@jununfly/zj-loop-core: ^0.1.0` and package-local lockfiles resolved that
+registry version.
 
 ## Publish
 

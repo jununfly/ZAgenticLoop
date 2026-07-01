@@ -50,7 +50,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@jununfly/zj-loop-core": "file:../zj-loop-core"
+    "@jununfly/zj-loop-core": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

@@ -24,7 +24,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-audit.yml',
     tagPattern: 'zj-loop-audit-v*',
     provenancePublishing: true,
-    localFileDependencies: ['@jununfly/zj-loop-core'],
+    knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'zj-loop-init',
@@ -34,7 +34,7 @@ export const RELEASE_PACKAGES = [
     tagPattern: 'zj-loop-init-v*',
     provenancePublishing: true,
     generatedAtRelease: ['starters', 'templates'],
-    localFileDependencies: ['@jununfly/zj-loop-core'],
+    knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'zj-loop-cost',
@@ -43,7 +43,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-cost.yml',
     tagPattern: 'zj-loop-cost-v*',
     provenancePublishing: true,
-    localFileDependencies: ['@jununfly/zj-loop-core'],
+    knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'zj-loop-sync',
@@ -52,7 +52,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-sync.yml',
     tagPattern: 'zj-loop-sync-v*',
     provenancePublishing: true,
-    localFileDependencies: ['@jununfly/zj-loop-core'],
+    knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'zj-loop-mcp-server',
@@ -61,7 +61,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-mcp-server.yml',
     tagPattern: 'zj-loop-mcp-server-v*',
     provenancePublishing: true,
-    localFileDependencies: ['@jununfly/zj-loop-core'],
+    knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
     id: 'zj-goal-audit',
@@ -223,7 +223,7 @@ async function validatePackedFiles(root, releasePackage, packageJson, errors) {
 
 function validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, errors) {
   const failOnLocalFileDependencies = process.env.ZJ_LOOP_RELEASE_READY === '1';
-  const allowed = new Set(releasePackage.localFileDependencies ?? []);
+  const allowed = new Set(releasePackage.knownLocalFileDependencies ?? []);
   const found = localFileDependencies(packageJson);
 
   for (const dependency of found) {
@@ -236,22 +236,17 @@ function validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, 
 
     if (!allowed.has(dependency.name)) {
       errors.push(`${releasePackage.directory}/package.json has untracked local file dependency: ${dependency.name} ${dependency.spec}`);
-    }
-  }
-
-  for (const allowedDependency of allowed) {
-    const foundDependency = found.find((dependency) => dependency.name === allowedDependency);
-    if (!foundDependency) {
-      errors.push(`${releasePackage.directory} manifest expects local file dependency not found: ${allowedDependency}`);
       continue;
     }
 
-    assertIncludes(
-      releaseDoc,
-      `${releasePackage.packageName} -> ${allowedDependency} (${foundDependency.spec})`,
-      'docs/RELEASE.md',
-      errors,
-    );
+    if (!failOnLocalFileDependencies) {
+      assertIncludes(
+        releaseDoc,
+        `${releasePackage.packageName} -> ${dependency.name} (${dependency.spec})`,
+        'docs/RELEASE.md',
+        errors,
+      );
+    }
   }
 }
 

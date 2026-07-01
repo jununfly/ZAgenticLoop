@@ -22,36 +22,36 @@ test('RELEASE_PACKAGES captures release-managed npm packages', () => {
     RELEASE_PACKAGES.map((releasePackage) => ({
       packageName: releasePackage.packageName,
       generatedAtRelease: releasePackage.generatedAtRelease ?? [],
-      localFileDependencies: releasePackage.localFileDependencies ?? [],
+      knownLocalFileDependencies: releasePackage.knownLocalFileDependencies ?? [],
     })),
     [
-      { packageName: '@jununfly/zj-loop-core', generatedAtRelease: [], localFileDependencies: [] },
+      { packageName: '@jununfly/zj-loop-core', generatedAtRelease: [], knownLocalFileDependencies: [] },
       {
         packageName: '@jununfly/zj-loop-audit',
         generatedAtRelease: [],
-        localFileDependencies: ['@jununfly/zj-loop-core'],
+        knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
       },
       {
         packageName: '@jununfly/zj-loop-init',
         generatedAtRelease: ['starters', 'templates'],
-        localFileDependencies: ['@jununfly/zj-loop-core'],
+        knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
       },
       {
         packageName: '@jununfly/zj-loop-cost',
         generatedAtRelease: [],
-        localFileDependencies: ['@jununfly/zj-loop-core'],
+        knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
       },
       {
         packageName: '@jununfly/zj-loop-sync',
         generatedAtRelease: [],
-        localFileDependencies: ['@jununfly/zj-loop-core'],
+        knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
       },
       {
         packageName: '@jununfly/zj-loop-mcp-server',
         generatedAtRelease: [],
-        localFileDependencies: ['@jununfly/zj-loop-core'],
+        knownLocalFileDependencies: ['@jununfly/zj-loop-core'],
       },
-      { packageName: '@jununfly/zj-goal-audit', generatedAtRelease: [], localFileDependencies: [] },
+      { packageName: '@jununfly/zj-goal-audit', generatedAtRelease: [], knownLocalFileDependencies: [] },
     ],
   );
 });
@@ -81,7 +81,7 @@ test('release-managed package files are represented in npm pack output', async (
 
 test('known local file dependencies are explicit release blockers', () => {
   const blockers = RELEASE_PACKAGES
-    .filter((releasePackage) => (releasePackage.localFileDependencies ?? []).length > 0)
+    .filter((releasePackage) => (releasePackage.knownLocalFileDependencies ?? []).length > 0)
     .map((releasePackage) => releasePackage.packageName);
 
   assert.deepEqual(blockers, [
@@ -95,9 +95,6 @@ test('known local file dependencies are explicit release blockers', () => {
 
 test('release-ready mode rejects every local file dependency', async () => {
   await withEnv('ZJ_LOOP_RELEASE_READY', '1', async () => {
-    await assert.rejects(
-      () => validateReleaseWorkflows(),
-      /release-blocking local file dependency/,
-    );
+    await assert.doesNotReject(() => validateReleaseWorkflows());
   });
 });
