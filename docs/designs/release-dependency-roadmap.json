@@ -1,0 +1,327 @@
+{
+  "title": "发布依赖可发布化路线图",
+  "description": "清理 release-managed packages 对 @jununfly/zj-loop-core 的 file: 依赖 blocker，再决定是否进入新 feature。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "发布依赖可发布化路线图",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6",
+        "1-7",
+        "1-8",
+        "1-9"
+      ],
+      "decisions": [
+        {
+          "q": "继续架构优化还是开发新 feature？",
+          "answer": "先继续架构优化，聚焦发布依赖可发布化。当前稳定文档明确记录 @jununfly/zj-loop-audit/init/cost 仍通过 file:../zj-loop-core 依赖 core，npm pack 会保留不可发布的本地路径；这是 release blocker。",
+          "note": "推荐先清 blocker，再评估新 feature；否则新 feature 会继续建立在不可发布依赖状态上。"
+        },
+        {
+          "q": "这次架构优化的发布标准是什么？",
+          "answer": "以 public npm 可发布为标准，而不是以本地 monorepo build 通过为标准。一个包进入发布宇宙后，必须满足：package.json 依赖可被 npm 消费者解析、npm pack 不泄漏本地 file: 依赖、files allowlist 中的产物存在且策略明确、release workflow/tag/docs/validator 一致、核心 gates 通过。",
+          "note": "这把目标从局部依赖替换提升为发布标准门；后续 feature 只有在该门稳定后再排。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "确认发布依赖迁移边界",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "发布依赖迁移的最小边界是什么？",
+          "answer": "只迁移 release-managed packages 中面向发布的 @jununfly/zj-loop-core 依赖，不引入 workspace 管理器、不重排 monorepo、不改变 core API。第一刀先确认 npm ci、npm pack、release validator 三者的约束。",
+          "note": "边界来自 docs/RELEASE.md 的 blocker 描述和 architecture.md 的 future release-dependency roadmap 结论。"
+        }
+      ],
+      "notes": "前置窄边界已被上升为可发布标准路线图；后续施工以 1-5 到 1-9 为主。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "迁移 release-managed packages 的 core 依赖",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "更新发布验证与文档 blocker 状态",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "评估下一批产品 feature 候选",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "定义可发布标准与发布包宇宙",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3"
+      ],
+      "decisions": [
+        {
+          "q": "发布包宇宙如何划定？",
+          "answer": "先以可发布信号划分，而不是只沿用旧 release manifest：已在 release manifest 的 core/audit/init/cost/goal-audit 必须达标；zj-loop-mcp-server 有 publishConfig 和 bin 且依赖 core，需要 explore 是否纳入发布宇宙；zj-loop-sync 有 bin/files 且依赖 core，但没有 publishConfig 和 release workflow，需要决定是纳入发布还是明确 internal。",
+          "note": "代码证据：release manifest 目前 5 包；mcp-server 与 sync 的 package.json 都有 @jununfly/zj-loop-core: file:../zj-loop-core。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "设计 core 依赖发布策略",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3"
+      ],
+      "decisions": [
+        {
+          "q": "core 依赖发布策略有哪些候选？",
+          "answer": "候选 A：把 publishable packages 的 @jununfly/zj-loop-core 改为版本依赖，并要求 core 先发布；候选 B：bundle core 进各包；候选 C：引入 npm workspace 统一管理。推荐 A。A 最符合当前 release manifest 中 core-first 的顺序，保留包边界；B 会复制 shared kernel，削弱 core；C 会扩大 monorepo 管理范围，不适合作为本轮最小架构刀。",
+          "note": "explore 需要用 npm pack 和 package-lock 变化验证 A 是否足够，同时确认本地开发 npm ci 不退化。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "执行发布依赖迁移与锁文件收敛",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-7-1",
+        "1-7-2",
+        "1-7-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8": {
+      "id": "1-8",
+      "label": "升级发布验证为可发布标准门",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-8-1",
+        "1-8-2",
+        "1-8-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9": {
+      "id": "1-9",
+      "label": "收尾发布文档与架构决策",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-9-1",
+        "1-9-2",
+        "1-9-3"
+      ],
+      "decisions": [
+        {
+          "q": "什么时候从架构优化转入新 feature？",
+          "answer": "只有当发布宇宙明确、发布包 npm pack 不再包含本地 file: 依赖、release validator 以可发布标准通过、RELEASE 与 architecture 文档从 blocker 状态更新为可发布状态后，才进入下一批产品 feature 评估。",
+          "note": "这避免在细节里循环，也避免 feature 建在未清的发布架构债上。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "盘点 release manifest 与 package publish 信号差异",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "决定 zj-loop-sync 与 zj-loop-mcp-server 发布身份",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "固定发布宇宙验收标准",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "用 npm pack 验证版本依赖候选",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "确认本地开发安装策略",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "选择版本范围与发布顺序策略",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-1": {
+      "id": "1-7-1",
+      "label": "替换发布包 package.json 中的 core file 依赖",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-2": {
+      "id": "1-7-2",
+      "label": "收敛 package-lock 与 package-local npm ci",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-3": {
+      "id": "1-7-3",
+      "label": "验证所有发布包 tarball 不含本地 file 依赖",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-1": {
+      "id": "1-8-1",
+      "label": "将 validator 从允许已知 blocker 改为拒绝发布 blocker",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-2": {
+      "id": "1-8-2",
+      "label": "增加 pack-level 可发布契约测试",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-3": {
+      "id": "1-8-3",
+      "label": "把 release gate 接入现有 test:tools 与 CI 语义",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-1": {
+      "id": "1-9-1",
+      "label": "更新 RELEASE 文档为无 blocker 状态",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-2": {
+      "id": "1-9-2",
+      "label": "更新 architecture 发布边界结论",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-3": {
+      "id": "1-9-3",
+      "label": "决定是否进入下一批产品 feature",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-01 11:39:25",
+    "updated": "2026-07-01 11:49:09",
+    "md_file": "docs/designs/release-dependency-roadmap.md"
+  }
+}
