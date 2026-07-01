@@ -15,7 +15,7 @@ export const RELEASE_PACKAGES = [
     directory: 'tools/zj-loop-core',
     workflow: '.github/workflows/release-zj-loop-core.yml',
     tagPattern: 'zj-loop-core-v*',
-    trustedPublishing: true,
+    provenancePublishing: true,
   },
   {
     id: 'zj-loop-audit',
@@ -23,7 +23,7 @@ export const RELEASE_PACKAGES = [
     directory: 'tools/zj-loop-audit',
     workflow: '.github/workflows/release-zj-loop-audit.yml',
     tagPattern: 'zj-loop-audit-v*',
-    trustedPublishing: true,
+    provenancePublishing: true,
     localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
@@ -32,7 +32,7 @@ export const RELEASE_PACKAGES = [
     directory: 'tools/zj-loop-init',
     workflow: '.github/workflows/release-zj-loop-init.yml',
     tagPattern: 'zj-loop-init-v*',
-    trustedPublishing: true,
+    provenancePublishing: true,
     generatedAtRelease: ['starters', 'templates'],
     localFileDependencies: ['@jununfly/zj-loop-core'],
   },
@@ -42,7 +42,7 @@ export const RELEASE_PACKAGES = [
     directory: 'tools/zj-loop-cost',
     workflow: '.github/workflows/release-zj-loop-cost.yml',
     tagPattern: 'zj-loop-cost-v*',
-    trustedPublishing: true,
+    provenancePublishing: true,
     localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
@@ -51,7 +51,7 @@ export const RELEASE_PACKAGES = [
     directory: 'tools/zj-loop-sync',
     workflow: '.github/workflows/release-zj-loop-sync.yml',
     tagPattern: 'zj-loop-sync-v*',
-    trustedPublishing: true,
+    provenancePublishing: true,
     localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
@@ -60,16 +60,16 @@ export const RELEASE_PACKAGES = [
     directory: 'tools/zj-loop-mcp-server',
     workflow: '.github/workflows/release-zj-loop-mcp-server.yml',
     tagPattern: 'zj-loop-mcp-server-v*',
-    trustedPublishing: true,
+    provenancePublishing: true,
     localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
-    id: 'goal-audit',
-    packageName: '@cobusgreyling/goal-audit',
-    directory: 'tools/goal-audit',
-    workflow: '.github/workflows/release-goal-audit.yml',
-    tagPattern: 'goal-audit-v*',
-    trustedPublishing: true,
+    id: 'zj-goal-audit',
+    packageName: '@jununfly/zj-goal-audit',
+    directory: 'tools/zj-goal-audit',
+    workflow: '.github/workflows/release-zj-goal-audit.yml',
+    tagPattern: 'zj-goal-audit-v*',
+    provenancePublishing: true,
   },
 ];
 
@@ -301,7 +301,8 @@ export async function validateReleaseWorkflows(root = ROOT) {
     assertIncludes(workflow, `working-directory: ${releasePackage.directory}`, releasePackage.workflow, errors);
     assertIncludes(workflow, `cache-dependency-path: ${releasePackage.directory}/package-lock.json`, releasePackage.workflow, errors);
     assertIncludes(workflow, 'npm publish --access public', releasePackage.workflow, errors);
-    if (releasePackage.trustedPublishing) {
+    assertIncludes(workflow, 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}', releasePackage.workflow, errors);
+    if (releasePackage.provenancePublishing) {
       assertIncludes(workflow, 'id-token: write', releasePackage.workflow, errors);
       assertIncludes(workflow, '--provenance', releasePackage.workflow, errors);
     }

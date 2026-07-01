@@ -1,8 +1,12 @@
 # Quickstart — 5 minutes to your first loop
 
-Landed from [X](https://x.com), the [showcase](https://jununfly.github.io/ZAgenticLoop/), or a friend's README? This is the shortest path from zero to a running loop.
+Landed from the [repository](https://github.com/jununfly/ZAgenticLoop), a package page, or a friend's README? This is the shortest path from zero to a running loop.
 
 **Week one rule:** report only. No auto-fix, no auto-merge. Read what the loop writes before you let it act.
+
+The commands below use the public npm packages after first release. Before npm
+is live, contributors can run the same CLIs from this monorepo; see
+[Before npm is live](#before-npm-is-live) below.
 
 ## 1. Pick your pain (30 seconds)
 
@@ -14,6 +18,9 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex
 
 # Score loop readiness (this repo also comments scores on PRs in CI)
 npx @jununfly/zj-loop-audit . --suggest
+
+# Optional: score run-until-done goal readiness
+npx @jununfly/zj-goal-audit . --suggest
 
 # Codex — report only, week one
 /loop 1d Run loop-triage. Update STATE.md. No auto-fix.
@@ -56,6 +63,12 @@ Scores 0–100 with concrete next steps. Re-run after each improvement. Paste a 
 npx @jununfly/zj-loop-audit . --badge
 ```
 
+For bounded run-until-done work, audit goal readiness separately:
+
+```bash
+npx @jununfly/zj-goal-audit . --suggest
+```
+
 ## 5. Run your first loop — report only (2 minutes)
 
 ### Grok
@@ -80,7 +93,7 @@ No `zj-loop-init --tool openclaw` yet — copy `skills/loop-triage/SKILL.md` and
 
 ### Cursor or Windsurf
 
-No `zj-loop-init --tool cursor` yet — copy skills and state from any starter, then map scheduling to editor Automations or Workflows. See the [Cursor & Windsurf appendix](./primitives-matrix.md#appendix-editor-transfer-recipes-cursor--windsurf) in the primitives matrix.
+No `zj-loop-init --tool cursor` yet — copy skills and state from any starter, then map scheduling to editor Automations or Workflows. See the [Cursor & Windsurf appendix](./primitives-matrix.md#appendix-editor-transfer-recipes-cursor-windsurf) in the primitives matrix.
 
 ### GitHub Actions only
 
@@ -96,7 +109,7 @@ Commit the scaffold + first run update so `zj-loop-audit` sees activity on the n
 
 | When | Do this |
 |------|---------|
-| End of week one | Re-run `zj-loop-audit . --suggest` — aim for L1 (score ~40+) |
+| End of week one | Re-run `npx @jununfly/zj-loop-audit . --suggest` — aim for L1 (score ~40+) |
 | Week two | Add a verifier skill; try one assisted fix in a worktree (L2) |
 | Before unattended (L3) | `loop-budget.md` + `loop-run-log.md` filled, human gates in `LOOP.md`, proven runs |
 | Unsure which pattern | [pattern-picker.md](./pattern-picker.md) · [loop-design-checklist.md](./loop-design-checklist.md) |
@@ -118,8 +131,20 @@ npx @jununfly/zj-loop-audit . --suggest
 npx @jununfly/zj-loop-audit . --badge
 ```
 
+## Before npm is live
+
+If the `@jununfly` packages have not been published yet, run the CLIs from a
+local checkout instead:
+
+```bash
+cd tools/zj-loop-init && npm ci && npm test && node dist/cli.js /path/to/project --pattern daily-triage --tool grok
+cd tools/zj-loop-cost && npm ci && npm test && node dist/cli.js --pattern daily-triage --level L1 --cadence 1d
+cd tools/zj-loop-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
+cd tools/zj-goal-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
+```
+
 ## Learn the why (optional, 10 minutes)
 
-- [ZAgenticLoop essay](https://jununfly.github.io/ZAgenticLoop) — concept and primitives
+- [Attribution and further reading](../resources/sources.md) — concept and primitives
 - [Primitives matrix](./primitives-matrix.md) — Grok vs Claude vs Codex vs OpenClaw vs Cursor
 - [Operating loops](./operating-loops.md) — when to kill a loop

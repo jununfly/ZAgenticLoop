@@ -17,7 +17,7 @@ export const TOOL_PACKAGES = [
     role: 'zj-loop',
     gates: ['root', 'validate'],
   },
-  { id: 'goal-audit', directory: 'tools/goal-audit', role: 'companion', gates: ['root'] },
+  { id: 'zj-goal-audit', directory: 'tools/zj-goal-audit', role: 'zj-goal', gates: ['root'] },
 ];
 
 const VALID_SCRIPTS = new Set(['build', 'test']);

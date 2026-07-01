@@ -51,7 +51,7 @@ test('RELEASE_PACKAGES captures release-managed npm packages', () => {
         generatedAtRelease: [],
         localFileDependencies: ['@jununfly/zj-loop-core'],
       },
-      { packageName: '@cobusgreyling/goal-audit', generatedAtRelease: [], localFileDependencies: [] },
+      { packageName: '@jununfly/zj-goal-audit', generatedAtRelease: [], localFileDependencies: [] },
     ],
   );
 });

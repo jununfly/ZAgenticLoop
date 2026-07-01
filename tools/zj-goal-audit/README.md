@@ -1,13 +1,13 @@
-# goal-audit
+# zj-goal-audit
 
-Goal Readiness Score CLI for Grok Build `/goal` workflows.
+Goal Readiness Score CLI for run-until-done agentic workflows.
 
 ## Install / run
 
 ```bash
-npx @cobusgreyling/goal-audit .
-npx @cobusgreyling/goal-audit . --suggest
-npx @cobusgreyling/goal-audit . --json
+npx @jununfly/zj-goal-audit .
+npx @jununfly/zj-goal-audit . --suggest
+npx @jununfly/zj-goal-audit . --json
 ```
 
 ## Levels
