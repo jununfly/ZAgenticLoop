@@ -30,6 +30,11 @@
           "q": "这次架构优化的发布标准是什么？",
           "answer": "以 public npm 可发布为标准，而不是以本地 monorepo build 通过为标准。一个包进入发布宇宙后，必须满足：package.json 依赖可被 npm 消费者解析、npm pack 不泄漏本地 file: 依赖、files allowlist 中的产物存在且策略明确、release workflow/tag/docs/validator 一致、核心 gates 通过。",
           "note": "这把目标从局部依赖替换提升为发布标准门；后续 feature 只有在该门稳定后再排。"
+        },
+        {
+          "q": "本轮发布依赖架构优化是否可以进入 closeout？",
+          "answer": "可以进入 closeout，但不能标记为全绿完成。已完成的是本地可落地的可发布标准、发布宇宙、validator、release-ready gate、文档沉淀；未完成且应保留为 blocker 的是 core 发布后才能执行的 dependent package registry 依赖迁移。",
+          "note": "下一步不是继续扩展细节，而是把过程 roadmap 的结论合并进稳定文档后删除过程文件；真正依赖迁移应在 @jununfly/zj-loop-core@0.1.0 registry-resolvable 后另行执行。"
         }
       ],
       "notes": ""
@@ -53,32 +58,50 @@
     "1-2": {
       "id": "1-2",
       "label": "迁移 release-managed packages 的 core 依赖",
-      "status": "pending",
+      "status": "blocked",
       "mode": "exploit",
       "parent": "1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "是否现在迁移 release-managed packages 的 core 依赖？",
+          "answer": "不现在迁移。该节点被 core registry 可解析性阻塞：在 @jununfly/zj-loop-core@0.1.0 发布并可被 npm ci 解析前，直接把 dependent packages 从 file:../zj-loop-core 改成 ^0.1.0 会制造不可复现的半迁移状态。",
+          "note": "后续迁移条件已经沉淀在 1-6/1-7/1-8：core-first publish，然后迁移 package.json 与 package-lock，并运行 package-local npm ci、npm pack、test:release-ready。"
+        }
+      ],
+      "notes": "Blocked until @jununfly/zj-loop-core@0.1.0 is published and registry-resolvable; migration instructions are captured by 1-6/1-7/1-8."
     },
     "1-3": {
       "id": "1-3",
       "label": "更新发布验证与文档 blocker 状态",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "发布验证与文档 blocker 状态是否已经更新？",
+          "answer": "已经更新，但状态不是无 blocker。稳定文档现在表达双门语义：普通 test:release-workflows 支持开发期并允许已登记 core file blockers；npm run test:release-ready 是 pre-tag 硬门，当前预期失败并列出 5 个 file:../zj-loop-core blockers。",
+          "note": "docs/RELEASE.md 与 docs/designs/architecture.md 已沉淀该状态；1-8/1-9 已完成验证门与稳定文档收口。"
+        }
+      ],
+      "notes": "Completed by 1-8 and 1-9: docs and gates now describe development-time blockers vs release-ready hard blockers without claiming a blocker-free release state."
     },
     "1-4": {
       "id": "1-4",
       "label": "评估下一批产品 feature 候选",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "是否在本路线图评估下一批产品 feature 候选？",
+          "answer": "不在本路线图评估。当前路线图目标是以可发布标准收束架构优化；feature 候选会引入产品范围扩张，应在 release dependency closeout 后另开 roadmap。",
+          "note": "1-9-3 已做同一方向决策：暂不进入 feature；先验证 gates、合并结论进稳定文档、删除过程 roadmap。"
+        }
+      ],
+      "notes": "Completed as a scope decision: next product feature evaluation belongs in a separate roadmap after release-dependency closeout."
     },
     "1-5": {
       "id": "1-5",
@@ -392,7 +415,7 @@
   },
   "metadata": {
     "created": "2026-07-01 11:39:25",
-    "updated": "2026-07-01 14:59:29",
+    "updated": "2026-07-01 15:04:00",
     "md_file": "docs/designs/release-dependency-roadmap.md"
   }
 }
