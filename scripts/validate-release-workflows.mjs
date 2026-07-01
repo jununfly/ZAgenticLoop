@@ -155,7 +155,8 @@ async function validatePackageFiles(root, releasePackage, packageJson, errors) {
     const generated = generatedAtRelease.has(entry);
 
     if (generated) {
-      if (!(await isIgnored(root, relativePath))) {
+      const generatedSentinel = `${relativePath}/.zj-loop-release-generated-check`;
+      if (!(await isIgnored(root, generatedSentinel))) {
         errors.push(`${releasePackage.directory}/package.json generated release entry should be ignored by git: ${entry}`);
       }
       continue;
