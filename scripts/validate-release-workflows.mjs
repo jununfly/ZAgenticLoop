@@ -46,6 +46,24 @@ export const RELEASE_PACKAGES = [
     localFileDependencies: ['@jununfly/zj-loop-core'],
   },
   {
+    id: 'zj-loop-sync',
+    packageName: '@jununfly/zj-loop-sync',
+    directory: 'tools/zj-loop-sync',
+    workflow: '.github/workflows/release-zj-loop-sync.yml',
+    tagPattern: 'zj-loop-sync-v*',
+    trustedPublishing: true,
+    localFileDependencies: ['@jununfly/zj-loop-core'],
+  },
+  {
+    id: 'zj-loop-mcp-server',
+    packageName: '@jununfly/zj-loop-mcp-server',
+    directory: 'tools/zj-loop-mcp-server',
+    workflow: '.github/workflows/release-zj-loop-mcp-server.yml',
+    tagPattern: 'zj-loop-mcp-server-v*',
+    trustedPublishing: true,
+    localFileDependencies: ['@jununfly/zj-loop-core'],
+  },
+  {
     id: 'goal-audit',
     packageName: '@cobusgreyling/goal-audit',
     directory: 'tools/goal-audit',
@@ -65,6 +83,22 @@ function localFileDependencies(packageJson) {
   return Object.entries(packageJson.dependencies ?? {})
     .filter(([, spec]) => typeof spec === 'string' && spec.startsWith('file:'))
     .map(([name, spec]) => ({ name, spec }));
+}
+
+async function listToolPackageDirectories(root) {
+  const toolsDir = path.join(root, 'tools');
+  const entries = await readdir(toolsDir, { withFileTypes: true });
+  const packageDirectories = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const directory = `tools/${entry.name}`;
+    if (await pathExists(path.join(root, directory, 'package.json'))) {
+      packageDirectories.push(directory);
+    }
+  }
+
+  return packageDirectories.sort();
 }
 
 async function pathExists(filePath) {
@@ -164,6 +198,18 @@ function validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, 
 export async function validateReleaseWorkflows(root = ROOT) {
   const errors = [];
   const releaseDoc = await readFile(path.join(root, 'docs/RELEASE.md'), 'utf8');
+  const releaseDirectories = new Set(RELEASE_PACKAGES.map((releasePackage) => releasePackage.directory));
+  const packageDirectories = await listToolPackageDirectories(root);
+
+  for (const directory of packageDirectories) {
+    const packageJson = JSON.parse(await readFile(path.join(root, directory, 'package.json'), 'utf8'));
+    const hasPublicPublishConfig = packageJson.publishConfig?.access === 'public';
+    const hasPublishSurface = hasPublicPublishConfig || Boolean(packageJson.bin);
+
+    if (hasPublishSurface && !releaseDirectories.has(directory) && packageJson.private !== true) {
+      errors.push(`${directory}/package.json has publish surface but is missing from RELEASE_PACKAGES`);
+    }
+  }
 
   for (const releasePackage of RELEASE_PACKAGES) {
     const packageJson = JSON.parse(

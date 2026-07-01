@@ -27,6 +27,16 @@ test('RELEASE_PACKAGES captures release-managed npm packages', () => {
         generatedAtRelease: [],
         localFileDependencies: ['@jununfly/zj-loop-core'],
       },
+      {
+        packageName: '@jununfly/zj-loop-sync',
+        generatedAtRelease: [],
+        localFileDependencies: ['@jununfly/zj-loop-core'],
+      },
+      {
+        packageName: '@jununfly/zj-loop-mcp-server',
+        generatedAtRelease: [],
+        localFileDependencies: ['@jununfly/zj-loop-core'],
+      },
       { packageName: '@cobusgreyling/goal-audit', generatedAtRelease: [], localFileDependencies: [] },
     ],
   );
@@ -53,5 +63,7 @@ test('known local file dependencies are explicit release blockers', () => {
     '@jununfly/zj-loop-audit',
     '@jununfly/zj-loop-init',
     '@jununfly/zj-loop-cost',
+    '@jununfly/zj-loop-sync',
+    '@jununfly/zj-loop-mcp-server',
   ]);
 });

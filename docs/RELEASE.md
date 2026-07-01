@@ -1,6 +1,6 @@
 # Release playbook — npm packages
 
-This repo has five release-managed public npm packages from `tools/`:
+This repo has seven release-managed public npm packages from `tools/`:
 
 | Package | Directory | Release tag |
 |---------|-----------|-------------|
@@ -8,6 +8,8 @@ This repo has five release-managed public npm packages from `tools/`:
 | `@jununfly/zj-loop-audit` | `tools/zj-loop-audit` | `zj-loop-audit-v*` |
 | `@jununfly/zj-loop-init` | `tools/zj-loop-init` | `zj-loop-init-v*` |
 | `@jununfly/zj-loop-cost` | `tools/zj-loop-cost` | `zj-loop-cost-v*` |
+| `@jununfly/zj-loop-sync` | `tools/zj-loop-sync` | `zj-loop-sync-v*` |
+| `@jununfly/zj-loop-mcp-server` | `tools/zj-loop-mcp-server` | `zj-loop-mcp-server-v*` |
 | `@cobusgreyling/goal-audit` | `tools/goal-audit` | `goal-audit-v*` |
 
 ## One-time setup (trusted publishing — recommended)
@@ -20,6 +22,8 @@ Link npm to GitHub, then for **each package** on [npmjs.com](https://www.npmjs.c
 | `@jununfly/zj-loop-audit` | `jununfly/ZAgenticLoop` | `release-zj-loop-audit.yml` |
 | `@jununfly/zj-loop-init` | `jununfly/ZAgenticLoop` | `release-zj-loop-init.yml` |
 | `@jununfly/zj-loop-cost` | `jununfly/ZAgenticLoop` | `release-zj-loop-cost.yml` |
+| `@jununfly/zj-loop-sync` | `jununfly/ZAgenticLoop` | `release-zj-loop-sync.yml` |
+| `@jununfly/zj-loop-mcp-server` | `jununfly/ZAgenticLoop` | `release-zj-loop-mcp-server.yml` |
 | `@cobusgreyling/goal-audit` | `jununfly/ZAgenticLoop` | `release-goal-audit.yml` |
 
 Names must match **exactly** (case-sensitive). No `NPM_TOKEN` secret is required when trusted publishing is configured.
@@ -63,6 +67,8 @@ local monorepo paths:
 - `@jununfly/zj-loop-audit -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 - `@jununfly/zj-loop-init -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 - `@jununfly/zj-loop-cost -> @jununfly/zj-loop-core (file:../zj-loop-core)`
+- `@jununfly/zj-loop-sync -> @jununfly/zj-loop-core (file:../zj-loop-core)`
+- `@jununfly/zj-loop-mcp-server -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 
 `npm pack` preserves these `file:` dependency specs in the published
 `package.json`. Do not tag these packages for public npm release until the core
@@ -91,12 +97,20 @@ git push origin zj-loop-init-v1.2.0
 git tag zj-loop-cost-v1.0.0
 git push origin zj-loop-cost-v1.0.0
 
+# zj-loop-sync (drift detection CLI)
+git tag zj-loop-sync-v1.0.0
+git push origin zj-loop-sync-v1.0.0
+
+# zj-loop-mcp-server (read-only MCP adapter)
+git tag zj-loop-mcp-server-v1.0.0
+git push origin zj-loop-mcp-server-v1.0.0
+
 # goal-audit (companion package)
 git tag goal-audit-v1.0.0
 git push origin goal-audit-v1.0.0
 ```
 
-Workflows: `.github/workflows/release-zj-loop-core.yml`, `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-goal-audit.yml`.
+Workflows: `.github/workflows/release-zj-loop-core.yml`, `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-zj-loop-sync.yml`, `.github/workflows/release-zj-loop-mcp-server.yml`, `.github/workflows/release-goal-audit.yml`.
 
 ## Verify after publish
 
@@ -105,6 +119,8 @@ npm view @jununfly/zj-loop-core version
 npx @jununfly/zj-loop-audit --help
 npx @jununfly/zj-loop-init --help
 npx @jununfly/zj-loop-cost --help
+npx @jununfly/zj-loop-sync --help
+npx @jununfly/zj-loop-mcp-server --help
 npx @cobusgreyling/goal-audit --help
 
 mkdir /tmp/zj-loop-init-test && cd /tmp/zj-loop-init-test

@@ -171,22 +171,34 @@
     "1-5-1": {
       "id": "1-5-1",
       "label": "盘点 release manifest 与 package publish 信号差异",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "release manifest 与 package publish 信号差异是什么？",
+          "answer": "release manifest 原本只登记 core/audit/init/cost/goal-audit 五个包；代码证据显示 zj-loop-mcp-server 有 publishConfig、bin、files 和 core file 依赖，zj-loop-sync 有 bin/main/files 和 core file 依赖但缺 publishConfig。两者都属于 zj-loop-* 工具家族，应纳入 release-managed packages，而不是保持悬空发布表面。",
+          "note": "本刀已补 release workflows、RELEASE 文档、sync publishConfig，并让 validator 扫描 tools/*/package.json 的 publish surface，防止未来新增悬空包。"
+        }
+      ],
+      "notes": "已纳入 zj-loop-sync 与 zj-loop-mcp-server；validator 现在扫描 tools package publish surface。"
     },
     "1-5-2": {
       "id": "1-5-2",
       "label": "决定 zj-loop-sync 与 zj-loop-mcp-server 发布身份",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "zj-loop-sync 与 zj-loop-mcp-server 是发布包还是 internal 包？",
+          "answer": "二者都纳入发布包宇宙。zj-loop-mcp-server 已有 public publishConfig 与 bin；zj-loop-sync 有 CLI bin/main/files 且是 zj-loop-* 工具家族成员。本轮不把它们标 internal，而是补齐 release workflow、docs、validator 清单和 sync publishConfig。",
+          "note": "这样 release universe 与实际 package surface 一致，避免 publishConfig/bin 暗示发布但 release gate 不覆盖。"
+        }
+      ],
+      "notes": "决定纳入 release-managed packages；不标 internal。"
     },
     "1-5-3": {
       "id": "1-5-3",
@@ -321,7 +333,7 @@
   },
   "metadata": {
     "created": "2026-07-01 11:39:25",
-    "updated": "2026-07-01 11:49:09",
+    "updated": "2026-07-01 11:54:42",
     "md_file": "docs/designs/release-dependency-roadmap.md"
   }
 }
