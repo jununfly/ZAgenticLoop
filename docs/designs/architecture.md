@@ -262,6 +262,27 @@ build|test` for each package. This runner is quality-gate orchestration, not
 domain semantics, so it does not live in `@jununfly/zj-loop-core` and does not
 replace package-local build, test, or release scripts.
 
+The release lifecycle is guarded by `scripts/validate-release-workflows.mjs`
+and documented in `docs/RELEASE.md`. Release-managed packages are
+`@jununfly/zj-loop-core`, `@jununfly/zj-loop-audit`,
+`@jununfly/zj-loop-init`, `@jununfly/zj-loop-cost`, and the
+`@cobusgreyling/goal-audit` companion package.
+
+Release artifacts are split into two classes:
+
+- Committed package artifacts such as `dist/`, package READMEs, package-local
+  registries, and small runtime data that npm entrypoints need.
+- Release-time generated package artifacts such as
+  `tools/zj-loop-init/starters/` and `tools/zj-loop-init/templates/`, which are
+  copied into the package working tree by package tests/builds and ignored by
+  git inside the package.
+
+Known `file:../zj-loop-core` dependencies in publishable packages are explicit
+release blockers, not hidden assumptions. The validator rejects untracked new
+local `file:` dependencies, and migrating the known core dependencies to
+publishable version dependencies is a separate future release-dependency
+roadmap.
+
 Test strategy:
 
 - Core semantic tests assert structured contracts, reason codes, warning codes,
@@ -321,3 +342,9 @@ The architecture-improvement roadmap produced these durable outcomes:
 - Root `build:tools` and `test:tools` now run through a repo-local tool gate
   runner that centralizes `zj-loop-*` and `goal-audit` coverage without changing
   package identities or release lifecycles.
+- Release workflow validation now protects workflow files, package manifests,
+  docs, artifact tracking/generation policy, and known local dependency
+  blockers for all release-managed packages.
+- `@jununfly/zj-loop-core` is now part of the documented release-managed
+  package lifecycle, while migration away from `file:../zj-loop-core`
+  dependencies remains a separate future project.
