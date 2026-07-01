@@ -25,10 +25,10 @@ The main boundary rule is simple: core semantic functions answer what a loop
 fact means; adapters decide how a particular surface reads inputs and formats
 outputs.
 
-`tools/goal-audit` is a companion package, not part of the `@jununfly/zj-loop-*`
-tool family. It keeps its `@cobusgreyling/goal-audit` package identity and
-separate release workflow, while the root repository quality gates still build
-and test it to avoid drift between the monorepo and the published package.
+`tools/zj-goal-audit` is a sibling goal readiness package, not part of the
+`@jununfly/zj-loop-*` tool family. It uses the `@jununfly/zj-goal-audit`
+package identity and `zj-goal-audit` CLI name while the root repository quality
+gates still build and test it with the loop tools to avoid release drift.
 
 ## Registry
 
@@ -252,8 +252,9 @@ git diff --check
 ```
 
 `npm run build:tools` and `npm run test:tools` cover both the `zj-loop-*` tool
-family and the `tools/goal-audit` companion package. That coverage is a quality
-gate only; it does not imply a shared package namespace or release lifecycle.
+family and the `tools/zj-goal-audit` goal readiness package. That coverage is a
+quality gate only; it does not imply that goal readiness belongs inside the loop
+core package.
 
 The root build/test aggregation is owned by
 `scripts/run-tool-package-scripts.mjs`. It keeps the ordered tool package list
@@ -266,8 +267,8 @@ The release lifecycle is guarded by `scripts/validate-release-workflows.mjs`
 and documented in `docs/RELEASE.md`. Release-managed packages are
 `@jununfly/zj-loop-core`, `@jununfly/zj-loop-audit`,
 `@jununfly/zj-loop-init`, `@jununfly/zj-loop-cost`,
-`@jununfly/zj-loop-sync`, `@jununfly/zj-loop-mcp-server`, and the
-`@cobusgreyling/goal-audit` companion package.
+`@jununfly/zj-loop-sync`, `@jununfly/zj-loop-mcp-server`, and
+`@jununfly/zj-goal-audit`.
 
 The release universe is defined by package publish surface, not by memory of
 which workflows already exist. A package under `tools/` with
@@ -361,8 +362,8 @@ The architecture-improvement roadmap produced these durable outcomes:
   recommendations now live in the package-owned `readiness.v1.yaml` policy and
   are evaluated by a local rule engine over collected evidence.
 - Root `build:tools` and `test:tools` now run through a repo-local tool gate
-  runner that centralizes `zj-loop-*` and `goal-audit` coverage without changing
-  package identities or release lifecycles.
+  runner that centralizes `zj-loop-*` and `zj-goal-audit` coverage without
+  moving goal readiness into the loop core.
 - Release workflow validation now protects workflow files, package manifests,
   docs, artifact tracking/generation policy, and known local dependency
   blockers for all release-managed packages.

@@ -8,10 +8,10 @@ const md = args.includes('--md');
 const suggest = args.includes('--suggest') || args.includes('--fix');
 const help = args.includes('--help') || args.includes('-h');
 if (help) {
-    console.log(`goal-audit — Goal Readiness Score CLI (G0–G3)
+    console.log(`zj-goal-audit — Goal Readiness Score CLI (G0-G3)
 
 Usage:
-  goal-audit [path] [options]
+  zj-goal-audit [path] [options]
 
 Options:
   --json      JSON output (for CI / scripting)
@@ -19,7 +19,7 @@ Options:
   --suggest   Show copy-from-template commands
   --help, -h  This help
 
-Scores goal readiness for Grok Build /goal:
+Scores goal readiness for run-until-done agentic workflows:
   GOAL.md, verifier skills, AGENTS.md, tests, CI, budget docs
 
 Exit codes:
@@ -27,9 +27,9 @@ Exit codes:
   2  score < 40
 
 Examples:
-  goal-audit .
-  goal-audit . --suggest
-  npx @cobusgreyling/goal-audit . --json
+  zj-goal-audit .
+  zj-goal-audit . --suggest
+  npx @jununfly/zj-goal-audit . --json
 `);
     process.exit(0);
 }
@@ -52,12 +52,12 @@ try {
         console.log('  # Then in Grok Build:');
         console.log('  /goal Read GOAL.md. Work the objective. goal-verifier before completed: true.');
         console.log('');
-        console.log('  Docs: https://github.com/cobusgreyling/goal-engineering');
+        console.log('  Docs: https://github.com/jununfly/ZAgenticLoop/tree/main/tools/zj-goal-audit');
     }
     process.exit(result.score >= 40 ? 0 : 2);
 }
 catch (err) {
-    console.error('goal-audit error:', err instanceof Error ? err.message : err);
+    console.error('zj-goal-audit error:', err instanceof Error ? err.message : err);
     process.exit(1);
 }
 //# sourceMappingURL=cli.js.map

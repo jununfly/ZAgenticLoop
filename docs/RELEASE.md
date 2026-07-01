@@ -10,11 +10,28 @@ This repo has seven release-managed public npm packages from `tools/`:
 | `@jununfly/zj-loop-cost` | `tools/zj-loop-cost` | `zj-loop-cost-v*` |
 | `@jununfly/zj-loop-sync` | `tools/zj-loop-sync` | `zj-loop-sync-v*` |
 | `@jununfly/zj-loop-mcp-server` | `tools/zj-loop-mcp-server` | `zj-loop-mcp-server-v*` |
-| `@cobusgreyling/goal-audit` | `tools/goal-audit` | `goal-audit-v*` |
+| `@jununfly/zj-goal-audit` | `tools/zj-goal-audit` | `zj-goal-audit-v*` |
 
-## One-time setup (trusted publishing — recommended)
+## One-time setup (first release)
 
-Link npm to GitHub, then for **each package** on [npmjs.com](https://www.npmjs.com/) → package **Settings** → **Trusted Publisher** → **GitHub Actions**:
+First release uses a GitHub repository secret named `NPM_TOKEN`.
+
+Create an npm automation token with publish access to the `@jununfly` scope,
+then add it in GitHub: `jununfly/ZAgenticLoop` → **Settings** → **Secrets and
+variables** → **Actions** → **New repository secret** → `NPM_TOKEN`.
+
+Release workflows pass that secret as `NODE_AUTH_TOKEN` and run
+`npm publish --access public --provenance`. Keep `id-token: write` in the
+workflow permissions so npm can attach provenance to token-based publishes.
+
+Refresh the token at [npmjs.com](https://www.npmjs.com/) → Access Tokens if
+publishes fail with `E401` or package-scope authorization errors.
+
+## Trusted Publisher hardening (after first release)
+
+After the first token-based publish, link npm to GitHub for **each package** on
+[npmjs.com](https://www.npmjs.com/) → package **Settings** → **Trusted
+Publisher** → **GitHub Actions**:
 
 | Package | Repository | Workflow filename |
 |---------|--------------|-------------------|
@@ -24,15 +41,13 @@ Link npm to GitHub, then for **each package** on [npmjs.com](https://www.npmjs.c
 | `@jununfly/zj-loop-cost` | `jununfly/ZAgenticLoop` | `release-zj-loop-cost.yml` |
 | `@jununfly/zj-loop-sync` | `jununfly/ZAgenticLoop` | `release-zj-loop-sync.yml` |
 | `@jununfly/zj-loop-mcp-server` | `jununfly/ZAgenticLoop` | `release-zj-loop-mcp-server.yml` |
-| `@cobusgreyling/goal-audit` | `jununfly/ZAgenticLoop` | `release-goal-audit.yml` |
+| `@jununfly/zj-goal-audit` | `jununfly/ZAgenticLoop` | `release-zj-goal-audit.yml` |
 
-Names must match **exactly** (case-sensitive). No `NPM_TOKEN` secret is required when trusted publishing is configured.
+Names must match **exactly** (case-sensitive). After trusted publishing is
+verified, workflows can remove the `NPM_TOKEN` dependency in a dedicated
+hardening change.
 
-**Auth:** release workflows use repo secret `NPM_TOKEN` (Automation token). Refresh it at [npmjs.com](https://www.npmjs.com/) → Access Tokens if publishes fail with `E401`/`E404`.
-
-**Retry without re-tagging:** Actions → Release workflow → **Run workflow** → enter the tag (e.g. `zj-loop-audit-v1.4.2`).
-
-**Trusted publishing (optional):** configure per package on npm; OIDC alone is not sufficient unless `NPM_TOKEN` is removed and trusted publishers are verified.
+**Retry without re-tagging:** Actions → Release workflow → **Run workflow** → enter the tag (e.g. `zj-loop-audit-v0.1.0`).
 
 ## Release universe standard
 
@@ -42,7 +57,7 @@ the package explicitly sets `private: true`. Release-managed packages must have:
 
 - a unique entry in `RELEASE_PACKAGES`
 - `publishConfig.access: public`
-- a matching release workflow, tag pattern, docs row, and trusted publisher row
+- a matching release workflow, tag pattern, docs row, and release auth row
 - a non-empty `files` allowlist whose committed/generated artifacts are covered
   by the generated artifacts policy below
 - no untracked local `file:` dependencies
@@ -115,37 +130,82 @@ resolve the registry version.
 
 Tag pushes trigger the release workflows:
 
+### Core-first execution checklist
+
+Do not create release tags from a dirty worktree. The first publish should use
+the reviewed `origin/main` commit that contains the release-prep changes.
+
+1. Commit and merge the release-prep branch to `origin/main`.
+2. Check out or pull the final `origin/main` commit locally.
+3. Run the core gate:
+
+```bash
+npm --prefix tools/zj-loop-core ci
+npm --prefix tools/zj-loop-core test
+npm pack ./tools/zj-loop-core --dry-run --json --cache .npm-cache-release-validation
+npm run test:release-workflows
+git diff --check
+```
+
+4. Confirm the version is still unpublished:
+
+```bash
+npm view @jununfly/zj-loop-core@0.1.0 version --registry https://registry.npmjs.org
+```
+
+Expected result before first publish: `E404`.
+
+5. Tag and push core:
+
 ```bash
 # zj-loop-core (shared package used by zj-loop-* tools)
 git tag zj-loop-core-v0.1.0
 git push origin zj-loop-core-v0.1.0
-
-# zj-loop-audit (runs tests before publish)
-git tag zj-loop-audit-v1.3.0
-git push origin zj-loop-audit-v1.3.0
-
-# zj-loop-init (bundles starters/templates, runs smoke tests)
-git tag zj-loop-init-v1.2.0
-git push origin zj-loop-init-v1.2.0
-
-# zj-loop-cost (bundles patterns/registry.yaml)
-git tag zj-loop-cost-v1.0.0
-git push origin zj-loop-cost-v1.0.0
-
-# zj-loop-sync (drift detection CLI)
-git tag zj-loop-sync-v1.0.0
-git push origin zj-loop-sync-v1.0.0
-
-# zj-loop-mcp-server (read-only MCP adapter)
-git tag zj-loop-mcp-server-v1.0.0
-git push origin zj-loop-mcp-server-v1.0.0
-
-# goal-audit (companion package)
-git tag goal-audit-v1.0.0
-git push origin goal-audit-v1.0.0
 ```
 
-Workflows: `.github/workflows/release-zj-loop-core.yml`, `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-zj-loop-sync.yml`, `.github/workflows/release-zj-loop-mcp-server.yml`, `.github/workflows/release-goal-audit.yml`.
+6. Wait for `.github/workflows/release-zj-loop-core.yml` to complete.
+7. Confirm npm can resolve core:
+
+```bash
+npm view @jununfly/zj-loop-core@0.1.0 version --registry https://registry.npmjs.org
+```
+
+Only after this command returns `0.1.0` should dependent packages migrate from
+`file:../zj-loop-core` to `^0.1.0`.
+
+### Dependent package tags
+
+After `@jununfly/zj-loop-core@0.1.0` is registry-resolvable and dependent
+packages have refreshed package-local lockfiles, tag pushes trigger the
+remaining release workflows:
+
+```bash
+# zj-loop-audit (runs tests before publish)
+git tag zj-loop-audit-v0.1.0
+git push origin zj-loop-audit-v0.1.0
+
+# zj-loop-init (bundles starters/templates, runs smoke tests)
+git tag zj-loop-init-v0.1.0
+git push origin zj-loop-init-v0.1.0
+
+# zj-loop-cost (bundles patterns/registry.yaml)
+git tag zj-loop-cost-v0.1.0
+git push origin zj-loop-cost-v0.1.0
+
+# zj-loop-sync (drift detection CLI)
+git tag zj-loop-sync-v0.1.0
+git push origin zj-loop-sync-v0.1.0
+
+# zj-loop-mcp-server (read-only MCP adapter)
+git tag zj-loop-mcp-server-v0.1.0
+git push origin zj-loop-mcp-server-v0.1.0
+
+# zj-goal-audit (goal readiness package)
+git tag zj-goal-audit-v0.1.0
+git push origin zj-goal-audit-v0.1.0
+```
+
+Workflows: `.github/workflows/release-zj-loop-core.yml`, `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-zj-loop-sync.yml`, `.github/workflows/release-zj-loop-mcp-server.yml`, `.github/workflows/release-zj-goal-audit.yml`.
 
 ## Verify after publish
 
@@ -156,7 +216,7 @@ npx @jununfly/zj-loop-init --help
 npx @jununfly/zj-loop-cost --help
 npx @jununfly/zj-loop-sync --help
 npx @jununfly/zj-loop-mcp-server --help
-npx @cobusgreyling/goal-audit --help
+npx @jununfly/zj-goal-audit --help
 
 mkdir /tmp/zj-loop-init-test && cd /tmp/zj-loop-init-test
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok --dry-run
@@ -192,8 +252,8 @@ core is still pre-1.0. Publish order is:
 2. regenerate each dependent package lockfile against the registry dependency
 3. run package-local `npm ci`, `npm test`, and `npm pack` checks
 4. tag and publish dependent `@jununfly/zj-loop-*` packages
-5. publish the independent `@cobusgreyling/goal-audit` companion package when
-   needed
+5. publish the independent `@jununfly/zj-goal-audit` goal readiness package
+   when needed
 
 Do not publish dependent packages in the same release step that first publishes
 core unless the registry dependency can be resolved by package-local `npm ci`.

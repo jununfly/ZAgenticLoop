@@ -21,10 +21,10 @@ test('TOOL_PACKAGES keeps root tool gate coverage explicit', () => {
       'zj-loop-cost',
       'zj-loop-sync',
       'zj-loop-mcp-server',
-      'goal-audit',
+      'zj-goal-audit',
     ],
   );
-  assert.equal(TOOL_PACKAGES.at(-1).role, 'companion');
+  assert.equal(TOOL_PACKAGES.at(-1).role, 'zj-goal');
 });
 
 test('selectToolPackages exposes the validate gate subset for CI', () => {

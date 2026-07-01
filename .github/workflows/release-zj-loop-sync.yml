@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g. zj-loop-sync-v1.0.0)'
+        description: 'Tag to publish (e.g. zj-loop-sync-v0.1.0)'
         required: true
         type: string
 
@@ -30,7 +30,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: tools/zj-loop-sync/package-lock.json
 
-      - name: Ensure npm supports trusted publishing (OIDC)
+      - name: Ensure npm supports provenance publishing
         run: npm install -g npm@latest
 
       - name: Install, build, test

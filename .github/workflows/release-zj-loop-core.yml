@@ -30,7 +30,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: tools/zj-loop-core/package-lock.json
 
-      - name: Ensure npm supports trusted publishing (OIDC)
+      - name: Ensure npm supports provenance publishing
         run: npm install -g npm@latest
 
       - name: Install, build, test
