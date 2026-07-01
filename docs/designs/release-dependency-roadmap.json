@@ -163,7 +163,7 @@
     "1-9": {
       "id": "1-9",
       "label": "收尾发布文档与架构决策",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -343,38 +343,56 @@
     },
     "1-9-1": {
       "id": "1-9-1",
-      "label": "更新 RELEASE 文档为无 blocker 状态",
-      "status": "pending",
+      "label": "更新 RELEASE 文档 blocker 状态",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-9",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "RELEASE 文档是否应改成无 blocker 状态？",
+          "answer": "不应声称无 blocker。当前正确状态是：普通 test:release-workflows 允许已登记 blockers 以支持 monorepo 开发；npm run test:release-ready 作为发布前门，当前预期失败并列出 5 个 file:../zj-loop-core blockers。RELEASE 文档已表达这个状态。",
+          "note": "无 blocker 状态要等 core 已发布、依赖包 package.json/package-lock 迁移到 registry version range 后再更新。"
+        }
+      ],
+      "notes": "RELEASE 保持诚实 blocker 状态：普通 gate 绿，release-ready gate 当前预期失败。"
     },
     "1-9-2": {
       "id": "1-9-2",
       "label": "更新 architecture 发布边界结论",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-9",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "architecture 发布边界结论是什么？",
+          "answer": "稳定架构现在记录：发布宇宙由 publish surface 决定，release-managed packages 共 7 个；普通 release workflow gate 支持 monorepo 开发并允许已登记 blockers；release-ready gate 是 pre-tag 硬门，会拒绝所有 local file dependencies；core 依赖策略是 core-first publishing 后迁移依赖包到 ^0.1.0 registry range。",
+          "note": "docs/designs/architecture.md 已更新。"
+        }
+      ],
+      "notes": "architecture.md 已承载 7 包发布宇宙、release-ready gate 与 core-first dependency strategy。"
     },
     "1-9-3": {
       "id": "1-9-3",
       "label": "决定是否进入下一批产品 feature",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-9",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "现在是否进入下一批产品 feature？",
+          "answer": "暂不进入。当前路线图已经把可发布标准、发布宇宙、release-ready gate 和 core-first dependency strategy 沉淀完成；剩余真正迁移 package.json/package-lock 的前提是 core registry 可解析。下一步应收尾：验证 gates、合并 roadmap 结论进稳定文档、删除过程 roadmap；feature 评估应另开路线图。",
+          "note": "本轮不继续扩展架构细节，避免在发布前依赖迁移的外部前提上空转。"
+        }
+      ],
+      "notes": "建议收尾并另开 feature roadmap；不在本路线图继续扩展。"
     }
   },
   "metadata": {
     "created": "2026-07-01 11:39:25",
-    "updated": "2026-07-01 14:56:00",
+    "updated": "2026-07-01 14:59:29",
     "md_file": "docs/designs/release-dependency-roadmap.md"
   }
 }

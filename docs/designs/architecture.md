@@ -265,8 +265,14 @@ replace package-local build, test, or release scripts.
 The release lifecycle is guarded by `scripts/validate-release-workflows.mjs`
 and documented in `docs/RELEASE.md`. Release-managed packages are
 `@jununfly/zj-loop-core`, `@jununfly/zj-loop-audit`,
-`@jununfly/zj-loop-init`, `@jununfly/zj-loop-cost`, and the
+`@jununfly/zj-loop-init`, `@jununfly/zj-loop-cost`,
+`@jununfly/zj-loop-sync`, `@jununfly/zj-loop-mcp-server`, and the
 `@cobusgreyling/goal-audit` companion package.
+
+The release universe is defined by package publish surface, not by memory of
+which workflows already exist. A package under `tools/` with
+`publishConfig.access: public` or an npm `bin` entry must either be covered by
+the release manifest or explicitly marked `private: true`.
 
 Release artifacts are split into two classes:
 
@@ -279,9 +285,18 @@ Release artifacts are split into two classes:
 
 Known `file:../zj-loop-core` dependencies in publishable packages are explicit
 release blockers, not hidden assumptions. The validator rejects untracked new
-local `file:` dependencies, and migrating the known core dependencies to
-publishable version dependencies is a separate future release-dependency
-roadmap.
+local `file:` dependencies. The normal release workflow gate allows documented
+local blockers so monorepo development can continue before core is published.
+The explicit release-ready gate, `npm run test:release-ready`, rejects every
+local `file:` dependency and is expected to fail until the dependent packages
+migrate from `file:../zj-loop-core` to a registry version dependency.
+
+The selected core dependency strategy is core-first publishing. After
+`@jununfly/zj-loop-core@0.1.0` is published, dependent `@jununfly/zj-loop-*`
+packages should migrate to `@jununfly/zj-loop-core: ^0.1.0`, regenerate
+package-local lockfiles against the registry dependency, and pass package-local
+`npm ci`, package tests, `npm pack`, and release workflow validation before
+tagging.
 
 Test strategy:
 
@@ -345,6 +360,9 @@ The architecture-improvement roadmap produced these durable outcomes:
 - Release workflow validation now protects workflow files, package manifests,
   docs, artifact tracking/generation policy, and known local dependency
   blockers for all release-managed packages.
-- `@jununfly/zj-loop-core` is now part of the documented release-managed
-  package lifecycle, while migration away from `file:../zj-loop-core`
-  dependencies remains a separate future project.
+- `@jununfly/zj-loop-core`, `@jununfly/zj-loop-sync`, and
+  `@jununfly/zj-loop-mcp-server` are now part of the documented
+  release-managed package lifecycle.
+- Release-ready validation now exists as an explicit pre-tag gate that rejects
+  local `file:` dependencies, while the normal development gate continues to
+  allow documented monorepo blockers.
