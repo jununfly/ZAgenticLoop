@@ -11,6 +11,18 @@ export interface SkillInfo {
     path: string;
     content: string;
 }
+export interface OperationalDocumentSummary {
+    key: 'config' | 'budget' | 'runLog' | 'safety';
+    uri: string;
+    path: string | null;
+    present: boolean;
+    highlights: string[];
+}
+export interface OperationalContextSummary {
+    documents: OperationalDocumentSummary[];
+    missing: string[];
+    rawResources: string[];
+}
 export declare function loadRegistry(root: string): Promise<RegistryData | null>;
 export declare function loadPatternDoc(root: string, patternId: string): Promise<string | null>;
 export declare function listSkills(root: string): Promise<SkillInfo[]>;
@@ -21,4 +33,5 @@ export declare function loadLoopConfig(root: string): Promise<string | null>;
 export declare function loadBudget(root: string): Promise<string | null>;
 export declare function loadRunLog(root: string): Promise<string | null>;
 export declare function loadSafetyDoc(root: string): Promise<string | null>;
+export declare function summarizeOperationalContext(root: string): Promise<OperationalContextSummary>;
 export declare function listPatternDocs(root: string): Promise<string[]>;

@@ -124,8 +124,8 @@
     "1-5": {
       "id": "1-5",
       "label": "设计 MCP raw resources 结构化替代路线",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [],
       "decisions": [
@@ -133,9 +133,14 @@
           "q": "MCP raw resources 替代路线为什么先 explore？",
           "answer": "architecture.md 明确 raw resources 在结构化替代证明前不能移除；需要先选择高价值 resource 做 summary tool 试点，验证结构化返回能覆盖常见问题。",
           "note": "推荐顺序：safety/config/budget/run-log summary 优先，patterns/skills/state raw source 保留。"
+        },
+        {
+          "q": "MCP raw resources 的结构化替代第一步做什么？",
+          "answer": "新增 resolver-backed structured summary tool，优先覆盖 config/budget/run-log/safety 的存在性、来源和关键行；保留所有 loop:// raw resources 与现有 tool 名。",
+          "note": "这是替代路线的试点，不是删除 raw resources。patterns/skills/state 继续以 raw source 为主。"
         }
       ],
-      "notes": ""
+      "notes": "Added loop_summarize_operational_context as a structured evidence route for config/budget/run-log/safety, with raw loop:// resources preserved for audit trail."
     },
     "1-6": {
       "id": "1-6",
@@ -172,7 +177,7 @@
   },
   "metadata": {
     "created": "2026-07-01 01:45:23",
-    "updated": "2026-07-01 11:00:53",
+    "updated": "2026-07-01 11:05:54",
     "md_file": "docs/designs/known-architecture-optimization-roadmap.md"
   }
 }

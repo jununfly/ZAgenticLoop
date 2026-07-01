@@ -21,6 +21,7 @@ import {
   loadBudget,
   loadRunLog,
   loadSafetyDoc,
+  summarizeOperationalContext,
 } from './resolver.js';
 
 const server = new McpServer({
@@ -286,6 +287,17 @@ server.tool(
           : 'No state files found. Create STATE.md from templates/STATE.md.template',
       }],
     };
+  },
+);
+
+server.tool(
+  'loop_summarize_operational_context',
+  'Summarize config, budget, run-log, and safety evidence without reading full raw resources',
+  {},
+  async () => {
+    const root = await resolveProjectRoot();
+    const summary = await summarizeOperationalContext(root);
+    return { content: [{ type: 'text' as const, text: JSON.stringify(summary, null, 2) }] };
   },
 );
 

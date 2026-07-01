@@ -58,6 +58,20 @@ export interface SkillInfo {
   content: string;
 }
 
+export interface OperationalDocumentSummary {
+  key: 'config' | 'budget' | 'runLog' | 'safety';
+  uri: string;
+  path: string | null;
+  present: boolean;
+  highlights: string[];
+}
+
+export interface OperationalContextSummary {
+  documents: OperationalDocumentSummary[];
+  missing: string[];
+  rawResources: string[];
+}
+
 export async function loadRegistry(root: string): Promise<RegistryData | null> {
   const fs = fsFor(root);
   if (!(await fs.exists('patterns/registry.yaml'))) return null;
@@ -143,6 +157,53 @@ export async function loadSafetyDoc(root: string): Promise<string | null> {
     if (content) return content;
   }
   return null;
+}
+
+function summarizeMarkdown(content: string | null, limit = 6): string[] {
+  if (!content) return [];
+  return content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && line !== '---')
+    .slice(0, limit)
+    .map((line) => line.length > 180 ? `${line.slice(0, 177)}...` : line);
+}
+
+async function summarizeFixedDocument(
+  root: string,
+  key: OperationalDocumentSummary['key'],
+  uri: string,
+  candidates: readonly string[],
+): Promise<OperationalDocumentSummary> {
+  const fs = fsFor(root);
+  for (const candidate of candidates) {
+    const content = await fs.readTextIfExists(candidate);
+    if (content) {
+      return {
+        key,
+        uri,
+        path: candidate,
+        present: true,
+        highlights: summarizeMarkdown(content),
+      };
+    }
+  }
+  return { key, uri, path: null, present: false, highlights: [] };
+}
+
+export async function summarizeOperationalContext(root: string): Promise<OperationalContextSummary> {
+  const documents = await Promise.all([
+    summarizeFixedDocument(root, 'config', 'loop://config', ['LOOP.md']),
+    summarizeFixedDocument(root, 'budget', 'loop://budget', ['loop-budget.md']),
+    summarizeFixedDocument(root, 'runLog', 'loop://run-log', ['loop-run-log.md']),
+    summarizeFixedDocument(root, 'safety', 'loop://safety', ['docs/safety.md', 'safety.md', 'SECURITY.md']),
+  ]);
+
+  return {
+    documents,
+    missing: documents.filter((doc) => !doc.present).map((doc) => doc.key),
+    rawResources: documents.map((doc) => doc.uri),
+  };
 }
 
 export async function listPatternDocs(root: string): Promise<string[]> {

@@ -121,6 +121,45 @@ export async function loadSafetyDoc(root) {
     }
     return null;
 }
+function summarizeMarkdown(content, limit = 6) {
+    if (!content)
+        return [];
+    return content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && line !== '---')
+        .slice(0, limit)
+        .map((line) => line.length > 180 ? `${line.slice(0, 177)}...` : line);
+}
+async function summarizeFixedDocument(root, key, uri, candidates) {
+    const fs = fsFor(root);
+    for (const candidate of candidates) {
+        const content = await fs.readTextIfExists(candidate);
+        if (content) {
+            return {
+                key,
+                uri,
+                path: candidate,
+                present: true,
+                highlights: summarizeMarkdown(content),
+            };
+        }
+    }
+    return { key, uri, path: null, present: false, highlights: [] };
+}
+export async function summarizeOperationalContext(root) {
+    const documents = await Promise.all([
+        summarizeFixedDocument(root, 'config', 'loop://config', ['LOOP.md']),
+        summarizeFixedDocument(root, 'budget', 'loop://budget', ['loop-budget.md']),
+        summarizeFixedDocument(root, 'runLog', 'loop://run-log', ['loop-run-log.md']),
+        summarizeFixedDocument(root, 'safety', 'loop://safety', ['docs/safety.md', 'safety.md', 'SECURITY.md']),
+    ]);
+    return {
+        documents,
+        missing: documents.filter((doc) => !doc.present).map((doc) => doc.key),
+        rawResources: documents.map((doc) => doc.uri),
+    };
+}
 export async function listPatternDocs(root) {
     const entries = await fsFor(root).listEntries('patterns');
     return entries

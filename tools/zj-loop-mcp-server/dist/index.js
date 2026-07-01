@@ -3,7 +3,7 @@ import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mc
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { estimatePatternCost, getPatternProfile, listPatternSummaries, recommendPatterns, } from '@jununfly/zj-loop-core';
-import { resolveProjectRoot, loadRegistry, loadPatternDoc, listSkills, loadSkill, loadState, listStateFiles, loadLoopConfig, loadBudget, loadRunLog, loadSafetyDoc, } from './resolver.js';
+import { resolveProjectRoot, loadRegistry, loadPatternDoc, listSkills, loadSkill, loadState, listStateFiles, loadLoopConfig, loadBudget, loadRunLog, loadSafetyDoc, summarizeOperationalContext, } from './resolver.js';
 const server = new McpServer({
     name: 'zagenticloop',
     version: '1.0.0',
@@ -196,6 +196,11 @@ server.tool('loop_list_state_files', 'List all state files present in the projec
                     : 'No state files found. Create STATE.md from templates/STATE.md.template',
             }],
     };
+});
+server.tool('loop_summarize_operational_context', 'Summarize config, budget, run-log, and safety evidence without reading full raw resources', {}, async () => {
+    const root = await resolveProjectRoot();
+    const summary = await summarizeOperationalContext(root);
+    return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] };
 });
 server.tool('loop_get_pattern', 'Get full documentation for a specific pattern by ID', { patternId: z.string().describe('Pattern ID (e.g. daily-triage, pr-babysitter, ci-sweeper)') }, async ({ patternId }) => {
     const root = await resolveProjectRoot();

@@ -17,6 +17,7 @@ import {
   loadBudget,
   loadRunLog,
   loadSafetyDoc,
+  summarizeOperationalContext,
   listPatternDocs,
   loadPatternDoc,
 } from '../dist/resolver.js';
@@ -297,6 +298,26 @@ test('loadSafetyDoc reads docs/safety.md', async () => {
   }
 });
 
+test('summarizeOperationalContext returns structured evidence with raw resource links', async () => {
+  const root = await setup();
+  try {
+    const summary = await summarizeOperationalContext(root);
+    assert.deepEqual(summary.missing, []);
+    assert.deepEqual(summary.rawResources, [
+      'loop://config',
+      'loop://budget',
+      'loop://run-log',
+      'loop://safety',
+    ]);
+    const config = summary.documents.find(doc => doc.key === 'config');
+    assert.equal(config.present, true);
+    assert.equal(config.path, 'LOOP.md');
+    assert.ok(config.highlights.some(line => line.includes('Budget')));
+  } finally {
+    await cleanup();
+  }
+});
+
 test('listPatternDocs finds .md files in patterns/', async () => {
   const root = await setup();
   try {
@@ -358,8 +379,9 @@ test('server lists all tools over stdio', async () => {
   try {
     const res = await callServer(root, [{ id: 1, method: 'tools/list', params: {} }]);
     const names = res.get(1).result.tools.map(t => t.name);
-    assert.equal(names.length, 8);
+    assert.equal(names.length, 9);
     assert.ok(names.includes('loop_list_patterns'));
+    assert.ok(names.includes('loop_summarize_operational_context'));
     assert.ok(names.includes('loop_estimate_cost'));
   } finally {
     await cleanup();
@@ -398,6 +420,23 @@ test('loop_get_pattern tool returns metadata and documentation', async () => {
     assert.ok(text.includes('Registry Metadata'));
     assert.ok(text.includes('Pattern Documentation'));
     assert.ok(text.includes('# Daily Triage'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('loop_summarize_operational_context tool returns structured operational evidence', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'tools/call',
+      params: { name: 'loop_summarize_operational_context', arguments: {} },
+    }]);
+    const text = res.get(1).result.content[0].text;
+    const parsed = JSON.parse(text);
+    assert.equal(parsed.documents.length, 4);
+    assert.equal(parsed.documents.find(doc => doc.key === 'safety').path, 'docs/safety.md');
+    assert.ok(parsed.rawResources.includes('loop://safety'));
   } finally {
     await cleanup();
   }

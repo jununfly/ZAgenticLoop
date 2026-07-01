@@ -113,6 +113,7 @@ Evidence tools and raw resources remain resolver-backed:
 - `loop_list_skills`
 - `loop_get_skill`
 - `loop_list_state_files`
+- `loop_summarize_operational_context`
 - `loop_get_state`
 - `loop://registry`
 - `loop://config`
@@ -131,6 +132,12 @@ shaping; it does not own a separate project filesystem abstraction.
 Raw resources are intentional. They answer "show me the source" and provide an
 audit trail when a structured answer needs inspection. Semantic tools answer
 "what does this mean for agentic loop working?"
+
+`loop_summarize_operational_context` is the first structured evidence route for
+raw operational docs. It summarizes the presence, source path, and key lines for
+config, budget, run-log, and safety documents, and returns the corresponding
+`loop://` raw resource URIs for inspection. It does not replace raw resources
+or move readiness policy into MCP.
 
 Compatibility rules:
 

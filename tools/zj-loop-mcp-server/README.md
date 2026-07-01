@@ -53,6 +53,7 @@ Add to your MCP config (`.mcp.json` or equivalent):
 | `loop_list_patterns` | `@jununfly/zj-loop-core` semantic query | List all patterns with legacy snake_case fields for existing clients |
 | `loop_list_skills` | MCP resolver evidence | List available skills with locations |
 | `loop_list_state_files` | MCP resolver evidence | List state files in the project |
+| `loop_summarize_operational_context` | MCP resolver evidence | Structured summary of config, budget, run-log, and safety docs with raw resource links |
 | `loop_get_pattern` | `@jununfly/zj-loop-core` semantic query + raw doc evidence | Get full pattern docs + registry metadata |
 | `loop_get_skill` | MCP resolver evidence | Get SKILL.md content for a named skill |
 | `loop_get_state` | MCP resolver evidence | Read a state file for current loop status |
@@ -70,7 +71,9 @@ behind `@jununfly/zj-loop-core` semantic queries.
 - Evidence tools and raw resources answer "show me the source" and continue to
   read from `LOOP_PROJECT_ROOT` (`loop://patterns/{id}`,
   `loop://skills/{name}`, `loop://state/{file}`, `loop_get_skill`,
-  `loop_get_state`).
+  `loop_get_state`). `loop_summarize_operational_context` is the structured
+  evidence route for config, budget, run-log, and safety discovery; it links
+  back to the raw resources instead of replacing them.
 - `loop_list_patterns` intentionally returns the legacy JSON field names
   (`week_one_mode`, `token_cost`, `state`) so existing clients can keep parsing
   the response while the implementation consumes core summaries internally.
