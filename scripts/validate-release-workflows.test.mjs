@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 
 import { RELEASE_PACKAGES, validateReleaseWorkflows } from './validate-release-workflows.mjs';
 
+async function withEnv(name, value, callback) {
+  const previous = process.env[name];
+  process.env[name] = value;
+  try {
+    await callback();
+  } finally {
+    if (previous === undefined) {
+      delete process.env[name];
+    } else {
+      process.env[name] = previous;
+    }
+  }
+}
+
 test('RELEASE_PACKAGES captures release-managed npm packages', () => {
   assert.deepEqual(
     RELEASE_PACKAGES.map((releasePackage) => ({
@@ -73,4 +87,13 @@ test('known local file dependencies are explicit release blockers', () => {
     '@jununfly/zj-loop-sync',
     '@jununfly/zj-loop-mcp-server',
   ]);
+});
+
+test('release-ready mode rejects every local file dependency', async () => {
+  await withEnv('ZJ_LOOP_RELEASE_READY', '1', async () => {
+    await assert.rejects(
+      () => validateReleaseWorkflows(),
+      /release-blocking local file dependency/,
+    );
+  });
 });

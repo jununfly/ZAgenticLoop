@@ -185,10 +185,18 @@ async function validatePackageFiles(root, releasePackage, packageJson, errors) {
 }
 
 function validateLocalFileDependencies(releasePackage, packageJson, releaseDoc, errors) {
+  const failOnLocalFileDependencies = process.env.ZJ_LOOP_RELEASE_READY === '1';
   const allowed = new Set(releasePackage.localFileDependencies ?? []);
   const found = localFileDependencies(packageJson);
 
   for (const dependency of found) {
+    if (failOnLocalFileDependencies) {
+      errors.push(
+        `${releasePackage.directory}/package.json has release-blocking local file dependency: ${dependency.name} ${dependency.spec}`,
+      );
+      continue;
+    }
+
     if (!allowed.has(dependency.name)) {
       errors.push(`${releasePackage.directory}/package.json has untracked local file dependency: ${dependency.name} ${dependency.spec}`);
     }

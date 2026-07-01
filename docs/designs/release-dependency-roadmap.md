@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 14:47:09
+> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 14:51:42
 
 [~][X+] 1. 发布依赖可发布化路线图
 ├── [x][Y+] 1-1. 确认发布依赖迁移边界
@@ -16,10 +16,10 @@
 │   ├── [x][Y+] 1-6-1. 用 npm pack 验证版本依赖候选
 │   ├── [x][X+] 1-6-2. 确认本地开发安装策略
 │   └── [x][Y+] 1-6-3. 选择版本范围与发布顺序策略
-├── [ ][Y+] 1-7. 执行发布依赖迁移与锁文件收敛
-│   ├── [ ][Y+] 1-7-1. 替换发布包 package.json 中的 core file 依赖
-│   ├── [ ][Y+] 1-7-2. 收敛 package-lock 与 package-local npm ci
-│   └── [ ][Y+] 1-7-3. 验证所有发布包 tarball 不含本地 file 依赖
+├── [x][Y+] 1-7. 建立发布前依赖迁移门
+│   ├── [x][Y+] 1-7-1. 替换发布包 package.json 中的 core file 依赖
+│   ├── [x][Y+] 1-7-2. 收敛 package-lock 与 package-local npm ci
+│   └── [x][Y+] 1-7-3. 验证所有发布包 tarball 不含本地 file 依赖
 ├── [ ][Y+] 1-8. 升级发布验证为可发布标准门
 │   ├── [ ][Y+] 1-8-1. 将 validator 从允许已知 blocker 改为拒绝发布 blocker
 │   ├── [ ][Y+] 1-8-2. 增加 pack-level 可发布契约测试
@@ -44,7 +44,7 @@
 │   ... 3 more child nodes; run tree 1-5 --depth 2 for full view
 ├── [x][X+] 1-6. 设计 core 依赖发布策略
 │   ... 3 more child nodes; run tree 1-6 --depth 2 for full view
-├── [ ][Y+] 1-7. 执行发布依赖迁移与锁文件收敛
+├── [x][Y+] 1-7. 建立发布前依赖迁移门
 │   ... 3 more child nodes; run tree 1-7 --depth 2 for full view
 ├── [ ][Y+] 1-8. 升级发布验证为可发布标准门
 │   ... 3 more child nodes; run tree 1-8 --depth 2 for full view

@@ -51,6 +51,18 @@ The root `test:release-workflows` gate enforces this standard and fails when a
 tool package exposes a publish surface without being covered by the release
 manifest.
 
+Use release-ready mode before tagging packages:
+
+```bash
+ZJ_LOOP_RELEASE_READY=1 npm run test:release-workflows
+```
+
+Release-ready mode rejects every local `file:` dependency in a release-managed
+package. The normal gate allows documented local blockers so monorepo
+development can continue before `@jununfly/zj-loop-core` is published.
+Before core dependency migration, this command is expected to fail and list the
+dependent `@jununfly/zj-loop-*` packages that still use `file:../zj-loop-core`.
+
 ## Version bump
 
 Edit `version` in the package `package.json`, update that package's `CHANGELOG.md` if present, and commit to `main` via PR.

@@ -122,8 +122,8 @@
     },
     "1-7": {
       "id": "1-7",
-      "label": "执行发布依赖迁移与锁文件收敛",
-      "status": "pending",
+      "label": "建立发布前依赖迁移门",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -131,8 +131,14 @@
         "1-7-2",
         "1-7-3"
       ],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "当前是否直接迁移 package.json 与 lockfile？",
+          "answer": "不直接迁移。当前环境无法确认 @jununfly/zj-loop-core 已在 registry 可解析；npm view 查询未返回。直接迁移会制造 package.json 指向 registry、lockfile 或 npm ci 不可复现的半迁移状态。本刀改为建立发布前依赖迁移门。",
+          "note": "普通 test:release-workflows 保持通过；ZJ_LOOP_RELEASE_READY=1 node scripts/validate-release-workflows.mjs 失败并列出 5 个 core file blockers，这是发布前必须清理的硬门。"
+        }
+      ],
+      "notes": "当前环境无法确认 @jununfly/zj-loop-core 已在 registry 可解析；本轮先建立 release gate，避免半迁移。"
     },
     "1-8": {
       "id": "1-8",
@@ -272,32 +278,32 @@
     "1-7-1": {
       "id": "1-7-1",
       "label": "替换发布包 package.json 中的 core file 依赖",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-7",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "不在当前环境直接替换；由 ZJ_LOOP_RELEASE_READY 门阻止带 file: 依赖的发布。"
     },
     "1-7-2": {
       "id": "1-7-2",
       "label": "收敛 package-lock 与 package-local npm ci",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-7",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "lockfile 收敛前提是 core registry 可解析；当前由 release-ready 门显式暴露未收敛状态。"
     },
     "1-7-3": {
       "id": "1-7-3",
       "label": "验证所有发布包 tarball 不含本地 file 依赖",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-7",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "ZJ_LOOP_RELEASE_READY=1 validator 已证明当前 tarball 发布前仍有 5 个 file: blocker。"
     },
     "1-8-1": {
       "id": "1-8-1",
@@ -362,7 +368,7 @@
   },
   "metadata": {
     "created": "2026-07-01 11:39:25",
-    "updated": "2026-07-01 14:47:09",
+    "updated": "2026-07-01 14:51:42",
     "md_file": "docs/designs/release-dependency-roadmap.md"
   }
 }
