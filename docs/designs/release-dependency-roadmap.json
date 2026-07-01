@@ -103,7 +103,7 @@
     "1-6": {
       "id": "1-6",
       "label": "设计 core 依赖发布策略",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -235,7 +235,7 @@
     "1-6-2": {
       "id": "1-6-2",
       "label": "确认本地开发安装策略",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6",
       "children": [],
@@ -244,19 +244,30 @@
           "q": "本地开发安装策略的约束是什么？",
           "answer": "不能只改 package.json。旧 package-lock 会继续把 core 记录为 node_modules/@jununfly/zj-loop-core -> ../zj-loop-core link；删除 lockfile 后重新生成会尝试 registry 解析，当前未发布/离线环境会卡住或失败。迁移策略必须同时处理 lockfile 与本地开发：要么先发布 core 再生成 registry lockfile，要么为本地开发提供明确的 install 覆盖策略。",
           "note": "临时实验：保留旧 lock 时 npm install --package-lock-only 会保留 link；删除 lock 后干净生成超过 90 秒未完成，说明依赖 registry 可用性。"
+        },
+        {
+          "q": "本地开发安装策略最终怎么定？",
+          "answer": "本地 monorepo 开发在 core 未发布前允许继续使用 file:../zj-loop-core 与 package-lock link；root build:tools/test:tools 不刷新 package-local locks。真正发布前必须先发布 core，再把依赖包的 package.json 与 package-lock.json 一起迁移到 registry version range，并用 package-local npm ci、npm pack 和 release validator 验证。",
+          "note": "这样把本地开发便利和 public npm 可发布标准分开：本地可用 file link，发布路径不允许 file link。docs/RELEASE.md 已记录该策略。"
         }
       ],
-      "notes": "已确认约束：lockfile 与本地开发安装策略必须先定，再能安全迁移 package.json。"
+      "notes": "策略已定：本地可保留 file link；发布前先发布 core，再迁移 package.json+lockfile 到 registry version range。"
     },
     "1-6-3": {
       "id": "1-6-3",
       "label": "选择版本范围与发布顺序策略",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "版本范围与发布顺序策略怎么选？",
+          "answer": "当前 core 版本是 0.1.0，依赖包发布迁移时使用 @jununfly/zj-loop-core: ^0.1.0。对 npm semver 的 0.x 版本，^0.1.0 只接受 0.1.x patch，不会自动接受 0.2.0，适合 pre-1.0 core。发布顺序必须 core first：先发布 core，再为依赖包生成 registry lockfile、跑 npm ci/test/pack，最后发布依赖包。",
+          "note": "docs/RELEASE.md 已记录该策略；1-7 才执行 package.json/package-lock 迁移。"
+        }
+      ],
+      "notes": "版本范围选 ^0.1.0；发布顺序 core first，再迁移依赖包 lockfile 与发布。"
     },
     "1-7-1": {
       "id": "1-7-1",
@@ -351,7 +362,7 @@
   },
   "metadata": {
     "created": "2026-07-01 11:39:25",
-    "updated": "2026-07-01 14:42:27",
+    "updated": "2026-07-01 14:47:09",
     "md_file": "docs/designs/release-dependency-roadmap.md"
   }
 }

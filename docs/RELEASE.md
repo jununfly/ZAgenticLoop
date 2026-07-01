@@ -146,6 +146,40 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok --dry-run
 
 ## Before npm is live (local / monorepo)
 
+Local monorepo development may keep `file:../zj-loop-core` dependencies and
+package-lock links while `@jununfly/zj-loop-core` is not published. Root
+`npm run build:tools` and `npm run test:tools` run against the checked-in
+package installs and do not refresh package-local locks by default.
+
+CI validate gates and release workflows do run package-local installs:
+
+- `scripts/ci-validate-gates.sh` runs `run-tool-package-scripts.mjs ... --install`
+  for the validate gate packages.
+- Release workflows run `npm ci` inside each package working directory before
+  publishing.
+
+Before tagging a package that depends on `@jununfly/zj-loop-core`, first publish
+core, then migrate that package's dependency and lockfile from
+`file:../zj-loop-core` to a registry version range. A lockfile generated from an
+old `file:` lock can preserve the local link even after `package.json` is
+changed, so release migration must verify both `package.json` and
+`package-lock.json`.
+
+For the current core version, dependent packages should use
+`@jununfly/zj-loop-core: ^0.1.0` after core is published. In npm semver, `^0.1.0`
+accepts compatible `0.1.x` patches but not `0.2.0`, which is appropriate while
+core is still pre-1.0. Publish order is:
+
+1. publish `@jununfly/zj-loop-core`
+2. regenerate each dependent package lockfile against the registry dependency
+3. run package-local `npm ci`, `npm test`, and `npm pack` checks
+4. tag and publish dependent `@jununfly/zj-loop-*` packages
+5. publish the independent `@cobusgreyling/goal-audit` companion package when
+   needed
+
+Do not publish dependent packages in the same release step that first publishes
+core unless the registry dependency can be resolved by package-local `npm ci`.
+
 ```bash
 cd tools/zj-loop-audit && npm ci && npm test && node dist/cli.js ../.. --suggest
 cd tools/zj-loop-init && npm ci && npm test && node dist/cli.js /tmp/target --pattern daily-triage --dry-run
