@@ -6,7 +6,21 @@ Landed from [X](https://x.com), the [showcase](https://jununfly.github.io/ZAgent
 
 ## 1. Pick your pain (30 seconds)
 
-Not sure which loop? Use the [interactive pattern picker](https://jununfly.github.io/ZAgenticLoop/#interactive) on the showcase — it recommends a pattern, scaffold command, first `/loop` line, and a token estimate.
+Not sure which loop?
+
+```bash
+# Scaffold starter (or copy manually)
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex
+
+# Score loop readiness (this repo also comments scores on PRs in CI)
+npx @jununfly/zj-loop-audit . --suggest
+
+# Codex — report only, week one
+/loop 1d Run loop-triage. Update STATE.md. No auto-fix.
+
+# Also try the new low-risk pattern
+/loop 1d Run changelog-scan + draft-release-notes. Write RELEASE_NOTES_DRAFT.md. Human review only.
+```
 
 Or start with **Daily Triage** if you just want to learn loop discipline with low risk.
 
@@ -109,7 +123,3 @@ npx @jununfly/zj-loop-audit . --badge
 - [ZAgenticLoop essay](https://jununfly.github.io/ZAgenticLoop) — concept and primitives
 - [Primitives matrix](./primitives-matrix.md) — Grok vs Claude vs Codex vs OpenClaw vs Cursor
 - [Operating loops](./operating-loops.md) — when to kill a loop
-
----
-
-*Questions? [GitHub Discussions](https://github.com/jununfly/ZAgenticLoop/discussions) · Share your setup via [Add Adopter](https://github.com/jununfly/ZAgenticLoop/issues/new?template=add-adopter.yml)*
