@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 14:35:06
+> 数据文件: `release-dependency-roadmap.json` | 最后更新: 2026-07-01 14:42:27
 
 [~][X+] 1. 发布依赖可发布化路线图
 ├── [x][Y+] 1-1. 确认发布依赖迁移边界
@@ -13,8 +13,8 @@
 │   ├── [x][X+] 1-5-2. 决定 zj-loop-sync 与 zj-loop-mcp-server 发布身份
 │   └── [x][Y+] 1-5-3. 固定发布宇宙验收标准
 ├── [ ][X+] 1-6. 设计 core 依赖发布策略
-│   ├── [ ][Y+] 1-6-1. 用 npm pack 验证版本依赖候选
-│   ├── [ ][X+] 1-6-2. 确认本地开发安装策略
+│   ├── [x][Y+] 1-6-1. 用 npm pack 验证版本依赖候选
+│   ├── [~][X+] 1-6-2. 确认本地开发安装策略
 │   └── [ ][Y+] 1-6-3. 选择版本范围与发布顺序策略
 ├── [ ][Y+] 1-7. 执行发布依赖迁移与锁文件收敛
 │   ├── [ ][Y+] 1-7-1. 替换发布包 package.json 中的 core file 依赖
@@ -29,25 +29,10 @@
     ├── [ ][Y+] 1-9-2. 更新 architecture 发布边界结论
     └── [ ][X+] 1-9-3. 决定是否进入下一批产品 feature
 
-### 当前施工：1. 发布依赖可发布化路线图
+### 当前施工：1-6-2. 确认本地开发安装策略
+
+已确认约束：lockfile 与本地开发安装策略必须先定，再能安全迁移 package.json。
 
 **决策：**
-- Q: 继续架构优化还是开发新 feature？ → 先继续架构优化，聚焦发布依赖可发布化。当前稳定文档明确记录 @jununfly/zj-loop-audit/init/cost 仍通过 file:../zj-loop-core 依赖 core，npm pack 会保留不可发布的本地路径；这是 release blocker。 (推荐先清 blocker，再评估新 feature；否则新 feature 会继续建立在不可发布依赖状态上。)
-- Q: 这次架构优化的发布标准是什么？ → 以 public npm 可发布为标准，而不是以本地 monorepo build 通过为标准。一个包进入发布宇宙后，必须满足：package.json 依赖可被 npm 消费者解析、npm pack 不泄漏本地 file: 依赖、files allowlist 中的产物存在且策略明确、release workflow/tag/docs/validator 一致、核心 gates 通过。 (这把目标从局部依赖替换提升为发布标准门；后续 feature 只有在该门稳定后再排。)
-
-**当前子树：**
-├── [x][Y+] 1-1. 确认发布依赖迁移边界
-├── [ ][Y+] 1-2. 迁移 release-managed packages 的 core 依赖
-├── [ ][Y+] 1-3. 更新发布验证与文档 blocker 状态
-├── [ ][X+] 1-4. 评估下一批产品 feature 候选
-├── [x][X+] 1-5. 定义可发布标准与发布包宇宙
-│   ... 3 more child nodes; run tree 1-5 --depth 2 for full view
-├── [ ][X+] 1-6. 设计 core 依赖发布策略
-│   ... 3 more child nodes; run tree 1-6 --depth 2 for full view
-├── [ ][Y+] 1-7. 执行发布依赖迁移与锁文件收敛
-│   ... 3 more child nodes; run tree 1-7 --depth 2 for full view
-├── [ ][Y+] 1-8. 升级发布验证为可发布标准门
-│   ... 3 more child nodes; run tree 1-8 --depth 2 for full view
-└── [ ][Y+] 1-9. 收尾发布文档与架构决策
-    ... 3 more child nodes; run tree 1-9 --depth 2 for full view
+- Q: 本地开发安装策略的约束是什么？ → 不能只改 package.json。旧 package-lock 会继续把 core 记录为 node_modules/@jununfly/zj-loop-core -> ../zj-loop-core link；删除 lockfile 后重新生成会尝试 registry 解析，当前未发布/离线环境会卡住或失败。迁移策略必须同时处理 lockfile 与本地开发：要么先发布 core 再生成 registry lockfile，要么为本地开发提供明确的 install 覆盖策略。 (临时实验：保留旧 lock 时 npm install --package-lock-only 会保留 link；删除 lock 后干净生成超过 90 秒未完成，说明依赖 registry 可用性。)
 <!-- ROADMAP_SECTION_END -->
