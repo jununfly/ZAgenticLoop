@@ -1,8 +1,9 @@
 # Roadmap-Sliced Development Pattern
 
-This design document records the origin and durable decisions behind the public
-[Roadmap-Sliced Development Pattern](../../patterns/roadmap-sliced-development-pattern.md).
-The reusable pattern is now registered in `patterns/registry.yaml`.
+Roadmap-Sliced Development is a reusable human-agent development pattern for
+turning ambiguous product, architecture, documentation, or release initiatives
+into reviewable slices with explicit decisions, verification evidence, commits,
+and PR handoff.
 
 Pattern id: **roadmap-sliced-development-pattern**
 Chinese name: **路线图切片开发循环**
@@ -766,8 +767,8 @@ Suggested budget posture:
 Closeout date: 2026-07-02
 
 The process roadmap that graduated this pattern recorded 35 decisions. All
-durable decisions were absorbed into this design doc before deleting the process
-roadmap files.
+durable decisions were absorbed into this pattern and its design record before
+deleting the process roadmap files.
 
 | Decision area | Classification | Durable location |
 | --- | --- | --- |
@@ -785,7 +786,7 @@ an unneeded process note.
 
 ## Registry Shape
 
-Registered shape:
+Registry entry:
 
 ```yaml
 - id: roadmap-sliced-development-pattern
@@ -804,5 +805,6 @@ Registered shape:
   token_cost: medium
 ```
 
-The reusable pattern is registered in `patterns/registry.yaml`; this design doc
-remains as the durable decision record for how it was shaped.
+This pattern is registered in `patterns/registry.yaml`. Keep the registry entry,
+starter, README tables, and bundled tool registries in sync when changing its
+public surface.

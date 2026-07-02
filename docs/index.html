@@ -47,7 +47,7 @@
 </nav>
 
 <header class="hero wrap">
-  <div class="badge">Open source · Tool-agnostic · Production-ready · L3 dogfood · 7 patterns · Interactive tools</div>
+  <div class="badge">Open source · Tool-agnostic · Production-ready · L3 dogfood · 8 patterns · Interactive tools</div>
   <h1>Design the system<br>that prompts your agents</h1>
   <p class="lead">
     Agentic Loop Working moves you from "I prompt → agent responds → I prompt again"
@@ -173,7 +173,7 @@
   <img
     class="hero-img"
     src="https://raw.githubusercontent.com/jununfly/ZAgenticLoop/main/assets/visuals/patterns-overview.svg"
-    alt="Seven production loop patterns — cadence and token cost overview"
+    alt="Eight production loop patterns — cadence and token cost overview"
     loading="lazy"
     style="margin-bottom: 28px;"
   />
@@ -233,6 +233,17 @@
       <a class="link" href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/dependency-sweeper.md">Read pattern →</a>
       <a class="link" href="https://github.com/jununfly/ZAgenticLoop/tree/main/starters/dependency-sweeper" style="margin-left:12px">Starter →</a>
     </article>
+    <article class="pattern-card">
+      <span class="tag">Human-led</span>
+      <h3>Roadmap-Sliced Development</h3>
+      <p>Drive ambiguous product, architecture, docs, and release initiatives through roadmap-backed slices, verification, closeout, and PR handoff.</p>
+      <div class="pattern-meta">
+        <span>⏱ 1d</span>
+        <span>◆ Medium risk</span>
+      </div>
+      <a class="link" href="https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/roadmap-sliced-development-pattern.md">Read pattern →</a>
+      <a class="link" href="https://github.com/jununfly/ZAgenticLoop/tree/main/starters/roadmap-sliced-development-pattern" style="margin-left:12px">Starter →</a>
+    </article>
 
     <article class="pattern-card">
       <span class="tag">Low risk</span>
@@ -259,7 +270,7 @@
   </div>
   <div class="stats">
     <div class="stat">
-      <div class="num">7</div>
+      <div class="num">8</div>
       <div class="label">Patterns</div>
     </div>
     <div class="stat">
@@ -325,6 +336,7 @@ npx @jununfly/zj-loop-audit . --suggest
       <div class="symptom-pill" data-symptom="debt">Merge debt / TODOs piling up</div>
       <div class="symptom-pill" data-symptom="releases">Stale release notes / changelogs</div>
       <div class="symptom-pill" data-symptom="issues">Noisy issue backlog / duplicates</div>
+      <div class="symptom-pill" data-symptom="initiative">Ambiguous product / architecture initiative</div>
     </div>
 
     <div id="reco-output" class="reco-card" style="display:none;">
@@ -532,7 +544,8 @@ const REGISTRY_COSTS = {
   'dependency-sweeper': { cadence: '6h-1d', token_cost: 'medium', cost: { tokens_noop: 5000, tokens_report: 60000, tokens_action: 300000, suggested_daily_cap: 500000, early_exit_required: true } },
   'post-merge-cleanup': { cadence: '1d-6h', token_cost: 'low', cost: { tokens_noop: 5000, tokens_report: 40000, tokens_action: 150000, suggested_daily_cap: 200000, early_exit_required: false } },
   'changelog-drafter': { cadence: '1d', token_cost: 'low', cost: { tokens_noop: 5000, tokens_report: 35000, tokens_action: 80000, suggested_daily_cap: 100000, early_exit_required: false } },
-  'issue-triage': { cadence: '2h-1d', token_cost: 'low', cost: { tokens_noop: 3000, tokens_report: 30000, tokens_action: 60000, suggested_daily_cap: 80000, early_exit_required: false } }
+  'issue-triage': { cadence: '2h-1d', token_cost: 'low', cost: { tokens_noop: 3000, tokens_report: 30000, tokens_action: 60000, suggested_daily_cap: 80000, early_exit_required: false } },
+  'roadmap-sliced-development-pattern': { cadence: '1d', token_cost: 'medium', cost: { tokens_noop: 10000, tokens_report: 80000, tokens_action: 300000, suggested_daily_cap: 500000, early_exit_required: true } }
 };
 
 function parseInterval(token) {
@@ -687,6 +700,17 @@ const PATTERNS = {
     loop: '/loop 1d Run issue-triage. Update issue-triage-state.md. Propose labels and priorities only — no auto-close.',
     patternHref: 'https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/issue-triage.md',
     starterHref: 'https://github.com/jununfly/ZAgenticLoop/tree/main/starters/issue-triage'
+  },
+  initiative: {
+    name: 'Roadmap-Sliced Development',
+    meta: '1d • Medium risk • L2 guided',
+    patternId: 'roadmap-sliced-development-pattern',
+    costLevel: 'L2',
+    costCadence: '1d',
+    npx: 'npx @jununfly/zj-loop-init . --pattern roadmap-sliced-development-pattern --tool codex',
+    loop: 'Run zj-grill-me + zj-roadmap-driven for one bounded roadmap slice. Update evidence before commit; continue to PR handoff after closeout.',
+    patternHref: 'https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/roadmap-sliced-development-pattern.md',
+    starterHref: 'https://github.com/jununfly/ZAgenticLoop/tree/main/starters/roadmap-sliced-development-pattern'
   }
 };
 

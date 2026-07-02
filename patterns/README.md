@@ -21,6 +21,7 @@ Each pattern answers:
 | Post-Merge Cleanup | 1d–6h | Low | [post-merge-cleanup.md](./post-merge-cleanup.md) |
 | Dependency Sweeper | 6h–1d | Medium | [dependency-sweeper.md](./dependency-sweeper.md) |
 | Changelog Drafter | 1d | Low | [changelog-drafter.md](./changelog-drafter.md) |
+| Roadmap-Sliced Development | 1d | Medium | [roadmap-sliced-development-pattern.md](./roadmap-sliced-development-pattern.md) |
 
 Machine-readable index: [registry.yaml](./registry.yaml)
 

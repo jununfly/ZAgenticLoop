@@ -27,8 +27,9 @@ After scaffolding, always run `npx @jununfly/zj-loop-audit . --suggest` and actu
 | `post-merge-cleanup` | `post-merge-state.md` |
 | `changelog-drafter` | `changelog-drafter-state.md` |
 | `issue-triage` | `issue-triage-state.md` |
+| `roadmap-sliced-development-pattern` | `roadmap-sliced-state.md` |
 
-L2 patterns (`ci-sweeper`, `dependency-sweeper`) also copy `minimal-fix` and `loop-verifier` templates when missing from the starter.
+L2 patterns (`ci-sweeper`, `dependency-sweeper`, `roadmap-sliced-development-pattern`) also copy verifier templates when missing from the starter; fix loops only copy `minimal-fix` where the registry asks for it.
 
 Every scaffold also creates:
 

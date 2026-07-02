@@ -238,3 +238,36 @@ patterns:
         grok: /loop 2h Run issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.
         claude: /loop 2h $issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.
         codex: "Automation 2h: issue-triage → issue-triage-state.md. Propose only."
+
+  - id: roadmap-sliced-development-pattern
+    name: Roadmap-Sliced Development Pattern
+    file: roadmap-sliced-development-pattern.md
+    goal: Drive ambiguous architecture, product, documentation, and release initiatives through bounded roadmap-backed slices
+    cadence: 1d
+    risk: medium
+    tools: [grok, claude-code, codex]
+    skills: [zj-grill-me, zj-roadmap-driven, zj-grill-with-docs]
+    state: roadmap-sliced-state.md
+    phases: [explore, decide, slice, verify, commit, closeout, pr-handoff]
+    human_gates: [naming, scope-expansion, release-boundary, branch-merge, process-doc-deletion]
+    starter: starters/roadmap-sliced-development-pattern
+    week_one_mode: L2
+    token_cost: medium
+    cost:
+      tokens_noop: 10000
+      tokens_report: 80000
+      tokens_action: 300000
+      suggested_daily_cap: 500000
+      early_exit_required: true
+    init:
+      templates:
+        minimal_fix: false
+        verifier: true
+      budget:
+        max_runs_per_day: 1
+        max_spawns_l1: 0
+        max_spawns_l2: 2
+      first_loop_command:
+        grok: /loop 1d Run roadmap-sliced-development-pattern. Update roadmap-sliced-state.md before commits. Execute one bounded slice, verify, commit, and stop at Human Gates.
+        claude: /loop 1d $zj-grill-me + $zj-roadmap-driven — execute one roadmap slice with verification evidence before commit. Stop at Human Gates.
+        codex: "Run $zj-grill-me + $zj-roadmap-driven for one bounded roadmap slice. Update roadmap-sliced-state.md before commit; continue to PR handoff after closeout."

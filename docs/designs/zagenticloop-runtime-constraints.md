@@ -22,7 +22,9 @@ or documentation changes should implement.
 ## Non-Goals
 
 - Do not implement roadmap CLI locking in this slice.
-- Do not register `roadmap-sliced-development-pattern` as a public pattern yet.
+- Do not define the registry graduation mechanics in this runtime-constraints
+  slice. `roadmap-sliced-development-pattern` is now registered separately as a
+  public pattern.
 - Do not change repository-wide PR templates.
 - Do not enable unattended merge, release, or destructive cleanup behavior.
 

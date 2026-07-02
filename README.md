@@ -118,6 +118,7 @@ Full detail: [docs/primitives.md](docs/primitives.md) · [docs/primitives-matrix
 | [Changelog Drafter](patterns/changelog-drafter.md) | 1d or tag | [changelog-drafter](starters/changelog-drafter/) | L1 draft | Low |
 | [Post-Merge Cleanup](patterns/post-merge-cleanup.md) | 1d-6h | [post-merge-cleanup](starters/post-merge-cleanup/) | L1 off-peak | Low |
 | [Issue Triage](patterns/issue-triage.md) | 2h-1d | [issue-triage](starters/issue-triage/) | L1 propose-only | Low |
+| [Roadmap-Sliced Development](patterns/roadmap-sliced-development-pattern.md) | 1d | [roadmap-sliced-development-pattern](starters/roadmap-sliced-development-pattern/) | L2 guided | Medium |
 
 Machine-readable index: [patterns/registry.yaml](patterns/registry.yaml)
 

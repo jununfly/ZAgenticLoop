@@ -16,9 +16,11 @@ flowchart TD
     J -->|yes| K[Post-Merge Cleanup]
     J -->|no| L{Release notes / changelog stale?}
     L -->|yes| M[Changelog Drafter]
-    L -->|no| N{Tight token budget?}
-    N -->|yes| M
-    N -->|no| G
+    L -->|no| N{Ambiguous product / architecture initiative?}
+    N -->|yes| O[Roadmap-Sliced Development]
+    N -->|no| P{Tight token budget?}
+    P -->|yes| M
+    P -->|no| G
 ```
 
 ## Cost-aware picks
@@ -49,6 +51,7 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok   # scaffolds lo
 | Outdated packages / CVE alerts | [Dependency Sweeper](../patterns/dependency-sweeper.md) | L2 patch-only, denylist majors |
 | TODOs and cleanup after merges | [Post-Merge Cleanup](../patterns/post-merge-cleanup.md) | L1 off-peak, small fixes only |
 | Stale or missing release notes | [Changelog Drafter](../patterns/changelog-drafter.md) | **L1** (draft only first), very low risk |
+| Ambiguous product, architecture, docs, or release initiative | [Roadmap-Sliced Development](../patterns/roadmap-sliced-development-pattern.md) | **L2 guided** — one branch, one slice at a time, explicit closeout + PR handoff |
 
 ## Overlap rules
 
@@ -59,6 +62,7 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok   # scaffolds lo
 | Dependency Sweeper + CI Sweeper | Pause Dependency Sweeper while CI is red on main |
 | Post-Merge + PR Babysitter | Post-Merge runs off-peak only |
 | Changelog Drafter + anything | Changelog Drafter is read-mostly and safe to run alongside others; it should not auto-publish |
+| Roadmap-Sliced Development + anything | Roadmap-Sliced owns the bounded initiative branch; scheduled loops report or feed issues but do not expand its PR without a Human Gate |
 
 ## First loop recommendation
 

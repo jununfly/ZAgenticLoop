@@ -1,0 +1,46 @@
+# Roadmap-Sliced Initiative State
+
+Roadmap id:
+Branch: `zjal/<roadmap-id>`
+Issue / tracker:
+PR:
+Last updated:
+
+## Goal
+
+One sentence describing the product, architecture, documentation, or release initiative.
+
+## Current Focus
+
+- Parent node:
+- Leaf node:
+- Mode: explore | exploit
+- Commit intent:
+
+## Decisions
+
+| Node | Decision | Durable location |
+|------|----------|------------------|
+| | | |
+
+## Verification Evidence
+
+| Leaf | Gate | Result | Notes |
+|------|------|--------|-------|
+| | | | |
+
+## Human Gates
+
+| Gate | Decision | Scope / expiry |
+|------|----------|----------------|
+| | | |
+
+## Closeout Checklist
+
+- [ ] All leaf nodes completed, deferred with follow-up, or explicitly won't do.
+- [ ] Durable decisions moved into docs, ADRs, README, or pattern docs.
+- [ ] Process roadmap files deleted or promoted into durable docs.
+- [ ] Closeout commit created separately from the final feature slice.
+- [ ] Branch clean.
+- [ ] Branch pushed.
+- [ ] PR opened or updated with verification notes and branch cleanup plan.
