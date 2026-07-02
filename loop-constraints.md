@@ -39,10 +39,7 @@ Never edit these paths or risk areas without explicit human approval:
 These areas may be edited only in a PR or equivalent human review flow:
 
 - `docs/primitives*.md`
-- `docs/index.html`
 - `docs/assets/**`
-- `assets/visuals/**`
-- `assets/*.jpg`
 - `tools/zj-loop-audit/src/**`
 - `patterns/**`
 - `patterns/registry.yaml`

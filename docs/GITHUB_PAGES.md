@@ -5,7 +5,8 @@
 3. **Folder**: `/docs`
 4. Save — showcase at `https://jununfly.github.io/ZAgenticLoop/`
 
-The homepage (`docs/index.html`) is the full interactive showcase with patterns, primitives, quick-start, and an anatomy diagram.
+GitHub Pages serves the `/docs` folder. Keep a valid homepage in this directory
+before relying on the site root URL.
 
 The root `README.md` and `LOOP.md` describe how this reference dogfoods its own patterns via `.github/workflows/audit.yml` + `validate-patterns.yml`.
 
