@@ -128,7 +128,7 @@ Branch rule:
 Recommended branch naming:
 
 ```text
-codex/<roadmap-id>
+zjal/<roadmap-id>
 ```
 
 Recommended issue naming:
