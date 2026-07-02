@@ -203,14 +203,16 @@ specific roadmap raises their risk enough to make them explicit gates.
    Commit after the slice is coherent. Commit is the hard boundary of a slice:
    if it cannot be committed cleanly, the slice is still too large or not done.
 
-10. **Repeat or close**  
+10. **Repeat or close**
    Continue with the next slice, expand the roadmap when needed, or close out by
    consolidating process docs into durable docs and deleting temporary files.
 
-11. **Open the PR**  
-   When the roadmap is complete, open a PR from the roadmap branch. The PR body
-   should link the roadmap, list completed parent nodes, summarize verification,
-   and call out human gates that were resolved.
+11. **Close out and hand off the PR**
+   After the closeout commit, continue automatically to PR handoff: confirm the
+   branch is clean, push the roadmap branch, and open or update the PR with
+   verification notes, closeout status, durable docs, and the post-merge branch
+   cleanup plan. `closeout commit complete` is not the same as `roadmap loop
+   complete`.
 
 ## Definition of Slice
 
@@ -409,6 +411,9 @@ Closeout commit rule:
 - The closeout commit carries durable docs consolidation, roadmap/process file
   deletion or migration, decision audit, and closeout evidence.
 - Do not hide closeout inside the final feature commit.
+- Do not treat the closeout commit as terminal for a development roadmap. It is
+  complete only after the agent continues to PR handoff, unless a Human Gate
+  explicitly pauses before push/PR or push/PR creation is externally blocked.
 
 Closeout is a merge gate:
 
@@ -441,6 +446,18 @@ The PR is the final review surface for a roadmap. It should include:
 - closeout status
 
 The PR should not require reviewers to reconstruct the roadmap from chat.
+
+Post-closeout continuation rule:
+
+- After closeout commit, the agent continues automatically to PR handoff.
+- PR handoff means confirming the branch is clean, pushing the roadmap branch,
+  and opening or updating the PR with verification notes, closeout status,
+  durable docs, and post-merge branch cleanup plan.
+- Stopping before PR handoff is valid only when a Human Gate explicitly says to
+  pause before push/PR, or when an external blocker prevents push/PR creation.
+- If blocked, record the blocker and the exact next command needed to resume.
+- `roadmap loop complete` means PR handoff is complete, not merely that closeout
+  was committed.
 
 Roadmap evidence policy:
 
@@ -566,6 +583,16 @@ for commit.
 Roadmap status follows gate evidence. A node is `completed` only after its gate
 passes or its decision-only gate is satisfied.
 
+Expected-red contract tests:
+
+- An expected-red test is not a Human Gate.
+- It is part of the implementation workflow when the leaf notes or commit intent
+  explicitly say the red result is expected.
+- The red test must prove the target gap, and the next step must be the green
+  implementation inside the same leaf.
+- If the final leaf verification gate is still red, it becomes a failed
+  verification gate.
+
 Verification failure rule:
 
 - A failed leaf-node gate blocks the current parent node by default.
@@ -584,6 +611,7 @@ Observed gate mapping:
 | Documentation/report | `git diff --check`, link scan, direct URL check when public links are involved. |
 | Registry or pattern change | registry validation and relevant tool tests. |
 | CLI/tool change | package tests, build, and root tool gate if shared behavior changes. |
+| Contract-first / TDD slice | expected red test, then green implementation, then final verification gate. |
 | Release change | release-ready validation, package packing/install checks, publish workflow check. |
 | Pages/public URL change | GitHub Pages config check and `curl -I -L` against final URLs. |
 
@@ -650,6 +678,7 @@ not need a full expiry rule.
 | Temporary roadmap/docs become permanent clutter | Closeout requires merging process notes into durable docs, then deleting roadmap/process files. |
 | Closeout only deletes files | Run a durable-decision audit before deleting or migrating roadmap files. |
 | Closeout hides inside feature work | Keep closeout as a separate commit with decision audit and process-file handling. |
+| Agent stops after closeout commit | Treat closeout commit as the bridge to automatic PR handoff, not as the roadmap terminal state. |
 | Merged branches linger without reason | Record branch cleanup plan before merge and delete or justify retention after merge. |
 | Agent keeps asking instead of exploring | `zj-grill-me` rule: if codebase can answer, inspect the codebase. |
 | Decisions disappear into chat history | Record decisions through roadmap CLI on the relevant node. |
@@ -665,6 +694,7 @@ not need a full expiry rule.
 | Pattern becomes overfit before proof | Keep it as a candidate design doc until one real initiative completes the Minimal Viable Checklist. |
 | Roadmap becomes a substitute for judgment | Require human gates for naming, scope expansion, public surfaces, and closeout. |
 | Verification is postponed until the end | Attach a minimum verification gate to every slice. |
+| Expected red is mistaken for a Human Gate | Treat contract-first red tests as implementation evidence, not final verification failure. |
 | Failed verification is ignored | Treat failed leaf-node gates as blocking until fixed, deferred with follow-up, or explicitly waived by a Human Gate. |
 | Human Gate approval becomes a permanent pass | Record scope, validity, and expiry conditions for high-risk approvals. |
 | Verification waiver loses the failure | Require a follow-up issue unless the roadmap and PR record an explicit `won't fix` / `won't do` reason. |
@@ -694,11 +724,15 @@ not need a full expiry rule.
   are updated.
 - Marking a node `completed` without a passed verification gate or satisfied
   decision-only gate.
+- Treating an expected-red contract test as a Human Gate instead of continuing
+  to the green implementation inside the same leaf.
 - Deleting roadmap/process files before durable docs have absorbed the useful
   decisions.
 - Closing out without classifying each roadmap decision as durable doc, PR only,
   or discarded process note.
 - Mixing closeout changes into the final feature slice commit.
+- Treating `closeout commit complete` as `roadmap loop complete` instead of
+  continuing to PR handoff.
 - Treating branch cleanup as forgotten background work instead of a post-merge
   checklist item.
 - Calling the pattern L3 because it is fast, rather than because verification,

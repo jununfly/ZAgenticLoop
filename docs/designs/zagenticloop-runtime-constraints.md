@@ -60,7 +60,7 @@ The loop stops only when one of these conditions occurs:
 
 - roadmap completed
 - Human Gate reached
-- verification gate failed
+- final or unexpected verification gate failed
 - scope expansion is needed
 - roadmap write safety cannot be trusted
 - external blocker prevents meaningful progress
@@ -70,6 +70,10 @@ The loop stops only when one of these conditions occurs:
 
 Stopping is not failure. A stop is correct when the next action requires human
 judgment, shared-state mutation, or a changed roadmap boundary.
+
+Expected-red contract tests are not stop conditions when the leaf notes or
+commit intent identify them as expected. They become stop conditions only if the
+leaf's final verification gate remains red.
 
 ## Roadmap Write Safety
 
