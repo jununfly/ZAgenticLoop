@@ -40,7 +40,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@jununfly/zj-loop-core": "^0.1.0"
+    "@jununfly/zj-loop-core": "^0.1.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
