@@ -19,7 +19,7 @@
         "minimal-fix",
         "rebase-and-clean"
       ],
-      "state": "pr-babysitter-state.md",
+      "state": "zj-loop/pr-babysitter-state.md",
       "phases": [
         "discover",
         "triage",
@@ -77,7 +77,7 @@
         "loop-triage",
         "minimal-fix"
       ],
-      "state": "STATE.md",
+      "state": "zj-loop/STATE.md",
       "phases": [
         "report",
         "act-small-wins",
@@ -113,9 +113,9 @@
           "max_spawns_l2": 2
         },
         "first_loop_command": {
-          "grok": "/loop 1d Run loop-triage. Update STATE.md. No auto-fix in week one.",
-          "claude": "/loop 1d $loop-triage — update STATE.md. Report-only week one.",
-          "codex": "Automation daily: $loop-triage → update STATE.md. Report-only."
+          "grok": "/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.",
+          "claude": "/loop 1d $loop-triage — update zj-loop/STATE.md. Report-only week one.",
+          "codex": "Automation daily: $loop-triage → update zj-loop/STATE.md. Report-only."
         }
       }
     },
@@ -136,7 +136,7 @@
         "ci-triage",
         "minimal-fix"
       ],
-      "state": "ci-sweeper-state.md",
+      "state": "zj-loop/ci-sweeper-state.md",
       "phases": [
         "detect",
         "classify",
@@ -193,7 +193,7 @@
         "post-merge-scan",
         "minimal-fix"
       ],
-      "state": "post-merge-state.md",
+      "state": "zj-loop/post-merge-state.md",
       "phases": [
         "scan-merges",
         "prioritize",
@@ -250,7 +250,7 @@
         "minimal-fix",
         "loop-verifier"
       ],
-      "state": "dependency-sweeper-state.md",
+      "state": "zj-loop/dependency-sweeper-state.md",
       "phases": [
         "scan",
         "triage-risk",
@@ -309,7 +309,7 @@
         "draft-release-notes",
         "loop-verifier"
       ],
-      "state": "changelog-drafter-state.md",
+      "state": "zj-loop/changelog-drafter-state.md",
       "phases": [
         "scan-merges",
         "categorize",
@@ -367,7 +367,7 @@
         "issue-triage",
         "loop-verifier"
       ],
-      "state": "issue-triage-state.md",
+      "state": "zj-loop/issue-triage-state.md",
       "phases": [
         "discover",
         "dedupe",
@@ -409,9 +409,9 @@
       }
     },
     {
-      "id": "roadmap-sliced-development-pattern",
+      "id": "roadmap-sliced-development",
       "name": "Roadmap-Sliced Development Pattern",
-      "file": "roadmap-sliced-development-pattern.md",
+      "file": "roadmap-sliced-development.md",
       "goal": "Drive ambiguous architecture, product, documentation, and release initiatives through bounded roadmap-backed slices",
       "cadence": "1d",
       "risk": "medium",
@@ -425,7 +425,7 @@
         "zj-roadmap-driven",
         "zj-grill-with-docs"
       ],
-      "state": "roadmap-sliced-state.md",
+      "state": "zj-loop/roadmap-sliced-state.md",
       "phases": [
         "explore",
         "decide",
@@ -442,7 +442,7 @@
         "branch-merge",
         "process-doc-deletion"
       ],
-      "starter": "starters/roadmap-sliced-development-pattern",
+      "starter": "starters/roadmap-sliced-development",
       "week_one_mode": "L2",
       "token_cost": "medium",
       "cost": {
@@ -463,9 +463,9 @@
           "max_spawns_l2": 2
         },
         "first_loop_command": {
-          "grok": "/loop 1d Run roadmap-sliced-development-pattern. Update roadmap-sliced-state.md before commits. Execute one bounded slice, verify, commit, and stop at Human Gates.",
+          "grok": "/loop 1d Run roadmap-sliced-development. Update zj-loop/roadmap-sliced-state.md before commits. Execute one bounded slice, verify, commit, and stop at Human Gates.",
           "claude": "/loop 1d $zj-grill-me + $zj-roadmap-driven — execute one roadmap slice with verification evidence before commit. Stop at Human Gates.",
-          "codex": "Run $zj-grill-me + $zj-roadmap-driven for one bounded roadmap slice. Update roadmap-sliced-state.md before commit; continue to PR handoff after closeout."
+          "codex": "Run $zj-grill-me + $zj-roadmap-driven for one bounded roadmap slice. Update zj-loop/roadmap-sliced-state.md before commit; continue to PR handoff after closeout."
         }
       }
     }

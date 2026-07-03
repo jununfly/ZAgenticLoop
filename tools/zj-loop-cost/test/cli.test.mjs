@@ -45,3 +45,14 @@ test('zj-loop-cost keeps business validation for invalid readiness level', () =>
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /Invalid level/);
 });
+
+test('zj-loop-cost accepts roadmap-sliced-development canonical id only', () => {
+  const canonical = runCli(['--pattern', 'roadmap-sliced-development']);
+  assert.equal(canonical.status, 0);
+  assert.equal(canonical.stderr, '');
+  assert.match(canonical.stdout, /Loop Cost Estimate — Roadmap-Sliced Development Pattern \(roadmap-sliced-development\)/);
+
+  const legacy = runCli(['--pattern', 'roadmap-sliced-development-pattern']);
+  assert.equal(legacy.status, 1);
+  assert.match(legacy.stderr, /Unknown pattern/);
+});

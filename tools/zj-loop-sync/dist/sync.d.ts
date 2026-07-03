@@ -2,7 +2,7 @@
  * Loop Sync - Detect and sync drift between Loop configuration files
  *
  * This module detects:
- * 1. STATE.md ↔ LOOP.md consistency
+ * 1. zj-loop/STATE.md ↔ zj-loop/ZJ-LOOP.md consistency
  * 2. Skills version updates
  * 3. Missing required files
  * 4. Configuration drift from starters

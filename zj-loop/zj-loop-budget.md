@@ -13,13 +13,13 @@
 ## On budget exceed
 
 1. Pause schedulers / disable high-cadence workflows
-2. Append event to `loop-run-log.md`
+2. Append event to `zj-loop/zj-loop-run-log.md`
 3. Open maintainer issue
 
 ## Kill switch
 
 - Label: `loop-pause-all`
-- Resume only after cleared in `STATE.md`
+- Resume only after cleared in `zj-loop/STATE.md`
 
 ## Estimate spend
 

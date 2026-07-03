@@ -22,7 +22,7 @@
 
 - Max sub-agent spawns per run: 3
 - Max auto-PRs per day: 5
-- Pause if token budget exceeded (see `templates/loop-budget.md.template`)
+- Pause if token budget exceeded (see `templates/zj-loop-budget.md.template`)
 
 ## Links
 

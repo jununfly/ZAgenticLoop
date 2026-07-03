@@ -33,7 +33,7 @@ Real ways loops fail — and how good design mitigates them. Use this when debug
 
 ## State Rot
 
-**Symptom**: `STATE.md` references merged PRs, closed tickets, or stale branches.
+**Symptom**: `zj-loop/STATE.md` references merged PRs, closed tickets, or stale branches.
 
 **Severity**: S1 → S2 (loop acts on ghosts)
 

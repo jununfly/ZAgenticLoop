@@ -56,7 +56,7 @@ Design mistakes to avoid **before** enabling unattended loops. For runtime incid
 
 **Why it fails**: Alert fatigue, budget overrun, weekend incidents.
 
-**Do instead**: Document pause/kill in LOOP.md + `templates/loop-budget.md.template`.
+**Do instead**: Document pause/kill in ZJ-LOOP.md + `templates/zj-loop-budget.md.template`.
 
 ## 8. Fixing flakes with code
 
@@ -80,4 +80,4 @@ Design mistakes to avoid **before** enabling unattended loops. For runtime incid
 
 **Why it fails**: Cannot debug "why did it do that Tuesday?"
 
-**Do instead**: Append to `loop-run-log.md` per [operating-loops.md](./operating-loops.md).
+**Do instead**: Append to `zj-loop/zj-loop-run-log.md` per [operating-loops.md](./operating-loops.md).

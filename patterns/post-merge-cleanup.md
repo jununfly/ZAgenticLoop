@@ -105,7 +105,7 @@ Last run: 2026-06-09 22:00 UTC
 npx @jununfly/zj-loop-cost --pattern post-merge-cleanup --cadence 1d --level L1
 ```
 
-Run off-peak. Cap auto-PRs per day in `loop-budget.md`.
+Run off-peak. Cap auto-PRs per day in `zj-loop/zj-loop-budget.md`.
 
 ## Success Metrics
 

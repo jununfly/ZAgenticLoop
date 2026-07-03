@@ -12,6 +12,13 @@ npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --json
 npx @jununfly/zj-loop-cost --list
 ```
 
+If `npx` stalls on package resolution, use an installed binary or npm's local cache:
+
+```bash
+zj-loop-cost --pattern daily-triage --level L1
+npm exec --offline --package=@jununfly/zj-loop-cost -- zj-loop-cost --pattern daily-triage --level L1
+```
+
 **From this repo:**
 
 ```bash
@@ -39,6 +46,6 @@ Each estimate includes:
 - **Action every run** — implementer + verifier every time (worst case)
 - **Realistic blend** — level-based mix (documented in output)
 
-Pair with `loop-budget.md` (scaffolded by `zj-loop-init`) and `zj-loop-audit` cost observability checks.
+Pair with `zj-loop/zj-loop-budget.md` (scaffolded by `zj-loop-init`) and `zj-loop-audit` cost observability checks.
 
 See [docs/operating-loops.md](../../docs/operating-loops.md).

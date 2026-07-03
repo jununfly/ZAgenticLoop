@@ -25,9 +25,9 @@ CI runs `validate-patterns` and `audit` on every push/PR (see `.github/workflows
 
 ## Loop operation (this repo)
 
-- **Daily triage**: `loop-triage` skill → `STATE.md` (report-only, L1).
+- **Daily triage**: `loop-triage` skill → `zj-loop/STATE.md` (report-only, L1).
 - **Fixes**: only via PR with human review; `minimal-fix` + `loop-verifier` for assisted changes (L2).
-- **Isolation**: use git worktrees for any unattended code-change experiments (see `LOOP.md`).
+- **Isolation**: use git worktrees for any unattended code-change experiments (see `zj-loop/ZJ-LOOP.md`).
 
 ## Test commands
 

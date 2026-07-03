@@ -1,7 +1,7 @@
 {
   "name": "@jununfly/zj-loop-sync",
   "version": "0.1.0",
-  "description": "Detect and sync drift between Loop configuration files (STATE.md ↔ LOOP.md, Skills versions)",
+  "description": "Detect and sync drift between Loop configuration files (zj-loop/STATE.md ↔ zj-loop/ZJ-LOOP.md, Skills versions)",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {

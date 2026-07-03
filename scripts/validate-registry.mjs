@@ -14,6 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CADENCE_RE = /^[0-9]+[mhd](-[0-9]+[mhd])?$/;
 const ID_RE = /^[a-z][a-z0-9-]*$/;
 const FILE_RE = /^[A-Za-z0-9-]+\.md$/;
+const STATE_RE = /^(zj-loop\/)?[A-Za-z0-9-]+\.md$/;
 const VALID_TOOLS = new Set(['grok', 'claude-code', 'codex', 'github-actions', 'cursor', 'windsurf', 'aider']);
 const VALID_RISK = new Set(['low', 'medium', 'high']);
 const VALID_MODES = new Set(['L1', 'L2', 'L3']);
@@ -38,7 +39,7 @@ export function validatePattern(p, index) {
     if (!VALID_TOOLS.has(t)) fail(`${prefix}.tools unknown tool: ${t}`);
   }
   if (!Array.isArray(p.skills) || p.skills.length === 0) fail(`${prefix}.skills must be non-empty array`);
-  if (!FILE_RE.test(p.state)) fail(`${prefix}.state invalid: ${p.state}`);
+  if (!STATE_RE.test(p.state)) fail(`${prefix}.state invalid: ${p.state}`);
   if (!Array.isArray(p.phases) || p.phases.length < 2) fail(`${prefix}.phases must have ≥2 entries`);
   if (!Array.isArray(p.human_gates) || p.human_gates.length === 0) fail(`${prefix}.human_gates must be non-empty`);
   if (p.week_one_mode && !VALID_MODES.has(p.week_one_mode)) fail(`${prefix}.week_one_mode invalid`);

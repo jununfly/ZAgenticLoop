@@ -29,26 +29,27 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Ensure STATE.md exists
+      - name: Ensure zj-loop/STATE.md exists
         run: |
-          if [ ! -f STATE.md ]; then
-            cp starters/minimal-loop/STATE.md.example STATE.md 2>/dev/null || \
-            echo "# Loop State\n\nLast run: never\n\n## High Priority\n\n## Watch List\n" > STATE.md
+          mkdir -p zj-loop
+          if [ ! -f zj-loop/STATE.md ]; then
+            cp starters/minimal-loop/STATE.md.example zj-loop/STATE.md 2>/dev/null || \
+            echo "# Loop State\n\nLast run: never\n\n## High Priority\n\n## Watch List\n" > zj-loop/STATE.md
           fi
 
       # Replace this step with your agent invocation:
       # - Codex CLI in headless mode
       # - repository_dispatch to a machine running Grok/Claude
-      # - Custom triage script that updates STATE.md
+      # - Custom triage script that updates zj-loop/STATE.md
       - name: Run triage agent
         run: |
           echo "::notice::Wire this step to your agent harness."
-          echo "Prompt: Run loop-triage skill. Update STATE.md. Report only unless L2 enabled."
+          echo "Prompt: Run loop-triage skill. Update zj-loop/STATE.md. Report only unless L2 enabled."
           echo "See examples/github-actions/README.md"
 
       - name: Upload state artifact
         uses: actions/upload-artifact@v4
         with:
           name: loop-state
-          path: STATE.md
+          path: zj-loop/STATE.md
           if-no-files-found: ignore

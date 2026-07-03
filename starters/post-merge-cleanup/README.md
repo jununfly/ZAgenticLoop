@@ -11,7 +11,8 @@ npx @jununfly/zj-loop-init . --pattern post-merge-cleanup --tool grok
 # Or manual copy
 cp -r starters/post-merge-cleanup/.grok/skills/post-merge-scan .grok/skills/
 cp starters/post-merge-cleanup/post-merge-state.md.example post-merge-state.md
-cp starters/post-merge-cleanup/LOOP.md .
+mkdir -p zj-loop
+cp starters/post-merge-cleanup/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
 ```
 
 Start (Grok):
@@ -26,7 +27,7 @@ Start (Grok):
 |------|---------|
 | `post-merge-state.md.example` | Cleanup backlog from recent merges |
 | `.grok/skills/post-merge-scan/` | Scan skill |
-| `LOOP.md` | Cadence and gates |
+| `zj-loop/ZJ-LOOP.md` | Cadence and gates |
 
 ## Safety
 

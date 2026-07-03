@@ -44,9 +44,9 @@ Add to your MCP config (`.mcp.json` or equivalent):
 | URI | Description |
 |-----|-------------|
 | `loop://registry` | Pattern registry (all 7 patterns with metadata, costs, phases) |
-| `loop://config` | LOOP.md — cadence, budget, gates, scheduling |
-| `loop://budget` | loop-budget.md — token caps, kill switch |
-| `loop://run-log` | loop-run-log.md — append-only run history |
+| `loop://config` | ZJ-LOOP.md — cadence, budget, gates, scheduling |
+| `loop://budget` | zj-loop-budget.md — token caps, kill switch |
+| `loop://run-log` | zj-loop-run-log.md — append-only run history |
 | `loop://safety` | Safety docs — denylists, auto-merge policy, MCP scopes |
 | `loop://patterns/{id}` | Full pattern documentation by ID |
 | `loop://skills/{name}` | Skill definition (SKILL.md) by name |
@@ -115,7 +115,7 @@ Agent (Claude Code / Grok / Codex)
 zj-loop-mcp-server (stdio transport)
   │
   ├─ @jununfly/zj-loop-core ──→ semantic pattern, recommendation, and cost queries
-  ├─ resolver.ts ─────────────→ reads patterns/, skills/, STATE.md, LOOP.md, etc.
+  ├─ resolver.ts ─────────────→ reads patterns/, skills/, STATE.md, ZJ-LOOP.md, etc.
   └─ index.ts ────────────────→ MCP protocol handlers and compatibility formatters
 ```
 

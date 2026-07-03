@@ -19,7 +19,7 @@ Many teams run triage-only first (reporting, no auto-fix) for 1–2 weeks before
 
 ## State
 
-Use `STATE.md` (or a Linear board view) as the memory spine:
+Use `zj-loop/STATE.md` (or a Linear board view) as the memory spine:
 
 ```markdown
 # Loop State — Project X
@@ -45,7 +45,7 @@ Fields the loop must update every run:
 ## How the Loop Runs (Typical Cycle)
 
 1. Scheduler fires (morning or interval).
-2. Triage skill ingests: CI failures (24h), open issues/tickets, recent commits, prior `STATE.md`.
+2. Triage skill ingests: CI failures (24h), open issues/tickets, recent commits, prior `zj-loop/STATE.md`.
 3. High-priority items appended to state with suggested next action.
 4. (Phase 2) For small, self-contained failures: open worktree → implementer → verifier.
 5. (Phase 3) Connectors update PRs/tickets; ambiguous items flagged for human.
@@ -64,7 +64,7 @@ After each Daily Triage run, record:
 
 ## Verification Strategy
 
-- Phase 1 (report-only): Human reads `STATE.md` — no auto-action verification needed.
+- Phase 1 (report-only): Human reads `zj-loop/STATE.md` — no auto-action verification needed.
 - Phase 2+: Never let implementer mark work done; verifier confirms fix scope and tests.
 - Triage skill must not invent architectural work — signal only.
 
@@ -88,7 +88,7 @@ After each Daily Triage run, record:
 ```
 
 **Codex**:
-- Automations tab: daily prompt calling `$loop-triage`, output to Triage inbox + `STATE.md`.
+- Automations tab: daily prompt calling `$loop-triage`, output to Triage inbox + `zj-loop/STATE.md`.
 
 **GitHub Actions**:
 - See `examples/github-actions/daily-triage.yml`.
@@ -117,12 +117,12 @@ After each Daily Triage run, record:
 npx @jununfly/zj-loop-cost --pattern daily-triage --cadence 1d --level L1
 ```
 
-Scaffold `loop-budget.md` and `loop-run-log.md` with `zj-loop-init`. See [operating-loops.md](../docs/operating-loops.md).
+Scaffold `zj-loop/zj-loop-budget.md` and `zj-loop/zj-loop-run-log.md` with `zj-loop-init`. See [operating-loops.md](../docs/operating-loops.md).
 
 ## Success Metrics
 
 - Time from "something broke" to "human knows about it"
-- % of mornings where `STATE.md` matched what you'd have found manually
+- % of mornings where `zj-loop/STATE.md` matched what you'd have found manually
 - Reduction in ad-hoc "what's on fire?" Slack messages
 
 Start report-only. Add action only when triage quality is consistently good.

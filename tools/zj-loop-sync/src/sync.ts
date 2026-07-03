@@ -2,7 +2,7 @@
  * Loop Sync - Detect and sync drift between Loop configuration files
  * 
  * This module detects:
- * 1. STATE.md ↔ LOOP.md consistency
+ * 1. zj-loop/STATE.md ↔ zj-loop/ZJ-LOOP.md consistency
  * 2. Skills version updates
  * 3. Missing required files
  * 4. Configuration drift from starters
@@ -69,7 +69,7 @@ function extractFrontmatter(content: string): { frontmatter: Record<string, stri
 }
 
 /**
- * Extract patterns from LOOP.md
+ * Extract patterns from ZJ-LOOP.md
  */
 function extractLoopPatterns(loopContent: string): string[] {
   const patterns: string[] = [];
@@ -85,13 +85,13 @@ function extractLoopPatterns(loopContent: string): string[] {
 }
 
 /**
- * Extract state file references from LOOP.md
+ * Extract state file references from ZJ-LOOP.md
  */
 function extractStateFiles(loopContent: string): string[] {
   const stateFiles: string[] = [];
   
-  // Look for STATE.md or other state file references
-  const stateRegex = /(?:state[s]?[\s]*[:=][\s]*|update[\s]+)([\w\-]+\.md)/gi;
+  // Look for STATE.md, zj-loop/STATE.md, or other state file references
+  const stateRegex = /(?:state[s]?[\s]*[:=][\s]*|update[\s]+)([\w\-\/]+\.md)/gi;
   let match;
   while ((match = stateRegex.exec(loopContent)) !== null) {
     stateFiles.push(match[1]);
@@ -179,26 +179,29 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
     });
   }
   
-  // Check STATE.md ↔ LOOP.md consistency
-  if (evidence.statePaths.includes('STATE.md') && evidence.loopConfig.present) {
-    const stateContent = await fs.readTextIfExists('STATE.md');
+  const primaryStatePath = evidence.statePaths.find((p) => p === 'zj-loop/STATE.md') ?? evidence.statePaths[0];
+  const loopConfigPath = 'zj-loop/ZJ-LOOP.md';
+
+  // Check state ↔ ZJ-LOOP.md consistency
+  if (primaryStatePath && evidence.loopConfig.present) {
+    const stateContent = await fs.readTextIfExists(primaryStatePath);
     const loopContent = evidence.loopConfig.content;
     
     if (stateContent && loopContent) {
-      // Extract patterns from LOOP.md
+      // Extract patterns from ZJ-LOOP.md
       const patterns = extractLoopPatterns(loopContent);
       
-      // Extract state files from LOOP.md
+      // Extract state files from ZJ-LOOP.md
       const stateFiles = extractStateFiles(loopContent);
       
-      // Check if STATE.md is referenced in LOOP.md
-      if (!stateFiles.includes('STATE.md')) {
+      // Check if the state file is referenced in ZJ-LOOP.md
+      if (!stateFiles.includes(primaryStatePath) && !stateFiles.includes(pathBasename(primaryStatePath))) {
         issues.push({
           type: 'inconsistent',
-          file: 'LOOP.md',
-          message: 'LOOP.md does not reference STATE.md',
+          file: loopConfigPath,
+          message: `${loopConfigPath} does not reference ${primaryStatePath}`,
           severity: 'warning',
-          suggestion: 'Add STATE.md to the state files list in LOOP.md',
+          suggestion: `Add ${primaryStatePath} to the state files list in ${loopConfigPath}`,
         });
       }
       
@@ -208,8 +211,8 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
       if (similarity < 0.3 && differences.length > 0) {
         issues.push({
           type: 'inconsistent',
-          file: 'STATE.md ↔ LOOP.md',
-          message: 'Low structural similarity between STATE.md and LOOP.md',
+          file: `${primaryStatePath} ↔ ${loopConfigPath}`,
+          message: `Low structural similarity between ${primaryStatePath} and ${loopConfigPath}`,
           severity: 'warning',
           suggestion: 'Review both files for consistency',
         });
@@ -218,7 +221,7 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
           for (const diff of differences.slice(0, 3)) {
             issues.push({
               type: 'inconsistent',
-              file: 'STATE.md ↔ LOOP.md',
+              file: `${primaryStatePath} ↔ ${loopConfigPath}`,
               message: diff,
               severity: 'info',
             });
@@ -262,7 +265,7 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
   }
   
   if (issues.some(i => i.type === 'inconsistent')) {
-    suggestions.push('Review STATE.md and LOOP.md for consistency');
+    suggestions.push('Review state and ZJ-LOOP.md for consistency');
   }
   
   return {
@@ -272,6 +275,11 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
     suggestions,
     timestamp: new Date().toISOString(),
   };
+}
+
+function pathBasename(projectPath: string): string {
+  const parts = projectPath.split('/');
+  return parts[parts.length - 1] ?? projectPath;
 }
 
 /**

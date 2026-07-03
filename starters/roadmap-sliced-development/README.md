@@ -1,18 +1,18 @@
 # Roadmap-Sliced Development Starter
 
-Starter for the [Roadmap-Sliced Development Pattern](../../patterns/roadmap-sliced-development-pattern.md): a human-led loop for ambiguous product, architecture, documentation, or release initiatives.
+Starter for the [Roadmap-Sliced Development Pattern](../../patterns/roadmap-sliced-development.md): a human-led loop for ambiguous product, architecture, documentation, or release initiatives.
 
 ## Quick Start
 
 ```bash
 # Grok
-npx @jununfly/zj-loop-init . --pattern roadmap-sliced-development-pattern --tool grok
+npx @jununfly/zj-loop-init . --pattern roadmap-sliced-development --tool grok
 
 # Claude Code
-npx @jununfly/zj-loop-init . --pattern roadmap-sliced-development-pattern --tool claude
+npx @jununfly/zj-loop-init . --pattern roadmap-sliced-development --tool claude
 
 # Codex
-npx @jununfly/zj-loop-init . --pattern roadmap-sliced-development-pattern --tool codex
+npx @jununfly/zj-loop-init . --pattern roadmap-sliced-development --tool codex
 ```
 
 Start with one bounded roadmap branch:
@@ -25,8 +25,8 @@ Run zj-grill-me + zj-roadmap-driven for one roadmap slice. Keep decisions in the
 
 | File | Purpose |
 |------|---------|
-| `roadmap-sliced-state.md.example` | Human-readable initiative state and closeout checklist |
-| `LOOP.md` | Cadence, gates, branch policy, and PR handoff contract |
+| `zj-loop/roadmap-sliced-state.md` | Human-readable initiative state and closeout checklist after init |
+| `zj-loop/ZJ-LOOP.md` | Cadence, gates, branch policy, and PR handoff contract after init |
 
 ## Safety
 

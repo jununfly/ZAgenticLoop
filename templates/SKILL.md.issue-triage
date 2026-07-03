@@ -63,4 +63,4 @@ Needs human: H
 
 ## Pairing with Daily Triage
 
-Daily Triage reads this file and merges Top 5 into `STATE.md` High Priority. Do not duplicate full issue bodies in STATE.md — reference issue numbers only.
+Daily Triage reads this file and merges Top 5 into `zj-loop/STATE.md` High Priority. Do not duplicate full issue bodies in STATE.md — reference issue numbers only.

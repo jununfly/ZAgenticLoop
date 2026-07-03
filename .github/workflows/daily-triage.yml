@@ -84,10 +84,10 @@ jobs:
           —
 
           ---
-          Run log: Updated by \`.github/workflows/daily-triage.yml\`. See \`LOOP.md\` for cadence and gates.
+          Run log: Updated by \`.github/workflows/daily-triage.yml\`. See \`ZJ-LOOP.md\` for cadence and gates.
           EOF
 
-      - name: Append loop-run-log.md
+      - name: Append zj-loop-run-log.md
         id: runlog
         run: |
           START="${{ steps.timing.outputs.started_at }}"
@@ -142,7 +142,7 @@ jobs:
           echo "One or more dogfood gates failed — not opening/merging an automated PR."
           exit 1
 
-      - name: Open PR for STATE.md + loop-run-log if changed
+      - name: Open PR for STATE.md + zj-loop-run-log if changed
         id: pr
         env:
           GH_TOKEN: ${{ github.token }}
@@ -150,8 +150,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet STATE.md loop-run-log.md; then
-            echo "No STATE.md or loop-run-log.md changes — skip PR"
+          if git diff --quiet STATE.md zj-loop-run-log.md; then
+            echo "No STATE.md or zj-loop-run-log.md changes — skip PR"
             echo "opened=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -160,7 +160,7 @@ jobs:
           git fetch origin main "$BRANCH" 2>/dev/null || git fetch origin main
           # -B keeps working-tree edits; avoids checkout conflicts with modified STATE.md
           git checkout -B "$BRANCH"
-          git add STATE.md loop-run-log.md
+          git add STATE.md zj-loop-run-log.md
           git commit -m "chore(loop): daily triage update STATE.md + run log [automated]"
           if git rev-parse --verify "refs/remotes/origin/${BRANCH}" >/dev/null 2>&1; then
             git rebase "origin/${BRANCH}"
@@ -241,7 +241,7 @@ jobs:
             --body "## Automated daily triage summary
 
           - Loop readiness: **${{ steps.audit.outputs.score }}** (${{ steps.audit.outputs.level }})
-          - Latest run outcome: \`${{ steps.runlog.outputs.outcome }}\` (see \`loop-run-log.md\`)
+          - Latest run outcome: \`${{ steps.runlog.outputs.outcome }}\` (see \`zj-loop-run-log.md\`)
           - See updated \`STATE.md\` on main after PR merge
           - Review high-priority items and close or re-prioritize
 

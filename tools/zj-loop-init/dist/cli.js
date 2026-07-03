@@ -3,6 +3,7 @@ import { cp, mkdir, readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadPatternRegistry, runCli } from '@jununfly/zj-loop-core';
+import { LOOP_ARTIFACTS } from './artifacts.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const MONOREPO_STARTERS = path.resolve(PACKAGE_ROOT, '../../starters');
@@ -125,13 +126,13 @@ function buildLoopBudgetMd(pattern) {
 ## On budget exceed
 
 1. Pause schedulers (\`scheduler_delete\` or disable automations)
-2. Append event to \`loop-run-log.md\`
-3. Notify human (Slack / issue / STATE.md High Priority)
+2. Append event to \`${LOOP_ARTIFACTS.runLog.primary}\`
+3. Notify human (Slack / issue / ${LOOP_ARTIFACTS.directory}/STATE.md High Priority)
 
 ## Kill switch
 
 - Command or issue label: \`loop-pause-all\`
-- Resume only after human clears the flag in STATE.md
+- Resume only after human clears the flag in ${LOOP_ARTIFACTS.directory}/STATE.md
 
 ## Estimate spend
 
@@ -141,9 +142,9 @@ npx @jununfly/zj-loop-cost --pattern ${pattern.id}
 `;
 }
 async function scaffoldObservability(pattern, tool, targetDir, templatesRoot, dryRun, io) {
-    const budgetPath = path.join(targetDir, 'loop-budget.md');
-    const runLogTemplate = path.join(templatesRoot, 'loop-run-log.md.template');
-    const runLogPath = path.join(targetDir, 'loop-run-log.md');
+    const budgetPath = path.join(targetDir, LOOP_ARTIFACTS.budget.primary);
+    const runLogTemplate = path.join(templatesRoot, LOOP_ARTIFACTS.runLog.template);
+    const runLogPath = path.join(targetDir, LOOP_ARTIFACTS.runLog.primary);
     if (!(await exists(budgetPath))) {
         const content = buildLoopBudgetMd(pattern);
         if (dryRun) {
@@ -151,21 +152,21 @@ async function scaffoldObservability(pattern, tool, targetDir, templatesRoot, dr
         }
         else {
             await writeFile(budgetPath, content);
-            io.stdout(`  created: loop-budget.md`);
+            io.stdout(`  created: ${LOOP_ARTIFACTS.budget.primary}`);
         }
     }
     if (!(await exists(runLogPath))) {
         await copyFile(runLogTemplate, runLogPath, dryRun, io);
     }
-    await copyTemplateSkill(templatesRoot, 'SKILL.md.loop-budget', targetDir, tool, 'loop-budget', dryRun, io);
+    await copyTemplateSkill(templatesRoot, LOOP_ARTIFACTS.skills.budgetTemplate, targetDir, tool, LOOP_ARTIFACTS.skills.budget, dryRun, io);
 }
 async function scaffoldConstraints(targetDir, templatesRoot, tool, dryRun, io) {
-    const constraintsPath = path.join(targetDir, 'loop-constraints.md');
-    const constraintsTemplate = path.join(templatesRoot, 'loop-constraints.md');
+    const constraintsPath = path.join(targetDir, LOOP_ARTIFACTS.constraints.primary);
+    const constraintsTemplate = path.join(templatesRoot, LOOP_ARTIFACTS.constraints.template);
     if (!(await exists(constraintsPath)) && (await exists(constraintsTemplate))) {
         await copyFile(constraintsTemplate, constraintsPath, dryRun, io);
     }
-    await copyTemplateSkill(templatesRoot, 'SKILL.md.loop-constraints', targetDir, tool, 'loop-constraints', dryRun, io);
+    await copyTemplateSkill(templatesRoot, LOOP_ARTIFACTS.skills.constraintsTemplate, targetDir, tool, LOOP_ARTIFACTS.skills.constraints, dryRun, io);
 }
 async function copyFile(src, dest, dryRun, io) {
     if (!(await exists(src)))
@@ -246,20 +247,24 @@ async function handleInitCommand({ io, options }) {
             }
         }
     }
-    const stateFile = selectedPattern.state;
+    const stateOutputPath = selectedPattern.state.includes('/')
+        ? selectedPattern.state
+        : path.join(LOOP_ARTIFACTS.directory, selectedPattern.state);
+    const stateFile = path.basename(stateOutputPath);
     const stateExample = path.join(effectiveStarter, `${stateFile}.example`);
+    const stateDest = path.join(targetDir, stateOutputPath);
     if (await exists(stateExample)) {
-        await copyFile(stateExample, path.join(targetDir, stateFile), dryRun, io);
+        await copyFile(stateExample, stateDest, dryRun, io);
     }
     else {
         const alt = path.join(effectiveStarter, 'STATE.md.example');
         if (await exists(alt)) {
-            await copyFile(alt, path.join(targetDir, stateFile), dryRun, io);
+            await copyFile(alt, stateDest, dryRun, io);
         }
     }
-    const loopMd = path.join(effectiveStarter, 'LOOP.md');
+    const loopMd = path.join(effectiveStarter, 'ZJ-LOOP.md');
     if (await exists(loopMd)) {
-        await copyFile(loopMd, path.join(targetDir, 'LOOP.md'), dryRun, io);
+        await copyFile(loopMd, path.join(targetDir, LOOP_ARTIFACTS.config.primary), dryRun, io);
     }
     await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
     await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
@@ -273,7 +278,7 @@ npm run lint
 
 ## Loop conventions
 - Report-only week one (L1) before enabling auto-fix (L2)
-- See LOOP.md for cadence and human gates
+- See ${LOOP_ARTIFACTS.config.primary} for cadence and human gates
 `;
         await writeFile(path.join(targetDir, 'AGENTS.md'), agentsTemplate);
         io.stdout('  created: AGENTS.md (template)');

@@ -38,6 +38,8 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 - [ ] Loop **writes** outcomes, timestamps, last actions
 - [ ] **Prune** resolved/merged/closed items every run
 - [ ] Human overrides recorded in state
+- [ ] Roadmap writes, when used, have a serialization or lock policy
+- [ ] Stale roadmap locks require explicit human/operator unlock
 
 ## 6. Human Handoff
 
@@ -45,6 +47,7 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 - [ ] **Denylist paths** — auth, payments, secrets, infra (see [safety.md](./safety.md))
 - [ ] **Notification rule** — only ping human when action required
 - [ ] **Inbox** — where ambiguous items land (STATE.md section, Slack, Linear)
+- [ ] Human Gate categories include merge, publish, destructive cleanup, failed verification, scope expansion, and public-surface changes
 
 ## 7. Connectors (MCP)
 
@@ -55,9 +58,9 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 ## 8. Cost & Limits
 
 - [ ] **Token budget** estimated (`npx @jununfly/zj-loop-cost`, [operating-loops.md](./operating-loops.md))
-- [ ] **`loop-budget.md`** with daily caps and kill switch
-- [ ] **`loop-run-log.md`** for append-only run history
-- [ ] **`loop-budget` skill** checks spend at start/end of each run
+- [ ] **`zj-loop/zj-loop-budget.md`** with daily caps and kill switch
+- [ ] **`zj-loop/zj-loop-run-log.md`** for append-only run history
+- [ ] **`zj-loop-budget` skill** checks spend at start/end of each run
 - [ ] **Max iterations** per item per run
 - [ ] **Max auto-PRs** per day (cleanup loops)
 - [ ] **Pause/kill** criteria defined
@@ -73,6 +76,7 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 - [ ] No auto-merge without explicit allowlist
 - [ ] Secrets/env files in denylist
 - [ ] Flake handling — don't "fix" intermittent tests with retries alone
+- [ ] Expected-red contract tests are documented as implementation evidence, not Human Gates
 
 ---
 

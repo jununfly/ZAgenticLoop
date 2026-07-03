@@ -119,7 +119,7 @@ server.resource(
 server.resource(
   'loop-config',
   'loop://config',
-  { description: 'LOOP.md — cadence, budget, gates, and scheduling configuration' },
+  { description: 'zj-loop/ZJ-LOOP.md — cadence, budget, gates, and scheduling configuration' },
   async () => {
     const root = await resolveProjectRoot();
     const content = await loadLoopConfig(root);
@@ -127,7 +127,7 @@ server.resource(
       contents: [{
         uri: 'loop://config',
         mimeType: 'text/markdown',
-        text: content ?? 'LOOP.md not found',
+        text: content ?? 'zj-loop/ZJ-LOOP.md not found',
       }],
     };
   },
@@ -136,7 +136,7 @@ server.resource(
 server.resource(
   'budget',
   'loop://budget',
-  { description: 'loop-budget.md — token caps, kill switch policy, spending limits' },
+  { description: 'zj-loop/zj-loop-budget.md — token caps, kill switch policy, spending limits' },
   async () => {
     const root = await resolveProjectRoot();
     const content = await loadBudget(root);
@@ -144,7 +144,7 @@ server.resource(
       contents: [{
         uri: 'loop://budget',
         mimeType: 'text/markdown',
-        text: content ?? 'loop-budget.md not found',
+        text: content ?? 'zj-loop/zj-loop-budget.md not found',
       }],
     };
   },
@@ -153,7 +153,7 @@ server.resource(
 server.resource(
   'run-log',
   'loop://run-log',
-  { description: 'loop-run-log.md — append-only run history with timestamps and outcomes' },
+  { description: 'zj-loop/zj-loop-run-log.md — append-only run history with timestamps and outcomes' },
   async () => {
     const root = await resolveProjectRoot();
     const content = await loadRunLog(root);
@@ -161,7 +161,7 @@ server.resource(
       contents: [{
         uri: 'loop://run-log',
         mimeType: 'text/markdown',
-        text: content ?? 'loop-run-log.md not found',
+        text: content ?? 'zj-loop/zj-loop-run-log.md not found',
       }],
     };
   },
@@ -225,9 +225,9 @@ server.resource(
 server.resource(
   'state',
   new ResourceTemplate('loop://state/{stateFile}', { list: undefined }),
-  { description: 'State file content (e.g. STATE.md, pr-babysitter-state.md)' },
+  { description: 'State file content (e.g. zj-loop/STATE.md, zj-loop/pr-babysitter-state.md)' },
   async (uri, variables) => {
-    const stateFile = variables.stateFile as string;
+    const stateFile = decodeURIComponent(variables.stateFile as string);
     const root = await resolveProjectRoot();
     const content = await loadState(root, stateFile);
     return {
@@ -284,7 +284,7 @@ server.tool(
         type: 'text' as const,
         text: files.length > 0
           ? JSON.stringify(files, null, 2)
-          : 'No state files found. Create STATE.md from templates/STATE.md.template',
+          : 'No state files found. Run zj-loop-init to create zj-loop/STATE.md',
       }],
     };
   },
@@ -360,7 +360,7 @@ server.tool(
 server.tool(
   'loop_get_state',
   'Read a state file to understand current loop status',
-  { stateFile: z.string().optional().describe('State file name (default: STATE.md)') },
+  { stateFile: z.string().optional().describe('State file path (default: zj-loop/STATE.md)') },
   async ({ stateFile }) => {
     const root = await resolveProjectRoot();
     const content = await loadState(root, stateFile);
@@ -369,7 +369,7 @@ server.tool(
       return {
         content: [{
           type: 'text' as const,
-          text: `State file "${stateFile ?? 'STATE.md'}" not found. Available: ${available.join(', ') || 'none'}`,
+          text: `State file "${stateFile ?? 'zj-loop/STATE.md'}" not found. Available: ${available.join(', ') || 'none'}`,
         }],
       };
     }

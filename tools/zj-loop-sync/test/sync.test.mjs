@@ -11,9 +11,10 @@ const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
 async function setupTestDir() {
   await mkdir(testDir, { recursive: true });
+  await mkdir(path.join(testDir, 'zj-loop'), { recursive: true });
 
   await writeFile(
-    path.join(testDir, 'STATE.md'),
+    path.join(testDir, 'zj-loop', 'STATE.md'),
     `# Loop State
 
 Last run: 2026-06-22
@@ -27,14 +28,14 @@ Last run: 2026-06-22
   );
 
   await writeFile(
-    path.join(testDir, 'LOOP.md'),
+    path.join(testDir, 'zj-loop', 'ZJ-LOOP.md'),
     `# Loop Configuration
 
 ## Patterns
 - daily-triage
 
 ## State Files
-- STATE.md
+- zj-loop/STATE.md
 
 ## Schedule
 - Cadence: 1d

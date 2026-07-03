@@ -9,11 +9,12 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
    ```bash
    cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/
    cp starters/minimal-loop-codex/.codex/agents/verifier.toml .codex/agents/
-   cp starters/minimal-loop-codex/STATE.md.example STATE.md
-   cp starters/minimal-loop-codex/LOOP.md .
+   mkdir -p zj-loop
+   cp starters/minimal-loop-codex/STATE.md.example zj-loop/STATE.md
+   cp starters/minimal-loop-codex/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
    ```
 
-2. Customize `STATE.md` project name.
+2. Customize `zj-loop/STATE.md` project name.
 
 3. Create an **Automation** in the Codex app (Automations tab):
 
@@ -24,11 +25,11 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
    | Prompt | See below |
 
    ```
-   Run $loop-triage. Read STATE.md first. Append high-priority and watch items.
+   Run $loop-triage. Read zj-loop/STATE.md first. Append high-priority and watch items.
    Update Last run timestamp. Week 1: report only — do not modify source files.
    ```
 
-4. Review findings in the Codex Triage inbox + `STATE.md` for 1–2 weeks.
+4. Review findings in the Codex Triage inbox + `zj-loop/STATE.md` for 1–2 weeks.
 
 5. When triage quality is good, add `minimal-fix` from `templates/` and enable small auto-wins with the verifier subagent in an isolated worktree.
 
@@ -36,10 +37,10 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
 
 | File | Purpose |
 |------|---------|
-| `STATE.md.example` | State spine template |
+| `zj-loop/STATE.md` | State spine template after init |
 | `.codex/skills/loop-triage/SKILL.md` | Triage skill |
 | `.codex/agents/verifier.toml` | Checker sub-agent for L2+ |
-| `LOOP.md` | Loop config doc for your team |
+| `zj-loop/ZJ-LOOP.md` | Loop config doc for your team |
 
 ## Next Steps
 

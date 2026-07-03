@@ -19,10 +19,14 @@ export function formatBadge(r: AuditResult): string {
 
 export function formatHuman(r: AuditResult): string {
   const lines: string[] = [];
+  const gateReasons = inferLevelGateReasons(r);
   lines.push('');
   lines.push(`Loop Readiness Audit — ${r.target}`);
   lines.push('═'.repeat(50));
   lines.push(`Score: ${r.score}/100  Level: ${r.level}`);
+  if (gateReasons.length) {
+    lines.push(`Level gate: ${r.level} because ${gateReasons.join('; ')}.`);
+  }
   lines.push(r.assessment);
   lines.push('');
   lines.push('Findings:');
@@ -39,7 +43,7 @@ export function formatHuman(r: AuditResult): string {
   }
   lines.push('');
   lines.push('Docs: docs/loop-design-checklist.md');
-  lines.push('Tip: rerun with --suggest for ready-to-paste copy commands from templates/starters.');
+  lines.push('Tip: rerun with --suggest for context-aware next actions.');
   lines.push('');
   return lines.join('\n');
 }
@@ -50,6 +54,7 @@ export function formatJson(r: AuditResult): string {
 
 export function formatMarkdown(r: AuditResult): string {
   const lines: string[] = [];
+  const gateReasons = inferLevelGateReasons(r);
   lines.push('# Loop Readiness Report');
   lines.push('');
   lines.push(`| Metric | Value |`);
@@ -57,6 +62,9 @@ export function formatMarkdown(r: AuditResult): string {
   lines.push(`| Target | \`${r.target}\` |`);
   lines.push(`| Score | **${r.score}/100** |`);
   lines.push(`| Level | ${r.level} |`);
+  if (gateReasons.length) {
+    lines.push(`| Level Gate | ${gateReasons.join('; ')} |`);
+  }
   lines.push(`| Assessment | ${r.assessment} |`);
   lines.push('');
   lines.push('## Findings');
@@ -73,4 +81,28 @@ export function formatMarkdown(r: AuditResult): string {
     }
   }
   return lines.join('\n');
+}
+
+export function inferLevelGateReasons(r: AuditResult): string[] {
+  const reasons: string[] = [];
+  const { signals } = r;
+
+  if (r.level === 'L0' && r.score >= 38 && !signals.stateFile.present) {
+    reasons.push('hard gate failed: no recognized state file');
+  }
+
+  if ((r.level === 'L0' || r.level === 'L1') && r.score >= 58 && !signals.triage.present) {
+    reasons.push('hard gate failed: no triage skill detected');
+  }
+
+  if (r.level !== 'L3' && r.score >= 78) {
+    if (!signals.verifier.present) reasons.push('L3 gate failed: verifier missing');
+    if (!signals.stateFile.present) reasons.push('L3 gate failed: no recognized state file');
+    if (!signals.cost.budgetDoc || !signals.cost.runLog || !signals.cost.loopMdBudget) {
+      reasons.push('L3 gate failed: cost observability incomplete');
+    }
+    if (!signals.loopActivity.present) reasons.push('L3 gate failed: no proven loop activity');
+  }
+
+  return reasons;
 }

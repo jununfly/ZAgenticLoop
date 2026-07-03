@@ -1,6 +1,6 @@
 # Sample Loop Budget Tracking
 
-Following `templates/loop-budget.md.template`.
+Following `templates/zj-loop-budget.md.template`.
 
 ## Current Period (example week)
 
@@ -21,4 +21,4 @@ Following `templates/loop-budget.md.template`.
 - Changelog Drafter is extremely cheap relative to value — consider running it more frequently during release weeks.
 - Keep Post-Merge off-peak only.
 
-Update this file (or a living version in your project root) whenever you adjust budgets in LOOP.md or the scheduler. The loop itself can append a line when it self-throttles.
+Update this file (or a living version in your project root) whenever you adjust budgets in ZJ-LOOP.md or the scheduler. The loop itself can append a line when it self-throttles.

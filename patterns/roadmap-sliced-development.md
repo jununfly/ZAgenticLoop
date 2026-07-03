@@ -1,10 +1,11 @@
 # Roadmap-Sliced Development Pattern
 
-This design document records the origin and durable decisions behind the public
-[Roadmap-Sliced Development Pattern](../../patterns/roadmap-sliced-development-pattern.md).
-The reusable pattern is now registered in `patterns/registry.yaml`.
+Roadmap-Sliced Development is a reusable human-agent development pattern for
+turning ambiguous product, architecture, documentation, or release initiatives
+into reviewable slices with explicit decisions, verification evidence, commits,
+and PR handoff.
 
-Pattern id: **roadmap-sliced-development-pattern**
+Pattern id: **roadmap-sliced-development**
 Chinese name: **路线图切片开发循环**
 
 ## Goal
@@ -93,10 +94,70 @@ State is layered rather than singular:
 | Roadmap Markdown | Human-readable progress window; generated from JSON. |
 | Git commits | Durable checkpoints after each completed slice. |
 | Durable docs | Final resting place for decisions after closeout. |
-| `STATE.md` / `loop-run-log.md` | Background repo operations evidence, not the main active-development state. |
+| `zj-loop/STATE.md` / `zj-loop/zj-loop-run-log.md` | Background repo operations evidence, not the main active-development state. |
 
 The important rule is: process state is temporary, decisions are not. Closeout
 must move durable decisions into docs before deleting roadmap/process files.
+
+## Runtime Contract
+
+When a user says "run under ZAgenticLoop constraints" or invokes this pattern
+for continuous execution, the agent should run leaf-by-leaf on the dedicated
+roadmap branch:
+
+1. select the current executable leaf node
+2. confirm the leaf has a verification or decision-only gate
+3. confirm the leaf has lightweight commit intent
+4. execute the slice
+5. run the declared verification gate
+6. update roadmap status, notes, and verification evidence before commit
+7. commit the leaf slice by default
+8. continue to the next executable leaf
+
+Automatic leaf commits are part of the default runtime contract once the
+roadmap has a dedicated branch. If the user explicitly disables automatic slice
+commits, stop at the commit boundary and wait for authorization.
+
+The loop stops only when one of these happens:
+
+- roadmap completed
+- Human Gate reached
+- final or unexpected verification gate failed
+- scope expansion is needed
+- roadmap write safety cannot be trusted
+- external blocker prevents meaningful progress
+- budget, time, or context limit is reached
+- user explicitly disabled automatic slice commits and the next action is a
+  commit boundary
+
+Stopping is correct when the next action requires human judgment,
+shared-state mutation, or a changed roadmap boundary.
+
+Expected-red contract tests are not stop conditions when the leaf notes or
+commit intent identify them as expected. They become stop conditions only if the
+leaf's final verification gate remains red.
+
+## Roadmap Write Safety
+
+Roadmap JSON is the source of truth. Markdown is a generated view. Product
+surfaces that write roadmap state should treat writes as serialized critical
+sections:
+
+- every write command obtains a per-roadmap lock
+- read commands can proceed without mutating the lock
+- stale locks are not cleared automatically by default
+- timeout messages include lock owner, lock path, and exact unlock command
+- explicit unlock requires human or operator intent
+- render runs after successful substantive writes
+
+If a write times out waiting for a lock, the agent stops rather than
+auto-unlocking. Unlock is allowed only when the user explicitly approves it or
+the operator runs an explicit unlock action.
+
+Active construction should prefer shallow executable leaves under a visible
+parent. Warn, but do not hard-block, when the active focus is deeper than depth
+3 from the roadmap root; then lift or fold the focus, or record why the deeper
+focus remains executable.
 
 ## Operational Mapping
 
@@ -645,6 +706,21 @@ This pattern depends on frequent human gates. The human decides:
 - whether package identity, public URLs, or release paths are acceptable
 - when to merge branches into `origin/main`
 
+Always stop before:
+
+- merge to shared branch
+- publish or release
+- delete an unmerged, shared, protected, or non-current-roadmap remote branch
+- destructive cleanup
+- roadmap scope expansion
+- continuing after failed verification
+- modifying denylisted or sensitive paths
+- changing package identity, public URLs, or public API
+
+Deleting the already-merged current roadmap branch is post-merge checklist work,
+not a Human Gate. Any branch deletion outside that narrow case remains a Human
+Gate.
+
 Common gate phrases in this repo:
 
 - `确认`
@@ -766,7 +842,7 @@ Suggested budget posture:
 Closeout date: 2026-07-02
 
 The process roadmap that graduated this pattern recorded 35 decisions. All
-durable decisions were absorbed into this design doc before deleting the process
+durable decisions were absorbed into this pattern before deleting the process
 roadmap files.
 
 | Decision area | Classification | Durable location |
@@ -779,30 +855,32 @@ roadmap files.
 | Durable-decision audit, roadmap retention, and closeout commit | durable doc | Closeout Contract |
 | Branch cleanup after merge | durable doc | Branch cleanup policy |
 | Candidate status and graduation condition | durable doc | Candidate Registry Shape |
+| Runtime continuous execution, stop conditions, roadmap write safety, and focus depth | durable doc | Runtime Contract, Roadmap Write Safety |
 
 No roadmap decision was retained only as `PR only`. No decision was discarded as
 an unneeded process note.
 
 ## Registry Shape
 
-Registered shape:
+Registry entry:
 
 ```yaml
-- id: roadmap-sliced-development-pattern
+- id: roadmap-sliced-development
   name: Roadmap-Sliced Development Pattern
-  file: roadmap-sliced-development-pattern.md
+  file: roadmap-sliced-development.md
   goal: Drive ambiguous architecture, product, documentation, and release initiatives through bounded roadmap-backed slices
   cadence: 1d
   risk: medium
   tools: [grok, claude-code, codex]
   skills: [zj-grill-me, zj-roadmap-driven, zj-grill-with-docs]
-  state: roadmap-sliced-state.md
+  state: zj-loop/roadmap-sliced-state.md
   phases: [explore, decide, slice, verify, commit, closeout, pr-handoff]
   human_gates: [naming, scope-expansion, release-boundary, branch-merge, process-doc-deletion]
-  starter: starters/roadmap-sliced-development-pattern
+  starter: starters/roadmap-sliced-development
   week_one_mode: L2
   token_cost: medium
 ```
 
-The reusable pattern is registered in `patterns/registry.yaml`; this design doc
-remains as the durable decision record for how it was shaped.
+This pattern is registered in `patterns/registry.yaml`. Keep the registry entry,
+starter, README tables, and bundled tool registries in sync when changing its
+public surface.

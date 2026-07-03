@@ -22,7 +22,7 @@
 3. Re-enabled with:
    - Report-only for 1 week
    - Verifier as separate sub-agent
-   - 2M token/day cap in LOOP.md
+   - 2M token/day cap in ZJ-LOOP.md
    - Branch allowlist: `main` only
 
 ## Lesson

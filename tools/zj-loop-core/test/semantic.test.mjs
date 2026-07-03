@@ -18,7 +18,7 @@ patterns:
     cadence: 1d
     risk: low
     skills: [loop-triage, minimal-fix]
-    state: STATE.md
+    state: zj-loop/STATE.md
     phases: [report, escalate]
     human_gates: [design-decisions]
     starter: starters/minimal-loop
@@ -36,7 +36,7 @@ patterns:
     cadence: 5m-15m
     risk: medium
     skills: [ci-triage, minimal-fix]
-    state: ci-sweeper-state.md
+    state: zj-loop/ci-sweeper-state.md
     phases: [detect, classify, fix]
     human_gates: [max-attempts]
     starter: starters/ci-sweeper
@@ -54,7 +54,7 @@ patterns:
     cadence: 6h-1d
     risk: medium
     skills: [dependency-triage, minimal-fix, loop-verifier]
-    state: dependency-sweeper-state.md
+    state: zj-loop/dependency-sweeper-state.md
     phases: [scan, triage-risk, patch-safe]
     human_gates: [major-bumps]
     starter: starters/dependency-sweeper
@@ -80,7 +80,7 @@ test('listPatternSummaries projects stable cards without full registry leakage',
     risk: 'low',
     weekOneMode: 'L1',
     tokenCostTier: 'low',
-    stateFile: 'STATE.md',
+    stateFile: 'zj-loop/STATE.md',
     requiredSkills: ['loop-triage', 'minimal-fix'],
     humanGates: ['design-decisions'],
     starter: 'starters/minimal-loop',

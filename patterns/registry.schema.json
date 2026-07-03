@@ -63,7 +63,7 @@
           },
           "state": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9-]+\\.md$"
+            "pattern": "^(zj-loop/)?[A-Za-z0-9-]+\\.md$"
           },
           "phases": {
             "type": "array",

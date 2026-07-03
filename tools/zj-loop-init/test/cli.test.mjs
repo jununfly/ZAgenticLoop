@@ -43,15 +43,34 @@ test('zj-loop-init dry-run scaffolds daily-triage', async () => {
   }
 });
 
+test('zj-loop-init accepts roadmap-sliced-development canonical id only', async () => {
+  const canonical = await exec('node', [
+    CLI,
+    '.',
+    '--pattern',
+    'roadmap-sliced-development',
+    '--tool',
+    'codex',
+    '--dry-run',
+  ]);
+  assert.match(canonical.stdout, /zj-loop-init: roadmap-sliced-development/);
+
+  await assert.rejects(
+    () => exec('node', [CLI, '.', '--pattern', 'roadmap-sliced-development-pattern', '--tool', 'codex', '--dry-run']),
+    (err) => err.stderr?.includes('Unknown pattern') || err.message?.includes('Unknown pattern'),
+  );
+});
+
 test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-'));
   try {
     await exec('node', [CLI, dir, '--pattern', 'issue-triage', '--tool', 'grok']);
-    await access(path.join(dir, 'issue-triage-state.md'));
+    await access(path.join(dir, 'zj-loop', 'issue-triage-state.md'));
+    await access(path.join(dir, 'zj-loop', 'ZJ-LOOP.md'));
     await access(path.join(dir, '.grok', 'skills', 'issue-triage', 'SKILL.md'));
     await access(path.join(dir, '.grok', 'skills', 'loop-verifier', 'SKILL.md'));
-    await access(path.join(dir, 'loop-budget.md'));
-    await access(path.join(dir, 'loop-run-log.md'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-budget.md'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -87,13 +106,14 @@ test('zj-loop-init scaffolds ci-sweeper with bundled assets', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-'));
   try {
     await exec('node', [CLI, dir, '--pattern', 'ci-sweeper', '--tool', 'grok']);
-    await access(path.join(dir, 'ci-sweeper-state.md'));
+    await access(path.join(dir, 'zj-loop', 'ci-sweeper-state.md'));
+    await access(path.join(dir, 'zj-loop', 'ZJ-LOOP.md'));
     await access(path.join(dir, '.grok', 'skills', 'ci-triage', 'SKILL.md'));
     await access(path.join(dir, '.grok', 'skills', 'minimal-fix', 'SKILL.md'));
     await access(path.join(dir, '.grok', 'skills', 'loop-verifier', 'SKILL.md'));
-    await access(path.join(dir, 'loop-budget.md'));
-    await access(path.join(dir, 'loop-run-log.md'));
-    await access(path.join(dir, '.grok', 'skills', 'loop-budget', 'SKILL.md'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-budget.md'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
+    await access(path.join(dir, '.grok', 'skills', 'zj-loop-budget', 'SKILL.md'));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

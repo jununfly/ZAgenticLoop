@@ -29,7 +29,7 @@ Estimate before you schedule:
 
 ```bash
 npx @jununfly/zj-loop-cost --pattern <id> --level L1
-npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok   # scaffolds loop-budget.md + loop-run-log.md
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok   # scaffolds zj-loop-budget.md + zj-loop-run-log.md
 ```
 
 | Situation | Prefer | Avoid (until budget + early-exit) |
@@ -39,7 +39,7 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok   # scaffolds lo
 | Many open PRs | PR Babysitter at 10–15m, L1 watch first | L2 fix loops on every tick |
 | Release week | Changelog Drafter daily | Dependency Sweeper + CI Sweeper unattended |
 
-`zj-loop-audit` caps **L3** until `loop-budget.md`, `loop-run-log.md`, and a `LOOP.md` budget section exist.
+`zj-loop-audit` caps **L3** until `zj-loop/zj-loop-budget.md`, `zj-loop/zj-loop-run-log.md`, and a `zj-loop/ZJ-LOOP.md` budget section exist.
 
 ## Quick reference
 
@@ -51,7 +51,7 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok   # scaffolds lo
 | Outdated packages / CVE alerts | [Dependency Sweeper](../patterns/dependency-sweeper.md) | L2 patch-only, denylist majors |
 | TODOs and cleanup after merges | [Post-Merge Cleanup](../patterns/post-merge-cleanup.md) | L1 off-peak, small fixes only |
 | Stale or missing release notes | [Changelog Drafter](../patterns/changelog-drafter.md) | **L1** (draft only first), very low risk |
-| Ambiguous product, architecture, docs, or release initiative | [Roadmap-Sliced Development](../patterns/roadmap-sliced-development-pattern.md) | **L2 guided** — one branch, one slice at a time, explicit closeout + PR handoff |
+| Ambiguous product, architecture, docs, or release initiative | [Roadmap-Sliced Development](../patterns/roadmap-sliced-development.md) | **L2 guided** — one branch, one slice at a time, explicit closeout + PR handoff |
 
 ## Overlap rules
 

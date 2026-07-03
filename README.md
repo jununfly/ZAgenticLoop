@@ -55,6 +55,15 @@ cd tools/zj-loop-audit && npm ci && npm test && node dist/cli.js /path/to/projec
 cd tools/zj-goal-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
 ```
 
+If `npx` stalls on package resolution, use an already installed binary
+(`zj-loop-init`, `zj-loop-audit`, `zj-loop-cost`), or reuse npm's cache:
+
+```bash
+npm exec --offline --package=@jununfly/zj-loop-init -- zj-loop-init . --pattern daily-triage --tool grok
+```
+
+More fallback paths are in [Quickstart](docs/QUICKSTART.md#if-npx-stalls-or-you-are-offline).
+
 ## First Loop In 5 Minutes
 
 1. Scaffold Daily Triage into a repo:
@@ -73,10 +82,10 @@ npx @jununfly/zj-loop-audit . --suggest
 3. Run report-only for week one:
 
 ```text
-/loop 1d Run loop-triage. Update STATE.md. No auto-fix in week one.
+/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
-4. Read `STATE.md`, correct anything wrong, then commit the scaffold and first state update.
+4. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold and first state update.
 
 Phased rollout: **L1 report -> L2 assisted fixes -> L3 unattended**. Do not skip the human-read step just because the loop is automated.
 
@@ -118,7 +127,7 @@ Full detail: [docs/primitives.md](docs/primitives.md) · [docs/primitives-matrix
 | [Changelog Drafter](patterns/changelog-drafter.md) | 1d or tag | [changelog-drafter](starters/changelog-drafter/) | L1 draft | Low |
 | [Post-Merge Cleanup](patterns/post-merge-cleanup.md) | 1d-6h | [post-merge-cleanup](starters/post-merge-cleanup/) | L1 off-peak | Low |
 | [Issue Triage](patterns/issue-triage.md) | 2h-1d | [issue-triage](starters/issue-triage/) | L1 propose-only | Low |
-| [Roadmap-Sliced Development](patterns/roadmap-sliced-development-pattern.md) | 1d | [roadmap-sliced-development-pattern](starters/roadmap-sliced-development-pattern/) | L2 guided | Medium |
+| [Roadmap-Sliced Development](patterns/roadmap-sliced-development.md) | 1d | [roadmap-sliced-development](starters/roadmap-sliced-development/) | L2 guided | Medium |
 
 Machine-readable index: [patterns/registry.yaml](patterns/registry.yaml)
 

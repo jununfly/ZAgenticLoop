@@ -6,7 +6,7 @@ Detect and sync drift between Loop configuration files in your repository.
 
 When working in teams, Loop configurations can drift over time:
 
-- STATE.md and LOOP.md get out of sync
+- zj-loop/STATE.md and zj-loop/ZJ-LOOP.md get out of sync
 - Skills are updated but not reflected in configuration
 - Required files are missing
 - Configuration drifts from starters
@@ -53,11 +53,11 @@ zj-loop-sync ./my-project --json
 ## What it checks
 
 1. **Required files**
-   - STATE.md (required)
-   - LOOP.md (required)
+   - zj-loop/STATE.md (required)
+   - zj-loop/ZJ-LOOP.md (required)
    - AGENTS.md (recommended)
 
-2. **STATE.md ↔ LOOP.md consistency**
+2. **zj-loop/STATE.md ↔ zj-loop/ZJ-LOOP.md consistency**
    - Structural similarity
    - State file references
    - Pattern consistency

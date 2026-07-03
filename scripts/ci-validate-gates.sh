@@ -21,9 +21,8 @@ done
 echo "Basic pattern structure checks passed ✓"
 
 test -f templates/pattern-template.md || (echo "Missing pattern-template.md"; exit 1)
-test -f templates/STATE.md.template || (echo "Missing STATE template"; exit 1)
-test -f templates/loop-run-log.md.template || (echo "Missing loop-run-log template"; exit 1)
-test -f templates/loop-budget.md.template || (echo "Missing loop-budget template"; exit 1)
+test -f templates/zj-loop-run-log.md.template || (echo "Missing zj-loop-run-log template"; exit 1)
+test -f templates/zj-loop-budget.md.template || (echo "Missing zj-loop-budget template"; exit 1)
 echo "Templates present ✓"
 
 npm install --no-save yaml@2 ajv@8

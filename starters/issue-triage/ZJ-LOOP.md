@@ -15,12 +15,12 @@
 
 ## Pairing
 
-Runs as a **feeder** for Daily Triage — merge Top 5 into `STATE.md` during morning triage.
+Runs as a **feeder** for Daily Triage — merge Top 5 into `zj-loop/STATE.md` during morning triage.
 
 ## Budget
 
 - Max sub-agent spawns per run: 1 (L2 label apply with verifier)
-- See `loop-budget.md`
+- See `zj-loop/zj-loop-budget.md`
 
 ## Links
 

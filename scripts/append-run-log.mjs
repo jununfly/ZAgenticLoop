@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Append one JSON run entry to loop-run-log.md and prune entries older than 30 days.
+ * Append one JSON run entry to zj-loop/zj-loop-run-log.md and prune entries older than 30 days.
  * Usage: node scripts/append-run-log.mjs '<json-object>' [path-to-log]
  */
 import { readFile, writeFile } from 'node:fs/promises';
@@ -9,10 +9,10 @@ const MARKER = '<!-- Loop appends below this line -->';
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 const entryJson = process.argv[2];
-const logPath = process.argv[3] || 'loop-run-log.md';
+const logPath = process.argv[3] || 'zj-loop/zj-loop-run-log.md';
 
 if (!entryJson) {
-  console.error('Usage: node scripts/append-run-log.mjs \'<json>\' [loop-run-log.md]');
+  console.error('Usage: node scripts/append-run-log.mjs \'<json>\' [zj-loop/zj-loop-run-log.md]');
   process.exit(1);
 }
 

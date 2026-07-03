@@ -1,7 +1,7 @@
 # Loop Constraints
 
 > Add rules below with `/constraints <rule>` in your agent.
-> The `loop-constraints` skill reads this file at the start of every run.
+> The `zj-loop-constraints` skill reads this file at the start of every run.
 > Constraints here are **binding** — the agent MUST follow them.
 
 ## Push & Merge

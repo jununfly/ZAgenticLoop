@@ -10,7 +10,8 @@ Scaffold for the [PR Babysitter](../../patterns/pr-babysitter.md) loop (L2 — a
    # Or manual:
    cp -r starters/pr-babysitter/.grok/skills/* .grok/skills/
    cp starters/pr-babysitter/pr-babysitter-state.md.example pr-babysitter-state.md
-   cp starters/pr-babysitter/LOOP.md .
+   mkdir -p zj-loop
+   cp starters/pr-babysitter/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
    ```
 
 2. Customize skills with your review norms and required checks.
@@ -28,7 +29,7 @@ Scaffold for the [PR Babysitter](../../patterns/pr-babysitter.md) loop (L2 — a
 |------|---------|
 | `pr-babysitter-state.md.example` | Watcher state |
 | `.grok/skills/pr-review-triage/` | PR triage skill |
-| `LOOP.md` | Team loop config |
+| `zj-loop/ZJ-LOOP.md` | Team loop config |
 
 ## Safety
 

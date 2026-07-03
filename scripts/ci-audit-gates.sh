@@ -34,7 +34,7 @@ node -e '
   const data = JSON.parse(fs.readFileSync("/tmp/audit.json", "utf8"));
   console.log("Reference score: " + data.score);
   if (data.score < 58) {
-    console.error("Reference score below L2 threshold (58). Restore dogfood signals: STATE.md, skills/, AGENTS.md.");
+    console.error("Reference score below L2 threshold (58). Restore dogfood signals: zj-loop/STATE.md, skills/, AGENTS.md.");
     process.exit(2);
   }
 '

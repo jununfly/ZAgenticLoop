@@ -55,6 +55,15 @@ cd tools/zj-loop-audit && npm ci && npm test && node dist/cli.js /path/to/projec
 cd tools/zj-goal-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
 ```
 
+如果 `npx` 在解析包时长时间无输出，可以使用已安装的可执行命令
+（`zj-loop-init`、`zj-loop-audit`、`zj-loop-cost`），或直接复用 npm 本地缓存：
+
+```bash
+npm exec --offline --package=@jununfly/zj-loop-init -- zj-loop-init . --pattern daily-triage --tool grok
+```
+
+更多 fallback 路径见 [Quickstart](docs/QUICKSTART.md#if-npx-stalls-or-you-are-offline)。
+
 ## 5 分钟跑起第一个 Loop
 
 1. 在 repo 中初始化 Daily Triage：
@@ -73,10 +82,10 @@ npx @jununfly/zj-loop-audit . --suggest
 3. 第一周只跑 report-only：
 
 ```text
-/loop 1d Run loop-triage. Update STATE.md. No auto-fix in week one.
+/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
-4. 阅读 `STATE.md`，修正任何错误，然后提交 starter 和第一次 state update。
+4. 阅读 `zj-loop/STATE.md`，修正任何错误，然后提交 starter 和第一次 state update。
 
 分阶段推出：**L1 report -> L2 assisted fixes -> L3 unattended**。不要因为 loop 已经自动化，就跳过人的阅读步骤。
 
@@ -118,7 +127,7 @@ npx @jununfly/zj-loop-audit . --suggest
 | [Changelog Drafter](patterns/changelog-drafter.md) | 1d or tag | [changelog-drafter](starters/changelog-drafter/) | L1 draft | Low |
 | [Post-Merge Cleanup](patterns/post-merge-cleanup.md) | 1d-6h | [post-merge-cleanup](starters/post-merge-cleanup/) | L1 off-peak | Low |
 | [Issue Triage](patterns/issue-triage.md) | 2h-1d | [issue-triage](starters/issue-triage/) | L1 propose-only | Low |
-| [Roadmap-Sliced Development](patterns/roadmap-sliced-development-pattern.md) | 1d | [roadmap-sliced-development-pattern](starters/roadmap-sliced-development-pattern/) | L2 guided | Medium |
+| [Roadmap-Sliced Development](patterns/roadmap-sliced-development.md) | 1d | [roadmap-sliced-development](starters/roadmap-sliced-development/) | L2 guided | Medium |
 
 机器可读索引：[patterns/registry.yaml](patterns/registry.yaml)
 

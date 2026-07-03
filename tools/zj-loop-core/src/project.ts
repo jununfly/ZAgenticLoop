@@ -29,19 +29,23 @@ export const DEFAULT_AGENT_DIRS = [
 ] as const;
 
 export const DEFAULT_STATE_FILES = [
-  'STATE.md',
-  'pr-babysitter-state.md',
-  'ci-sweeper-state.md',
-  'post-merge-state.md',
-  'dependency-sweeper-state.md',
-  'changelog-drafter-state.md',
-  'issue-triage-state.md',
+  'zj-loop/STATE.md',
+  'zj-loop/pr-babysitter-state.md',
+  'zj-loop/ci-sweeper-state.md',
+  'zj-loop/post-merge-state.md',
+  'zj-loop/dependency-sweeper-state.md',
+  'zj-loop/changelog-drafter-state.md',
+  'zj-loop/issue-triage-state.md',
 ] as const;
 
 export const DEFAULT_REQUIRED_LOOP_FILES = [
-  'STATE.md',
-  'LOOP.md',
+  'zj-loop/STATE.md',
+  'zj-loop/ZJ-LOOP.md',
   'AGENTS.md',
+] as const;
+
+export const LOOP_CONFIG_FILE_CANDIDATES = [
+  'zj-loop/ZJ-LOOP.md',
 ] as const;
 
 export const DEFAULT_SAFETY_FILES = [
@@ -66,7 +70,8 @@ export const DEFAULT_LOOP_SKILL_NAMES = [
   'dependency-triage',
   'rebase-and-clean',
   'changelog-scan',
-  'loop-constraints',
+  'zj-loop-constraints',
+  'zj-loop-budget',
   'draft-release-notes',
   'issue-triage',
 ] as const;
@@ -143,6 +148,17 @@ export async function hasAnyProjectPath(
   return (await findExistingProjectPaths(fs, candidates)).length > 0;
 }
 
+export async function readFirstProjectText(
+  fs: ProjectFileSystem,
+  candidates: readonly string[],
+): Promise<{ path: string; content: string } | null> {
+  for (const candidate of candidates) {
+    const content = await fs.readTextIfExists(candidate);
+    if (content !== null) return { path: candidate, content };
+  }
+  return null;
+}
+
 export async function listProjectSkillNames(
   fs: ProjectFileSystem,
   options: {
@@ -182,7 +198,7 @@ export async function collectProjectEvidenceFacts(fs: ProjectFileSystem): Promis
   const missingRequiredLoopFiles = DEFAULT_REQUIRED_LOOP_FILES.filter(
     (requiredFile) => !requiredLoopFiles.includes(requiredFile),
   );
-  const loopConfigContent = (await fs.readTextIfExists('LOOP.md')) ?? '';
+  const loopConfig = await readFirstProjectText(fs, LOOP_CONFIG_FILE_CANDIDATES);
   const skillNames = await listProjectSkillNames(fs);
 
   return {
@@ -190,8 +206,8 @@ export async function collectProjectEvidenceFacts(fs: ProjectFileSystem): Promis
     requiredLoopFiles,
     missingRequiredLoopFiles,
     loopConfig: {
-      present: loopConfigContent.length > 0,
-      content: loopConfigContent,
+      present: Boolean(loopConfig?.content.length),
+      content: loopConfig?.content ?? '',
     },
     agentsMd: {
       present: await hasAnyProjectPath(fs, ['AGENTS.md', 'CLAUDE.md']),

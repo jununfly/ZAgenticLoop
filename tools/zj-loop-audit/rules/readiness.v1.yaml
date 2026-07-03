@@ -107,7 +107,7 @@ assessments:
         - scoreGte: 82
         - not:
             predicate: costReady
-    message: Strong signals but missing cost observability (loop-budget.md, loop-run-log.md, LOOP.md budget) — add before L3.
+    message: Strong signals but missing cost observability (zj-loop/zj-loop-budget.md, zj-loop/zj-loop-run-log.md, zj-loop/ZJ-LOOP.md budget) — add before L3.
   - when:
       all:
         - scoreGte: 82
@@ -126,9 +126,9 @@ guidance:
       not: stateFile.present
     finding:
       level: fail
-      message: No state file (STATE.md or pattern-specific state).
+      message: No state file (zj-loop/STATE.md or zj-loop/<pattern>-state.md).
     recommendations:
-      - Copy starters/minimal-loop/STATE.md.example (or -claude / -codex variant) to STATE.md
+      - Copy starters/minimal-loop/STATE.md.example (or -claude / -codex variant) to zj-loop/STATE.md
   - when: stateFile.present
     finding:
       level: ok
@@ -159,9 +159,9 @@ guidance:
       not: loopConfig.present
     finding:
       level: warn
-      message: No LOOP.md documenting cadence, limits, and gates.
+      message: No zj-loop/ZJ-LOOP.md documenting cadence, limits, and gates.
     recommendations:
-      - Copy starters/minimal-loop/LOOP.md and customize
+      - Copy starters/minimal-loop/ZJ-LOOP.md to zj-loop/ZJ-LOOP.md and customize
   - when:
       not: agentsMd.present
     finding:
@@ -173,9 +173,9 @@ guidance:
       not: safety.loopMdMentionsSafety
     finding:
       level: warn
-      message: LOOP.md does not mention safety gates or auto-merge policy.
+      message: zj-loop/ZJ-LOOP.md does not mention safety gates or auto-merge policy.
     recommendations:
-      - Document human gates per docs/safety.md in LOOP.md
+      - Document human gates per docs/safety.md in zj-loop/ZJ-LOOP.md
   - when:
       not: safety.safetyDocPresent
     finding:
@@ -191,22 +191,22 @@ guidance:
       not: constraints.present
     finding:
       level: warn
-      message: No loop-constraints.md — structured constraints file missing.
+      message: No zj-loop/zj-loop-constraints.md — structured constraints file missing.
     recommendations:
-      - Create loop-constraints.md with denylist paths, push/merge rules, and human gates (see templates/loop-constraints.md)
+      - Create zj-loop/zj-loop-constraints.md with denylist paths, push/merge rules, and human gates (see templates/zj-loop-constraints.md)
   - when: constraints.present
     finding:
       level: ok
-      message: loop-constraints.md present.
+      message: zj-loop/zj-loop-constraints.md present.
   - when:
       all:
         - constraints.present
         - not: constraints.hasConstraintsSkill
     finding:
       level: warn
-      message: loop-constraints.md exists but no loop-constraints skill — rules not enforced at runtime.
+      message: zj-loop/zj-loop-constraints.md exists but no zj-loop-constraints skill — rules not enforced at runtime.
     recommendations:
-      - Add loop-constraints skill via zj-loop-init or templates/SKILL.md.loop-constraints
+      - Add zj-loop-constraints skill via zj-loop-init or templates/SKILL.md.zj-loop-constraints
   - when:
       not: github.present
     finding:
@@ -233,14 +233,14 @@ guidance:
       level: warn
       message: No MCP / connector config or mentions detected.
     recommendations:
-      - Document MCP usage (or note "MCP not required for this pattern") in LOOP.md or skills
+      - Document MCP usage (or note "MCP not required for this pattern") in zj-loop/ZJ-LOOP.md or skills
   - when:
       not: worktreeEvidence.present
     finding:
       level: warn
       message: Little evidence of worktree usage in docs or state.
     recommendations:
-      - Add worktree isolation notes to LOOP.md or pattern docs (see primitives and starters)
+      - Add worktree isolation notes to ZJ-LOOP.md or pattern docs (see primitives and starters)
   - when:
       not: registry.present
     finding:
@@ -252,49 +252,49 @@ guidance:
       not: cost.budgetDoc
     finding:
       level: warn
-      message: No loop-budget.md — token caps and kill switch undocumented.
+      message: No zj-loop/zj-loop-budget.md — token caps and kill switch undocumented.
     recommendations:
-      - Scaffold with zj-loop-init or copy templates/loop-budget.md.template
+      - Scaffold with zj-loop-init or copy templates/zj-loop-budget.md.template
   - when: cost.budgetDoc
     finding:
       level: ok
-      message: loop-budget.md present.
+      message: zj-loop/zj-loop-budget.md present.
   - when:
       not: cost.runLog
     finding:
       level: warn
-      message: No loop-run-log.md — run history not persisted.
+      message: No zj-loop/zj-loop-run-log.md — run history not persisted.
     recommendations:
-      - Copy templates/loop-run-log.md.template to loop-run-log.md
+      - Copy templates/zj-loop-run-log.md.template to zj-loop/zj-loop-run-log.md
   - when: cost.runLog
     finding:
       level: ok
-      message: loop-run-log.md present.
+      message: zj-loop/zj-loop-run-log.md present.
   - when:
       not: cost.loopMdBudget
     finding:
       level: warn
-      message: LOOP.md does not mention budget, token caps, or kill switch.
+      message: zj-loop/ZJ-LOOP.md does not mention budget, token caps, or kill switch.
     recommendations:
-      - Add a Budget section to LOOP.md (see starters/*/LOOP.md)
+      - Add a Budget section to zj-loop/ZJ-LOOP.md (see starters/*/ZJ-LOOP.md)
   - when:
       not: cost.budgetSkill
     finding:
       level: warn
-      message: No loop-budget skill — budget checks are not automated at runtime.
+      message: No zj-loop-budget skill — budget checks are not automated at runtime.
     recommendations:
-      - Add loop-budget skill via zj-loop-init or templates/SKILL.md.loop-budget
+      - Add zj-loop-budget skill via zj-loop-init or templates/SKILL.md.zj-loop-budget
   - when: cost.budgetSkill
     finding:
       level: ok
-      message: loop-budget skill present.
+      message: zj-loop-budget skill present.
   - when:
       not: loopActivity.present
     finding:
       level: warn
       message: No evidence of actual loop runs detected (no "Last run" entries in state, loop-related git activity, or scheduled workflows yet).
     recommendations:
-      - Run one loop (report-only), update + commit STATE.md (or pattern state). This turns structure into proven usage.
+      - Run one loop (report-only), update + commit zj-loop/STATE.md (or pattern state). This turns structure into proven usage.
   - when: loopActivity.present
     finding:
       level: ok
@@ -308,7 +308,7 @@ guidance:
             predicate: costReady
     finding:
       level: warn
-      message: Score qualifies for L3 but cost observability is incomplete — capped at L2 until budget + run log + LOOP.md budget exist.
+      message: Score qualifies for L3 but cost observability is incomplete — capped at L2 until budget + run log + zj-loop/ZJ-LOOP.md budget exist.
   - when:
       all:
         - scoreGte: 78

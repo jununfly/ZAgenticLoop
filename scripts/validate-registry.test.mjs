@@ -17,7 +17,7 @@ const VALID_PATTERN = {
   risk: 'low',
   tools: ['codex'],
   skills: ['loop-triage'],
-  state: 'STATE.md',
+  state: 'zj-loop/STATE.md',
   phases: ['scan', 'report'],
   human_gates: ['report-only'],
   starter: 'starters/minimal-loop',
@@ -66,7 +66,7 @@ patterns:
       - codex
     skills:
       - loop-triage
-    state: STATE.md
+    state: zj-loop/STATE.md
     phases:
       - scan
       - report

@@ -6,6 +6,7 @@ import {
   hasAnyProjectPath,
   type ProjectFileSystem,
 } from '@jununfly/zj-loop-core';
+import { LOOP_ARTIFACTS, artifactCandidates, skillPathCandidates } from './artifacts.js';
 import { evaluateReadinessGuidance, evaluateReadinessPolicy } from './readiness-rules.js';
 
 export interface LoopSignals {
@@ -50,19 +51,42 @@ export interface AuditResult {
 const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 const BUDGET_HINTS = [/budget/i, /max tokens/i, /token cap/i, /kill switch/i, /loop-pause-all/i];
 
+async function readFirstProjectText(
+  fs: ProjectFileSystem,
+  candidates: readonly string[],
+): Promise<{ path: string; content: string } | null> {
+  for (const candidate of candidates) {
+    const content = await fs.readTextIfExists(candidate);
+    if (content !== null) return { path: candidate, content };
+  }
+  return null;
+}
+
+async function findExistingProjectPaths(
+  fs: ProjectFileSystem,
+  candidates: readonly string[],
+): Promise<string[]> {
+  const found: string[] = [];
+  for (const candidate of candidates) {
+    if (await fs.exists(candidate)) found.push(candidate);
+  }
+  return found;
+}
+
 async function detectLoopActivity(
   root: string,
   fs: ProjectFileSystem,
 ): Promise<{ present: boolean; evidence: string[] }> {
   const evidence: string[] = [];
   const stateCandidates = [
-    'STATE.md',
-    'pr-babysitter-state.md',
-    'ci-sweeper-state.md',
-    'post-merge-state.md',
-    'dependency-sweeper-state.md',
-    'changelog-drafter-state.md',
-    'issue-triage-state.md',
+    'zj-loop/STATE.md',
+    'zj-loop/pr-babysitter-state.md',
+    'zj-loop/ci-sweeper-state.md',
+    'zj-loop/post-merge-state.md',
+    'zj-loop/dependency-sweeper-state.md',
+    'zj-loop/changelog-drafter-state.md',
+    'zj-loop/issue-triage-state.md',
+    'zj-loop/roadmap-sliced-state.md',
   ];
 
   // 1. Look for "Last run" timestamps or dated entries inside state files (strong real-usage signal)
@@ -78,9 +102,12 @@ async function detectLoopActivity(
   }
 
   // 2. Presence of run log artifacts or dedicated log templates being used
-  const logHints = ['loop-run-log', 'run-log', 'loop.log', 'audit-report'];
+  const logHints = ['zj-loop-run-log', 'run-log', 'loop.log', 'audit-report'];
   try {
-    const entries = await fs.listEntries('.');
+    const entries = [
+      ...(await fs.listEntries('.')),
+      ...(await fs.listEntries(LOOP_ARTIFACTS.directory)),
+    ];
     for (const entry of entries) {
       if (entry.kind === 'file' && logHints.some(h => entry.name.toLowerCase().includes(h))) {
         evidence.push(`log:${entry.name}`);
@@ -115,11 +142,11 @@ async function detectLoopActivity(
     // git not available or not a repo — ignore gracefully
   }
 
-  // 5. Check LOOP.md or a state for explicit "Last run" human-readable proof
+  // 5. Check ZJ-LOOP.md or a state for explicit "Last run" human-readable proof
   try {
-    const txt = await fs.readTextIfExists('LOOP.md');
-    if (txt) {
-      if (/last run|cadence|scheduled|automation/i.test(txt)) evidence.push('LOOP.md:active');
+    const loopConfig = await readFirstProjectText(fs, artifactCandidates(LOOP_ARTIFACTS.config));
+    if (loopConfig) {
+      if (/last run|cadence|scheduled|automation/i.test(loopConfig.content)) evidence.push(`${loopConfig.path}:active`);
     }
   } catch {}
 
@@ -135,8 +162,12 @@ export async function auditProject(target: string): Promise<AuditResult> {
   const fs = createNodeProjectFileSystem(root);
   const evidence = await collectProjectEvidenceFacts(fs);
 
-  const statePaths = evidence.statePaths;
-  const loopMd = evidence.loopConfig.present;
+  const statePaths = Array.from(new Set([
+    ...evidence.statePaths,
+    ...(await findExistingProjectPaths(fs, LOOP_ARTIFACTS.state.candidates)),
+  ]));
+  const loopConfig = await readFirstProjectText(fs, artifactCandidates(LOOP_ARTIFACTS.config));
+  const loopMd = Boolean(loopConfig?.content.length);
   const agentsMd = evidence.agentsMd.present;
   const skillNames = evidence.skillNames;
   const loopSkills = evidence.loopSkillNames;
@@ -150,7 +181,7 @@ export async function auditProject(target: string): Promise<AuditResult> {
     skillNames.includes('changelog-scan') ||
     skillNames.includes('issue-triage');
 
-  const loopMdContent = evidence.loopConfig.content;
+  const loopMdContent = loopConfig?.content ?? evidence.loopConfig.content;
 
   // New expanded signals
   const githubDir = evidence.github.present;
@@ -165,11 +196,11 @@ export async function auditProject(target: string): Promise<AuditResult> {
   // Light evidence of worktree usage (common in patterns/starters/LOOP)
   let worktreeEvidence = false;
   const candidateMd = [
-    'LOOP.md',
+    LOOP_ARTIFACTS.config.primary,
     'patterns/pr-babysitter.md',
-    'starters/minimal-loop/LOOP.md',
-    'starters/minimal-loop-claude/LOOP.md',
-    'starters/minimal-loop-codex/LOOP.md',
+    `starters/minimal-loop/${LOOP_ARTIFACTS.config.primary}`,
+    `starters/minimal-loop-claude/${LOOP_ARTIFACTS.config.primary}`,
+    `starters/minimal-loop-codex/${LOOP_ARTIFACTS.config.primary}`,
     'docs/operating-loops.md',
   ];
   for (const c of candidateMd) {
@@ -183,30 +214,26 @@ export async function auditProject(target: string): Promise<AuditResult> {
 
   const registryPresent = await fs.exists('patterns/registry.yaml');
 
-  const budgetDoc = await fs.exists('loop-budget.md');
-  const runLog = await fs.exists('loop-run-log.md');
+  const budgetDoc = await hasAnyProjectPath(fs, artifactCandidates(LOOP_ARTIFACTS.budget));
+  const runLog = await hasAnyProjectPath(fs, artifactCandidates(LOOP_ARTIFACTS.runLog));
   const loopMdBudget = BUDGET_HINTS.some((re) => re.test(loopMdContent));
 
-  const budgetSkill = await hasAnyProjectPath(fs, [
-    'skills/loop-budget/SKILL.md',
-    '.grok/skills/loop-budget/SKILL.md',
-    '.claude/skills/loop-budget/SKILL.md',
-    '.codex/skills/loop-budget/SKILL.md',
-  ]);
+  const budgetSkill = await hasAnyProjectPath(
+    fs,
+    skillPathCandidates([LOOP_ARTIFACTS.skills.budget.primary, ...LOOP_ARTIFACTS.skills.budget.legacy]),
+  );
 
   const loopActivity = await detectLoopActivity(root, fs);
 
-  const constraintsFile = await fs.exists('loop-constraints.md');
-  const constraintsSkill = await hasAnyProjectPath(fs, [
-    'skills/loop-constraints/SKILL.md',
-    '.grok/skills/loop-constraints/SKILL.md',
-    '.claude/skills/loop-constraints/SKILL.md',
-    '.codex/skills/loop-constraints/SKILL.md',
-  ]);
+  const constraintsFile = await hasAnyProjectPath(fs, artifactCandidates(LOOP_ARTIFACTS.constraints));
+  const constraintsSkill = await hasAnyProjectPath(
+    fs,
+    skillPathCandidates([LOOP_ARTIFACTS.skills.constraints.primary, ...LOOP_ARTIFACTS.skills.constraints.legacy]),
+  );
 
   const signals: LoopSignals = {
     stateFile: { present: statePaths.length > 0, paths: statePaths },
-    loopConfig: { present: loopMd, path: loopMd ? 'LOOP.md' : undefined },
+    loopConfig: { present: loopMd, path: loopConfig?.path },
     skills: { count: loopSkills.length, loopSkills },
     verifier: { present: verifier },
     triage: { present: triage },

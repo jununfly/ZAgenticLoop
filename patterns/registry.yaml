@@ -12,7 +12,7 @@ patterns:
     risk: medium
     tools: [grok, claude-code, codex, github-actions]
     skills: [pr-review-triage, minimal-fix, rebase-and-clean]
-    state: pr-babysitter-state.md
+    state: zj-loop/pr-babysitter-state.md
     phases: [discover, triage, fix, verify, notify]
     human_gates: [security, payments, auth, max-fix-attempts]
     starter: starters/pr-babysitter
@@ -45,7 +45,7 @@ patterns:
     risk: low
     tools: [grok, claude-code, codex, github-actions]
     skills: [loop-triage, minimal-fix]
-    state: STATE.md
+    state: zj-loop/STATE.md
     phases: [report, act-small-wins, escalate]
     human_gates: [design-decisions, multi-file-refactors]
     starter: starters/minimal-loop
@@ -70,9 +70,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 2
       first_loop_command:
-        grok: /loop 1d Run loop-triage. Update STATE.md. No auto-fix in week one.
-        claude: /loop 1d $loop-triage — update STATE.md. Report-only week one.
-        codex: "Automation daily: $loop-triage → update STATE.md. Report-only."
+        grok: /loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
+        claude: /loop 1d $loop-triage — update zj-loop/STATE.md. Report-only week one.
+        codex: "Automation daily: $loop-triage → update zj-loop/STATE.md. Report-only."
 
   - id: ci-sweeper
     name: CI Sweeper
@@ -82,7 +82,7 @@ patterns:
     risk: medium
     tools: [grok, claude-code, codex, github-actions]
     skills: [ci-triage, minimal-fix]
-    state: ci-sweeper-state.md
+    state: zj-loop/ci-sweeper-state.md
     phases: [detect, classify, fix, verify, escalate]
     human_gates: [infra-failures, max-attempts, security-tests]
     starter: starters/ci-sweeper
@@ -115,7 +115,7 @@ patterns:
     risk: low
     tools: [grok, claude-code, codex, github-actions]
     skills: [post-merge-scan, minimal-fix]
-    state: post-merge-state.md
+    state: zj-loop/post-merge-state.md
     phases: [scan-merges, prioritize, fix-small, ticket-large]
     human_gates: [architectural-debt, feature-flags, large-diffs]
     starter: starters/post-merge-cleanup
@@ -148,7 +148,7 @@ patterns:
     risk: medium
     tools: [grok, claude-code, codex, github-actions]
     skills: [dependency-triage, minimal-fix, loop-verifier]
-    state: dependency-sweeper-state.md
+    state: zj-loop/dependency-sweeper-state.md
     phases: [scan, triage-risk, patch-safe, verify-worktree, escalate-risky]
     human_gates: [major-bumps, high-sev-cve, denylisted-packages, max-attempts]
     starter: starters/dependency-sweeper
@@ -181,7 +181,7 @@ patterns:
     risk: low
     tools: [grok, claude-code, codex, github-actions]
     skills: [changelog-scan, draft-release-notes, loop-verifier]
-    state: changelog-drafter-state.md
+    state: zj-loop/changelog-drafter-state.md
     phases: [scan-merges, categorize, draft, review, publish]
     human_gates: [breaking-changes, security, major-features, marketing-sensitive]
     starter: starters/changelog-drafter
@@ -214,7 +214,7 @@ patterns:
     risk: low
     tools: [grok, claude-code, codex, github-actions]
     skills: [issue-triage, loop-verifier]
-    state: issue-triage-state.md
+    state: zj-loop/issue-triage-state.md
     phases: [discover, dedupe, score, propose-labels, human-review]
     human_gates: [security, p0-p1, ambiguous-duplicates, stale-closures]
     starter: starters/issue-triage
@@ -239,18 +239,18 @@ patterns:
         claude: /loop 2h $issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.
         codex: "Automation 2h: issue-triage → issue-triage-state.md. Propose only."
 
-  - id: roadmap-sliced-development-pattern
+  - id: roadmap-sliced-development
     name: Roadmap-Sliced Development Pattern
-    file: roadmap-sliced-development-pattern.md
+    file: roadmap-sliced-development.md
     goal: Drive ambiguous architecture, product, documentation, and release initiatives through bounded roadmap-backed slices
     cadence: 1d
     risk: medium
     tools: [grok, claude-code, codex]
     skills: [zj-grill-me, zj-roadmap-driven, zj-grill-with-docs]
-    state: roadmap-sliced-state.md
+    state: zj-loop/roadmap-sliced-state.md
     phases: [explore, decide, slice, verify, commit, closeout, pr-handoff]
     human_gates: [naming, scope-expansion, release-boundary, branch-merge, process-doc-deletion]
-    starter: starters/roadmap-sliced-development-pattern
+    starter: starters/roadmap-sliced-development
     week_one_mode: L2
     token_cost: medium
     cost:
@@ -268,6 +268,6 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 2
       first_loop_command:
-        grok: /loop 1d Run roadmap-sliced-development-pattern. Update roadmap-sliced-state.md before commits. Execute one bounded slice, verify, commit, and stop at Human Gates.
+        grok: /loop 1d Run roadmap-sliced-development. Update zj-loop/roadmap-sliced-state.md before commits. Execute one bounded slice, verify, commit, and stop at Human Gates.
         claude: /loop 1d $zj-grill-me + $zj-roadmap-driven — execute one roadmap slice with verification evidence before commit. Stop at Human Gates.
-        codex: "Run $zj-grill-me + $zj-roadmap-driven for one bounded roadmap slice. Update roadmap-sliced-state.md before commit; continue to PR handoff after closeout."
+        codex: "Run $zj-grill-me + $zj-roadmap-driven for one bounded roadmap slice. Update zj-loop/roadmap-sliced-state.md before commit; continue to PR handoff after closeout."

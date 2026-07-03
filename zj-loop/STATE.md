@@ -19,4 +19,4 @@ Last run: 2026-07-01T11:22:22Z (automated daily-triage workflow)
 —
 
 ---
-Run log: Updated by `.github/workflows/daily-triage.yml`. See `LOOP.md` for cadence and gates.
+Run log: Updated by `.github/workflows/daily-triage.yml`. See `zj-loop/ZJ-LOOP.md` for cadence and gates.

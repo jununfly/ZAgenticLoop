@@ -15,7 +15,7 @@ You can also run it on a faster cadence during active periods:
 
 ## Supporting Files You Should Have
 
-- `STATE.md` in the repo root (committed or in a shared location)
+- `zj-loop/STATE.md` in the repo root (committed or in a shared location)
 - The `loop-triage` skill installed (copy from `templates/SKILL.md.loop-triage`)
 - A `minimal-fix` skill (or equivalent instructions)
 - Reviewer persona / sub-agent definition
@@ -46,7 +46,7 @@ Last run: 2026-06-09 08:15 UTC
 
 - Use `isolation: "worktree"` on any sub-agent that will edit code.
 - Make the reviewer sub-agent use a stronger model or higher reasoning effort.
-- After the loop runs, read `STATE.md` yourself the first few times so you can refine the triage skill and the hand-off criteria.
+- After the loop runs, read `zj-loop/STATE.md` yourself the first few times so you can refine the triage skill and the hand-off criteria.
 - Add a `durable: true` scheduler entry if you want the loop to survive session restarts (advanced).
 
 ## Evolution Path

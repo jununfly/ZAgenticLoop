@@ -16,26 +16,34 @@ See [docs/RELEASE.md](../../docs/RELEASE.md) for npm publish tags. The published
 
 After scaffolding, always run `npx @jununfly/zj-loop-audit . --suggest` and actually execute the first report-only loop to generate activity signals.
 
+If `npx` stalls on package resolution, use an installed binary or npm's local cache:
+
+```bash
+zj-loop-init . --pattern daily-triage --tool grok
+npm exec --offline --package=@jununfly/zj-loop-init -- zj-loop-init . --pattern daily-triage --tool grok
+```
+
 ## Patterns
 
 | Pattern | Default state file |
 |---------|-------------------|
-| `daily-triage` | `STATE.md` |
-| `pr-babysitter` | `pr-babysitter-state.md` |
-| `ci-sweeper` | `ci-sweeper-state.md` |
-| `dependency-sweeper` | `dependency-sweeper-state.md` |
-| `post-merge-cleanup` | `post-merge-state.md` |
-| `changelog-drafter` | `changelog-drafter-state.md` |
-| `issue-triage` | `issue-triage-state.md` |
-| `roadmap-sliced-development-pattern` | `roadmap-sliced-state.md` |
+| `daily-triage` | `zj-loop/STATE.md` |
+| `pr-babysitter` | `zj-loop/pr-babysitter-state.md` |
+| `ci-sweeper` | `zj-loop/ci-sweeper-state.md` |
+| `dependency-sweeper` | `zj-loop/dependency-sweeper-state.md` |
+| `post-merge-cleanup` | `zj-loop/post-merge-state.md` |
+| `changelog-drafter` | `zj-loop/changelog-drafter-state.md` |
+| `issue-triage` | `zj-loop/issue-triage-state.md` |
+| `roadmap-sliced-development` | `zj-loop/roadmap-sliced-state.md` |
 
-L2 patterns (`ci-sweeper`, `dependency-sweeper`, `roadmap-sliced-development-pattern`) also copy verifier templates when missing from the starter; fix loops only copy `minimal-fix` where the registry asks for it.
+L2 patterns (`ci-sweeper`, `dependency-sweeper`, `roadmap-sliced-development`) also copy verifier templates when missing from the starter; fix loops only copy `minimal-fix` where the registry asks for it.
 
 Every scaffold also creates:
 
-- `loop-budget.md` — pattern-specific daily caps and kill switch
-- `loop-run-log.md` — append-only run history
-- `loop-budget` skill — runtime budget guard at start/end of each run
+- `zj-loop/zj-loop-budget.md` — pattern-specific daily caps and kill switch
+- `zj-loop/zj-loop-run-log.md` — append-only run history
+- `zj-loop/zj-loop-constraints.md` — structured runtime constraints
+- `zj-loop-budget` skill — runtime budget guard at start/end of each run
 
 ## Tools
 

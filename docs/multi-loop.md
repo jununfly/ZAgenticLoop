@@ -5,10 +5,10 @@ Running more than one loop in a repo is normal. Running them without boundaries 
 ## Principles
 
 1. **One owner per branch** — at most one loop may mutate a branch per hour.
-2. **Separate state files** — `STATE.md` for triage; pattern-specific files for action loops.
+2. **Separate state files** — `zj-loop/STATE.md` for triage; pattern-specific files for action loops.
 3. **Triage reports, action loops execute** — Daily Triage at L1 never competes with CI Sweeper fixes.
-4. **Shared denylist** — copy the same path denylist into every LOOP.md.
-5. **Aggregate token budget** — see `templates/loop-budget.md.template`.
+4. **Shared denylist** — copy the same path denylist into every ZJ-LOOP.md.
+5. **Aggregate token budget** — see `templates/zj-loop-budget.md.template`.
 
 ## Recommended state layout
 
@@ -18,7 +18,7 @@ pr-babysitter-state.md      # PR watcher
 ci-sweeper-state.md         # Active CI failures + attempt counts
 dependency-sweeper-state.md # In-flight package updates
 post-merge-state.md         # Cleanup backlog
-loop-run-log.md             # Append-only observability
+zj-loop-run-log.md             # Append-only observability
 ```
 
 ## Priority when loops conflict
@@ -33,7 +33,7 @@ loop-run-log.md             # Append-only observability
 
 ## Scheduler coordination
 
-Document in root `LOOP.md`:
+Document in root `zj-loop/ZJ-LOOP.md`:
 
 ```markdown
 ## Multi-loop schedule
@@ -49,11 +49,11 @@ Document in root `LOOP.md`:
 Each action loop should write `acting_on: branch-or-pr-id` in its state file. Before spawning a fix:
 
 1. Read all other pattern state files
-2. If another loop `acting_on` matches → skip and log to `loop-run-log.md`
+2. If another loop `acting_on` matches → skip and log to `zj-loop/zj-loop-run-log.md`
 
 ## Human inbox
 
-Use a shared section in `STATE.md`:
+Use a shared section in `zj-loop/STATE.md`:
 
 ```markdown
 ## Human Inbox (ambiguous / cross-loop)

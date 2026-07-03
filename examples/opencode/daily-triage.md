@@ -5,22 +5,22 @@ Same pattern as Grok and Claude Code; **scheduling runs from cron/systemd** and 
 ## Prerequisites
 
 1. [Opencode CLI](https://opencode.ai) installed and authenticated against your preferred provider.
-2. `STATE.md` at the repo root — copy from `starters/minimal-loop-opencode/STATE.md.example`.
+2. `zj-loop/STATE.md` at the repo root — copy from `starters/minimal-loop-opencode/STATE.md.example`.
 3. `loop-triage` skill — copy `templates/SKILL.md.loop-triage` to `skills/loop-triage/SKILL.md`.
 
 ```bash
-mkdir -p skills/loop-triage
+mkdir -p skills/loop-triage zj-loop
 cp templates/SKILL.md.loop-triage skills/loop-triage/SKILL.md
-cp starters/minimal-loop-opencode/STATE.md.example STATE.md
+cp starters/minimal-loop-opencode/STATE.md.example zj-loop/STATE.md
 ```
 
 ## Report-Only (Week 1)
 
-Use cron or a systemd timer to run a fresh opencode session each morning. The prompt forces the run to read `STATE.md` first so state carries across sessions.
+Use cron or a systemd timer to run a fresh opencode session each morning. The prompt forces the run to read `zj-loop/STATE.md` first so state carries across sessions.
 
 ```bash
 opencode run \
-  "Run the loop-triage skill. Read STATE.md first. Append high-priority items under High Priority and Watch List. Update Last run timestamp. Do not edit source code. End with a 5-line summary." \
+  "Run the loop-triage skill. Read zj-loop/STATE.md first. Append high-priority items under High Priority and Watch List. Update Last run timestamp. Do not edit source code. End with a 5-line summary." \
   --title "Daily triage — repo:${PWD##*/}"
 ```
 
@@ -29,7 +29,7 @@ The report-only stance is enforced by `AGENTS.md` and the prompt: no source-code
 Faster cadence during active periods:
 
 ```cron
-0 */2 * * * cd /repo && opencode run "Run loop-triage. Report obvious small wins only. Update STATE.md. No code changes."
+0 */2 * * * cd /repo && opencode run "Run loop-triage. Report obvious small wins only. Update zj-loop/STATE.md. No code changes."
 ```
 
 ## With Small Auto-Fixes (Week 3+)
@@ -55,7 +55,7 @@ The verifier sees only the diff; the implementer works only inside the worktree.
 
 ## Goal Mode Alternative
 
-For a one-shot "get main green" session, drive opencode with the [Goal Engineering](https://github.com/cobusgreyling/goal-engineering) `/goal` skill. opencode is goal-friendly: hand it the goal, the stop condition, and the verifier prompt and let the verifier decide when to stop.
+For a one-shot "get main green" session, drive opencode with a goal-oriented workflow: hand it the goal, the stop condition, and the verifier prompt and let the verifier decide when to stop.
 
 ```bash
 opencode run "Goal: all tests on main pass and lint is clean. Stop when tests pass and write the evidence."
@@ -106,14 +106,14 @@ Invoke one role per run with `--agent verifier` or `--agent implementer` (see We
 
 ## State Conventions
 
-The default spine is `STATE.md` at the repo root. Use `STATE.md.example` for the template (gitignored live state). For pattern-specific state, follow the [state conventions in primitives-matrix.md](../../docs/primitives-matrix.md).
+The default spine is `zj-loop/STATE.md` at the repo root. Use `STATE.md.example` for the template (gitignored live state). For pattern-specific state, follow the [state conventions in primitives-matrix.md](../../docs/primitives-matrix.md).
 
 ## Safety (L1 defaults)
 
 - Week one: report-only prompt + `AGENTS.md` safety rules; no source-code edits.
 - One worktree per fix attempt; discard after verifier REJECT.
 - Never push without a draft PR and explicit human review on denylisted paths (`docs/safety.md`).
-- Token budget: set `loop-pause-all` in `STATE.md` if a run exceeds the daily cap.
+- Token budget: set `loop-pause-all` in `zj-loop/STATE.md` if a run exceeds the daily cap.
 
 ## Operations
 
@@ -124,14 +124,14 @@ opencode session list
 opencode export <sessionID> > loop-session.json
 ```
 
-Pause: disable the cron/systemd timer or set `loop-pause-all` in `STATE.md` and teach the skill to stop acting.
+Pause: disable the cron/systemd timer or set `loop-pause-all` in `zj-loop/STATE.md` and teach the skill to stop acting.
 
-Audit readiness: `npx @cobusgreyling/loop-audit . --suggest`.
+Audit readiness: `npx @jununfly/zj-loop-audit . --suggest`.
 
 ## When to pick opencode over a TUI agent
 
 - You want **scheduling without a TUI** — cron/systemd can call `opencode run` in CI, in tmux, and on a headless box.
-- You want to keep your **state and skills in plain files** (`STATE.md`, `skills/`) that survive a host change.
+- You want to keep your **state and skills in plain files** (`zj-loop/STATE.md`, `skills/`) that survive a host change.
 - You're already running **systemd timers** or **cron** for unrelated work — fold opencode loops into the same scheduler.
 
 ## References

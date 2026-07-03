@@ -28,7 +28,7 @@ Start (Grok, week one):
 | `issue-triage-state.md.example` | Rolling backlog health |
 | `.grok/skills/issue-triage/` | Issue scan + prioritize skill |
 | `.claude/agents/loop-verifier.md` | L2 label-apply checker |
-| `LOOP.md` | Cadence and human gates |
+| `zj-loop/ZJ-LOOP.md` | Cadence and human gates |
 
 ## Safety
 

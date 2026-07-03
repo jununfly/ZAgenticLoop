@@ -1,6 +1,6 @@
 # Sample Loop Run Log (Populated)
 
-This is an example of a real (lightly anonymized) run log following `templates/loop-run-log.md.template`.
+This is an example of a real (lightly anonymized) run log following `templates/zj-loop-run-log.md.template`.
 
 Append one structured entry per significant run (or daily summary). Prune old entries.
 
@@ -52,6 +52,6 @@ Append one structured entry per significant run (or daily summary). Prune old en
 - The loop (or a wrapper script / GitHub Action step) appends a compact JSON block after every run.
 - Humans can `grep` or view the file to get a fast picture without reading full chat histories.
 - Feed the recent entries back into the next loop run as context (via STATE.md or directly).
-- Combine with `loop-budget.md` to detect when you're burning too many tokens or spawning too many sub-agents.
+- Combine with `zj-loop/zj-loop-budget.md` to detect when you're burning too many tokens or spawning too many sub-agents.
 
-See `templates/loop-run-log.md.template` and `templates/loop-budget.md.template` for the canonical empty versions.
+See `templates/zj-loop-run-log.md.template` and `templates/zj-loop-budget.md.template` for the canonical empty versions.

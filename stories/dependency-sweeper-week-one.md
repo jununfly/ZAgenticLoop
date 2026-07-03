@@ -30,4 +30,4 @@
 
 ## Lesson
 
-Patch-only is not "risk-free." Verifier must run the **same install path as CI** (`npm ci`, not `npm test` alone). Cap auto-PRs per day (we added max 5 to LOOP.md). One false APPROVE cost more human time than a week of manual patches would have.
+Patch-only is not "risk-free." Verifier must run the **same install path as CI** (`npm ci`, not `npm test` alone). Cap auto-PRs per day (we added max 5 to ZJ-LOOP.md). One false APPROVE cost more human time than a week of manual patches would have.

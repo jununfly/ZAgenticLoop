@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render loop-audit-demo.gif — score climbing 10 → 70 → 100."""
+"""Render zj-loop-audit-demo.gif — score climbing 10 -> 70 -> 100."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "assets" / "visuals" / "loop-audit-demo.gif"
-AUDIT = ROOT / "tools" / "loop-audit" / "dist" / "cli.js"
+OUT = ROOT / "docs" / "visuals" / "zj-loop-audit-demo.gif"
+AUDIT = ROOT / "tools" / "zj-loop-audit" / "dist" / "cli.js"
 FONT_CANDIDATES = [
     "/System/Library/Fonts/Menlo.ttc",
     "/System/Library/Fonts/Supplemental/Courier New.ttf",
@@ -89,14 +89,14 @@ def render_frame(stage_title: str, score: int, level: str, assessment: str) -> I
     if score >= 70:
         draw.text((48, y), "✓ Triage skill present", fill=ACCENT, font=font_sm)
         y += 28
-        draw.text((48, y), "✓ State file(s): STATE.md", fill=ACCENT, font=font_sm)
-        y += 28
+    draw.text((48, y), "✓ State file(s): zj-loop/STATE.md", fill=ACCENT, font=font_sm)
+    y += 28
     if score >= 100:
         draw.text((48, y), "✓ Verifier skill present", fill=ACCENT, font=font_sm)
         y += 28
 
-    draw.text((48, HEIGHT - 88), "npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok", fill=FG, font=font_sm)
-    draw.text((48, HEIGHT - 56), "npx @cobusgreyling/loop-audit . --badge", fill=ACCENT, font=font_sm)
+    draw.text((48, HEIGHT - 88), "npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok", fill=FG, font=font_sm)
+    draw.text((48, HEIGHT - 56), "npx @jununfly/zj-loop-audit . --badge", fill=ACCENT, font=font_sm)
 
     # big score watermark
     draw.text((WIDTH - 200, 130), str(score), fill=(20, 32, 48), font=font_xl)
@@ -115,8 +115,8 @@ def build_gif() -> None:
     draw.text((48, 180), "Stop prompting.", fill=FG, font=font_lg)
     draw.text((48, 230), "Design the loop.", fill=FG, font=font_lg)
     draw.text((48, 280), "Get a score.", fill=ACCENT, font=font_lg)
-    draw.text((48, 360), "loop-init → loop-audit", fill=MUTED, font=font_md)
-    draw.text((48, 400), "10  →  70  →  100", fill=ACCENT, font=font_sm)
+    draw.text((48, 360), "zj-loop-init -> zj-loop-audit", fill=MUTED, font=font_md)
+    draw.text((48, 400), "10  ->  70  ->  100", fill=ACCENT, font=font_sm)
     for _ in range(3):
         frames.append(intro)
 
@@ -144,8 +144,8 @@ def build_gif() -> None:
 def ensure_audit_built() -> None:
     if AUDIT.exists():
         return
-    subprocess.run(["npm", "ci"], cwd=ROOT / "tools" / "loop-audit", check=True)
-    subprocess.run(["npm", "run", "build"], cwd=ROOT / "tools" / "loop-audit", check=True)
+    subprocess.run(["npm", "ci"], cwd=ROOT / "tools" / "zj-loop-audit", check=True)
+    subprocess.run(["npm", "run", "build"], cwd=ROOT / "tools" / "zj-loop-audit", check=True)
 
 
 if __name__ == "__main__":

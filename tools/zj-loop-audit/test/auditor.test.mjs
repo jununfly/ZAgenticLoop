@@ -7,7 +7,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { auditProject, computeScore } from '../dist/auditor.js';
 import { evaluateReadinessGuidance, evaluateReadinessPolicy, parseReadinessPolicy } from '../dist/readiness-rules.js';
-import { formatBadge } from '../dist/reporter.js';
+import { formatBadge, formatHuman, formatMarkdown } from '../dist/reporter.js';
 
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
@@ -35,8 +35,8 @@ function emptySignals() {
 function l3CandidateSignals(overrides = {}) {
   return {
     ...emptySignals(),
-    stateFile: { present: true, paths: ['STATE.md'] },
-    loopConfig: { present: true, path: 'LOOP.md' },
+    stateFile: { present: true, paths: ['zj-loop/STATE.md'] },
+    loopConfig: { present: true, path: 'zj-loop/ZJ-LOOP.md' },
     skills: { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] },
     verifier: { present: true },
     triage: { present: true },
@@ -49,7 +49,7 @@ function l3CandidateSignals(overrides = {}) {
     registry: { present: true },
     constraints: { present: true, hasConstraintsSkill: true },
     cost: { budgetDoc: true, runLog: true, loopMdBudget: true, budgetSkill: true },
-    loopActivity: { present: true, evidence: ['git:state update', 'state:STATE.md'] },
+    loopActivity: { present: true, evidence: ['git:state update', 'state:zj-loop/STATE.md'] },
     ...overrides,
   };
 }
@@ -62,7 +62,7 @@ test('computeScore: empty project is L0', () => {
 
 test('computeScore: state + triage reaches L1', () => {
   const s = emptySignals();
-  s.stateFile = { present: true, paths: ['STATE.md'] };
+  s.stateFile = { present: true, paths: ['zj-loop/STATE.md'] };
   s.triage = { present: true };
   const { level, score } = computeScore(s);
   assert.equal(level, 'L1');
@@ -71,7 +71,7 @@ test('computeScore: state + triage reaches L1', () => {
 
 test('computeScore: full L2 signals', () => {
   const s = emptySignals();
-  s.stateFile = { present: true, paths: ['STATE.md'] };
+  s.stateFile = { present: true, paths: ['zj-loop/STATE.md'] };
   s.triage = { present: true };
   s.skills = { count: 2, loopSkills: ['loop-triage', 'loop-verifier'] };
   s.verifier = { present: true };
@@ -96,9 +96,9 @@ test('computeScore: L3 blocked without cost observability', () => {
 
 test('computeScore: high structure without activity caps at L2', () => {
   const s = emptySignals();
-  s.stateFile = { present: true, paths: ['STATE.md'] };
+  s.stateFile = { present: true, paths: ['zj-loop/STATE.md'] };
   s.triage = { present: true };
-  s.loopConfig = { present: true, path: 'LOOP.md' };
+  s.loopConfig = { present: true, path: 'zj-loop/ZJ-LOOP.md' };
   s.agentsMd = { present: true };
   s.skills = { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] };
   s.verifier = { present: true };
@@ -120,7 +120,7 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
         assessment: 'Strong loop readiness',
         findings: [
           { level: 'ok', message: 'Loop activity detected' },
-          { level: 'ok', message: 'loop-budget.md present' },
+          { level: 'ok', message: 'zj-loop/zj-loop-budget.md present' },
         ],
         recommendations: [],
       },
@@ -135,12 +135,12 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
         assessment: 'Strong signals but missing cost observability',
         findings: [
           { level: 'warn', message: 'Score qualifies for L3 but cost observability is incomplete' },
-          { level: 'warn', message: 'No loop-budget.md' },
-          { level: 'warn', message: 'No loop-run-log.md' },
+          { level: 'warn', message: 'No zj-loop/zj-loop-budget.md' },
+          { level: 'warn', message: 'No zj-loop/zj-loop-run-log.md' },
         ],
         recommendations: [
-          'Scaffold with zj-loop-init or copy templates/loop-budget.md.template',
-          'Copy templates/loop-run-log.md.template to loop-run-log.md',
+          'Scaffold with zj-loop-init or copy templates/zj-loop-budget.md.template',
+          'Copy templates/zj-loop-run-log.md.template to zj-loop/zj-loop-run-log.md',
         ],
       },
     },
@@ -157,7 +157,7 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
           { level: 'warn', message: 'No evidence of actual loop runs detected' },
         ],
         recommendations: [
-          'Run one loop (report-only), update + commit STATE.md (or pattern state). This turns structure into proven usage.',
+          'Run one loop (report-only), update + commit zj-loop/STATE.md (or pattern state). This turns structure into proven usage.',
         ],
       },
     },
@@ -165,7 +165,7 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
       name: 'L1 foundation keeps setup recommendations visible',
       signals: {
         ...emptySignals(),
-        stateFile: { present: true, paths: ['STATE.md'] },
+        stateFile: { present: true, paths: ['zj-loop/STATE.md'] },
         triage: { present: true },
         skills: { count: 1, loopSkills: ['loop-triage'] },
       },
@@ -173,14 +173,14 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
         level: 'L1',
         assessment: 'Early loop setup',
         findings: [
-          { level: 'ok', message: 'State file(s): STATE.md' },
+          { level: 'ok', message: 'State file(s): zj-loop/STATE.md' },
           { level: 'ok', message: 'Triage skill present' },
           { level: 'warn', message: 'No loop-verifier skill' },
-          { level: 'warn', message: 'No LOOP.md documenting cadence, limits, and gates' },
+          { level: 'warn', message: 'No zj-loop/ZJ-LOOP.md documenting cadence, limits, and gates' },
         ],
         recommendations: [
           'Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, or .codex/agents/verifier.toml',
-          'Copy starters/minimal-loop/LOOP.md and customize',
+          'Copy starters/minimal-loop/ZJ-LOOP.md to zj-loop/ZJ-LOOP.md and customize',
         ],
       },
     },
@@ -237,7 +237,7 @@ assessments:
     message: Custom no activity
   - message: Custom default
 `);
-  const result = evaluateReadinessPolicy({ ...emptySignals(), stateFile: { present: true, paths: ['STATE.md'] } }, policy);
+  const result = evaluateReadinessPolicy({ ...emptySignals(), stateFile: { present: true, paths: ['zj-loop/STATE.md'] } }, policy);
   assert.deepEqual(result, { score: 11, level: 'L1', assessment: 'Custom no activity' });
 });
 
@@ -262,13 +262,13 @@ guidance:
       - "Review {stateFile.paths}"
 `);
   const result = evaluateReadinessGuidance(
-    { ...emptySignals(), stateFile: { present: true, paths: ['STATE.md', 'ci-sweeper-state.md'] } },
+    { ...emptySignals(), stateFile: { present: true, paths: ['zj-loop/STATE.md', 'zj-loop/ci-sweeper-state.md'] } },
     0,
     policy,
   );
   assert.deepEqual(result, {
-    findings: [{ level: 'ok', message: 'State files: STATE.md, ci-sweeper-state.md' }],
-    recommendations: ['Review STATE.md, ci-sweeper-state.md'],
+    findings: [{ level: 'ok', message: 'State files: zj-loop/STATE.md, zj-loop/ci-sweeper-state.md' }],
+    recommendations: ['Review zj-loop/STATE.md, zj-loop/ci-sweeper-state.md'],
   });
 });
 
@@ -287,7 +287,8 @@ test('auditProject: empty directory scores low', async () => {
 test('auditProject: minimal L1 layout', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-l1-'));
   try {
-    await writeFile(path.join(dir, 'STATE.md'), '# State\n');
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(path.join(dir, 'zj-loop', 'STATE.md'), '# State\n');
     await mkdir(path.join(dir, '.grok', 'skills', 'loop-triage'), { recursive: true });
     await writeFile(
       path.join(dir, '.grok', 'skills', 'loop-triage', 'SKILL.md'),
@@ -297,6 +298,26 @@ test('auditProject: minimal L1 layout', async () => {
     assert.equal(result.level, 'L1');
     assert.ok(result.signals.triage.present);
     assert.ok(result.signals.stateFile.present);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject: recognizes roadmap-sliced state from init artifact contract', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-roadmap-state-'));
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(path.join(dir, 'zj-loop', 'roadmap-sliced-state.md'), '# Roadmap-Sliced State\n\nLast run: never\n');
+    await mkdir(path.join(dir, '.codex', 'skills', 'zj-roadmap-driven'), { recursive: true });
+    await writeFile(
+      path.join(dir, '.codex', 'skills', 'zj-roadmap-driven', 'SKILL.md'),
+      '---\nname: zj-roadmap-driven\ndescription: roadmap\n---\n# Roadmap\n',
+    );
+
+    const result = await auditProject(dir);
+
+    assert.equal(result.signals.stateFile.present, true);
+    assert.ok(result.signals.stateFile.paths.includes('zj-loop/roadmap-sliced-state.md'));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -315,6 +336,24 @@ test('formatBadge: includes level and score', () => {
   assert.match(badge, /Loop Ready L2 \(72\/100\)/);
   assert.match(badge, /img\.shields\.io/);
   assert.match(badge, /jununfly\.github\.io\/ZAgenticLoop/);
+});
+
+test('reporter: explains hard gates separately from numeric score', () => {
+  const result = {
+    target: '/tmp',
+    score: 90,
+    level: 'L0',
+    assessment: 'Strong structure but blocked.',
+    signals: {
+      ...l3CandidateSignals(),
+      stateFile: { present: false, paths: [] },
+    },
+    findings: [],
+    recommendations: [],
+  };
+
+  assert.match(formatHuman(result), /Level gate: L0 because hard gate failed: no recognized state file/);
+  assert.match(formatMarkdown(result), /Level Gate.*no recognized state file/);
 });
 
 test('auditProject: git commit with triage counts as loop activity', async () => {
@@ -337,7 +376,8 @@ test('auditProject: git commit with triage counts as loop activity', async () =>
 test('auditProject: L2 with verifier skill', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-l2-'));
   try {
-    await writeFile(path.join(dir, 'STATE.md'), '# State\n');
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(path.join(dir, 'zj-loop', 'STATE.md'), '# State\n');
     for (const skill of ['loop-triage', 'loop-verifier']) {
       await mkdir(path.join(dir, '.grok', 'skills', skill), { recursive: true });
       await writeFile(
@@ -395,6 +435,42 @@ test('cli: --fix remains an alias for --suggest', async () => {
     assert.equal(result.status, 2);
     assert.match(result.stdout, /Suggested actions/);
     assert.match(result.stdout, /zj-loop-init/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('cli: --suggest does not recommend copying artifacts that already exist', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-cli-suggest-'));
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(path.join(dir, 'zj-loop', 'STATE.md'), '# State\n');
+    await writeFile(path.join(dir, 'zj-loop', 'ZJ-LOOP.md'), '# Loop\n\n## Human Gates\n- Review release changes.\n');
+    await writeFile(path.join(dir, 'zj-loop', 'zj-loop-budget.md'), '# Budget\n');
+    await writeFile(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'), '# Run Log\n');
+
+    const result = runCli([dir, '--suggest']);
+
+    assert.equal(result.stderr, '');
+    assert.doesNotMatch(result.stdout, /cp templates\/zj-loop-budget\.md\.template/);
+    assert.doesNotMatch(result.stdout, /cp templates\/zj-loop-run-log\.md\.template/);
+    assert.match(result.stdout, /Edit zj-loop\/ZJ-LOOP\.md: add a Budget section/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('cli: --suggest uses zj-loop directory for missing scaffold artifacts', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-cli-suggest-dir-'));
+  try {
+    const result = runCli([dir, '--suggest']);
+
+    assert.equal(result.stderr, '');
+    assert.match(result.stdout, /mkdir -p zj-loop/);
+    assert.match(result.stdout, /cp starters\/minimal-loop\/STATE\.md\.example zj-loop\/STATE\.md/);
+    assert.match(result.stdout, /cp starters\/minimal-loop\/ZJ-LOOP\.md zj-loop\/ZJ-LOOP\.md/);
+    assert.match(result.stdout, /cp templates\/zj-loop-budget\.md\.template zj-loop\/zj-loop-budget\.md/);
+    assert.match(result.stdout, /cp templates\/zj-loop-run-log\.md\.template zj-loop\/zj-loop-run-log\.md/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

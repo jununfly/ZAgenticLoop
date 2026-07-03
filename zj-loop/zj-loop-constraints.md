@@ -4,7 +4,7 @@ These constraints are binding for loops operating on this repository. Load them 
 
 ## Operating Mode
 
-- Daily triage is report-only: update `STATE.md` and `loop-run-log.md`, then hand findings to a human.
+- Daily triage is report-only: update `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md`, then hand findings to a human.
 - Assisted fixes may prepare changes in a branch or isolated worktree, but humans merge.
 - Never auto-merge to `main`.
 - Never mark a draft PR ready, merge a PR, close an issue, or publish a release without human approval.
@@ -93,6 +93,6 @@ These areas may be edited only in a PR or equivalent human review flow:
 
 ## Budget & Pause
 
-- If token spend reaches 80% of the daily cap in `loop-budget.md`, switch to report-only.
-- If `loop-pause-all` is active in `STATE.md`, an issue label, or a PR label, stop immediately.
+- If token spend reaches 80% of the daily cap in `zj-loop/zj-loop-budget.md`, switch to report-only.
+- If `loop-pause-all` is active in `zj-loop/STATE.md`, an issue label, or a PR label, stop immediately.
 - Make at most 3 fix attempts on the same item before escalating with context.

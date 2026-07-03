@@ -7,17 +7,19 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
 1. Copy files into your repo:
    ```bash
    cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/skills/  # Grok
-   cp starters/minimal-loop/STATE.md.example STATE.md
+   mkdir -p zj-loop
+   cp starters/minimal-loop/STATE.md.example zj-loop/STATE.md
+   cp starters/minimal-loop/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
    ```
 
-2. Customize `STATE.md` project name.
+2. Customize `zj-loop/STATE.md` project name.
 
 3. Start the loop (Grok):
    ```bash
-   /loop 1d Run the loop-triage skill. Read STATE.md first. Append high-priority and watch items. Update Last run timestamp. Do not auto-fix anything in week one.
+   /loop 1d Run the loop-triage skill. Read zj-loop/STATE.md first. Append high-priority and watch items. Update Last run timestamp. Do not auto-fix anything in week one.
    ```
 
-4. Read `STATE.md` each morning for 1–2 weeks. Tune the triage skill.
+4. Read `zj-loop/STATE.md` each morning for 1–2 weeks. Tune the triage skill.
 
 5. When triage quality is good, add `minimal-fix` + `loop-verifier` from `templates/` and enable small auto-wins.
 
@@ -25,9 +27,9 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
 
 | File | Purpose |
 |------|---------|
-| `STATE.md.example` | State spine template |
+| `zj-loop/STATE.md` | State spine template after init |
 | `.grok/skills/loop-triage/SKILL.md` | Triage skill |
-| `LOOP.md` | Loop config doc for your team |
+| `zj-loop/ZJ-LOOP.md` | Loop config doc for your team |
 
 ## Other tools
 

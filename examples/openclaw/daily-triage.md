@@ -5,25 +5,25 @@ Same pattern as Grok and Claude Code; scheduling runs on the **Gateway** (`openc
 ## Prerequisites
 
 1. [OpenClaw Gateway](https://docs.openclaw.ai/) running with your repo as the agent workspace.
-2. `STATE.md` at the repo root — copy from `starters/minimal-loop/STATE.md.example`.
+2. `zj-loop/STATE.md` at the repo root — copy from `starters/minimal-loop/STATE.md.example`.
 3. `loop-triage` skill — copy `templates/SKILL.md.loop-triage` to `<workspace>/skills/loop-triage/SKILL.md` (or `openclaw skills install` from ClawHub once published).
 
 ```bash
-mkdir -p skills/loop-triage
+mkdir -p skills/loop-triage zj-loop
 cp templates/SKILL.md.loop-triage skills/loop-triage/SKILL.md
-cp starters/minimal-loop/STATE.md.example STATE.md
+cp starters/minimal-loop/STATE.md.example zj-loop/STATE.md
 ```
 
 ## Report-Only (Week 1)
 
-Isolated cron job: fresh session each run, writes to `STATE.md`, no code edits.
+Isolated cron job: fresh session each run, writes to `zj-loop/STATE.md`, no code edits.
 
 ```bash
 openclaw cron create "0 7 * * 1-5" \
   --name "Daily triage" \
   --tz "America/Los_Angeles" \
   --session isolated \
-  --message "Run the loop-triage skill. Read STATE.md. Merge findings into High Priority and Watch List. Update Last run timestamp. Do not edit source code. End with a 5-line summary." \
+  --message "Run the loop-triage skill. Read zj-loop/STATE.md. Merge findings into High Priority and Watch List. Update Last run timestamp. Do not edit source code. End with a 5-line summary." \
   --tools read,write,exec \
   --announce \
   --channel slack \
@@ -38,7 +38,7 @@ Faster cadence during active periods:
 openclaw cron create "0 */2 * * *" \
   --name "Triage pulse" \
   --session isolated \
-  --message "Run loop-triage. Report obvious small wins only. Update STATE.md. No code changes."
+  --message "Run loop-triage. Report obvious small wins only. Update zj-loop/STATE.md. No code changes."
 ```
 
 ## With Small Auto-Fixes (Week 3+)
@@ -47,7 +47,7 @@ Add a verifier agent (separate `agents.list` entry) or explicit checker instruct
 
 ```bash
 openclaw cron edit <job-id> \
-  --message "Run loop-triage. For high-priority single-file bugfixes: create an isolated git worktree, implement minimal fix, run tests, have a verifier pass review the diff. Update STATE.md. Escalate ambiguous or denylisted paths."
+  --message "Run loop-triage. For high-priority single-file bugfixes: create an isolated git worktree, implement minimal fix, run tests, have a verifier pass review the diff. Update zj-loop/STATE.md. Escalate ambiguous or denylisted paths."
 ```
 
 Enable the bundled `coding-agent` skill only when delegating to an external CLI (`claude`, `codex`, etc.) is intentional — see [OpenClaw skills config](https://docs.openclaw.ai/tools/skills-config).
@@ -60,7 +60,7 @@ Webhook instead of cron — useful after deploys or CI failures:
 curl -X POST http://127.0.0.1:18789/hooks/agent \
   -H 'Authorization: Bearer <hooks-token>' \
   -H 'Content-Type: application/json' \
-  -d '{"message":"Run loop-triage on recent CI failures. Update STATE.md. Report only.","name":"CI triage","deliver":false}'
+  -d '{"message":"Run loop-triage on recent CI failures. Update zj-loop/STATE.md. Report only.","name":"CI triage","deliver":false}'
 ```
 
 Keep hook endpoints on loopback or a trusted tailnet. See [Scheduled tasks](https://docs.openclaw.ai/automation/cron-jobs) and [Security](https://docs.openclaw.ai/gateway/security).
@@ -80,7 +80,7 @@ Isolated cron runs prefer **final descendant output** over interim status text �
 - `--session isolated` — do not pollute human chat history with routine triage turns.
 - Restrict `--tools` on cron jobs until L2 graduation.
 - Channel `allowFrom` / mention rules before enabling `--announce` to DMs or groups.
-- Week one: **report-only**; human reads `STATE.md` and the channel summary.
+- Week one: **report-only**; human reads `zj-loop/STATE.md` and the channel summary.
 
 ## Operations
 
@@ -90,7 +90,7 @@ openclaw cron runs --id <job-id>
 openclaw cron edit <job-id> --message "..."
 ```
 
-Pause: remove or disable the job (`openclaw cron remove <job-id>`) or set `loop-pause-all` in `STATE.md` and teach the skill to stop acting.
+Pause: remove or disable the job (`openclaw cron remove <job-id>`) or set `loop-pause-all` in `zj-loop/STATE.md` and teach the skill to stop acting.
 
 Audit readiness: `npx @jununfly/zj-loop-audit . --suggest`
 

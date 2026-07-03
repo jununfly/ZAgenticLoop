@@ -19,7 +19,7 @@ Slower overnight cadence (30–60m) is fine when no one is watching.
 
 ## State
 
-`ci-sweeper-state.md` or section in `STATE.md`:
+`ci-sweeper-state.md` or section in `zj-loop/STATE.md`:
 
 ```markdown
 ## CI Sweeper — Active Failures

@@ -13,10 +13,10 @@
 ## On budget exceed
 
 1. Pause all schedulers (`scheduler_delete` or disable automations)
-2. Append event to `loop-run-log.md`
-3. Notify human (Slack / issue / STATE.md High Priority)
+2. Append event to `zj-loop/zj-loop-run-log.md`
+3. Notify human (Slack / issue / zj-loop/STATE.md High Priority)
 
 ## Kill switch
 
 - Command or issue label: `loop-pause-all`
-- Resume only after human clears the flag in STATE.md
+- Resume only after human clears the flag in `zj-loop/STATE.md`

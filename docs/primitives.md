@@ -73,7 +73,7 @@ In unattended loops, the verifier is what lets you (the human) walk away with so
 The model has no long-term memory across separate turns or sessions.
 
 The loop must read from and write to something durable:
-- A `STATE.md` or `LOOP-STATE.json` in the repo
+- A `zj-loop/STATE.md` or `LOOP-STATE.json` in the repo
 - A dedicated section of a Linear board or GitHub Project
 - A small database row
 

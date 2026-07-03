@@ -5,8 +5,8 @@ These rules are loaded by opencode before loop work.
 ## Loop Mode
 
 - Start in L1 report-only mode.
-- Read `STATE.md` before any triage.
-- Update `STATE.md` after every loop run.
+- Read `zj-loop/STATE.md` before any triage.
+- Update `zj-loop/STATE.md` after every loop run.
 - Do not edit source code until the human explicitly enables L2.
 
 ## Safety
@@ -20,4 +20,4 @@ These rules are loaded by opencode before loop work.
 
 - For L2+ changes, dispatch a verifier sub-agent after implementation.
 - Run the project's documented tests before proposing a fix.
-- Record test evidence in `STATE.md`.
+- Record test evidence in `zj-loop/STATE.md`.

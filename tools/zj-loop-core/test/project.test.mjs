@@ -61,16 +61,18 @@ test('listProjectSkillNames finds tool skills and verifier agents', async () => 
 
 test('collectProjectEvidenceFacts returns shared loop evidence without policy interpretation', async () => {
   await withProject(async (root) => {
-    await writeFile(path.join(root, 'STATE.md'), '# State\n');
-    await writeFile(path.join(root, 'LOOP.md'), '# Loop\n');
+    await mkdir(path.join(root, 'zj-loop'), { recursive: true });
+    await writeFile(path.join(root, 'zj-loop', 'STATE.md'), '# State\n');
+    await writeFile(path.join(root, 'zj-loop', 'ZJ-LOOP.md'), '# Loop\n');
+    await writeFile(path.join(root, 'AGENTS.md'), '# Agents\n');
     await mkdir(path.join(root, '.github', 'workflows'), { recursive: true });
     await mkdir(path.join(root, '.codex', 'skills', 'issue-triage'), { recursive: true });
 
     const fs = createNodeProjectFileSystem(root);
     const facts = await collectProjectEvidenceFacts(fs);
 
-    assert.deepEqual(facts.statePaths, ['STATE.md']);
-    assert.deepEqual(facts.missingRequiredLoopFiles, ['AGENTS.md']);
+    assert.deepEqual(facts.statePaths, ['zj-loop/STATE.md']);
+    assert.deepEqual(facts.missingRequiredLoopFiles, []);
     assert.equal(facts.loopConfig.present, true);
     assert.equal(facts.github.workflows, true);
     assert.deepEqual(facts.loopSkillNames, ['issue-triage']);

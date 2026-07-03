@@ -39,5 +39,4 @@ Stopping before PR handoff is valid only for an explicit Human Gate pause or an 
 
 ## Links
 
-- Pattern: [roadmap-sliced-development-pattern](../../patterns/roadmap-sliced-development-pattern.md)
-- Design record: [docs/designs/roadmap-sliced-development-pattern.md](../../docs/designs/roadmap-sliced-development-pattern.md)
+- Pattern: [roadmap-sliced-development](../../patterns/roadmap-sliced-development.md)

@@ -14,7 +14,7 @@ In the Codex **Automations** tab:
 ## Prompt
 
 ```
-Run $loop-triage on this project. Read STATE.md if present.
+Run $loop-triage on this project. Read zj-loop/STATE.md if present.
 
 Append to STATE.md:
 - High-Priority Items → "## High Priority" section
@@ -43,6 +43,6 @@ Define verifier in `.codex/agents/verifier.toml`.
 
 ## Triage Inbox
 
-Runs with findings land in Codex Triage inbox — review there + `STATE.md`.
+Runs with findings land in Codex Triage inbox — review there + `zj-loop/STATE.md`.
 
 Empty runs archive automatically (built-in behavior).

@@ -16,7 +16,8 @@ mkdir -p .grok/skills/loop-verifier .grok/skills/minimal-fix
 cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md
 cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md
 cp starters/dependency-sweeper/dependency-sweeper-state.md.example dependency-sweeper-state.md
-cp starters/dependency-sweeper/LOOP.md .
+mkdir -p zj-loop
+cp starters/dependency-sweeper/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
 ```
 
 Claude Code / Codex: use `--tool claude` or `--tool codex` with `zj-loop-init`.
@@ -35,7 +36,7 @@ Start (Grok):
 | `.grok/.claude/.codex/skills/dependency-triage/` | Triage skill (all tools) |
 | `.claude/agents/loop-verifier.md` | Checker agent |
 | `.codex/agents/verifier.toml` | Checker subagent |
-| `LOOP.md` | Cadence, gates, budget |
+| `zj-loop/ZJ-LOOP.md` | Cadence, gates, budget |
 
 ## Next Steps
 

@@ -97,7 +97,7 @@ Example state entry:
 npx @jununfly/zj-loop-cost --pattern pr-babysitter --cadence 10m --level L1 --conservative
 ```
 
-High cadence without early-exit burns tokens fast. Use `loop-budget` skill + `loop-run-log.md`.
+High cadence without early-exit burns tokens fast. Use `zj-loop-budget` skill + `zj-loop/zj-loop-run-log.md`.
 
 ## Success Metrics
 

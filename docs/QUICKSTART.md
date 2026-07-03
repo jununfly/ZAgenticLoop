@@ -22,7 +22,7 @@ npx @jununfly/zj-loop-audit . --suggest
 npx @jununfly/zj-goal-audit . --suggest
 
 # Codex — report only, week one
-/loop 1d Run loop-triage. Update STATE.md. No auto-fix.
+/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix.
 
 # Also try the new low-risk pattern
 /loop 1d Run changelog-scan + draft-release-notes. Write RELEASE_NOTES_DRAFT.md. Human review only.
@@ -40,7 +40,7 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 
 Swap `--tool grok` for `claude` or `codex` if needed. Swap `--pattern` for any pattern from [patterns/registry.yaml](../patterns/registry.yaml).
 
-`zj-loop-init` copies the starter kit, creates `STATE.md`, `LOOP.md`, `loop-budget.md`, and `loop-run-log.md`, then prints your first command.
+`zj-loop-init` copies the starter kit, creates `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-budget.md`, and `zj-loop/zj-loop-run-log.md`, then prints your first command.
 
 ## 3. Check cost before you schedule (30 seconds)
 
@@ -73,13 +73,13 @@ npx @jununfly/zj-goal-audit . --suggest
 ### Grok
 
 ```bash
-/loop 1d Run loop-triage. Update STATE.md. No auto-fix in week one.
+/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
 ### Claude Code
 
 ```bash
-/loop 1d Run $loop-triage. Read STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
+/loop 1d Run $loop-triage. Read zj-loop/STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
 ```
 
 ### Codex
@@ -88,7 +88,7 @@ Use the first-run command printed by `zj-loop-init` (pattern-specific). Week one
 
 ### OpenClaw
 
-No `zj-loop-init --tool openclaw` yet — copy `skills/loop-triage/SKILL.md` and `STATE.md`, then create an isolated cron job. See [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md).
+No `zj-loop-init --tool openclaw` yet — copy `skills/loop-triage/SKILL.md` and `zj-loop/STATE.md`, then create an isolated cron job. See [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md).
 
 ### Cursor or Windsurf
 
@@ -100,7 +100,7 @@ Workflow examples under [examples/github-actions/](../examples/github-actions/) 
 
 ## 6. Read the output, commit state (1 minute)
 
-Open `STATE.md`. Did the loop capture real priorities? Edit anything wrong — you're still the engineer.
+Open `zj-loop/STATE.md`. Did the loop capture real priorities? Edit anything wrong — you're still the engineer.
 
 Commit the scaffold + first run update so `zj-loop-audit` sees activity on the next audit.
 
@@ -110,7 +110,7 @@ Commit the scaffold + first run update so `zj-loop-audit` sees activity on the n
 |------|---------|
 | End of week one | Re-run `npx @jununfly/zj-loop-audit . --suggest` — aim for L1 (score ~40+) |
 | Week two | Add a verifier skill; try one assisted fix in a worktree (L2) |
-| Before unattended (L3) | `loop-budget.md` + `loop-run-log.md` filled, human gates in `LOOP.md`, proven runs |
+| Before unattended (L3) | `zj-loop/zj-loop-budget.md` + `zj-loop/zj-loop-run-log.md` filled, human gates in `zj-loop/ZJ-LOOP.md`, proven runs |
 | Unsure which pattern | [pattern-picker.md](./pattern-picker.md) · [loop-design-checklist.md](./loop-design-checklist.md) |
 | Something broke | [failure-modes.md](./failure-modes.md) · [stories/](../stories/) |
 
@@ -140,6 +140,29 @@ cd tools/zj-loop-cost && npm ci && npm test && node dist/cli.js --pattern daily-
 cd tools/zj-loop-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
 cd tools/zj-goal-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
 ```
+
+## If npx stalls or you are offline
+
+`npx` may look silent while npm resolves the package, especially behind a slow
+registry mirror or DNS failure. Use one of these paths instead:
+
+```bash
+# Already installed globally
+zj-loop-init . --pattern daily-triage --tool grok
+zj-loop-audit . --suggest
+zj-loop-cost --pattern daily-triage --level L1
+
+# Reuse npm's local cache without network
+npm exec --offline --package=@jununfly/zj-loop-init -- zj-loop-init . --pattern daily-triage --tool grok
+npm exec --offline --package=@jununfly/zj-loop-audit -- zj-loop-audit . --suggest
+npm exec --offline --package=@jununfly/zj-loop-cost -- zj-loop-cost --pattern daily-triage --level L1
+
+# Force the official npm registry when a mirror is unhealthy
+npm_config_registry=https://registry.npmjs.org npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+```
+
+If you have cloned this repository, the [From source](#from-source) commands are
+the most deterministic option because they avoid package resolution entirely.
 
 ## Learn the why (optional, 10 minutes)
 

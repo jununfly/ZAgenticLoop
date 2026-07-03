@@ -4,3 +4,4 @@ export declare function formatBadge(r: AuditResult): string;
 export declare function formatHuman(r: AuditResult): string;
 export declare function formatJson(r: AuditResult): string;
 export declare function formatMarkdown(r: AuditResult): string;
+export declare function inferLevelGateReasons(r: AuditResult): string[];

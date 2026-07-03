@@ -10,7 +10,7 @@ Tool-agnostic loop design: the **capability** is what matters, not the product n
 | **Skills** | Persistent project knowledge | `SKILL.md` in `.grok/skills/` or `~/.grok/skills/`; invoked by name | `SKILL.md` in `.claude/skills/` or project skills | [Agent Skills](https://developers.openai.com/codex/skills) — `$name` or implicit match | `SKILL.md` in `<workspace>/skills/`, `.agents/skills`, or `~/.openclaw/skills`; [AgentSkills](https://agentskills.io) spec; [ClawHub](https://clawhub.ai) + `openclaw skills install` | `.cursor/rules/*.mdc` (globs, `alwaysApply`), `AGENTS.md`, `.cursor/skills/` | `.devin/rules/` or `.windsurf/rules/` (persistent context); `.windsurf/workflows/` (reusable recipes) |
 | **Plugins & Connectors** | Reach into real tools | MCP servers via `CallMcpTool` | MCP servers + plugins | Connectors (MCP) + plugins for distribution | MCP + channel plugins (Slack, Telegram, WhatsApp, etc.); browser automation plugin | MCP in settings; Cloud Agent sandbox with full connector access | MCP via Cascade settings / `mcp_config.json` |
 | **Sub-agents** | Maker / checker split | `Task` tool with `subagent_type`, worktree isolation | Task subagents in `.claude/agents/`, agent teams | Subagents as TOML in `.codex/agents/` | `agents.list` multi-agent routing; isolated cron subagent orchestration; separate verifier agent id | Multi-agent mode, review mode, custom agents in `.cursor/agents/` | Multiple Cascades in parallel; workflow-orchestrated implementer → reviewer steps |
-| **State / Memory** | Track what's done across runs | `STATE.md`, todos, durable scheduler state | `AGENTS.md`, progress files, Linear via MCP | Markdown or Linear via connector | `STATE.md`, `HEARTBEAT.md` in workspace; cron persisted in Gateway SQLite; Skill Workshop for skill proposals | `STATE.md`, `LOOP.md`, Cloud Agent memories | `STATE.md`, Cascade **Memories**, workflow run notes |
+| **State / Memory** | Track what's done across runs | `zj-loop/STATE.md`, todos, durable scheduler state | `AGENTS.md`, progress files, Linear via MCP | Markdown or Linear via connector | `zj-loop/STATE.md`, `HEARTBEAT.md` in workspace; cron persisted in Gateway SQLite; Skill Workshop for skill proposals | `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, Cloud Agent memories | `zj-loop/STATE.md`, Cascade **Memories**, workflow run notes |
 
 **Reference MCP server:** this repo ships [`tools/zj-loop-mcp-server/`](../tools/zj-loop-mcp-server/) — patterns, skills, state, budget, and safety docs as runtime-queryable MCP resources (reduces prompt stuffing). Config example: [`examples/mcp/zj-loop.mcp.json`](../examples/mcp/zj-loop.mcp.json).
 
@@ -21,7 +21,7 @@ Tool-agnostic loop design: the **capability** is what matters, not the product n
 | Every 5 minutes | `/loop 5m <prompt>` | `/loop 5m <prompt>` | Automation, 5m cadence | `openclaw cron create "*/5 * * * *" --session isolated --message "..."` | Automation cron trigger | External cron + `/workflow` or Action |
 | Daily morning | `/loop 1d <prompt>` | Cron / `/loop 1d` | Automation, daily | `openclaw cron create "0 7 * * *" --tz ... --session isolated` + optional `--announce` | Automation daily + `AGENTS.md` context | Daily workflow + Memories |
 | Until tests pass | `/goal` + `goal-verifier` skill (or loop + verifier) | `/goal all tests pass` | `/goal` | Isolated cron + verifier in message, or `coding-agent` + external CLI | Hooks grind-until-green | Workflow with test/fix loop |
-| Survive restart | `scheduler_create` with `durable: true` | Hooks + persisted config | Automation (server-side) | Cron jobs persist in Gateway SQLite | Cloud Agent + repo-persisted state | Memories + committed `STATE.md` |
+| Survive restart | `scheduler_create` with `durable: true` | Hooks + persisted config | Automation (server-side) | Cron jobs persist in Gateway SQLite | Cloud Agent + repo-persisted state | Memories + committed `zj-loop/STATE.md` |
 | Event-driven (CI fail) | `monitor` or GitHub Action | GitHub Action + webhook | Automation + webhook | `POST /hooks/agent` or mapped webhooks | Automation on PR/issue events | GitHub Action triggers + `/workflow` |
 
 ## Skill Packaging
@@ -46,7 +46,7 @@ Recommended filenames (pick one spine per project):
 
 | File | Purpose |
 |------|---------|
-| `STATE.md` | General loop memory (daily triage) |
+| `zj-loop/STATE.md` | General loop memory (daily triage) |
 | `issue-triage-state.md` | Issue queue health (feeder for daily triage) |
 | `pr-babysitter-state.md` | PR-specific watcher state |
 | `ci-sweeper-state.md` | Active CI failures + attempt counts |
@@ -72,8 +72,8 @@ See [examples/](../examples/) for the same pattern implemented across tools.
 | Grok | [starters/minimal-loop](../starters/minimal-loop/) |
 | Claude Code | [starters/minimal-loop-claude](../starters/minimal-loop-claude/) |
 | Codex | [starters/minimal-loop-codex](../starters/minimal-loop-codex/) |
-| OpenClaw | [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md) — copy `skills/` + `STATE.md`; no `zj-loop-init` yet |
-| Cursor / Windsurf | Copy `SKILL.md` + `STATE.md` from any starter; map scheduling to editor Automations or Workflows (see appendix) |
+| OpenClaw | [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md) — copy `skills/` + `zj-loop/STATE.md`; no `zj-loop-init` yet |
+| Cursor / Windsurf | Copy `SKILL.md` + `zj-loop/STATE.md` from any starter; map scheduling to editor Automations or Workflows (see appendix) |
 
 Audit after copying: `npx @jununfly/zj-loop-audit . --suggest`
 
@@ -85,7 +85,7 @@ Loops discover ongoing work; **goals finish bounded tasks**. The local release-m
 
 | Handoff | Command |
 |---------|---------|
-| Loop found a fixable item | `/goal Read STATE.md top item. Complete the bounded task. goal-verifier before done.` |
+| Loop found a fixable item | `/goal Read zj-loop/STATE.md top item. Complete the bounded task. goal-verifier before done.` |
 | Audit goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Goal vs loop decision | Decide whether the work is ongoing discovery (loop) or a bounded verifiable task (goal). |
 
@@ -96,11 +96,11 @@ No dedicated starters yet — map capabilities to the same loop shape:
 | Step | Cursor | Windsurf |
 |------|--------|----------|
 | 1. Skills | Copy `templates/SKILL.md.loop-triage` → `.cursor/skills/loop-triage/SKILL.md`; add always-on triage rules in `.cursor/rules/` | Copy skill content into `.windsurf/rules/loop-triage.md` |
-| 2. State | `cp starters/minimal-loop/STATE.md.example STATE.md` | Same — commit `STATE.md` at repo root |
+| 2. State | `mkdir -p zj-loop && cp starters/minimal-loop/STATE.md.example zj-loop/STATE.md` | Same — commit `zj-loop/STATE.md` |
 | 3. Scheduling | Cloud Automation (cron) or manual Agent prompt on cadence | Create `.windsurf/workflows/daily-triage.md`, invoke `/daily-triage` |
 | 4. Verification | `.cursor/agents/loop-verifier.md` from `templates/SKILL.md.verifier` | Add review step at end of workflow; human gate on denylist paths |
 | 5. Connectors | Enable GitHub MCP read-only for issue/PR discovery | Configure GitHub MCP in Cascade settings |
 
-**Aider** (CLI-only): use `--watch` or scripted sessions; state in `STATE.md`; reviewer = second terminal session.
+**Aider** (CLI-only): use `--watch` or scripted sessions; state in `zj-loop/STATE.md`; reviewer = second terminal session.
 
 Transfer recipe: copy the tool-agnostic `SKILL.md` + state schema from this repo; map scheduling to your editor's automation surface.

@@ -99,7 +99,7 @@ Prune merged/closed entries on every run.
 npx @jununfly/zj-loop-cost --pattern dependency-sweeper --level L2
 ```
 
-Verifier runs (`npm ci && npm test`) dominate cost — cap attempts per package in `loop-budget.md`.
+Verifier runs (`npm ci && npm test`) dominate cost — cap attempts per package in `zj-loop/zj-loop-budget.md`.
 
 ## Success Metrics
 

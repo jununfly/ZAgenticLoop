@@ -6,57 +6,57 @@ Seven community PRs merged. Three new tools ship. One command to try everything.
 
 ```bash
 # Scaffold your first loop (any git repo)
-npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 
 # Check token cost before you schedule
-npx @cobusgreyling/loop-cost --pattern daily-triage --level L1 --cadence 1d
+npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d
 
 # Score readiness + get next steps
-npx @cobusgreyling/loop-audit . --suggest
+npx @jununfly/zj-loop-audit . --suggest
 
-# Detect drift between STATE.md and LOOP.md
-npx @cobusgreyling/loop-sync .
+# Detect drift between zj-loop/STATE.md and zj-loop/ZJ-LOOP.md
+npx @jununfly/zj-loop-sync .
 ```
 
-**New here?** [Quickstart (5 min)](docs/QUICKSTART.md) · [Interactive pattern picker](https://cobusgreyling.github.io/loop-engineering/#interactive)
+**New here?** [Quickstart (5 min)](docs/QUICKSTART.md) · [Interactive pattern picker](docs/pattern-picker.md)
 
 ---
 
 ## What's new
 
-### New: `loop-sync` CLI (npm v1.0.0)
+### New: `zj-loop-sync` CLI
 
-Detect configuration drift between `STATE.md`, `LOOP.md`, and skill versions. Run in CI or locally:
+Detect configuration drift between `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, and skill versions. Run in CI or locally:
 
 ```bash
-npx @cobusgreyling/loop-sync . -v
+npx @jununfly/zj-loop-sync . -v
 ```
 
-Contributed via [#47](https://github.com/cobusgreyling/loop-engineering/pull/47) — thanks @community.
+Contributed through the ZAgenticLoop roadmap.
 
-### New: `loop-constraints`
+### New: `zj-loop-constraints`
 
-Structured guardrails file + enforcement skill. `loop-init` now scaffolds `loop-constraints.md` and the `loop-constraints` skill on every run. `loop-audit` scores constraints presence (+6 readiness points when file + skill both exist).
+Structured guardrails file + enforcement skill. `zj-loop-init` now scaffolds `zj-loop/zj-loop-constraints.md` and the `zj-loop-constraints` skill on every run. `zj-loop-audit` scores constraints presence (+6 readiness points when file + skill both exist).
 
-Contributed via [#71](https://github.com/cobusgreyling/loop-engineering/pull/71).
+Contributed through the ZAgenticLoop roadmap.
 
-### New: `loop-mcp-server` (repo v1)
+### New: `zj-loop-mcp-server` (repo v1)
 
 MCP runtime lookup for patterns, skills, and state. Path traversal guards included.
 
 ```bash
-node tools/mcp-server/dist/index.js
+node tools/zj-loop-mcp-server/dist/index.js
 ```
 
-Contributed via [#72](https://github.com/cobusgreyling/loop-engineering/pull/72). npm publish coming soon.
+Contributed through the ZAgenticLoop roadmap.
 
 ### Updated npm packages
 
 | Package | Version | Highlights |
 |---------|---------|------------|
-| `@cobusgreyling/loop-audit` | **1.5.0** | Constraints scoring + recommendations |
-| `@cobusgreyling/loop-init` | **1.2.3** | Constraints scaffold; serialized asset bundling fix ([#80](https://github.com/cobusgreyling/loop-engineering/pull/80)) |
-| `@cobusgreyling/loop-sync` | **1.0.0** | First npm release |
+| `@jununfly/zj-loop-audit` | **0.1.x** | Constraints scoring + recommendations |
+| `@jununfly/zj-loop-init` | **0.1.x** | Constraints scaffold; serialized asset bundling fix |
+| `@jununfly/zj-loop-sync` | **0.1.x** | Drift detection |
 
 ### Docs & discoverability
 
@@ -70,11 +70,11 @@ Contributed via [#72](https://github.com/cobusgreyling/loop-engineering/pull/72)
 
 ## Community
 
-This release merges work from 7 community PRs. Read the full story in [Discussion #89](https://github.com/cobusgreyling/loop-engineering/discussions/89).
+This release merges the current ZAgenticLoop roadmap work.
 
-**Run a loop?** Add yourself to [docs/adopters.md](docs/adopters.md) or [open an Add Adopter issue](https://github.com/cobusgreyling/loop-engineering/issues/new?template=add-adopter.yml).
+**Run a loop?** Add yourself to [docs/adopters.md](docs/adopters.md) or open an adopter issue in this repository.
 
-**Show & tell:** [Discussions → Show and tell](https://github.com/cobusgreyling/loop-engineering/discussions/categories/show-and-tell)
+**Show & tell:** Use this repository's GitHub Discussions.
 
 ---
 
@@ -84,11 +84,11 @@ Loops discover ongoing work. **Goals finish bounded tasks.**
 
 | Layer | Repo | Command |
 |-------|------|---------|
-| Discover (cadence) | [loop-engineering](https://github.com/cobusgreyling/loop-engineering) | `npx @cobusgreyling/loop-init . --pattern daily-triage --tool grok` |
-| Finish (run-until-done) | [goal-engineering](https://github.com/cobusgreyling/goal-engineering) | `npx @cobusgreyling/goal init . --pattern fix-bug --tool grok` |
+| Discover (cadence) | [ZAgenticLoop](https://github.com/jununfly/ZAgenticLoop) | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok` |
+| Finish (run-until-done) | `zj-goal-audit` | `npx @jununfly/zj-goal-audit . --suggest` |
 
-**Stack cookbook:** [loop → goal → fleet day rhythm](https://github.com/cobusgreyling/goal-engineering/blob/main/docs/stack-cookbook.md)
+**Stack cookbook:** Use the loop patterns plus goal readiness checks together.
 
 ```
-/goal Read STATE.md top priority. Done when verifier PASS. goal-verifier before completed: true.
+/goal Read zj-loop/STATE.md top priority. Done when verifier PASS. goal-verifier before completed: true.
 ```

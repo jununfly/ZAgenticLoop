@@ -30,7 +30,7 @@ A mid-size SaaS team (12 engineers, ~40 merges/week) ran post-merge cleanup afte
 
 **Bot-merge noise:** The loop over-triaged Dependabot and Renovate merge commits for three days straight, generating 11 “candidates” that were lockfile-only. Engineers started ignoring the report. Fix: added `ignored_authors` (dependabot, renovate) and `min_diff_lines: 3` to state.
 
-**False confidence on feature flags:** The loop suggested removing `legacyAuth` based on a `// remove after Q2` comment, but the flag was still referenced in a mobile client the loop couldn't see (separate repo). A human caught it; we added “cross-repo flags → always escalate” to `LOOP.md`.
+**False confidence on feature flags:** The loop suggested removing `legacyAuth` based on a `// remove after Q2` comment, but the flag was still referenced in a mobile client the loop couldn't see (separate repo). A human caught it; we added “cross-repo flags → always escalate” to `zj-loop/ZJ-LOOP.md`.
 
 ## Metrics (4-week pilot)
 

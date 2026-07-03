@@ -25,7 +25,7 @@ Faster cadence for busy repos:
 | `issue-triage-state.md` | Rolling backlog health (see [patterns/issue-triage.md](../../patterns/issue-triage.md)) |
 | `issue-triage` skill | Bundled in [starters/issue-triage](../../starters/issue-triage/) or copy `templates/SKILL.md.issue-triage` |
 | `loop-verifier` skill | Light sanity check on proposed labels before L2 |
-| `STATE.md` | Daily Triage reads this; Issue Triage feeds it via cross-reference |
+| `zj-loop/STATE.md` | Daily Triage reads this; Issue Triage feeds it via cross-reference |
 
 Scaffold state file:
 
@@ -58,7 +58,7 @@ Enable GitHub MCP read-only for issue discovery and linked-PR signals. Scope to 
 
 ## Pairing with Daily Triage
 
-Issue Triage runs more frequently (2h–1d) and produces a clean queue. Daily Triage (1d) reads `issue-triage-state.md` and merges the top items into `STATE.md` High Priority.
+Issue Triage runs more frequently (2h–1d) and produces a clean queue. Daily Triage (1d) reads `issue-triage-state.md` and merges the top items into `zj-loop/STATE.md` High Priority.
 
 ## Evolution Path
 

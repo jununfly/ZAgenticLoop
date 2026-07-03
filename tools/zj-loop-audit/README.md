@@ -13,6 +13,13 @@ npx @jununfly/zj-loop-audit .
 npx @jununfly/zj-loop-audit . --suggest
 ```
 
+If `npx` stalls on package resolution, use an installed binary or npm's local cache:
+
+```bash
+zj-loop-audit . --suggest
+npm exec --offline --package=@jununfly/zj-loop-audit -- zj-loop-audit . --suggest
+```
+
 **From this repo:**
 
 ```bash
@@ -36,7 +43,7 @@ bash scripts/before-after-demo.sh
 zj-loop-audit .              # human-readable (default)
 zj-loop-audit . --json       # machine-readable
 zj-loop-audit . --md         # markdown report
-zj-loop-audit . --suggest    # copy-from-template commands + activity tips (all tools)
+zj-loop-audit . --suggest    # context-aware actions for missing or incomplete pieces
 zj-loop-audit . --badge      # markdown README badge (Loop Ready level + score)
 ```
 
@@ -56,23 +63,23 @@ npm publish --access public
 
 | Signal                  | Notes |
 |-------------------------|-------|
-| State file              | STATE.md or pattern-specific |
+| State file              | `zj-loop/STATE.md` or `zj-loop/<pattern>-state.md` |
 | Triage skill            | loop-triage / ci-triage / pr-review-triage etc. |
 | Verifier skill          | maker/checker split (skills or Claude/Codex agents) |
-| LOOP.md / config        | Cadence, limits, handoff |
+| `zj-loop/ZJ-LOOP.md` / config | Cadence, limits, handoff |
 | AGENTS.md / CLAUDE.md   | Project conventions |
-| Safety docs             | safety.md + LOOP.md mentions of gates |
+| Safety docs             | safety.md + ZJ-LOOP.md mentions of gates |
 | .github/ + workflows    | Dogfooding / automation |
 | MCP / connectors        | Mentions or config files |
 | Worktree evidence       | Isolation patterns in docs |
 | patterns/registry.yaml  | Machine index for tooling |
-| loop-budget.md          | Token caps and kill switch |
-| loop-run-log.md         | Append-only run history |
-| LOOP.md budget section  | Cadence limits documented in config |
-| loop-budget skill       | Runtime budget guard |
+| `zj-loop/zj-loop-budget.md` | Token caps and kill switch |
+| `zj-loop/zj-loop-run-log.md` | Append-only run history |
+| `zj-loop/ZJ-LOOP.md` budget section | Cadence limits documented in config |
+| zj-loop-budget skill       | Runtime budget guard |
 | **loopActivity (v1.4)** | **Dynamic proof**: "Last run" timestamps in state, loop-related git commits, scheduled workflows, run logs |
 
-L3 requires verifier + state + cost observability (budget + run log + LOOP.md budget) **and** proven loop activity (not just files on disk).
+L3 requires verifier + state + cost observability (budget + run log + zj-loop/ZJ-LOOP.md budget) **and** proven loop activity (not just files on disk).
 
 ## Levels
 

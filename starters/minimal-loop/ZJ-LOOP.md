@@ -14,8 +14,8 @@
 ## Budget
 
 - Max sub-agent spawns per run: 0 (L1) / 2 (L2)
-- Max tokens/day: 100k (see `loop-budget.md`)
-- Append each run to `loop-run-log.md`; use `loop-budget` skill at start/end
+- Max tokens/day: 100k (see `zj-loop/zj-loop-budget.md`)
+- Append each run to `zj-loop/zj-loop-run-log.md`; use `zj-loop-budget` skill at start/end
 - Kill switch: `loop-pause-all` — pause schedulers and notify human
 - Estimate: `npx @jununfly/zj-loop-cost --pattern daily-triage`
 

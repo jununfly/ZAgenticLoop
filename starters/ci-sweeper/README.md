@@ -13,6 +13,8 @@ Scaffold for the [CI Sweeper](../../patterns/ci-sweeper.md) loop.
    cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md
    cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md
    cp starters/ci-sweeper/ci-sweeper-state.md.example ci-sweeper-state.md
+   mkdir -p zj-loop
+   cp starters/ci-sweeper/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
    ```
 
 2. Add GitHub Action (optional): `examples/github-actions/ci-sweeper.yml`

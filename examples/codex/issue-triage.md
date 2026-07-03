@@ -65,7 +65,7 @@ Never auto-close. Never label P0/P1 without human confirmation.
 
 ## Pairing with Daily Triage
 
-Run a separate daily automation that reads both `STATE.md` and `issue-triage-state.md`, merging top issues into Daily Triage High Priority.
+Run a separate daily automation that reads both `zj-loop/STATE.md` and `issue-triage-state.md`, merging top issues into Daily Triage High Priority.
 
 ## References
 

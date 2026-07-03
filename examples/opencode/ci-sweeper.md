@@ -37,7 +37,7 @@ opencode run \
   --title "CI sweeper"
 ```
 
-Use [loop-cost](https://github.com/cobusgreyling/loop-engineering/blob/main/tools/loop-cost) before choosing a cadence; encode the daily cap in `LOOP.md` and `AGENTS.md` as a hard stop.
+Use `zj-loop-cost` before choosing a cadence; encode the daily cap in `zj-loop/ZJ-LOOP.md` and `AGENTS.md` as a hard stop.
 
 ## Cadence: shell loop
 
@@ -79,10 +79,10 @@ Discard the worktree after verifier REJECT; merge or PR on APPROVE.
 - Dispatch into a worktree per attempt — never edit the main working tree.
 - Max 3 fix attempts per item; escalate after to a human with full context.
 - Infra / security / payments test failures: do not auto-fix; flag and stop.
-- Budget cap documented in `LOOP.md` and enforced by the prompt (`loop-pause-all` stops action).
+- Budget cap documented in `zj-loop/ZJ-LOOP.md` and enforced by the prompt (`loop-pause-all` stops action).
 
 ## References
 
 - [patterns/ci-sweeper.md](../../patterns/ci-sweeper.md)
 - [templates/SKILL.md.loop-triage](../../templates/SKILL.md.loop-triage)
-- [tools/loop-cost](../../tools/loop-cost) — cadence-to-cost mapping
+- [tools/zj-loop-cost](../../tools/zj-loop-cost) — cadence-to-cost mapping

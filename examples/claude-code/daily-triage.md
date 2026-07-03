@@ -5,13 +5,13 @@ Same pattern as Grok; different scheduling primitives.
 ## Report-Only (Week 1)
 
 ```bash
-/loop 1d Run $loop-triage. Read STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
+/loop 1d Run $loop-triage. Read zj-loop/STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
 ```
 
 ## With Small Auto-Fixes (Week 3+)
 
 ```bash
-/loop 1d Run $loop-triage. For high-priority items that are single-file bugfixes: spawn implementer in worktree, then verifier agent. Update STATE.md. Escalate ambiguous items.
+/loop 1d Run $loop-triage. For high-priority items that are single-file bugfixes: spawn implementer in worktree, then verifier agent. Update zj-loop/STATE.md. Escalate ambiguous items.
 ```
 
 ## Skills Setup

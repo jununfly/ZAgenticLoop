@@ -41,7 +41,7 @@ patterns:
     risk: low
     tools: [grok, claude-code]
     skills: [loop-triage, minimal-fix]
-    state: STATE.md
+    state: zj-loop/STATE.md
     phases: [report, act-small-wins, escalate]
     human_gates: [design-decisions]
     starter: starters/minimal-loop
@@ -69,27 +69,29 @@ patterns:
     '---\nname: loop-triage\ndescription: Triage skill\nuser_invocable: true\n---\n\n# Loop Triage\nYou are a triage agent.',
   );
 
+  await mkdir(path.join(tmpRoot, 'zj-loop'), { recursive: true });
+
   // State files
   await writeFile(
-    path.join(tmpRoot, 'STATE.md'),
+    path.join(tmpRoot, 'zj-loop', 'STATE.md'),
     '# Loop State\n\nLast run: 2026-06-20T08:00Z\n\n## High Priority\n- Fix CI\n',
   );
 
-  // LOOP.md
+  // ZJ-LOOP.md
   await writeFile(
-    path.join(tmpRoot, 'LOOP.md'),
+    path.join(tmpRoot, 'zj-loop', 'ZJ-LOOP.md'),
     '# Loop Config\n\n## Budget\nMax tokens/day: 100k\nKill switch: loop-pause-all\n',
   );
 
-  // loop-budget.md
+  // zj-loop-budget.md
   await writeFile(
-    path.join(tmpRoot, 'loop-budget.md'),
+    path.join(tmpRoot, 'zj-loop', 'zj-loop-budget.md'),
     '# Loop Budget\n\nDaily cap: 100k tokens\n',
   );
 
-  // loop-run-log.md
+  // zj-loop-run-log.md
   await writeFile(
-    path.join(tmpRoot, 'loop-run-log.md'),
+    path.join(tmpRoot, 'zj-loop', 'zj-loop-run-log.md'),
     '# Run Log\n\n- 2026-06-20T08:00Z: daily-triage — report — 45k tokens\n',
   );
 
@@ -248,13 +250,13 @@ test('listStateFiles finds existing state files', async () => {
   const root = await setup();
   try {
     const files = await listStateFiles(root);
-    assert.ok(files.includes('STATE.md'));
+    assert.ok(files.includes('zj-loop/STATE.md'));
   } finally {
     await cleanup();
   }
 });
 
-test('loadLoopConfig reads LOOP.md', async () => {
+test('loadLoopConfig reads ZJ-LOOP.md', async () => {
   const root = await setup();
   try {
     const config = await loadLoopConfig(root);
@@ -265,7 +267,7 @@ test('loadLoopConfig reads LOOP.md', async () => {
   }
 });
 
-test('loadBudget reads loop-budget.md', async () => {
+test('loadBudget reads zj-loop-budget.md', async () => {
   const root = await setup();
   try {
     const budget = await loadBudget(root);
@@ -276,7 +278,7 @@ test('loadBudget reads loop-budget.md', async () => {
   }
 });
 
-test('loadRunLog reads loop-run-log.md', async () => {
+test('loadRunLog reads zj-loop-run-log.md', async () => {
   const root = await setup();
   try {
     const log = await loadRunLog(root);
@@ -311,7 +313,7 @@ test('summarizeOperationalContext returns structured evidence with raw resource 
     ]);
     const config = summary.documents.find(doc => doc.key === 'config');
     assert.equal(config.present, true);
-    assert.equal(config.path, 'LOOP.md');
+    assert.equal(config.path, 'zj-loop/ZJ-LOOP.md');
     assert.ok(config.highlights.some(line => line.includes('Budget')));
   } finally {
     await cleanup();
@@ -363,9 +365,9 @@ test('loadPatternDoc rejects path traversal pattern ids', async () => {
 test('loadState rejects path traversal state files', async () => {
   const root = await setup();
   try {
-    assert.equal(await loadState(root, '../LOOP.md'), null);
-    assert.equal(await loadState(root, 'STATE.md/../../LOOP.md'), null);
-    const state = await loadState(root, 'STATE.md');
+    assert.equal(await loadState(root, '../ZJ-LOOP.md'), null);
+    assert.equal(await loadState(root, 'STATE.md/../../ZJ-LOOP.md'), null);
+    const state = await loadState(root, 'zj-loop/STATE.md');
     assert.ok(state?.includes('Fix CI'));
   } finally {
     await cleanup();
@@ -400,7 +402,7 @@ test('loop_list_patterns tool returns registry patterns', async () => {
     assert.equal(parsed[0].id, 'daily-triage');
     assert.equal(parsed[0].week_one_mode, 'L1');
     assert.equal(parsed[0].token_cost, 'low');
-    assert.equal(parsed[0].state, 'STATE.md');
+    assert.equal(parsed[0].state, 'zj-loop/STATE.md');
     assert.equal(parsed[0].requiredSkills, undefined);
     assert.equal(parsed[0].cost, undefined);
     assert.equal(parsed[0].init, undefined);
@@ -535,7 +537,7 @@ test('state resource remains readable over stdio', async () => {
   try {
     const res = await callServer(root, [{
       id: 1, method: 'resources/read',
-      params: { uri: 'loop://state/STATE.md' },
+      params: { uri: 'loop://state/zj-loop%2FSTATE.md' },
     }]);
     const text = res.get(1).result.contents[0].text;
     assert.ok(text.includes('Fix CI'));

@@ -8,7 +8,7 @@ Team wanted morning visibility without risking auto-edits on day one.
 
 - [minimal-loop starter](../starters/minimal-loop/)
 - `/loop 1d` — triage only, no sub-agents
-- Human reads `STATE.md` with coffee
+- Human reads `zj-loop/STATE.md` with coffee
 
 ## Week 1 Results
 

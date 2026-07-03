@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { auditProject } from './auditor.js';
+import { auditProject, type AuditResult } from './auditor.js';
+import { LOOP_ARTIFACTS } from './artifacts.js';
 import { formatBadge, formatHuman, formatJson, formatMarkdown } from './reporter.js';
 import { runCli, type CliHandlerContext, type CliSpec } from '@jununfly/zj-loop-core';
 
@@ -11,7 +12,7 @@ Usage:
 Options:
   --json      JSON output (for CI / scripting)
   --md        Markdown report
-  --suggest   Show copy-from-template commands for missing pieces (recommended on first runs)
+  --suggest   Show context-aware actions for missing or incomplete pieces
   --badge     Markdown README badge (Loop Ready level + score)
   --help, -h  This help
 
@@ -47,50 +48,81 @@ async function handleAuditCommand({ io, options }: CliHandlerContext) {
   else io.stdout(formatHuman(result));
 
   if (suggest) {
-    io.stdout(SUGGEST_TEXT);
+    io.stdout(formatSuggestions(result));
   }
 
   return result.score < 40 ? 2 : 0;
 }
 
-const SUGGEST_TEXT = `
-=== Suggested actions (copy & customize) ===
-From the root of this repo (or after cloning the reference):
+function formatSuggestions(result: AuditResult): string {
+  const { signals } = result;
+  const lines: string[] = [
+    '',
+    '=== Suggested actions ===',
+    'These actions are based on files detected in the target project.',
+    '',
+  ];
 
-  # Minimal L1 daily triage — pick your tool
-  # Grok:
-  cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/skills/
-  # Claude Code:
-  cp -r starters/minimal-loop-claude/.claude/skills/loop-triage .claude/skills/
-  cp starters/minimal-loop-claude/.claude/agents/loop-verifier.md .claude/agents/
-  # Codex:
-  cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/
-  cp starters/minimal-loop-codex/.codex/agents/verifier.toml .codex/agents/
-  # All tools:
-  cp starters/minimal-loop/STATE.md.example STATE.md   # or -claude / -codex variant
-  cp starters/minimal-loop/LOOP.md .
-  cp templates/loop-budget.md.template loop-budget.md
-  cp templates/loop-run-log.md.template loop-run-log.md
+  if (!signals.stateFile.present) {
+    lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
+    lines.push(`  cp starters/minimal-loop/STATE.md.example ${LOOP_ARTIFACTS.directory}/STATE.md`);
+  }
 
-  # Maker/checker verifier (Grok / generic skills dir)
-  mkdir -p .grok/skills/loop-verifier
-  cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md
+  if (!signals.loopConfig.present) {
+    lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
+    lines.push(`  cp starters/minimal-loop/ZJ-LOOP.md ${LOOP_ARTIFACTS.config.primary}`);
+  }
 
-  # Common minimal fix action
-  mkdir -p .grok/skills/minimal-fix
-  cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md
+  if (!signals.triage.present) {
+    lines.push('  # Add one triage skill for the target tool, or run:');
+    lines.push('  npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok');
+  }
 
-  # For PR babysitter / CI sweeper patterns, copy the corresponding starter
-  # Then run:  zj-loop-audit . --suggest   (again after changes)
+  if (!signals.verifier.present) {
+    lines.push('  # Add maker/checker verification before enabling L2 actions.');
+    lines.push('  mkdir -p .grok/skills/loop-verifier');
+    lines.push('  cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md');
+  }
 
-  # Or scaffold automatically:
-  npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-  npx @jununfly/zj-loop-cost --pattern daily-triage --level L1
+  if (!signals.cost.budgetDoc) {
+    lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
+    lines.push(`  cp templates/${LOOP_ARTIFACTS.budget.template} ${LOOP_ARTIFACTS.budget.primary}`);
+  }
 
-  # IMPORTANT (v1.4): After scaffolding, actually RUN a loop (report-only) and commit the updated STATE.md.
-  # This creates the "loopActivity" evidence that pushes you toward real L2/L3 scores.
+  if (!signals.cost.runLog) {
+    lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
+    lines.push(`  cp templates/${LOOP_ARTIFACTS.runLog.template} ${LOOP_ARTIFACTS.runLog.primary}`);
+  }
 
-See docs/loop-design-checklist.md and patterns/ for full guidance.`;
+  if (signals.loopConfig.present && !signals.cost.loopMdBudget) {
+    lines.push(`  # Edit ${signals.loopConfig.path ?? LOOP_ARTIFACTS.config.primary}: add a Budget section with token caps and kill switch.`);
+  }
+
+  if (!signals.cost.budgetSkill) {
+    lines.push(`  # Add the ${LOOP_ARTIFACTS.skills.budget.primary} skill via zj-loop-init or templates/SKILL.md.${LOOP_ARTIFACTS.skills.budget.primary}.`);
+  }
+
+  if (!signals.constraints.present) {
+    lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
+    lines.push(`  cp templates/${LOOP_ARTIFACTS.constraints.template} ${LOOP_ARTIFACTS.constraints.primary}`);
+  }
+
+  if (signals.constraints.present && !signals.constraints.hasConstraintsSkill) {
+    lines.push(`  # Add the ${LOOP_ARTIFACTS.skills.constraints.primary} skill so constraints are enforced at runtime.`);
+  }
+
+  if (!signals.loopActivity.present) {
+    lines.push('  # Run one report-only loop, update state, and commit the state/run-log evidence.');
+  }
+
+  if (lines.length === 4) {
+    lines.push('  No missing scaffold artifacts detected. Review warnings above for policy edits or runtime evidence.');
+  }
+
+  lines.push('');
+  lines.push('Docs: docs/loop-design-checklist.md and docs/operating-loops.md');
+  return lines.join('\n');
+}
 
 const SPEC: CliSpec = {
   name: 'zj-loop-audit',
@@ -100,7 +132,7 @@ const SPEC: CliSpec = {
     { name: 'target', type: 'positional', description: 'Project path', default: '.' },
     { name: 'json', type: 'boolean', description: 'JSON output' },
     { name: 'md', type: 'boolean', description: 'Markdown report' },
-    { name: 'suggest', type: 'boolean', description: 'Show copy-from-template commands' },
+    { name: 'suggest', type: 'boolean', description: 'Show context-aware actions' },
     { name: 'fix', type: 'boolean', description: 'Alias for --suggest' },
     { name: 'badge', type: 'boolean', description: 'Markdown README badge' },
   ],

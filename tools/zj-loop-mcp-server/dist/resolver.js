@@ -1,13 +1,13 @@
 import path from 'node:path';
 import { createNodeProjectFileSystem, loadPatternRegistry, } from '@jununfly/zj-loop-core';
 const STATE_FILE_CANDIDATES = [
-    'STATE.md',
-    'pr-babysitter-state.md',
-    'ci-sweeper-state.md',
-    'post-merge-state.md',
-    'dependency-sweeper-state.md',
-    'changelog-drafter-state.md',
-    'issue-triage-state.md',
+    'zj-loop/STATE.md',
+    'zj-loop/pr-babysitter-state.md',
+    'zj-loop/ci-sweeper-state.md',
+    'zj-loop/post-merge-state.md',
+    'zj-loop/dependency-sweeper-state.md',
+    'zj-loop/changelog-drafter-state.md',
+    'zj-loop/issue-triage-state.md',
 ];
 /** Reject path segments that could escape the project root. */
 export function assertSafeSegment(name, label) {
@@ -23,6 +23,14 @@ async function allowedPatternIds(root) {
 }
 function fsFor(root) {
     return createNodeProjectFileSystem(root);
+}
+async function readFirstProjectText(fs, candidates) {
+    for (const candidate of candidates) {
+        const content = await fs.readTextIfExists(candidate);
+        if (content !== null)
+            return { path: candidate, content };
+    }
+    return null;
 }
 export async function fileExists(p) {
     return fsFor(path.dirname(p)).exists(path.basename(p));
@@ -83,11 +91,8 @@ export async function loadSkill(root, skillName) {
     return skills.find(s => s.name === skillName) ?? null;
 }
 export async function loadState(root, stateFile) {
-    const target = stateFile ?? 'STATE.md';
-    try {
-        assertSafeSegment(target, 'stateFile');
-    }
-    catch {
+    const target = stateFile ?? 'zj-loop/STATE.md';
+    if (!target || target.includes('\0') || target.includes('..') || target.includes('\\')) {
         return null;
     }
     if (!STATE_FILE_CANDIDATES.includes(target))
@@ -104,13 +109,13 @@ export async function listStateFiles(root) {
     return found;
 }
 export async function loadLoopConfig(root) {
-    return fsFor(root).readTextIfExists('LOOP.md');
+    return (await readFirstProjectText(fsFor(root), ['zj-loop/ZJ-LOOP.md']))?.content ?? null;
 }
 export async function loadBudget(root) {
-    return fsFor(root).readTextIfExists('loop-budget.md');
+    return (await readFirstProjectText(fsFor(root), ['zj-loop/zj-loop-budget.md']))?.content ?? null;
 }
 export async function loadRunLog(root) {
-    return fsFor(root).readTextIfExists('loop-run-log.md');
+    return (await readFirstProjectText(fsFor(root), ['zj-loop/zj-loop-run-log.md']))?.content ?? null;
 }
 export async function loadSafetyDoc(root) {
     const fs = fsFor(root);
@@ -149,9 +154,9 @@ async function summarizeFixedDocument(root, key, uri, candidates) {
 }
 export async function summarizeOperationalContext(root) {
     const documents = await Promise.all([
-        summarizeFixedDocument(root, 'config', 'loop://config', ['LOOP.md']),
-        summarizeFixedDocument(root, 'budget', 'loop://budget', ['loop-budget.md']),
-        summarizeFixedDocument(root, 'runLog', 'loop://run-log', ['loop-run-log.md']),
+        summarizeFixedDocument(root, 'config', 'loop://config', ['zj-loop/ZJ-LOOP.md']),
+        summarizeFixedDocument(root, 'budget', 'loop://budget', ['zj-loop/zj-loop-budget.md']),
+        summarizeFixedDocument(root, 'runLog', 'loop://run-log', ['zj-loop/zj-loop-run-log.md']),
         summarizeFixedDocument(root, 'safety', 'loop://safety', ['docs/safety.md', 'safety.md', 'SECURITY.md']),
     ]);
     return {

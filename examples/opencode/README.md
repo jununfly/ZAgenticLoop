@@ -1,6 +1,6 @@
 # Opencode
 
-Open-source coding agent that runs from the CLI, can run headlessly via `opencode run`, supports named agents, and can connect to tools through MCP. Loop engineering primitives publish to plain files: `AGENTS.md`, `STATE.md`, and `skills/` folders in the [AgentSkills](https://agentskills.io) format.
+Open-source coding agent that runs from the CLI, can run headlessly via `opencode run`, supports named agents, and can connect to tools through MCP. Loop engineering primitives publish to plain files: `AGENTS.md`, `zj-loop/STATE.md`, and `skills/` folders in the [AgentSkills](https://agentskills.io) format.
 
 | Example | Pattern |
 |---------|---------|

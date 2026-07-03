@@ -61,12 +61,27 @@ Always require human for:
 - Dependency upgrades (supply chain risk)
 - Changes touching >N files (suggest N=10)
 - Third attempt failed on same item
+- Merge to shared branch
+- Publish or release
+- Delete an unmerged, shared, protected, or non-current-roadmap remote branch
+- Destructive cleanup
+- Roadmap scope expansion
+- Continuing after failed verification
+- Package identity, public URL, or public API changes
+
+Deleting the already-merged current roadmap branch is post-merge checklist work,
+not a Human Gate. Any branch deletion outside that narrow case remains a Human
+Gate.
+
+At a Human Gate, the agent may prepare context, commands, verification status,
+and recommendation. It must not cross the gate until approval is explicit and
+recorded with scope and validity when the risk is high.
 
 ## Secrets in Prompts & Logs
 
 - Never paste API keys into scheduler prompts
 - CI logs may contain secrets — triage skill should redact before state write
-- State files are often committed — no credentials in `STATE.md`
+- State files are often committed — no credentials in `zj-loop/STATE.md`
 
 ## Flake & Test Safety
 
@@ -96,8 +111,8 @@ See also [loop-design-checklist.md](./loop-design-checklist.md).
 
 ## Machine-Readable Constraints
 
-For runtime enforcement, define constraints in `loop-constraints.md` at the project root.
-The `loop-constraints` skill reads this file at the start of every loop run and enforces
-every rule. Template: [templates/loop-constraints.md](../templates/loop-constraints.md).
+For runtime enforcement, define constraints in `zj-loop/zj-loop-constraints.md` at the project root.
+The `zj-loop-constraints` skill reads this file at the start of every loop run and enforces
+every rule. Template: [templates/zj-loop-constraints.md](../templates/zj-loop-constraints.md).
 
 Tool examples: [Grok](../examples/grok/constraints.md) · [Claude Code](../examples/claude-code/constraints.md) · [Codex](../examples/codex/constraints.md)

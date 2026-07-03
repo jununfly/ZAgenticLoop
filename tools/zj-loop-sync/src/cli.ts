@@ -26,8 +26,8 @@ Examples:
   zj-loop-sync ./my-project --json
 
 The tool checks:
-  - STATE.md ↔ LOOP.md consistency
-  - Required files (STATE.md, LOOP.md, AGENTS.md)
+  - zj-loop/STATE.md ↔ zj-loop/ZJ-LOOP.md consistency
+  - Required files (zj-loop/STATE.md, zj-loop/ZJ-LOOP.md, AGENTS.md)
   - Skills directory structure
   - Configuration drift indicators
 

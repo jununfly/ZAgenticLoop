@@ -8,10 +8,10 @@ Estimate before scheduling:
 
 ```bash
 npx @jununfly/zj-loop-cost --pattern <id> --cadence <interval> --level L1
-npx @jununfly/zj-loop-init . --pattern <id>   # scaffolds loop-budget.md + loop-run-log.md + loop-budget skill
+npx @jununfly/zj-loop-init . --pattern <id>   # scaffolds zj-loop-budget.md + zj-loop-run-log.md + zj-loop-budget skill
 ```
 
-`zj-loop-audit` scores cost observability and caps L3 until budget + run log + LOOP.md budget section exist.
+`zj-loop-audit` scores cost observability and caps L3 until budget + run log + ZJ-LOOP.md budget section exist.
 
 Rough planning factors:
 
@@ -47,7 +47,7 @@ Encode in skill or scheduler prompt: "If no high-priority items, exit immediatel
 
 ## Logging Each Run
 
-Minimum log entry (append to `loop-run-log.md` or structured JSON):
+Minimum log entry (append to `zj-loop/zj-loop-run-log.md` or structured JSON):
 
 ```json
 {
@@ -62,7 +62,7 @@ Minimum log entry (append to `loop-run-log.md` or structured JSON):
 }
 ```
 
-Human-readable alternative in `STATE.md` footer:
+Human-readable alternative in `zj-loop/STATE.md` footer:
 
 ```markdown
 ---
