@@ -1,6 +1,6 @@
 {
   "name": "@jununfly/zj-loop-cost",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Estimate token budgets and daily costs for agentic loop working patterns. By cadence, readiness level (L1/L2/L3), and coding agent tool.",
   "type": "module",
   "bin": {
