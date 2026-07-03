@@ -44,7 +44,7 @@ jobs:
       - name: Run triage agent
         run: |
           echo "::notice::Wire this step to your agent harness."
-          echo "Prompt: Run loop-triage skill. Update zj-loop/STATE.md. Report only unless L2 enabled."
+          echo "Prompt: Run zj-loop-triage skill. Update zj-loop/STATE.md. Report only unless L2 enabled."
           echo "See examples/github-actions/README.md"
 
       - name: Upload state artifact

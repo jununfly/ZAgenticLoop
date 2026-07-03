@@ -4,7 +4,7 @@
 
 | Pattern | Cadence | Status | Automation prompt |
 |---------|---------|--------|-------------------|
-| Daily Triage | 1d | L1 report-only | `Run $loop-triage. Read zj-loop/STATE.md. Report only.` |
+| Daily Triage | 1d | L1 report-only | `Run $zj-loop-triage. Read zj-loop/STATE.md. Report only.` |
 
 ## Human Gates
 

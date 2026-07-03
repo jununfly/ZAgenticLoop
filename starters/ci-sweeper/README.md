@@ -9,9 +9,9 @@ Scaffold for the [CI Sweeper](../../patterns/ci-sweeper.md) loop.
    npx @jununfly/zj-loop-init . --pattern ci-sweeper --tool grok
    # Or manual:
    mkdir -p .grok/skills
-   cp -r starters/ci-sweeper/.grok/skills/ci-triage .grok/skills/
-   cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md
-   cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md
+   cp -r starters/ci-sweeper/.grok/skills/zj-ci-triage .grok/skills/
+   cp templates/SKILL.md.zj-minimal-fix .grok/skills/zj-minimal-fix/SKILL.md
+   cp templates/SKILL.md.zj-loop-verifier .grok/skills/zj-loop-verifier/SKILL.md
    cp starters/ci-sweeper/ci-sweeper-state.md.example ci-sweeper-state.md
    mkdir -p zj-loop
    cp starters/ci-sweeper/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
@@ -21,7 +21,7 @@ Scaffold for the [CI Sweeper](../../patterns/ci-sweeper.md) loop.
 
 3. Start (Grok):
    ```bash
-   /loop 15m Check CI on main. Update ci-sweeper-state.md. Classify failures. For new actionable failures (not flakes): worktree + minimal-fix + loop-verifier. Escalate after 3 attempts.
+   /loop 15m Check CI on main. Update ci-sweeper-state.md. Classify failures. For new actionable failures (not flakes): worktree + zj-minimal-fix + zj-loop-verifier. Escalate after 3 attempts.
    ```
 
 ## Flake Policy

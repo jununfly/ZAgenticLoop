@@ -5,18 +5,18 @@
 | Field | Value |
 |-------|--------|
 | Cadence | Every 5–15 minutes (working hours) |
-| Prompt | `$pr-review-triage` + update state + conditional fix flow |
+| Prompt | `$zj-pr-review-triage` + update state + conditional fix flow |
 
 ## Prompt Template
 
 ```
 For open PRs on this repo (team-authored or label loop-watch):
 
-1. Run $pr-review-triage
+1. Run $zj-pr-review-triage
 2. Update pr-babysitter-state.md
 3. If CI red or actionable review comment AND attempts < 3:
    - Open worktree
-   - Implementer: $minimal-fix
+   - Implementer: $zj-minimal-fix
    - Verifier subagent: must APPROVE
    - Comment on PR with proposal — do not merge
 4. If attempts >= 3 or high-risk labels: Triage inbox + escalate
@@ -28,7 +28,7 @@ For open PRs on this repo (team-authored or label loop-watch):
 # verifier.toml — example structure
 name = "verifier"
 description = "Rejects loop fixes unless tests pass and scope is minimal"
-instructions = "See templates/SKILL.md.verifier"
+instructions = "See templates/SKILL.md.zj-loop-verifier"
 model = "strongest-available"
 reasoning_effort = "high"
 ```

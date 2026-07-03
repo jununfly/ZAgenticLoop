@@ -6,8 +6,8 @@
 - Goal: produce `RELEASE_NOTES_DRAFT.md` from recent merges. Human reviews before any publish.
 
 ## What Worked
-- `changelog-scan` quickly gave a clean, citable list of PRs + direct commits.
-- `draft-release-notes` produced nicely categorized output on first try (Features / Fixes / Breaking surfaced correctly).
+- `zj-changelog-scan` quickly gave a clean, citable list of PRs + direct commits.
+- `zj-draft-release-notes` produced nicely categorized output on first try (Features / Fixes / Breaking surfaced correctly).
 - State file (`changelog-drafter-state.md`) made it trivial to know the window and what was already reviewed.
 
 ## What Broke / Needed Tuning

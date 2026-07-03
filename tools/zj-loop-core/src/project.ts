@@ -61,19 +61,19 @@ export const DEFAULT_MCP_FILES = [
 ] as const;
 
 export const DEFAULT_LOOP_SKILL_NAMES = [
-  'loop-triage',
-  'minimal-fix',
-  'loop-verifier',
-  'pr-review-triage',
-  'ci-triage',
-  'post-merge-scan',
-  'dependency-triage',
-  'rebase-and-clean',
-  'changelog-scan',
+  'zj-loop-triage',
+  'zj-minimal-fix',
+  'zj-loop-verifier',
+  'zj-pr-review-triage',
+  'zj-ci-triage',
+  'zj-post-merge-scan',
+  'zj-dependency-triage',
+  'zj-rebase-and-clean',
+  'zj-changelog-scan',
   'zj-loop-constraints',
   'zj-loop-budget',
-  'draft-release-notes',
-  'issue-triage',
+  'zj-draft-release-notes',
+  'zj-issue-triage',
 ] as const;
 
 export interface ProjectEvidenceFacts {
@@ -183,8 +183,8 @@ export async function listProjectSkillNames(
     for (const entry of entries) {
       if (entry.kind !== 'file') continue;
       const base = entry.name.replace(/\.(md|toml)$/i, '');
-      if (base.includes('verifier') || base === 'loop-verifier') {
-        found.push('loop-verifier');
+      if (base.includes('verifier') || base === 'zj-loop-verifier') {
+        found.push('zj-loop-verifier');
       }
     }
   }

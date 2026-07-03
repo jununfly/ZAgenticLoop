@@ -11,7 +11,7 @@
 A mid-size SaaS team (12 engineers, ~40 merges/week) ran post-merge cleanup after shipping a feature branch. Predictable leftovers piled up: stale comments, half-updated docs, and tiny lint issues nobody wanted to context-switch for. PR Babysitter felt too heavy for work already on `main`.
 
 - **Loop:** daily post-merge scan on merges in the last 24–48h
-- **Skills:** `post-merge-scan`, `minimal-fix`, `loop-verifier`
+- **Skills:** `zj-post-merge-scan`, `zj-minimal-fix`, `zj-loop-verifier`
 - **State:** `post-merge-state.md` with fixed / ticketed / ignored per merge SHA
 - **Week one:** L1 report only — loop listed candidates, humans picked two
 - **Denylist:** `auth/`, `payments/`, anything touching public API contracts

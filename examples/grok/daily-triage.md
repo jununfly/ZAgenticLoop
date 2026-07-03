@@ -5,7 +5,7 @@ This is a practical, copy-pasteable example of a morning triage loop using the G
 ## The Command
 
 ```bash
-/loop 1d Run the loop-triage skill on the current project. Append high-priority items to STATE.md. For any small, self-contained bugfix or CI failure, open an isolated worktree, draft a minimal fix using the minimal-fix skill, and have a reviewer sub-agent verify it against project skills and tests. Update the PR or ticket via connectors if possible. Anything ambiguous or high-risk should be clearly flagged for human review in STATE.md.
+/loop 1d Run the zj-loop-triage skill on the current project. Append high-priority items to STATE.md. For any small, self-contained bugfix or CI failure, open an isolated worktree, draft a minimal fix using the zj-minimal-fix skill, and have a reviewer sub-agent verify it against project skills and tests. Update the PR or ticket via connectors if possible. Anything ambiguous or high-risk should be clearly flagged for human review in STATE.md.
 ```
 
 You can also run it on a faster cadence during active periods:
@@ -16,8 +16,8 @@ You can also run it on a faster cadence during active periods:
 ## Supporting Files You Should Have
 
 - `zj-loop/STATE.md` in the repo root (committed or in a shared location)
-- The `loop-triage` skill installed (copy from `templates/SKILL.md.loop-triage`)
-- A `minimal-fix` skill (or equivalent instructions)
+- The `zj-loop-triage` skill installed (copy from `templates/SKILL.md.zj-loop-triage`)
+- A `zj-minimal-fix` skill (or equivalent instructions)
 - Reviewer persona / sub-agent definition
 - MCP connectors configured for your issue tracker and/or GitHub (optional but powerful)
 

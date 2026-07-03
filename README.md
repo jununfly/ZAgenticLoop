@@ -82,7 +82,7 @@ npx @jununfly/zj-loop-audit . --suggest
 3. Run report-only for week one:
 
 ```text
-/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
+/loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
 4. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold and first state update.

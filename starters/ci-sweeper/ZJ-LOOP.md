@@ -4,7 +4,7 @@
 
 | Pattern | Cadence | Status | Command |
 |---------|---------|--------|---------|
-| CI Sweeper | 15m when CI is active | L2 guarded fixes | `/loop 15m Check CI on main. Update ci-sweeper-state.md. Classify failures. For new actionable failures: worktree + minimal-fix + loop-verifier. Escalate after 3 attempts.` |
+| CI Sweeper | 15m when CI is active | L2 guarded fixes | `/loop 15m Check CI on main. Update ci-sweeper-state.md. Classify failures. For new actionable failures: worktree + zj-minimal-fix + zj-loop-verifier. Escalate after 3 attempts.` |
 
 ## Human Gates
 

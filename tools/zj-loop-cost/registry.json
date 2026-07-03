@@ -15,9 +15,9 @@
         "github-actions"
       ],
       "skills": [
-        "pr-review-triage",
-        "minimal-fix",
-        "rebase-and-clean"
+        "zj-pr-review-triage",
+        "zj-minimal-fix",
+        "zj-rebase-and-clean"
       ],
       "state": "zj-loop/pr-babysitter-state.md",
       "phases": [
@@ -54,9 +54,9 @@
           "max_spawns_l2": 3
         },
         "first_loop_command": {
-          "grok": "/loop 10m Run pr-review-triage. Update pr-babysitter-state.md. Worktree + minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.",
-          "claude": "/loop 10m $pr-review-triage — update pr-babysitter-state.md. No auto-merge.",
-          "codex": "Automation 10m: pr-review-triage → pr-babysitter-state.md. No auto-merge."
+          "grok": "/loop 10m Run zj-pr-review-triage. Update pr-babysitter-state.md. Worktree + zj-minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.",
+          "claude": "/loop 10m $zj-pr-review-triage — update pr-babysitter-state.md. No auto-merge.",
+          "codex": "Automation 10m: zj-pr-review-triage → pr-babysitter-state.md. No auto-merge."
         }
       }
     },
@@ -74,8 +74,8 @@
         "github-actions"
       ],
       "skills": [
-        "loop-triage",
-        "minimal-fix"
+        "zj-loop-triage",
+        "zj-minimal-fix"
       ],
       "state": "zj-loop/STATE.md",
       "phases": [
@@ -113,9 +113,9 @@
           "max_spawns_l2": 2
         },
         "first_loop_command": {
-          "grok": "/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.",
-          "claude": "/loop 1d $loop-triage — update zj-loop/STATE.md. Report-only week one.",
-          "codex": "Automation daily: $loop-triage → update zj-loop/STATE.md. Report-only."
+          "grok": "/loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.",
+          "claude": "/loop 1d $zj-loop-triage — update zj-loop/STATE.md. Report-only week one.",
+          "codex": "Automation daily: $zj-loop-triage → update zj-loop/STATE.md. Report-only."
         }
       }
     },
@@ -133,8 +133,8 @@
         "github-actions"
       ],
       "skills": [
-        "ci-triage",
-        "minimal-fix"
+        "zj-ci-triage",
+        "zj-minimal-fix"
       ],
       "state": "zj-loop/ci-sweeper-state.md",
       "phases": [
@@ -170,9 +170,9 @@
           "max_spawns_l2": 3
         },
         "first_loop_command": {
-          "grok": "/loop 15m Run ci-triage on failing CI. Update ci-sweeper-state.md. Fix only regressions in worktree. Max 3 attempts.",
-          "claude": "/loop 15m $ci-triage — update ci-sweeper-state.md. Max 3 fix attempts.",
-          "codex": "Automation 15m: ci-triage on CI failures. Max 3 attempts."
+          "grok": "/loop 15m Run zj-ci-triage on failing CI. Update ci-sweeper-state.md. Fix only regressions in worktree. Max 3 attempts.",
+          "claude": "/loop 15m $zj-ci-triage — update ci-sweeper-state.md. Max 3 fix attempts.",
+          "codex": "Automation 15m: zj-ci-triage on CI failures. Max 3 attempts."
         }
       }
     },
@@ -190,8 +190,8 @@
         "github-actions"
       ],
       "skills": [
-        "post-merge-scan",
-        "minimal-fix"
+        "zj-post-merge-scan",
+        "zj-minimal-fix"
       ],
       "state": "zj-loop/post-merge-state.md",
       "phases": [
@@ -226,9 +226,9 @@
           "max_spawns_l2": 2
         },
         "first_loop_command": {
-          "grok": "/loop 1d Run post-merge-scan on recent merges. Update post-merge-state.md. Small fixes only in worktree.",
-          "claude": "/loop 1d $post-merge-scan — update post-merge-state.md. Small fixes only.",
-          "codex": "Automation daily: post-merge-scan → post-merge-state.md."
+          "grok": "/loop 1d Run zj-post-merge-scan on recent merges. Update post-merge-state.md. Small fixes only in worktree.",
+          "claude": "/loop 1d $zj-post-merge-scan — update post-merge-state.md. Small fixes only.",
+          "codex": "Automation daily: zj-post-merge-scan → post-merge-state.md."
         }
       }
     },
@@ -246,9 +246,9 @@
         "github-actions"
       ],
       "skills": [
-        "dependency-triage",
-        "minimal-fix",
-        "loop-verifier"
+        "zj-dependency-triage",
+        "zj-minimal-fix",
+        "zj-loop-verifier"
       ],
       "state": "zj-loop/dependency-sweeper-state.md",
       "phases": [
@@ -285,9 +285,9 @@
           "max_spawns_l2": 3
         },
         "first_loop_command": {
-          "grok": "/loop 6h Run dependency-triage. Patch-only auto-fix in worktree + verifier. Escalate majors and denylist.",
-          "claude": "/loop 6h $dependency-triage — patch-only with verifier. Escalate risky bumps.",
-          "codex": "Automation 6h: dependency-triage. Patch-only with verifier."
+          "grok": "/loop 6h Run zj-dependency-triage. Patch-only auto-fix in worktree + verifier. Escalate majors and denylist.",
+          "claude": "/loop 6h $zj-dependency-triage — patch-only with verifier. Escalate risky bumps.",
+          "codex": "Automation 6h: zj-dependency-triage. Patch-only with verifier."
         }
       }
     },
@@ -305,9 +305,9 @@
         "github-actions"
       ],
       "skills": [
-        "changelog-scan",
-        "draft-release-notes",
-        "loop-verifier"
+        "zj-changelog-scan",
+        "zj-draft-release-notes",
+        "zj-loop-verifier"
       ],
       "state": "zj-loop/changelog-drafter-state.md",
       "phases": [
@@ -344,9 +344,9 @@
           "max_spawns_l2": 2
         },
         "first_loop_command": {
-          "grok": "/loop 1d Run changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using draft-release-notes. Update changelog-drafter-state.md. Human review only.",
-          "claude": "/loop 1d $changelog-scan + draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.",
-          "codex": "Automation daily: changelog-scan + draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review."
+          "grok": "/loop 1d Run zj-changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes. Update changelog-drafter-state.md. Human review only.",
+          "claude": "/loop 1d $zj-changelog-scan + zj-draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.",
+          "codex": "Automation daily: zj-changelog-scan + zj-draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review."
         }
       }
     },
@@ -364,8 +364,8 @@
         "github-actions"
       ],
       "skills": [
-        "issue-triage",
-        "loop-verifier"
+        "zj-issue-triage",
+        "zj-loop-verifier"
       ],
       "state": "zj-loop/issue-triage-state.md",
       "phases": [
@@ -402,9 +402,9 @@
           "max_spawns_l2": 1
         },
         "first_loop_command": {
-          "grok": "/loop 2h Run issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.",
-          "claude": "/loop 2h $issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.",
-          "codex": "Automation 2h: issue-triage → issue-triage-state.md. Propose only."
+          "grok": "/loop 2h Run zj-issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.",
+          "claude": "/loop 2h $zj-issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.",
+          "codex": "Automation 2h: zj-issue-triage → issue-triage-state.md. Propose only."
         }
       }
     },

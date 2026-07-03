@@ -18,7 +18,7 @@ Scaffold for the [PR Babysitter](../../patterns/pr-babysitter.md) loop (L2 — a
 
 3. Start (Grok):
    ```bash
-   /loop 5m Check open PRs. Update pr-babysitter-state.md. For CI failures or actionable review comments on allowlisted PRs: worktree + minimal-fix + loop-verifier. Never merge — propose only. Escalate after 3 attempts per PR.
+   /loop 5m Check open PRs. Update pr-babysitter-state.md. For CI failures or actionable review comments on allowlisted PRs: worktree + zj-minimal-fix + zj-loop-verifier. Never merge — propose only. Escalate after 3 attempts per PR.
    ```
 
 4. Sign PR comments: `🤖 ZAgenticLoop — PR Babysitter`
@@ -28,7 +28,7 @@ Scaffold for the [PR Babysitter](../../patterns/pr-babysitter.md) loop (L2 — a
 | File | Purpose |
 |------|---------|
 | `pr-babysitter-state.md.example` | Watcher state |
-| `.grok/skills/pr-review-triage/` | PR triage skill |
+| `.grok/skills/zj-pr-review-triage/` | PR triage skill |
 | `zj-loop/ZJ-LOOP.md` | Team loop config |
 
 ## Safety

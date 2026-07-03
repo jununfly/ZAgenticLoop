@@ -38,19 +38,19 @@ export const DEFAULT_MCP_FILES = [
     '.mcp/config.json',
 ];
 export const DEFAULT_LOOP_SKILL_NAMES = [
-    'loop-triage',
-    'minimal-fix',
-    'loop-verifier',
-    'pr-review-triage',
-    'ci-triage',
-    'post-merge-scan',
-    'dependency-triage',
-    'rebase-and-clean',
-    'changelog-scan',
+    'zj-loop-triage',
+    'zj-minimal-fix',
+    'zj-loop-verifier',
+    'zj-pr-review-triage',
+    'zj-ci-triage',
+    'zj-post-merge-scan',
+    'zj-dependency-triage',
+    'zj-rebase-and-clean',
+    'zj-changelog-scan',
     'zj-loop-constraints',
     'zj-loop-budget',
-    'draft-release-notes',
-    'issue-triage',
+    'zj-draft-release-notes',
+    'zj-issue-triage',
 ];
 function toProjectPath(relativePath) {
     return relativePath === '.' ? '.' : path.normalize(relativePath);
@@ -131,8 +131,8 @@ export async function listProjectSkillNames(fs, options = {}) {
             if (entry.kind !== 'file')
                 continue;
             const base = entry.name.replace(/\.(md|toml)$/i, '');
-            if (base.includes('verifier') || base === 'loop-verifier') {
-                found.push('loop-verifier');
+            if (base.includes('verifier') || base === 'zj-loop-verifier') {
+                found.push('zj-loop-verifier');
             }
         }
     }

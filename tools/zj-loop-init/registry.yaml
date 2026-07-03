@@ -11,7 +11,7 @@ patterns:
     cadence: 5m-15m
     risk: medium
     tools: [grok, claude-code, codex, github-actions]
-    skills: [pr-review-triage, minimal-fix, rebase-and-clean]
+    skills: [zj-pr-review-triage, zj-minimal-fix, zj-rebase-and-clean]
     state: zj-loop/pr-babysitter-state.md
     phases: [discover, triage, fix, verify, notify]
     human_gates: [security, payments, auth, max-fix-attempts]
@@ -33,9 +33,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 3
       first_loop_command:
-        grok: /loop 10m Run pr-review-triage. Update pr-babysitter-state.md. Worktree + minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.
-        claude: /loop 10m $pr-review-triage — update pr-babysitter-state.md. No auto-merge.
-        codex: "Automation 10m: pr-review-triage → pr-babysitter-state.md. No auto-merge."
+        grok: /loop 10m Run zj-pr-review-triage. Update pr-babysitter-state.md. Worktree + zj-minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.
+        claude: /loop 10m $zj-pr-review-triage — update pr-babysitter-state.md. No auto-merge.
+        codex: "Automation 10m: zj-pr-review-triage → pr-babysitter-state.md. No auto-merge."
 
   - id: daily-triage
     name: Daily Triage
@@ -44,7 +44,7 @@ patterns:
     cadence: 1d-2h
     risk: low
     tools: [grok, claude-code, codex, github-actions]
-    skills: [loop-triage, minimal-fix]
+    skills: [zj-loop-triage, zj-minimal-fix]
     state: zj-loop/STATE.md
     phases: [report, act-small-wins, escalate]
     human_gates: [design-decisions, multi-file-refactors]
@@ -70,9 +70,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 2
       first_loop_command:
-        grok: /loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
-        claude: /loop 1d $loop-triage — update zj-loop/STATE.md. Report-only week one.
-        codex: "Automation daily: $loop-triage → update zj-loop/STATE.md. Report-only."
+        grok: /loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
+        claude: /loop 1d $zj-loop-triage — update zj-loop/STATE.md. Report-only week one.
+        codex: "Automation daily: $zj-loop-triage → update zj-loop/STATE.md. Report-only."
 
   - id: ci-sweeper
     name: CI Sweeper
@@ -81,7 +81,7 @@ patterns:
     cadence: 5m-15m
     risk: medium
     tools: [grok, claude-code, codex, github-actions]
-    skills: [ci-triage, minimal-fix]
+    skills: [zj-ci-triage, zj-minimal-fix]
     state: zj-loop/ci-sweeper-state.md
     phases: [detect, classify, fix, verify, escalate]
     human_gates: [infra-failures, max-attempts, security-tests]
@@ -103,9 +103,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 3
       first_loop_command:
-        grok: /loop 15m Run ci-triage on failing CI. Update ci-sweeper-state.md. Fix only regressions in worktree. Max 3 attempts.
-        claude: /loop 15m $ci-triage — update ci-sweeper-state.md. Max 3 fix attempts.
-        codex: "Automation 15m: ci-triage on CI failures. Max 3 attempts."
+        grok: /loop 15m Run zj-ci-triage on failing CI. Update ci-sweeper-state.md. Fix only regressions in worktree. Max 3 attempts.
+        claude: /loop 15m $zj-ci-triage — update ci-sweeper-state.md. Max 3 fix attempts.
+        codex: "Automation 15m: zj-ci-triage on CI failures. Max 3 attempts."
 
   - id: post-merge-cleanup
     name: Post-Merge Cleanup
@@ -114,7 +114,7 @@ patterns:
     cadence: 1d-6h
     risk: low
     tools: [grok, claude-code, codex, github-actions]
-    skills: [post-merge-scan, minimal-fix]
+    skills: [zj-post-merge-scan, zj-minimal-fix]
     state: zj-loop/post-merge-state.md
     phases: [scan-merges, prioritize, fix-small, ticket-large]
     human_gates: [architectural-debt, feature-flags, large-diffs]
@@ -136,9 +136,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 2
       first_loop_command:
-        grok: /loop 1d Run post-merge-scan on recent merges. Update post-merge-state.md. Small fixes only in worktree.
-        claude: /loop 1d $post-merge-scan — update post-merge-state.md. Small fixes only.
-        codex: "Automation daily: post-merge-scan → post-merge-state.md."
+        grok: /loop 1d Run zj-post-merge-scan on recent merges. Update post-merge-state.md. Small fixes only in worktree.
+        claude: /loop 1d $zj-post-merge-scan — update post-merge-state.md. Small fixes only.
+        codex: "Automation daily: zj-post-merge-scan → post-merge-state.md."
 
   - id: dependency-sweeper
     name: Dependency Sweeper
@@ -147,7 +147,7 @@ patterns:
     cadence: 6h-1d
     risk: medium
     tools: [grok, claude-code, codex, github-actions]
-    skills: [dependency-triage, minimal-fix, loop-verifier]
+    skills: [zj-dependency-triage, zj-minimal-fix, zj-loop-verifier]
     state: zj-loop/dependency-sweeper-state.md
     phases: [scan, triage-risk, patch-safe, verify-worktree, escalate-risky]
     human_gates: [major-bumps, high-sev-cve, denylisted-packages, max-attempts]
@@ -169,9 +169,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 3
       first_loop_command:
-        grok: /loop 6h Run dependency-triage. Patch-only auto-fix in worktree + verifier. Escalate majors and denylist.
-        claude: /loop 6h $dependency-triage — patch-only with verifier. Escalate risky bumps.
-        codex: "Automation 6h: dependency-triage. Patch-only with verifier."
+        grok: /loop 6h Run zj-dependency-triage. Patch-only auto-fix in worktree + verifier. Escalate majors and denylist.
+        claude: /loop 6h $zj-dependency-triage — patch-only with verifier. Escalate risky bumps.
+        codex: "Automation 6h: zj-dependency-triage. Patch-only with verifier."
 
   - id: changelog-drafter
     name: Changelog Drafter
@@ -180,7 +180,7 @@ patterns:
     cadence: 1d
     risk: low
     tools: [grok, claude-code, codex, github-actions]
-    skills: [changelog-scan, draft-release-notes, loop-verifier]
+    skills: [zj-changelog-scan, zj-draft-release-notes, zj-loop-verifier]
     state: zj-loop/changelog-drafter-state.md
     phases: [scan-merges, categorize, draft, review, publish]
     human_gates: [breaking-changes, security, major-features, marketing-sensitive]
@@ -202,9 +202,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 2
       first_loop_command:
-        grok: /loop 1d Run changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using draft-release-notes. Update changelog-drafter-state.md. Human review only.
-        claude: /loop 1d $changelog-scan + draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.
-        codex: "Automation daily: changelog-scan + draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review."
+        grok: /loop 1d Run zj-changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes. Update changelog-drafter-state.md. Human review only.
+        claude: /loop 1d $zj-changelog-scan + zj-draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.
+        codex: "Automation daily: zj-changelog-scan + zj-draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review."
 
   - id: issue-triage
     name: Issue Triage
@@ -213,7 +213,7 @@ patterns:
     cadence: 2h-1d
     risk: low
     tools: [grok, claude-code, codex, github-actions]
-    skills: [issue-triage, loop-verifier]
+    skills: [zj-issue-triage, zj-loop-verifier]
     state: zj-loop/issue-triage-state.md
     phases: [discover, dedupe, score, propose-labels, human-review]
     human_gates: [security, p0-p1, ambiguous-duplicates, stale-closures]
@@ -235,9 +235,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 1
       first_loop_command:
-        grok: /loop 2h Run issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.
-        claude: /loop 2h $issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.
-        codex: "Automation 2h: issue-triage → issue-triage-state.md. Propose only."
+        grok: /loop 2h Run zj-issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.
+        claude: /loop 2h $zj-issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.
+        codex: "Automation 2h: zj-issue-triage → issue-triage-state.md. Propose only."
 
   - id: roadmap-sliced-development
     name: Roadmap-Sliced Development Pattern

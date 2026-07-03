@@ -50,12 +50,12 @@ test('project path helpers expose deterministic evidence primitives', async () =
 
 test('listProjectSkillNames finds tool skills and verifier agents', async () => {
   await withProject(async (root) => {
-    await mkdir(path.join(root, '.grok', 'skills', 'loop-triage'), { recursive: true });
+    await mkdir(path.join(root, '.grok', 'skills', 'zj-loop-triage'), { recursive: true });
     await mkdir(path.join(root, '.claude', 'agents'), { recursive: true });
-    await writeFile(path.join(root, '.claude', 'agents', 'loop-verifier.md'), '# Verifier\n');
+    await writeFile(path.join(root, '.claude', 'agents', 'zj-loop-verifier.md'), '# Verifier\n');
 
     const fs = createNodeProjectFileSystem(root);
-    assert.deepEqual(await listProjectSkillNames(fs), ['loop-triage', 'loop-verifier']);
+    assert.deepEqual(await listProjectSkillNames(fs), ['zj-loop-triage', 'zj-loop-verifier']);
   });
 });
 
@@ -66,7 +66,7 @@ test('collectProjectEvidenceFacts returns shared loop evidence without policy in
     await writeFile(path.join(root, 'zj-loop', 'ZJ-LOOP.md'), '# Loop\n');
     await writeFile(path.join(root, 'AGENTS.md'), '# Agents\n');
     await mkdir(path.join(root, '.github', 'workflows'), { recursive: true });
-    await mkdir(path.join(root, '.codex', 'skills', 'issue-triage'), { recursive: true });
+    await mkdir(path.join(root, '.codex', 'skills', 'zj-issue-triage'), { recursive: true });
 
     const fs = createNodeProjectFileSystem(root);
     const facts = await collectProjectEvidenceFacts(fs);
@@ -75,6 +75,6 @@ test('collectProjectEvidenceFacts returns shared loop evidence without policy in
     assert.deepEqual(facts.missingRequiredLoopFiles, []);
     assert.equal(facts.loopConfig.present, true);
     assert.equal(facts.github.workflows, true);
-    assert.deepEqual(facts.loopSkillNames, ['issue-triage']);
+    assert.deepEqual(facts.loopSkillNames, ['zj-issue-triage']);
   });
 });

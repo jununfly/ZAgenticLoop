@@ -11,10 +11,10 @@ npx @jununfly/zj-loop-init . --pattern dependency-sweeper --tool grok
 Or manual copy:
 
 ```bash
-cp -r starters/dependency-sweeper/.grok/skills/dependency-triage .grok/skills/
-mkdir -p .grok/skills/loop-verifier .grok/skills/minimal-fix
-cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md
-cp templates/SKILL.md.minimal-fix .grok/skills/minimal-fix/SKILL.md
+cp -r starters/dependency-sweeper/.grok/skills/zj-dependency-triage .grok/skills/
+mkdir -p .grok/skills/zj-loop-verifier .grok/skills/zj-minimal-fix
+cp templates/SKILL.md.zj-loop-verifier .grok/skills/zj-loop-verifier/SKILL.md
+cp templates/SKILL.md.zj-minimal-fix .grok/skills/zj-minimal-fix/SKILL.md
 cp starters/dependency-sweeper/dependency-sweeper-state.md.example dependency-sweeper-state.md
 mkdir -p zj-loop
 cp starters/dependency-sweeper/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
@@ -25,7 +25,7 @@ Claude Code / Codex: use `--tool claude` or `--tool codex` with `zj-loop-init`.
 Start (Grok):
 
 ```
-/loop 6h Run dependency-triage on package manifests and lockfiles. Patch-only auto-fix in worktree + verifier (npm ci && npm test). Escalate majors, high-sev CVEs, and denylist packages. Update dependency-sweeper-state.md.
+/loop 6h Run zj-dependency-triage on package manifests and lockfiles. Patch-only auto-fix in worktree + verifier (npm ci && npm test). Escalate majors, high-sev CVEs, and denylist packages. Update dependency-sweeper-state.md.
 ```
 
 ## What's Included
@@ -33,8 +33,8 @@ Start (Grok):
 | File | Purpose |
 |------|---------|
 | `dependency-sweeper-state.md.example` | State spine (in-flight updates, denylist) |
-| `.grok/.claude/.codex/skills/dependency-triage/` | Triage skill (all tools) |
-| `.claude/agents/loop-verifier.md` | Checker agent |
+| `.grok/.claude/.codex/skills/zj-dependency-triage/` | Triage skill (all tools) |
+| `.claude/agents/zj-loop-verifier.md` | Checker agent |
 | `.codex/agents/verifier.toml` | Checker subagent |
 | `zj-loop/ZJ-LOOP.md` | Cadence, gates, budget |
 

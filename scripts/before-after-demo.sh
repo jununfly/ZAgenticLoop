@@ -31,14 +31,14 @@ run_audit "Stage 0 — empty project (baseline)" "$TMP"
 # Stage 1: copy Grok minimal-loop starter (L1)
 mkdir -p "$TMP/.grok/skills"
 mkdir -p "$TMP/zj-loop"
-cp -r "$ROOT/starters/minimal-loop/.grok/skills/loop-triage" "$TMP/.grok/skills/"
+cp -r "$ROOT/starters/minimal-loop/.grok/skills/zj-loop-triage" "$TMP/.grok/skills/"
 cp "$ROOT/starters/minimal-loop/STATE.md.example" "$TMP/zj-loop/STATE.md"
 cp "$ROOT/starters/minimal-loop/ZJ-LOOP.md" "$TMP/zj-loop/ZJ-LOOP.md"
 run_audit "Stage 1 — after minimal-loop starter (L1 report-only)" "$TMP"
 
 # Stage 2: add verifier + AGENTS.md (L2)
-mkdir -p "$TMP/.grok/skills/loop-verifier"
-cp "$ROOT/templates/SKILL.md.verifier" "$TMP/.grok/skills/loop-verifier/SKILL.md"
+mkdir -p "$TMP/.grok/skills/zj-loop-verifier"
+cp "$ROOT/templates/SKILL.md.zj-loop-verifier" "$TMP/.grok/skills/zj-loop-verifier/SKILL.md"
 cat > "$TMP/AGENTS.md" <<'EOF'
 # AGENTS.md
 
@@ -50,8 +50,8 @@ run_audit "Stage 2 — after verifier + AGENTS.md (L2 assisted)" "$TMP"
 
 echo ""
 echo "Done. Copy a starter for your tool:"
-echo "  Grok:        cp -r starters/minimal-loop/.grok/skills/loop-triage .grok/skills/"
-echo "  Claude Code: cp -r starters/minimal-loop-claude/.claude/skills/loop-triage .claude/skills/"
-echo "  Codex:       cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/"
+echo "  Grok:        cp -r starters/minimal-loop/.grok/skills/zj-loop-triage .grok/skills/"
+echo "  Claude Code: cp -r starters/minimal-loop-claude/.claude/skills/zj-loop-triage .claude/skills/"
+echo "  Codex:       cp -r starters/minimal-loop-codex/.codex/skills/zj-loop-triage .codex/skills/"
 echo ""
 echo "Audit your project: npx @jununfly/zj-loop-audit . --suggest"

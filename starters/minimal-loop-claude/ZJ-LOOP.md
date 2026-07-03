@@ -4,7 +4,7 @@
 
 | Pattern | Cadence | Status | Command |
 |---------|---------|--------|---------|
-| Daily Triage | 1d | L1 report-only | `/loop 1d Run $loop-triage` |
+| Daily Triage | 1d | L1 report-only | `/loop 1d Run $zj-loop-triage` |
 
 ## Human Gates
 

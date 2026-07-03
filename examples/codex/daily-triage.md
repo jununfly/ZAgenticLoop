@@ -14,7 +14,7 @@ In the Codex **Automations** tab:
 ## Prompt
 
 ```
-Run $loop-triage on this project. Read zj-loop/STATE.md if present.
+Run $zj-loop-triage on this project. Read zj-loop/STATE.md if present.
 
 Append to STATE.md:
 - High-Priority Items → "## High Priority" section
@@ -28,7 +28,7 @@ Flag anything ambiguous for the Triage inbox.
 
 ## Skills
 
-Install `loop-triage` per [Codex Agent Skills](https://developers.openai.com/codex/skills) — same `SKILL.md` format as `templates/SKILL.md.loop-triage`.
+Install `zj-loop-triage` per [Codex Agent Skills](https://developers.openai.com/codex/skills) — same `SKILL.md` format as `templates/SKILL.md.zj-loop-triage`.
 
 ## Phase 2 — Action
 

@@ -139,7 +139,7 @@ guidance:
       level: warn
       message: No triage skill detected.
     recommendations:
-      - Install loop-triage from starters/minimal-loop, minimal-loop-claude, or minimal-loop-codex
+      - Install zj-loop-triage from starters/minimal-loop, minimal-loop-claude, or minimal-loop-codex
   - when: triage.present
     finding:
       level: ok
@@ -148,9 +148,9 @@ guidance:
       not: verifier.present
     finding:
       level: warn
-      message: No loop-verifier skill — maker/checker split incomplete.
+      message: No zj-loop-verifier skill — maker/checker split incomplete.
     recommendations:
-      - "Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, or .codex/agents/verifier.toml"
+      - "Add verifier: .grok/skills/zj-loop-verifier, .claude/agents/zj-loop-verifier.md, or .codex/agents/verifier.toml"
   - when: verifier.present
     finding:
       level: ok

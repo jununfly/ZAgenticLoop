@@ -24,7 +24,7 @@ body:
     attributes:
       label: Pattern(s)
       description: e.g. Daily Triage + Issue Triage
-      placeholder: daily-triage, issue-triage
+      placeholder: daily-triage, zj-issue-triage
     validations:
       required: true
 

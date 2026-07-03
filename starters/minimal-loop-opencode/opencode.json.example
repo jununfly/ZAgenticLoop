@@ -1,11 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "agent": {
-    "loop-triage": {
-      "name": "loop-triage",
+    "zj-loop-triage": {
+      "name": "zj-loop-triage",
       "description": "Report-only daily triage loop. Reads STATE.md, updates high-priority items, and does not edit source code in L1 mode.",
       "mode": "primary",
-      "prompt": "Read AGENTS.md, ZJ-LOOP.md, STATE.md, and skills/loop-triage/SKILL.md. Run report-only triage. Update zj-loop/STATE.md. Do not edit source code unless the human has explicitly enabled L2.",
+      "prompt": "Read AGENTS.md, ZJ-LOOP.md, STATE.md, and skills/zj-loop-triage/SKILL.md. Run report-only triage. Update zj-loop/STATE.md. Do not edit source code unless the human has explicitly enabled L2.",
       "permission": {
         "bash": "ask",
         "edit": "ask"

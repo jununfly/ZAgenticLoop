@@ -231,6 +231,37 @@ been migrated to the harness. As of this design snapshot, `zj-loop-cost`,
 `zj-loop-mcp-server` is intentionally excluded from the first human-facing CLI
 harness. It is a long-running stdio server, not a normal user command workflow.
 
+## User Project Artifacts
+
+User-project loop artifacts are namespaced under `zj-loop/` by default. This
+keeps ZAgenticLoop state, configuration, budget, run history, and constraints
+from spreading across a user's repository root while still keeping the files
+plain, reviewable, and tool-agnostic.
+
+Canonical files:
+
+- `zj-loop/STATE.md` or `zj-loop/<pattern>-state.md`
+- `zj-loop/ZJ-LOOP.md`
+- `zj-loop/zj-loop-budget.md`
+- `zj-loop/zj-loop-run-log.md`
+- `zj-loop/zj-loop-constraints.md`
+
+Tool-host directories such as `.codex/`, `.grok/`, `.claude/`, and tool-specific
+skill or agent folders stay where those host tools require them. The `zj-loop/`
+namespace is for project-local loop memory and operating artifacts, not a forced
+relocation of every tool integration.
+
+The public roadmap-sliced development pattern id is
+`roadmap-sliced-development`, with starter files under
+`starters/roadmap-sliced-development/`. The older
+`roadmap-sliced-development-pattern` spelling is not a public entry point in the
+current mainline; tests keep it only as a negative case so the tools reject old
+ids clearly.
+
+`zj-loop-init` and `zj-loop-audit` share a small internal artifact contract for
+these canonical paths. It is deliberately an implementation contract between
+tools, not a new user-facing concept that pattern docs must teach first.
+
 ## Verification Gates
 
 Architecture slices should protect behavior at four levels:
@@ -351,6 +382,13 @@ The architecture-improvement roadmap produced these durable outcomes:
 - `zj-loop-cost`, `zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` now share
   the core single-command CLI harness while preserving their product-specific
   output and side effects.
+- User-project loop artifacts now converge under the `zj-loop/` namespace, with
+  init, audit, sync, MCP, starters, templates, examples, and docs aligned to
+  `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-budget.md`,
+  `zj-loop/zj-loop-run-log.md`, and `zj-loop/zj-loop-constraints.md`.
+- `roadmap-sliced-development` is the canonical public pattern id and starter
+  directory; the older `roadmap-sliced-development-pattern` spelling is retained
+  only as a rejected-id test case.
 - `zj-loop-sync` now uses the core project filesystem primitives for
   project-relative existence, read, and directory evidence while keeping drift
   policy and reporting package-local.

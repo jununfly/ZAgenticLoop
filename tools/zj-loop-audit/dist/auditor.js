@@ -113,14 +113,14 @@ export async function auditProject(target) {
     const agentsMd = evidence.agentsMd.present;
     const skillNames = evidence.skillNames;
     const loopSkills = evidence.loopSkillNames;
-    const verifier = skillNames.includes('loop-verifier');
-    const triage = skillNames.includes('loop-triage') ||
-        skillNames.includes('pr-review-triage') ||
-        skillNames.includes('ci-triage') ||
-        skillNames.includes('dependency-triage') ||
-        skillNames.includes('post-merge-scan') ||
-        skillNames.includes('changelog-scan') ||
-        skillNames.includes('issue-triage');
+    const verifier = skillNames.includes('zj-loop-verifier');
+    const triage = skillNames.includes('zj-loop-triage') ||
+        skillNames.includes('zj-pr-review-triage') ||
+        skillNames.includes('zj-ci-triage') ||
+        skillNames.includes('zj-dependency-triage') ||
+        skillNames.includes('zj-post-merge-scan') ||
+        skillNames.includes('zj-changelog-scan') ||
+        skillNames.includes('zj-issue-triage');
     const loopMdContent = loopConfig?.content ?? evidence.loopConfig.content;
     // New expanded signals
     const githubDir = evidence.github.present;
@@ -168,7 +168,7 @@ export async function auditProject(target) {
         agentsMd: { present: agentsMd },
         patterns: { documented: loopMd },
         safety: { loopMdMentionsSafety: /gate|denylist|auto-merge|safety/i.test(loopMdContent), safetyDocPresent },
-        starters: { used: loopSkills.includes('loop-triage') },
+        starters: { used: loopSkills.includes('zj-loop-triage') },
         github: { present: githubDir, workflows: hasWorkflows },
         mcp: { present: mcpPresent },
         constraints: { present: constraintsFile, hasConstraintsSkill: constraintsSkill },

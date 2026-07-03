@@ -82,7 +82,7 @@ npx @jununfly/zj-loop-audit . --suggest
 3. 第一周只跑 report-only：
 
 ```text
-/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
+/loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
 4. 阅读 `zj-loop/STATE.md`，修正任何错误，然后提交 starter 和第一次 state update。

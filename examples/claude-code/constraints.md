@@ -14,7 +14,7 @@ Add rules your loop must never break. The `zj-loop-constraints` skill reads `zj-
 ```bash
 # The zj-loop-constraints skill runs first — it reads zj-loop-constraints.md and bakes
 # every rule into the agent's context BEFORE triage or any action skill runs.
-/loop 1d Run $zj-loop-constraints, then $loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
+/loop 1d Run $zj-loop-constraints, then $zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
 ## How it works

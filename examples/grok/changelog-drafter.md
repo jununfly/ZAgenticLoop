@@ -3,7 +3,7 @@
 ## Invocation (report + draft, L1)
 
 ```bash
-/loop 1d Run changelog-scan on merges to main since last tag (or last state date). Produce a clean categorized draft using draft-release-notes. Write the draft to RELEASE_NOTES_DRAFT.md at repo root. Update changelog-drafter-state.md with the window and draft status. Do not publish or create any PRs/tags — human review only this week.
+/loop 1d Run zj-changelog-scan on merges to main since last tag (or last state date). Produce a clean categorized draft using zj-draft-release-notes. Write the draft to RELEASE_NOTES_DRAFT.md at repo root. Update changelog-drafter-state.md with the window and draft status. Do not publish or create any PRs/tags — human review only this week.
 ```
 
 ## What the loop should maintain

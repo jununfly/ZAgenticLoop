@@ -13,8 +13,8 @@ Many teams run triage-only first (reporting, no auto-fix) for 1–2 weeks before
 
 ## Required Skills
 
-- `loop-triage` — Reads CI, issues, commits, chat; produces prioritized findings (see `templates/SKILL.md.loop-triage`)
-- `minimal-fix` (optional, phase 2) — Drafts small fixes for obvious failures
+- `zj-loop-triage` — Reads CI, issues, commits, chat; produces prioritized findings (see `templates/SKILL.md.zj-loop-triage`)
+- `zj-minimal-fix` (optional, phase 2) — Drafts small fixes for obvious failures
 - Reviewer sub-agent or skill (optional, phase 2) — Verifies proposed fixes
 
 ## State
@@ -79,16 +79,16 @@ After each Daily Triage run, record:
 
 **Grok Build TUI**:
 ```bash
-/loop 1d Run the loop-triage skill. Append high-priority items to STATE.md. For obvious small bugfixes only: worktree + minimal-fix + verifier sub-agent (maker/checker). Flag ambiguous items for human review.
+/loop 1d Run the zj-loop-triage skill. Append high-priority items to STATE.md. For obvious small bugfixes only: worktree + zj-minimal-fix + verifier sub-agent (maker/checker). Flag ambiguous items for human review.
 ```
 
 **Claude Code**:
 ```bash
-/loop 1d Run $loop-triage and update STATE.md. Do not auto-fix on first week — report only.
+/loop 1d Run $zj-loop-triage and update STATE.md. Do not auto-fix on first week — report only.
 ```
 
 **Codex**:
-- Automations tab: daily prompt calling `$loop-triage`, output to Triage inbox + `zj-loop/STATE.md`.
+- Automations tab: daily prompt calling `$zj-loop-triage`, output to Triage inbox + `zj-loop/STATE.md`.
 
 **GitHub Actions**:
 - See `examples/github-actions/daily-triage.yml`.

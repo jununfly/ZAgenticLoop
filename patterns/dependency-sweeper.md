@@ -7,16 +7,16 @@
 **Recommended**:
 - Grok: `/loop 6h dependency-sweeper` (or daily during business hours)
 - Claude Code: `/loop 12h /sweep-deps` + `/goal keep the dependency surface clean and green`
-- Codex: scheduled automation running the triage + minimal-fix flow every 4-12h
+- Codex: scheduled automation running the triage + zj-minimal-fix flow every 4-12h
 - GitHub Actions: Dependabot + a scheduled or workflow_dispatch sweeper (see `examples/github-actions/` patterns)
 
 Run more frequently after Dependabot or OSV alerts fire. Slow down or pause on major release trains.
 
 ## Required Skills
 
-- `dependency-triage` — Parses lockfiles/package manifests, groups updates by risk (patch/minor/major + known CVEs), produces a short actionable list with suggested next version and justification.
-- `minimal-fix` — Applies the smallest possible change (usually just version bumps + lockfile update) and nothing else.
-- `loop-verifier` (or project test script) — Runs the project's test/build/lint in a clean worktree and confirms the change did not introduce regressions.
+- `zj-dependency-triage` — Parses lockfiles/package manifests, groups updates by risk (patch/minor/major + known CVEs), produces a short actionable list with suggested next version and justification.
+- `zj-minimal-fix` — Applies the smallest possible change (usually just version bumps + lockfile update) and nothing else.
+- `zj-loop-verifier` (or project test script) — Runs the project's test/build/lint in a clean worktree and confirms the change did not introduce regressions.
 
 ## State
 
@@ -37,7 +37,7 @@ Prune merged/closed entries on every run.
 
 1. Scan manifests + lockfiles + any security advisories (Dependabot, OSV, npm audit, etc.).
 2. Triage into safe (patch + no CVE), cautious (minor), and high-risk (major or high-severity CVE).
-3. For safe items: spawn a worktree, apply minimal version + lock update via minimal-fix skill, run verifier (tests + build).
+3. For safe items: spawn a worktree, apply minimal version + lock update via zj-minimal-fix skill, run verifier (tests + build).
 4. If verifier passes → open or update a small PR (or commit if allowed on a dependency branch) and record in state.
 5. For cautious/high-risk → add to state with clear "needs human" flag + context (changelog diff summary, CVE link).
 6. Update the state file and (optionally) comment on open dependency PRs.
@@ -61,7 +61,7 @@ Prune merged/closed entries on every run.
 ## Tool-Specific Notes
 
 **Grok Build TUI**:
-- Use `/loop 6h Run dependency-triage. For safe patches create minimal PRs in worktrees. Never auto-merge majors or CVEs above medium.`
+- Use `/loop 6h Run zj-dependency-triage. For safe patches create minimal PRs in worktrees. Never auto-merge majors or CVEs above medium.`
 - Combine with the scheduler and worktree primitives.
 
 **Claude Code**:
@@ -82,7 +82,7 @@ Prune merged/closed entries on every run.
 | Loop applies a "safe" update that breaks the build in prod | Strong verifier in worktree + never auto-merge anything without explicit allowlist + human review for anything beyond patch. |
 | Infinite update churn (A depends on B which reverts) | Limit attempts per package per 24h. Record last attempted version in state. Escalate after 2 tries. |
 | Security patch introduces a new vuln elsewhere | The verifier should include `npm audit` (or equivalent) after the change. |
-| Update touches dozens of transitive deps at once | Treat as high-risk. Only touch direct deps in the minimal-fix step. |
+| Update touches dozens of transitive deps at once | Treat as high-risk. Only touch direct deps in the zj-minimal-fix step. |
 | Notification spam | Only notify human for items in the "needs human" section of state. Everything else is silent or summarized daily. |
 
 ## Cost Profile

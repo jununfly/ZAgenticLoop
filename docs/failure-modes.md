@@ -110,7 +110,7 @@ Real ways loops fail — and how good design mitigates them. Use this when debug
 **Severity**: S2 → S3
 
 **Causes**:
-- minimal-fix skill too permissive
+- zj-minimal-fix skill too permissive
 - No path allowlist/denylist
 - Triage puts architectural work in "High Priority"
 

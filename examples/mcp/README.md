@@ -34,7 +34,7 @@ profiles, and cost estimates.
 ## Usage in a Loop Prompt (Grok example)
 
 ```
-/loop 1d Use the github-propose MCP. Scan open PRs with pr-review-triage. For actionable low-risk items on allowlisted paths: open worktree, minimal-fix, verifier. Then post a signed comment on the PR with a link to the worktree diff. Never merge.
+/loop 1d Use the github-propose MCP. Scan open PRs with zj-pr-review-triage. For actionable low-risk items on allowlisted paths: open worktree, zj-minimal-fix, verifier. Then post a signed comment on the PR with a link to the worktree diff. Never merge.
 ```
 
 Always:

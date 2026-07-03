@@ -4,7 +4,7 @@ Any time a loop needs to *change* external state (create PR, update ticket, post
 
 1. **Discovery / Triage** (read MCP or local git)
 2. **Worktree** for code changes (isolated)
-3. **Implementer sub-agent** (minimal-fix or equivalent)
+3. **Implementer sub-agent** (zj-minimal-fix or equivalent)
 4. **Verifier sub-agent** (separate session or higher-reasoning model)
 5. **Propose only**:
    - Open a draft PR (or comment with diff link + summary)
@@ -19,11 +19,11 @@ Any time a loop needs to *change* external state (create PR, update ticket, post
 ```
 /loop 15m 
 Use github-propose MCP (read + draft PR + comment).
-Run pr-review-triage on open PRs.
+Run zj-pr-review-triage on open PRs.
 For low-risk, allowlisted items that pass verifier:
   - open worktree
-  - minimal-fix
-  - loop-verifier
+  - zj-minimal-fix
+  - zj-loop-verifier
   - post signed comment + link to worktree (or open draft PR)
 Never merge. Update pr-babysitter-state.md.
 ```

@@ -18,7 +18,7 @@ Optional: add `issues` webhook trigger for immediate triage on new issues.
 ## Prompt (L1 — Propose Only)
 
 ```
-Run $issue-triage on this project. Read issue-triage-state.md if present.
+Run $zj-issue-triage on this project. Read issue-triage-state.md if present.
 
 Update issue-triage-state.md:
 - Last run timestamp
@@ -33,7 +33,7 @@ Flag anything touching auth, payments, or public API for human review.
 
 ## Skills
 
-Install `issue-triage` per [Codex Agent Skills](https://developers.openai.com/codex/skills) — scaffold with `zj-loop-init` or copy `templates/SKILL.md.issue-triage` to `.codex/skills/issue-triage/SKILL.md`.
+Install `zj-issue-triage` per [Codex Agent Skills](https://developers.openai.com/codex/skills) — scaffold with `zj-loop-init` or copy `templates/SKILL.md.zj-issue-triage` to `.codex/skills/zj-issue-triage/SKILL.md`.
 
 Define light verifier in `.codex/agents/verifier.toml` before enabling L2.
 

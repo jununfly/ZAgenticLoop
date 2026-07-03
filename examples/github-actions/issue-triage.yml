@@ -38,16 +38,16 @@ jobs:
           fi
 
       # Replace with your agent invocation (Codex CLI, repository_dispatch, Grok/Claude runner)
-      - name: Run issue-triage agent
+      - name: Run zj-issue-triage agent
         run: |
           echo "::notice::Wire this step to your agent harness."
-          echo "Prompt: Run issue-triage skill. Update issue-triage-state.md."
+          echo "Prompt: Run zj-issue-triage skill. Update issue-triage-state.md."
           echo "Week 1: propose labels and priority only — no auto-apply or close."
           echo "See examples/github-actions/README.md and examples/grok/issue-triage.md"
 
       - name: Upload state artifact
         uses: actions/upload-artifact@v4
         with:
-          name: issue-triage-state
+          name: zj-issue-triage-state
           path: issue-triage-state.md
           if-no-files-found: ignore

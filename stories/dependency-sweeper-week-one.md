@@ -5,7 +5,7 @@
 - Pattern: Dependency Sweeper (L2 patch-only)
 - Cadence: `/loop 6h`
 - Denylist: `react`, `@company/core-auth`
-- Verifier: `loop-verifier` in isolated worktree
+- Verifier: `zj-loop-verifier` in isolated worktree
 
 ## What Worked
 

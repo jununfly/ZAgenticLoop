@@ -21,7 +21,7 @@ payments/**
 billing/**
 ```
 
-Encode in `minimal-fix` and implementer skills:
+Encode in `zj-minimal-fix` and implementer skills:
 
 > Do not modify files matching the denylist. Escalate to human with context.
 

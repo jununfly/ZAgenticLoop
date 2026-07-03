@@ -37,7 +37,7 @@ function l3CandidateSignals(overrides = {}) {
     ...emptySignals(),
     stateFile: { present: true, paths: ['zj-loop/STATE.md'] },
     loopConfig: { present: true, path: 'zj-loop/ZJ-LOOP.md' },
-    skills: { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] },
+    skills: { count: 3, loopSkills: ['zj-loop-triage', 'zj-minimal-fix', 'zj-loop-verifier'] },
     verifier: { present: true },
     triage: { present: true },
     agentsMd: { present: true },
@@ -73,7 +73,7 @@ test('computeScore: full L2 signals', () => {
   const s = emptySignals();
   s.stateFile = { present: true, paths: ['zj-loop/STATE.md'] };
   s.triage = { present: true };
-  s.skills = { count: 2, loopSkills: ['loop-triage', 'loop-verifier'] };
+  s.skills = { count: 2, loopSkills: ['zj-loop-triage', 'zj-loop-verifier'] };
   s.verifier = { present: true };
   const { level, score } = computeScore(s);
   assert.equal(level, 'L2');
@@ -100,7 +100,7 @@ test('computeScore: high structure without activity caps at L2', () => {
   s.triage = { present: true };
   s.loopConfig = { present: true, path: 'zj-loop/ZJ-LOOP.md' };
   s.agentsMd = { present: true };
-  s.skills = { count: 3, loopSkills: ['loop-triage', 'minimal-fix', 'loop-verifier'] };
+  s.skills = { count: 3, loopSkills: ['zj-loop-triage', 'zj-minimal-fix', 'zj-loop-verifier'] };
   s.verifier = { present: true };
   s.safety = { loopMdMentionsSafety: true, safetyDocPresent: true };
   s.github = { present: true, workflows: true };
@@ -167,7 +167,7 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
         ...emptySignals(),
         stateFile: { present: true, paths: ['zj-loop/STATE.md'] },
         triage: { present: true },
-        skills: { count: 1, loopSkills: ['loop-triage'] },
+        skills: { count: 1, loopSkills: ['zj-loop-triage'] },
       },
       expected: {
         level: 'L1',
@@ -175,11 +175,11 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
         findings: [
           { level: 'ok', message: 'State file(s): zj-loop/STATE.md' },
           { level: 'ok', message: 'Triage skill present' },
-          { level: 'warn', message: 'No loop-verifier skill' },
+          { level: 'warn', message: 'No zj-loop-verifier skill' },
           { level: 'warn', message: 'No zj-loop/ZJ-LOOP.md documenting cadence, limits, and gates' },
         ],
         recommendations: [
-          'Add verifier: .grok/skills/loop-verifier, .claude/agents/loop-verifier.md, or .codex/agents/verifier.toml',
+          'Add verifier: .grok/skills/zj-loop-verifier, .claude/agents/zj-loop-verifier.md, or .codex/agents/verifier.toml',
           'Copy starters/minimal-loop/ZJ-LOOP.md to zj-loop/ZJ-LOOP.md and customize',
         ],
       },
@@ -289,10 +289,10 @@ test('auditProject: minimal L1 layout', async () => {
   try {
     await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
     await writeFile(path.join(dir, 'zj-loop', 'STATE.md'), '# State\n');
-    await mkdir(path.join(dir, '.grok', 'skills', 'loop-triage'), { recursive: true });
+    await mkdir(path.join(dir, '.grok', 'skills', 'zj-loop-triage'), { recursive: true });
     await writeFile(
-      path.join(dir, '.grok', 'skills', 'loop-triage', 'SKILL.md'),
-      '---\nname: loop-triage\ndescription: triage\n---\n# Triage\n',
+      path.join(dir, '.grok', 'skills', 'zj-loop-triage', 'SKILL.md'),
+      '---\nname: zj-loop-triage\ndescription: triage\n---\n# Triage\n',
     );
     const result = await auditProject(dir);
     assert.equal(result.level, 'L1');
@@ -378,7 +378,7 @@ test('auditProject: L2 with verifier skill', async () => {
   try {
     await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
     await writeFile(path.join(dir, 'zj-loop', 'STATE.md'), '# State\n');
-    for (const skill of ['loop-triage', 'loop-verifier']) {
+    for (const skill of ['zj-loop-triage', 'zj-loop-verifier']) {
       await mkdir(path.join(dir, '.grok', 'skills', skill), { recursive: true });
       await writeFile(
         path.join(dir, '.grok', 'skills', skill, 'SKILL.md'),

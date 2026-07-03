@@ -24,9 +24,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 2
       first_loop_command:
-        grok: /loop 1d Run loop-triage.
-        claude: /loop 1d $loop-triage
-        codex: "Automation daily: loop-triage"
+        grok: /loop 1d Run zj-loop-triage.
+        claude: /loop 1d $zj-loop-triage
+        codex: "Automation daily: zj-loop-triage"
 `;
 
 test('parsePatternRegistry: validates schemaVersion and pattern cost fields', () => {

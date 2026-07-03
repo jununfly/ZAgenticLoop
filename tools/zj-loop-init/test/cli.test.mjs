@@ -15,7 +15,7 @@ test('bundle-assets tolerates concurrent rebuilds', async () => {
     exec('node', ['scripts/bundle-assets.mjs']),
   ]);
   await access(path.join('starters', 'issue-triage', 'README.md'));
-  await access(path.join('templates', 'SKILL.md.issue-triage'));
+  await access(path.join('templates', 'SKILL.md.zj-issue-triage'));
   await access('registry.yaml');
 });
 
@@ -67,8 +67,8 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     await exec('node', [CLI, dir, '--pattern', 'issue-triage', '--tool', 'grok']);
     await access(path.join(dir, 'zj-loop', 'issue-triage-state.md'));
     await access(path.join(dir, 'zj-loop', 'ZJ-LOOP.md'));
-    await access(path.join(dir, '.grok', 'skills', 'issue-triage', 'SKILL.md'));
-    await access(path.join(dir, '.grok', 'skills', 'loop-verifier', 'SKILL.md'));
+    await access(path.join(dir, '.grok', 'skills', 'zj-issue-triage', 'SKILL.md'));
+    await access(path.join(dir, '.grok', 'skills', 'zj-loop-verifier', 'SKILL.md'));
     await access(path.join(dir, 'zj-loop', 'zj-loop-budget.md'));
     await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
   } finally {
@@ -108,9 +108,9 @@ test('zj-loop-init scaffolds ci-sweeper with bundled assets', async () => {
     await exec('node', [CLI, dir, '--pattern', 'ci-sweeper', '--tool', 'grok']);
     await access(path.join(dir, 'zj-loop', 'ci-sweeper-state.md'));
     await access(path.join(dir, 'zj-loop', 'ZJ-LOOP.md'));
-    await access(path.join(dir, '.grok', 'skills', 'ci-triage', 'SKILL.md'));
-    await access(path.join(dir, '.grok', 'skills', 'minimal-fix', 'SKILL.md'));
-    await access(path.join(dir, '.grok', 'skills', 'loop-verifier', 'SKILL.md'));
+    await access(path.join(dir, '.grok', 'skills', 'zj-ci-triage', 'SKILL.md'));
+    await access(path.join(dir, '.grok', 'skills', 'zj-minimal-fix', 'SKILL.md'));
+    await access(path.join(dir, '.grok', 'skills', 'zj-loop-verifier', 'SKILL.md'));
     await access(path.join(dir, 'zj-loop', 'zj-loop-budget.md'));
     await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
     await access(path.join(dir, '.grok', 'skills', 'zj-loop-budget', 'SKILL.md'));

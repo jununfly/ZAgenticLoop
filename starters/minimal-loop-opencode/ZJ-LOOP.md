@@ -4,7 +4,7 @@
 
 | Pattern | Cadence | Status | Command |
 |---------|---------|--------|---------|
-| Daily Triage | 1d | L1 report-only | `opencode run "Run loop-triage" --agent loop-triage` via cron/systemd |
+| Daily Triage | 1d | L1 report-only | `opencode run "Run zj-loop-triage" --agent zj-loop-triage` via cron/systemd |
 
 ## Human Gates
 

@@ -13,9 +13,9 @@ This is an excellent "off-peak" or "end of sprint" loop. Low urgency compared to
 
 ## Required Skills
 
-- `changelog-scan` — Discovers recent merges/PRs/commits, extracts titles, labels, linked issues, and breaking-change signals. Produces a structured list.
-- `draft-release-notes` — Takes the scanned items + project conventions and produces clean, user-facing release notes (categorized: Features, Fixes, Breaking, Security, Docs, etc.).
-- `loop-verifier` (or human review) — Checks the draft for accuracy, tone, completeness, and adherence to project voice. Never let the drafter grade its own output.
+- `zj-changelog-scan` — Discovers recent merges/PRs/commits, extracts titles, labels, linked issues, and breaking-change signals. Produces a structured list.
+- `zj-draft-release-notes` — Takes the scanned items + project conventions and produces clean, user-facing release notes (categorized: Features, Fixes, Breaking, Security, Docs, etc.).
+- `zj-loop-verifier` (or human review) — Checks the draft for accuracy, tone, completeness, and adherence to project voice. Never let the drafter grade its own output.
 
 ## State
 
@@ -44,9 +44,9 @@ The loop should prune entries once a release is tagged/published and the draft i
 ## How the Loop Runs (Typical Cycle)
 
 1. Determine the "since" window (last tag, or last run date from state, or last N days).
-2. `changelog-scan` lists merged PRs to main + noteworthy direct commits. Extracts conventional commit type, labels (e.g. `breaking`, `security`), linked issues.
+2. `zj-changelog-scan` lists merged PRs to main + noteworthy direct commits. Extracts conventional commit type, labels (e.g. `breaking`, `security`), linked issues.
 3. Group items into standard sections (Features, Bug Fixes, Performance, Breaking Changes, Security, Documentation, Internal / Chores).
-4. `draft-release-notes` writes a polished markdown draft (with links, thanks to contributors, upgrade notes where obvious).
+4. `zj-draft-release-notes` writes a polished markdown draft (with links, thanks to contributors, upgrade notes where obvious).
 5. Verifier (or human) reviews the draft for:
    - Accuracy (no invented features)
    - Completeness (high-impact items not omitted)
@@ -88,7 +88,7 @@ Optional but recommended during L1 dogfood runs. Even occasional critique entrie
 
 **Grok Build TUI**:
 ```bash
-/loop 1d Run changelog-scan on merges since last tag or last state date. Produce a categorized draft in RELEASE_NOTES_DRAFT.md using draft-release-notes. Update changelog-drafter-state.md. Do not commit/publish without human approval.
+/loop 1d Run zj-changelog-scan on merges since last tag or last state date. Produce a categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes. Update changelog-drafter-state.md. Do not commit/publish without human approval.
 ```
 
 **Claude Code**:

@@ -12,9 +12,9 @@ Many teams run a faster "watcher" loop (2–5m) during active review periods and
 
 ## Required Skills
 
-- `pr-review-triage` — Understands your project's review norms, required checks, and what "ready to merge" means.
-- `minimal-fix` — Produces the smallest possible change that addresses a specific reviewer comment or CI failure.
-- `rebase-and-clean` — Safe rebase + conflict resolution patterns for your repo.
+- `zj-pr-review-triage` — Understands your project's review norms, required checks, and what "ready to merge" means.
+- `zj-minimal-fix` — Produces the smallest possible change that addresses a specific reviewer comment or CI failure.
+- `zj-rebase-and-clean` — Safe rebase + conflict resolution patterns for your repo.
 
 ## State
 
@@ -37,7 +37,7 @@ Example state entry:
 1. Discover open PRs authored by the team (or all PRs the user cares about).
 2. For each PR:
    - Run triage skill.
-   - If CI is red → spawn sub-agent with `minimal-fix` skill to address the failure.
+   - If CI is red → spawn sub-agent with `zj-minimal-fix` skill to address the failure.
    - If review comments exist and are actionable → propose minimal patches.
    - If ready (all checks green, approvals present, no blocking comments) → add "ready to merge" label or ping human.
 3. For PRs that have been idle too long → suggest close or hand-off.
@@ -89,7 +89,7 @@ Example state entry:
 |----------|------------|-------|
 | No-op (empty watchlist) | ~3k | **Target most runs** — exit early |
 | Triage pass | ~80k | PR + CI status scan |
-| Fix attempt (L2) | ~250k | Worktree + minimal-fix + verifier |
+| Fix attempt (L2) | ~250k | Worktree + zj-minimal-fix + verifier |
 
 **Cadence**: 5m–15m · **Tier**: high · **Suggested daily cap**: 2M tokens · **Early exit required**
 

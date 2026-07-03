@@ -13,8 +13,8 @@ Run after working hours or overnight so it doesn't compete with active developme
 
 ## Required Skills
 
-- `post-merge-scan` — Read recent merges, diff summaries, linked tickets; identify cleanup opportunities
-- `minimal-fix` — Small follow-ups (remove dead code, update deprecation notices, fix broken links in docs)
+- `zj-post-merge-scan` — Read recent merges, diff summaries, linked tickets; identify cleanup opportunities
+- `zj-minimal-fix` — Small follow-ups (remove dead code, update deprecation notices, fix broken links in docs)
 - Project conventions skill — What "cleanup" means in your repo
 
 ## State

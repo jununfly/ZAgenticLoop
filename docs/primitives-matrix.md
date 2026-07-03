@@ -38,7 +38,7 @@ Tool-agnostic loop design: the **capability** is what matters, not the product n
 |-------|-------------|------|-------------|-------|----------|--------|----------|
 | Implementer → Verifier | Any unattended code change | `Task` + different instructions/model | `.claude/agents/reviewer.md` | TOML agent with higher `reasoning_effort` | Separate `agents.list` id or verifier block in cron message | Review mode or second Cloud Agent pass | Second Cascade or workflow review step |
 | Explorer → Implementer | Large unfamiliar codebase | `explore` subagent_type | Explorer agent | Fast read-only subagent | `--light-context` cron + follow-up isolated job | `@codebase` + plan mode first | Audit workflow (read-only) then implement |
-| Triage only | Report-first loops | `loop-triage` skill | `$loop-triage` | Automation calls skill | `loop-triage` + isolated cron; restrict `--tools` | `AGENTS.md` + report-only rule | Triage workflow, no edit steps |
+| Triage only | Report-first loops | `zj-loop-triage` skill | `$zj-loop-triage` | Automation calls skill | `zj-loop-triage` + isolated cron; restrict `--tools` | `AGENTS.md` + report-only rule | Triage workflow, no edit steps |
 
 ## State Conventions
 
@@ -95,10 +95,10 @@ No dedicated starters yet — map capabilities to the same loop shape:
 
 | Step | Cursor | Windsurf |
 |------|--------|----------|
-| 1. Skills | Copy `templates/SKILL.md.loop-triage` → `.cursor/skills/loop-triage/SKILL.md`; add always-on triage rules in `.cursor/rules/` | Copy skill content into `.windsurf/rules/loop-triage.md` |
+| 1. Skills | Copy `templates/SKILL.md.zj-loop-triage` → `.cursor/skills/zj-loop-triage/SKILL.md`; add always-on triage rules in `.cursor/rules/` | Copy skill content into `.windsurf/rules/zj-loop-triage.md` |
 | 2. State | `mkdir -p zj-loop && cp starters/minimal-loop/STATE.md.example zj-loop/STATE.md` | Same — commit `zj-loop/STATE.md` |
 | 3. Scheduling | Cloud Automation (cron) or manual Agent prompt on cadence | Create `.windsurf/workflows/daily-triage.md`, invoke `/daily-triage` |
-| 4. Verification | `.cursor/agents/loop-verifier.md` from `templates/SKILL.md.verifier` | Add review step at end of workflow; human gate on denylist paths |
+| 4. Verification | `.cursor/agents/zj-loop-verifier.md` from `templates/SKILL.md.zj-loop-verifier` | Add review step at end of workflow; human gate on denylist paths |
 | 5. Connectors | Enable GitHub MCP read-only for issue/PR discovery | Configure GitHub MCP in Cascade settings |
 
 **Aider** (CLI-only): use `--watch` or scripted sessions; state in `zj-loop/STATE.md`; reviewer = second terminal session.

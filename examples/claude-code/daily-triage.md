@@ -5,22 +5,22 @@ Same pattern as Grok; different scheduling primitives.
 ## Report-Only (Week 1)
 
 ```bash
-/loop 1d Run $loop-triage. Read zj-loop/STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
+/loop 1d Run $zj-loop-triage. Read zj-loop/STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
 ```
 
 ## With Small Auto-Fixes (Week 3+)
 
 ```bash
-/loop 1d Run $loop-triage. For high-priority items that are single-file bugfixes: spawn implementer in worktree, then verifier agent. Update zj-loop/STATE.md. Escalate ambiguous items.
+/loop 1d Run $zj-loop-triage. For high-priority items that are single-file bugfixes: spawn implementer in worktree, then verifier agent. Update zj-loop/STATE.md. Escalate ambiguous items.
 ```
 
 ## Skills Setup
 
-Copy from `templates/SKILL.md.loop-triage` to `.claude/skills/loop-triage/SKILL.md` (or project skills path per your Claude Code version).
+Copy from `templates/SKILL.md.zj-loop-triage` to `.claude/skills/zj-loop-triage/SKILL.md` (or project skills path per your Claude Code version).
 
 ## Sub-agents
 
-Create `.claude/agents/loop-verifier.md` from `templates/SKILL.md.verifier` frontmatter + body.
+Create `.claude/agents/zj-loop-verifier.md` from `templates/SKILL.md.zj-loop-verifier` frontmatter + body.
 
 Use `isolation: worktree` when spawning implementer tasks.
 

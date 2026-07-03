@@ -7,13 +7,13 @@ Native primitives: `/loop`, `scheduler_create`, worktree isolation, skills, MCP,
 | Example | Pattern |
 |---------|---------|
 | [daily-triage.md](./daily-triage.md) | Daily Triage |
-| [issue-triage.md](./issue-triage.md) | Issue Triage (L1 propose-only) |
+| [zj-issue-triage.md](./zj-issue-triage.md) | Issue Triage (L1 propose-only) |
 
 ## Common Commands
 
 ```bash
 /loop 5m /pr-babysit check
-/loop 1d Run loop-triage and update STATE.md
+/loop 1d Run zj-loop-triage and update STATE.md
 /loop 15m Check CI on main — see patterns/ci-sweeper.md
 ```
 

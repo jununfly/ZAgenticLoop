@@ -33,10 +33,10 @@ npm exec --offline --package=@jununfly/zj-loop-init -- zj-loop-init . --pattern 
 | `dependency-sweeper` | `zj-loop/dependency-sweeper-state.md` |
 | `post-merge-cleanup` | `zj-loop/post-merge-state.md` |
 | `changelog-drafter` | `zj-loop/changelog-drafter-state.md` |
-| `issue-triage` | `zj-loop/issue-triage-state.md` |
+| `zj-issue-triage` | `zj-loop/issue-triage-state.md` |
 | `roadmap-sliced-development` | `zj-loop/roadmap-sliced-state.md` |
 
-L2 patterns (`ci-sweeper`, `dependency-sweeper`, `roadmap-sliced-development`) also copy verifier templates when missing from the starter; fix loops only copy `minimal-fix` where the registry asks for it.
+L2 patterns (`ci-sweeper`, `dependency-sweeper`, `roadmap-sliced-development`) also copy verifier templates when missing from the starter; fix loops only copy `zj-minimal-fix` where the registry asks for it.
 
 Every scaffold also creates:
 

@@ -6,11 +6,11 @@ Same pattern as Grok and Claude Code; **scheduling runs from cron/systemd** and 
 
 1. [Opencode CLI](https://opencode.ai) installed and authenticated against your preferred provider.
 2. `zj-loop/STATE.md` at the repo root — copy from `starters/minimal-loop-opencode/STATE.md.example`.
-3. `loop-triage` skill — copy `templates/SKILL.md.loop-triage` to `skills/loop-triage/SKILL.md`.
+3. `zj-loop-triage` skill — copy `templates/SKILL.md.zj-loop-triage` to `skills/zj-loop-triage/SKILL.md`.
 
 ```bash
-mkdir -p skills/loop-triage zj-loop
-cp templates/SKILL.md.loop-triage skills/loop-triage/SKILL.md
+mkdir -p skills/zj-loop-triage zj-loop
+cp templates/SKILL.md.zj-loop-triage skills/zj-loop-triage/SKILL.md
 cp starters/minimal-loop-opencode/STATE.md.example zj-loop/STATE.md
 ```
 
@@ -20,7 +20,7 @@ Use cron or a systemd timer to run a fresh opencode session each morning. The pr
 
 ```bash
 opencode run \
-  "Run the loop-triage skill. Read zj-loop/STATE.md first. Append high-priority items under High Priority and Watch List. Update Last run timestamp. Do not edit source code. End with a 5-line summary." \
+  "Run the zj-loop-triage skill. Read zj-loop/STATE.md first. Append high-priority items under High Priority and Watch List. Update Last run timestamp. Do not edit source code. End with a 5-line summary." \
   --title "Daily triage — repo:${PWD##*/}"
 ```
 
@@ -29,7 +29,7 @@ The report-only stance is enforced by `AGENTS.md` and the prompt: no source-code
 Faster cadence during active periods:
 
 ```cron
-0 */2 * * * cd /repo && opencode run "Run loop-triage. Report obvious small wins only. Update zj-loop/STATE.md. No code changes."
+0 */2 * * * cd /repo && opencode run "Run zj-loop-triage. Report obvious small wins only. Update zj-loop/STATE.md. No code changes."
 ```
 
 ## With Small Auto-Fixes (Week 3+)
@@ -41,7 +41,7 @@ FIX_ID="$(date +%Y%m%d%H%M%S)"
 WORKTREE="../wt-small-fix-$FIX_ID"
 git worktree add "$WORKTREE" -b "loop/small-fix-$FIX_ID"
 opencode run \
-  "Run loop-triage. For one high-priority single-file bugfix: implement the minimal fix, run tests, and write a summary plus diff path. Escalate ambiguous or denylisted paths." \
+  "Run zj-loop-triage. For one high-priority single-file bugfix: implement the minimal fix, run tests, and write a summary plus diff path. Escalate ambiguous or denylisted paths." \
   --agent implementer \
   --dir "$WORKTREE"
 DIFF_FILE="$(mktemp /tmp/loop-diff.XXXXXX.patch)"
@@ -68,11 +68,11 @@ opencode run "Verify the goal is complete. APPROVE only if tests pass and the di
 
 ## Skills Setup
 
-Copy from `templates/SKILL.md.loop-triage` to `skills/loop-triage/SKILL.md` (the `skills/` dir is auto-discovered by opencode at the repo root):
+Copy from `templates/SKILL.md.zj-loop-triage` to `skills/zj-loop-triage/SKILL.md` (the `skills/` dir is auto-discovered by opencode at the repo root):
 
 ```bash
-mkdir -p skills/loop-triage
-cp templates/SKILL.md.loop-triage skills/loop-triage/SKILL.md
+mkdir -p skills/zj-loop-triage
+cp templates/SKILL.md.zj-loop-triage skills/zj-loop-triage/SKILL.md
 ```
 
 Create named verifier/implementer agents when you graduate to L2. The starter's `opencode.json.example` already includes both names; copy it to `opencode.json` or add this shape manually:

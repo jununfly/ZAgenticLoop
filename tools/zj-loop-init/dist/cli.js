@@ -70,17 +70,17 @@ async function copyTemplateSkill(templatesRoot, templateFile, targetDir, tool, s
 }
 async function copyTemplateVerifier(templatesRoot, targetDir, tool, dryRun, io) {
     const verifierPaths = {
-        grok: path.join(targetDir, '.grok', 'skills', 'loop-verifier', 'SKILL.md'),
-        claude: path.join(targetDir, '.claude', 'agents', 'loop-verifier.md'),
+        grok: path.join(targetDir, '.grok', 'skills', 'zj-loop-verifier', 'SKILL.md'),
+        claude: path.join(targetDir, '.claude', 'agents', 'zj-loop-verifier.md'),
         codex: path.join(targetDir, '.codex', 'agents', 'verifier.toml'),
     };
     const dest = verifierPaths[tool];
     if (await exists(dest))
         return;
     if (tool === 'codex') {
-        const src = path.join(templatesRoot, 'SKILL.md.verifier');
+        const src = path.join(templatesRoot, 'SKILL.md.zj-loop-verifier');
         const body = await readFile(src, 'utf8');
-        const toml = `name = "loop-verifier"\ndescription = "Independent verification agent for loop-produced changes."\n\n[system_prompt]\ncontent = """\n${body}\n"""\n`;
+        const toml = `name = "zj-loop-verifier"\ndescription = "Independent verification agent for loop-produced changes."\n\n[system_prompt]\ncontent = """\n${body}\n"""\n`;
         if (dryRun) {
             io.stdout(`  would write verifier: ${dest}`);
             return;
@@ -90,7 +90,7 @@ async function copyTemplateVerifier(templatesRoot, targetDir, tool, dryRun, io) 
         io.stdout(`  created: ${dest} (from verifier template)`);
         return;
     }
-    const src = path.join(templatesRoot, 'SKILL.md.verifier');
+    const src = path.join(templatesRoot, 'SKILL.md.zj-loop-verifier');
     await copyFile(src, dest, dryRun, io);
 }
 async function copyL2Templates(pattern, tool, targetDir, templatesRoot, dryRun, io) {
@@ -98,7 +98,7 @@ async function copyL2Templates(pattern, tool, targetDir, templatesRoot, dryRun, 
     if (!templates.minimal_fix && !templates.verifier)
         return;
     if (templates.minimal_fix) {
-        await copyTemplateSkill(templatesRoot, 'SKILL.md.minimal-fix', targetDir, tool, 'minimal-fix', dryRun, io);
+        await copyTemplateSkill(templatesRoot, 'SKILL.md.zj-minimal-fix', targetDir, tool, 'zj-minimal-fix', dryRun, io);
     }
     if (templates.verifier) {
         await copyTemplateVerifier(templatesRoot, targetDir, tool, dryRun, io);

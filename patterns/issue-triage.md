@@ -13,8 +13,8 @@ This is an excellent always-on, low-cost companion loop.
 
 ## Required Skills
 
-- `issue-triage` — Scans open issues, discussions, and (optionally via MCP) Linear / Jira. Dedupes, extracts signals (labels, comments, linked PRs, age, reactions), proposes priority + suggested labels + one-sentence summary.
-- `loop-verifier` (light or human) — Sanity check on the proposed triage actions / new labels before anything is applied.
+- `zj-issue-triage` — Scans open issues, discussions, and (optionally via MCP) Linear / Jira. Dedupes, extracts signals (labels, comments, linked PRs, age, reactions), proposes priority + suggested labels + one-sentence summary.
+- `zj-loop-verifier` (light or human) — Sanity check on the proposed triage actions / new labels before anything is applied.
 
 ## State
 
@@ -62,16 +62,16 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 
 **Grok Build TUI**:
 ```
-/loop 2h Run issue-triage skill. Read issue-triage-state.md first. Produce updated state + suggested labels for new items only. No auto-label or close. Escalate anything ambiguous.
+/loop 2h Run zj-issue-triage skill. Read issue-triage-state.md first. Produce updated state + suggested labels for new items only. No auto-label or close. Escalate anything ambiguous.
 ```
 
 **Claude Code**:
 ```
-/loop 2h $issue-triage — update issue-triage-state.md. Propose labels only on allowlisted areas. Human review for P0/P1.
+/loop 2h $zj-issue-triage — update issue-triage-state.md. Propose labels only on allowlisted areas. Human review for P0/P1.
 ```
 
 **Codex**:
-Automation every 2h or on `issues` event: run issue-triage → update state. Report mode.
+Automation every 2h or on `issues` event: run zj-issue-triage → update state. Report mode.
 
 **GitHub Actions**:
 See `examples/github-actions/` for a starter workflow that can react to issue events + scheduled run.

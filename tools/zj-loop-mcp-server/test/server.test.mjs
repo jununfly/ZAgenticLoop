@@ -40,7 +40,7 @@ patterns:
     cadence: 1d-2h
     risk: low
     tools: [grok, claude-code]
-    skills: [loop-triage, minimal-fix]
+    skills: [zj-loop-triage, zj-minimal-fix]
     state: zj-loop/STATE.md
     phases: [report, act-small-wins, escalate]
     human_gates: [design-decisions]
@@ -59,14 +59,14 @@ patterns:
   // Pattern doc
   await writeFile(
     path.join(tmpRoot, 'patterns', 'daily-triage.md'),
-    '# Daily Triage\n\n## Scheduling\nRun once per day.\n\n## Required Skills\nloop-triage\n\n## Verification Strategy\nmaker/checker via loop-verifier\n',
+    '# Daily Triage\n\n## Scheduling\nRun once per day.\n\n## Required Skills\nzj-loop-triage\n\n## Verification Strategy\nmaker/checker via zj-loop-verifier\n',
   );
 
   // Skills
-  await mkdir(path.join(tmpRoot, 'skills', 'loop-triage'), { recursive: true });
+  await mkdir(path.join(tmpRoot, 'skills', 'zj-loop-triage'), { recursive: true });
   await writeFile(
-    path.join(tmpRoot, 'skills', 'loop-triage', 'SKILL.md'),
-    '---\nname: loop-triage\ndescription: Triage skill\nuser_invocable: true\n---\n\n# Loop Triage\nYou are a triage agent.',
+    path.join(tmpRoot, 'skills', 'zj-loop-triage', 'SKILL.md'),
+    '---\nname: zj-loop-triage\ndescription: Triage skill\nuser_invocable: true\n---\n\n# Loop Triage\nYou are a triage agent.',
   );
 
   await mkdir(path.join(tmpRoot, 'zj-loop'), { recursive: true });
@@ -208,7 +208,7 @@ test('listSkills finds skills directories', async () => {
     const skills = await listSkills(root);
     assert.ok(skills.length >= 1);
     const names = skills.map(s => s.name);
-    assert.ok(names.includes('loop-triage'));
+    assert.ok(names.includes('zj-loop-triage'));
   } finally {
     await cleanup();
   }
@@ -217,7 +217,7 @@ test('listSkills finds skills directories', async () => {
 test('loadSkill returns content for existing skill', async () => {
   const root = await setup();
   try {
-    const skill = await loadSkill(root, 'loop-triage');
+    const skill = await loadSkill(root, 'zj-loop-triage');
     assert.ok(skill);
     assert.ok(skill.content.includes('triage'));
   } finally {
@@ -523,7 +523,7 @@ test('skill resource remains readable over stdio', async () => {
   try {
     const res = await callServer(root, [{
       id: 1, method: 'resources/read',
-      params: { uri: 'loop://skills/loop-triage' },
+      params: { uri: 'loop://skills/zj-loop-triage' },
     }]);
     const text = res.get(1).result.contents[0].text;
     assert.ok(text.includes('# Loop Triage'));

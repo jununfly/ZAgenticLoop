@@ -80,8 +80,8 @@ function formatSuggestions(result: AuditResult): string {
 
   if (!signals.verifier.present) {
     lines.push('  # Add maker/checker verification before enabling L2 actions.');
-    lines.push('  mkdir -p .grok/skills/loop-verifier');
-    lines.push('  cp templates/SKILL.md.verifier .grok/skills/loop-verifier/SKILL.md');
+    lines.push('  mkdir -p .grok/skills/zj-loop-verifier');
+    lines.push('  cp templates/SKILL.md.zj-loop-verifier .grok/skills/zj-loop-verifier/SKILL.md');
   }
 
   if (!signals.cost.budgetDoc) {

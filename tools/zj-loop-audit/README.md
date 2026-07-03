@@ -64,7 +64,7 @@ npm publish --access public
 | Signal                  | Notes |
 |-------------------------|-------|
 | State file              | `zj-loop/STATE.md` or `zj-loop/<pattern>-state.md` |
-| Triage skill            | loop-triage / ci-triage / pr-review-triage etc. |
+| Triage skill            | zj-loop-triage / zj-ci-triage / zj-pr-review-triage etc. |
 | Verifier skill          | maker/checker split (skills or Claude/Codex agents) |
 | `zj-loop/ZJ-LOOP.md` / config | Cadence, limits, handoff |
 | AGENTS.md / CLAUDE.md   | Project conventions |

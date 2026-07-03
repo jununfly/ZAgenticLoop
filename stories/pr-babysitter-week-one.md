@@ -11,7 +11,7 @@
 
 - Pattern: [pr-babysitter](../patterns/pr-babysitter.md)
 - Cadence: `/loop 5m` during work hours
-- L2 assisted: minimal-fix + loop-verifier, no auto-merge
+- L2 assisted: zj-minimal-fix + zj-loop-verifier, no auto-merge
 
 ## What Worked
 

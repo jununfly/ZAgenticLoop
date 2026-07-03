@@ -20,7 +20,7 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 ## 3. Skills
 
 - [ ] **Triage skill** exists with tight output format
-- [ ] **Action skills** (minimal-fix, etc.) match project conventions
+- [ ] **Action skills** (zj-minimal-fix, etc.) match project conventions
 - [ ] **Skill descriptions** are boring and specific (good auto-triggering)
 - [ ] **Build/test commands** documented in skills or AGENTS.md
 

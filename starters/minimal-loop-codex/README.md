@@ -7,7 +7,7 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
 1. Copy files into your repo:
 
    ```bash
-   cp -r starters/minimal-loop-codex/.codex/skills/loop-triage .codex/skills/
+   cp -r starters/minimal-loop-codex/.codex/skills/zj-loop-triage .codex/skills/
    cp starters/minimal-loop-codex/.codex/agents/verifier.toml .codex/agents/
    mkdir -p zj-loop
    cp starters/minimal-loop-codex/STATE.md.example zj-loop/STATE.md
@@ -25,20 +25,20 @@ Clone this into your project root to run a **report-only daily triage loop** (L1
    | Prompt | See below |
 
    ```
-   Run $loop-triage. Read zj-loop/STATE.md first. Append high-priority and watch items.
+   Run $zj-loop-triage. Read zj-loop/STATE.md first. Append high-priority and watch items.
    Update Last run timestamp. Week 1: report only — do not modify source files.
    ```
 
 4. Review findings in the Codex Triage inbox + `zj-loop/STATE.md` for 1–2 weeks.
 
-5. When triage quality is good, add `minimal-fix` from `templates/` and enable small auto-wins with the verifier subagent in an isolated worktree.
+5. When triage quality is good, add `zj-minimal-fix` from `templates/` and enable small auto-wins with the verifier subagent in an isolated worktree.
 
 ## What's Included
 
 | File | Purpose |
 |------|---------|
 | `zj-loop/STATE.md` | State spine template after init |
-| `.codex/skills/loop-triage/SKILL.md` | Triage skill |
+| `.codex/skills/zj-loop-triage/SKILL.md` | Triage skill |
 | `.codex/agents/verifier.toml` | Checker sub-agent for L2+ |
 | `zj-loop/ZJ-LOOP.md` | Loop config doc for your team |
 

@@ -41,7 +41,7 @@ If a matching PR exists, update state and skip duplicate work.
 
 | Role | Opencode shape |
 |------|----------------|
-| Triage | `skills/pr-review-triage/SKILL.md` or `skills/loop-triage/SKILL.md` with PR-focused prompt |
+| Triage | `skills/zj-pr-review-triage/SKILL.md` or `skills/zj-loop-triage/SKILL.md` with PR-focused prompt |
 | Implementer | `opencode run "..." --agent implementer --dir <worktree>` scoped to the PR branch |
 | Verifier | `opencode run "Verify diff" --agent verifier --file <diff.patch>` |
 

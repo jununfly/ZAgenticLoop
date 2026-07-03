@@ -5,12 +5,12 @@ React to failing CI with minimal fixes and short cadences. opencode shines at 5â
 ## Prerequisites
 
 ```bash
-mkdir -p skills/ci-triage
-cp templates/SKILL.md.loop-triage skills/ci-triage/SKILL.md   # same triage body
-mkdir -p skills/minimal-fix
-cp templates/SKILL.md.minimal-fix skills/minimal-fix/SKILL.md
-mkdir -p skills/loop-verifier
-cp templates/SKILL.md.verifier skills/loop-verifier/SKILL.md
+mkdir -p skills/zj-ci-triage
+cp templates/SKILL.md.zj-loop-triage skills/zj-ci-triage/SKILL.md   # same triage body
+mkdir -p skills/zj-minimal-fix
+cp templates/SKILL.md.zj-minimal-fix skills/zj-minimal-fix/SKILL.md
+mkdir -p skills/zj-loop-verifier
+cp templates/SKILL.md.zj-loop-verifier skills/zj-loop-verifier/SKILL.md
 ```
 
 Plus a fresh state file at the root:
@@ -33,7 +33,7 @@ CI sweeper tolerates nothing wasted between runs. A system cron at 5-minute reso
 #!/usr/bin/env bash
 set -euo pipefail
 opencode run \
-  "Run skills/ci-triage/SKILL.md. Classify each failing check. For clear single-file regressions, create a git worktree, run the implementer agent with --dir <worktree>, then run verifier with the diff as --file. Update ci-sweeper-state.md. For infra or security-test failures, escalate to a human with full context. Max 3 attempts per item." \
+  "Run skills/zj-ci-triage/SKILL.md. Classify each failing check. For clear single-file regressions, create a git worktree, run the implementer agent with --dir <worktree>, then run verifier with the diff as --file. Update ci-sweeper-state.md. For infra or security-test failures, escalate to a human with full context. Max 3 attempts per item." \
   --title "CI sweeper"
 ```
 
@@ -45,7 +45,7 @@ If you'd rather keep the loop fully in the CLI, run a long-lived shell loop inst
 
 ```bash
 while true; do
-  opencode run "Run skills/ci-triage/SKILL.md. Fix only clear regressions in a worktree with verifier. Max 3 attempts. Escalate infra and security test failures."
+  opencode run "Run skills/zj-ci-triage/SKILL.md. Fix only clear regressions in a worktree with verifier. Max 3 attempts. Escalate infra and security test failures."
   sleep 300
 done
 ```
@@ -59,7 +59,7 @@ Same primitive, different scheduler.
 curl -X POST http://opencode-bridge:8080/hooks/agent \
   -H "Authorization: Bearer ${OPENCODE_HOOK_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d '{"message":"Run ci-triage. Inspect recent CI failures. No fixes in report-only mode."}'
+  -d '{"message":"Run zj-ci-triage. Inspect recent CI failures. No fixes in report-only mode."}'
 ```
 
 Keep hook endpoints on loopback or a trusted tailnet (see [docs/safety.md](../../docs/safety.md)).
@@ -68,7 +68,7 @@ Keep hook endpoints on loopback or a trusted tailnet (see [docs/safety.md](../..
 
 | Role | Opencode shape |
 |------|----------------|
-| Triage | `skills/ci-triage/SKILL.md` (or alias to `loop-triage`) named in the `opencode run` message |
+| Triage | `skills/zj-ci-triage/SKILL.md` (or alias to `zj-loop-triage`) named in the `opencode run` message |
 | Implementer | `opencode run "..." --agent implementer --dir <worktree>` |
 | Verifier | `opencode run "Verify diff" --agent verifier --file <diff.patch>` |
 
@@ -84,5 +84,5 @@ Discard the worktree after verifier REJECT; merge or PR on APPROVE.
 ## References
 
 - [patterns/ci-sweeper.md](../../patterns/ci-sweeper.md)
-- [templates/SKILL.md.loop-triage](../../templates/SKILL.md.loop-triage)
+- [templates/SKILL.md.zj-loop-triage](../../templates/SKILL.md.zj-loop-triage)
 - [tools/zj-loop-cost](../../tools/zj-loop-cost) â€” cadence-to-cost mapping

@@ -16,7 +16,7 @@ const VALID_PATTERN = {
   cadence: '1d',
   risk: 'low',
   tools: ['codex'],
-  skills: ['loop-triage'],
+  skills: ['zj-loop-triage'],
   state: 'zj-loop/STATE.md',
   phases: ['scan', 'report'],
   human_gates: ['report-only'],
@@ -65,7 +65,7 @@ patterns:
     tools:
       - codex
     skills:
-      - loop-triage
+      - zj-loop-triage
     state: zj-loop/STATE.md
     phases:
       - scan

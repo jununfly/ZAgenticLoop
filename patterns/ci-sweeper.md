@@ -13,8 +13,8 @@ Slower overnight cadence (30–60m) is fine when no one is watching.
 
 ## Required Skills
 
-- `ci-triage` — Parse CI logs, identify failing job/step, classify failure type (flake, regression, env, config)
-- `minimal-fix` — Smallest change that addresses the specific failure
+- `zj-ci-triage` — Parse CI logs, identify failing job/step, classify failure type (flake, regression, env, config)
+- `zj-minimal-fix` — Smallest change that addresses the specific failure
 - Project test/lint skill — Build and test commands for your stack
 
 ## State

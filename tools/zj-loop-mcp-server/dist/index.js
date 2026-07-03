@@ -142,7 +142,7 @@ server.resource('pattern', new ResourceTemplate('loop://patterns/{patternId}', {
             }],
     };
 });
-server.resource('skill', new ResourceTemplate('loop://skills/{skillName}', { list: undefined }), { description: 'Skill definition (SKILL.md) by name (e.g. loop-triage, minimal-fix, loop-verifier)' }, async (uri, variables) => {
+server.resource('skill', new ResourceTemplate('loop://skills/{skillName}', { list: undefined }), { description: 'Skill definition (SKILL.md) by name (e.g. zj-loop-triage, zj-minimal-fix, zj-loop-verifier)' }, async (uri, variables) => {
     const skillName = variables.skillName;
     const root = await resolveProjectRoot();
     const skill = await loadSkill(root, skillName);
@@ -228,7 +228,7 @@ server.tool('loop_get_pattern', 'Get full documentation for a specific pattern b
     }
     return { content: [{ type: 'text', text: parts.join('\n') }] };
 });
-server.tool('loop_get_skill', 'Get the full SKILL.md definition for a named skill', { skillName: z.string().describe('Skill name (e.g. loop-triage, minimal-fix, loop-verifier)') }, async ({ skillName }) => {
+server.tool('loop_get_skill', 'Get the full SKILL.md definition for a named skill', { skillName: z.string().describe('Skill name (e.g. zj-loop-triage, zj-minimal-fix, zj-loop-verifier)') }, async ({ skillName }) => {
     const root = await resolveProjectRoot();
     const skill = await loadSkill(root, skillName);
     if (!skill) {

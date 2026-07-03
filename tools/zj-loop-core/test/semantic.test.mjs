@@ -17,7 +17,7 @@ patterns:
     goal: Prioritized morning scan
     cadence: 1d
     risk: low
-    skills: [loop-triage, minimal-fix]
+    skills: [zj-loop-triage, zj-minimal-fix]
     state: zj-loop/STATE.md
     phases: [report, escalate]
     human_gates: [design-decisions]
@@ -35,7 +35,7 @@ patterns:
     goal: React to failing CI
     cadence: 5m-15m
     risk: medium
-    skills: [ci-triage, minimal-fix]
+    skills: [zj-ci-triage, zj-minimal-fix]
     state: zj-loop/ci-sweeper-state.md
     phases: [detect, classify, fix]
     human_gates: [max-attempts]
@@ -53,7 +53,7 @@ patterns:
     goal: Discover and apply dependency updates
     cadence: 6h-1d
     risk: medium
-    skills: [dependency-triage, minimal-fix, loop-verifier]
+    skills: [zj-dependency-triage, zj-minimal-fix, zj-loop-verifier]
     state: zj-loop/dependency-sweeper-state.md
     phases: [scan, triage-risk, patch-safe]
     human_gates: [major-bumps]
@@ -81,7 +81,7 @@ test('listPatternSummaries projects stable cards without full registry leakage',
     weekOneMode: 'L1',
     tokenCostTier: 'low',
     stateFile: 'zj-loop/STATE.md',
-    requiredSkills: ['loop-triage', 'minimal-fix'],
+    requiredSkills: ['zj-loop-triage', 'zj-minimal-fix'],
     humanGates: ['design-decisions'],
     starter: 'starters/minimal-loop',
   });
@@ -136,7 +136,7 @@ test('estimatePatternCost exposes structured estimate, warnings, and typed error
 test('listRequiredSkills returns registry skills as required', () => {
   const result = listRequiredSkills(REGISTRY, 'dependency-sweeper');
   assert.equal(result.meta.query, 'listRequiredSkills');
-  assert.deepEqual(result.skills.map((s) => s.name), ['dependency-triage', 'minimal-fix', 'loop-verifier']);
+  assert.deepEqual(result.skills.map((s) => s.name), ['zj-dependency-triage', 'zj-minimal-fix', 'zj-loop-verifier']);
   assert.ok(result.skills.every((s) => s.required));
 
   const missing = listRequiredSkills(REGISTRY, 'missing');

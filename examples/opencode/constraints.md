@@ -17,7 +17,7 @@ Or just edit `zj-loop/zj-loop-constraints.md` directly. Comments are allowed; th
 Make every scheduled run invoke constraints **before** triage. The skill itself reads `zj-loop/zj-loop-constraints.md` and bakes the rules into the agent's context before any action runs:
 
 ```bash
-opencode run "Run skills/zj-loop-constraints/SKILL.md. Then run skills/loop-triage/SKILL.md. Update zj-loop/STATE.md. No auto-fix in week one."
+opencode run "Run skills/zj-loop-constraints/SKILL.md. Then run skills/zj-loop-triage/SKILL.md. Update zj-loop/STATE.md. No auto-fix in week one."
 ```
 
 ## How it works

@@ -22,10 +22,10 @@ npx @jununfly/zj-loop-audit . --suggest
 npx @jununfly/zj-goal-audit . --suggest
 
 # Codex — report only, week one
-/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix.
+/loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix.
 
 # Also try the new low-risk pattern
-/loop 1d Run changelog-scan + draft-release-notes. Write RELEASE_NOTES_DRAFT.md. Human review only.
+/loop 1d Run zj-changelog-scan + zj-draft-release-notes. Write RELEASE_NOTES_DRAFT.md. Human review only.
 ```
 
 Or start with **Daily Triage** if you just want to learn loop discipline with low risk.
@@ -73,13 +73,13 @@ npx @jununfly/zj-goal-audit . --suggest
 ### Grok
 
 ```bash
-/loop 1d Run loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
+/loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
 ### Claude Code
 
 ```bash
-/loop 1d Run $loop-triage. Read zj-loop/STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
+/loop 1d Run $zj-loop-triage. Read zj-loop/STATE.md. Merge findings into High Priority and Watch List. Update Last run. Do not edit code.
 ```
 
 ### Codex
@@ -88,7 +88,7 @@ Use the first-run command printed by `zj-loop-init` (pattern-specific). Week one
 
 ### OpenClaw
 
-No `zj-loop-init --tool openclaw` yet — copy `skills/loop-triage/SKILL.md` and `zj-loop/STATE.md`, then create an isolated cron job. See [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md).
+No `zj-loop-init --tool openclaw` yet — copy `skills/zj-loop-triage/SKILL.md` and `zj-loop/STATE.md`, then create an isolated cron job. See [examples/openclaw/daily-triage.md](../examples/openclaw/daily-triage.md).
 
 ### Cursor or Windsurf
 
