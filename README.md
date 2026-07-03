@@ -28,6 +28,23 @@ The shortest mental model: **Pattern -> Starter -> Memory -> Verifier -> Story**
 - **Adoption path:** Quickstart with Daily Triage, run L1 report-only, audit readiness, estimate cost, then graduate toward L2/L3 only after real loop activity is visible.
 - **Evidence:** the pattern catalog is backed by [registry metadata](patterns/registry.yaml), [production stories](stories/), and a full [product experience report](https://jununfly.github.io/ZAgenticLoop/product-experience-report.html).
 
+## Product Story
+
+**One-sentence request to merged production change.** In a ZCodeGraph roadmap slice, the user gave Codex one product goal: migrate C baseline extraction to Rust-owned execution, validate it on a suitably sized real GitHub C project, and remove the migrated TypeScript implementation after success.
+
+Using [Roadmap-Sliced Development](patterns/roadmap-sliced-development.md), the loop carried the work through the whole delivery path:
+
+- Created a bounded branch: `zjal/rust-owned-c-baseline`.
+- Turned the request into leaf nodes for Rust-owned C registration, extraction parity, fixture coverage, real-corpus validation, and TypeScript path removal.
+- Recorded scope decisions, including `.c` and C-classified `.h` ownership, C++ / Objective-C header boundaries, and corpus selection.
+- Implemented Rust-owned C extraction for functions, structs, enums, enum members, typedefs, includes, calls, variables, and ownership metadata.
+- Validated locally with Cargo, npm build, Vitest smoke/fallback/engine tests, targeted extraction tests, and `git diff --check`.
+- Validated on [`DaveGamble/cJSON`](https://github.com/DaveGamble/cJSON) at commit `fb16e5c`: 121 indexed files, 3,581 nodes, 7,000 edges, `engineByLanguage.c = rust`, and no Rust-owned C gap diagnostics.
+- Produced durable evidence in ZCodeGraph docs and opened [PR #677](https://github.com/jununfly/ZCodeGraph/pull/677).
+- After the user merged the PR, continued through local main fast-forward, local branch deletion, and remote branch deletion.
+
+The promise: **give the agent a product goal, not a task list; the loop keeps enough state to finish the whole delivery path.** The important part is continuity: decisions stayed written down, validation moved from fixtures to real corpus evidence, a failing first corpus became a recorded boundary, PR handoff happened, and post-merge cleanup did not get dropped.
+
 ## Install And Run
 
 Use the public npm packages directly:
@@ -93,12 +110,12 @@ Phased rollout: **L1 report -> L2 assisted fixes -> L3 unattended**. Do not skip
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
-| `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.0` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, state files, budget, and run logs | `0.1.1` |
-| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.0` |
-| `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.1` |
-| `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state and config | `0.1.0` |
-| `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, state, and safety docs | `0.1.0` |
+| `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.1` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, state files, budget, and run logs | `0.1.3` |
+| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.2` |
+| `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.3` |
+| `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state and config | `0.1.2` |
+| `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, state, and safety docs | `0.1.2` |
 | `@jununfly/zj-goal-audit` | `zj-goal-audit` | Goal Readiness Score for bounded run-until-done work | `0.1.0` |
 
 Release details live in [docs/RELEASE.md](docs/RELEASE.md). The first release used `NPM_TOKEN`; Trusted Publisher is tracked as a post-first-release hardening step.
