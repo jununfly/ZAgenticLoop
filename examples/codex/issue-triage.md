@@ -18,9 +18,9 @@ Optional: add `issues` webhook trigger for immediate triage on new issues.
 ## Prompt (L1 — Propose Only)
 
 ```
-Run $zj-issue-triage on this project. Read issue-triage-state.md if present.
+Run $zj-issue-triage on this project. Read zj-loop/issue-triage-state.md if present.
 
-Update issue-triage-state.md:
+Update zj-loop/issue-triage-state.md:
 - Last run timestamp
 - Open actionable count + delta since last run
 - Top 5 prioritized issues with one-sentence summaries
@@ -52,7 +52,7 @@ Needs human: 2
 
 ## Triage Inbox
 
-Runs with findings land in Codex Triage inbox — review there plus `issue-triage-state.md`. Empty runs archive automatically.
+Runs with findings land in Codex Triage inbox — review there plus `zj-loop/issue-triage-state.md`. Empty runs archive automatically.
 
 ## Phase 2 — Allowlisted Auto-Labels
 
@@ -65,7 +65,7 @@ Never auto-close. Never label P0/P1 without human confirmation.
 
 ## Pairing with Daily Triage
 
-Run a separate daily automation that reads both `zj-loop/STATE.md` and `issue-triage-state.md`, merging top issues into Daily Triage High Priority.
+Run a separate daily automation that reads both `zj-loop/STATE.md` and `zj-loop/issue-triage-state.md`, merging top issues into Daily Triage High Priority.
 
 ## References
 

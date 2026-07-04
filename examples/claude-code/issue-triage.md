@@ -5,7 +5,7 @@ Same pattern as Grok; uses `$zj-issue-triage` skill invocation and Claude Code s
 ## Report-Only (Week 1)
 
 ```bash
-/loop 2h $zj-issue-triage — read issue-triage-state.md first. Scan open issues since last run. Update state with Top 5, suggested labels, and needs-human bucket. Propose only — do not apply labels or close issues. Escalate auth, payments, and security items.
+/loop 2h $zj-issue-triage — read zj-loop/issue-triage-state.md first. Scan open issues since last run. Update state with Top 5, suggested labels, and needs-human bucket. Propose only — do not apply labels or close issues. Escalate auth, payments, and security items.
 ```
 
 ## Skills Setup
@@ -27,7 +27,7 @@ cp templates/SKILL.md.zj-loop-verifier .claude/agents/zj-loop-verifier.md
 
 ## State File
 
-`issue-triage-state.md` at repo root — same schema as [patterns/issue-triage.md](../../patterns/issue-triage.md).
+`zj-loop/issue-triage-state.md` — same schema as [patterns/issue-triage.md](../../patterns/issue-triage.md).
 
 Scaffold:
 
@@ -48,7 +48,7 @@ Human gate remains on: `P0`, `P1`, `security`, `breaking-change`.
 ## Pairing with Daily Triage
 
 ```bash
-/loop 1d $zj-loop-triage — read STATE.md and issue-triage-state.md. Merge top zj-issue-triage items into High Priority. Report only week one.
+/loop 1d $zj-loop-triage — read zj-loop/STATE.md and zj-loop/issue-triage-state.md. Merge top zj-issue-triage items into High Priority. Report only week one.
 ```
 
 ## GitHub Action Fallback

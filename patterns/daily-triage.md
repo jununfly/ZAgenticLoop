@@ -11,6 +11,10 @@
 
 Many teams run triage-only first (reporting, no auto-fix) for 1–2 weeks before enabling action.
 
+For the responsibility split between Daily Triage, Issue Triage,
+`zj-loop-triage`, and `zj-triage`, see
+[Triage Architecture](../docs/designs/triage-architecture.md).
+
 ## Required Skills
 
 - `zj-loop-triage` — Reads CI, issues, commits, chat; produces prioritized findings (see `templates/SKILL.md.zj-loop-triage`)

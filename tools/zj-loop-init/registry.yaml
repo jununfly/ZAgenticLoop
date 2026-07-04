@@ -235,9 +235,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 1
       first_loop_command:
-        grok: /loop 2h Run zj-issue-triage. Update issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.
-        claude: /loop 2h $zj-issue-triage — update issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.
-        codex: "Automation 2h: zj-issue-triage → issue-triage-state.md. Propose only."
+        grok: /loop 2h Run zj-issue-triage. Update zj-loop/issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.
+        claude: /loop 2h $zj-issue-triage — update zj-loop/issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.
+        codex: "Automation 2h: zj-issue-triage → zj-loop/issue-triage-state.md. Propose only."
 
   - id: roadmap-sliced-development
     name: Roadmap-Sliced Development Pattern

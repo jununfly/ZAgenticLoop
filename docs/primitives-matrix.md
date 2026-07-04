@@ -47,7 +47,7 @@ Recommended filenames (pick one spine per project):
 | File | Purpose |
 |------|---------|
 | `zj-loop/STATE.md` | General loop memory (daily triage) |
-| `issue-triage-state.md` | Issue queue health (feeder for daily triage) |
+| `zj-loop/issue-triage-state.md` | Issue queue health (feeder for daily triage) |
 | `pr-babysitter-state.md` | PR-specific watcher state |
 | `ci-sweeper-state.md` | Active CI failures + attempt counts |
 | `post-merge-state.md` | Cleanup backlog from recent merges |

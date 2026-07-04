@@ -11,6 +11,10 @@
 
 This is an excellent always-on, low-cost companion loop.
 
+For the responsibility split between Issue Triage, Daily Triage,
+`zj-loop-triage`, and `zj-triage`, see
+[Triage Architecture](../docs/designs/triage-architecture.md).
+
 ## Required Skills
 
 - `zj-issue-triage` — Scans open issues, discussions, and (optionally via MCP) Linear / Jira. Dedupes, extracts signals (labels, comments, linked PRs, age, reactions), proposes priority + suggested labels + one-sentence summary.
@@ -18,7 +22,7 @@ This is an excellent always-on, low-cost companion loop.
 
 ## State
 
-Filename: `issue-triage-state.md`
+Filename: `zj-loop/issue-triage-state.md`
 
 Compact rolling view of the current backlog health:
 
@@ -62,16 +66,16 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 
 **Grok Build TUI**:
 ```
-/loop 2h Run zj-issue-triage skill. Read issue-triage-state.md first. Produce updated state + suggested labels for new items only. No auto-label or close. Escalate anything ambiguous.
+/loop 2h Run zj-issue-triage skill. Read zj-loop/issue-triage-state.md first. Produce updated state + suggested labels for new items only. No auto-label or close. Escalate anything ambiguous.
 ```
 
 **Claude Code**:
 ```
-/loop 2h $zj-issue-triage — update issue-triage-state.md. Propose labels only on allowlisted areas. Human review for P0/P1.
+/loop 2h $zj-issue-triage — update zj-loop/issue-triage-state.md. Propose labels only on allowlisted areas. Human review for P0/P1.
 ```
 
 **Codex**:
-Automation every 2h or on `issues` event: run zj-issue-triage → update state. Report mode.
+Automation every 2h or on `issues` event: run zj-issue-triage → update `zj-loop/issue-triage-state.md`. Report mode.
 
 **GitHub Actions**:
 See `examples/github-actions/` for a starter workflow that can react to issue events + scheduled run.
@@ -91,4 +95,4 @@ See `examples/github-actions/` for a starter workflow that can react to issue ev
 - Engineer-reported "I always know what the top 5 things are" score (qualitative, from state file reviews).
 - Number of duplicates caught before two people start working on them.
 
-See also: [Daily Triage](../daily-triage.md) (this loop is a feeder), [Multi-Loop Coordination](../docs/multi-loop.md), and the [Loop Design Checklist](../../docs/loop-design-checklist.md).
+See also: [Daily Triage](./daily-triage.md) (this loop is a feeder), [Multi-Loop Coordination](../docs/multi-loop.md), and the [Loop Design Checklist](../docs/loop-design-checklist.md).

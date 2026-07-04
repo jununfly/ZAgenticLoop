@@ -18,14 +18,14 @@ npx @jununfly/zj-loop-init . --pattern issue-triage --tool codex
 Start (Grok, week one):
 
 ```
-/loop 2h Run zj-issue-triage. Read issue-triage-state.md first. Update Top 5 and proposed labels. No auto-apply. Escalate security and ambiguous items.
+/loop 2h Run zj-issue-triage. Read zj-loop/issue-triage-state.md first. Update Top 5 and proposed labels. No auto-apply. Escalate security and ambiguous items.
 ```
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `issue-triage-state.md.example` | Rolling backlog health |
+| `issue-triage-state.md.example` | Rolling backlog health, copied to `zj-loop/issue-triage-state.md` by init |
 | `.grok/skills/zj-issue-triage/` | Issue scan + prioritize skill |
 | `.claude/agents/zj-loop-verifier.md` | L2 label-apply checker |
 | `zj-loop/ZJ-LOOP.md` | Cadence and human gates |

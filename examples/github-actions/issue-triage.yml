@@ -1,6 +1,6 @@
 # Issue Triage — GitHub Actions (tool-agnostic trigger)
 # Scans open issues on a cadence and on new issues. L1 propose-only — updates
-# issue-triage-state.md. Wire the "Run triage agent" step to your harness.
+# zj-loop/issue-triage-state.md. Wire the "Run triage agent" step to your harness.
 
 name: Issue Triage Loop
 
@@ -30,18 +30,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Ensure issue-triage-state.md exists
+      - name: Ensure zj-loop/issue-triage-state.md exists
         run: |
-          if [ ! -f issue-triage-state.md ]; then
-            cp starters/issue-triage/issue-triage-state.md.example issue-triage-state.md 2>/dev/null || \
-            echo "# Issue Triage State\n\nLast run: never\nOpen actionable: 0\n\n## Top 5\n\n## Proposed Labels (L1 — not applied)\n" > issue-triage-state.md
+          mkdir -p zj-loop
+          if [ ! -f zj-loop/issue-triage-state.md ]; then
+            cp starters/issue-triage/issue-triage-state.md.example zj-loop/issue-triage-state.md 2>/dev/null || \
+            echo "# Issue Triage State\n\nLast run: never\nOpen actionable: 0\n\n## Top 5\n\n## Proposed Labels (L1 — not applied)\n" > zj-loop/issue-triage-state.md
           fi
 
       # Replace with your agent invocation (Codex CLI, repository_dispatch, Grok/Claude runner)
       - name: Run zj-issue-triage agent
         run: |
           echo "::notice::Wire this step to your agent harness."
-          echo "Prompt: Run zj-issue-triage skill. Update issue-triage-state.md."
+          echo "Prompt: Run zj-issue-triage skill. Update zj-loop/issue-triage-state.md."
           echo "Week 1: propose labels and priority only — no auto-apply or close."
           echo "See examples/github-actions/README.md and examples/grok/issue-triage.md"
 
@@ -49,5 +50,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zj-issue-triage-state
-          path: issue-triage-state.md
+          path: zj-loop/issue-triage-state.md
           if-no-files-found: ignore

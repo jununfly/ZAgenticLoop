@@ -2,7 +2,7 @@
 name: zj-issue-triage
 description: >
   Scan open issues and discussions. Dedupe, prioritize, and propose labels.
-  Updates issue-triage-state.md. L1 propose-only — never auto-label or close.
+  Updates zj-loop/issue-triage-state.md. L1 propose-only — never auto-label or close.
 user_invocable: true
 ---
 
@@ -13,10 +13,10 @@ You are an issue queue health agent. Your job is to keep the backlog legible so 
 ## Inputs
 
 - Open GitHub issues and discussions (or Linear/Jira via MCP if configured)
-- `issue-triage-state.md` from the previous run
+- `zj-loop/issue-triage-state.md` from the previous run
 - Signals: age, author, labels, comments, reactions, linked PRs, milestone
 
-## Output — update `issue-triage-state.md`
+## Output — update `zj-loop/issue-triage-state.md`
 
 ```markdown
 # Issue Triage State
@@ -63,4 +63,4 @@ Needs human: H
 
 ## Pairing with Daily Triage
 
-Daily Triage reads this file and merges Top 5 into `zj-loop/STATE.md` High Priority. Do not duplicate full issue bodies in STATE.md — reference issue numbers only.
+Daily Triage reads this file and merges Top 5 into `zj-loop/STATE.md` High Priority. Do not duplicate full issue bodies in `zj-loop/STATE.md` — reference issue numbers only.
