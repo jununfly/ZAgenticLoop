@@ -111,9 +111,9 @@ Phased rollout: **L1 report -> L2 assisted fixes -> L3 unattended**. Do not skip
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
 | `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.1` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, state files, budget, and run logs | `0.1.3` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, state files, budget, and run logs | `0.1.4` |
 | `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.2` |
-| `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.3` |
+| `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.4` |
 | `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state and config | `0.1.2` |
 | `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, state, and safety docs | `0.1.2` |
 | `@jununfly/zj-goal-audit` | `zj-goal-audit` | Goal Readiness Score for bounded run-until-done work | `0.1.0` |

@@ -111,9 +111,9 @@ npx @jununfly/zj-loop-audit . --suggest
 | Package | CLI | 用途 | 当前版本 |
 |---------|-----|------|----------|
 | `@jununfly/zj-loop-core` | library | 共享 registry、project evidence、semantic queries 和 CLI harness | `0.1.1` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | 初始化 starters、state files、budget 和 run logs | `0.1.3` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | 初始化 starters、state files、budget 和 run logs | `0.1.4` |
 | `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score 和建议 | `0.1.2` |
-| `@jununfly/zj-loop-cost` | `zj-loop-cost` | 按 pattern、level、cadence 估算 token 开销 | `0.1.3` |
+| `@jununfly/zj-loop-cost` | `zj-loop-cost` | 按 pattern、level、cadence 估算 token 开销 | `0.1.4` |
 | `@jununfly/zj-loop-sync` | `zj-loop-sync` | 检查 loop state 与 config 之间的漂移 | `0.1.2` |
 | `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | 只读 MCP 访问 patterns、skills、state 和 safety docs | `0.1.2` |
 | `@jununfly/zj-goal-audit` | `zj-goal-audit` | 面向 bounded run-until-done work 的 Goal Readiness Score | `0.1.0` |
