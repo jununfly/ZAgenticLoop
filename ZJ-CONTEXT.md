@@ -60,6 +60,14 @@ _Avoid_: Notification, handoff
 The act of passing loop context to a human or another executor, including current state, why the loop stopped, what it tried, and the recommended next step.
 _Avoid_: Escalation
 
+**Plan Activation**:
+The explicit authorization step that turns a PRD/plan intake record into a request for a target pattern to start. Discovery, triage, and labels are not activation.
+_Avoid_: Trigger status, label trigger, state queue
+
+**Activation Request**:
+An auditable request created from an authorized activation signal and later consumed by a target pattern. It records permission to start; it is not the resulting branch, roadmap, or implementation.
+_Avoid_: Roadmap, issue label, STATE entry
+
 **Escalation**:
 The event or judgment that triggers a handoff, such as ambiguity, a risky path, max attempts, or budget exhaustion.
 _Avoid_: Handoff
