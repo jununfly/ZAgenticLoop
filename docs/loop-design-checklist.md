@@ -53,7 +53,7 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 
 - [ ] Minimum permissions for connectors (read vs write)
 - [ ] Loop can **open/update PRs** or tickets if acting, not just suggest
-- [ ] Bot identity clear on PR comments (e.g. "ZAgenticLoop — PR Babysitter")
+- [ ] Bot identity clear on PR comments (e.g. "ZAgenticLoop — PR Steward")
 
 ## 8. Cost & Limits
 

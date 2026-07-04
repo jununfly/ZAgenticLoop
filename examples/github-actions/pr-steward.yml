@@ -1,4 +1,4 @@
-name: PR Babysitter (example)
+name: PR Steward (example)
 
 on:
   schedule:
@@ -11,7 +11,7 @@ permissions:
   issues: read
 
 jobs:
-  babysit:
+  steward:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -19,5 +19,5 @@ jobs:
       - name: Placeholder — wire to your agent runtime
         run: |
           echo "Run zj-pr-review-triage against open PRs."
-          echo "Update pr-babysitter-state.md in a follow-up PR."
-          echo "No auto-merge in week one — see patterns/pr-babysitter.md"
+          echo "Update pr-steward-state.md in a follow-up PR."
+          echo "No auto-merge in week one — see patterns/pr-steward.md"

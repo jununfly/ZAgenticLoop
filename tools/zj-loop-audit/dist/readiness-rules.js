@@ -22,7 +22,7 @@ export function evaluateReadinessPolicy(signals, policy = loadDefaultReadinessPo
         return score >= rule.threshold && (!rule.when || evaluateCondition(rule.when, { signals, policy, score }));
     })?.level ?? 'L0';
     const assessment = policy.assessments.find((rule) => !rule.when || evaluateCondition(rule.when, { signals, policy, score }))?.message ??
-        'Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).';
+        'Not loop-ready — start with a starter from this repo (minimal-loop or pr-steward).';
     return { score, level, assessment };
 }
 export function evaluateReadinessGuidance(signals, score, policy = loadDefaultReadinessPolicy()) {

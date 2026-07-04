@@ -316,7 +316,7 @@ Options:
 
 Examples:
   npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-  npx @jununfly/zj-loop-init . -p pr-babysitter -t claude
+  npx @jununfly/zj-loop-init . -p pr-steward -t claude
 `;
 }
 const SPEC = {

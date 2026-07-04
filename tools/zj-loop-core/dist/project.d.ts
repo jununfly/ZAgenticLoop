@@ -12,7 +12,7 @@ export interface ProjectFileSystem {
 }
 export declare const DEFAULT_SKILL_DIRS: readonly [".grok/skills", ".claude/skills", ".codex/skills", "skills"];
 export declare const DEFAULT_AGENT_DIRS: readonly [".claude/agents", ".codex/agents"];
-export declare const DEFAULT_STATE_FILES: readonly ["zj-loop/STATE.md", "zj-loop/pr-babysitter-state.md", "zj-loop/ci-sweeper-state.md", "zj-loop/post-merge-state.md", "zj-loop/dependency-sweeper-state.md", "zj-loop/changelog-drafter-state.md", "zj-loop/issue-triage-state.md"];
+export declare const DEFAULT_STATE_FILES: readonly ["zj-loop/STATE.md", "zj-loop/pr-steward-state.md", "zj-loop/ci-sweeper-state.md", "zj-loop/post-merge-state.md", "zj-loop/dependency-sweeper-state.md", "zj-loop/changelog-drafter-state.md", "zj-loop/issue-triage-state.md"];
 export declare const DEFAULT_REQUIRED_LOOP_FILES: readonly ["zj-loop/STATE.md", "zj-loop/ZJ-LOOP.md", "AGENTS.md"];
 export declare const LOOP_CONFIG_FILE_CANDIDATES: readonly ["zj-loop/ZJ-LOOP.md"];
 export declare const DEFAULT_SAFETY_FILES: readonly ["safety.md", "docs/safety.md", "SECURITY.md"];

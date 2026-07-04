@@ -2,7 +2,7 @@
 name: zj-pr-review-triage
 description: >
   Triage open pull requests for CI status, review comments, and merge readiness.
-  Use in PR babysitter loops. Respects project review norms and required checks.
+  Use in PR steward loops. Respects project review norms and required checks.
 user_invocable: true
 ---
 

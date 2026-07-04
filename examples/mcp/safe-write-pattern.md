@@ -25,7 +25,7 @@ For low-risk, allowlisted items that pass verifier:
   - zj-minimal-fix
   - zj-loop-verifier
   - post signed comment + link to worktree (or open draft PR)
-Never merge. Update pr-babysitter-state.md.
+Never merge. Update pr-steward-state.md.
 ```
 
 ## Why This Works

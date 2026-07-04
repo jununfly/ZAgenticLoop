@@ -1,4 +1,4 @@
-# Post-Merge Cleanup — small wins without the babysitter tax
+# Post-Merge Cleanup — small wins without the steward overhead
 
 **Pattern:** [post-merge-cleanup](../patterns/post-merge-cleanup.md)  
 **Cadence:** 1d (off-peak)  
@@ -8,7 +8,7 @@
 
 ## Setup
 
-A mid-size SaaS team (12 engineers, ~40 merges/week) ran post-merge cleanup after shipping a feature branch. Predictable leftovers piled up: stale comments, half-updated docs, and tiny lint issues nobody wanted to context-switch for. PR Babysitter felt too heavy for work already on `main`.
+A mid-size SaaS team (12 engineers, ~40 merges/week) ran post-merge cleanup after shipping a feature branch. Predictable leftovers piled up: stale comments, half-updated docs, and tiny lint issues nobody wanted to context-switch for. PR Steward felt too heavy for work already on `main`.
 
 - **Loop:** daily post-merge scan on merges in the last 24–48h
 - **Skills:** `zj-post-merge-scan`, `zj-minimal-fix`, `zj-loop-verifier`
@@ -43,4 +43,4 @@ A mid-size SaaS team (12 engineers, ~40 merges/week) ran post-merge cleanup afte
 
 ## Lesson
 
-Start L1 for two weeks — the report calibrates what your team actually considers debt. Enable L2 only for docs, comments, and lint paths with a verifier that treats API examples as code. Keep architectural debt in Linear, not in the loop. Post-Merge Cleanup is a complement to PR Babysitter, not a replacement: it runs off-peak on work already landed.
+Start L1 for two weeks — the report calibrates what your team actually considers debt. Enable L2 only for docs, comments, and lint paths with a verifier that treats API examples as code. Keep architectural debt in Linear, not in the loop. Post-Merge Cleanup is a complement to PR Steward, not a replacement: it runs off-peak on work already landed.

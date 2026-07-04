@@ -8,7 +8,7 @@ Practical, scoped examples for connecting loops to real tools via MCP (or equiva
 
 | Connector | Typical Use | Recommended Scope | Pattern Fit |
 |-----------|-------------|-------------------|-------------|
-| GitHub (read + propose) | Discover PRs/issues, post comments, open draft PRs | `contents: read`, `pull_requests: write` (with bot identity) | PR Babysitter, Daily Triage, Changelog Drafter |
+| GitHub (read + propose) | Discover PRs/issues, post comments, open draft PRs | `contents: read`, `pull_requests: write` (with bot identity) | PR Steward, Daily Triage, Changelog Drafter |
 | Linear | Read/update issues from state, create follow-up tickets | API key with project + issue write limited to specific teams | Post-Merge, Dependency Sweeper, CI Sweeper |
 | Slack (read) | Ingest threads / alerts the loop should triage | Read-only on specific channels | Daily Triage |
 | Safe propose flow | Any write action | Loop opens PR / draft / comment. Human merges or approves. | All L2+ patterns |

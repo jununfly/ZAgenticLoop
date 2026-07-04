@@ -1,11 +1,11 @@
-# PR Babysitter Loop
+# PR Steward Loop
 
-**Goal**: Reduce the human time spent herding pull requests through review, CI, rebase, and merge while keeping the human in the judgment seat.
+**Goal**: Reduce the human time spent stewarding pull requests through review, CI, rebase, and merge while keeping the human in the judgment seat.
 
 ## Scheduling
 
 **Recommended**:
-- `/loop 5m /pr-babysit check` (Grok TUI)
+- `/loop 5m /pr-steward check` (Grok TUI)
 - Equivalent scheduled task or GitHub Action in other environments (every 5–15 minutes during working hours is common).
 
 Many teams run a faster "watcher" loop (2–5m) during active review periods and a slower sweeper overnight.
@@ -18,7 +18,7 @@ Many teams run a faster "watcher" loop (2–5m) during active review periods and
 
 ## State
 
-Keep a small `pr-babysitter-state.md` (or a Linear board / GitHub project view) with:
+Keep a small `pr-steward-state.md` (or a Linear board / GitHub project view) with:
 
 - Watched PRs + current status
 - Last action taken + outcome
@@ -63,18 +63,18 @@ Example state entry:
 ## Tool-Specific Notes
 
 **Grok Build TUI**:
-- The `pr-babysit` skill (if installed) is designed exactly for this.
-- Run with `/loop 5m /pr-babysit check`.
+- The `pr-steward` skill (if installed) is designed exactly for this.
+- Run with `/loop 5m /pr-steward check`.
 - Use worktree isolation for any fix attempts.
 - The skill can call `scheduler_delete` on itself when the watchlist is empty.
 
 **Claude Code**:
-- Boris Cherny has publicly described running very similar `/loop 5m /babysit` flows.
+- Similar Claude Code loops can keep working on a PR until CI is green and no blocking comments remain.
 - Combine with `/goal` for "keep working on this PR until CI is green and no blocking comments remain".
 
 **General**:
 - Expose the state file in the repo or a shared doc so the whole team can see what the loop is doing.
-- Make the loop's comments on PRs clearly signed (e.g. "🤖 ZAgenticLoop — PR Babysitter").
+- Make the loop's comments on PRs clearly signed (e.g. "🤖 ZAgenticLoop — PR Steward").
 
 ## Failure Modes & Mitigations
 
@@ -94,7 +94,7 @@ Example state entry:
 **Cadence**: 5m–15m · **Tier**: high · **Suggested daily cap**: 2M tokens · **Early exit required**
 
 ```bash
-npx @jununfly/zj-loop-cost --pattern pr-babysitter --cadence 10m --level L1 --conservative
+npx @jununfly/zj-loop-cost --pattern pr-steward --cadence 10m --level L1 --conservative
 ```
 
 High cadence without early-exit burns tokens fast. Use `zj-loop-budget` skill + `zj-loop/zj-loop-run-log.md`.

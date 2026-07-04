@@ -30,7 +30,7 @@ Assume ~50k tokens per light triage run, ~200k per run with implementer + verifi
 |------|---------|----------|-------------------|
 | Daily triage (report only) | 1d | 1 | ~50k |
 | CI sweeper (light) | 15m | 96 | ~5M (if every run is full — **avoid**) |
-| PR babysitter | 5m | 288 | High — use early exit |
+| PR steward | 5m | 288 | High — use early exit |
 
 **Best practice**: Triage pass is cheap; spawn sub-agents **only** when state says actionable. Empty watchlist → exit in <5k tokens.
 
@@ -73,7 +73,7 @@ Run log: 2026-06-09 08:15 | 4 findings | 1 worktree opened | 0 escalations
 
 Track weekly in a spreadsheet or Notion:
 
-| Metric | PR Babysitter | Daily Triage | CI Sweeper |
+| Metric | PR Steward | Daily Triage | CI Sweeper |
 |--------|---------------|--------------|------------|
 | Runs | | | |
 | Actionable findings | | | |

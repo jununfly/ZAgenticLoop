@@ -14,9 +14,9 @@ Each pattern answers:
 
 | Pattern | Cadence | Risk | File |
 |---------|---------|------|------|
-| PR Babysitter | 5–15m | Medium | [pr-babysitter.md](./pr-babysitter.md) |
+| PR Steward | 5–15m | Medium | [pr-steward.md](./pr-steward.md) |
 | Daily Triage | 1d–2h | Low | [daily-triage.md](./daily-triage.md) |
-| Issue Triage (new) | 2h–1d | Low | [zj-issue-triage.md](./zj-issue-triage.md) |
+| Issue Triage (new) | 2h–1d | Low | [issue-triage.md](./issue-triage.md) |
 | CI Sweeper | 5–15m | Medium | [ci-sweeper.md](./ci-sweeper.md) |
 | Post-Merge Cleanup | 1d–6h | Low | [post-merge-cleanup.md](./post-merge-cleanup.md) |
 | Dependency Sweeper | 6h–1d | Medium | [dependency-sweeper.md](./dependency-sweeper.md) |
@@ -24,6 +24,17 @@ Each pattern answers:
 | Roadmap-Sliced Development | 1d | Medium | [roadmap-sliced-development.md](./roadmap-sliced-development.md) |
 
 Machine-readable index: [registry.yaml](./registry.yaml)
+
+## Pattern Families
+
+Patterns are easier to choose and maintain when grouped by the loop problem they own:
+
+| Family | Purpose | Patterns |
+|--------|---------|----------|
+| Attention / backlog loops | Keep the team oriented by turning noisy work queues into reviewable state. | [Daily Triage](./daily-triage.md), [Issue Triage](./issue-triage.md) |
+| Delivery unblockers | Keep active delivery moving when PRs, checks, or dependency updates stall. | [PR Steward](./pr-steward.md), [CI Sweeper](./ci-sweeper.md), [Dependency Sweeper](./dependency-sweeper.md) |
+| Hygiene / release loops | Preserve project health after delivery and prepare user-facing release artifacts. | [Post-Merge Cleanup](./post-merge-cleanup.md), [Changelog Drafter](./changelog-drafter.md) |
+| Roadmap initiative execution | Turn ambiguous product, architecture, docs, or release initiatives into reviewable slices. | [Roadmap-Sliced Development](./roadmap-sliced-development.md) |
 
 ## How to Use a Pattern
 

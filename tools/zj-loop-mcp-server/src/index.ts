@@ -189,7 +189,7 @@ server.resource(
 server.resource(
   'pattern',
   new ResourceTemplate('loop://patterns/{patternId}', { list: undefined }),
-  { description: 'Full pattern documentation by ID (e.g. daily-triage, pr-babysitter, ci-sweeper)' },
+  { description: 'Full pattern documentation by ID (e.g. daily-triage, pr-steward, ci-sweeper)' },
   async (uri, variables) => {
     const patternId = variables.patternId as string;
     const root = await resolveProjectRoot();
@@ -225,7 +225,7 @@ server.resource(
 server.resource(
   'state',
   new ResourceTemplate('loop://state/{stateFile}', { list: undefined }),
-  { description: 'State file content (e.g. zj-loop/STATE.md, zj-loop/pr-babysitter-state.md)' },
+  { description: 'State file content (e.g. zj-loop/STATE.md, zj-loop/pr-steward-state.md)' },
   async (uri, variables) => {
     const stateFile = decodeURIComponent(variables.stateFile as string);
     const root = await resolveProjectRoot();
@@ -304,7 +304,7 @@ server.tool(
 server.tool(
   'loop_get_pattern',
   'Get full documentation for a specific pattern by ID',
-  { patternId: z.string().describe('Pattern ID (e.g. daily-triage, pr-babysitter, ci-sweeper)') },
+  { patternId: z.string().describe('Pattern ID (e.g. daily-triage, pr-steward, ci-sweeper)') },
   async ({ patternId }) => {
     const root = await resolveProjectRoot();
 

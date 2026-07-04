@@ -13,9 +13,9 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 - Phase: Report-only. Human reviews and decides actions.
 - Handoff: Design decisions, large refactors, new pattern acceptance.
 
-### PR Babysitter (L2 — assisted, manual trigger)
+### PR Steward (L2 — assisted, manual trigger)
 - Cadence: 10–15m during active hours (maintainer `/loop` or future Action)
-- Starter: `starters/pr-babysitter` (Grok, Claude Code, Codex)
+- Starter: `starters/pr-steward` (Grok, Claude Code, Codex)
 - Worktrees for suggested fixes; verifier required; no auto-merge by default.
 
 ### Dependency Sweeper (L2 — patch-only)
@@ -38,7 +38,7 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 
 ## Multi-loop coordination
 
-See [docs/multi-loop.md](docs/multi-loop.md). Priority: CI Sweeper → PR Babysitter → Dependency Sweeper → Post-Merge / Changelog Drafter (off-peak) → Daily Triage (report).
+See [docs/multi-loop.md](docs/multi-loop.md). Priority: CI Sweeper → PR Steward → Dependency Sweeper → Post-Merge / Changelog Drafter (off-peak) → Daily Triage (report).
 
 ## Worktrees
 

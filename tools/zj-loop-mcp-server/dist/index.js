@@ -130,7 +130,7 @@ server.resource('safety', 'loop://safety', { description: 'Safety documentation 
     };
 });
 // ── Resource Templates (dynamic) ───────────────────────────────────
-server.resource('pattern', new ResourceTemplate('loop://patterns/{patternId}', { list: undefined }), { description: 'Full pattern documentation by ID (e.g. daily-triage, pr-babysitter, ci-sweeper)' }, async (uri, variables) => {
+server.resource('pattern', new ResourceTemplate('loop://patterns/{patternId}', { list: undefined }), { description: 'Full pattern documentation by ID (e.g. daily-triage, pr-steward, ci-sweeper)' }, async (uri, variables) => {
     const patternId = variables.patternId;
     const root = await resolveProjectRoot();
     const content = await loadPatternDoc(root, patternId);
@@ -154,7 +154,7 @@ server.resource('skill', new ResourceTemplate('loop://skills/{skillName}', { lis
             }],
     };
 });
-server.resource('state', new ResourceTemplate('loop://state/{stateFile}', { list: undefined }), { description: 'State file content (e.g. zj-loop/STATE.md, zj-loop/pr-babysitter-state.md)' }, async (uri, variables) => {
+server.resource('state', new ResourceTemplate('loop://state/{stateFile}', { list: undefined }), { description: 'State file content (e.g. zj-loop/STATE.md, zj-loop/pr-steward-state.md)' }, async (uri, variables) => {
     const stateFile = decodeURIComponent(variables.stateFile);
     const root = await resolveProjectRoot();
     const content = await loadState(root, stateFile);
@@ -202,7 +202,7 @@ server.tool('loop_summarize_operational_context', 'Summarize config, budget, run
     const summary = await summarizeOperationalContext(root);
     return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] };
 });
-server.tool('loop_get_pattern', 'Get full documentation for a specific pattern by ID', { patternId: z.string().describe('Pattern ID (e.g. daily-triage, pr-babysitter, ci-sweeper)') }, async ({ patternId }) => {
+server.tool('loop_get_pattern', 'Get full documentation for a specific pattern by ID', { patternId: z.string().describe('Pattern ID (e.g. daily-triage, pr-steward, ci-sweeper)') }, async ({ patternId }) => {
     const root = await resolveProjectRoot();
     const registry = await loadRegistry(root);
     if (!registry) {

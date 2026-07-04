@@ -14,7 +14,7 @@ Running more than one loop in a repo is normal. Running them without boundaries 
 
 ```
 STATE.md                    # Daily Triage (priorities, human inbox)
-pr-babysitter-state.md      # PR watcher
+pr-steward-state.md      # PR watcher
 ci-sweeper-state.md         # Active CI failures + attempt counts
 dependency-sweeper-state.md # In-flight package updates
 post-merge-state.md         # Cleanup backlog
@@ -26,7 +26,7 @@ zj-loop-run-log.md             # Append-only observability
 | Priority | Loop | Reason |
 |----------|------|--------|
 | 1 | CI Sweeper | Red main blocks everything |
-| 2 | PR Babysitter | Active PRs are time-sensitive |
+| 2 | PR Steward | Active PRs are time-sensitive |
 | 3 | Dependency Sweeper | Pause while CI red |
 | 4 | Post-Merge Cleanup | Off-peak, lowest urgency |
 | 5 | Daily Triage | Reports only at L1; schedules others |
@@ -38,7 +38,7 @@ Document in root `zj-loop/ZJ-LOOP.md`:
 ```markdown
 ## Multi-loop schedule
 - CI Sweeper: /loop 15m (active hours)
-- PR Babysitter: /loop 10m (active hours, skip if CI Sweeper acting on same PR)
+- PR Steward: /loop 10m (active hours, skip if CI Sweeper acting on same PR)
 - Daily Triage: /loop 1d 08:00
 - Dependency Sweeper: /loop 6h (skip if main CI red)
 - Post-Merge: /loop 1d 22:00
@@ -57,7 +57,7 @@ Use a shared section in `zj-loop/STATE.md`:
 
 ```markdown
 ## Human Inbox (ambiguous / cross-loop)
-- [ ] PR #42: CI Sweeper and PR Babysitter both flagged — human pick owner
+- [ ] PR #42: CI Sweeper and PR Steward both flagged — human pick owner
 ```
 
 ## Example: safe three-loop setup
@@ -65,9 +65,9 @@ Use a shared section in `zj-loop/STATE.md`:
 | Loop | Level | Cadence |
 |------|-------|---------|
 | Daily Triage | L1 | 1d |
-| PR Babysitter | L2 | 10m |
+| PR Steward | L2 | 10m |
 | Post-Merge Cleanup | L1 → L2 | 1d off-peak |
 
-Add CI Sweeper only after PR Babysitter attempt limits and verifier are proven for two weeks.
+Add CI Sweeper only after PR Steward attempt limits and verifier are proven for two weeks.
 
 See [stories/multi-loop-collision.md](../stories/multi-loop-collision.md) for a real collision story.

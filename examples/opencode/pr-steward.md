@@ -1,13 +1,13 @@
-# PR Babysitter — Opencode
+# PR Steward — Opencode
 
-Watch open PRs, surface blockers, and act only on safe, obvious maintenance tasks. opencode works well here because the loop can run headless while still preserving state in `pr-babysitter-state.md`.
+Watch open PRs, surface blockers, and act only on safe, obvious maintenance tasks. opencode works well here because the loop can run headless while still preserving state in `pr-steward-state.md`.
 
 ## Report-Only (Week 1)
 
 ```bash
 opencode run \
-  "Run PR babysitter triage. Read pr-babysitter-state.md first. List PRs with red CI, stale review, merge conflicts, or unanswered review comments. Do not edit code. Update pr-babysitter-state.md and end with the top 3 human actions." \
-  --title "PR babysitter"
+  "Run PR steward triage. Read pr-steward-state.md first. List PRs with red CI, stale review, merge conflicts, or unanswered review comments. Do not edit code. Update pr-steward-state.md and end with the top 3 human actions." \
+  --title "PR steward"
 ```
 
 Keep the first week boring: read GitHub state, update state, notify humans.
@@ -19,7 +19,7 @@ FIX_ID="$(date +%Y%m%d%H%M%S)"
 WORKTREE="../wt-pr-fix-$FIX_ID"
 git worktree add "$WORKTREE" -b "loop/pr-fix-$FIX_ID"
 opencode run \
-  "Run PR babysitter triage. For PRs authored by us with red CI caused by a clear single-file regression: apply a minimal fix in this worktree and run tests. For review comments, draft a response or patch but do not resolve threads without human approval. Never force-push." \
+  "Run PR steward triage. For PRs authored by us with red CI caused by a clear single-file regression: apply a minimal fix in this worktree and run tests. For review comments, draft a response or patch but do not resolve threads without human approval. Never force-push." \
   --agent implementer \
   --dir "$WORKTREE"
 DIFF_FILE="$(mktemp /tmp/pr-fix.XXXXXX.patch)"
@@ -55,6 +55,6 @@ If a matching PR exists, update state and skip duplicate work.
 
 ## References
 
-- [patterns/pr-babysitter.md](../../patterns/pr-babysitter.md)
+- [patterns/pr-steward.md](../../patterns/pr-steward.md)
 - [docs/safety.md](../../docs/safety.md)
-- [examples/github-actions/pr-babysitter.yml](../github-actions/pr-babysitter.yml)
+- [examples/github-actions/pr-steward.yml](../github-actions/pr-steward.yml)

@@ -138,7 +138,7 @@ npx @jununfly/zj-loop-audit . --suggest
 | Pattern | Cadence | Starter | Week 1 | Token cost |
 |---------|---------|---------|--------|------------|
 | [Daily Triage](patterns/daily-triage.md) | 1d-2h | [minimal-loop](starters/minimal-loop/) | L1 report | Low |
-| [PR Babysitter](patterns/pr-babysitter.md) | 5-15m | [pr-babysitter](starters/pr-babysitter/) | L1 watch | High |
+| [PR Steward](patterns/pr-steward.md) | 5-15m | [pr-steward](starters/pr-steward/) | L1 watch | High |
 | [CI Sweeper](patterns/ci-sweeper.md) | 5-15m | [ci-sweeper](starters/ci-sweeper/) | L2 cautious | Very high |
 | [Dependency Sweeper](patterns/dependency-sweeper.md) | 6h-1d | [dependency-sweeper](starters/dependency-sweeper/) | L2 patch-only | Medium |
 | [Changelog Drafter](patterns/changelog-drafter.md) | 1d or tag | [changelog-drafter](starters/changelog-drafter/) | L1 draft | Low |

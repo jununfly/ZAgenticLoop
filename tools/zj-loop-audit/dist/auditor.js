@@ -25,7 +25,7 @@ async function detectLoopActivity(root, fs) {
     const evidence = [];
     const stateCandidates = [
         'zj-loop/STATE.md',
-        'zj-loop/pr-babysitter-state.md',
+        'zj-loop/pr-steward-state.md',
         'zj-loop/ci-sweeper-state.md',
         'zj-loop/post-merge-state.md',
         'zj-loop/dependency-sweeper-state.md',
@@ -63,7 +63,7 @@ async function detectLoopActivity(root, fs) {
     try {
         const workflows = await fs.listEntries('.github/workflows');
         if (workflows.length > 0) {
-            if (workflows.some(w => /triage|changelog|daily|loop|audit|pr-babysit/i.test(w.name))) {
+            if (workflows.some(w => /triage|changelog|daily|loop|audit|pr-steward/i.test(w.name))) {
                 evidence.push('github:loop-workflows');
             }
         }
@@ -133,7 +133,7 @@ export async function auditProject(target) {
     let worktreeEvidence = false;
     const candidateMd = [
         LOOP_ARTIFACTS.config.primary,
-        'patterns/pr-babysitter.md',
+        'patterns/pr-steward.md',
         `starters/minimal-loop/${LOOP_ARTIFACTS.config.primary}`,
         `starters/minimal-loop-claude/${LOOP_ARTIFACTS.config.primary}`,
         `starters/minimal-loop-codex/${LOOP_ARTIFACTS.config.primary}`,

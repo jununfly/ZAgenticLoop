@@ -12,7 +12,7 @@ Native primitives: `/loop`, `scheduler_create`, worktree isolation, skills, MCP,
 ## Common Commands
 
 ```bash
-/loop 5m /pr-babysit check
+/loop 5m /pr-steward check
 /loop 1d Run zj-loop-triage and update STATE.md
 /loop 15m Check CI on main — see patterns/ci-sweeper.md
 ```

@@ -4,7 +4,7 @@ Real-world agentic loop working — including failures. Contribute yours via [CO
 
 | Story | Pattern | Takeaway |
 |-------|---------|----------|
-| [pr-babysitter-week-one.md](./pr-babysitter-week-one.md) | PR Babysitter | State + attempt limits + verifier |
+| [pr-steward-week-one.md](./pr-steward-week-one.md) | PR Steward | State + attempt limits + verifier |
 | [daily-triage-report-only.md](./daily-triage-report-only.md) | Daily Triage | L1 before L2 |
 | [why-we-killed-ci-sweeper.md](./why-we-killed-ci-sweeper.md) | CI Sweeper | Budget, branch allowlist, kill switch |
 | [dependency-sweeper-week-one.md](./dependency-sweeper-week-one.md) | Dependency Sweeper | Verifier must match CI install path |

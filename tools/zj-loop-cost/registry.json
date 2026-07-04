@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "patterns": [
     {
-      "id": "pr-babysitter",
-      "name": "PR Babysitter",
-      "file": "pr-babysitter.md",
-      "goal": "Shepherd PRs through review, CI, rebase, and merge",
+      "id": "pr-steward",
+      "name": "PR Steward",
+      "file": "pr-steward.md",
+      "goal": "Steward PRs through review, CI, rebase, and merge",
       "cadence": "5m-15m",
       "risk": "medium",
       "tools": [
@@ -19,7 +19,7 @@
         "zj-minimal-fix",
         "zj-rebase-and-clean"
       ],
-      "state": "zj-loop/pr-babysitter-state.md",
+      "state": "zj-loop/pr-steward-state.md",
       "phases": [
         "discover",
         "triage",
@@ -33,7 +33,7 @@
         "auth",
         "max-fix-attempts"
       ],
-      "starter": "starters/pr-babysitter",
+      "starter": "starters/pr-steward",
       "week_one_mode": "L1",
       "token_cost": "high",
       "cost": {
@@ -54,9 +54,9 @@
           "max_spawns_l2": 3
         },
         "first_loop_command": {
-          "grok": "/loop 10m Run zj-pr-review-triage. Update pr-babysitter-state.md. Worktree + zj-minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.",
-          "claude": "/loop 10m $zj-pr-review-triage — update pr-babysitter-state.md. No auto-merge.",
-          "codex": "Automation 10m: zj-pr-review-triage → pr-babysitter-state.md. No auto-merge."
+          "grok": "/loop 10m Run zj-pr-review-triage. Update pr-steward-state.md. Worktree + zj-minimal-fix + verifier for allowlisted PRs only. Escalate after 3 attempts.",
+          "claude": "/loop 10m $zj-pr-review-triage — update pr-steward-state.md. No auto-merge.",
+          "codex": "Automation 10m: zj-pr-review-triage → pr-steward-state.md. No auto-merge."
         }
       }
     },

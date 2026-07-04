@@ -4,7 +4,7 @@ Clone-and-run scaffolds. Copy into your project — or use `zj-loop-init`:
 
 ```bash
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-npx @jununfly/zj-loop-init . -p pr-babysitter -t claude
+npx @jununfly/zj-loop-init . -p pr-steward -t claude
 ```
 
 ## Daily Triage (L1 report-only)
@@ -19,7 +19,7 @@ npx @jununfly/zj-loop-init . -p pr-babysitter -t claude
 
 | Starter | Pattern | Tools | Readiness |
 |---------|---------|-------|-----------|
-| [pr-babysitter](./pr-babysitter/) | PR Babysitter | Grok, Claude, Codex | L2 assisted |
+| [pr-steward](./pr-steward/) | PR Steward | Grok, Claude, Codex | L2 assisted |
 | [ci-sweeper](./ci-sweeper/) | CI Sweeper | Grok, Claude, Codex | L2 assisted |
 | [dependency-sweeper](./dependency-sweeper/) | Dependency Sweeper | Grok, Claude, Codex | L2 patch-only |
 | [post-merge-cleanup](./post-merge-cleanup/) | Post-Merge Cleanup | Grok, Claude, Codex | L1 → L2 |

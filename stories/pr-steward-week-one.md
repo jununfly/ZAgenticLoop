@@ -1,4 +1,4 @@
-# PR Babysitter — Week One (Example Story)
+# PR Steward — Week One (Example Story)
 
 *Anonymized production-style narrative for contributors. Replace with your real metrics via PR.*
 
@@ -9,15 +9,15 @@
 
 ## Setup
 
-- Pattern: [pr-babysitter](../patterns/pr-babysitter.md)
+- Pattern: [pr-steward](../patterns/pr-steward.md)
 - Cadence: `/loop 5m` during work hours
 - L2 assisted: zj-minimal-fix + zj-loop-verifier, no auto-merge
 
 ## What Worked
 
-- **State file** (`pr-babysitter-state.md`) stopped duplicate fix attempts — attempt counter mattered
+- **State file** (`pr-steward-state.md`) stopped duplicate fix attempts — attempt counter mattered
 - Verifier on stronger model caught 2 over-broad diffs before PR comment
-- Loop comments signed `🤖 ZAgenticLoop — PR Babysitter` — reviewers knew what to trust
+- Loop comments signed `🤖 ZAgenticLoop — PR Steward` — reviewers knew what to trust
 
 ## What Broke
 

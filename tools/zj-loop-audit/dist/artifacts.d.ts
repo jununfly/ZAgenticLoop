@@ -5,7 +5,7 @@ export declare const LOOP_ARTIFACTS: {
         readonly legacy: readonly [];
     };
     readonly state: {
-        readonly candidates: readonly ["zj-loop/STATE.md", "zj-loop/pr-babysitter-state.md", "zj-loop/ci-sweeper-state.md", "zj-loop/post-merge-state.md", "zj-loop/dependency-sweeper-state.md", "zj-loop/changelog-drafter-state.md", "zj-loop/issue-triage-state.md", "zj-loop/roadmap-sliced-state.md"];
+        readonly candidates: readonly ["zj-loop/STATE.md", "zj-loop/pr-steward-state.md", "zj-loop/ci-sweeper-state.md", "zj-loop/post-merge-state.md", "zj-loop/dependency-sweeper-state.md", "zj-loop/changelog-drafter-state.md", "zj-loop/issue-triage-state.md", "zj-loop/roadmap-sliced-state.md"];
     };
     readonly budget: {
         readonly primary: "zj-loop/zj-loop-budget.md";

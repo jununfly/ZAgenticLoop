@@ -5,7 +5,7 @@
 | Loop | Max runs/day | Max tokens/day | Max sub-agent spawns/run |
 |------|--------------|----------------|--------------------------|
 | Daily Triage | 2 | 100k | 0 (L1) / 2 (L2) |
-| PR Babysitter | 288 | 2M | 3 |
+| PR Steward | 288 | 2M | 3 |
 | CI Sweeper | 96 | 1M | 3 |
 | Dependency Sweeper | 4 | 500k | 3 |
 | Post-Merge Cleanup | 1 | 200k | 2 |

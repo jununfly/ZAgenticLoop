@@ -1,9 +1,9 @@
-# Multi-Loop Collision — CI Sweeper vs PR Babysitter on PR #318
+# Multi-Loop Collision — CI Sweeper vs PR Steward on PR #318
 
 ## Setup
 
 - CI Sweeper: `/loop 15m`, max 3 attempts
-- PR Babysitter: `/loop 10m`, same repo
+- PR Steward: `/loop 10m`, same repo
 - Shared branch: `fix/auth-token-refresh` on PR #318
 
 ## What Worked
@@ -14,7 +14,7 @@
 ## What Broke
 
 - CI Sweeper spawned a worktree fix at 14:02
-- PR Babysitter spawned a **different** minimal fix on the same PR at 14:07
+- PR Steward spawned a **different** minimal fix on the same PR at 14:07
 - Two commits, conflicting approaches, reviewer confused
 - Combined token spend for that PR: ~400k (normally ~80k)
 
@@ -28,4 +28,4 @@
 
 ## Lesson
 
-Action loops need a **branch lock** in state. We added collision detection to [multi-loop.md](../docs/multi-loop.md): read all pattern state files before spawning a worktree. CI Sweeper now owns red CI; PR Babysitter skips if `ci-sweeper-state.md` shows `acting_on` for that PR.
+Action loops need a **branch lock** in state. We added collision detection to [multi-loop.md](../docs/multi-loop.md): read all pattern state files before spawning a worktree. CI Sweeper now owns red CI; PR Steward skips if `ci-sweeper-state.md` shows `acting_on` for that PR.

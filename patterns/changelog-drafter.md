@@ -9,7 +9,7 @@
 - On release preparation: trigger manually or via tag webhook / GitHub Action (`on: [release, workflow_dispatch]`)
 - Weekly for slower projects
 
-This is an excellent "off-peak" or "end of sprint" loop. Low urgency compared to CI or PR babysitter.
+This is an excellent "off-peak" or "end of sprint" loop. Low urgency compared to CI or PR steward.
 
 ## Required Skills
 

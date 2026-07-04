@@ -16,7 +16,7 @@ This repository exists because of public discussion and practice by experienced 
 
 - **Boris Cherny** (Head of Claude Code at Anthropic)
   - Public statements: “I don’t prompt Claude anymore. I have loops running that prompt Claude and figuring out what to do. My job is to write loops.”
-  - Practical usage shared in the community: `/loop 5m /babysit`, `/loop 30m /slack-feedback`, `/loop /post-merge-sweeper`, `/pr-pruner`, etc.
+  - Practical usage shared in the community: scheduled PR review loops, `/loop 30m /slack-feedback`, `/loop /post-merge-sweeper`, `/pr-pruner`, etc.
   - Emphasis on turning workflows into skills + loops.
   - `/loop`, `/goal`, and `/schedule` as first-class primitives in Claude Code.
 

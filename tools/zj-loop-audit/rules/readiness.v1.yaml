@@ -120,7 +120,7 @@ assessments:
   - when:
       scoreGte: 42
     message: Early loop setup — focus on L1 state + triage before enabling actions.
-  - message: Not loop-ready — start with a starter from this repo (minimal-loop or pr-babysitter).
+  - message: Not loop-ready — start with a starter from this repo (minimal-loop or pr-steward).
 guidance:
   - when:
       not: stateFile.present

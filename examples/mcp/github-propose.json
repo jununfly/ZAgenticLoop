@@ -1,6 +1,6 @@
 {
   "name": "github-propose",
-  "description": "Read-only discovery + limited propose actions (comments, draft PRs). For PR Babysitter, Daily Triage, Changelog Drafter.",
+  "description": "Read-only discovery + limited propose actions (comments, draft PRs). For PR Steward, Daily Triage, Changelog Drafter.",
   "permissions": {
     "contents": "read",
     "issues": "read",

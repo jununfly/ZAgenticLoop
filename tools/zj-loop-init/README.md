@@ -8,7 +8,7 @@ Scaffold agentic loop working starters into your project by pattern and tool.
 
 ```bash
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-npx @jununfly/zj-loop-init . -p pr-babysitter -t claude
+npx @jununfly/zj-loop-init . -p pr-steward -t claude
 npx @jununfly/zj-loop-init . -p dependency-sweeper --dry-run
 ```
 
@@ -28,7 +28,7 @@ npm exec --offline --package=@jununfly/zj-loop-init -- zj-loop-init . --pattern 
 | Pattern | Default state file |
 |---------|-------------------|
 | `daily-triage` | `zj-loop/STATE.md` |
-| `pr-babysitter` | `zj-loop/pr-babysitter-state.md` |
+| `pr-steward` | `zj-loop/pr-steward-state.md` |
 | `ci-sweeper` | `zj-loop/ci-sweeper-state.md` |
 | `dependency-sweeper` | `zj-loop/dependency-sweeper-state.md` |
 | `post-merge-cleanup` | `zj-loop/post-merge-state.md` |

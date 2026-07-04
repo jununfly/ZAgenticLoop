@@ -35,7 +35,7 @@ Or open a PR that adds a row to the table below:
 | [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (this repo) | Daily Triage, Changelog Drafter, audit dogfood | GitHub Actions + Grok | L3 | Reference implementation — `zj-loop-audit` on every PR; readiness score 100 |
 | [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (maintainer) | Post-Merge Cleanup | Grok + GitHub Actions | L1→L2 | Off-peak scan; verifier caught doc/API drift — see [story](../stories/post-merge-cleanup-honest-win.md) |
 | [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (maintainer) | Issue Triage + Daily Triage | Grok | L1 | Issue queue feeder: propose labels only week one; pairs with morning `zj-loop/STATE.md` triage |
-| [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (maintainer) | PR Babysitter, Dependency Sweeper | Grok / Claude Code | L2 | Assisted fixes in worktrees; human gate on merges; patch-only deps |
+| [zagenticloop](https://github.com/jununfly/ZAgenticLoop) (maintainer) | PR Steward, Dependency Sweeper | Grok / Claude Code | L2 | Assisted fixes in worktrees; human gate on merges; patch-only deps |
 
 *Your project here — see [CONTRIBUTING.md](../CONTRIBUTING.md).*
 

@@ -36,5 +36,5 @@ Append one JSON object to `zj-loop/zj-loop-run-log.md`:
 ## Rules
 
 - Never exceed `max sub-agent spawns/run` from `zj-loop/zj-loop-budget.md`.
-- High-cadence patterns (CI Sweeper, PR Babysitter) **must** early-exit when nothing is actionable.
+- High-cadence patterns (CI Sweeper, PR Steward) **must** early-exit when nothing is actionable.
 - On self-throttle, append a line to `zj-loop/zj-loop-budget.md` under **Alerts This Period**.

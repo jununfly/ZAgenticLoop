@@ -1,8 +1,8 @@
-# Loop Configuration — PR Babysitter
+# Loop Configuration — PR Steward
 
 | Pattern | Cadence | Status |
 |---------|---------|--------|
-| PR Babysitter | 5m (work hours) | L2 assisted |
+| PR Steward | 5m (work hours) | L2 assisted |
 
 ## Limits
 
@@ -17,4 +17,4 @@
 
 ## Pattern
 
-[pr-babysitter.md](../../patterns/pr-babysitter.md)
+[pr-steward.md](../../patterns/pr-steward.md)

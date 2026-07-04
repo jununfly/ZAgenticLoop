@@ -1,4 +1,4 @@
-# PR Babysitter — Codex App
+# PR Steward — Codex App
 
 ## Automation
 
@@ -13,7 +13,7 @@
 For open PRs on this repo (team-authored or label loop-watch):
 
 1. Run $zj-pr-review-triage
-2. Update pr-babysitter-state.md
+2. Update pr-steward-state.md
 3. If CI red or actionable review comment AND attempts < 3:
    - Open worktree
    - Implementer: $zj-minimal-fix

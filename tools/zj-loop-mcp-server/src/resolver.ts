@@ -9,7 +9,7 @@ import {
 
 const STATE_FILE_CANDIDATES = [
   'zj-loop/STATE.md',
-  'zj-loop/pr-babysitter-state.md',
+  'zj-loop/pr-steward-state.md',
   'zj-loop/ci-sweeper-state.md',
   'zj-loop/post-merge-state.md',
   'zj-loop/dependency-sweeper-state.md',
