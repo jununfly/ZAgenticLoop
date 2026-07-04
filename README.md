@@ -18,6 +18,7 @@ It gives you a method, production patterns, starter kits, and small CLIs for mov
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Integrate loop knowledge through MCP | [zj-loop-mcp-server](tools/zj-loop-mcp-server/) |
+| Turn a PRD/plan issue into a roadmap run | Comment `/zj-loop start roadmap-sliced-development` as a maintainer/collaborator |
 
 ## Product Experience Map
 
@@ -106,12 +107,35 @@ npx @jununfly/zj-loop-audit . --suggest
 
 Phased rollout: **L1 report -> L2 assisted fixes -> L3 unattended**. Do not skip the human-read step just because the loop is automated.
 
+## From Plan Intake To Roadmap
+
+When an issue is really a PRD, plan, or multi-slice initiative, keep Daily Triage
+as discovery and use an explicit activation comment to start Roadmap-Sliced
+Development:
+
+```text
+/zj-loop start roadmap-sliced-development
+```
+
+First-version rules:
+
+- Only maintainers/collaborators may activate.
+- The command takes no parameters.
+- `zj-loop-triage` may recommend the command, but it does not create branches,
+  roadmap files, commits, or activation requests.
+- `zj-loop-activate` owns authorization, duplicate detection, and append-only
+  activation comments.
+- Roadmap-Sliced Development consumes an explicit issue/request id and resumes
+  from roadmap state after consumption.
+
+See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patterns/roadmap-sliced-development.md), and [Triage Architecture](docs/designs/triage-architecture.md).
+
 ## Tool Packages
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
 | `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.1` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, state files, budget, and run logs | `0.1.4` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, state files, budget, and run logs | `0.1.5` |
 | `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.2` |
 | `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.4` |
 | `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state and config | `0.1.2` |
