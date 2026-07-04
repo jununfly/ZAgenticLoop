@@ -56,6 +56,32 @@ Fields the loop must update every run:
 6. Prune resolved/merged items from state.
 7. Record post-run critique in state: false positives, repeated items, re-prioritized or dropped items, and one adjustment for next run.
 
+## Plan Intake Candidates
+
+Daily Triage may discover GitHub issues that are really PRDs, plans, or
+multi-slice initiative requests. It should classify those as plan intake
+candidates, but it must not start Roadmap-Sliced Development by changing labels,
+writing `zj-loop/STATE.md`, creating branches, or creating roadmap files.
+
+The activation path is an explicit maintainer/collaborator issue comment:
+
+```text
+/zj-loop start roadmap-sliced-development
+```
+
+Current first-version constraints:
+
+- The command is parameterless; roadmap id and branch naming belong to
+  Roadmap-Sliced Development when it consumes the request.
+- Only `roadmap-sliced-development` is allowlisted.
+- Daily Triage recommends the command only when a candidate is first discovered
+  or its activation lifecycle status changes.
+- If a pending, consumed, failed, duplicate, denied, or ambiguous activation
+  comment already exists, report that status instead of repeating the same
+  recommendation.
+- Labels remain routing metadata. `zj-loop/STATE.md` remains triage memory, not
+  an activation queue.
+
 ## Post-Run Critique
 
 After each Daily Triage run, record:

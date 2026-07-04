@@ -137,6 +137,50 @@ Expected-red contract tests are not stop conditions when the leaf notes or
 commit intent identify them as expected. They become stop conditions only if the
 leaf's final verification gate remains red.
 
+## Activation Request Contract
+
+Roadmap-Sliced Development may be started manually by a human, or by consuming a
+pending activation request that was created from an authorized issue comment.
+When the trigger comes from plan intake, the GitHub issue remains the canonical
+PRD/plan record and the activation lifecycle lives in append-only structured
+issue comments.
+
+The accepted first-version command is:
+
+```text
+/zj-loop start roadmap-sliced-development
+```
+
+Activation rules:
+
+- Labels are routing metadata, not lifecycle state.
+- `zj-loop/STATE.md` is Daily Triage memory, not an activation queue.
+- `zj-loop-activate` owns slash command parsing, GitHub permission checks,
+  allowlist checks, duplicate detection, and request/denial comments.
+- The slash command creates only an activation request. It does not create a
+  branch, roadmap, commits, PR, or implementation work.
+- Roadmap-Sliced Development consumes only an explicitly provided issue id or
+  request id by default. It must not scan all issues as a global work queue.
+- Duplicate commands while a pending request exists append a duplicate response
+  that references the existing `request_id`.
+- Failed activation consumption is terminal for that request. Retry requires a
+  new activation request.
+- Once a request is consumed, later branch, roadmap, slice, verification, or
+  commit failures are resumed inside the Roadmap-Sliced lifecycle and do not
+  require reactivation.
+- Lifecycle comments are append-only; do not edit the original request comment.
+
+The consumed comment must include enough resume anchors for a human or agent to
+continue without reactivation:
+
+- `roadmap_branch`
+- `roadmap_file`
+- `roadmap_view`
+- `next_action`
+
+If lifecycle parsing is missing, inconsistent, or ambiguous, fail closed and
+require human review before creating or consuming another request.
+
 ## Roadmap Write Safety
 
 Roadmap JSON is the source of truth. Markdown is a generated view. Product

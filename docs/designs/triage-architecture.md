@@ -28,6 +28,7 @@ same thing.
 | Backlog health | `patterns/issue-triage.md` | Discovering, deduplicating, prioritizing, and proposing labels for issues/discussions. | Daily operational attention or formal issue lifecycle transitions. |
 | Daily attention | `patterns/daily-triage.md` | Combining CI, commits, chat, state, and issue-triage summaries into today's attention picture. | Full issue-body rescans or direct issue lifecycle decisions. |
 | Signal summarization | `zj-loop-triage` | Summarizing daily signals into High Priority, Watch, Noise, and State Updates. | Applying labels, closing issues, fixing code, or inventing architecture work. |
+| Plan activation | `zj-loop-activate` | Converting an authorized slash command into an auditable activation request for an allowlisted pattern. | Discovering plans, analyzing PRD content, creating branches, roadmaps, commits, or implementation work. |
 | Issue decision | `zj-triage` | Moving a specific issue through a role-based state machine and producing durable handoffs. | Continuous backlog scanning or daily operational dashboards. |
 
 The intended flow is:
@@ -43,6 +44,11 @@ Daily Triage Pattern
 
 zj-loop-triage
   -> performs the Daily Triage signal summarization step
+
+zj-loop-activate
+  -> consumes explicit /zj-loop start commands
+  -> writes append-only activation lifecycle comments
+  -> hands off to Roadmap-Sliced Development without executing it
 
 zj-triage
   -> handles a specific issue when a formal state decision or durable handoff is needed
@@ -103,6 +109,13 @@ Daily Triage may consume `zj-loop/issue-triage-state.md`, but it should not
 duplicate full issue bodies or redo full issue scoring. It should reference
 issue numbers and summarize only the signal needed for daily attention.
 
+Plan intake activation is not stored in either triage state file. If Daily
+Triage finds a GitHub issue that looks like a PRD/plan, it may report it as a
+plan intake candidate and recommend `/zj-loop start roadmap-sliced-development`
+when newly discovered or when activation status changes. The activation
+lifecycle itself is derived from append-only structured GitHub issue comments.
+Labels remain routing metadata, not activation state.
+
 ## Side-Effect Boundaries
 
 Triage loops should be conservative by default.
@@ -117,6 +130,12 @@ Formal issue lifecycle transitions require stricter handling. Closing an issue,
 marking `wontfix`, writing a `ready-for-agent` brief, or writing a
 `ready-for-human` brief should follow `zj-triage` rules or require explicit
 human confirmation.
+
+Plan activation is a separate side-effect lane: `zj-loop-activate` may append
+request, duplicate, denied, unsupported-pattern, or failed activation comments
+when invoked by automation or a maintainer. It must not create roadmap process
+artifacts or start implementation; Roadmap-Sliced Development owns consumption
+and execution after an explicit issue id or request id is provided.
 
 ## Handoff Rules
 
@@ -146,6 +165,20 @@ Use Daily Triage when the question is:
 - Did the issue backlog, CI, commits, chat, or prior state create a new daily
   priority?
 - Should a small candidate fix enter verifier-backed L2 handling?
+
+Use `zj-loop-activate` when the question is:
+
+- Did this issue comment contain a supported `/zj-loop start ...` command?
+- Is the commenter authorized to create an activation request?
+- Is there already a pending activation request for this issue and pattern?
+- Which structured activation lifecycle comment should be appended?
+
+Use Roadmap-Sliced Development when the question is:
+
+- Should an explicitly provided activation request be consumed?
+- What branch, roadmap file, roadmap view, and next action resume anchors should
+  be recorded?
+- How should the requested PRD/plan be sliced into executable roadmap nodes?
 
 ## Operational Refinement Rules
 

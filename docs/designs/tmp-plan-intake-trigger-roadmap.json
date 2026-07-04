@@ -1,0 +1,223 @@
+{
+  "title": "Plan Intake Trigger Design",
+  "description": "Design how GitHub Issue PRD/plan intake is discovered by Daily Triage and starts Roadmap-Sliced Development without overloading labels or state.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Plan Intake Trigger Design",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [],
+      "notes": "All child leaves completed. Durable contract absorbed into Daily Triage pattern, Roadmap-Sliced Development pattern, zj-loop-activate/zj-loop-triage skills, and deterministic activation contract tests. Closeout/deletion remains separate when requested."
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Plan intake discovery and activation contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Should labels and STATE trigger status drive roadmap activation?",
+          "answer": "No. Labels are routing metadata and Daily Triage state is report memory; neither should become the activation state machine.",
+          "note": "Use GitHub Issue as the canonical plan intake record, Daily Triage as discovery/classification, and a separate explicit activation signal to start Roadmap-Sliced Development."
+        },
+        {
+          "q": "Should activation use an issue comment slash command by default?",
+          "answer": "Yes. Use an issue comment slash command as the default activation signal.",
+          "note": "The default activation event is a maintainer comment such as /zj-loop start roadmap-sliced-development. Labels remain routing metadata, and zj-loop/STATE.md remains triage memory rather than an execution queue."
+        },
+        {
+          "q": "Who may issue the roadmap activation slash command?",
+          "answer": "Only repository maintainers or collaborators may activate Roadmap-Sliced Development.",
+          "note": "Issue authors can submit PRD/plan intake records, but activation is execution authorization because it can create branches, process roadmaps, commits, and PR handoff work."
+        },
+        {
+          "q": "How should unauthorized activation commands be handled?",
+          "answer": "Reject explicitly and leave an auditable comment.",
+          "note": "Do not silently ignore unauthorized activation. The response should explain that only maintainers or collaborators may start Roadmap-Sliced Development, while the issue may still be classified as a plan candidate by Daily Triage."
+        },
+        {
+          "q": "What should an authorized slash command create?",
+          "answer": "Only create an activation request for Roadmap-Sliced Development to consume on its next run.",
+          "note": "The slash command handler must not create branches, roadmap files, commits, or execute leaf slices. It only records a durable, auditable request to start Roadmap-Sliced Development; implementation work remains the Roadmap-Sliced Development pattern's responsibility."
+        },
+        {
+          "q": "Where should the activation request be stored?",
+          "answer": "Store the activation request as a structured GitHub Issue comment, not in zj-loop/STATE.md or labels.",
+          "note": "The GitHub Issue is the canonical plan intake record. Labels remain routing metadata; zj-loop/STATE.md remains Daily Triage memory. A structured issue comment preserves the activation event beside the PRD/plan and gives Roadmap-Sliced Development a clear consumption target."
+        },
+        {
+          "q": "Should the slash command syntax be generic or roadmap-sliced only?",
+          "answer": "Use a generic command shape, but initially allowlist only roadmap-sliced-development.",
+          "note": "Command syntax should be /zj-loop start <pattern-id>. The first and only accepted pattern id is roadmap-sliced-development; unsupported pattern ids are rejected with a clear comment. This preserves future extension without prematurely enabling arbitrary pattern activation."
+        }
+      ],
+      "notes": "Durable docs updated: Daily Triage discovers plan intake candidates and recommends the slash command only on first discovery/status change; Roadmap-Sliced owns activation consumption. Verification: npm run test:activation-contract; git diff --check."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Activation loop prevention contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "How should the process avoid infinite activation loops?",
+          "answer": "Use an idempotent activation lifecycle anchored in issue comments: one request id, one pending request, one consumed marker, and explicit duplicate handling.",
+          "note": "Daily Triage may recommend activation but must not recreate requests. The slash command handler must not create duplicate pending requests for the same issue and pattern. Roadmap-Sliced Development must mark a request consumed before or as part of starting work, and later runs must ignore consumed requests."
+        },
+        {
+          "q": "How should failed activation consumption be retried?",
+          "answer": "A request may enter failed as a terminal state; retry must create a new activation request.",
+          "note": "This preserves audit clarity and prevents a bad request from being automatically consumed repeatedly. The failure comment should include the reason, next safe action, and whether a maintainer should issue a new slash command."
+        },
+        {
+          "q": "Should consumption update the original activation request comment?",
+          "answer": "No. Consumption and failure must append new comments and never edit the original request comment.",
+          "note": "Issue comments form an append-only audit log. The request comment preserves the authorization event; consumed or failed comments record later lifecycle events with the same request_id."
+        },
+        {
+          "q": "How should duplicate slash commands be handled while a pending request already exists?",
+          "answer": "Return duplicate and reference the existing pending request id.",
+          "note": "For the same issue and pattern, at most one pending activation request may exist. A repeated slash command should append an auditable duplicate response, point to the existing request_id, and avoid creating a new pending request."
+        },
+        {
+          "q": "How should Roadmap-Sliced Development discover activation requests to consume?",
+          "answer": "Consume only an explicitly provided issue id or request id by default; automation may pass that target.",
+          "note": "Roadmap-Sliced Development should not scan all repository issue comments as a global queue. This keeps execution focused, avoids accidental multi-request consumption, and makes each run traceable to a specific activation request."
+        },
+        {
+          "q": "How should current activation state be derived?",
+          "answer": "Derive current state from append-only lifecycle comments grouped by request_id, not from labels or mutable request comments.",
+          "note": "For each request_id, parse structured lifecycle comments in issue-comment order. The initial request remains request_status: pending; current state is computed from later consumed or failed comments. Duplicate and denied comments are audit events and do not mutate another request's state. If lifecycle parsing is inconsistent or ambiguous, fail closed and require human review."
+        }
+      ],
+      "notes": "Activation loop prevention contract implemented in docs and deterministic tests: append-only lifecycle comments, duplicate pending handling, terminal failed requests, consumed state, and ambiguous-state fail-closed behavior. Verification: npm run test:activation-contract; git diff --check."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Skill ownership and contract updates",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Is a new skill needed for plan activation, and do existing skills need updates?",
+          "answer": "Yes, add a small dedicated activation skill or command contract; also update zj-loop-triage and Roadmap-Sliced Development contracts.",
+          "note": "zj-loop-triage should only discover plan intake candidates and recommend the slash command. A dedicated activation layer should parse /zj-loop start <pattern-id>, authorize the commenter, reject unsupported patterns, create activation request comments, and handle duplicates. Roadmap-Sliced Development should consume pending activation requests and append consumed or failed lifecycle comments."
+        },
+        {
+          "q": "Should the dedicated activation skill/contract be named zj-loop-activate?",
+          "answer": "Yes. Name the dedicated activation skill or contract zj-loop-activate.",
+          "note": "zj-loop-activate handles activation events: slash command parsing, authorization, pattern allowlist checks, duplicate pending detection, activation request comments, and auditable rejection comments. It does not analyze PRD content or execute Roadmap-Sliced Development."
+        },
+        {
+          "q": "Should zj-loop-activate be user-invocable or automation-internal?",
+          "answer": "Support both, but make automation the primary path.",
+          "note": "GitHub Action or equivalent automation should listen to issue_comment and apply the zj-loop-activate contract. Maintainers may manually invoke the skill for a specific issue comment, but user-facing docs should describe the slash command rather than requiring users to understand skill internals."
+        },
+        {
+          "q": "Must the activation request comment schema be fixed?",
+          "answer": "Yes. The activation request schema must be fixed as a shared contract between zj-loop-activate and Roadmap-Sliced Development.",
+          "note": "The request comment is append-only and remains status: pending. Later consumed, failed, duplicate, or denied outcomes are represented by separate lifecycle comments linked by request_id."
+        },
+        {
+          "q": "Must activation request schema include command_comment_id?",
+          "answer": "Yes. command_comment_id is required.",
+          "note": "The activation request is the system's response to an authorization comment. command_comment_id links the request back to the original slash command comment so the audit trail can prove who authorized what and when."
+        },
+        {
+          "q": "Should activation request schema include command_text?",
+          "answer": "Yes. command_text is required or at least strongly required in the fixed schema.",
+          "note": "command_text captures the slash command text as parsed at activation time. This prevents later edits to the original GitHub comment from changing the audit meaning of the activation request."
+        },
+        {
+          "q": "Should activation request schema include the requester's permission snapshot?",
+          "answer": "Yes. Include requested_by_permission in the fixed schema.",
+          "note": "The permission snapshot records the authorization basis at request creation time, such as maintainer or collaborator. This keeps the audit trail interpretable even if repository permissions change later."
+        },
+        {
+          "q": "Should the first version of /zj-loop start allow parameters?",
+          "answer": "No. The first version allows only the parameterless command /zj-loop start roadmap-sliced-development.",
+          "note": "Roadmap id generation belongs to Roadmap-Sliced Development at consumption time. Disallowing parameters avoids early security, idempotency, naming, and injection complexity in zj-loop-activate."
+        },
+        {
+          "q": "Should Daily Triage repeatedly recommend activation for the same plan candidate?",
+          "answer": "No. Recommend only on first discovery or state change; later runs report the existing status.",
+          "note": "Daily Triage should avoid becoming noisy. It recommends the slash command only when a candidate is first discovered or when activation lifecycle status changes. If pending, consumed, failed, or unchanged, it reports the existing request/roadmap status instead of repeating the same high-priority recommendation."
+        },
+        {
+          "q": "Should all lifecycle comment schemas be fixed?",
+          "answer": "Yes. Fix schemas for activation-request, activation-consumed, activation-failed, activation-denied, activation-duplicate, and unsupported-pattern comments.",
+          "note": "zj-loop-activate and Roadmap-Sliced Development need a shared parseable contract for every append-only lifecycle event, not only the initial request. Each lifecycle comment should include kind, version, request_id when applicable, source_issue, pattern, actor/time fields, and a machine-readable reason or outcome."
+        },
+        {
+          "q": "Which GitHub permissions are allowed to activate Roadmap-Sliced Development?",
+          "answer": "Allow admin, maintain, and write; reject triage, read, none, and unknown.",
+          "note": "GitHub's permission vocabulary should be used directly. This maps maintainer/collaborator authorization to deterministic API values and avoids ambiguity around the word collaborator."
+        }
+      ],
+      "notes": "Added zj-loop-activate skill/template as the activation boundary; updated zj-loop-triage skill/template and triage architecture so triage discovers plan candidates and recommends slash-command activation without starting implementation. Verification: npm run test:activation-contract; npm run test:registry; npm run test:tool-gates; git diff --check."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Roadmap-Sliced failure handling contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "How should failures after activation be classified?",
+          "answer": "Separate activation-consumption failure from Roadmap-Sliced execution failure.",
+          "note": "If Roadmap-Sliced Development cannot validate or consume the activation request, append activation-failed and require a new activation request for retry. If it successfully consumes the request and then fails during branch, roadmap creation, verification, commit, or slice execution, the activation request remains consumed; failure is recorded in roadmap state, issue comments, and any created branch/process artifacts."
+        },
+        {
+          "q": "After a consumed request, should Roadmap-Sliced execution failures require a new activation?",
+          "answer": "No. Allow resume within the Roadmap-Sliced lifecycle; do not require a new activation.",
+          "note": "Activation authorizes starting the initiative. Once consumed, branch/roadmap/slice failures belong to Roadmap-Sliced Development state and should be resumed through roadmap state, branch, and issue comments rather than creating another activation request."
+        },
+        {
+          "q": "What resume anchors must be written when a request is consumed?",
+          "answer": "The consumed comment must include Roadmap-Sliced resume anchors: roadmap_branch, roadmap_file, roadmap_view, and next_action.",
+          "note": "Once activation is consumed, later failures resume through Roadmap-Sliced Development. The consumed lifecycle event therefore needs enough pointers for an agent or human to find the branch, process roadmap, human-readable roadmap view, and next safe action without re-activating."
+        }
+      ],
+      "notes": "Documented failure boundary: activation-consumption failure appends failed and requires a new request; failures after consumed resume through Roadmap-Sliced branch/roadmap state without reactivation. Verification: npm run test:activation-contract; git diff --check."
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Deterministic activation contract script",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Which activation behavior should be saved as deterministic script logic?",
+          "answer": "Save pure activation contract logic as deterministic scripts: command parsing, permission allowlist, structured comment parsing, current state derivation, duplicate detection, request comment creation, and consumed resume-anchor comment creation.",
+          "note": "Do not script GitHub API side effects in this slice. The deterministic module is scripts/zj-loop-activation-contract.mjs with node:test coverage in scripts/zj-loop-activation-contract.test.mjs."
+        }
+      ],
+      "notes": "Implemented deterministic activation contract script and tests, including request/consumed/failed/denied/duplicate/unsupported-pattern lifecycle comment builders and state derivation. Verification: npm run test:activation-contract; git diff --check."
+    }
+  },
+  "metadata": {
+    "created": "2026-07-04 23:06:14",
+    "updated": "2026-07-05 00:39:21",
+    "md_file": "docs/designs/tmp-plan-intake-trigger-roadmap.md"
+  }
+}

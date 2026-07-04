@@ -37,6 +37,12 @@ Produce a markdown report with these sections:
 ### 4. State Updates
 - Any facts the loop should remember for the next run (e.g. "PR #1234 now has 2 approvals")
 
+### 5. Plan Intake Candidates
+- GitHub issues that look like a PRD, plan, or multi-slice initiative
+- Existing activation lifecycle status, if structured `zj-loop` comments are visible
+- Suggested maintainer action only when first discovered or status changed:
+  `/zj-loop start roadmap-sliced-development`
+
 ## Rules
 
 - Be brutally concise. The loop (and the human reading the state) will thank you.
@@ -44,3 +50,6 @@ Produce a markdown report with these sections:
 - When in doubt, put it in Watch or Noise rather than creating work.
 - Never propose architectural overhauls during triage — this skill is for signal, not invention.
 - Respect the project's existing skills and conventions (they will be provided in context).
+- Do not start Roadmap-Sliced Development from triage. Do not create branches, roadmap files, or activation request comments.
+- Treat labels as routing metadata and state files as triage memory. Activation state comes from structured GitHub issue comments.
+- Recommend `/zj-loop start roadmap-sliced-development` only on first candidate discovery or activation status change; otherwise report the existing status.
