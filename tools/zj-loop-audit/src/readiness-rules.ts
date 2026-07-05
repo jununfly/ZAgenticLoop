@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import type { Finding, LoopSignals } from './auditor.js';
+import type { Finding, FindingCategory, LoopSignals, NextStep } from './auditor.js';
 
 export type ReadinessLevel = 'L0' | 'L1' | 'L2' | 'L3';
 
@@ -119,7 +119,10 @@ export function evaluateReadinessGuidance(
     if (rule.finding) {
       findings.push({
         level: rule.finding.level,
+        category: rule.finding.category,
         message: renderTemplate(rule.finding.message, signals),
+        affectsScore: rule.finding.affectsScore,
+        nextSteps: rule.finding.nextSteps.map((step) => renderNextStep(step, signals)),
       });
     }
 
@@ -181,6 +184,21 @@ function renderTemplate(template: string, signals: LoopSignals): string {
   });
 }
 
+function renderNextStep(step: NextStep, signals: LoopSignals): NextStep {
+  if ('command' in step) {
+    return {
+      ...step,
+      label: renderTemplate(step.label, signals),
+      command: renderTemplate(step.command, signals),
+    };
+  }
+
+  return {
+    ...step,
+    label: renderTemplate(step.label, signals),
+  };
+}
+
 function clampScore(score: number): number {
   return Math.min(100, Math.max(0, score));
 }
@@ -192,4 +210,50 @@ function assertPolicy(policy: ReadinessPolicy): void {
   if (!Array.isArray(policy.levels)) throw new Error('Readiness policy levels must be an array.');
   if (!Array.isArray(policy.assessments)) throw new Error('Readiness policy assessments must be an array.');
   if (policy.guidance !== undefined && !Array.isArray(policy.guidance)) throw new Error('Readiness policy guidance must be an array.');
+  for (const [index, rule] of (policy.guidance ?? []).entries()) {
+    if (!rule.finding) continue;
+    assertFinding(rule.finding, `guidance[${index}].finding`);
+  }
+}
+
+function assertFinding(finding: Finding, path: string): void {
+  if (!['ok', 'warn', 'fail'].includes(finding.level)) {
+    throw new Error(`${path}.level must be ok, warn, or fail.`);
+  }
+  if (!isFindingCategory(finding.category)) {
+    throw new Error(`${path}.category must be pass, blocker, readiness-gap, hardening, or future-tooling.`);
+  }
+  if (typeof finding.message !== 'string' || finding.message.length === 0) {
+    throw new Error(`${path}.message must be a non-empty string.`);
+  }
+  if (typeof finding.affectsScore !== 'boolean') {
+    throw new Error(`${path}.affectsScore must be a boolean.`);
+  }
+  if (!Array.isArray(finding.nextSteps)) {
+    throw new Error(`${path}.nextSteps must be an array.`);
+  }
+  for (const [index, step] of finding.nextSteps.entries()) {
+    assertNextStep(step, `${path}.nextSteps[${index}]`);
+  }
+}
+
+function isFindingCategory(value: unknown): value is FindingCategory {
+  return value === 'pass' ||
+    value === 'blocker' ||
+    value === 'readiness-gap' ||
+    value === 'hardening' ||
+    value === 'future-tooling';
+}
+
+function assertNextStep(step: NextStep, path: string): void {
+  if (!step || typeof step !== 'object') throw new Error(`${path} must be an object.`);
+  if (!['command', 'manual-review', 'validate', 'info'].includes(step.kind)) {
+    throw new Error(`${path}.kind must be command, manual-review, validate, or info.`);
+  }
+  if (typeof step.label !== 'string' || step.label.length === 0) {
+    throw new Error(`${path}.label must be a non-empty string.`);
+  }
+  if ((step.kind === 'command' || step.kind === 'validate') && typeof step.command !== 'string') {
+    throw new Error(`${path}.command must be a string for ${step.kind} steps.`);
+  }
 }

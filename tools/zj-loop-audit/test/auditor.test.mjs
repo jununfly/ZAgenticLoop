@@ -257,7 +257,13 @@ guidance:
   - when: stateFile.present
     finding:
       level: ok
+      category: pass
       message: "State files: {stateFile.paths}"
+      affectsScore: false
+      nextSteps:
+        - kind: validate
+          label: "Review {stateFile.paths}"
+          command: "test -f zj-loop/STATE.md"
     recommendations:
       - "Review {stateFile.paths}"
 `);
@@ -267,7 +273,21 @@ guidance:
     policy,
   );
   assert.deepEqual(result, {
-    findings: [{ level: 'ok', message: 'State files: zj-loop/STATE.md, zj-loop/ci-sweeper-state.md' }],
+    findings: [
+      {
+        level: 'ok',
+        category: 'pass',
+        message: 'State files: zj-loop/STATE.md, zj-loop/ci-sweeper-state.md',
+        affectsScore: false,
+        nextSteps: [
+          {
+            kind: 'validate',
+            label: 'Review zj-loop/STATE.md, zj-loop/ci-sweeper-state.md',
+            command: 'test -f zj-loop/STATE.md',
+          },
+        ],
+      },
+    ],
     recommendations: ['Review zj-loop/STATE.md, zj-loop/ci-sweeper-state.md'],
   });
 });

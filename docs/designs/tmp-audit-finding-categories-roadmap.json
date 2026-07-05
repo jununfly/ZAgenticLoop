@@ -1,0 +1,134 @@
+{
+  "title": "Audit Finding Categories",
+  "description": "Resolve issue #4 by clarifying zj-loop-audit finding categories, suggestion semantics, and optional scaffolding boundaries.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Audit finding category UX",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3"
+      ],
+      "decisions": [],
+      "notes": "Issue #4: make zj-loop-audit warnings explicit by category so 100/100 L3 does not conflict with optional hardening/future-tooling notes."
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Finding category model",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Should audit finding use structured categories instead of naked warn/fail semantics?",
+          "answer": "Yes. Keep display severity as ok/warn/fail for compatibility, and add product-contract category: pass, blocker, readiness-gap, hardening, future-tooling.",
+          "note": "This resolves the trust mismatch where 100/100 L3 can still show optional notes without implying score leakage."
+        },
+        {
+          "q": "How should missing docs/safety.md be categorized by default?",
+          "answer": "Hardening by default.",
+          "note": "It is recommended project policy documentation, not a baseline readiness blocker. It may upgrade only when the project enables higher-risk automation such as auto-merge or sensitive production surfaces."
+        },
+        {
+          "q": "How should missing patterns/registry.yaml be categorized by default?",
+          "answer": "Future tooling by default.",
+          "note": "It supports machine-readable pattern indexing and reusable pattern publication, but ordinary loop readiness does not require a project-local pattern registry."
+        },
+        {
+          "q": "Can audit JSON output make finding.category a required breaking-change field?",
+          "answer": "Yes.",
+          "note": "This is acceptable in 0.x. Keep level for display compatibility, but machine consumers should use category. Non-pass findings should also expose affectsScore and actionable next-step data."
+        },
+        {
+          "q": "Should findings expose one next string or structured nextSteps?",
+          "answer": "Use structured nextSteps arrays, not a single next string.",
+          "note": "Each next step can distinguish command, manual-review, validation, or informational action. --suggest renders these for humans; JSON consumers use nextSteps directly."
+        }
+      ],
+      "notes": "Commit intent: add structured audit finding category model. Completed: Finding now includes category/affectsScore/nextSteps; readiness policy guidance requires those fields; nextSteps support template rendering; tests cover the structured contract. Verification: npm test in tools/zj-loop-audit passed."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Category-specific suggestion output",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Should --suggest remain a flat action list or group actions by category?",
+          "answer": "Group suggestions by finding category.",
+          "note": "Each non-pass finding should explain whether it affects score/level and provide either an exact next command or an explicit manual-policy explanation."
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Incremental init scaffolding",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Should zj-loop-init add incremental --add safety / --add pattern-registry scaffolding?",
+          "answer": "Yes, add incremental scaffolding.",
+          "note": "The previous recommendation to defer is superseded by the human decision. Keep artifact semantics explicit so safety remains review-required policy and registry remains optional unless the repo publishes reusable patterns."
+        },
+        {
+          "q": "Should zj-loop-init --add support only one artifact or multi-select?",
+          "answer": "Support multi-select in the first version.",
+          "note": "The human wants one-step scaffolding. Accepted forms should allow adding safety and pattern-registry together while keeping each artifact's risk semantics visible in output."
+        },
+        {
+          "q": "Should --add support aggregate aliases such as all or recommended?",
+          "answer": "No. Do not support all/recommended/category aliases in the first version.",
+          "note": "Only explicit allowlisted artifacts are accepted, such as safety, pattern-registry, or safety,pattern-registry. This preserves category semantics and prevents unwanted project layout pollution."
+        },
+        {
+          "q": "How should --add handle existing target files?",
+          "answer": "Default no overwrite: output skipped plus next step; also add --force for explicit overwrite.",
+          "note": "Skipped output must explain why the file was not overwritten. --force is allowed but should be explicit and auditable, especially for policy files such as docs/safety.md."
+        },
+        {
+          "q": "When --force is used, should init overwrite files or write .new/.example sidecars?",
+          "answer": "Overwrite the target file. Do not write .new sidecars.",
+          "note": "The force flag should mean force. Safety comes from default no-overwrite, explicit --force, and strong output warnings such as overwritten plus review next step."
+        },
+        {
+          "q": "Where should loop safety policy be scaffolded and stored canonically?",
+          "answer": "Use zj-loop/zj-loop-safety.md as the canonical path, and migrate existing docs/safety.md or safety.md usage to that path.",
+          "note": "Audit may need compatibility guidance during transition, but the repository and init scaffolding should converge on the zj-loop/ prefixed runtime policy location."
+        },
+        {
+          "q": "Should audit/MCP/goal-audit keep recognizing legacy safety paths docs/safety.md or safety.md?",
+          "answer": "No. Do not keep compatibility recognition for legacy safety paths.",
+          "note": "Canonical loop safety policy is zj-loop/zj-loop-safety.md. Existing docs/safety.md or safety.md usage should be migrated rather than treated as equivalent loop safety evidence."
+        },
+        {
+          "q": "Should SECURITY.md count as loop safety policy evidence?",
+          "answer": "No.",
+          "note": "SECURITY.md is security reporting/disclosure policy. It must not substitute for zj-loop/zj-loop-safety.md, which is the loop runtime safety policy."
+        },
+        {
+          "q": "Should patterns/registry.yaml also move under zj-loop/?",
+          "answer": "No. Keep patterns/registry.yaml.",
+          "note": "The registry is reusable pattern catalog metadata, not loop runtime state or policy. Only safety policy moves to zj-loop/zj-loop-safety.md."
+        }
+      ],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-05 20:06:37",
+    "updated": "2026-07-05 21:52:06",
+    "md_file": "docs/designs/tmp-audit-finding-categories-roadmap.md"
+  }
+}
