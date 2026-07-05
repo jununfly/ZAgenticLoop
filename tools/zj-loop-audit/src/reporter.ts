@@ -1,4 +1,4 @@
-import type { AuditResult } from './auditor.js';
+import type { AuditResult, Finding, FindingCategory, NextStep } from './auditor.js';
 
 const LEVEL_BADGE_COLORS: Record<AuditResult['level'], string> = {
   L0: '6e7681',
@@ -8,6 +8,16 @@ const LEVEL_BADGE_COLORS: Record<AuditResult['level'], string> = {
 };
 
 const SHOWCASE_URL = 'https://jununfly.github.io/ZAgenticLoop/';
+
+const CATEGORY_LABELS: Record<FindingCategory, string> = {
+  pass: 'Pass',
+  blocker: 'Blockers',
+  'readiness-gap': 'Readiness gaps',
+  hardening: 'Hardening',
+  'future-tooling': 'Future tooling',
+};
+
+const CATEGORY_ORDER: FindingCategory[] = ['blocker', 'readiness-gap', 'hardening', 'future-tooling', 'pass'];
 
 /** Markdown badge for README — paste output from `zj-loop-audit . --badge`. */
 export function formatBadge(r: AuditResult): string {
@@ -30,9 +40,14 @@ export function formatHuman(r: AuditResult): string {
   lines.push(r.assessment);
   lines.push('');
   lines.push('Findings:');
-  for (const f of r.findings) {
-    const icon = f.level === 'ok' ? '✓' : f.level === 'warn' ? '!' : '✗';
-    lines.push(`  ${icon} ${f.message}`);
+  for (const category of CATEGORY_ORDER) {
+    const findings = findingsByCategory(r.findings, category);
+    if (!findings.length) continue;
+    lines.push(`  ${CATEGORY_LABELS[category]}:`);
+    for (const f of findings) {
+      const icon = f.level === 'ok' ? '✓' : f.level === 'warn' ? '!' : '✗';
+      lines.push(`    ${icon} ${f.message} (${formatScoreImpact(f)})`);
+    }
   }
   if (r.recommendations.length) {
     lines.push('');
@@ -69,8 +84,15 @@ export function formatMarkdown(r: AuditResult): string {
   lines.push('');
   lines.push('## Findings');
   lines.push('');
-  for (const f of r.findings) {
-    lines.push(`- **${f.level}**: ${f.message}`);
+  for (const category of CATEGORY_ORDER) {
+    const findings = findingsByCategory(r.findings, category);
+    if (!findings.length) continue;
+    lines.push(`### ${CATEGORY_LABELS[category]}`);
+    lines.push('');
+    for (const f of findings) {
+      lines.push(`- **${f.level}** (${formatScoreImpact(f)}): ${f.message}`);
+    }
+    lines.push('');
   }
   if (r.recommendations.length) {
     lines.push('');
@@ -81,6 +103,57 @@ export function formatMarkdown(r: AuditResult): string {
     }
   }
   return lines.join('\n');
+}
+
+export function formatSuggestionGroups(r: AuditResult): string {
+  const actionableFindings = r.findings.filter((finding) => {
+    return finding.category !== 'pass' && finding.nextSteps.length > 0;
+  });
+  const lines: string[] = [
+    '',
+    '=== Suggested actions ===',
+    'Grouped by product category. Each item states whether it affects the readiness score.',
+    '',
+  ];
+
+  for (const category of CATEGORY_ORDER) {
+    if (category === 'pass') continue;
+    const findings = findingsByCategory(actionableFindings, category);
+    if (!findings.length) continue;
+    lines.push(`${CATEGORY_LABELS[category]}:`);
+    for (const finding of findings) {
+      lines.push(`  - ${finding.message}`);
+      lines.push(`    Score impact: ${formatScoreImpact(finding)}.`);
+      for (const step of finding.nextSteps) {
+        lines.push(...formatNextStep(step).map((line) => `    ${line}`));
+      }
+    }
+    lines.push('');
+  }
+
+  if (lines.length === 4) {
+    lines.push('  No missing scaffold artifacts detected. Review warnings above for policy edits or runtime evidence.');
+    lines.push('');
+  }
+
+  lines.push('Docs: docs/loop-design-checklist.md and docs/operating-loops.md');
+  return lines.join('\n');
+}
+
+function findingsByCategory(findings: Finding[], category: FindingCategory): Finding[] {
+  return findings.filter((finding) => finding.category === category);
+}
+
+function formatScoreImpact(finding: Finding): string {
+  if (finding.category === 'pass') return 'score satisfied';
+  return finding.affectsScore ? 'affects score/level' : 'does not affect score';
+}
+
+function formatNextStep(step: NextStep): string[] {
+  if (step.kind === 'command') return [`→ ${step.label}`, `  ${step.command}`];
+  if (step.kind === 'validate') return [`✓ ${step.label}`, `  ${step.command}`];
+  if (step.kind === 'manual-review') return [`• ${step.label}`];
+  return [`i ${step.label}`];
 }
 
 export function inferLevelGateReasons(r: AuditResult): string[] {

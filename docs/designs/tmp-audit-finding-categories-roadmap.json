@@ -56,7 +56,7 @@
     "1-2": {
       "id": "1-2",
       "label": "Category-specific suggestion output",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [],
@@ -67,7 +67,7 @@
           "note": "Each non-pass finding should explain whether it affects score/level and provide either an exact next command or an explicit manual-policy explanation."
         }
       ],
-      "notes": ""
+      "notes": "Commit intent: render audit findings and --suggest output by product category using structured nextSteps. Completed: human/markdown findings are grouped by category with score impact; --suggest is derived from finding.nextSteps instead of a parallel hardcoded signals list; CLI tests assert grouped output. Verification: npm test in tools/zj-loop-audit passed."
     },
     "1-3": {
       "id": "1-3",
@@ -128,7 +128,7 @@
   },
   "metadata": {
     "created": "2026-07-05 20:06:37",
-    "updated": "2026-07-05 21:52:06",
+    "updated": "2026-07-05 21:55:53",
     "md_file": "docs/designs/tmp-audit-finding-categories-roadmap.md"
   }
 }

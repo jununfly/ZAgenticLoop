@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { auditProject } from './auditor.js';
-import { LOOP_ARTIFACTS } from './artifacts.js';
-import { formatBadge, formatHuman, formatJson, formatMarkdown } from './reporter.js';
+import { formatBadge, formatHuman, formatJson, formatMarkdown, formatSuggestionGroups } from './reporter.js';
 import { runCli } from '@jununfly/zj-loop-core';
 const HELP_TEXT = `zj-loop-audit — Loop Readiness Score CLI (v1.4+)
 
@@ -48,65 +47,9 @@ async function handleAuditCommand({ io, options }) {
     else
         io.stdout(formatHuman(result));
     if (suggest) {
-        io.stdout(formatSuggestions(result));
+        io.stdout(formatSuggestionGroups(result));
     }
     return result.score < 40 ? 2 : 0;
-}
-function formatSuggestions(result) {
-    const { signals } = result;
-    const lines = [
-        '',
-        '=== Suggested actions ===',
-        'These actions are based on files detected in the target project.',
-        '',
-    ];
-    if (!signals.stateFile.present) {
-        lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
-        lines.push(`  cp starters/minimal-loop/STATE.md.example ${LOOP_ARTIFACTS.directory}/STATE.md`);
-    }
-    if (!signals.loopConfig.present) {
-        lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
-        lines.push(`  cp starters/minimal-loop/ZJ-LOOP.md ${LOOP_ARTIFACTS.config.primary}`);
-    }
-    if (!signals.triage.present) {
-        lines.push('  # Add one triage skill for the target tool, or run:');
-        lines.push('  npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok');
-    }
-    if (!signals.verifier.present) {
-        lines.push('  # Add maker/checker verification before enabling L2 actions.');
-        lines.push('  mkdir -p .grok/skills/zj-loop-verifier');
-        lines.push('  cp templates/SKILL.md.zj-loop-verifier .grok/skills/zj-loop-verifier/SKILL.md');
-    }
-    if (!signals.cost.budgetDoc) {
-        lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
-        lines.push(`  cp templates/${LOOP_ARTIFACTS.budget.template} ${LOOP_ARTIFACTS.budget.primary}`);
-    }
-    if (!signals.cost.runLog) {
-        lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
-        lines.push(`  cp templates/${LOOP_ARTIFACTS.runLog.template} ${LOOP_ARTIFACTS.runLog.primary}`);
-    }
-    if (signals.loopConfig.present && !signals.cost.loopMdBudget) {
-        lines.push(`  # Edit ${signals.loopConfig.path ?? LOOP_ARTIFACTS.config.primary}: add a Budget section with token caps and kill switch.`);
-    }
-    if (!signals.cost.budgetSkill) {
-        lines.push(`  # Add the ${LOOP_ARTIFACTS.skills.budget.primary} skill via zj-loop-init or templates/SKILL.md.${LOOP_ARTIFACTS.skills.budget.primary}.`);
-    }
-    if (!signals.constraints.present) {
-        lines.push(`  mkdir -p ${LOOP_ARTIFACTS.directory}`);
-        lines.push(`  cp templates/${LOOP_ARTIFACTS.constraints.template} ${LOOP_ARTIFACTS.constraints.primary}`);
-    }
-    if (signals.constraints.present && !signals.constraints.hasConstraintsSkill) {
-        lines.push(`  # Add the ${LOOP_ARTIFACTS.skills.constraints.primary} skill so constraints are enforced at runtime.`);
-    }
-    if (!signals.loopActivity.present) {
-        lines.push('  # Run one report-only loop, update state, and commit the state/run-log evidence.');
-    }
-    if (lines.length === 4) {
-        lines.push('  No missing scaffold artifacts detected. Review warnings above for policy edits or runtime evidence.');
-    }
-    lines.push('');
-    lines.push('Docs: docs/loop-design-checklist.md and docs/operating-loops.md');
-    return lines.join('\n');
 }
 const SPEC = {
     name: 'zj-loop-audit',

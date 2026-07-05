@@ -474,7 +474,11 @@ test('cli: --suggest does not recommend copying artifacts that already exist', a
     assert.equal(result.stderr, '');
     assert.doesNotMatch(result.stdout, /cp templates\/zj-loop-budget\.md\.template/);
     assert.doesNotMatch(result.stdout, /cp templates\/zj-loop-run-log\.md\.template/);
-    assert.match(result.stdout, /Edit zj-loop\/ZJ-LOOP\.md: add a Budget section/);
+    assert.match(result.stdout, /Readiness gaps:/);
+    assert.match(result.stdout, /Hardening:/);
+    assert.match(result.stdout, /Future tooling:/);
+    assert.match(result.stdout, /Score impact: affects score\/level/);
+    assert.match(result.stdout, /Add a Budget section to zj-loop\/ZJ-LOOP\.md/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
