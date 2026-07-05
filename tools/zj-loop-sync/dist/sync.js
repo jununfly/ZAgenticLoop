@@ -49,8 +49,11 @@ function extractLoopPatterns(loopContent) {
  */
 function extractStateFiles(loopContent) {
     const stateFiles = [];
-    // Look for STATE.md, zj-loop/STATE.md, or other state file references
-    const stateRegex = /(?:state[s]?[\s]*[:=][\s]*|update[\s]+)([\w\-\/]+\.md)/gi;
+    // Look for canonical state file paths anywhere in the loop config.
+    // ZJ-LOOP.md commonly uses bullets like "- State: zj-loop/STATE.md",
+    // while registry-backed patterns use paths such as
+    // "zj-loop/issue-triage-state.md".
+    const stateRegex = /\b((?:zj-loop\/)?[\w-]*state[\w-]*\.md)\b/gi;
     let match;
     while ((match = stateRegex.exec(loopContent)) !== null) {
         stateFiles.push(match[1]);
@@ -143,27 +146,9 @@ export async function runSync(options) {
                     suggestion: `Add ${primaryStatePath} to the state files list in ${loopConfigPath}`,
                 });
             }
-            // Compare structural similarity
-            const { similarity, differences } = compareMarkdownFiles(stateContent, loopContent, 0.5);
-            if (similarity < 0.3 && differences.length > 0) {
-                issues.push({
-                    type: 'inconsistent',
-                    file: `${primaryStatePath} ↔ ${loopConfigPath}`,
-                    message: `Low structural similarity between ${primaryStatePath} and ${loopConfigPath}`,
-                    severity: 'warning',
-                    suggestion: 'Review both files for consistency',
-                });
-                if (verbose) {
-                    for (const diff of differences.slice(0, 3)) {
-                        issues.push({
-                            type: 'inconsistent',
-                            file: `${primaryStatePath} ↔ ${loopConfigPath}`,
-                            message: diff,
-                            severity: 'info',
-                        });
-                    }
-                }
-            }
+            // Do not compare heading similarity between state and config files.
+            // They intentionally carry different structures: STATE.md is operational
+            // memory, while ZJ-LOOP.md is the loop contract.
         }
     }
     // Scan skills for version information

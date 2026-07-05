@@ -42,7 +42,7 @@ jobs:
               '### Next steps',
               '1. Run the changelog-drafter starter skills locally or in your agent TUI.',
               '2. Produce `RELEASE_NOTES_DRAFT.md` from merges since the last tag.',
-              '3. Update `changelog-drafter-state.md` when the draft is ready.',
+              '3. Update `zj-loop/changelog-drafter-state.md` when the draft is ready.',
               '',
               'Pattern: [changelog-drafter.md](https://github.com/jununfly/ZAgenticLoop/blob/main/patterns/changelog-drafter.md)',
               '',

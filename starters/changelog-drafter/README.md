@@ -11,22 +11,22 @@ npx @jununfly/zj-loop-init . --pattern changelog-drafter --tool grok
 # Or manual copy (Grok)
 cp -r starters/changelog-drafter/.grok/skills/zj-changelog-scan .grok/skills/
 cp -r starters/changelog-drafter/.grok/skills/zj-draft-release-notes .grok/skills/
-cp starters/changelog-drafter/changelog-drafter-state.md.example changelog-drafter-state.md
 mkdir -p zj-loop
+cp starters/changelog-drafter/changelog-drafter-state.md.example zj-loop/changelog-drafter-state.md
 cp starters/changelog-drafter/ZJ-LOOP.md zj-loop/ZJ-LOOP.md
 ```
 
 Start (Grok example — report/draft only in week one):
 
 ```bash
-/loop 1d Run zj-changelog-scan on merges since last tag (or last 7 days). Produce a clean categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes skill. Update changelog-drafter-state.md. Never publish or tag without explicit human approval.
+/loop 1d Run zj-changelog-scan on merges since last tag (or last 7 days). Produce a clean categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes skill. Update zj-loop/changelog-drafter-state.md. Never publish or tag without explicit human approval.
 ```
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `changelog-drafter-state.md.example` | Tracks last release, scanned window, pending drafts |
+| `zj-loop/changelog-drafter-state.md` | Tracks last release, scanned window, pending drafts |
 | `.grok/skills/zj-changelog-scan/` | Discovery / triage of merges + signals |
 | `.grok/skills/zj-draft-release-notes/` | Turns structured list into polished user-facing notes |
 | `zj-loop/ZJ-LOOP.md` | Cadence, gates, and budget for your team |

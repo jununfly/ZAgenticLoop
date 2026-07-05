@@ -4,7 +4,7 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Product experience report](https://jununfly.github.io/ZAgenticLoop/product-experience-report.html) · [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
 
 ## What You Get
 
@@ -27,24 +27,16 @@ The shortest mental model: **Pattern -> Starter -> Memory -> Verifier -> Story**
 - **User story:** move from ad-hoc prompting to repeatable Agentic Loop Working without giving up human judgment.
 - **Backbone:** choose a Pattern, copy a Starter, preserve Memory in state/run logs, add verifier separation, and use Human Gates for risky boundaries.
 - **Adoption path:** Quickstart with Daily Triage, run L1 report-only, audit readiness, estimate cost, then graduate toward L2/L3 only after real loop activity is visible.
-- **Evidence:** the pattern catalog is backed by [registry metadata](patterns/registry.yaml), [production stories](stories/), and a full [product experience report](https://jununfly.github.io/ZAgenticLoop/product-experience-report.html).
+- **Evidence:** the pattern catalog is backed by [registry metadata](patterns/registry.yaml), [production stories](stories/), and this repo's [dogfood reference case](docs/designs/dogfood-reference-case.md).
 
-## Product Story
+## Dogfood Reference
 
-**One-sentence request to merged production change.** In a ZCodeGraph roadmap slice, the user gave Codex one product goal: migrate C baseline extraction to Rust-owned execution, validate it on a suitably sized real GitHub C project, and remove the migrated TypeScript implementation after success.
+This repository is maintained as a live dogfood case for Agentic Loop Working.
+It runs scheduled audit, validation, daily triage, changelog drafting, release
+workflow checks, and drift detection against its own patterns and tooling.
 
-Using [Roadmap-Sliced Development](patterns/roadmap-sliced-development.md), the loop carried the work through the whole delivery path:
-
-- Created a bounded branch: `zjal/rust-owned-c-baseline`.
-- Turned the request into leaf nodes for Rust-owned C registration, extraction parity, fixture coverage, real-corpus validation, and TypeScript path removal.
-- Recorded scope decisions, including `.c` and C-classified `.h` ownership, C++ / Objective-C header boundaries, and corpus selection.
-- Implemented Rust-owned C extraction for functions, structs, enums, enum members, typedefs, includes, calls, variables, and ownership metadata.
-- Validated locally with Cargo, npm build, Vitest smoke/fallback/engine tests, targeted extraction tests, and `git diff --check`.
-- Validated on [`DaveGamble/cJSON`](https://github.com/DaveGamble/cJSON) at commit `fb16e5c`: 121 indexed files, 3,581 nodes, 7,000 edges, `engineByLanguage.c = rust`, and no Rust-owned C gap diagnostics.
-- Produced durable evidence in ZCodeGraph docs and opened [PR #677](https://github.com/jununfly/ZCodeGraph/pull/677).
-- After the user merged the PR, continued through local main fast-forward, local branch deletion, and remote branch deletion.
-
-The promise: **give the agent a product goal, not a task list; the loop keeps enough state to finish the whole delivery path.** The important part is continuity: decisions stayed written down, validation moved from fixtures to real corpus evidence, a failing first corpus became a recorded boundary, PR handoff happened, and post-merge cleanup did not get dropped.
+The reference case explains the configuration sources, state files, workflow
+flow, gates, and current automation boundaries: [Dogfood reference case](docs/designs/dogfood-reference-case.md).
 
 ## Install And Run
 

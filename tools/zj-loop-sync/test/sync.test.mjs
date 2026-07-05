@@ -71,6 +71,27 @@ describe('runSync', () => {
     assert.match(agentsIssue.message, /missing/i);
   });
 
+  test('accepts state references in loop contract bullets', async () => {
+    await writeFile(
+      path.join(testDir, 'zj-loop', 'ZJ-LOOP.md'),
+      `# Loop Configuration
+
+## Active Loops
+
+### Daily Triage
+- Cadence: 1d
+- State: zj-loop/STATE.md
+`,
+    );
+
+    const report = await runSync({ targetDir: testDir, ...baseOpts });
+
+    assert.equal(
+      report.issues.some((i) => i.file === 'zj-loop/ZJ-LOOP.md' && /does not reference/.test(i.message)),
+      false,
+    );
+  });
+
   test('calculates score in range', async () => {
     const report = await runSync({ targetDir: testDir, ...baseOpts });
     assert.ok(report.score >= 0);
@@ -146,11 +167,11 @@ describe('cli', () => {
 
   test('outputs JSON when --json is provided', () => {
     const result = runCli([testDir, '--json']);
-    assert.equal(result.status, 2);
+    assert.equal(result.status, 0);
     assert.equal(result.stderr, '');
     const report = JSON.parse(result.stdout);
     assert.equal(typeof report.score, 'number');
-    assert.equal(report.level, 'warning');
+    assert.equal(report.level, 'healthy');
   });
 
   test('fails fast on unknown option', () => {

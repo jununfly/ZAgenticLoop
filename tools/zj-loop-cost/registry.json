@@ -344,7 +344,7 @@
           "max_spawns_l2": 2
         },
         "first_loop_command": {
-          "grok": "/loop 1d Run zj-changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes. Update changelog-drafter-state.md. Human review only.",
+          "grok": "/loop 1d Run zj-changelog-scan on merges since last tag. Produce categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes. Update zj-loop/changelog-drafter-state.md. Human review only.",
           "claude": "/loop 1d $zj-changelog-scan + zj-draft-release-notes — write RELEASE_NOTES_DRAFT.md and update state. Human approves before publish.",
           "codex": "Automation daily: zj-changelog-scan + zj-draft-release-notes → RELEASE_NOTES_DRAFT.md. Human review."
         }

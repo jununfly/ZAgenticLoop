@@ -19,7 +19,7 @@ This is an excellent "off-peak" or "end of sprint" loop. Low urgency compared to
 
 ## State
 
-Filename: `changelog-drafter-state.md`
+Filename: `zj-loop/changelog-drafter-state.md`
 
 Compact record of what has been scanned and what drafts are pending review:
 
@@ -88,7 +88,7 @@ Optional but recommended during L1 dogfood runs. Even occasional critique entrie
 
 **Grok Build TUI**:
 ```bash
-/loop 1d Run zj-changelog-scan on merges since last tag or last state date. Produce a categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes. Update changelog-drafter-state.md. Do not commit/publish without human approval.
+/loop 1d Run zj-changelog-scan on merges since last tag or last state date. Produce a categorized draft in RELEASE_NOTES_DRAFT.md using zj-draft-release-notes. Update zj-loop/changelog-drafter-state.md. Do not commit/publish without human approval.
 ```
 
 **Claude Code**:
