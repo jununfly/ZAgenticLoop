@@ -81,9 +81,11 @@ The Daily Triage workflow is the clearest self-running dogfood loop:
 7. Run `scripts/ci-validate-gates.sh` and `scripts/ci-audit-gates.sh`.
 8. Stop if either gate fails.
 9. If state/run-log changed, create an automated branch and PR.
-10. Post commit statuses for branch protection because `GITHUB_TOKEN` does not
+10. If the same date branch already exists, overwrite it from current `main`
+    instead of rebasing stale generated state.
+11. Post commit statuses for branch protection because `GITHUB_TOKEN` does not
     trigger normal PR workflows.
-11. On Mondays, open or refresh a weekly loop report issue.
+12. On Mondays, open or refresh a weekly loop report issue.
 
 The loop remains L1/report-only. It updates operational memory and creates
 reviewable evidence, but it does not perform product or code fixes.
