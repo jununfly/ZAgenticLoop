@@ -115,7 +115,7 @@ Real ways loops fail — and how good design mitigates them. Use this when debug
 - Triage puts architectural work in "High Priority"
 
 **Mitigations**:
-- [safety.md](./safety.md) denylist enforced in skills
+- [zj-loop/zj-loop-safety.md](../zj-loop/zj-loop-safety.md) denylist enforced in skills
 - "Smallest possible diff" + verifier checks touched files
 - Triage skill: signal only, no invention
 

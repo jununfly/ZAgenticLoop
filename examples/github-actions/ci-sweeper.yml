@@ -40,4 +40,4 @@ jobs:
       - name: Invoke fix agent
         run: |
           echo "::notice::Wire to agent: classify failure, worktree fix, verifier, open PR."
-          echo "See patterns/ci-sweeper.md and docs/safety.md"
+          echo "See patterns/ci-sweeper.md and zj-loop/zj-loop-safety.md"

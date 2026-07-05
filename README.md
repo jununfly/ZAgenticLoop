@@ -186,7 +186,7 @@ Machine-readable index: [patterns/registry.yaml](patterns/registry.yaml)
 - [Anti-Patterns](docs/anti-patterns.md) — design mistakes before production
 - [Multi-Loop Coordination](docs/multi-loop.md) — when loops collide
 - [Operating Loops](docs/operating-loops.md) — cost, logging, when to kill
-- [Safety](docs/safety.md) — denylist, auto-merge, MCP scopes
+- [Safety](zj-loop/zj-loop-safety.md) — denylist, auto-merge, MCP scopes
 - [Security](SECURITY.md) — reporting and unattended automation risks
 - [Concepts](docs/concepts.md) — intent debt, comprehension debt, harness vs loop
 - [Architecture](docs/designs/architecture.md) — registry, core, readiness, MCP, CLI boundaries

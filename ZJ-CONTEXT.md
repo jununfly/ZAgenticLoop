@@ -96,9 +96,13 @@ _Avoid_: Checker when referring to a concrete skill or agent
 Explanatory safety guidance that helps humans design safe loops and understand why guardrails exist.
 _Avoid_: Runtime constraints
 
+**Loop Safety Policy**:
+Project-local operating policy that states what loops must not do automatically, which actions require human approval, and how safety incidents are handled.
+_Avoid_: Security disclosure policy, generic safety docs
+
 **Loop Constraints**:
 Project-local binding rules that every loop run must follow, typically covering push and merge behavior, protected paths, code-change limits, communication rules, and budget stops.
-_Avoid_: Safety docs, guidelines
+_Avoid_: Loop safety policy, guidelines
 
 **Constraint Enforcer**:
 The skill or agent role that loads loop constraints before work begins and applies them to every later loop action.
@@ -119,6 +123,10 @@ _Avoid_: Connector
 **Loop Activity**:
 Detectable evidence that a loop actually ran, such as state updates, run-log entries, scheduled workflow runs, or loop-related git history.
 _Avoid_: Static readiness
+
+**Audit Finding Category**:
+The product meaning of an audit finding, separate from display severity. Categories distinguish passed checks, blockers, readiness gaps, hardening opportunities, and future tooling opportunities.
+_Avoid_: Warning level
 
 **Dogfooding**:
 The practice of this repository using its own patterns, starters, and tooling to maintain itself.

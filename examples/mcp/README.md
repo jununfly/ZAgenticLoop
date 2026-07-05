@@ -49,4 +49,4 @@ Always:
 - Test new connectors in report-only (L1) mode first.
 - Log every MCP call the loop makes (the `monitor` tool or GitHub Action logs are your friend).
 
-See also: [docs/safety.md](../../docs/safety.md), [docs/operating-loops.md](../../docs/operating-loops.md), and the individual pattern docs for human gate recommendations.
+See also: [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md), [docs/operating-loops.md](../../docs/operating-loops.md), and the individual pattern docs for human gate recommendations.

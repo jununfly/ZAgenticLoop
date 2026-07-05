@@ -56,5 +56,5 @@ If a matching PR exists, update state and skip duplicate work.
 ## References
 
 - [patterns/pr-steward.md](../../patterns/pr-steward.md)
-- [docs/safety.md](../../docs/safety.md)
+- [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)
 - [examples/github-actions/pr-steward.yml](../github-actions/pr-steward.yml)

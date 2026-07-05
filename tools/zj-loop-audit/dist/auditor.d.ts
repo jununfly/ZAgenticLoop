@@ -60,8 +60,27 @@ export interface LoopSignals {
 }
 export interface Finding {
     level: 'ok' | 'warn' | 'fail';
+    category: FindingCategory;
     message: string;
+    affectsScore: boolean;
+    nextSteps: NextStep[];
 }
+export type FindingCategory = 'pass' | 'blocker' | 'readiness-gap' | 'hardening' | 'future-tooling';
+export type NextStep = {
+    kind: 'command';
+    label: string;
+    command: string;
+} | {
+    kind: 'manual-review';
+    label: string;
+} | {
+    kind: 'validate';
+    label: string;
+    command: string;
+} | {
+    kind: 'info';
+    label: string;
+};
 export interface AuditResult {
     target: string;
     score: number;

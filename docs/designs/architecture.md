@@ -151,7 +151,7 @@ Compatibility rules:
 
 `zj-loop-audit` owns the Loop Readiness Score, readiness level presentation,
 findings, and recommendations. The policy is based on project evidence signals
-such as state files, triage skills, verifier skills, safety docs, workflow
+such as state files, triage skills, verifier skills, loop safety policy, workflow
 evidence, MCP mentions, worktree evidence, registry presence, budget docs, run
 logs, budget skills, constraints, and loop activity.
 
@@ -163,6 +163,12 @@ Important policy decisions:
   activity.
 - L3 is capped when cost observability or operational proof is missing, even if
   the numeric score is high.
+- Display severity (`ok`, `warn`, `fail`) is not the product contract for a
+  finding. Each finding also carries a category: `pass`, `blocker`,
+  `readiness-gap`, `hardening`, or `future-tooling`.
+- Non-pass findings expose whether they affect score/level and carry structured
+  `nextSteps` so human output and machine consumers do not have to infer action
+  semantics from prose.
 
 The declarative policy lives in
 `tools/zj-loop-audit/rules/readiness.v1.yaml`. It expresses:
@@ -172,7 +178,8 @@ The declarative policy lives in
 - additive score contributions with exclusive groups where needed
 - level gates evaluated from highest to lowest
 - ordered assessment bands
-- findings and recommendations tied to predicates
+- findings, categories, score impact, structured next steps, and
+  recommendations tied to predicates
 
 `tools/zj-loop-audit/src/readiness-rules.ts` evaluates that policy. It consumes
 the evidence object produced by `auditProject()` and does not read project files
@@ -180,6 +187,11 @@ directly. `auditProject()` still owns project inspection and dynamic evidence
 collection, including git/workflow/activity checks. Guidance text may use simple
 signal-path placeholders such as `{stateFile.paths}`; the rule file should not
 grow a general template or expression language.
+
+`zj-loop-audit --suggest` renders the structured next steps grouped by finding
+category. This keeps a `100/100 L3` result with remaining hardening or
+future-tooling suggestions from looking contradictory: the score/level contract
+and the follow-up action category are shown separately.
 
 ## CLI Product Surface
 
@@ -224,6 +236,19 @@ Product tools still own the product contract:
 - `zj-loop-init` owns scaffold file writes, dry-run progress output, dynamic
   registry-backed help, and next-step guidance.
 
+`zj-loop-init` has two scaffold modes:
+
+- pattern initialization via `--pattern <id> --tool <tool>`, which copies a full
+  starter and associated runtime templates.
+- incremental artifact addition via `--add safety`, `--add pattern-registry`, or
+  `--add safety,pattern-registry`, which adds only explicitly requested optional
+  artifacts.
+
+Incremental artifact addition intentionally rejects aggregate aliases such as
+`all` or `recommended`. Existing files are skipped by default with a next step
+that tells the user how to review or rerun. `--force` means real overwrite, not
+sidecar creation; the CLI must make that overwrite auditable in its output.
+
 Unknown options and missing option values fail fast only for commands that have
 been migrated to the harness. As of this design snapshot, `zj-loop-cost`,
 `zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` are migrated.
@@ -245,6 +270,15 @@ Canonical files:
 - `zj-loop/zj-loop-budget.md`
 - `zj-loop/zj-loop-run-log.md`
 - `zj-loop/zj-loop-constraints.md`
+- `zj-loop/zj-loop-safety.md`
+
+`zj-loop/zj-loop-safety.md` is the canonical loop safety policy. Legacy paths
+such as `docs/safety.md`, root `safety.md`, and `SECURITY.md` do not count as
+loop safety evidence. `SECURITY.md` is reserved for vulnerability disclosure and
+security reporting; it must not substitute for runtime loop safety policy.
+
+`patterns/registry.yaml` intentionally remains outside `zj-loop/`. It is a
+repository pattern catalog, not project-local loop runtime state or policy.
 
 Tool-host directories such as `.codex/`, `.grok/`, `.claude/`, and tool-specific
 skill or agent folders stay where those host tools require them. The `zj-loop/`
@@ -395,6 +429,15 @@ The architecture-improvement roadmap produced these durable outcomes:
 - `zj-loop-audit` readiness score, level gates, assessment bands, findings, and
   recommendations now live in the package-owned `readiness.v1.yaml` policy and
   are evaluated by a local rule engine over collected evidence.
+- `zj-loop-audit` findings now distinguish display severity from product
+  category, expose score impact, and carry structured next steps rendered by
+  `--suggest` by category.
+- `zj-loop-init` supports explicit incremental artifact scaffolding for
+  `safety` and `pattern-registry`, including multi-select, default skip on
+  existing files, and auditable `--force` overwrite behavior.
+- Loop safety policy moved to `zj-loop/zj-loop-safety.md`; init, audit, MCP,
+  goal-audit, starters, templates, examples, and docs now treat that as the
+  canonical loop safety evidence path.
 - Root `build:tools` and `test:tools` now run through a repo-local tool gate
   runner that centralizes `zj-loop-*` and `zj-goal-audit` coverage without
   moving goal readiness into the loop core.

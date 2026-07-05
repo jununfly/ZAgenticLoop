@@ -99,4 +99,4 @@ Audit readiness: `npx @jununfly/zj-loop-audit . --suggest`
 - Peter Steinberger — design loops, not one-off prompts ([sources](../../resources/sources.md))
 - [primitives-matrix.md](../../docs/primitives-matrix.md) — OpenClaw column
 - [patterns/daily-triage.md](../../patterns/daily-triage.md)
-- [docs/safety.md](../../docs/safety.md)
+- [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)

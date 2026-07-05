@@ -33,4 +33,4 @@ Start (Grok, week one):
 ## Safety
 
 - No auto-label or close in L1
-- Denylist: auth, payments, security — see [safety.md](../../docs/safety.md)
+- Denylist: auth, payments, security — see [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)

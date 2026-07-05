@@ -15,7 +15,7 @@ export declare const DEFAULT_AGENT_DIRS: readonly [".claude/agents", ".codex/age
 export declare const DEFAULT_STATE_FILES: readonly ["zj-loop/STATE.md", "zj-loop/pr-steward-state.md", "zj-loop/ci-sweeper-state.md", "zj-loop/post-merge-state.md", "zj-loop/dependency-sweeper-state.md", "zj-loop/changelog-drafter-state.md", "zj-loop/issue-triage-state.md"];
 export declare const DEFAULT_REQUIRED_LOOP_FILES: readonly ["zj-loop/STATE.md", "zj-loop/ZJ-LOOP.md", "AGENTS.md"];
 export declare const LOOP_CONFIG_FILE_CANDIDATES: readonly ["zj-loop/ZJ-LOOP.md"];
-export declare const DEFAULT_SAFETY_FILES: readonly ["safety.md", "docs/safety.md", "SECURITY.md"];
+export declare const DEFAULT_SAFETY_FILES: readonly ["zj-loop/zj-loop-safety.md"];
 export declare const DEFAULT_MCP_FILES: readonly [".mcp.json", "mcp.json", ".mcp/config.json"];
 export declare const DEFAULT_LOOP_SKILL_NAMES: readonly ["zj-loop-triage", "zj-minimal-fix", "zj-loop-verifier", "zj-pr-review-triage", "zj-ci-triage", "zj-post-merge-scan", "zj-dependency-triage", "zj-rebase-and-clean", "zj-changelog-scan", "zj-loop-constraints", "zj-loop-budget", "zj-draft-release-notes", "zj-issue-triage"];
 export interface ProjectEvidenceFacts {

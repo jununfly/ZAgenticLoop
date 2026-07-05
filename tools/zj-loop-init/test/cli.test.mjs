@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, access } from 'node:fs/promises';
+import { mkdtemp, rm, access, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -74,6 +74,46 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('zj-loop-init --add scaffolds explicit optional artifacts', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-'));
+  try {
+    const { stdout } = await exec('node', [CLI, dir, '--add', 'safety,pattern-registry']);
+    assert.match(stdout, /zj-loop-init --add: safety, pattern-registry/);
+    await access(path.join(dir, 'zj-loop', 'zj-loop-safety.md'));
+    await access(path.join(dir, 'patterns', 'registry.yaml'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --add skips existing files unless --force is explicit', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-skip-'));
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    const safetyPath = path.join(dir, 'zj-loop', 'zj-loop-safety.md');
+    await writeFile(safetyPath, '# Custom Safety\n');
+
+    const skipped = await exec('node', [CLI, dir, '--add', 'safety']);
+    assert.match(skipped.stdout, /skipped: .*zj-loop-safety\.md already exists/);
+    assert.match(skipped.stdout, /next step: review zj-loop\/zj-loop-safety\.md or rerun with --force/);
+    assert.equal(await readFile(safetyPath, 'utf8'), '# Custom Safety\n');
+
+    const forced = await exec('node', [CLI, dir, '--add', 'safety', '--force']);
+    assert.match(forced.stdout, /OVERWRITTEN with --force/);
+    assert.match(forced.stdout, /WARNING: review this policy\/catalog file/);
+    assert.notEqual(await readFile(safetyPath, 'utf8'), '# Custom Safety\n');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --add rejects aggregate aliases', async () => {
+  await assert.rejects(
+    () => exec('node', [CLI, '.', '--add', 'all', '--dry-run']),
+    (err) => err.stderr?.includes('Unknown --add artifact: all') || err.message?.includes('Unknown --add artifact: all'),
+  );
 });
 
 test('zj-loop-init rejects unknown pattern', async () => {

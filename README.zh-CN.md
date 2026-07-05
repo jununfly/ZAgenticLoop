@@ -162,7 +162,7 @@ npx @jununfly/zj-loop-audit . --suggest
 - [Anti-Patterns](docs/anti-patterns.md) — 上生产前要避开的设计错误
 - [Multi-Loop Coordination](docs/multi-loop.md) — 多个 loop 冲突时怎么办
 - [Operating Loops](docs/operating-loops.md) — 成本、日志、何时杀掉 loop
-- [Safety](docs/safety.md) — denylist、auto-merge、MCP scopes
+- [Safety](zj-loop/zj-loop-safety.md) — denylist、auto-merge、MCP scopes
 - [Security](SECURITY.md) — 报告安全问题和 unattended automation 风险
 - [Concepts](docs/concepts.md) — intent debt、comprehension debt、harness vs loop
 - [Architecture](docs/designs/architecture.md) — registry、core、readiness、MCP、CLI 边界

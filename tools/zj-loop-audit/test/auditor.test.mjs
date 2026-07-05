@@ -257,7 +257,13 @@ guidance:
   - when: stateFile.present
     finding:
       level: ok
+      category: pass
       message: "State files: {stateFile.paths}"
+      affectsScore: false
+      nextSteps:
+        - kind: validate
+          label: "Review {stateFile.paths}"
+          command: "test -f zj-loop/STATE.md"
     recommendations:
       - "Review {stateFile.paths}"
 `);
@@ -267,7 +273,21 @@ guidance:
     policy,
   );
   assert.deepEqual(result, {
-    findings: [{ level: 'ok', message: 'State files: zj-loop/STATE.md, zj-loop/ci-sweeper-state.md' }],
+    findings: [
+      {
+        level: 'ok',
+        category: 'pass',
+        message: 'State files: zj-loop/STATE.md, zj-loop/ci-sweeper-state.md',
+        affectsScore: false,
+        nextSteps: [
+          {
+            kind: 'validate',
+            label: 'Review zj-loop/STATE.md, zj-loop/ci-sweeper-state.md',
+            command: 'test -f zj-loop/STATE.md',
+          },
+        ],
+      },
+    ],
     recommendations: ['Review zj-loop/STATE.md, zj-loop/ci-sweeper-state.md'],
   });
 });
@@ -454,7 +474,11 @@ test('cli: --suggest does not recommend copying artifacts that already exist', a
     assert.equal(result.stderr, '');
     assert.doesNotMatch(result.stdout, /cp templates\/zj-loop-budget\.md\.template/);
     assert.doesNotMatch(result.stdout, /cp templates\/zj-loop-run-log\.md\.template/);
-    assert.match(result.stdout, /Edit zj-loop\/ZJ-LOOP\.md: add a Budget section/);
+    assert.match(result.stdout, /Readiness gaps:/);
+    assert.match(result.stdout, /Hardening:/);
+    assert.match(result.stdout, /Future tooling:/);
+    assert.match(result.stdout, /Score impact: affects score\/level/);
+    assert.match(result.stdout, /Add a Budget section to zj-loop\/ZJ-LOOP\.md/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

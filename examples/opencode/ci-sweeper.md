@@ -62,7 +62,7 @@ curl -X POST http://opencode-bridge:8080/hooks/agent \
   -d '{"message":"Run zj-ci-triage. Inspect recent CI failures. No fixes in report-only mode."}'
 ```
 
-Keep hook endpoints on loopback or a trusted tailnet (see [docs/safety.md](../../docs/safety.md)).
+Keep hook endpoints on loopback or a trusted tailnet (see [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)).
 
 ## Verification split
 

@@ -72,7 +72,7 @@ Design mistakes to avoid **before** enabling unattended loops. For runtime incid
 
 **Why it fails**: Security and business-logic bugs pass weak verifiers.
 
-**Do instead**: Explicit path allowlist; human merge for denylist paths per [safety.md](./safety.md).
+**Do instead**: Explicit path allowlist; human merge for denylist paths per [zj-loop/zj-loop-safety.md](../zj-loop/zj-loop-safety.md).
 
 ## 10. No run log
 

@@ -47,7 +47,7 @@ Add to your MCP config (`.mcp.json` or equivalent):
 | `loop://config` | ZJ-LOOP.md — cadence, budget, gates, scheduling |
 | `loop://budget` | zj-loop-budget.md — token caps, kill switch |
 | `loop://run-log` | zj-loop-run-log.md — append-only run history |
-| `loop://safety` | Safety docs — denylists, auto-merge policy, MCP scopes |
+| `loop://safety` | Loop safety policy — denylists, auto-merge policy, MCP scopes |
 | `loop://patterns/{id}` | Full pattern documentation by ID |
 | `loop://skills/{name}` | Skill definition (SKILL.md) by name |
 | `loop://state/{file}` | State file content |
@@ -127,4 +127,4 @@ The server reads from the local filesystem at `LOOP_PROJECT_ROOT`. It is read-on
 - [MCP Examples](../../examples/mcp/)
 - [Primitives: Plugins & Connectors](../../docs/primitives.md)
 - [Architecture: MCP Server Boundary](../../docs/designs/architecture.md#mcp-server-boundary)
-- [Safety: MCP Least Privilege](../../docs/safety.md)
+- [Safety: MCP Least Privilege](../../zj-loop/zj-loop-safety.md)

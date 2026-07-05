@@ -40,7 +40,7 @@ Start (Grok example — report/draft only in week one):
 
 - This loop proposes drafts only. Publishing (updating CHANGELOG.md, creating GitHub releases, pushing tags) should require human review or a very tight allowlist + verifier.
 - Always surface breaking changes and security items explicitly for human sign-off.
-- See [safety.md](../../docs/safety.md) and the pattern doc for full guidance.
+- See [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md) and the pattern doc for full guidance.
 
 After copying, run:
 

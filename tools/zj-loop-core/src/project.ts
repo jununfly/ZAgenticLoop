@@ -49,9 +49,7 @@ export const LOOP_CONFIG_FILE_CANDIDATES = [
 ] as const;
 
 export const DEFAULT_SAFETY_FILES = [
-  'safety.md',
-  'docs/safety.md',
-  'SECURITY.md',
+  'zj-loop/zj-loop-safety.md',
 ] as const;
 
 export const DEFAULT_MCP_FILES = [

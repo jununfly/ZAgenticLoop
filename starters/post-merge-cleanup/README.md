@@ -32,4 +32,4 @@ Start (Grok):
 ## Safety
 
 - No large refactors without human ticket
-- Denylist: feature flags, auth paths — see [safety.md](../../docs/safety.md)
+- Denylist: feature flags, auth paths — see [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)

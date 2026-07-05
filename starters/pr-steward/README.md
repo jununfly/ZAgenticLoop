@@ -34,4 +34,4 @@ Scaffold for the [PR Steward](../../patterns/pr-steward.md) loop (L2 — assiste
 ## Safety
 
 - No auto-merge by default
-- Denylist: auth, payments, secrets — see [safety.md](../../docs/safety.md)
+- Denylist: auth, payments, secrets — see [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)
