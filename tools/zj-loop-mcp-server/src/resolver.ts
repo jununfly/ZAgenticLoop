@@ -160,12 +160,7 @@ export async function loadRunLog(root: string): Promise<string | null> {
 }
 
 export async function loadSafetyDoc(root: string): Promise<string | null> {
-  const fs = fsFor(root);
-  for (const f of ['docs/safety.md', 'safety.md', 'SECURITY.md']) {
-    const content = await fs.readTextIfExists(f);
-    if (content) return content;
-  }
-  return null;
+  return fsFor(root).readTextIfExists('zj-loop/zj-loop-safety.md');
 }
 
 function summarizeMarkdown(content: string | null, limit = 6): string[] {
@@ -205,7 +200,7 @@ export async function summarizeOperationalContext(root: string): Promise<Operati
     summarizeFixedDocument(root, 'config', 'loop://config', ['zj-loop/ZJ-LOOP.md']),
     summarizeFixedDocument(root, 'budget', 'loop://budget', ['zj-loop/zj-loop-budget.md']),
     summarizeFixedDocument(root, 'runLog', 'loop://run-log', ['zj-loop/zj-loop-run-log.md']),
-    summarizeFixedDocument(root, 'safety', 'loop://safety', ['docs/safety.md', 'safety.md', 'SECURITY.md']),
+    summarizeFixedDocument(root, 'safety', 'loop://safety', ['zj-loop/zj-loop-safety.md']),
   ]);
 
   return {

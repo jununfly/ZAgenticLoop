@@ -68,7 +68,7 @@ npm publish --access public
 | Verifier skill          | maker/checker split (skills or Claude/Codex agents) |
 | `zj-loop/ZJ-LOOP.md` / config | Cadence, limits, handoff |
 | AGENTS.md / CLAUDE.md   | Project conventions |
-| Safety docs             | safety.md + ZJ-LOOP.md mentions of gates |
+| Loop safety policy             | zj-loop/zj-loop-safety.md + ZJ-LOOP.md mentions of gates |
 | .github/ + workflows    | Dogfooding / automation |
 | MCP / connectors        | Mentions or config files |
 | Worktree evidence       | Isolation patterns in docs |

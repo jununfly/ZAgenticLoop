@@ -98,7 +98,7 @@ _Avoid_: Runtime constraints
 
 **Loop Constraints**:
 Project-local binding rules that every loop run must follow, typically covering push and merge behavior, protected paths, code-change limits, communication rules, and budget stops.
-_Avoid_: Safety docs, guidelines
+_Avoid_: Loop safety policy, guidelines
 
 **Constraint Enforcer**:
 The skill or agent role that loads loop constraints before work begins and applies them to every later loop action.

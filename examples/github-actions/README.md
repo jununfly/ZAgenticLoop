@@ -33,4 +33,4 @@ The state file schema and skills are tool-agnostic — only the invocation step 
 
 - Use `GITHUB_TOKEN` with minimum permissions
 - No secrets in workflow logs
-- See [safety.md](../../docs/safety.md)
+- See [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)

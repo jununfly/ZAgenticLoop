@@ -90,4 +90,4 @@ flowchart TB
 - [Loop Design Checklist](./loop-design-checklist.md) — before you ship a loop
 - [Failure Modes](./failure-modes.md) — when loops go wrong
 - [Operating Loops](./operating-loops.md) — cost, logging, when to pause
-- [Safety](./safety.md) — guardrails for production
+- [Safety](../zj-loop/zj-loop-safety.md) — guardrails for production

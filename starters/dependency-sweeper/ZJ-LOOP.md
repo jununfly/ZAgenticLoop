@@ -27,4 +27,4 @@
 ## Links
 
 - Pattern: [dependency-sweeper](../../patterns/dependency-sweeper.md)
-- Safety: [safety.md](../../docs/safety.md)
+- Safety: [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)

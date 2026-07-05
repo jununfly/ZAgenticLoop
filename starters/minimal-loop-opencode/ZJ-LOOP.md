@@ -9,7 +9,7 @@
 ## Human Gates
 
 - No auto-fix until L2 checklist complete.
-- All high-risk paths require human review (see docs/safety.md denylist).
+- All high-risk paths require human review (see zj-loop/zj-loop-safety.md denylist).
 
 ## Worktrees
 

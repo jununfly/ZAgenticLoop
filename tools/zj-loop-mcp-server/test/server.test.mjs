@@ -95,10 +95,9 @@ patterns:
     '# Run Log\n\n- 2026-06-20T08:00Z: daily-triage — report — 45k tokens\n',
   );
 
-  // Safety doc
-  await mkdir(path.join(tmpRoot, 'docs'), { recursive: true });
+  // Loop safety policy
   await writeFile(
-    path.join(tmpRoot, 'docs', 'safety.md'),
+    path.join(tmpRoot, 'zj-loop', 'zj-loop-safety.md'),
     '# Safety\n\n## Path Denylists\n- .env\n- credentials\n',
   );
 
@@ -289,7 +288,7 @@ test('loadRunLog reads zj-loop-run-log.md', async () => {
   }
 });
 
-test('loadSafetyDoc reads docs/safety.md', async () => {
+test('loadSafetyDoc reads zj-loop/zj-loop-safety.md', async () => {
   const root = await setup();
   try {
     const safety = await loadSafetyDoc(root);
@@ -437,7 +436,7 @@ test('loop_summarize_operational_context tool returns structured operational evi
     const text = res.get(1).result.content[0].text;
     const parsed = JSON.parse(text);
     assert.equal(parsed.documents.length, 4);
-    assert.equal(parsed.documents.find(doc => doc.key === 'safety').path, 'docs/safety.md');
+    assert.equal(parsed.documents.find(doc => doc.key === 'safety').path, 'zj-loop/zj-loop-safety.md');
     assert.ok(parsed.rawResources.includes('loop://safety'));
   } finally {
     await cleanup();

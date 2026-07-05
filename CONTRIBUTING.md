@@ -42,7 +42,7 @@ Also add an entry to `patterns/registry.yaml`.
 - [ ] Links work from README or relevant index
 - [ ] No secrets, tokens, or internal URLs
 - [ ] `STATE.md` examples use `.example` suffix (gitignored live state)
-- [ ] Safety-sensitive patterns reference [docs/safety.md](./docs/safety.md)
+- [ ] Safety-sensitive patterns reference [zj-loop/zj-loop-safety.md](./zj-loop/zj-loop-safety.md)
 
 ## Code of Conduct
 

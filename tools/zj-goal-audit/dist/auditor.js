@@ -6,7 +6,7 @@ const GOAL_SKILL_NAMES = [
     'goal-scoper',
     'goal-completion-check',
 ];
-const SAFETY_FILES = ['docs/safety.md', 'SECURITY.md', 'safety.md'];
+const SAFETY_FILES = ['zj-loop/zj-loop-safety.md'];
 const BUDGET_FILES = ['goal-budget.md', 'docs/goal-budget.md'];
 const RUN_LOG_FILES = ['goal-run-log.md', 'docs/goal-run-log.md'];
 async function fileExists(p) {

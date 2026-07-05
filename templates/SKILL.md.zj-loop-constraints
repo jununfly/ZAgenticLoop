@@ -30,7 +30,7 @@ Always begin with a one-line confirmation:
 Constraints loaded from zj-loop-constraints.md: N rules active.
 ```
 
-If no `zj-loop/zj-loop-constraints.md` exists, say so and proceed with default safety rules from `docs/safety.md`.
+If no `zj-loop/zj-loop-constraints.md` exists, say so and proceed with default safety rules from `zj-loop/zj-loop-safety.md`.
 
 ## Interaction with other skills
 

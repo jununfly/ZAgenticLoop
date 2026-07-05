@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "Audit finding category UX",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -72,7 +72,7 @@
     "1-3": {
       "id": "1-3",
       "label": "Incremental init scaffolding",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [],
@@ -123,12 +123,12 @@
           "note": "The registry is reusable pattern catalog metadata, not loop runtime state or policy. Only safety policy moves to zj-loop/zj-loop-safety.md."
         }
       ],
-      "notes": ""
+      "notes": "Commit intent: add incremental zj-loop-init scaffolding and migrate loop safety evidence to canonical zj-loop/zj-loop-safety.md. Completed: zj-loop-init supports explicit --add safety and --add pattern-registry with multi-select, default skipped output, and --force overwrite warnings; docs/safety.md moved to zj-loop/zj-loop-safety.md; templates include zj-loop-safety.md; core/MCP/goal-audit recognize only canonical loop safety evidence; repo docs and starters point to the canonical path. Verification: npm test in tools/zj-loop-init, tools/zj-loop-core, tools/zj-loop-mcp-server, tools/zj-goal-audit, tools/zj-loop-audit passed; npm run check:zj-loop-init, test:registry, test:activation-contract, test:release-workflows, test:tool-gates passed; git diff --check passed."
     }
   },
   "metadata": {
     "created": "2026-07-05 20:06:37",
-    "updated": "2026-07-05 21:55:53",
+    "updated": "2026-07-05 22:05:14",
     "md_file": "docs/designs/tmp-audit-finding-categories-roadmap.md"
   }
 }

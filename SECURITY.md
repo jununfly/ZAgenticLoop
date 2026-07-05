@@ -9,7 +9,7 @@ Report security issues **privately** — do not open public issues for exploitab
 - **Preferred:** [GitHub private vulnerability reporting](https://github.com/jununfly/ZAgenticLoop/security/advisories/new)
 - **GitHub:** report through the private advisory form above so the fix can stay coordinated.
 
-For general loop safety guidance, see [docs/safety.md](docs/safety.md).
+For general loop safety guidance, see [zj-loop/zj-loop-safety.md](zj-loop/zj-loop-safety.md).
 
 ## Unattended automation risks
 

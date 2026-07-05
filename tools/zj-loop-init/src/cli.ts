@@ -11,6 +11,7 @@ const MONOREPO_STARTERS = path.resolve(PACKAGE_ROOT, '../../starters');
 const MONOREPO_TEMPLATES = path.resolve(PACKAGE_ROOT, '../../templates');
 
 type Tool = 'grok' | 'claude' | 'codex';
+type AddArtifact = 'safety' | 'pattern-registry';
 
 type InitPattern = RegistryPattern & {
   state: string;
@@ -19,6 +20,7 @@ type InitPattern = RegistryPattern & {
 };
 
 const VALID_TOOLS: Tool[] = ['grok', 'claude', 'codex'];
+const VALID_ADD_ARTIFACTS: AddArtifact[] = ['safety', 'pattern-registry'];
 
 async function loadRegistry() {
   return loadPatternRegistry({
@@ -65,6 +67,98 @@ async function resolveBundledOrMonorepo(name: 'starters' | 'templates'): Promise
   const bundled = path.join(PACKAGE_ROOT, name);
   if (await exists(bundled)) return bundled;
   return name === 'starters' ? MONOREPO_STARTERS : MONOREPO_TEMPLATES;
+}
+
+function parseAddArtifacts(value: unknown): AddArtifact[] {
+  if (value === undefined || value === false) return [];
+  const artifacts = String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const invalid = artifacts.filter((artifact) => !VALID_ADD_ARTIFACTS.includes(artifact as AddArtifact));
+  if (invalid.length) {
+    throw new Error(`Unknown --add artifact: ${invalid.join(', ')}. Valid: ${VALID_ADD_ARTIFACTS.join(', ')}`);
+  }
+  return Array.from(new Set(artifacts)) as AddArtifact[];
+}
+
+async function copyIncrementalArtifact(
+  src: string,
+  dest: string,
+  dryRun: boolean,
+  force: boolean,
+  io: CliIo,
+  nextStep: string,
+) {
+  if (!(await exists(src))) {
+    io.stderr(`  missing template: ${src}`);
+    return false;
+  }
+
+  if ((await exists(dest)) && !force) {
+    io.stdout(`  skipped: ${dest} already exists`);
+    io.stdout(`  next step: ${nextStep}`);
+    return true;
+  }
+
+  if (dryRun) {
+    const verb = force ? 'would overwrite' : 'would copy';
+    io.stdout(`  ${verb}: ${src} → ${dest}`);
+    if (force) io.stdout('  WARNING: --force would overwrite the existing file; review the result before committing.');
+    return true;
+  }
+
+  await mkdir(path.dirname(dest), { recursive: true });
+  await cp(src, dest, { force: true });
+  if (force) {
+    io.stdout(`  OVERWRITTEN with --force: ${dest}`);
+    io.stdout('  WARNING: review this policy/catalog file before committing.');
+  } else {
+    io.stdout(`  created: ${dest}`);
+  }
+  return true;
+}
+
+async function handleAddArtifacts(
+  artifacts: AddArtifact[],
+  targetDir: string,
+  templatesRoot: string,
+  dryRun: boolean,
+  force: boolean,
+  io: CliIo,
+) {
+  io.stdout(`\nzj-loop-init --add: ${artifacts.join(', ')} → ${targetDir}${dryRun ? ' [dry-run]' : ''}${force ? ' [force]' : ''}\n`);
+
+  for (const artifact of artifacts) {
+    if (artifact === 'safety') {
+      await copyIncrementalArtifact(
+        path.join(templatesRoot, 'zj-loop-safety.md'),
+        path.join(targetDir, 'zj-loop', 'zj-loop-safety.md'),
+        dryRun,
+        force,
+        io,
+        'review zj-loop/zj-loop-safety.md or rerun with --force to overwrite intentionally',
+      );
+    }
+
+    if (artifact === 'pattern-registry') {
+      await copyIncrementalArtifact(
+        path.join(PACKAGE_ROOT, 'registry.yaml'),
+        path.join(targetDir, 'patterns', 'registry.yaml'),
+        dryRun,
+        force,
+        io,
+        'review patterns/registry.yaml or rerun with --force to overwrite intentionally',
+      );
+    }
+  }
+
+  io.stdout(`\n=== Next steps ===
+  npx @jununfly/zj-loop-audit ${targetDir} --suggest
+  Review any created or overwritten policy/catalog files before committing.
+`);
+
+  return 0;
 }
 
 async function copyTemplateSkill(
@@ -256,13 +350,28 @@ function firstLoopCommand(pattern: InitPattern, tool: Tool): string {
 }
 
 async function handleInitCommand({ io, options }: CliHandlerContext) {
+  let addArtifacts: AddArtifact[];
+  try {
+    addArtifacts = parseAddArtifacts(options.add);
+  } catch (err) {
+    io.stderr(err instanceof Error ? err.message : String(err));
+    return 1;
+  }
+  const target = typeof options.target === 'string' ? options.target : '.';
+  const targetDir = path.resolve(target);
+  const dryRun = options.dryRun === true;
+  const force = options.force === true;
+
+  if (addArtifacts.length > 0) {
+    const templatesRoot = await resolveBundledOrMonorepo('templates');
+    return handleAddArtifacts(addArtifacts, targetDir, templatesRoot, dryRun, force, io);
+  }
+
   const registry = await loadRegistry();
   const patterns = registry.patterns.map(requireInitPattern);
 
   const pattern = String(options.pattern ?? 'daily-triage');
   const tool = String(options.tool ?? 'grok') as Tool;
-  const target = typeof options.target === 'string' ? options.target : '.';
-  const dryRun = options.dryRun === true;
 
   const selectedPattern = patterns.find((p) => p.id === pattern);
   if (!selectedPattern) {
@@ -274,7 +383,6 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
     return 1;
   }
 
-  const targetDir = path.resolve(target);
   const baseStarter = starterName(selectedPattern.starter);
   const starterNameForTool = starterName(selectedPattern.init.tool_starters?.[tool] ?? selectedPattern.starter);
   const startersRoot = await resolveBundledOrMonorepo('starters');
@@ -396,6 +504,7 @@ async function helpText() {
 
 Usage:
   zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
+  zj-loop-init [target-dir] --add <safety|pattern-registry>[,...] [--force]
 
 Patterns:
 ${patternList}
@@ -403,11 +512,14 @@ ${patternList}
 Options:
   -p, --pattern   Pattern to scaffold
   -t, --tool      Tool target (default: grok)
+  --add           Add explicit optional artifacts: safety, pattern-registry
+  --force         Overwrite existing --add targets instead of skipping
   --dry-run       Print actions without copying
   -h, --help      This help
 
 Examples:
   npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+  npx @jununfly/zj-loop-init . --add safety,pattern-registry
   npx @jununfly/zj-loop-init . -p pr-steward -t claude
 `;
 }
@@ -420,6 +532,8 @@ const SPEC: CliSpec = {
     { name: 'target', type: 'positional', description: 'Target directory', default: '.' },
     { name: 'pattern', alias: '-p', type: 'string', description: 'Pattern to scaffold', default: 'daily-triage' },
     { name: 'tool', alias: '-t', type: 'string', description: 'Tool target', default: 'grok' },
+    { name: 'add', type: 'string', description: 'Add explicit optional artifacts' },
+    { name: 'force', type: 'boolean', description: 'Overwrite existing --add targets' },
     { name: 'dryRun', flag: 'dry-run', type: 'boolean', description: 'Print actions without copying' },
   ],
   handler: handleInitCommand,

@@ -105,9 +105,9 @@ Before L3 (unattended):
 - [ ] Auto-merge off or strict allowlist
 - [ ] Connector scopes reviewed
 - [ ] Human gates documented in pattern
-- [ ] Kill switch documented ([operating-loops.md](./operating-loops.md))
+- [ ] Kill switch documented ([operating-loops.md](../docs/operating-loops.md))
 
-See also [loop-design-checklist.md](./loop-design-checklist.md).
+See also [loop-design-checklist.md](../docs/loop-design-checklist.md).
 
 ## Machine-Readable Constraints
 

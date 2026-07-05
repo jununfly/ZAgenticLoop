@@ -112,7 +112,7 @@ The default spine is `zj-loop/STATE.md` at the repo root. Use `STATE.md.example`
 
 - Week one: report-only prompt + `AGENTS.md` safety rules; no source-code edits.
 - One worktree per fix attempt; discard after verifier REJECT.
-- Never push without a draft PR and explicit human review on denylisted paths (`docs/safety.md`).
+- Never push without a draft PR and explicit human review on denylisted paths (`zj-loop/zj-loop-safety.md`).
 - Token budget: set `loop-pause-all` in `zj-loop/STATE.md` if a run exceeds the daily cap.
 
 ## Operations
@@ -139,4 +139,4 @@ Audit readiness: `npx @jununfly/zj-loop-audit . --suggest`.
 - Peter Steinberger — design loops, not one-off prompts ([sources](../../resources/sources.md))
 - [primitives-matrix.md](../../docs/primitives-matrix.md) — opencode column
 - [patterns/daily-triage.md](../../patterns/daily-triage.md)
-- [docs/safety.md](../../docs/safety.md)
+- [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)

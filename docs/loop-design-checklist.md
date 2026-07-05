@@ -44,7 +44,7 @@ Use this before enabling a loop in production. Score honestly — a loop missing
 ## 6. Human Handoff
 
 - [ ] **Escalation triggers** explicit (max attempts, risk paths, ambiguity)
-- [ ] **Denylist paths** — auth, payments, secrets, infra (see [safety.md](./safety.md))
+- [ ] **Denylist paths** — auth, payments, secrets, infra (see [zj-loop/zj-loop-safety.md](../zj-loop/zj-loop-safety.md))
 - [ ] **Notification rule** — only ping human when action required
 - [ ] **Inbox** — where ambiguous items land (STATE.md section, Slack, Linear)
 - [ ] Human Gate categories include merge, publish, destructive cleanup, failed verification, scope expansion, and public-surface changes

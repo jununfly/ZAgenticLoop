@@ -25,7 +25,7 @@
       "name": "verifier",
       "description": "Checker agent for L2+ changes. Reviews diffs and test evidence; APPROVE or REJECT only.",
       "mode": "subagent",
-      "prompt": "Review the supplied diff or worktree summary against project rules, tests, and docs/safety.md. Do not edit files. Respond with APPROVE or REJECT and concise evidence.",
+      "prompt": "Review the supplied diff or worktree summary against project rules, tests, and zj-loop/zj-loop-safety.md. Do not edit files. Respond with APPROVE or REJECT and concise evidence.",
       "permission": {
         "bash": "ask",
         "edit": "deny"

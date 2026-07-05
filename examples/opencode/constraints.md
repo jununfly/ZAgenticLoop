@@ -52,4 +52,4 @@ Constraints are *binding*. If a rule can be misinterpreted, rewrite it — the l
 
 - [templates/zj-loop-constraints.md](../../templates/zj-loop-constraints.md) — default constraint set
 - [templates/SKILL.md.zj-loop-constraints](../../templates/SKILL.md.zj-loop-constraints) — constraints skill template
-- [docs/safety.md](../../docs/safety.md)
+- [zj-loop/zj-loop-safety.md](../../zj-loop/zj-loop-safety.md)
