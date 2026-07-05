@@ -1,6 +1,6 @@
 {
   "name": "@jununfly/zj-goal-audit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Goal readiness auditor for run-until-done agentic workflows. Compute Goal Readiness Score (G0-G3). npx @jununfly/zj-goal-audit . --suggest",
   "type": "module",
   "bin": {

@@ -2,10 +2,12 @@
 
 All notable changes to `@jununfly/zj-loop-audit` are documented here.
 
-## Unreleased
+## [0.1.3] - 2026-07-05
 
 ### Changed
 - `--suggest` is now context-aware: it only recommends copy commands for missing artifacts and suggests targeted edits for files that already exist but need policy content.
+- Findings now expose structured categories, score impact, and next steps so warnings are separated from blockers, readiness gaps, hardening, and future tooling.
+- Safety policy detection now uses the canonical `zj-loop/zj-loop-safety.md` path.
 
 ## [1.5.2] - 2026-06-30
 

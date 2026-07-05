@@ -1,6 +1,6 @@
 {
   "name": "@jununfly/zj-loop-init",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Scaffold agentic loop working patterns and starters into any project. Supports Grok, Claude Code, Codex and more. npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok",
   "type": "module",
   "bin": {
@@ -50,7 +50,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@jununfly/zj-loop-core": "^0.1.1"
+    "@jununfly/zj-loop-core": "^0.1.2"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",
