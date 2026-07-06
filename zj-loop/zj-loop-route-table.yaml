@@ -63,6 +63,24 @@ routes:
     failure_owner: "daily-triage"
     human_gate: "on ambiguity or high risk"
 
+  - route_id: "pr-steward-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "pr-steward"
+    evidence_store: "zj-loop/pr-steward-state.md"
+    match:
+      source: ["pull_request"]
+      action: ["opened", "synchronize", "review_requested", "ready_for_review"]
+    guards:
+      side_effects_allowed: false
+      pr_comment_allowed: false
+      label_changes_allowed: false
+      rebase_allowed: false
+      merge_allowed: false
+    dedupe_window: "pr_number:action"
+    failure_owner: "pr-steward"
+    human_gate: "before comments, labels, rebase, merge, or fix request creation"
+
   - route_id: "ci-sweeper"
     enabled: true
     request_kind: "issue-fix-request"
