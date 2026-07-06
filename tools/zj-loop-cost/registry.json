@@ -62,7 +62,7 @@
     },
     {
       "id": "daily-triage",
-      "name": "Daily Triage",
+      "name": "Daily Triage E2E Drift",
       "file": "daily-triage.md",
       "goal": "Prioritized morning scan of CI, issues, commits, and chat",
       "cadence": "1d-2h",
