@@ -76,3 +76,20 @@ the consumer handoff anchors: branch
 `codex-daily-triage-roadmap-activation`, roadmap file
 `docs/plans/daily-triage-roadmap-activation-roadmap.json`, and roadmap view
 `docs/plans/daily-triage-roadmap-activation-roadmap.md`.
+
+## Closeout Decision Audit
+
+Durable decisions from the roadmap were classified as follows:
+
+| Decision | Classification | Durable home |
+| --- | --- | --- |
+| Canonical chain wording is `Plan Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
+| Daily Triage is only the producer; Route Dispatcher creates activation requests; Roadmap-Sliced Development consumes them. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
+| `roadmap-sliced-development` is enabled as an `activation-comment` route in the dogfood route table. | durable doc | `zj-loop/zj-loop-route-table.yaml` and `zj-loop/ZJ-LOOP.md`. |
+| Activation replay must read the real route table and fail when the route is disabled or malformed. | durable doc | `scripts/roadmap-activation-e2e-replay.mjs` tests and this test case. |
+| Synthetic issue dogfood is acceptable when the carrier is clearly marked and closed after evidence capture. | durable doc | This test case. |
+| Feature-slice commit intent. | discarded process note | Preserved by commit history; it does not need to survive as user-facing documentation. |
+
+The process roadmap files were deleted after this audit because the durable docs,
+tests, route table, GitHub issue evidence, and commit history now absorb the
+reviewable decisions.
