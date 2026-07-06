@@ -157,7 +157,9 @@ jobs:
           fi
 
           BRANCH="automated/daily-triage-$(date -u +%Y-%m-%d)"
-          git fetch origin main
+          # Fetch the generated branch only to refresh --force-with-lease metadata.
+          # Do not rebase it: daily triage state is regenerated from current main.
+          git fetch origin main "$BRANCH" 2>/dev/null || git fetch origin main
           # -B keeps working-tree edits; avoids checkout conflicts with modified loop state.
           git checkout -B "$BRANCH"
           git add zj-loop/STATE.md zj-loop/zj-loop-run-log.md
@@ -187,7 +189,6 @@ jobs:
             PR_NUMBER=$(gh pr view "$BRANCH" --json number -q '.number')
           fi
           echo "number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
-          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
 
       - name: Post required commit statuses for branch protection
         if: steps.pr.outputs.opened == 'true'
@@ -223,6 +224,12 @@ jobs:
                 target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               });
             }
+
+      - name: Merge automated daily triage PR
+        if: steps.pr.outputs.opened == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr merge "${{ steps.pr.outputs.number }}" --squash --delete-branch
 
       - name: Open weekly loop report issue (Mondays)
         if: github.event.schedule == '0 8 * * 1-5' && format('{0}', github.run_attempt) == '1'

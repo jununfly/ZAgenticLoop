@@ -83,9 +83,13 @@ The Daily Triage workflow is the clearest self-running dogfood loop:
 9. If state/run-log changed, create an automated branch and PR.
 10. If the same date branch already exists, overwrite it from current `main`
     instead of rebasing stale generated state.
+    The workflow may fetch that generated branch only to refresh
+    `--force-with-lease` metadata before replacement.
 11. Post commit statuses for branch protection because `GITHUB_TOKEN` does not
     trigger normal PR workflows.
-12. On Mondays, open or refresh a weekly loop report issue.
+12. Squash-merge the automated PR after inline statuses are posted, without
+    requiring repository-level auto-merge to be enabled.
+13. On Mondays, open or refresh a weekly loop report issue.
 
 The loop remains L1/report-only. It updates operational memory and creates
 reviewable evidence, but it does not perform product or code fixes.
