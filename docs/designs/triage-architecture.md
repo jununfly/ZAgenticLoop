@@ -41,6 +41,7 @@ Issue Triage Pattern
 Daily Triage Pattern
   -> consumes issue-triage summary plus CI, commits, chat, and zj-loop/STATE.md
   -> maintains zj-loop/STATE.md
+  -> emits Signals for Route Dispatcher when cross-loop action may be needed
 
 zj-loop-triage
   -> performs the Daily Triage signal summarization step
@@ -67,6 +68,12 @@ Project-level routing policy is scaffolded by default at
 `zj-loop/zj-loop-route-table.yaml`; runtime lifecycle evidence stays in
 append-only issue/PR comments, consumer-owned state files, workflow runs, or
 PRs.
+
+Daily Triage must not create Issue Fix Requests or activation requests directly.
+It may discover a signal, summarize it, and recommend or emit a candidate route.
+The Route Dispatcher reads `Signal + Route Table`, creates the replayable Route
+Decision, and only then creates or appends an Issue Fix Request or activation
+request. This keeps Daily Triage as a producer instead of a hidden dispatcher.
 
 ## Triage Dimensions
 
@@ -126,6 +133,13 @@ when newly discovered or when activation status changes. The activation
 lifecycle itself is derived from append-only structured GitHub issue comments.
 Labels remain routing metadata, not activation state.
 
+Candidate fixes follow a different lane. If Daily Triage observes CI, PR, or
+dependency signals that may lead to a Fix PR, it emits a Signal for the Route
+Dispatcher. The dispatcher may create an `issue-fix-request` only when the route
+is allowlisted and guards pass. Fix Consumers such as CI Sweeper, PR Steward, or
+Dependency Sweeper consume that request; they must not re-route the signal or
+expand scope without a new request.
+
 ## Side-Effect Boundaries
 
 Triage loops should be conservative by default.
@@ -148,7 +162,7 @@ artifacts or start implementation; Roadmap-Sliced Development owns consumption
 and execution after an explicit issue id or request id is provided.
 
 General cross-loop dispatch follows the same shape. A dispatcher may create an
-allowlisted activation or dispatch request, but it must not perform the
+allowlisted activation request or Issue Fix Request, but it must not perform the
 consumer's work. Consumer loops own execution, verification, state, and failure
 recovery. See [Route Table Architecture](./route-table-architecture.md) for the
 full Route Decision contract, lifecycle, and loop-prevention rules.

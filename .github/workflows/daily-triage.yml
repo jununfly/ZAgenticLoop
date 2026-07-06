@@ -111,6 +111,19 @@ jobs:
             echo "existing_request=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Create CI Sweeper Issue Fix Request
+        id: issue_fix_request
+        if: steps.route.outputs.dispatch == 'true' && steps.existing_route.outputs.duplicate != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROUTE_DECISION_PATH: /tmp/zj-loop-ci-route-decision.json
+          ISSUE_FIX_REQUEST_BODY_OUT: /tmp/zj-loop-issue-fix-request.md
+        run: |
+          node scripts/build-ci-issue-fix-request-body.mjs
+          TITLE="[Issue Fix Request] ci-sweeper: ${{ steps.route.outputs.source_workflow }} run ${{ steps.route.outputs.source_run_id }}"
+          URL=$(gh issue create --title "$TITLE" --body-file "$ISSUE_FIX_REQUEST_BODY_OUT")
+          echo "issue_url=${URL}" >> "$GITHUB_OUTPUT"
+
       - name: Update zj-loop/STATE.md
         run: |
           DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -145,6 +158,7 @@ jobs:
           - Keep npm packages current after tool changes (tag \`zj-loop-audit-v*\`, \`zj-loop-init-v*\`, \`zj-loop-cost-v*\` — see docs/RELEASE.md).
           $([ "$FAILING" -gt 0 ] && echo "- **${FAILING}** dogfood workflow(s) failing — investigate CI.")
           $([ "${{ steps.route.outputs.dispatch }}" = "true" ] && echo "- Routed CI failure to CI Sweeper: \`${{ steps.route.outputs.dedupe_key }}\`.")
+          $([ -n "${{ steps.issue_fix_request.outputs.issue_url }}" ] && echo "- Issue Fix Request: ${{ steps.issue_fix_request.outputs.issue_url }}.")
           $([ "${{ steps.existing_route.outputs.duplicate }}" = "true" ] && echo "- CI Sweeper duplicate request found: ${{ steps.existing_route.outputs.existing_request }}.")
           ${ROUTE_EVIDENCE}
 
@@ -209,7 +223,8 @@ jobs:
             -f head_branch="${{ steps.route.outputs.head_branch }}" \
             -f head_sha="${{ steps.route.outputs.head_sha }}" \
             -f dedupe_key="${{ steps.route.outputs.dedupe_key }}" \
-            -f request_branch="${{ steps.route.outputs.request_branch }}"
+            -f request_branch="${{ steps.route.outputs.request_branch }}" \
+            -f request_issue_url="${{ steps.issue_fix_request.outputs.issue_url }}"
 
       # These run the SAME gates a PR-triggered workflow would. Their outcomes
       # (not a hardcoded value) drive the commit statuses posted below, so the

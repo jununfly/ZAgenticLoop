@@ -11,7 +11,8 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 - Skill: `zj-loop-triage` (from `skills/` and `starters/minimal-loop`)
 - State: `zj-loop/STATE.md` (updated by workflow; human reviews weekly issue)
 - Route table: `zj-loop/zj-loop-route-table.yaml`
-- Phase: Report + allowlisted route dispatch. Human reviews and decides actions.
+- Phase: Report + Signal producer. Route Dispatcher owns Route Decision and
+  request creation. Human reviews and decides actions.
 - Handoff: Design decisions, large refactors, new pattern acceptance.
 
 ### PR Steward (L2 — assisted, manual trigger)
@@ -28,8 +29,8 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 
 ### CI Sweeper (L2 — route-dispatched deterministic repair)
 - Trigger: `daily-triage.yml` dispatches `.github/workflows/ci-sweeper.yml`
-  when latest `validate-patterns` or `audit` run failed and the route table
-  enables `ci-sweeper`.
+  when latest `validate-patterns` or `audit` run failed, the Route Dispatcher
+  creates an `issue-fix-request`, and the route table enables `ci-sweeper`.
 - State: `zj-loop/ci-sweeper-state.md`.
 - Action: run deterministic build/bundle repair plan, rerun gates, open a PR
   only when non-state repair diffs exist and repair/validate/audit gates all
@@ -37,6 +38,38 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 - Handoff: if no deterministic repair exists or gates still fail, open/update an
   escalation issue.
 - Boundary: not a general-purpose coding agent yet; no auto-merge.
+
+## Route / Request Dogfood
+
+Canonical fix chain:
+
+```text
+Signal -> Route Decision -> Issue Fix Request -> Fix Consumer -> Fix PR
+```
+
+This repo keeps Route Table policy in `zj-loop/zj-loop-route-table.yaml`.
+`ci-sweeper` is the first live allowlisted Fix Consumer. `pr-steward` and
+`dependency-sweeper` are covered by protocol fixtures and can be enabled as
+separate dogfood slices.
+
+Roadmap-Sliced Development is intentionally separate: it consumes
+`activation-comment` requests, not Issue Fix Requests.
+
+Local gates:
+
+```bash
+node --test scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs
+```
+
+Current dogfood status:
+
+- Local replay and validate/audit gates are the hard verification gate.
+- Daily Triage is wired to create a real Issue Fix Request carrier issue before
+  dispatching CI Sweeper.
+- CI Sweeper records the request issue URL in state, Fix PR body, and
+  escalation issue body.
+- A live GitHub run is still required to close real external evidence for this
+  dogfood path.
 
 ### Post-Merge (opportunistic)
 - Future: sweeper reacting to post-merge cleanup signals.

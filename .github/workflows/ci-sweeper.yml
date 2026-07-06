@@ -35,6 +35,11 @@ on:
         required: false
         default: ""
         type: string
+      request_issue_url:
+        description: "Issue Fix Request carrier URL"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -73,6 +78,7 @@ jobs:
             echo "- Head branch: ${{ inputs.head_branch }}"
             echo "- Head SHA: ${{ inputs.head_sha }}"
             echo "- Dedupe key: ${{ inputs.dedupe_key }}"
+            echo "- Issue Fix Request: ${{ inputs.request_issue_url }}"
             echo "- Action: deterministic repair attempt"
           } >> zj-loop/ci-sweeper-state.md
 
@@ -130,6 +136,7 @@ jobs:
           BODY="CI Sweeper deterministic repair for [${{ inputs.source_workflow }} run ${{ inputs.source_run_id }}](${{ inputs.source_url }}).
 
           - Route: \`daily-triage -> ci-sweeper\`
+          - Issue Fix Request: ${{ inputs.request_issue_url }}
           - Dedupe key: \`${{ inputs.dedupe_key }}\`
           - Repair script outcome: \`${{ steps.repair.outcome }}\`
           - Validate gates: \`${{ steps.validate_gates.outcome }}\`
@@ -158,6 +165,7 @@ jobs:
 
           - Source workflow: \`${{ inputs.source_workflow }}\`
           - Source run: ${{ inputs.source_url }}
+          - Issue Fix Request: ${{ inputs.request_issue_url }}
           - Dedupe key: \`${{ inputs.dedupe_key }}\`
           - Non-state repair diff: \`${{ steps.diff.outputs.changed }}\`
           - Repair script outcome: \`${{ steps.repair.outcome }}\`

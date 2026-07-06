@@ -3,8 +3,12 @@
 These test cases verify the dogfood path:
 
 ```text
-Daily Triage -> Route Table -> CI Sweeper -> repair PR / escalation issue
+Signal -> Route Decision -> Issue Fix Request -> CI Sweeper -> repair PR / escalation issue
 ```
+
+Daily Triage is the signal producer in this dogfood path. The Route Dispatcher
+creates the replayable Route Decision and Issue Fix Request before CI Sweeper
+acts as the allowlisted Fix Consumer.
 
 Use this document when changing Daily Triage, Route Table policy, CI Sweeper,
 deterministic repair commands, workflow permissions, or dogfood gates.
@@ -15,6 +19,7 @@ The suite is layered:
 
 - Local deterministic replay proves the route-to-outcome model without GitHub
   side effects.
+- General Issue Fix Request replay proves the chain is not CI Sweeper-specific.
 - GitHub Actions path verification proves Daily Triage can run with repository
   permissions and update loop state.
 - CI Sweeper consumer verification proves the repair PR and escalation branches
@@ -48,8 +53,9 @@ outcome without creating real GitHub PRs or issues.
 
 1. Confirm the worktree is clean, or record current unrelated changes.
 2. Run `node scripts/ci-sweeper-e2e-replay.mjs`.
-3. Run `node --test scripts/ci-sweeper-e2e-replay.test.mjs`.
-4. Confirm the replay covers `repair-pr`, `escalation-issue`,
+3. Run `node scripts/issue-fix-request-e2e-replay.mjs`.
+4. Run `node --test scripts/ci-sweeper-e2e-replay.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs`.
+5. Confirm the replay covers `repair-pr`, `escalation-issue`,
    `duplicate-request`, and `route-denied`.
 
 **Expected result:**
@@ -73,7 +79,7 @@ agree before running real GitHub side effects.
 2. Run:
 
    ```bash
-   node --test scripts/route-ci-failure.test.mjs scripts/ci-sweeper-workflow-contract.test.mjs scripts/ci-sweeper-e2e-replay.test.mjs
+   node --test scripts/route-ci-failure.test.mjs scripts/ci-sweeper-workflow-contract.test.mjs scripts/ci-sweeper-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs
    bash scripts/ci-audit-gates.sh
    bash scripts/ci-validate-gates.sh
    ```

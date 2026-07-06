@@ -1,5 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import yaml from 'yaml';
+
+import { ROUTE_DECISION_SCHEMA } from './issue-fix-request-contract.mjs';
 
 const DEFAULT_ROUTE_TABLE = 'zj-loop/zj-loop-route-table.yaml';
 
@@ -17,7 +20,7 @@ export function findRoute(routeTableText, routeId) {
 
 export function isCiSweeperDispatchEnabled(routeTableText) {
   const route = findRoute(routeTableText, 'ci-sweeper');
-  return route?.enabled === true && route?.request_kind === 'workflow-dispatch';
+  return route?.enabled === true && route?.request_kind === 'issue-fix-request';
 }
 
 function routeMatchesFailure(route, failure) {
@@ -37,7 +40,7 @@ function branchAllowed(route, branchName) {
 }
 
 function findActiveDuplicate(existingRequests, dedupeKey) {
-  const activeStatuses = new Set(['pending', 'consumed', 'ambiguous']);
+  const activeStatuses = new Set(['requested', 'consumed', 'pr_opened', 'pending']);
   return (Array.isArray(existingRequests) ? existingRequests : [])
     .find((request) => request?.dedupe_key === dedupeKey && activeStatuses.has(request?.status));
 }
@@ -68,7 +71,7 @@ export function buildCiSweeperRouteDecision({ routeTableText, failures, sourceRu
     };
   }
 
-  if (route?.enabled !== true || route?.request_kind !== 'workflow-dispatch') {
+  if (route?.enabled !== true || route?.request_kind !== 'issue-fix-request') {
     return {
       dispatch: false,
       status: 'denied',
@@ -141,12 +144,20 @@ export function buildCiSweeperRouteDecision({ routeTableText, failures, sourceRu
   }
 
   return {
+    schema: ROUTE_DECISION_SCHEMA,
+    decision_id: `rd_${stableHash(signalId)}`,
     dispatch: true,
-    status: 'pending',
+    status: 'requested',
     route: 'ci-sweeper',
-    request_kind: 'workflow-dispatch',
-    requested_action: 'dispatch',
+    request_kind: 'issue-fix-request',
+    requested_action: 'create-issue-fix-request',
     target_consumer: route.consumer ?? 'ci-sweeper',
+    allowed: true,
+    guards: {
+      route_enabled: true,
+      branch_allowed: true,
+      consumer_allowed: true,
+    },
     source: 'ci',
     signal_id: signalId,
     subject: `${sourceWorkflow} workflow run ${sourceRun || 'unknown'}`,
@@ -167,6 +178,10 @@ export function buildCiSweeperRouteDecision({ routeTableText, failures, sourceRu
     created_at: new Date().toISOString(),
     failures: normalizedFailures,
   };
+}
+
+function stableHash(value) {
+  return createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
 }
 
 async function main() {

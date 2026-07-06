@@ -27,6 +27,7 @@ Signal producers
   -> Route Table
   -> Route Decision
   -> Dispatcher
+  -> Request carrier
   -> Consumer-owned workflow
 ```
 
@@ -59,10 +60,16 @@ comments, consumer-owned state files, workflow runs, or PRs.
 A Route Decision is the replayable record between an observed signal and any
 activation or dispatch request.
 
+Route Decision evidence must be persisted somewhere reviewable, such as an
+Issue/PR comment, workflow summary, or deterministic replay fixture. It must not
+exist only as a temporary function return value.
+
 Minimum fields:
 
 | Field | Purpose |
 | --- | --- |
+| `schema` | Contract id, currently `zj-loop.route_decision.v1`. |
+| `decision_id` | Stable id for this routing decision. |
 | `signal_id` | Stable id for the observed signal. |
 | `source` | Origin such as `ci`, `issue`, `pr`, `dependency`, `release`, `chat`, or `human`. |
 | `subject` | Issue number, PR number, workflow run, package, commit, or concise title. |
@@ -75,7 +82,8 @@ Minimum fields:
 | `producer` | Component that emitted the decision candidate. |
 | `dedupe_key` | Stable key used to detect repeats. |
 | `request_branch` | Optional deterministic branch name for workflow-dispatch routes that will create a PR; producer and consumer should share this value to avoid branch naming drift. |
-| `requested_action` | `report`, `dispatch`, `activate`, `comment`, or `ignore`. |
+| `request_kind` | `issue-fix-request`, `activation-comment`, `workflow-dispatch`, or `report-only`. |
+| `requested_action` | `report`, `create-issue-fix-request`, `activate`, `comment`, or `ignore`. |
 | `target_consumer` | Owning consumer if request creation is allowed. |
 | `status` | `candidate`, `pending`, `consumed`, `duplicate`, `denied`, `failed`, or `closed`. |
 | `created_at` | Timestamp for audit and dedupe windows. |
@@ -91,6 +99,62 @@ represent activation progress, and do not store activation lifecycle in
 `zj-loop/issue-triage-state.md`; plan activation lifecycle is derived from
 append-only structured GitHub issue comments.
 
+## Request Kinds
+
+Request kinds are intentionally separate. A Route Table can govern all of them,
+but their consumers and lifecycle contracts are not interchangeable.
+
+| Request kind | Meaning |
+| --- | --- |
+| `issue-fix-request` | Creates or appends a semantic Issue Fix Request that may lead to a Fix PR. Only Fix Consumer protocol applies. |
+| `activation-comment` | Creates an append-only activation request, such as Roadmap-Sliced Development. It must not be treated as a fix request. |
+| `workflow-dispatch` | Direct workflow dispatch for narrowly scoped automation. Prefer pairing it with durable request evidence when it can create PRs. |
+| `report-only` | Records or recommends an action without creating a side-effecting request. |
+
+## Issue Fix Request Contract
+
+The canonical fix chain is:
+
+```text
+Signal -> Route Decision -> Issue Fix Request -> Fix Consumer -> Fix PR
+```
+
+An Issue Fix Request is a semantic object. GitHub or GitLab issues are only
+carriers. If no suitable issue tracker item exists, create an independent issue
+with a title shaped like:
+
+```text
+[Issue Fix Request] <route_id>: <short summary>
+```
+
+If a suitable issue tracker item already exists, append a structured request
+comment to that item instead of creating another issue.
+
+The structured request comment is versioned and machine-parseable. Current
+scripts use `<!-- zj-loop:issue-fix-request ... -->` with JSON payloads. The
+hard required fields are:
+
+| Field | Purpose |
+| --- | --- |
+| `schema` | Must be `zj-loop.issue_fix_request.v1`. |
+| `request_id` | Stable request id. |
+| `status` | One of `requested`, `duplicate`, `denied`, `consumed`, `pr_opened`, `failed`, `completed`. |
+| `created_at` | Creation timestamp. |
+| `source_signal` | Signal id, source, summary, and evidence URL. |
+| `route_decision` | Embedded or linked replayable Route Decision. |
+| `dedupe_key` | Stable duplicate suppression key. |
+| `requested_consumer` | Target Fix Consumer and capability. |
+| `fix_scope` | Repo, files/areas, and non-goals. |
+| `acceptance_criteria` | Observable success criteria. |
+| `verification_gate` | Commands or checks required before PR confidence. |
+| `failure_policy` | Must require retry via a new request. |
+| `lifecycle` | PR link, consumer, close/failure evidence. |
+
+Active duplicate suppression applies to `requested`, `consumed`, and
+`pr_opened`. `failed`, `completed`, and `denied` do not block a new request, but
+the new request must use a new `request_id` and may reference
+`parent_request_id`.
+
 ## Route Table Shape
 
 A Route Table row describes a rule, not a job implementation.
@@ -103,7 +167,7 @@ Recommended fields:
 | `producer_scope` | Which producers may emit candidates for this route. |
 | `match` | Deterministic or human-readable match condition. |
 | `guards` | Risk, permission, branch, budget, and evidence gates. |
-| `request_kind` | `activation-comment`, `workflow-dispatch`, `evidence-request`, or `report-only`. |
+| `request_kind` | `issue-fix-request`, `activation-comment`, `workflow-dispatch`, or `report-only`. |
 | `consumer` | Owning pattern, workflow, or skill. |
 | `evidence_store` | Where request lifecycle evidence/status is recorded; this must point to an allowed evidence target, not a central queue. |
 | `dedupe_window` | Time or lifecycle window for duplicate suppression. |
@@ -153,19 +217,19 @@ overwrite and must make that overwrite visible in CLI output.
 
 | Route | Request kind | Consumer | First behavior |
 | --- | --- | --- | --- |
-| `ci-sweeper` | `workflow-dispatch` or `evidence-request` | CI Sweeper | Diagnose CI failure, propose verifier-backed minimal fix, escalate on infra or high risk. |
+| `ci-sweeper` | `issue-fix-request` | CI Sweeper | Diagnose CI failure, propose verifier-backed minimal fix, escalate on infra or high risk. |
 | `issue-triage` | `evidence-request` | Issue Triage | Summarize issue backlog changes and propose labels; no formal lifecycle transition in L1. |
-| `pr-steward` | `evidence-request` | PR Steward | Watch PRs, review comments, CI state, rebase needs, and readiness. |
-| `dependency-sweeper` | `evidence-request` or `workflow-dispatch` | Dependency Sweeper | Handle patch/minor dependency signals with verifier-backed boundaries. |
+| `pr-steward` | `issue-fix-request` or `report-only` | PR Steward | Watch PRs, review comments, CI state, rebase needs, and readiness. |
+| `dependency-sweeper` | `issue-fix-request` or `report-only` | Dependency Sweeper | Handle patch/minor dependency signals with verifier-backed boundaries. |
 | `changelog-drafter` | `workflow-dispatch` or `evidence-request` | Changelog Drafter | Draft release-note candidates; never publish. |
 | `roadmap-sliced-development` | `activation-comment` | Roadmap-Sliced Development | Create or consume authorized activation requests only; implementation stays with roadmap lifecycle. |
 | `human` | `report-only` | Maintainer | Security, auth, billing, infra, ambiguous, high-risk, or policy decisions. |
 | `ignore` | `report-only` | Producing loop | Record noise with reason and avoid rediscovery. |
 
-`evidence-request` means "append a request/status record to the
-consumer-owned evidence location declared by the route." It does not mean the
-Route Table owns or mutates triage state, and it must not turn
-`zj-loop/STATE.md` or `zj-loop/issue-triage-state.md` into an activation queue.
+`issue-fix-request` means "create or append a structured request/status record
+that may lead to a Fix PR." It does not mean the Route Table owns or mutates
+triage state, and it must not turn `zj-loop/STATE.md` or
+`zj-loop/issue-triage-state.md` into a request queue.
 
 ## Dispatcher Boundary
 
@@ -174,6 +238,7 @@ The Dispatcher may:
 - validate that a route is allowlisted
 - apply guards and permission checks
 - create an activation or dispatch request
+- create or append an Issue Fix Request
 - append an audit record to an allowed evidence target, such as an issue/PR
   comment, workflow dispatch record, or consumer-owned state/evidence entry
 - mark a request duplicate, denied, failed, or consumed
@@ -197,9 +262,10 @@ state.
 
 ```text
 candidate
-  -> pending
+  -> requested
   -> consumed
-  -> closed
+  -> pr_opened
+  -> completed
 
 candidate
   -> denied
@@ -207,7 +273,7 @@ candidate
 candidate
   -> duplicate
 
-pending
+requested
   -> failed
 ```
 
@@ -217,8 +283,9 @@ Rules:
   request id.
 - A failed request is terminal for that request.
 - Retrying a failed request requires a new request.
-- Once a request is consumed, execution failures are resumed inside the owning
-  consumer lifecycle.
+- `failed` is terminal for that request; retry requires a new request.
+- Once a request is consumed, execution failures are recorded inside the owning
+  consumer lifecycle and surfaced as request lifecycle evidence.
 - Request lifecycle records are append-only unless the route declares a
   consumer-owned mutable state file as its evidence target.
 
@@ -248,33 +315,41 @@ consumer-created repair PR cannot recursively dispatch the same consumer.
 CI failure:
 
 ```yaml
+schema: zj-loop.route_decision.v1
+decision_id: rd_28765215864
 signal_id: ci:validate-patterns:28765215864
 source: ci
 subject: validate-patterns.yml run 28765215864
 priority: P1
 state: none
 route: ci-sweeper
+route_id: ci-sweeper
+request_kind: issue-fix-request
 risk: medium
 confidence: high
 evidence:
   - https://github.com/jununfly/ZAgenticLoop/actions/runs/28765215864
 producer: daily-triage
 dedupe_key: ci:validate-patterns:main
-requested_action: dispatch
+requested_action: create-issue-fix-request
 target_consumer: ci-sweeper
-status: candidate
+status: requested
 created_at: 2026-07-06T00:00:00Z
 ```
 
 Plan intake:
 
 ```yaml
+schema: zj-loop.route_decision.v1
+decision_id: rd_issue_12_plan_intake
 signal_id: issue:12:plan-intake
 source: issue
 subject: "#12"
 priority: P2
 state: ready-for-agent
 route: roadmap-sliced-development
+route_id: roadmap-sliced-development
+request_kind: activation-comment
 risk: medium
 confidence: high
 evidence:
