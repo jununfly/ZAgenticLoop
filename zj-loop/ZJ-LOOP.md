@@ -66,12 +66,15 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
 ```
 
 Current dogfood status:
 
 - Local replay and validate/audit gates are the hard verification gate.
+- `human`, `ignore`, and `daily-triage-report` are implemented as
+  `report-only` Route Decisions that create report evidence only. Allowed
+  report-only decisions close immediately with `status: closed`.
 - Daily Triage is wired to create a real Issue Fix Request carrier issue before
   dispatching CI Sweeper.
 - `roadmap-sliced-development` is enabled in the route table as an
@@ -85,6 +88,18 @@ Current dogfood status:
     https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4893003970
   - Activation consumed:
     https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4893007904
+- Report-only Route Decision dogfood evidence has been captured:
+  - Plan Signal carrier:
+    https://github.com/jununfly/ZAgenticLoop/issues/21
+  - Activation request:
+    https://github.com/jununfly/ZAgenticLoop/issues/21#issuecomment-4893268445
+  - Activation Route Decision:
+    https://github.com/jununfly/ZAgenticLoop/issues/21#issuecomment-4893272307
+  - Activation consumed:
+    https://github.com/jununfly/ZAgenticLoop/issues/21#issuecomment-4893302147
+  - Local report-only decisions:
+    `rd_report_37f23ba8d291`, `rd_report_608d990bd18f`,
+    `rd_report_8a9f213d1057`
 - CI Sweeper records the request issue URL in state, Fix PR body, and
   escalation issue body.
 - Live external evidence has been captured:

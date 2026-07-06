@@ -82,3 +82,19 @@ Captured Route Decisions:
 | `daily-triage-report` | `daily:report:report-only-dogfood` | `rd_report_8a9f213d1057` | `report`, `status: closed` |
 
 Each report evidence object recorded all side-effect flags as `false`.
+
+## Closeout Decision Audit
+
+Durable decisions from the roadmap were classified as follows:
+
+| Decision | Classification | Durable home |
+| --- | --- | --- |
+| Report-only Route Decision covers `human`, `ignore`, and `daily-triage-report`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
+| Report-only routes produce Route Decision plus report evidence only. | durable doc | This test case and `scripts/report-only-route-dispatcher.mjs`. |
+| Report-only routes must not create Issue Fix Requests, Activation Requests, workflow dispatches, branches, PRs, or consumer work. | durable doc | This test case and dispatcher tests. |
+| Allowed report-only Route Decisions use `status: closed`. | durable doc | This test case and dispatcher tests. |
+| Feature-slice verification and commit bookkeeping. | discarded process note | Preserved by commit history; not needed as durable user-facing documentation. |
+
+The process roadmap files were deleted after this audit because the durable docs,
+tests, GitHub issue evidence, and commit history now absorb the reviewable
+decisions.
