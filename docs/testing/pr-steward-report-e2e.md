@@ -59,7 +59,7 @@ The implementation work may be started through the usual issue/comment
 activation path:
 
 ```text
-Plan Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR
+Issue Slash Command -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR
 ```
 
 That is separate from the route implemented here. The runtime route input is a
@@ -80,6 +80,6 @@ slice.
 | Decision | Classification | Durable home |
 | --- | --- | --- |
 | Canonical chain wording is `Pull Request Event -> Route Decision -> PR Steward Report Evidence`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
-| Plan Signal is only the activation path for implementing this slice, not the runtime route input. | durable doc | This test case. |
+| Issue Slash Command is only the activation path for implementing this slice, not the runtime route input. | durable doc | This test case. |
 | `pr-steward-report` is report-only and writes no PR comments, labels, rebases, merges, requests, or workflow dispatches. | durable doc | This test case and replay tests. |
 | PR Steward report evidence belongs in `zj-loop/pr-steward-state.md` until a later explicit route enables public PR comments. | durable doc | This test case and route table. |

@@ -3,13 +3,13 @@
 These test cases verify the activation route:
 
 ```text
-Plan Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR
+Issue Slash Command -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR
 ```
 
 For this repository's dogfood run, the producer-specific chain is:
 
 ```text
-Daily Triage Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Development -> Roadmap Branch/PR
+Daily Triage Candidate -> Route Decision -> Activation Request -> Roadmap-Sliced Development -> Roadmap Branch/PR
 ```
 
 This is not an Issue Fix Request chain and must not create a Fix PR by protocol.
@@ -83,7 +83,8 @@ Durable decisions from the roadmap were classified as follows:
 
 | Decision | Classification | Durable home |
 | --- | --- | --- |
-| Canonical chain wording is `Plan Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
+| Canonical issue-command chain wording is `Issue Slash Command -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
+| Canonical triage-candidate chain wording is `Daily Triage Candidate -> Route Decision -> Activation Request -> Roadmap-Sliced Development -> Roadmap Branch/PR`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
 | Daily Triage is only the producer; Route Dispatcher creates activation requests; Roadmap-Sliced Development consumes them. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
 | `roadmap-sliced-development` is enabled as an `activation-comment` route in the dogfood route table. | durable doc | `zj-loop/zj-loop-route-table.yaml` and `zj-loop/ZJ-LOOP.md`. |
 | Activation replay must read the real route table and fail when the route is disabled or malformed. | durable doc | `scripts/roadmap-activation-e2e-replay.mjs` tests and this test case. |
