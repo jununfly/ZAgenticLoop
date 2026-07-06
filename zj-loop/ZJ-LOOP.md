@@ -53,7 +53,15 @@ This repo keeps Route Table policy in `zj-loop/zj-loop-route-table.yaml`.
 separate dogfood slices.
 
 Roadmap-Sliced Development is intentionally separate: it consumes
-`activation-comment` requests, not Issue Fix Requests.
+`activation-comment` requests, not Issue Fix Requests. The dogfood route is:
+
+```text
+Daily Triage Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Development -> Roadmap Branch/PR
+```
+
+Daily Triage does not create roadmap artifacts. The Route Dispatcher appends the
+activation request, and Roadmap-Sliced Development consumes an explicit issue or
+request id.
 
 Local gates:
 
@@ -66,6 +74,17 @@ Current dogfood status:
 - Local replay and validate/audit gates are the hard verification gate.
 - Daily Triage is wired to create a real Issue Fix Request carrier issue before
   dispatching CI Sweeper.
+- `roadmap-sliced-development` is enabled in the route table as an
+  `activation-comment` route and covered by local activation replay.
+- Roadmap activation dogfood evidence has been captured:
+  - Synthetic activation carrier:
+    https://github.com/jununfly/ZAgenticLoop/issues/19
+  - Activation request:
+    https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4892983991
+  - Route Decision:
+    https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4893003970
+  - Activation consumed:
+    https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4893007904
 - CI Sweeper records the request issue URL in state, Fix PR body, and
   escalation issue body.
 - Live external evidence has been captured:
