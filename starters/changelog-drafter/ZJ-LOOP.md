@@ -25,6 +25,11 @@
 - Final approved notes incorporated into `CHANGELOG.md` (or GitHub Release body) by human or allowlisted automation
 - State file updated on every run
 
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.
+
 ## Links
 
 - Pattern: [changelog-drafter](../../patterns/changelog-drafter.md)

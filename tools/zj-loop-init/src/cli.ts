@@ -11,7 +11,7 @@ const MONOREPO_STARTERS = path.resolve(PACKAGE_ROOT, '../../starters');
 const MONOREPO_TEMPLATES = path.resolve(PACKAGE_ROOT, '../../templates');
 
 type Tool = 'grok' | 'claude' | 'codex';
-type AddArtifact = 'safety' | 'pattern-registry';
+type AddArtifact = 'safety' | 'pattern-registry' | 'route-table';
 
 type InitPattern = RegistryPattern & {
   state: string;
@@ -20,7 +20,7 @@ type InitPattern = RegistryPattern & {
 };
 
 const VALID_TOOLS: Tool[] = ['grok', 'claude', 'codex'];
-const VALID_ADD_ARTIFACTS: AddArtifact[] = ['safety', 'pattern-registry'];
+const VALID_ADD_ARTIFACTS: AddArtifact[] = ['safety', 'pattern-registry', 'route-table'];
 
 async function loadRegistry() {
   return loadPatternRegistry({
@@ -123,6 +123,7 @@ async function handleAddArtifacts(
   artifacts: AddArtifact[],
   targetDir: string,
   templatesRoot: string,
+  patterns: InitPattern[],
   dryRun: boolean,
   force: boolean,
   io: CliIo,
@@ -150,6 +151,41 @@ async function handleAddArtifacts(
         io,
         'review patterns/registry.yaml or rerun with --force to overwrite intentionally',
       );
+    }
+
+    if (artifact === 'route-table') {
+      const defaultPattern = patterns.find((pattern) => pattern.id === 'daily-triage') ?? patterns[0];
+      if (!defaultPattern) {
+        io.stderr('  missing pattern metadata: cannot scaffold route table');
+        continue;
+      }
+      const src = path.join(templatesRoot, LOOP_ARTIFACTS.routeTable.template);
+      const dest = path.join(targetDir, LOOP_ARTIFACTS.routeTable.primary);
+      if (!(await exists(src))) {
+        io.stderr(`  missing template: ${src}`);
+        continue;
+      }
+      if ((await exists(dest)) && !force) {
+        io.stdout(`  skipped: ${LOOP_ARTIFACTS.routeTable.primary} already exists`);
+        io.stdout('  next step: review zj-loop/zj-loop-route-table.yaml or rerun with --force to overwrite intentionally');
+        continue;
+      }
+      if (dryRun) {
+        const verb = force ? 'would overwrite' : 'would write';
+        io.stdout(`  ${verb}: ${dest}`);
+        if (force) io.stdout('  WARNING: --force would overwrite the existing route table; review the result before committing.');
+        continue;
+      }
+
+      const template = await readFile(src, 'utf8');
+      await mkdir(path.dirname(dest), { recursive: true });
+      await writeFile(dest, buildRouteTableYaml(template, defaultPattern));
+      if (force) {
+        io.stdout(`  OVERWRITTEN with --force: ${LOOP_ARTIFACTS.routeTable.primary}`);
+        io.stdout('  WARNING: review this route policy before committing.');
+      } else {
+        io.stdout(`  created: ${LOOP_ARTIFACTS.routeTable.primary}`);
+      }
     }
   }
 
@@ -333,6 +369,39 @@ async function scaffoldConstraints(
   );
 }
 
+function buildRouteTableYaml(template: string, pattern: InitPattern): string {
+  return template
+    .replaceAll('__PATTERN_ID__', pattern.id)
+    .replaceAll('__PATTERN_NAME__', pattern.name)
+    .replaceAll('__PATTERN_STATE__', pattern.state);
+}
+
+async function scaffoldRouteTable(
+  pattern: InitPattern,
+  targetDir: string,
+  templatesRoot: string,
+  dryRun: boolean,
+  io: CliIo,
+) {
+  const routeTablePath = path.join(targetDir, LOOP_ARTIFACTS.routeTable.primary);
+  if (await exists(routeTablePath)) {
+    io.stdout(`  skipped: ${LOOP_ARTIFACTS.routeTable.primary} already exists`);
+    return;
+  }
+
+  const templatePath = path.join(templatesRoot, LOOP_ARTIFACTS.routeTable.template);
+  if (!(await exists(templatePath))) return;
+  if (dryRun) {
+    io.stdout(`  would write: ${routeTablePath}`);
+    return;
+  }
+
+  const template = await readFile(templatePath, 'utf8');
+  await mkdir(path.dirname(routeTablePath), { recursive: true });
+  await writeFile(routeTablePath, buildRouteTableYaml(template, pattern));
+  io.stdout(`  created: ${LOOP_ARTIFACTS.routeTable.primary}`);
+}
+
 async function copyFile(src: string, dest: string, dryRun: boolean, io: CliIo) {
   if (!(await exists(src))) return false;
   if (dryRun) {
@@ -361,14 +430,13 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
   const targetDir = path.resolve(target);
   const dryRun = options.dryRun === true;
   const force = options.force === true;
+  const registry = await loadRegistry();
+  const patterns = registry.patterns.map(requireInitPattern);
 
   if (addArtifacts.length > 0) {
     const templatesRoot = await resolveBundledOrMonorepo('templates');
-    return handleAddArtifacts(addArtifacts, targetDir, templatesRoot, dryRun, force, io);
+    return handleAddArtifacts(addArtifacts, targetDir, templatesRoot, patterns, dryRun, force, io);
   }
-
-  const registry = await loadRegistry();
-  const patterns = registry.patterns.map(requireInitPattern);
 
   const pattern = String(options.pattern ?? 'daily-triage');
   const tool = String(options.tool ?? 'grok') as Tool;
@@ -465,6 +533,7 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
   await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
 
   await scaffoldConstraints(targetDir, templatesRoot, tool, dryRun, io);
+  await scaffoldRouteTable(selectedPattern, targetDir, templatesRoot, dryRun, io);
   if (!dryRun && !(await exists(path.join(targetDir, 'AGENTS.md')))) {
     const agentsTemplate = `# AGENTS.md
 
@@ -504,7 +573,7 @@ async function helpText() {
 
 Usage:
   zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
-  zj-loop-init [target-dir] --add <safety|pattern-registry>[,...] [--force]
+  zj-loop-init [target-dir] --add <safety|pattern-registry|route-table>[,...] [--force]
 
 Patterns:
 ${patternList}
@@ -512,14 +581,14 @@ ${patternList}
 Options:
   -p, --pattern   Pattern to scaffold
   -t, --tool      Tool target (default: grok)
-  --add           Add explicit optional artifacts: safety, pattern-registry
+  --add           Add explicit optional artifacts: safety, pattern-registry, route-table
   --force         Overwrite existing --add targets instead of skipping
   --dry-run       Print actions without copying
   -h, --help      This help
 
 Examples:
   npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-  npx @jununfly/zj-loop-init . --add safety,pattern-registry
+  npx @jununfly/zj-loop-init . --add safety,pattern-registry,route-table
   npx @jununfly/zj-loop-init . -p pr-steward -t claude
 `;
 }

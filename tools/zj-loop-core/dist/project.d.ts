@@ -16,6 +16,7 @@ export declare const DEFAULT_STATE_FILES: readonly ["zj-loop/STATE.md", "zj-loop
 export declare const DEFAULT_REQUIRED_LOOP_FILES: readonly ["zj-loop/STATE.md", "zj-loop/ZJ-LOOP.md", "AGENTS.md"];
 export declare const LOOP_CONFIG_FILE_CANDIDATES: readonly ["zj-loop/ZJ-LOOP.md"];
 export declare const DEFAULT_SAFETY_FILES: readonly ["zj-loop/zj-loop-safety.md"];
+export declare const DEFAULT_ROUTE_TABLE_FILES: readonly ["zj-loop/zj-loop-route-table.yaml"];
 export declare const DEFAULT_MCP_FILES: readonly [".mcp.json", "mcp.json", ".mcp/config.json"];
 export declare const DEFAULT_LOOP_SKILL_NAMES: readonly ["zj-loop-triage", "zj-minimal-fix", "zj-loop-verifier", "zj-pr-review-triage", "zj-ci-triage", "zj-post-merge-scan", "zj-dependency-triage", "zj-rebase-and-clean", "zj-changelog-scan", "zj-loop-constraints", "zj-loop-budget", "zj-draft-release-notes", "zj-issue-triage"];
 export interface ProjectEvidenceFacts {
@@ -37,6 +38,9 @@ export interface ProjectEvidenceFacts {
     loopSkillNames: string[];
     safety: {
         docPresent: boolean;
+    };
+    routeTable: {
+        present: boolean;
     };
     mcp: {
         filePresent: boolean;

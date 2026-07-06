@@ -30,6 +30,9 @@ export const LOOP_CONFIG_FILE_CANDIDATES = [
 export const DEFAULT_SAFETY_FILES = [
     'zj-loop/zj-loop-safety.md',
 ];
+export const DEFAULT_ROUTE_TABLE_FILES = [
+    'zj-loop/zj-loop-route-table.yaml',
+];
 export const DEFAULT_MCP_FILES = [
     '.mcp.json',
     'mcp.json',
@@ -161,6 +164,9 @@ export async function collectProjectEvidenceFacts(fs) {
         loopSkillNames: skillNames.filter((skillName) => DEFAULT_LOOP_SKILL_NAMES.includes(skillName)),
         safety: {
             docPresent: await hasAnyProjectPath(fs, DEFAULT_SAFETY_FILES),
+        },
+        routeTable: {
+            present: await hasAnyProjectPath(fs, DEFAULT_ROUTE_TABLE_FILES),
         },
         mcp: {
             filePresent: await hasAnyProjectPath(fs, DEFAULT_MCP_FILES),

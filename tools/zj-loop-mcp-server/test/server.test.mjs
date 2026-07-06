@@ -17,6 +17,7 @@ import {
   loadBudget,
   loadRunLog,
   loadSafetyDoc,
+  loadRouteTable,
   summarizeOperationalContext,
   listPatternDocs,
   loadPatternDoc,
@@ -99,6 +100,12 @@ patterns:
   await writeFile(
     path.join(tmpRoot, 'zj-loop', 'zj-loop-safety.md'),
     '# Safety\n\n## Path Denylists\n- .env\n- credentials\n',
+  );
+
+  // Route dispatch control plane
+  await writeFile(
+    path.join(tmpRoot, 'zj-loop', 'zj-loop-route-table.yaml'),
+    'version: 1\nroutes:\n  - id: human\n    enabled: true\n',
   );
 
   return tmpRoot;
@@ -299,6 +306,17 @@ test('loadSafetyDoc reads zj-loop/zj-loop-safety.md', async () => {
   }
 });
 
+test('loadRouteTable reads zj-loop/zj-loop-route-table.yaml', async () => {
+  const root = await setup();
+  try {
+    const routeTable = await loadRouteTable(root);
+    assert.ok(routeTable);
+    assert.ok(routeTable.includes('routes:'));
+  } finally {
+    await cleanup();
+  }
+});
+
 test('summarizeOperationalContext returns structured evidence with raw resource links', async () => {
   const root = await setup();
   try {
@@ -309,11 +327,15 @@ test('summarizeOperationalContext returns structured evidence with raw resource 
       'loop://budget',
       'loop://run-log',
       'loop://safety',
+      'loop://route-table',
     ]);
     const config = summary.documents.find(doc => doc.key === 'config');
     assert.equal(config.present, true);
     assert.equal(config.path, 'zj-loop/ZJ-LOOP.md');
     assert.ok(config.highlights.some(line => line.includes('Budget')));
+    const routeTable = summary.documents.find(doc => doc.key === 'routeTable');
+    assert.equal(routeTable.present, true);
+    assert.equal(routeTable.path, 'zj-loop/zj-loop-route-table.yaml');
   } finally {
     await cleanup();
   }
@@ -435,9 +457,11 @@ test('loop_summarize_operational_context tool returns structured operational evi
     }]);
     const text = res.get(1).result.content[0].text;
     const parsed = JSON.parse(text);
-    assert.equal(parsed.documents.length, 4);
+    assert.equal(parsed.documents.length, 5);
     assert.equal(parsed.documents.find(doc => doc.key === 'safety').path, 'zj-loop/zj-loop-safety.md');
+    assert.equal(parsed.documents.find(doc => doc.key === 'routeTable').path, 'zj-loop/zj-loop-route-table.yaml');
     assert.ok(parsed.rawResources.includes('loop://safety'));
+    assert.ok(parsed.rawResources.includes('loop://route-table'));
   } finally {
     await cleanup();
   }
@@ -540,6 +564,21 @@ test('state resource remains readable over stdio', async () => {
     }]);
     const text = res.get(1).result.contents[0].text;
     assert.ok(text.includes('Fix CI'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('route table resource is readable over stdio', async () => {
+  const root = await setup();
+  try {
+    const res = await callServer(root, [{
+      id: 1, method: 'resources/read',
+      params: { uri: 'loop://route-table' },
+    }]);
+    const content = res.get(1).result.contents[0];
+    assert.equal(content.mimeType, 'text/yaml');
+    assert.ok(content.text.includes('routes:'));
   } finally {
     await cleanup();
   }

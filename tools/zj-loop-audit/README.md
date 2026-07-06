@@ -69,6 +69,7 @@ npm publish --access public
 | `zj-loop/ZJ-LOOP.md` / config | Cadence, limits, handoff |
 | AGENTS.md / CLAUDE.md   | Project conventions |
 | Loop safety policy             | zj-loop/zj-loop-safety.md + ZJ-LOOP.md mentions of gates |
+| Route table             | `zj-loop/zj-loop-route-table.yaml` as non-scoring hardening guidance |
 | .github/ + workflows    | Dogfooding / automation |
 | MCP / connectors        | Mentions or config files |
 | Worktree evidence       | Isolation patterns in docs |

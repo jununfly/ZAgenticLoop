@@ -240,9 +240,9 @@ Product tools still own the product contract:
 
 - pattern initialization via `--pattern <id> --tool <tool>`, which copies a full
   starter and associated runtime templates.
-- incremental artifact addition via `--add safety`, `--add pattern-registry`, or
-  `--add safety,pattern-registry`, which adds only explicitly requested optional
-  artifacts.
+- incremental artifact addition via `--add safety`, `--add pattern-registry`,
+  `--add route-table`, or a comma-separated combination, which adds only
+  explicitly requested optional artifacts.
 
 Incremental artifact addition intentionally rejects aggregate aliases such as
 `all` or `recommended`. Existing files are skipped by default with a next step
@@ -267,6 +267,7 @@ Canonical files:
 
 - `zj-loop/STATE.md` or `zj-loop/<pattern>-state.md`
 - `zj-loop/ZJ-LOOP.md`
+- `zj-loop/zj-loop-route-table.yaml`
 - `zj-loop/zj-loop-budget.md`
 - `zj-loop/zj-loop-run-log.md`
 - `zj-loop/zj-loop-constraints.md`
@@ -418,7 +419,8 @@ The architecture-improvement roadmap produced these durable outcomes:
   output and side effects.
 - User-project loop artifacts now converge under the `zj-loop/` namespace, with
   init, audit, sync, MCP, starters, templates, examples, and docs aligned to
-  `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-budget.md`,
+  `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`,
+  `zj-loop/zj-loop-route-table.yaml`, `zj-loop/zj-loop-budget.md`,
   `zj-loop/zj-loop-run-log.md`, and `zj-loop/zj-loop-constraints.md`.
 - `roadmap-sliced-development` is the canonical public pattern id and starter
   directory; the older `roadmap-sliced-development-pattern` spelling is retained

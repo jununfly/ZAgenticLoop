@@ -52,6 +52,10 @@ export const DEFAULT_SAFETY_FILES = [
   'zj-loop/zj-loop-safety.md',
 ] as const;
 
+export const DEFAULT_ROUTE_TABLE_FILES = [
+  'zj-loop/zj-loop-route-table.yaml',
+] as const;
+
 export const DEFAULT_MCP_FILES = [
   '.mcp.json',
   'mcp.json',
@@ -84,6 +88,7 @@ export interface ProjectEvidenceFacts {
   skillNames: string[];
   loopSkillNames: string[];
   safety: { docPresent: boolean };
+  routeTable: { present: boolean };
   mcp: { filePresent: boolean };
 }
 
@@ -220,6 +225,9 @@ export async function collectProjectEvidenceFacts(fs: ProjectFileSystem): Promis
     ),
     safety: {
       docPresent: await hasAnyProjectPath(fs, DEFAULT_SAFETY_FILES),
+    },
+    routeTable: {
+      present: await hasAnyProjectPath(fs, DEFAULT_ROUTE_TABLE_FILES),
     },
     mcp: {
       filePresent: await hasAnyProjectPath(fs, DEFAULT_MCP_FILES),

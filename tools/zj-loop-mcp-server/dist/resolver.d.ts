@@ -12,7 +12,7 @@ export interface SkillInfo {
     content: string;
 }
 export interface OperationalDocumentSummary {
-    key: 'config' | 'budget' | 'runLog' | 'safety';
+    key: 'config' | 'budget' | 'runLog' | 'safety' | 'routeTable';
     uri: string;
     path: string | null;
     present: boolean;
@@ -33,5 +33,6 @@ export declare function loadLoopConfig(root: string): Promise<string | null>;
 export declare function loadBudget(root: string): Promise<string | null>;
 export declare function loadRunLog(root: string): Promise<string | null>;
 export declare function loadSafetyDoc(root: string): Promise<string | null>;
+export declare function loadRouteTable(root: string): Promise<string | null>;
 export declare function summarizeOperationalContext(root: string): Promise<OperationalContextSummary>;
 export declare function listPatternDocs(root: string): Promise<string[]>;

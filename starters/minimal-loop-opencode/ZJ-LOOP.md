@@ -27,6 +27,11 @@
 - Review STATE.md daily.
 - If token spend hits 80% of daily cap, switch to report-only.
 
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.
+
 ## Links
 
 - Pattern: [daily-triage](../../patterns/daily-triage.md)

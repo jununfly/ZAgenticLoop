@@ -13,6 +13,7 @@ enough of its own loop system to catch drift between:
 - pattern documents and `patterns/registry.yaml`
 - starter scaffolds and `zj-loop-init`
 - readiness scoring and real repo artifacts
+- route table policy and cross-loop dispatch boundaries
 - workflow automation and canonical `zj-loop/*` state paths
 - published package metadata and local monorepo source
 
@@ -30,6 +31,7 @@ are report-only, and some are declared candidates for future automation.
 | Release Workflow Validation | `scripts/validate-release-workflows.mjs` | Validate gate | Ensure every release-managed npm package has matching workflow, tag pattern, and pack output |
 | Drift Check | `tools/zj-loop-sync` | Local/CI tool package test, optional manual check | Detect mismatch between loop state, loop config, and required files |
 | Runtime Constraints | `zj-loop/zj-loop-constraints.md` + `skills/zj-loop-constraints/SKILL.md` | Skill-level guardrail | Make repo-specific operating rules loadable at run start |
+| Route Table | `zj-loop/zj-loop-route-table.yaml` + MCP `loop://route-table` | Control-plane policy | Keep route decisions visible without turning them into runtime queue state |
 
 ## Operating Artifacts
 
@@ -39,6 +41,7 @@ The active dogfood state lives under `zj-loop/`:
 - `zj-loop/STATE.md` is the Daily Triage memory spine.
 - `zj-loop/zj-loop-run-log.md` is append-only run evidence.
 - `zj-loop/zj-loop-budget.md` records token/run budgets.
+- `zj-loop/zj-loop-route-table.yaml` records routing policy for loop signals.
 - `zj-loop/zj-loop-constraints.md` defines binding repo rules.
 - `zj-loop/zj-loop-safety.md` records safety policy and denylist guidance.
 
@@ -50,8 +53,8 @@ not create root-level `STATE.md` or root-level run logs.
 There are two configuration sources:
 
 1. **Scaffolded loop artifacts** from `zj-loop-init`.
-   - Pattern starters create `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, budget,
-     run-log, skills, and verifier artifacts.
+   - Pattern starters create `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`,
+     route table, budget, run-log, skills, and verifier artifacts.
    - Optional artifacts such as safety and pattern registry are added with
      `zj-loop-init . --add safety,pattern-registry`.
    - `--force` is only for explicit optional artifacts and should be reviewed
@@ -164,6 +167,8 @@ When dogfood config changes, check:
 - Workflow paths use `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md`.
 - Pattern registry state paths use `zj-loop/*-state.md`.
 - Starter README copy commands create state files under `zj-loop/`.
+- `zj-loop/zj-loop-route-table.yaml` exists and keeps cross-component dispatch
+  routes disabled until the consumer workflow/state owner is ready.
 - `zj-loop-init` bundled registry/templates are regenerated after registry or
   starter changes.
 - `zj-loop-cost` bundled `registry.json` is regenerated after registry changes.

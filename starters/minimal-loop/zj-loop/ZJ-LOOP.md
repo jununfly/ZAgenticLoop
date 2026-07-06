@@ -19,6 +19,11 @@
 - Kill switch: `loop-pause-all` — pause schedulers and notify human
 - Estimate: `npx @jununfly/zj-loop-cost --pattern daily-triage`
 
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.
+
 ## Links
 
 - Pattern: [daily-triage](../../patterns/daily-triage.md)

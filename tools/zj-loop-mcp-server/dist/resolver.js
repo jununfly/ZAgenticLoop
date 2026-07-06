@@ -120,6 +120,9 @@ export async function loadRunLog(root) {
 export async function loadSafetyDoc(root) {
     return fsFor(root).readTextIfExists('zj-loop/zj-loop-safety.md');
 }
+export async function loadRouteTable(root) {
+    return fsFor(root).readTextIfExists('zj-loop/zj-loop-route-table.yaml');
+}
 function summarizeMarkdown(content, limit = 6) {
     if (!content)
         return [];
@@ -152,6 +155,7 @@ export async function summarizeOperationalContext(root) {
         summarizeFixedDocument(root, 'budget', 'loop://budget', ['zj-loop/zj-loop-budget.md']),
         summarizeFixedDocument(root, 'runLog', 'loop://run-log', ['zj-loop/zj-loop-run-log.md']),
         summarizeFixedDocument(root, 'safety', 'loop://safety', ['zj-loop/zj-loop-safety.md']),
+        summarizeFixedDocument(root, 'routeTable', 'loop://route-table', ['zj-loop/zj-loop-route-table.yaml']),
     ]);
     return {
         documents,

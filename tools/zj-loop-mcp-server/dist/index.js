@@ -3,7 +3,7 @@ import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mc
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { estimatePatternCost, getPatternProfile, listPatternSummaries, recommendPatterns, } from '@jununfly/zj-loop-core';
-import { resolveProjectRoot, loadRegistry, loadPatternDoc, listSkills, loadSkill, loadState, listStateFiles, loadLoopConfig, loadBudget, loadRunLog, loadSafetyDoc, summarizeOperationalContext, } from './resolver.js';
+import { resolveProjectRoot, loadRegistry, loadPatternDoc, listSkills, loadSkill, loadState, listStateFiles, loadLoopConfig, loadBudget, loadRunLog, loadSafetyDoc, loadRouteTable, summarizeOperationalContext, } from './resolver.js';
 const server = new McpServer({
     name: 'zagenticloop',
     version: '1.0.0',
@@ -126,6 +126,17 @@ server.resource('safety', 'loop://safety', { description: 'Safety documentation 
                 uri: 'loop://safety',
                 mimeType: 'text/markdown',
                 text: content ?? 'No safety documentation found',
+            }],
+    };
+});
+server.resource('route-table', 'loop://route-table', { description: 'zj-loop/zj-loop-route-table.yaml — route dispatch control plane policy' }, async () => {
+    const root = await resolveProjectRoot();
+    const content = await loadRouteTable(root);
+    return {
+        contents: [{
+                uri: 'loop://route-table',
+                mimeType: 'text/yaml',
+                text: content ?? 'zj-loop/zj-loop-route-table.yaml not found',
             }],
     };
 });

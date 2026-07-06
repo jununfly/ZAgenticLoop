@@ -24,6 +24,11 @@
 - Max auto-PRs per day: 5
 - Pause if token budget exceeded (see `templates/zj-loop-budget.md.template`)
 
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.
+
 ## Links
 
 - Pattern: [dependency-sweeper](../../patterns/dependency-sweeper.md)

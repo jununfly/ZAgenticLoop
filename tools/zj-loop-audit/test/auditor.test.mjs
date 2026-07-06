@@ -21,6 +21,7 @@ function emptySignals() {
     agentsMd: { present: false },
     patterns: { documented: false },
     safety: { loopMdMentionsSafety: false, safetyDocPresent: false },
+    routeTable: { present: false },
     starters: { used: false },
     github: { present: false, workflows: false },
     mcp: { present: false },
@@ -43,6 +44,7 @@ function l3CandidateSignals(overrides = {}) {
     agentsMd: { present: true },
     patterns: { documented: true },
     safety: { loopMdMentionsSafety: true, safetyDocPresent: true },
+    routeTable: { present: true },
     github: { present: true, workflows: true },
     mcp: { present: true },
     worktreeEvidence: { present: true },
@@ -120,6 +122,7 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
         assessment: 'Strong loop readiness',
         findings: [
           { level: 'ok', message: 'Loop activity detected' },
+          { level: 'ok', message: 'zj-loop/zj-loop-route-table.yaml present' },
           { level: 'ok', message: 'zj-loop/zj-loop-budget.md present' },
         ],
         recommendations: [],
@@ -177,6 +180,7 @@ test('readiness default policy matrix: gates, assessment bands, and guidance anc
           { level: 'ok', message: 'Triage skill present' },
           { level: 'warn', message: 'No zj-loop-verifier skill' },
           { level: 'warn', message: 'No zj-loop/ZJ-LOOP.md documenting cadence, limits, and gates' },
+          { level: 'warn', message: 'No zj-loop/zj-loop-route-table.yaml' },
         ],
         recommendations: [
           'Add verifier: .grok/skills/zj-loop-verifier, .claude/agents/zj-loop-verifier.md, or .codex/agents/verifier.toml',

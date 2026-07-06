@@ -27,6 +27,9 @@ export interface LoopSignals {
         loopMdMentionsSafety: boolean;
         safetyDocPresent: boolean;
     };
+    routeTable: {
+        present: boolean;
+    };
     starters: {
         used: boolean;
     };

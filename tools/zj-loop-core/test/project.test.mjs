@@ -64,6 +64,7 @@ test('collectProjectEvidenceFacts returns shared loop evidence without policy in
     await mkdir(path.join(root, 'zj-loop'), { recursive: true });
     await writeFile(path.join(root, 'zj-loop', 'STATE.md'), '# State\n');
     await writeFile(path.join(root, 'zj-loop', 'ZJ-LOOP.md'), '# Loop\n');
+    await writeFile(path.join(root, 'zj-loop', 'zj-loop-route-table.yaml'), 'routes: []\n');
     await writeFile(path.join(root, 'AGENTS.md'), '# Agents\n');
     await mkdir(path.join(root, '.github', 'workflows'), { recursive: true });
     await mkdir(path.join(root, '.codex', 'skills', 'zj-issue-triage'), { recursive: true });
@@ -75,6 +76,7 @@ test('collectProjectEvidenceFacts returns shared loop evidence without policy in
     assert.deepEqual(facts.missingRequiredLoopFiles, []);
     assert.equal(facts.loopConfig.present, true);
     assert.equal(facts.github.workflows, true);
+    assert.equal(facts.routeTable.present, true);
     assert.deepEqual(facts.loopSkillNames, ['zj-issue-triage']);
   });
 });

@@ -26,6 +26,11 @@
 - Max sub-agent spawns per run: 0 (L1)
 - Review STATE.md daily + Codex Triage inbox
 
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.
+
 ## Links
 
 - Pattern: [daily-triage](../../patterns/daily-triage.md)

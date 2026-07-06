@@ -7,6 +7,15 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 npx @jununfly/zj-loop-init . -p pr-steward -t claude
 ```
 
+`zj-loop-init` also creates the shared control-plane files that all starters
+use: `zj-loop/zj-loop-route-table.yaml`, `zj-loop/zj-loop-budget.md`,
+`zj-loop/zj-loop-run-log.md`, and `zj-loop/zj-loop-constraints.md`.
+Manual copies can add the canonical route table with:
+
+```bash
+npx @jununfly/zj-loop-init . --add route-table
+```
+
 ## Daily Triage (L1 report-only)
 
 | Starter | Tool | Path |

@@ -17,6 +17,11 @@
 - Max sub-agent spawns per run: 2 (L2)
 - Run off-peak (evening / overnight)
 
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.
+
 ## Links
 
 - Pattern: [post-merge-cleanup](../../patterns/post-merge-cleanup.md)

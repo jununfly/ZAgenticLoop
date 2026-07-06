@@ -22,10 +22,10 @@ It gives you a method, production patterns, starter kits, and small CLIs for mov
 
 ## Product Experience Map
 
-The shortest mental model: **Pattern -> Starter -> Memory -> Verifier -> Story**.
+The shortest mental model: **Pattern -> Starter -> Route Table -> Memory -> Verifier -> Story**.
 
 - **User story:** move from ad-hoc prompting to repeatable Agentic Loop Working without giving up human judgment.
-- **Backbone:** choose a Pattern, copy a Starter, preserve Memory in state/run logs, add verifier separation, and use Human Gates for risky boundaries.
+- **Backbone:** choose a Pattern, scaffold a Starter, keep routing policy in `zj-loop/zj-loop-route-table.yaml`, preserve Memory in state/run logs, add verifier separation, and use Human Gates for risky boundaries.
 - **Adoption path:** Quickstart with Daily Triage, run L1 report-only, audit readiness, estimate cost, then graduate toward L2/L3 only after real loop activity is visible.
 - **Evidence:** the pattern catalog is backed by [registry metadata](patterns/registry.yaml), [production stories](stories/), and this repo's [dogfood reference case](docs/designs/dogfood-reference-case.md).
 
@@ -126,13 +126,13 @@ See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patte
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
-| `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.1` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, state files, budget, and run logs | `0.1.5` |
-| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.2` |
+| `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.2` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, state files, budget, and run logs | `0.1.6` |
+| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.3` |
 | `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.4` |
 | `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state and config | `0.1.2` |
-| `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, state, and safety docs | `0.1.2` |
-| `@jununfly/zj-goal-audit` | `zj-goal-audit` | Goal Readiness Score for bounded run-until-done work | `0.1.0` |
+| `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, route table, state, and safety docs | `0.1.3` |
+| `@jununfly/zj-goal-audit` | `zj-goal-audit` | Goal Readiness Score for bounded run-until-done work | `0.1.1` |
 
 Release details live in [docs/RELEASE.md](docs/RELEASE.md). The first release used `NPM_TOKEN`; Trusted Publisher is tracked as a post-first-release hardening step.
 
@@ -179,6 +179,7 @@ Machine-readable index: [patterns/registry.yaml](patterns/registry.yaml)
 - [Multi-Loop Coordination](docs/multi-loop.md) — when loops collide
 - [Operating Loops](docs/operating-loops.md) — cost, logging, when to kill
 - [Safety](zj-loop/zj-loop-safety.md) — denylist, auto-merge, MCP scopes
+- [Route Table Architecture](docs/designs/route-table-architecture.md) — global routing control plane for loop signals
 - [Security](SECURITY.md) — reporting and unattended automation risks
 - [Concepts](docs/concepts.md) — intent debt, comprehension debt, harness vs loop
 - [Architecture](docs/designs/architecture.md) — registry, core, readiness, MCP, CLI boundaries

@@ -21,6 +21,7 @@ import {
   loadBudget,
   loadRunLog,
   loadSafetyDoc,
+  loadRouteTable,
   summarizeOperationalContext,
 } from './resolver.js';
 
@@ -179,6 +180,23 @@ server.resource(
         uri: 'loop://safety',
         mimeType: 'text/markdown',
         text: content ?? 'No safety documentation found',
+      }],
+    };
+  },
+);
+
+server.resource(
+  'route-table',
+  'loop://route-table',
+  { description: 'zj-loop/zj-loop-route-table.yaml — route dispatch control plane policy' },
+  async () => {
+    const root = await resolveProjectRoot();
+    const content = await loadRouteTable(root);
+    return {
+      contents: [{
+        uri: 'loop://route-table',
+        mimeType: 'text/yaml',
+        text: content ?? 'zj-loop/zj-loop-route-table.yaml not found',
       }],
     };
   },

@@ -58,6 +58,16 @@ Pattern documents own operating protocol: cadence, state files, safety levels,
 cost, verification, and human handoff points. Skills own node-level behavior:
 what an agent reads, how it reasons, what it outputs, and when it must stop.
 
+Route decisions that cross pattern boundaries are governed by the
+[Route Table Architecture](./route-table-architecture.md). The Route Table is a
+global routing control plane: Daily Triage, Issue Triage, CI events, PR events,
+dependency alerts, release events, and human commands may all produce route
+candidates, but downstream execution belongs to the allowlisted consumer.
+Project-level routing policy is scaffolded by default at
+`zj-loop/zj-loop-route-table.yaml`; runtime lifecycle evidence stays in
+append-only issue/PR comments, consumer-owned state files, workflow runs, or
+PRs.
+
 ## Triage Dimensions
 
 Triage records should keep `priority`, `state`, and `route` separate.
@@ -136,6 +146,12 @@ request, duplicate, denied, unsupported-pattern, or failed activation comments
 when invoked by automation or a maintainer. It must not create roadmap process
 artifacts or start implementation; Roadmap-Sliced Development owns consumption
 and execution after an explicit issue id or request id is provided.
+
+General cross-loop dispatch follows the same shape. A dispatcher may create an
+allowlisted activation or dispatch request, but it must not perform the
+consumer's work. Consumer loops own execution, verification, state, and failure
+recovery. See [Route Table Architecture](./route-table-architecture.md) for the
+full Route Decision contract, lifecycle, and loop-prevention rules.
 
 ## Handoff Rules
 

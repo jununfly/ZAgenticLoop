@@ -240,6 +240,26 @@ guidance:
       affectsScore: false
       nextSteps: []
   - when:
+      not: routeTable.present
+    finding:
+      level: warn
+      category: hardening
+      message: No zj-loop/zj-loop-route-table.yaml — route dispatch control plane is not configured.
+      affectsScore: false
+      nextSteps:
+        - kind: command
+          label: Scaffold the canonical route table.
+          command: npx @jununfly/zj-loop-init . --add route-table
+    recommendations:
+      - Scaffold zj-loop/zj-loop-route-table.yaml with zj-loop-init before enabling cross-component dispatch.
+  - when: routeTable.present
+    finding:
+      level: ok
+      category: pass
+      message: zj-loop/zj-loop-route-table.yaml present.
+      affectsScore: false
+      nextSteps: []
+  - when:
       not: constraints.present
     finding:
       level: warn

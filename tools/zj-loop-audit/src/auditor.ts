@@ -18,6 +18,7 @@ export interface LoopSignals {
   agentsMd: { present: boolean };
   patterns: { documented: boolean };
   safety: { loopMdMentionsSafety: boolean; safetyDocPresent: boolean };
+  routeTable: { present: boolean };
   starters: { used: boolean };
   github: { present: boolean; workflows: boolean };
   mcp: { present: boolean };
@@ -61,6 +62,7 @@ export interface AuditResult {
 
 const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 const BUDGET_HINTS = [/budget/i, /max tokens/i, /token cap/i, /kill switch/i, /loop-pause-all/i];
+const ROUTE_TABLE_FILES = ['zj-loop/zj-loop-route-table.yaml'] as const;
 
 async function readFirstProjectText(
   fs: ProjectFileSystem,
@@ -241,6 +243,10 @@ export async function auditProject(target: string): Promise<AuditResult> {
     fs,
     skillPathCandidates([LOOP_ARTIFACTS.skills.constraints.primary, ...LOOP_ARTIFACTS.skills.constraints.legacy]),
   );
+  const routeTablePresent = await hasAnyProjectPath(fs, [
+    ...ROUTE_TABLE_FILES,
+    ...artifactCandidates(LOOP_ARTIFACTS.routeTable),
+  ]);
 
   const signals: LoopSignals = {
     stateFile: { present: statePaths.length > 0, paths: statePaths },
@@ -251,6 +257,7 @@ export async function auditProject(target: string): Promise<AuditResult> {
     agentsMd: { present: agentsMd },
     patterns: { documented: loopMd },
     safety: { loopMdMentionsSafety: /gate|denylist|auto-merge|safety/i.test(loopMdContent), safetyDocPresent },
+    routeTable: { present: routeTablePresent },
     starters: { used: loopSkills.includes('zj-loop-triage') },
     github: { present: githubDir, workflows: hasWorkflows },
     mcp: { present: mcpPresent },

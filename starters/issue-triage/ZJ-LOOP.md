@@ -22,6 +22,11 @@ Runs as a **feeder** for Daily Triage — merge Top 5 into `zj-loop/STATE.md` du
 - Max sub-agent spawns per run: 1 (L2 label apply with verifier)
 - See `zj-loop/zj-loop-budget.md`
 
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.
+
 ## Links
 
 - Pattern: [issue-triage](../../patterns/issue-triage.md)

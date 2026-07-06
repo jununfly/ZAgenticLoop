@@ -40,7 +40,9 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 
 Swap `--tool grok` for `claude` or `codex` if needed. Swap `--pattern` for any pattern from [patterns/registry.yaml](../patterns/registry.yaml).
 
-`zj-loop-init` copies the starter kit, creates `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-budget.md`, and `zj-loop/zj-loop-run-log.md`, then prints your first command.
+`zj-loop-init` copies the starter kit, creates `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/zj-loop-budget.md`, and `zj-loop/zj-loop-run-log.md`, then prints your first command.
+
+`zj-loop/zj-loop-route-table.yaml` is the routing control plane. It records which loop signals should stay human-readable, be ignored, remain report-only, or later dispatch to another pattern. It is policy, not a runtime queue.
 
 ## 3. Check cost before you schedule (30 seconds)
 
@@ -110,7 +112,7 @@ Commit the scaffold + first run update so `zj-loop-audit` sees activity on the n
 |------|---------|
 | End of week one | Re-run `npx @jununfly/zj-loop-audit . --suggest` — aim for L1 (score ~40+) |
 | Week two | Add a verifier skill; try one assisted fix in a worktree (L2) |
-| Before unattended (L3) | `zj-loop/zj-loop-budget.md` + `zj-loop/zj-loop-run-log.md` filled, human gates in `zj-loop/ZJ-LOOP.md`, proven runs |
+| Before unattended (L3) | `zj-loop/zj-loop-budget.md` + `zj-loop/zj-loop-run-log.md` filled, `zj-loop/zj-loop-route-table.yaml` reviewed, human gates in `zj-loop/ZJ-LOOP.md`, proven runs |
 | Unsure which pattern | [pattern-picker.md](./pattern-picker.md) · [loop-design-checklist.md](./loop-design-checklist.md) |
 | Something broke | [failure-modes.md](./failure-modes.md) · [stories/](../stories/) |
 

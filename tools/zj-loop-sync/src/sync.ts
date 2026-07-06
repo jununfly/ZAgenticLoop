@@ -41,6 +41,8 @@ export interface SyncOptions {
   json?: boolean;
 }
 
+const ROUTE_TABLE_FILE = 'zj-loop/zj-loop-route-table.yaml';
+
 /**
  * Extract frontmatter from markdown files
  */
@@ -179,6 +181,16 @@ export async function runSync(options: SyncOptions): Promise<DriftReport> {
       message: `${file} is missing`,
       severity: 'error',
       suggestion: `Run 'npx @jununfly/zj-loop-init . --pattern daily-triage' to scaffold required files`,
+    });
+  }
+
+  if (!(await fs.exists(ROUTE_TABLE_FILE))) {
+    issues.push({
+      type: 'missing',
+      file: ROUTE_TABLE_FILE,
+      message: `${ROUTE_TABLE_FILE} is missing; route dispatch control plane is not configured`,
+      severity: 'info',
+      suggestion: `Run 'npx @jununfly/zj-loop-init . --add route-table' to scaffold the route table`,
     });
   }
   

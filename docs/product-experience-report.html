@@ -436,7 +436,7 @@
         </div>
         <div class="spine">
           <div class="spine-step"><b>Pattern</b><span>Goal, cadence, risk, phases, human gates, and cost metadata live in <code>patterns/registry.yaml</code>.</span></div>
-          <div class="spine-step"><b>Starter</b><span>Copyable scaffold turns a pattern into skills, state, budgets, run logs, and first command text.</span></div>
+          <div class="spine-step"><b>Starter</b><span>Copyable scaffold turns a pattern into skills, route table, state, budgets, run logs, and first command text.</span></div>
           <div class="spine-step"><b>Memory</b><span>State and Run Log keep facts outside any one agent conversation and make loop activity inspectable.</span></div>
           <div class="spine-step"><b>Verifier</b><span>Maker/checker split, worktrees, and readiness gates prevent the agent from grading its own work.</span></div>
           <div class="spine-step"><b>Story</b><span>Proven Usage and failure stories calibrate trust, costs, escalation rules, and graduation criteria.</span></div>
@@ -502,7 +502,7 @@
           <tbody>
             <tr>
               <td><code>zj-loop-init</code></td>
-              <td>Creates starter files, state, budget, run log, and first command for a chosen pattern.</td>
+              <td>Creates starter files, route table, state, budget, run log, and first command for a chosen pattern.</td>
               <td>Use Daily Triage with a Codex, Grok, or Claude Code starter.</td>
             </tr>
             <tr>
@@ -522,7 +522,7 @@
             </tr>
             <tr>
               <td><code>zj-loop-mcp-server</code></td>
-              <td>Gives agents read-only access to patterns, skills, state, safety docs, and semantic loop tools.</td>
+              <td>Gives agents read-only access to patterns, skills, route table, state, safety docs, and semantic loop tools.</td>
               <td>Use when an agent needs to inspect loop knowledge without duplicating docs in prompt text.</td>
             </tr>
             <tr>

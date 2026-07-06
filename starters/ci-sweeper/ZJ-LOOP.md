@@ -26,3 +26,8 @@
 - Fixes run in a git worktree.
 - One minimal fix per run.
 - No auto-merge.
+
+## Routing
+
+- Route policy lives in `zj-loop/zj-loop-route-table.yaml`.
+- Keep cross-component dispatch routes disabled until the consumer workflow and state owner are ready.

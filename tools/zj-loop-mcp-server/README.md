@@ -1,6 +1,6 @@
 # @jununfly/zj-loop-mcp-server
 
-MCP (Model Context Protocol) server for **ZAgenticLoop** — exposes patterns, skills, state, budget, and audit tools as runtime-queryable resources for AI agents.
+MCP (Model Context Protocol) server for **ZAgenticLoop** — exposes patterns, skills, route table, state, budget, and audit tools as runtime-queryable resources for AI agents.
 
 Instead of stuffing all loop documentation into the prompt, agents can query only what they need on-demand via MCP.
 
@@ -48,6 +48,7 @@ Add to your MCP config (`.mcp.json` or equivalent):
 | `loop://budget` | zj-loop-budget.md — token caps, kill switch |
 | `loop://run-log` | zj-loop-run-log.md — append-only run history |
 | `loop://safety` | Loop safety policy — denylists, auto-merge policy, MCP scopes |
+| `loop://route-table` | Route dispatch control plane policy |
 | `loop://patterns/{id}` | Full pattern documentation by ID |
 | `loop://skills/{name}` | Skill definition (SKILL.md) by name |
 | `loop://state/{file}` | State file content |
@@ -59,7 +60,7 @@ Add to your MCP config (`.mcp.json` or equivalent):
 | `loop_list_patterns` | `@jununfly/zj-loop-core` semantic query | List all patterns with legacy snake_case fields for existing clients |
 | `loop_list_skills` | MCP resolver evidence | List available skills with locations |
 | `loop_list_state_files` | MCP resolver evidence | List state files in the project |
-| `loop_summarize_operational_context` | MCP resolver evidence | Structured summary of config, budget, run-log, and safety docs with raw resource links |
+| `loop_summarize_operational_context` | MCP resolver evidence | Structured summary of config, budget, run-log, safety docs, and route table with raw resource links |
 | `loop_get_pattern` | `@jununfly/zj-loop-core` semantic query + raw doc evidence | Get full pattern docs + registry metadata |
 | `loop_get_skill` | MCP resolver evidence | Get SKILL.md content for a named skill |
 | `loop_get_state` | MCP resolver evidence | Read a state file for current loop status |

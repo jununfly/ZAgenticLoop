@@ -42,6 +42,11 @@ Last run: 2026-06-22
 - Level: L1
 `,
   );
+
+  await writeFile(
+    path.join(testDir, 'zj-loop', 'zj-loop-route-table.yaml'),
+    'routes: []\n',
+  );
 }
 
 async function cleanupTestDir() {
@@ -109,6 +114,24 @@ describe('runSync', () => {
     const report = await runSync({ targetDir: testDir, ...baseOpts });
 
     assert.ok(report.suggestions.includes('No skills found. Run zj-loop-init to scaffold skills.'));
+  });
+
+  test('reports missing route table as informational control-plane guidance', async () => {
+    await cleanupTestDir();
+    await mkdir(path.join(testDir, 'zj-loop'), { recursive: true });
+    await writeFile(path.join(testDir, 'zj-loop', 'STATE.md'), '# Loop State\n');
+    await writeFile(
+      path.join(testDir, 'zj-loop', 'ZJ-LOOP.md'),
+      '# Loop Configuration\n\n## State Files\n- zj-loop/STATE.md\n',
+    );
+    await writeFile(path.join(testDir, 'AGENTS.md'), '# Agents\n');
+
+    const report = await runSync({ targetDir: testDir, ...baseOpts });
+    const routeTableIssue = report.issues.find((i) => i.file === 'zj-loop/zj-loop-route-table.yaml');
+
+    assert.ok(routeTableIssue);
+    assert.equal(routeTableIssue.severity, 'info');
+    assert.match(routeTableIssue.message, /route dispatch control plane/i);
   });
 });
 

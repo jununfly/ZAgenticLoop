@@ -56,6 +56,7 @@ zj-loop-sync ./my-project --json
    - zj-loop/STATE.md (required)
    - zj-loop/ZJ-LOOP.md (required)
    - AGENTS.md (recommended)
+   - zj-loop/zj-loop-route-table.yaml (informational control-plane guidance)
 
 2. **zj-loop/STATE.md ↔ zj-loop/ZJ-LOOP.md consistency**
    - Structural similarity

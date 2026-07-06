@@ -194,11 +194,11 @@
         <table class="feature-table">
           <thead><tr><th>Feature</th><th>用户价值</th><th>最佳首次使用方式</th></tr></thead>
           <tbody>
-            <tr><td><code>zj-loop-init</code></td><td>为选定 pattern 创建 starter files、state、budget、run log 和 first command。</td><td>用 Codex、Grok 或 Claude Code starter 跑 Daily Triage。</td></tr>
+            <tr><td><code>zj-loop-init</code></td><td>为选定 pattern 创建 starter files、route table、state、budget、run log 和 first command。</td><td>用 Codex、Grok 或 Claude Code starter 跑 Daily Triage。</td></tr>
             <tr><td><code>zj-loop-cost</code></td><td>按 pattern、level 和 cadence 在调度前估算 token spend。</td><td>比较 Daily Triage L1 与 5-15 分钟 cadence 的 CI Sweeper。</td></tr>
             <tr><td><code>zj-loop-audit</code></td><td>计算 Loop Readiness 并给出可执行升级建议。</td><td>scaffold 后运行一次，第一次 state update 后再运行一次。</td></tr>
             <tr><td><code>zj-loop-sync</code></td><td>检测 loop configuration 与当前 project evidence 之间的 drift。</td><td>修改 loop config、budget 或 state conventions 后使用。</td></tr>
-            <tr><td><code>zj-loop-mcp-server</code></td><td>让 agents 只读访问 patterns、skills、state、safety docs 和 semantic loop tools。</td><td>当 agent 需要检查 loop knowledge，但不想把 docs 复制到 prompt 中时使用。</td></tr>
+            <tr><td><code>zj-loop-mcp-server</code></td><td>让 agents 只读访问 patterns、skills、route table、state、safety docs 和 semantic loop tools。</td><td>当 agent 需要检查 loop knowledge，但不想把 docs 复制到 prompt 中时使用。</td></tr>
             <tr><td><code>zj-goal-audit</code></td><td>作为 sibling package 审计 bounded run-until-done goal readiness。</td><td>用于有明确 stop condition 的 goals，而不是 recurring cadence loops。</td></tr>
             <tr><td><code>zj-loop-core</code></td><td>registry、project evidence、semantic queries 和 CLI harness 的共享 domain kernel。</td><td>构建新的 product surface 或 loop knowledge adapter 时使用。</td></tr>
           </tbody>

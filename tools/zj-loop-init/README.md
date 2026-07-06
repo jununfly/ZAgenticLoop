@@ -40,10 +40,18 @@ L2 patterns (`ci-sweeper`, `dependency-sweeper`, `roadmap-sliced-development`) a
 
 Every scaffold also creates:
 
+- `zj-loop/zj-loop-route-table.yaml` — routing control plane policy for loop signals
 - `zj-loop/zj-loop-budget.md` — pattern-specific daily caps and kill switch
 - `zj-loop/zj-loop-run-log.md` — append-only run history
 - `zj-loop/zj-loop-constraints.md` — structured runtime constraints
 - `zj-loop-budget` skill — runtime budget guard at start/end of each run
+
+Manual starter copies should use the same canonical route table instead of
+maintaining starter-specific copies:
+
+```bash
+npx @jununfly/zj-loop-init . --add route-table
+```
 
 ## Tools
 

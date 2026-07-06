@@ -22,6 +22,11 @@ export declare const LOOP_ARTIFACTS: {
         readonly legacy: readonly [];
         readonly template: "zj-loop-constraints.md";
     };
+    readonly routeTable: {
+        readonly primary: "zj-loop/zj-loop-route-table.yaml";
+        readonly legacy: readonly [];
+        readonly template: "zj-loop-route-table.yaml.template";
+    };
     readonly skills: {
         readonly budget: {
             readonly primary: "zj-loop-budget";

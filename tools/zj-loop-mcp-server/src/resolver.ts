@@ -70,7 +70,7 @@ export interface SkillInfo {
 }
 
 export interface OperationalDocumentSummary {
-  key: 'config' | 'budget' | 'runLog' | 'safety';
+  key: 'config' | 'budget' | 'runLog' | 'safety' | 'routeTable';
   uri: string;
   path: string | null;
   present: boolean;
@@ -163,6 +163,10 @@ export async function loadSafetyDoc(root: string): Promise<string | null> {
   return fsFor(root).readTextIfExists('zj-loop/zj-loop-safety.md');
 }
 
+export async function loadRouteTable(root: string): Promise<string | null> {
+  return fsFor(root).readTextIfExists('zj-loop/zj-loop-route-table.yaml');
+}
+
 function summarizeMarkdown(content: string | null, limit = 6): string[] {
   if (!content) return [];
   return content
@@ -201,6 +205,7 @@ export async function summarizeOperationalContext(root: string): Promise<Operati
     summarizeFixedDocument(root, 'budget', 'loop://budget', ['zj-loop/zj-loop-budget.md']),
     summarizeFixedDocument(root, 'runLog', 'loop://run-log', ['zj-loop/zj-loop-run-log.md']),
     summarizeFixedDocument(root, 'safety', 'loop://safety', ['zj-loop/zj-loop-safety.md']),
+    summarizeFixedDocument(root, 'routeTable', 'loop://route-table', ['zj-loop/zj-loop-route-table.yaml']),
   ]);
 
   return {

@@ -68,6 +68,14 @@ _Avoid_: Trigger status, label trigger, state queue
 An auditable request created from an authorized activation signal and later consumed by a target pattern. It records permission to start; it is not the resulting branch, roadmap, or implementation.
 _Avoid_: Roadmap, issue label, STATE entry
 
+**Route Table**:
+The routing control plane that defines which loop should own a discovered signal next, what guards apply, and where lifecycle evidence should be recorded. It is policy, not a runtime queue or executor.
+_Avoid_: Queue, dispatcher, workflow
+
+**Route Decision**:
+The replayable record that connects an observed signal to a route, including the evidence, risk, confidence, dedupe key, requested action, and lifecycle status.
+_Avoid_: Label, trigger, route table row
+
 **Escalation**:
 The event or judgment that triggers a handoff, such as ambiguity, a risky path, max attempts, or budget exhaustion.
 _Avoid_: Handoff

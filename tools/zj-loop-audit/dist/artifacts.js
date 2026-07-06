@@ -31,6 +31,11 @@ export const LOOP_ARTIFACTS = {
         legacy: [],
         template: 'zj-loop-constraints.md',
     },
+    routeTable: {
+        primary: 'zj-loop/zj-loop-route-table.yaml',
+        legacy: [],
+        template: 'zj-loop-route-table.yaml.template',
+    },
     skills: {
         budget: {
             primary: 'zj-loop-budget',
