@@ -33,7 +33,7 @@ node scripts/ci-sweeper-e2e-replay.mjs > /tmp/ci-sweeper-e2e-replay.json
 node --test scripts/ci-sweeper-e2e-replay.test.mjs
 node scripts/issue-fix-request-e2e-replay.mjs > /tmp/issue-fix-request-e2e-replay.json
 node scripts/roadmap-activation-e2e-replay.mjs > /tmp/roadmap-activation-e2e-replay.json
-node --test scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs
 node scripts/run-tool-package-scripts.mjs test --gate=validate --install
 
 echo "validate gates passed ✓"
