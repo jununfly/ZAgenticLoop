@@ -1,0 +1,90 @@
+{
+  "title": "Report-only Route Decision",
+  "description": "Implement report-only Route Decision support for human, ignore, and daily-triage-report routes through the activated Roadmap-Sliced Development chain.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Report-only Route Decision",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [],
+      "notes": "Feature slice verification before commit: npm run test:route-decision, npm run test:activation-contract, and npm run test:issue-fix-request passed. Activation carrier issue #21 contains slash command, activation request, activation Route Decision, and activation consumed comments. Report-only local dogfood decisions are recorded in docs/testing/report-only-route-decision-e2e.md."
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Report-only Route Decision boundary",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "下一个 Route Decision 实现范围是什么？",
+          "answer": "实现 report-only Route Decision，覆盖 human、ignore、daily-triage-report 三条基础控制面路线。",
+          "note": "Report-only route 只产生 Route Decision 与 report evidence；不得创建 Issue Fix Request、Activation Request、workflow dispatch 或 consumer implementation work。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Report-only dispatcher implementation",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented scripts/report-only-route-dispatcher.mjs. It reads the real route table, supports human/ignore/daily-triage-report report-only routes, emits Route Decision plus report evidence, and explicitly creates no side-effect requests."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Replayable verification for report-only routes",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Report-only Route Decision 的完成状态是什么？",
+          "answer": "Allowed report-only Route Decision 使用 status: closed。",
+          "note": "Report-only route 没有后续 request lifecycle；report evidence 生成后即闭环，使用 pending 会误导后续 agent 继续等待 consumer。"
+        }
+      ],
+      "notes": "Verification gate: npm run test:route-decision passed, including report-only route matching, kind drift denial, non-matching denial, and existing side-effect route replay coverage."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "ZAgenticLoop report-only route dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": "Dogfood gate: ran scripts/report-only-route-dispatcher.mjs against real zj-loop/zj-loop-route-table.yaml for human, ignore, and daily-triage-report synthetic signals linked to issue #21. Decisions: rd_report_37f23ba8d291, rd_report_608d990bd18f, rd_report_8a9f213d1057."
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Closeout and PR handoff",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-06 21:21:36",
+    "updated": "2026-07-06 21:31:38",
+    "md_file": "docs/plans/report-only-route-decision-roadmap.md"
+  }
+}

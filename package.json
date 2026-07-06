@@ -6,6 +6,7 @@
     "validate:registry": "node scripts/validate-registry.mjs",
     "test:registry": "node --test scripts/validate-registry.test.mjs",
     "test:activation-contract": "node --test scripts/zj-loop-activation-contract.test.mjs scripts/roadmap-activation-dispatcher.test.mjs",
+    "test:route-decision": "node --test scripts/report-only-route-dispatcher.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs",
     "test:issue-fix-request": "node --test scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs",
     "test:tool-gates": "node --test scripts/run-tool-package-scripts.test.mjs",
     "test:release-workflows": "node --test scripts/validate-release-workflows.test.mjs",
@@ -18,7 +19,7 @@
     "test:zj-loop-sync": "cd tools/zj-loop-sync && npm test",
     "test:zj-loop-mcp-server": "cd tools/zj-loop-mcp-server && npm test",
     "test:zj-goal-audit": "cd tools/zj-goal-audit && npm test",
-    "test:tools": "npm run test:registry && npm run test:activation-contract && npm run test:issue-fix-request && npm run test:tool-gates && npm run test:release-workflows && node scripts/run-tool-package-scripts.mjs test",
+    "test:tools": "npm run test:registry && npm run test:activation-contract && npm run test:route-decision && npm run test:issue-fix-request && npm run test:tool-gates && npm run test:release-workflows && node scripts/run-tool-package-scripts.mjs test",
     "build:tools": "node scripts/run-tool-package-scripts.mjs build"
   },
   "devDependencies": {
