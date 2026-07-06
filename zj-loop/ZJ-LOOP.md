@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 ```
 
@@ -83,6 +83,11 @@ Current dogfood status:
   Requests, workflow dispatches, or consumer work are created.
 - Daily Triage is wired to create a real Issue Fix Request carrier issue before
   dispatching CI Sweeper.
+- `dependency-sweeper` is enabled as a bounded Issue Fix Request route:
+  `Dependency Alert -> Route Decision -> Issue Fix Request -> Dependency Sweeper`.
+  Local replay stops at requested, duplicate, or denied. It does not run
+  Dependency Sweeper, edit package manifests, update lockfiles, open Fix PRs, or
+  auto-merge.
 - `roadmap-sliced-development` is enabled in the route table as an
   `activation-comment` route and covered by local activation replay.
 - Roadmap activation dogfood evidence has been captured:
