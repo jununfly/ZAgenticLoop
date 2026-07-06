@@ -73,6 +73,14 @@ Deleting the already-merged current roadmap branch is post-merge checklist work,
 not a Human Gate. Any branch deletion outside that narrow case remains a Human
 Gate.
 
+Closing issues remains a Human Gate except for one narrow post-merge exception:
+a Roadmap-Sliced Development activation carrier issue may be closed by the
+Post-Merge Cleanup `roadmap-closeout` mode when a merged PR body contains a
+valid `zj-loop.post-merge-contract`, names that carrier issue, confirms there
+are no pending follow-ups, and the consumer first records closeout evidence.
+This exception does not apply to ordinary linked issues, bug reports, feature
+requests, or ambiguous issue references.
+
 At a Human Gate, the agent may prepare context, commands, verification status,
 and recommendation. It must not cross the gate until approval is explicit and
 recorded with scope and validity when the risk is high.

@@ -8,6 +8,9 @@ These constraints are binding for loops operating on this repository. Load them 
 - Assisted fixes may prepare changes in a branch or isolated worktree, but humans merge.
 - Never auto-merge to `main`.
 - Never mark a draft PR ready, merge a PR, close an issue, or publish a release without human approval.
+- Narrow exception: Post-Merge Cleanup `roadmap-closeout` may close only the
+  Roadmap activation carrier issue named in a valid merged-PR
+  `zj-loop.post-merge-contract`. It must not close ordinary linked issues.
 - Use one isolated worktree per unattended code-change experiment.
 
 ## Push & Merge
