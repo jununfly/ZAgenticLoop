@@ -67,6 +67,7 @@ Local gates:
 
 ```bash
 node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 ```
 
 Current dogfood status:
@@ -102,6 +103,12 @@ Current dogfood status:
     `rd_report_8a9f213d1057`
 - CI Sweeper records the request issue URL in state, Fix PR body, and
   escalation issue body.
+- `post-merge-roadmap-closeout` is enabled as a report-only route. Local replay
+  proves:
+  `Merged PR Signal -> Route Decision -> Post-Merge Roadmap Closeout Report Evidence`.
+  The replay emits JSON only; live dogfood evidence belongs in the merged PR
+  comment thread after a real Roadmap-Sliced PR with a `Post-Merge Contract`
+  merges.
 - Live external evidence has been captured:
   - Daily Triage no-signal run:
     https://github.com/jununfly/ZAgenticLoop/actions/runs/28790602470
@@ -112,8 +119,13 @@ Current dogfood status:
   - Escalation issue:
     https://github.com/jununfly/ZAgenticLoop/issues/18
 
-### Post-Merge (opportunistic)
-- Future: sweeper reacting to post-merge cleanup signals.
+### Post-Merge (report-only roadmap closeout)
+- Trigger: merged Roadmap-Sliced PR signal with a PR body
+  `zj-loop.post-merge-contract`.
+- Route: `post-merge-roadmap-closeout` in `zj-loop/zj-loop-route-table.yaml`.
+- Current mode: local deterministic replay and report evidence only.
+- Boundary: no branch deletion, carrier issue closure, GitHub comment write, or
+  workflow dispatch until a later explicit roadmap enables side effects.
 
 ### Changelog Drafter (L1 — draft only, high value)
 - Cadence: 1d or on release prep (manual or tag-triggered)

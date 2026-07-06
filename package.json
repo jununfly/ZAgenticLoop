@@ -8,7 +8,7 @@
     "test:activation-contract": "node --test scripts/zj-loop-activation-contract.test.mjs scripts/roadmap-activation-dispatcher.test.mjs",
     "test:route-decision": "node --test scripts/report-only-route-dispatcher.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs",
     "test:issue-fix-request": "node --test scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs",
-    "test:post-merge-roadmap-closeout": "node --test scripts/post-merge-roadmap-closeout-contract.test.mjs",
+    "test:post-merge-roadmap-closeout": "node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs",
     "test:tool-gates": "node --test scripts/run-tool-package-scripts.test.mjs",
     "test:release-workflows": "node --test scripts/validate-release-workflows.test.mjs",
     "test:release-ready": "ZJ_LOOP_RELEASE_READY=1 node scripts/validate-release-workflows.mjs",
