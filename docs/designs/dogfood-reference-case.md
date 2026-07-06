@@ -182,6 +182,9 @@ It records the expected outcome, actual outcome, Route Decision, dedupe key,
 request branch, and the terminal replay step. This makes failures replayable
 without reading GitHub Actions logs line by line.
 
+For the reusable local, workflow, repair PR, and escalation test cases, see
+[Daily Triage Route CI Sweeper E2E Test Cases](../testing/daily-triage-route-ci-sweeper-e2e.md).
+
 ## Gate Model
 
 The two top-level gates are intentionally reused by workflows and local checks:

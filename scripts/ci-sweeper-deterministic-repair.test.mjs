@@ -24,6 +24,7 @@ test('buildRepairCommands exposes the same step order used by dry-run and execut
   assert.deepEqual(commands, [
     { command: 'npm', args: ['ci'], cwd: 'tools/zj-loop-core' },
     { command: 'npm', args: ['run', 'build'], cwd: 'tools/zj-loop-core' },
+    { command: 'npm', args: ['ci', '--ignore-scripts'] },
     { command: 'node', args: ['scripts/check-zj-loop-init-sync.mjs'] },
   ]);
 });

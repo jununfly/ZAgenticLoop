@@ -31,6 +31,7 @@ async function packageHasScript(directory, scriptName) {
 
 export async function buildRepairCommands({
   packageDirectories = PACKAGE_BUILD_PLAN,
+  rootInstallCommand = ['npm', ['ci', '--ignore-scripts']],
   rootCommands = [
     ['node', ['scripts/check-zj-loop-init-sync.mjs']],
     ['node', ['scripts/validate-release-workflows.mjs']],
@@ -43,6 +44,11 @@ export async function buildRepairCommands({
     if (await packageHasScript(directory, 'build')) {
       commands.push({ command: 'npm', args: ['run', 'build'], cwd: directory });
     }
+  }
+
+  if (rootInstallCommand) {
+    const [command, args] = rootInstallCommand;
+    commands.push({ command, args });
   }
 
   for (const [command, args] of rootCommands) {
