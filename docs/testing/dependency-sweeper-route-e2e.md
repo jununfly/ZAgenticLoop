@@ -53,7 +53,7 @@ The implementation work may be started through the issue/comment activation
 path:
 
 ```text
-Plan Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR
+Issue Slash Command -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -> Roadmap Branch/PR
 ```
 
 That activation path starts the development slice. The runtime route input is a

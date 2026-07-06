@@ -100,7 +100,7 @@ Current dogfood status:
   - Activation consumed:
     https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4893007904
 - Report-only Route Decision dogfood evidence has been captured:
-  - Plan Signal carrier:
+  - Issue Slash Command carrier:
     https://github.com/jununfly/ZAgenticLoop/issues/21
   - Activation request:
     https://github.com/jununfly/ZAgenticLoop/issues/21#issuecomment-4893268445
