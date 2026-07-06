@@ -59,6 +59,17 @@ Plan Signal -> Route Decision -> Activation Request -> Roadmap-Sliced Consumer -
 That activation path starts the development slice. The runtime route input is a
 Dependency Alert, not the activation issue signal.
 
+Dogfood activation evidence:
+
+- Carrier issue:
+  [jununfly/ZAgenticLoop#23](https://github.com/jununfly/ZAgenticLoop/issues/23)
+- Slash command:
+  [issuecomment-4895586832](https://github.com/jununfly/ZAgenticLoop/issues/23#issuecomment-4895586832)
+- Activation request:
+  [issuecomment-4895594821](https://github.com/jununfly/ZAgenticLoop/issues/23#issuecomment-4895594821)
+- Activation consumed:
+  [issuecomment-4895606098](https://github.com/jununfly/ZAgenticLoop/issues/23#issuecomment-4895606098)
+
 ## Failure Diagnosis Matrix
 
 | Failing layer | Expected evidence |
@@ -77,3 +88,4 @@ Dependency Alert, not the activation issue signal.
 | First route slice stops at requested, duplicate, or denied. | durable doc | This test case and replay tests. |
 | Only patch/minor low/medium dependency alerts may create requests. | durable doc | Route table and replay tests. |
 | Major, high, critical, and non-main dependency alerts are denied in this route. | durable doc | Route table and replay tests. |
+| Process roadmap was reviewable on branch, then deleted at closeout after durable docs absorbed key decisions. | discarded process note | Commit history and this closeout audit. |
