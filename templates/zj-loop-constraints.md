@@ -22,6 +22,9 @@
 ## Communication
 - Always tell me what you're about to do before doing it
 - Never close an issue or PR without my approval
+- Narrow exception: Post-Merge Cleanup `roadmap-closeout` may close only the
+  Roadmap activation carrier issue named in a valid merged-PR
+  `zj-loop.post-merge-contract`; it must not close ordinary linked issues
 
 ## Budget
 - If token spend hits 80% of daily cap, switch to report-only

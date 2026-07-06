@@ -81,3 +81,18 @@ disabled_dispatch_routes:
     consumer: "roadmap-sliced-development"
     evidence_store: "append-only GitHub issue comments"
     note: "Activation creates a request only; Roadmap-Sliced Development owns execution."
+
+  - route_id: "post-merge-roadmap-closeout"
+    enabled: false
+    request_kind: "report-only"
+    consumer: "post-merge-cleanup"
+    mode: "roadmap-closeout"
+    evidence_store: "GitHub pull request comment"
+    guards:
+      requires_post_merge_contract: true
+      report_only_if_contract_missing: true
+      requires_no_pending_followups: true
+      destructive_actions_enabled: false
+      branch_prefix_allowlist: ["zjal/"]
+      close_carrier_issue_only: true
+    note: "Enable only after merged-PR events, contract validation, and failure owner are configured."

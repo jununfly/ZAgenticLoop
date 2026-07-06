@@ -593,6 +593,44 @@ Branch cleanup policy:
 - Branch cleanup does not block PR merge, but it should be tracked as post-merge
   checklist work.
 
+Post-merge automation boundary:
+
+- Roadmap-Sliced Development does not listen to merge events itself. It defines
+  the closeout, PR handoff, and post-merge contract.
+- The actual post-merge consumer is Post-Merge Cleanup in `roadmap-closeout`
+  mode, routed through the route table.
+- PR merge remains a Human Gate.
+- Without an explicit machine-readable post-merge contract in the PR body,
+  post-merge consumers must report only.
+- Automated carrier issue closure is only allowed for the Roadmap activation
+  carrier issue named in the contract. Ordinary linked issues are not closed by
+  this path.
+- Automated branch deletion is only allowed for the already-merged current
+  roadmap branch named in the contract. Generic head-branch cleanup is out of
+  scope.
+
+The PR body is the source of truth for this contract:
+
+```yaml
+kind: zj-loop.post-merge-contract
+version: 1
+consumer: post-merge-cleanup
+mode: roadmap-closeout
+roadmap:
+  id: <roadmap-id>
+  branch: zjal/<roadmap-id>
+carrier:
+  issue: <activation-carrier-issue-number>
+cleanup:
+  delete_merged_branch: true
+  close_carrier_issue: true
+safety:
+  require_pr_merged: true
+  require_branch_merged: true
+  no_pending_followups: true
+  missing_contract_behavior: report-only
+```
+
 ## Extended PR Template
 
 Use this recommended template for PRs created from this pattern when the roadmap
@@ -609,6 +647,28 @@ template is recommended / L3 hardening, not a second mandatory checklist.
 - Closeout status: pending | complete
 - Closeout commit:
 - Post-merge branch cleanup plan:
+
+## Post-Merge Contract
+
+```yaml
+kind: zj-loop.post-merge-contract
+version: 1
+consumer: post-merge-cleanup
+mode: roadmap-closeout
+roadmap:
+  id:
+  branch: zjal/
+carrier:
+  issue:
+cleanup:
+  delete_merged_branch: true
+  close_carrier_issue: true
+safety:
+  require_pr_merged: true
+  require_branch_merged: true
+  no_pending_followups: true
+  missing_contract_behavior: report-only
+```
 
 ## Scope
 

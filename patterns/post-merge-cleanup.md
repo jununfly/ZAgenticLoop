@@ -50,6 +50,48 @@ Last run: 2026-06-09 22:00 UTC
 6. Open small PRs or batch into a single "cleanup" PR per day.
 7. Update state; prune completed items.
 
+## Roadmap Closeout Mode
+
+`roadmap-closeout` is a narrow Post-Merge Cleanup mode for Roadmap-Sliced
+Development PRs. It is mechanical post-merge closeout, not a new development
+pattern.
+
+Trigger:
+
+- A merged PR event is routed through `zj-loop/zj-loop-route-table.yaml`.
+- The PR body contains a fixed YAML fenced `zj-loop.post-merge-contract`.
+- The contract uses `consumer: post-merge-cleanup` and
+  `mode: roadmap-closeout`.
+
+Allowed actions:
+
+- Confirm the PR is merged.
+- Confirm the PR head branch equals `roadmap.branch`.
+- Confirm the branch is a current roadmap branch such as `zjal/<roadmap-id>`.
+- Delete only that already-merged current roadmap branch when the contract says
+  `cleanup.delete_merged_branch: true`.
+- Close only the activation carrier issue named by `carrier.issue` when the
+  contract says `cleanup.close_carrier_issue: true` and no follow-up blocker is
+  present. The contract must also declare `safety.no_pending_followups: true`.
+- Append closeout evidence comments.
+
+Hard boundaries:
+
+- Do not merge PRs.
+- Do not close ordinary linked issues, bug reports, or feature requests.
+- Do not delete fork branches, protected branches, release branches, shared
+  long-lived branches, or any branch not named in the contract.
+- If the contract is missing, invalid, ambiguous, or does not match the PR,
+  report only.
+
+Failure policy:
+
+- The consumer is idempotent: already-deleted branches and already-closed
+  carrier issues count as completed actions with evidence.
+- Each action reports `done`, `skipped`, or `failed` independently.
+- Failed or skipped actions do not expand permissions. They produce evidence and
+  a follow-up item for human review.
+
 ## Verification Strategy
 
 - Cleanup must not alter behavior unless explicitly removing dead code paths.

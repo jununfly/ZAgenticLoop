@@ -98,3 +98,27 @@ routes:
     dedupe_window: "active-pending-request"
     failure_owner: "roadmap-sliced-development"
     human_gate: "maintainer/collaborator command required"
+
+  - route_id: "post-merge-roadmap-closeout"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "post-merge-cleanup"
+    mode: "roadmap-closeout"
+    evidence_store: "GitHub pull request comment"
+    match:
+      source: ["pull_request"]
+      action: ["closed"]
+      merged: [true]
+    guards:
+      requires_post_merge_contract: true
+      report_only_if_contract_missing: true
+      requires_no_pending_followups: true
+      destructive_actions_enabled: false
+      allowed_consumer: "post-merge-cleanup"
+      allowed_mode: "roadmap-closeout"
+      branch_prefix_allowlist: ["zjal/"]
+      close_carrier_issue_only: true
+      auto_merge: false
+    dedupe_window: "pr_number"
+    failure_owner: "post-merge-cleanup"
+    human_gate: "only when contract is missing, invalid, ambiguous, or asks for broader cleanup"
