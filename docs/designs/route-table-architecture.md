@@ -44,6 +44,29 @@ Signal producers may include:
 
 Daily Triage is therefore one producer, not the owner of the Route Table.
 
+## Signal Terminology
+
+Use `Signal` as an abstract slot in generic protocol templates. Do not turn a
+planning-related input into a capitalized protocol term unless it has a concrete
+producer and contract.
+
+Canonical activation chains should name the concrete producer:
+
+```text
+Issue Slash Command -> Route Decision -> Activation Request -> Roadmap-Sliced Development -> Roadmap Branch/PR
+Daily Triage Candidate -> Route Decision -> Activation Request -> Roadmap-Sliced Development -> Roadmap Branch/PR
+```
+
+The abstract fix-request template remains valid:
+
+```text
+Signal -> Route Decision -> Issue Fix Request -> Fix Consumer -> Fix PR
+```
+
+The retired uppercase planning-signal phrase is intentionally forbidden across
+the repository. Use explanatory natural language such as `plan-like signals` or
+`planning-related input` only outside canonical chains.
+
 Durable architecture lives here. Project-specific routing policy lives in
 `zj-loop/zj-loop-route-table.yaml`, which `zj-loop-init` should scaffold by
 default. The file is part of the loop control plane, alongside
