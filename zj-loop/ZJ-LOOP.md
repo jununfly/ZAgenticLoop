@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 ```
 
@@ -76,6 +76,11 @@ Current dogfood status:
 - `human`, `ignore`, and `daily-triage-report` are implemented as
   `report-only` Route Decisions that create report evidence only. Allowed
   report-only decisions close immediately with `status: closed`.
+- `pr-steward-report` is implemented as a PR event report-only route:
+  `Pull Request Event -> Route Decision -> PR Steward Report Evidence`.
+  Local replay writes JSON only and records `zj-loop/pr-steward-state.md` as
+  the evidence target; no PR comments, labels, rebases, merges, Issue Fix
+  Requests, workflow dispatches, or consumer work are created.
 - Daily Triage is wired to create a real Issue Fix Request carrier issue before
   dispatching CI Sweeper.
 - `roadmap-sliced-development` is enabled in the route table as an
