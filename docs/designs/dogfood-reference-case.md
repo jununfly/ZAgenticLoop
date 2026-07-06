@@ -28,6 +28,7 @@ are report-only, and some are declared candidates for future automation.
 | Validate Patterns & Registry | `.github/workflows/validate-patterns.yml` -> `scripts/ci-validate-gates.sh` | Push and PR | Keep pattern docs, registry, starters, release workflows, and tool package tests aligned |
 | Daily Triage | `.github/workflows/daily-triage.yml` + `zj-loop/STATE.md` + `zj-loop/zj-loop-run-log.md` | Weekday scheduled workflow and manual dispatch | Run L1 report-only operational triage and record loop activity |
 | CI Sweeper | `.github/workflows/ci-sweeper.yml` + `zj-loop/zj-loop-route-table.yaml` + `zj-loop/ci-sweeper-state.md` | Route-dispatched workflow from Daily Triage | Attempt allowlisted deterministic repairs for failed validate/audit runs; create PR only when repair produces real non-state diffs and repair/validate/audit gates pass |
+| CI Sweeper E2E Replay | `scripts/ci-sweeper-e2e-replay.mjs` + `scripts/ci-sweeper-e2e-replay.test.mjs` | Validate gate and local replay | Prove Daily Triage -> Route Table -> CI Sweeper reaches repair PR, escalation issue, duplicate, and denied outcomes from deterministic fixtures |
 | Changelog Drafter | `.github/workflows/changelog-drafter.yml` | Weekly schedule and manual dispatch | Open or refresh release-prep issues without publishing |
 | Release Workflow Validation | `scripts/validate-release-workflows.mjs` | Validate gate | Ensure every release-managed npm package has matching workflow, tag pattern, and pack output |
 | Drift Check | `tools/zj-loop-sync` | Local/CI tool package test, optional manual check | Detect mismatch between loop state, loop config, and required files |
@@ -145,6 +146,42 @@ CI. Agent runtime integration can be layered behind the same route request after
 the deterministic path proves the dispatch, dedupe, evidence, and PR handoff
 contract.
 
+## CI Sweeper E2E Replay
+
+The e2e replay script is the local, deterministic proof that the route-dispatch
+chain still reaches the expected terminal behavior without creating real
+GitHub PRs or issues.
+
+Run it locally with:
+
+```bash
+node scripts/ci-sweeper-e2e-replay.mjs
+node --test scripts/ci-sweeper-e2e-replay.test.mjs
+```
+
+The replay covers four dogfood cases:
+
+| Scenario | Expected outcome | Purpose |
+| --- | --- | --- |
+| `repair-pr` | `repair-pr` | A validate/audit failure on `main` dispatches CI Sweeper and would create a repair PR when repair, validate, and audit gates pass. |
+| `escalation-issue` | `escalation-issue` | A dispatch that still has failing gates becomes an escalation issue, not a green repair PR. |
+| `duplicate-request` | `duplicate-request` | A matching pending request prevents duplicate dispatch. |
+| `route-denied-generated-branch` | `route-denied` | A generated `automated/ci-sweeper-*` branch cannot recursively trigger CI Sweeper. |
+
+Each replay result includes a step trace:
+
+```text
+daily-triage-signal
+  -> route-table-decision
+  -> ci-sweeper-dispatch
+  -> ci-sweeper-outcome
+```
+
+When the validate gate fails, inspect `/tmp/ci-sweeper-e2e-replay.json` first.
+It records the expected outcome, actual outcome, Route Decision, dedupe key,
+request branch, and the terminal replay step. This makes failures replayable
+without reading GitHub Actions logs line by line.
+
 ## Gate Model
 
 The two top-level gates are intentionally reused by workflows and local checks:
@@ -162,6 +199,7 @@ The two top-level gates are intentionally reused by workflows and local checks:
   - validates registry schema
   - checks `zj-loop-init` bundled assets are synced
   - validates release workflows
+  - replays the Daily Triage -> Route Table -> CI Sweeper dogfood chain
   - runs relevant tool package tests
 
 For local verification after dogfood changes, run:
@@ -169,6 +207,7 @@ For local verification after dogfood changes, run:
 ```bash
 node tools/zj-loop-sync/dist/cli.js . --json
 node tools/zj-loop-audit/dist/cli.js . --json
+node scripts/ci-sweeper-e2e-replay.mjs
 bash scripts/ci-audit-gates.sh
 bash scripts/ci-validate-gates.sh
 ```
@@ -221,6 +260,8 @@ When dogfood config changes, check:
   routes disabled until the consumer workflow/state owner is ready.
 - `ci-sweeper` route remains limited to validate/audit failures unless the route
   table and CI Sweeper workflow are updated together.
+- `scripts/ci-sweeper-e2e-replay.mjs` scenarios still cover repair PR,
+  escalation issue, duplicate request, and route-denied generated branch paths.
 - The dogfood route table may enable `ci-sweeper`, but starters should not copy
   that enablement as a default side-effect route.
 - `zj-loop-init` bundled registry/templates are regenerated after registry or
