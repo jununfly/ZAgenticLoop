@@ -10,6 +10,7 @@ permissions:
   pull-requests: write
   issues: write
   statuses: write
+  actions: write
 
 jobs:
   triage:
@@ -25,7 +26,12 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: tools/zj-loop-audit/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            tools/zj-loop-audit/package-lock.json
+
+      - name: Install root workflow script dependencies
+        run: npm ci --ignore-scripts
 
       - name: Build zj-loop-audit
         run: |
@@ -47,14 +53,63 @@ jobs:
         id: workflows
         run: |
           FAILING=0
+          FAILURES_JSON=$(mktemp)
+          printf '[]' > "$FAILURES_JSON"
           for wf in validate-patterns audit; do
-            STATUS=$(gh run list --workflow="${wf}.yml" --limit 1 --json conclusion -q '.[0].conclusion' 2>/dev/null || echo "unknown")
+            RUN_JSON=$(gh run list --workflow="${wf}.yml" --limit 1 --json conclusion,databaseId,headBranch,headSha,name -q '.[0]' 2>/dev/null || echo "{}")
+            STATUS=$(node -e "const r = JSON.parse(process.argv[1] || '{}'); console.log(r.conclusion || 'unknown')" "$RUN_JSON")
             echo "${wf}: ${STATUS}"
-            if [ "$STATUS" = "failure" ]; then FAILING=$((FAILING + 1)); fi
+            if [ "$STATUS" = "failure" ]; then
+              FAILING=$((FAILING + 1))
+              node -e "
+                const fs = require('fs');
+                const path = process.argv[1];
+                const run = JSON.parse(process.argv[2] || '{}');
+                const workflow = process.argv[3];
+                const repo = process.argv[4];
+                const failures = JSON.parse(fs.readFileSync(path, 'utf8'));
+                const runId = String(run.databaseId || '');
+                failures.push({
+                  workflow,
+                  databaseId: runId,
+                  headBranch: run.headBranch || 'main',
+                  headSha: run.headSha || '',
+                  url: runId ? 'https://github.com/' + repo + '/actions/runs/' + runId : ''
+                });
+                fs.writeFileSync(path, JSON.stringify(failures));
+              " "$FAILURES_JSON" "$RUN_JSON" "$wf" "$GITHUB_REPOSITORY"
+            fi
           done
           echo "failing=$FAILING" >> "$GITHUB_OUTPUT"
+          echo "failures_json=$(cat "$FAILURES_JSON")" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Route CI failures through route table
+        id: route
+        env:
+          FAILED_WORKFLOWS_JSON: ${{ steps.workflows.outputs.failures_json }}
+          ROUTE_DECISION_OUT: /tmp/zj-loop-ci-route-decision.json
+        run: node scripts/route-ci-failure.mjs
+
+      - name: Check existing CI Sweeper request
+        id: existing_route
+        if: steps.route.outputs.dispatch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=$(gh pr list --head "${{ github.repository_owner }}:${{ steps.route.outputs.request_branch }}" --base main --state open --json number -q '.[0].number' 2>/dev/null || true)
+          ISSUE=$(gh issue list --state open --search "\"${{ steps.route.outputs.dedupe_key }}\"" --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -n "$PR" ] && [ "$PR" != "null" ]; then
+            echo "duplicate=true" >> "$GITHUB_OUTPUT"
+            echo "existing_request=PR #${PR}" >> "$GITHUB_OUTPUT"
+          elif [ -n "$ISSUE" ] && [ "$ISSUE" != "null" ]; then
+            echo "duplicate=true" >> "$GITHUB_OUTPUT"
+            echo "existing_request=issue #${ISSUE}" >> "$GITHUB_OUTPUT"
+          else
+            echo "duplicate=false" >> "$GITHUB_OUTPUT"
+            echo "existing_request=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Update zj-loop/STATE.md
         run: |
@@ -62,6 +117,23 @@ jobs:
           SCORE="${{ steps.audit.outputs.score }}"
           LEVEL="${{ steps.audit.outputs.level }}"
           FAILING="${{ steps.workflows.outputs.failing }}"
+          ROUTE_EVIDENCE=$(node -e "
+            const fs = require('fs');
+            const path = '/tmp/zj-loop-ci-route-decision.json';
+            if (!fs.existsSync(path)) process.exit(0);
+            const decision = JSON.parse(fs.readFileSync(path, 'utf8'));
+            if (!decision.route || decision.status === 'ignored' && decision.reason === 'no-failing-workflows') process.exit(0);
+            const evidence = Array.isArray(decision.evidence) && decision.evidence.length ? decision.evidence[0] : decision.source_url;
+            const parts = [
+              '- Route decision:',
+              '`' + decision.status + '`',
+              'route `' + decision.route + '`',
+              decision.signal_id ? 'signal `' + decision.signal_id + '`' : null,
+              decision.requested_action ? 'action `' + decision.requested_action + '`' : null,
+              evidence ? 'evidence ' + evidence : null,
+            ].filter(Boolean);
+            console.log(parts.join('; ') + '.');
+          ")
           cat > zj-loop/STATE.md <<EOF
           # Loop State — zagenticloop reference
 
@@ -72,6 +144,9 @@ jobs:
           - Maintain loop readiness score ≥ 58 (current: **${SCORE}**, level **${LEVEL}**).
           - Keep npm packages current after tool changes (tag \`zj-loop-audit-v*\`, \`zj-loop-init-v*\`, \`zj-loop-cost-v*\` — see docs/RELEASE.md).
           $([ "$FAILING" -gt 0 ] && echo "- **${FAILING}** dogfood workflow(s) failing — investigate CI.")
+          $([ "${{ steps.route.outputs.dispatch }}" = "true" ] && echo "- Routed CI failure to CI Sweeper: \`${{ steps.route.outputs.dedupe_key }}\`.")
+          $([ "${{ steps.existing_route.outputs.duplicate }}" = "true" ] && echo "- CI Sweeper duplicate request found: ${{ steps.existing_route.outputs.existing_request }}.")
+          ${ROUTE_EVIDENCE}
 
           ## Watch List
 
@@ -120,6 +195,21 @@ jobs:
           ")
           node scripts/append-run-log.mjs "$ENTRY"
           echo "outcome=${OUTCOME}" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch CI Sweeper route request
+        if: steps.route.outputs.dispatch == 'true' && steps.existing_route.outputs.duplicate != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run ci-sweeper.yml \
+            --ref main \
+            -f source_workflow="${{ steps.route.outputs.source_workflow }}" \
+            -f source_run_id="${{ steps.route.outputs.source_run_id }}" \
+            -f source_url="${{ steps.route.outputs.source_url }}" \
+            -f head_branch="${{ steps.route.outputs.head_branch }}" \
+            -f head_sha="${{ steps.route.outputs.head_sha }}" \
+            -f dedupe_key="${{ steps.route.outputs.dedupe_key }}" \
+            -f request_branch="${{ steps.route.outputs.request_branch }}"
 
       # These run the SAME gates a PR-triggered workflow would. Their outcomes
       # (not a hardcoded value) drive the commit statuses posted below, so the

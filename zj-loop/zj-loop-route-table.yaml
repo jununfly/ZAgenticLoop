@@ -1,0 +1,90 @@
+schemaVersion: 1
+kind: zj-loop-route-table
+
+metadata:
+  primary_pattern: "daily-triage"
+  primary_pattern_name: "Daily Triage"
+  generated_by: "zj-loop-init"
+  dogfood: true
+
+policy:
+  description: "Routing policy for ZAgenticLoop dogfood signals. This file is not a runtime queue."
+  lifecycle_evidence:
+    - "zj-loop/STATE.md"
+    - "zj-loop/zj-loop-run-log.md"
+    - "zj-loop/ci-sweeper-state.md"
+    - "GitHub Actions workflow runs"
+    - "GitHub pull requests"
+    - "GitHub issues"
+  default_enablement:
+    human: true
+    ignore: true
+    selected_pattern_report_only: true
+    cross_component_dispatch: true
+    side_effect_routes: true
+
+routes:
+  - route_id: "human"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "maintainer"
+    evidence_store: "zj-loop/STATE.md"
+    match:
+      risk: ["high", "unknown"]
+    guards:
+      requires_human_review: true
+    dedupe_window: "24h"
+    failure_owner: "maintainer"
+    human_gate: "always"
+
+  - route_id: "ignore"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "daily-triage"
+    evidence_store: "zj-loop/STATE.md"
+    match:
+      route: ["ignore"]
+    guards:
+      requires_noise_reason: true
+    dedupe_window: "24h"
+    failure_owner: "daily-triage"
+    human_gate: "none"
+
+  - route_id: "daily-triage-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "daily-triage"
+    evidence_store: "zj-loop/STATE.md"
+    match:
+      route: ["daily-triage"]
+    guards:
+      side_effects_allowed: false
+    dedupe_window: "24h"
+    failure_owner: "daily-triage"
+    human_gate: "on ambiguity or high risk"
+
+  - route_id: "ci-sweeper"
+    enabled: true
+    request_kind: "workflow-dispatch"
+    consumer: "ci-sweeper"
+    evidence_store: "zj-loop/ci-sweeper-state.md"
+    match:
+      source: ["ci"]
+      workflows: ["validate-patterns", "audit"]
+      conclusion: ["failure"]
+    guards:
+      branch_allowlist: ["main"]
+      deterministic_repair_only: true
+      create_pr_only: true
+      auto_merge: false
+    dedupe_window: "source_run_id"
+    failure_owner: "ci-sweeper"
+    human_gate: "when deterministic repair creates no diff or gates still fail"
+
+disabled_dispatch_routes:
+  - route_id: "roadmap-sliced-development"
+    enabled: false
+    request_kind: "activation-comment"
+    consumer: "roadmap-sliced-development"
+    evidence_store: "append-only GitHub issue comments"
+    note: "Enable separately; plan activation is not part of the first CI failure closed loop."

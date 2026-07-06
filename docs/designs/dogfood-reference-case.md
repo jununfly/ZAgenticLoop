@@ -27,6 +27,7 @@ are report-only, and some are declared candidates for future automation.
 | Loop Readiness Audit | `.github/workflows/audit.yml` -> `scripts/ci-audit-gates.sh` -> local `tools/zj-loop-audit` | Push, PR, daily schedule | Prove the reference repo and starters still meet readiness gates |
 | Validate Patterns & Registry | `.github/workflows/validate-patterns.yml` -> `scripts/ci-validate-gates.sh` | Push and PR | Keep pattern docs, registry, starters, release workflows, and tool package tests aligned |
 | Daily Triage | `.github/workflows/daily-triage.yml` + `zj-loop/STATE.md` + `zj-loop/zj-loop-run-log.md` | Weekday scheduled workflow and manual dispatch | Run L1 report-only operational triage and record loop activity |
+| CI Sweeper | `.github/workflows/ci-sweeper.yml` + `zj-loop/zj-loop-route-table.yaml` + `zj-loop/ci-sweeper-state.md` | Route-dispatched workflow from Daily Triage | Attempt allowlisted deterministic repairs for failed validate/audit runs; create PR only when repair produces real non-state diffs and repair/validate/audit gates pass |
 | Changelog Drafter | `.github/workflows/changelog-drafter.yml` | Weekly schedule and manual dispatch | Open or refresh release-prep issues without publishing |
 | Release Workflow Validation | `scripts/validate-release-workflows.mjs` | Validate gate | Ensure every release-managed npm package has matching workflow, tag pattern, and pack output |
 | Drift Check | `tools/zj-loop-sync` | Local/CI tool package test, optional manual check | Detect mismatch between loop state, loop config, and required files |
@@ -42,6 +43,8 @@ The active dogfood state lives under `zj-loop/`:
 - `zj-loop/zj-loop-run-log.md` is append-only run evidence.
 - `zj-loop/zj-loop-budget.md` records token/run budgets.
 - `zj-loop/zj-loop-route-table.yaml` records routing policy for loop signals.
+- `zj-loop/ci-sweeper-state.md` records CI Sweeper route requests and repair
+  outcomes.
 - `zj-loop/zj-loop-constraints.md` defines binding repo rules.
 - `zj-loop/zj-loop-safety.md` records safety policy and denylist guidance.
 
@@ -65,6 +68,17 @@ There are two configuration sources:
    - Daily Triage writes `zj-loop/STATE.md`, appends
      `zj-loop/zj-loop-run-log.md`, runs the same validate/audit gates, then
      opens an automated state PR only if those gates pass.
+   - Daily Triage also consults `zj-loop/zj-loop-route-table.yaml`; when
+     validate/audit workflow health is failing and the `ci-sweeper` route is
+     enabled, it dispatches `.github/workflows/ci-sweeper.yml`.
+   - CI Sweeper runs deterministic build/bundle repair steps and opens a PR
+     only when those steps produce non-state diffs and repair/validate/audit
+     gates pass. If no deterministic repair exists or gates still fail, it
+     opens or updates an escalation issue instead.
+   - This repository explicitly enables the `ci-sweeper` dispatch route as a
+     dogfood exception. Starter defaults should still keep side-effect routes
+     disabled or report-only until a project deliberately enables the matching
+     dispatcher.
    - Changelog Drafter is L1/report-only and writes GitHub issue comments, not
      release tags or package publications.
 
@@ -79,23 +93,57 @@ The Daily Triage workflow is the clearest self-running dogfood loop:
 2. Build local `tools/zj-loop-audit`.
 3. Audit the reference repo and extract readiness score/level.
 4. Check recent validate/audit workflow health.
-5. Rewrite `zj-loop/STATE.md` with current high-priority items.
-6. Append one JSON entry to `zj-loop/zj-loop-run-log.md`.
-7. Run `scripts/ci-validate-gates.sh` and `scripts/ci-audit-gates.sh`.
-8. Stop if either gate fails.
-9. If state/run-log changed, create an automated branch and PR.
-10. If the same date branch already exists, overwrite it from current `main`
+5. Build a Route Decision from `zj-loop/zj-loop-route-table.yaml`.
+6. Check for an existing CI Sweeper PR or escalation issue with the same
+   request branch or dedupe key.
+7. Rewrite `zj-loop/STATE.md` with current high-priority items and concise
+   Route Decision evidence.
+8. Append one JSON entry to `zj-loop/zj-loop-run-log.md`.
+9. Dispatch CI Sweeper when validate/audit failure matches the enabled
+   `ci-sweeper` route and no duplicate request exists.
+10. Run `scripts/ci-validate-gates.sh` and `scripts/ci-audit-gates.sh`.
+11. Stop if either gate fails.
+12. If state/run-log changed, create an automated branch and PR.
+13. If the same date branch already exists, overwrite it from current `main`
     instead of rebasing stale generated state.
     The workflow may fetch that generated branch only to refresh
     `--force-with-lease` metadata before replacement.
-11. Post commit statuses for branch protection because `GITHUB_TOKEN` does not
+14. Post commit statuses for branch protection because `GITHUB_TOKEN` does not
     trigger normal PR workflows.
-12. Squash-merge the automated PR after inline statuses are posted, without
+15. Squash-merge the automated PR after inline statuses are posted, without
     requiring repository-level auto-merge to be enabled.
-13. On Mondays, open or refresh a weekly loop report issue.
+16. On Mondays, open or refresh a weekly loop report issue.
 
-The loop remains L1/report-only. It updates operational memory and creates
-reviewable evidence, but it does not perform product or code fixes.
+Daily Triage itself remains a producer. It updates operational memory, creates
+reviewable evidence, and may dispatch an allowlisted consumer, but it does not
+perform product or code fixes directly.
+
+## CI Sweeper Flow
+
+The CI Sweeper dogfood path is intentionally narrow:
+
+1. Daily Triage sees the latest `validate-patterns` or `audit` workflow run in
+   failure.
+2. `scripts/route-ci-failure.mjs` checks the `ci-sweeper` route in
+   `zj-loop/zj-loop-route-table.yaml` and emits a replayable route decision.
+3. Daily Triage checks branch allowlist, generated-branch loop prevention, and
+   duplicate request evidence before dispatch.
+4. Daily Triage dispatches `.github/workflows/ci-sweeper.yml` with the failed
+   workflow name, run id, run URL, head branch, head SHA, dedupe key, and
+   deterministic request branch.
+5. CI Sweeper records the route request in `zj-loop/ci-sweeper-state.md`.
+6. CI Sweeper runs `scripts/ci-sweeper-deterministic-repair.mjs`, which rebuilds
+   release-managed packages and refreshes deterministic generated artifacts.
+7. CI Sweeper reruns validate/audit gates.
+8. If deterministic repair produced non-state diffs, it creates or refreshes a
+   fix PR only after repair, validate, and audit gates all pass. If no
+   deterministic repair exists, or any gate still fails, it opens or updates an
+   escalation issue.
+
+This first version deliberately does not run a general-purpose coding agent in
+CI. Agent runtime integration can be layered behind the same route request after
+the deterministic path proves the dispatch, dedupe, evidence, and PR handoff
+contract.
 
 ## Gate Model
 
@@ -154,7 +202,9 @@ These are not yet fully automated dogfood loops:
 - PR Steward is declared as L2 assisted/manual or future Action.
 - Dependency Sweeper is declared as L2 patch-only, not a continuously scheduled
   self-maintainer.
-- CI Sweeper and Post-Merge Cleanup are opportunistic/future loops.
+- CI Sweeper is route-dispatched and deterministic-repair only; it is not a
+  general-purpose autonomous coding agent.
+- Post-Merge Cleanup is opportunistic/future.
 - Changelog Drafter is report-only and issue-based; it does not publish releases.
 
 Keep these labels explicit. Do not present declared/candidate loops as active
@@ -169,6 +219,10 @@ When dogfood config changes, check:
 - Starter README copy commands create state files under `zj-loop/`.
 - `zj-loop/zj-loop-route-table.yaml` exists and keeps cross-component dispatch
   routes disabled until the consumer workflow/state owner is ready.
+- `ci-sweeper` route remains limited to validate/audit failures unless the route
+  table and CI Sweeper workflow are updated together.
+- The dogfood route table may enable `ci-sweeper`, but starters should not copy
+  that enablement as a default side-effect route.
 - `zj-loop-init` bundled registry/templates are regenerated after registry or
   starter changes.
 - `zj-loop-cost` bundled `registry.json` is regenerated after registry changes.

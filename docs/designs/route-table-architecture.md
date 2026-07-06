@@ -74,6 +74,7 @@ Minimum fields:
 | `evidence` | Reviewable links or concise evidence. |
 | `producer` | Component that emitted the decision candidate. |
 | `dedupe_key` | Stable key used to detect repeats. |
+| `request_branch` | Optional deterministic branch name for workflow-dispatch routes that will create a PR; producer and consumer should share this value to avoid branch naming drift. |
 | `requested_action` | `report`, `dispatch`, `activate`, `comment`, or `ignore`. |
 | `target_consumer` | Owning consumer if request creation is allowed. |
 | `status` | `candidate`, `pending`, `consumed`, `duplicate`, `denied`, `failed`, or `closed`. |
@@ -227,6 +228,7 @@ Every automated route must define:
 
 - `dedupe_key`
 - `source_run_id`
+- deterministic generated branch naming when the route can create repair PRs
 - `parent_request_id` when a consumer emits follow-up signals
 - `attempt_count`
 - `dedupe_window`
@@ -237,6 +239,9 @@ Every automated route must define:
 Daily Triage and other producers should report existing request lifecycle
 evidence/status instead of creating another request when a matching pending,
 consumed, failed, duplicate, denied, or ambiguous request already exists.
+Generated repair branches should be denied as producer inputs when they match
+the consumer's own branch namespace, such as `automated/ci-sweeper-*`, so a
+consumer-created repair PR cannot recursively dispatch the same consumer.
 
 ## Example Route Decisions
 

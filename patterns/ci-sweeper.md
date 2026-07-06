@@ -8,8 +8,29 @@
 - `/loop 15m` during active development (Grok, Claude Code)
 - `/loop 5m` when main is red and you're shipping
 - GitHub Action on `workflow_run` failure (event-driven, not polling)
+- Route-dispatched GitHub Action from Daily Triage for deterministic first
+  versions
 
 Slower overnight cadence (30–60m) is fine when no one is watching.
+
+## Route-Dispatched Deterministic First Version
+
+For teams that want the safest first automation path, run CI Sweeper as a
+consumer of Route Table decisions instead of as a free-running fixer:
+
+1. Daily Triage or another producer observes a failed allowlisted workflow.
+2. The producer creates a Route Decision from `zj-loop/zj-loop-route-table.yaml`.
+3. The dispatcher starts CI Sweeper only when guards pass, such as branch
+   allowlist, deterministic repair only, create PR only, and no auto-merge.
+4. CI Sweeper runs deterministic repair commands, reruns verifier gates, and
+   opens a PR only if a non-state diff exists and all gates pass.
+5. If no deterministic repair exists, or repair/gates fail, CI Sweeper opens or
+   updates an escalation issue instead of presenting the output as a green fix.
+
+This mode is deliberately narrower than a general-purpose agent sweeper. It is
+the recommended first implementation when the goal is to prove dispatch,
+dedupe, evidence, and verifier-backed handoff before allowing agent-authored
+code changes in CI.
 
 ## Required Skills
 
@@ -56,6 +77,8 @@ Track: commit SHA, failing job, attempt count, worktree/PR link, outcome.
 - Verifier must run tests in the worktree before approving.
 - Implementer cannot merge — only propose.
 - Flake detection: if same test failed and passed on retry without code change, do not auto-fix.
+- For deterministic GitHub Actions mode, open a normal repair PR only when the
+  deterministic repair step and all configured verifier gates succeed.
 
 ## Human Handoff Points
 

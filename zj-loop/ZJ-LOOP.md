@@ -6,11 +6,12 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 
 ## Active Loops
 
-### Daily Triage (L1 — automated + report)
+### Daily Triage (L1 — automated producer + report)
 - Cadence: 1d weekdays (`/.github/workflows/daily-triage.yml`)
 - Skill: `zj-loop-triage` (from `skills/` and `starters/minimal-loop`)
 - State: `zj-loop/STATE.md` (updated by workflow; human reviews weekly issue)
-- Phase: Report-only. Human reviews and decides actions.
+- Route table: `zj-loop/zj-loop-route-table.yaml`
+- Phase: Report + allowlisted route dispatch. Human reviews and decides actions.
 - Handoff: Design decisions, large refactors, new pattern acceptance.
 
 ### PR Steward (L2 — assisted, manual trigger)
@@ -25,10 +26,20 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 - Verifier = full `npm ci && npm test` in worktree
 - Human gate on majors and denylisted packages
 
-### CI Sweeper / Post-Merge (opportunistic)
-- `validate-patterns.yml` + `audit.yml` dogfood pattern validation and readiness scoring
-- `audit.yml` posts loop readiness scores on PRs
-- Future: sweeper reacting to failing validate/audit runs
+### CI Sweeper (L2 — route-dispatched deterministic repair)
+- Trigger: `daily-triage.yml` dispatches `.github/workflows/ci-sweeper.yml`
+  when latest `validate-patterns` or `audit` run failed and the route table
+  enables `ci-sweeper`.
+- State: `zj-loop/ci-sweeper-state.md`.
+- Action: run deterministic build/bundle repair plan, rerun gates, open a PR
+  only when non-state repair diffs exist and repair/validate/audit gates all
+  pass.
+- Handoff: if no deterministic repair exists or gates still fail, open/update an
+  escalation issue.
+- Boundary: not a general-purpose coding agent yet; no auto-merge.
+
+### Post-Merge (opportunistic)
+- Future: sweeper reacting to post-merge cleanup signals.
 
 ### Changelog Drafter (L1 — draft only, high value)
 - Cadence: 1d or on release prep (manual or tag-triggered)
@@ -38,7 +49,7 @@ The goal of this repo is to be the canonical, copyable, high-signal collection o
 
 ## Multi-loop coordination
 
-See [docs/multi-loop.md](docs/multi-loop.md). Priority: CI Sweeper → PR Steward → Dependency Sweeper → Post-Merge / Changelog Drafter (off-peak) → Daily Triage (report).
+See [docs/multi-loop.md](docs/multi-loop.md). Priority: CI Sweeper → PR Steward → Dependency Sweeper → Post-Merge / Changelog Drafter (off-peak) → Daily Triage (report/producer).
 
 ## Worktrees
 

@@ -1,0 +1,172 @@
+name: CI Sweeper (dogfood)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_workflow:
+        description: "Workflow that failed and triggered this route"
+        required: true
+        type: string
+      source_run_id:
+        description: "Failed workflow run id"
+        required: true
+        type: string
+      source_url:
+        description: "Failed workflow run URL"
+        required: true
+        type: string
+      head_branch:
+        description: "Failed workflow head branch"
+        required: false
+        default: "main"
+        type: string
+      head_sha:
+        description: "Failed workflow head sha"
+        required: false
+        default: ""
+        type: string
+      dedupe_key:
+        description: "Route decision dedupe key"
+        required: false
+        default: ""
+        type: string
+      request_branch:
+        description: "Deterministic repair PR branch"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: ci-sweeper-${{ inputs.source_run_id }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Record CI Sweeper route request
+        run: |
+          mkdir -p zj-loop
+          if [ ! -f zj-loop/ci-sweeper-state.md ]; then
+            printf '# CI Sweeper State\n\nLast run: never\n\n## Active Failures\n\nNone.\n\n## Recent Actions\n\nNone.\n' > zj-loop/ci-sweeper-state.md
+          fi
+          {
+            echo ""
+            echo "### $(date -u +%Y-%m-%dT%H:%M:%SZ) — route request"
+            echo "- Source workflow: ${{ inputs.source_workflow }}"
+            echo "- Source run: ${{ inputs.source_run_id }}"
+            echo "- Source URL: ${{ inputs.source_url }}"
+            echo "- Head branch: ${{ inputs.head_branch }}"
+            echo "- Head SHA: ${{ inputs.head_sha }}"
+            echo "- Dedupe key: ${{ inputs.dedupe_key }}"
+            echo "- Action: deterministic repair attempt"
+          } >> zj-loop/ci-sweeper-state.md
+
+      - name: Run deterministic repair plan
+        id: repair
+        continue-on-error: true
+        run: node scripts/ci-sweeper-deterministic-repair.mjs
+
+      - name: Run validate gates after repair
+        id: validate_gates
+        continue-on-error: true
+        run: bash scripts/ci-validate-gates.sh
+
+      - name: Run audit gates after repair
+        id: audit_gates
+        continue-on-error: true
+        run: bash scripts/ci-audit-gates.sh
+
+      - name: Summarize CI Sweeper result
+        run: |
+          {
+            echo "- Repair script outcome: ${{ steps.repair.outcome }}"
+            echo "- Validate gates: ${{ steps.validate_gates.outcome }}"
+            echo "- Audit gates: ${{ steps.audit_gates.outcome }}"
+          } >> zj-loop/ci-sweeper-state.md
+
+      - name: Detect repair diff
+        id: diff
+        run: |
+          if git diff --quiet -- . ':(exclude)zj-loop/ci-sweeper-state.md'; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update deterministic repair PR
+        if: steps.diff.outputs.changed == 'true' && steps.repair.outcome == 'success' && steps.validate_gates.outcome == 'success' && steps.audit_gates.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="${{ inputs.request_branch }}"
+          if [ -z "$BRANCH" ]; then
+            SAFE_WORKFLOW=$(printf '%s' "${{ inputs.source_workflow }}" | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-//;s/-$//')
+            BRANCH="automated/ci-sweeper-${SAFE_WORKFLOW}-${{ inputs.source_run_id }}"
+          fi
+          git fetch origin main "$BRANCH" 2>/dev/null || git fetch origin main
+          git checkout -B "$BRANCH"
+          git add .
+          git commit -m "fix(ci): deterministic repair for ${{ inputs.source_workflow }} [automated]"
+          git push -u origin "$BRANCH" --force-with-lease
+
+          BODY="CI Sweeper deterministic repair for [${{ inputs.source_workflow }} run ${{ inputs.source_run_id }}](${{ inputs.source_url }}).
+
+          - Route: \`daily-triage -> ci-sweeper\`
+          - Dedupe key: \`${{ inputs.dedupe_key }}\`
+          - Repair script outcome: \`${{ steps.repair.outcome }}\`
+          - Validate gates: \`${{ steps.validate_gates.outcome }}\`
+          - Audit gates: \`${{ steps.audit_gates.outcome }}\`
+          - Human review required before merge."
+
+          EXISTING=$(gh pr list --head "${{ github.repository_owner }}:${BRANCH}" --base main --state open --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            gh pr comment "$EXISTING" --body "$BODY"
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "fix(ci): deterministic repair for ${{ inputs.source_workflow }}" \
+              --body "$BODY"
+          fi
+
+      - name: Escalate CI Sweeper repair failure
+        if: steps.diff.outputs.changed != 'true' || steps.repair.outcome != 'success' || steps.validate_gates.outcome != 'success' || steps.audit_gates.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="CI Sweeper could not safely repair ${{ inputs.source_workflow }} run ${{ inputs.source_run_id }}"
+          EXISTING=$(gh issue list --state open --search "\"${TITLE}\" in:title" --json number -q '.[0].number' 2>/dev/null || true)
+          BODY="Daily Triage routed a CI failure to CI Sweeper, but it could not produce a safe verifier-backed repair PR.
+
+          - Source workflow: \`${{ inputs.source_workflow }}\`
+          - Source run: ${{ inputs.source_url }}
+          - Dedupe key: \`${{ inputs.dedupe_key }}\`
+          - Non-state repair diff: \`${{ steps.diff.outputs.changed }}\`
+          - Repair script outcome: \`${{ steps.repair.outcome }}\`
+          - Validate gates: \`${{ steps.validate_gates.outcome }}\`
+          - Audit gates: \`${{ steps.audit_gates.outcome }}\`
+
+          Next step: human or agent runtime should inspect the failed run and create a targeted fix PR."
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
