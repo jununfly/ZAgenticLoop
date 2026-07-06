@@ -68,8 +68,15 @@ Current dogfood status:
   dispatching CI Sweeper.
 - CI Sweeper records the request issue URL in state, Fix PR body, and
   escalation issue body.
-- A live GitHub run is still required to close real external evidence for this
-  dogfood path.
+- Live external evidence has been captured:
+  - Daily Triage no-signal run:
+    https://github.com/jununfly/ZAgenticLoop/actions/runs/28790602470
+  - Synthetic Issue Fix Request carrier:
+    https://github.com/jununfly/ZAgenticLoop/issues/17
+  - CI Sweeper no-diff escalation run:
+    https://github.com/jununfly/ZAgenticLoop/actions/runs/28790735629
+  - Escalation issue:
+    https://github.com/jununfly/ZAgenticLoop/issues/18
 
 ### Post-Merge (opportunistic)
 - Future: sweeper reacting to post-merge cleanup signals.

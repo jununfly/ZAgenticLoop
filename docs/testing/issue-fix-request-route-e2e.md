@@ -57,8 +57,15 @@ Current ZAgenticLoop repo status:
 - Workflow support exists for the first live consumer, `ci-sweeper`.
 - Daily Triage creates the Issue Fix Request carrier issue before dispatch.
 - CI Sweeper records the carrier URL in consumer-owned evidence.
-- The remaining closeout step is a real GitHub run that leaves issue, workflow,
-  and PR or escalation evidence.
+- Live external evidence has been captured:
+  - Daily Triage no-signal run:
+    https://github.com/jununfly/ZAgenticLoop/actions/runs/28790602470
+  - Synthetic Issue Fix Request carrier:
+    https://github.com/jununfly/ZAgenticLoop/issues/17
+  - CI Sweeper no-diff escalation run:
+    https://github.com/jununfly/ZAgenticLoop/actions/runs/28790735629
+  - Escalation issue:
+    https://github.com/jununfly/ZAgenticLoop/issues/18
 
 ## Failure Diagnosis Matrix
 
