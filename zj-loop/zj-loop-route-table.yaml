@@ -82,10 +82,19 @@ routes:
     failure_owner: "ci-sweeper"
     human_gate: "when deterministic repair creates no diff or gates still fail"
 
-disabled_dispatch_routes:
   - route_id: "roadmap-sliced-development"
-    enabled: false
+    enabled: true
     request_kind: "activation-comment"
     consumer: "roadmap-sliced-development"
     evidence_store: "append-only GitHub issue comments"
-    note: "Enable separately; plan activation is not part of the first CI failure closed loop."
+    match:
+      source: ["issue", "daily-triage", "human"]
+      command: ["/zj-loop start roadmap-sliced-development"]
+    guards:
+      allowed_permissions: ["admin", "maintain", "write"]
+      consumer_allowed: true
+      create_roadmap_artifacts: false
+      append_only_comments: true
+    dedupe_window: "active-pending-request"
+    failure_owner: "roadmap-sliced-development"
+    human_gate: "maintainer/collaborator command required"
