@@ -145,9 +145,14 @@ export function buildIssueFixRequestFromDecision({
 }
 
 function signalMatchesRoute(route, signal) {
-  const sources = route?.match?.source;
-  if (!Array.isArray(sources) || sources.length === 0) return true;
-  return sources.includes(signal?.source);
+  const match = route?.match ?? {};
+  const entries = Object.entries(match);
+  if (entries.length === 0) return true;
+
+  return entries.every(([key, allowedValues]) => {
+    if (!Array.isArray(allowedValues) || allowedValues.length === 0) return true;
+    return allowedValues.includes(signal?.[key]);
+  });
 }
 
 function branchAllowedByRoute(route, branchName) {

@@ -100,6 +100,25 @@ routes:
     failure_owner: "ci-sweeper"
     human_gate: "when deterministic repair creates no diff or gates still fail"
 
+  - route_id: "dependency-sweeper"
+    enabled: true
+    request_kind: "issue-fix-request"
+    consumer: "dependency-sweeper"
+    evidence_store: "zj-loop/dependency-sweeper-state.md"
+    match:
+      source: ["dependency"]
+      update_type: ["patch", "minor"]
+      risk: ["low", "medium"]
+    guards:
+      branch_allowlist: ["main"]
+      direct_dependency_only: true
+      verifier_required: true
+      auto_merge: false
+      fix_consumer_allowlist: ["dependency-sweeper"]
+    dedupe_window: "package:update_type:target_version"
+    failure_owner: "dependency-sweeper"
+    human_gate: "major, high risk, critical CVE, denylisted package, or verifier failure"
+
   - route_id: "roadmap-sliced-development"
     enabled: true
     request_kind: "activation-comment"

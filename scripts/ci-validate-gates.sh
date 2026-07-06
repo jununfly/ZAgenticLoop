@@ -35,7 +35,8 @@ node scripts/issue-fix-request-e2e-replay.mjs > /tmp/issue-fix-request-e2e-repla
 node scripts/roadmap-activation-e2e-replay.mjs > /tmp/roadmap-activation-e2e-replay.json
 node scripts/post-merge-roadmap-closeout-e2e-replay.mjs > /tmp/post-merge-roadmap-closeout-e2e-replay.json
 node scripts/pr-steward-report-e2e-replay.mjs > /tmp/pr-steward-report-e2e-replay.json
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
+node scripts/dependency-sweeper-route-e2e-replay.mjs > /tmp/dependency-sweeper-route-e2e-replay.json
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs scripts/roadmap-handoff-gate.test.mjs scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 node scripts/run-tool-package-scripts.mjs test --gate=validate --install
 
 echo "validate gates passed ✓"

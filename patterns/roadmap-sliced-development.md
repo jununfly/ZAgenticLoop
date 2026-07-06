@@ -558,6 +558,10 @@ Post-closeout continuation rule:
 - PR handoff means confirming the branch is clean, pushing the roadmap branch,
   and opening or updating the PR with verification notes, closeout status,
   durable docs, and post-merge branch cleanup plan.
+- Treat PR handoff as an executable gate, not a prose-only reminder. Run the
+  Roadmap Handoff Gate with branch, PR, closeout, and process-file evidence; do
+  not say `roadmap loop complete` unless the gate passes or an explicit Human
+  Gate records why push/PR handoff is paused.
 - Stopping before PR handoff is valid only when a Human Gate explicitly says to
   pause before push/PR, or when an external blocker prevents push/PR creation.
 - If blocked, record the blocker and the exact next command needed to resume.
