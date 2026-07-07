@@ -87,7 +87,7 @@ Evidence:
 
 ## Leaf 3: Daily Triage Integration
 
-Status: pending
+Status: completed
 
 Commit intent: `feat(loop): use ci sweeper lifecycle classification in daily triage`
 
@@ -107,7 +107,14 @@ Work:
 
 Evidence:
 
-- Pending.
+- Replaced ad hoc duplicate handling with query + deterministic lifecycle
+  classifier.
+- Daily Triage now creates Issue Fix Requests and dispatches CI Sweeper only
+  when lifecycle kind is `none`.
+- `zj-loop/STATE.md` receives stable lifecycle evidence from
+  `scripts/ci-sweeper-lifecycle.mjs`.
+- Verification passed:
+  `node --test scripts/ci-sweeper-workflow-contract.test.mjs scripts/daily-triage-workflow-contract.test.mjs`.
 
 ## Leaf 4: Replay And Durable Docs
 
