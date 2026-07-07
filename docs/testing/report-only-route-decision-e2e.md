@@ -19,6 +19,7 @@ The ZAgenticLoop dogfood route table currently enables these report-only routes:
 | `ignore` | `route: ignore` | `zj-loop/STATE.md` |
 | `daily-triage-report` | `route: daily-triage` | `zj-loop/STATE.md` |
 | `pr-steward-report` | `source: pull_request` with allowlisted PR actions | `zj-loop/pr-steward-state.md` |
+| `changelog-drafter-report` | merged PR or manual release-prep signals on `main` | `zj-loop/changelog-drafter-state.md` |
 
 ## Local Replay Gate
 
@@ -36,6 +37,9 @@ Expected results:
 - A Daily Triage report signal reaches `daily-triage-report`.
 - Pull request events can reach `pr-steward-report`; detailed scenarios live in
   [PR Steward Report E2E](./pr-steward-report-e2e.md).
+- Release-prep signals can reach `changelog-drafter-report`; detailed
+  scenarios live in
+  [Changelog Drafter Report E2E](./changelog-drafter-report-e2e.md).
 - A route kind drift to `issue-fix-request`, `activation-comment`, or
   `workflow-dispatch` is denied before any report evidence is produced.
 - Non-matching signals are denied.

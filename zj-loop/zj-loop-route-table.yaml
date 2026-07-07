@@ -144,6 +144,29 @@ routes:
     failure_owner: "dependency-sweeper"
     human_gate: "major, high risk, critical CVE, denylisted package, or verifier failure"
 
+  - route_id: "changelog-drafter-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "changelog-drafter"
+    evidence_store: "zj-loop/changelog-drafter-state.md"
+    match:
+      source: ["pull_request", "human"]
+      action: ["merged", "merged_batch", "release_prep"]
+      base_branch: ["main"]
+    guards:
+      side_effects_allowed: false
+      release_notes_draft_allowed: false
+      changelog_edit_allowed: false
+      changelog_pr_allowed: false
+      tag_allowed: false
+      release_allowed: false
+      package_publish_allowed: false
+      workflow_dispatch_allowed: false
+      human_review_required_on: ["breaking_change", "security", "major_version", "scan_window_too_large"]
+    dedupe_window: "changelog:repo:base_branch:since_ref:until_ref"
+    failure_owner: "changelog-drafter"
+    human_gate: "breaking change, security note, major version, or scan window above 50 items"
+
   - route_id: "roadmap-sliced-development"
     enabled: true
     request_kind: "activation-comment"
