@@ -89,3 +89,29 @@ Current ZAgenticLoop repo status:
 | Retry | New request with new `request_id`; failed request is not retried in place. |
 
 The validate gate runs these local checks through `scripts/ci-validate-gates.sh`.
+
+## CI Sweeper Hardening Replay
+
+**Goal:** Prove the first live Fix Consumer does not loop on its own generated
+branches, stale workflow runs, or already-escalated failed repairs.
+
+Run:
+
+```bash
+node --test scripts/route-ci-failure.test.mjs scripts/ci-sweeper-lifecycle.test.mjs scripts/ci-sweeper-e2e-replay.test.mjs scripts/daily-triage-workflow-contract.test.mjs
+```
+
+Expected results:
+
+- Generated `automated/ci-sweeper-*` branches are denied with
+  `generated-ci-sweeper-branch`, `next_action`, and loop-prevention evidence.
+- Stale `source_run_id` values are denied before Issue Fix Request creation.
+- Existing lifecycle is classified as `existing_repair_pr`,
+  `existing_issue_fix_request`, `existing_escalation_issue`, or `none` with
+  first-match-wins priority.
+- Existing repair PR, Issue Fix Request, or escalation issue suppresses new
+  Issue Fix Request creation and CI Sweeper dispatch.
+- Daily Triage writes stable human-facing lifecycle evidence to
+  `zj-loop/STATE.md` through deterministic script output.
+- Same-day generated repair branches are regenerated from current `main` and
+  pushed with `--force-with-lease`; stale generated commits are not rebased.

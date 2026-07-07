@@ -45,6 +45,10 @@ function findActiveDuplicate(existingRequests, dedupeKey) {
     .find((request) => request?.dedupe_key === dedupeKey && activeStatuses.has(request?.status));
 }
 
+function isStaleSourceRun(failure) {
+  return failure?.isLatestFailure === false;
+}
+
 export function buildCiSweeperBranchName(sourceWorkflow, sourceRunId) {
   const safeWorkflow = String(sourceWorkflow ?? 'unknown')
     .replace(/[^A-Za-z0-9._-]+/g, '-')
@@ -110,6 +114,32 @@ export function buildCiSweeperRouteDecision({ routeTableText, failures, sourceRu
       dedupe_key: signalId,
       request_branch: requestBranch,
       head_branch: headBranch,
+      source_workflow: sourceWorkflow,
+      source_run_id: sourceRun,
+      next_action: 'report-existing-generated-branch-run',
+      loop_prevention: {
+        source: 'ci-sweeper-generated-branch',
+        dispatch_allowed: false,
+      },
+      failures: normalizedFailures,
+    };
+  }
+
+  if (isStaleSourceRun(failure)) {
+    return {
+      dispatch: false,
+      status: 'denied',
+      reason: 'stale-source-run',
+      route: 'ci-sweeper',
+      signal_id: signalId,
+      dedupe_key: signalId,
+      request_branch: requestBranch,
+      head_branch: headBranch,
+      source_workflow: sourceWorkflow,
+      source_run_id: sourceRun,
+      source_url: sourceUrl,
+      next_action: 'report-stale-source-run',
+      latest_failure_required: true,
       failures: normalizedFailures,
     };
   }
@@ -124,6 +154,8 @@ export function buildCiSweeperRouteDecision({ routeTableText, failures, sourceRu
       dedupe_key: signalId,
       request_branch: requestBranch,
       head_branch: headBranch,
+      source_workflow: sourceWorkflow,
+      source_run_id: sourceRun,
       failures: normalizedFailures,
     };
   }
@@ -139,6 +171,8 @@ export function buildCiSweeperRouteDecision({ routeTableText, failures, sourceRu
       request_branch: requestBranch,
       existing_request_id: duplicate.request_id ?? duplicate.id ?? '',
       head_branch: headBranch,
+      source_workflow: sourceWorkflow,
+      source_run_id: sourceRun,
       failures: normalizedFailures,
     };
   }
@@ -215,6 +249,7 @@ async function main() {
       `requested_action=${decision.requested_action ?? ''}`,
       `target_consumer=${decision.target_consumer ?? ''}`,
       `reason=${decision.reason ?? ''}`,
+      `next_action=${decision.next_action ?? ''}`,
     ];
     await writeFile(process.env.GITHUB_OUTPUT, `${lines.join('\n')}\n`, { flag: 'a' });
   }

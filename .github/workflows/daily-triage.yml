@@ -92,28 +92,38 @@ jobs:
           ROUTE_DECISION_OUT: /tmp/zj-loop-ci-route-decision.json
         run: node scripts/route-ci-failure.mjs
 
-      - name: Check existing CI Sweeper request
-        id: existing_route
+      - name: Query existing CI Sweeper lifecycle
+        id: existing_lifecycle_query
         if: steps.route.outputs.dispatch == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           PR=$(gh pr list --head "${{ github.repository_owner }}:${{ steps.route.outputs.request_branch }}" --base main --state open --json number -q '.[0].number' 2>/dev/null || true)
           ISSUE=$(gh issue list --state open --search "\"${{ steps.route.outputs.dedupe_key }}\"" --json number -q '.[0].number' 2>/dev/null || true)
-          if [ -n "$PR" ] && [ "$PR" != "null" ]; then
-            echo "duplicate=true" >> "$GITHUB_OUTPUT"
-            echo "existing_request=PR #${PR}" >> "$GITHUB_OUTPUT"
-          elif [ -n "$ISSUE" ] && [ "$ISSUE" != "null" ]; then
-            echo "duplicate=true" >> "$GITHUB_OUTPUT"
-            echo "existing_request=issue #${ISSUE}" >> "$GITHUB_OUTPUT"
-          else
-            echo "duplicate=false" >> "$GITHUB_OUTPUT"
-            echo "existing_request=" >> "$GITHUB_OUTPUT"
-          fi
+          ESCALATION_TITLE="CI Sweeper could not safely repair ${{ steps.route.outputs.source_workflow }} run ${{ steps.route.outputs.source_run_id }}"
+          ESCALATION=$(gh issue list --state open --search "\"${ESCALATION_TITLE}\"" --json number -q '.[0].number' 2>/dev/null || true)
+          echo "repair_pr_number=${PR}" >> "$GITHUB_OUTPUT"
+          echo "issue_fix_request_number=${ISSUE}" >> "$GITHUB_OUTPUT"
+          echo "escalation_issue_number=${ESCALATION}" >> "$GITHUB_OUTPUT"
+
+      - name: Classify CI Sweeper lifecycle
+        id: lifecycle
+        if: steps.route.outputs.dispatch == 'true'
+        env:
+          DEDUPE_KEY: ${{ steps.route.outputs.dedupe_key }}
+          SOURCE_WORKFLOW: ${{ steps.route.outputs.source_workflow }}
+          SOURCE_RUN_ID: ${{ steps.route.outputs.source_run_id }}
+          REQUEST_BRANCH: ${{ steps.route.outputs.request_branch }}
+          REPAIR_PR_NUMBER: ${{ steps.existing_lifecycle_query.outputs.repair_pr_number }}
+          ISSUE_FIX_REQUEST_NUMBER: ${{ steps.existing_lifecycle_query.outputs.issue_fix_request_number }}
+          ESCALATION_ISSUE_NUMBER: ${{ steps.existing_lifecycle_query.outputs.escalation_issue_number }}
+          LIFECYCLE_JSON_OUT: /tmp/zj-loop-ci-sweeper-lifecycle.json
+          STATE_EVIDENCE_OUT: /tmp/zj-loop-ci-sweeper-lifecycle-state.md
+        run: node scripts/ci-sweeper-lifecycle.mjs
 
       - name: Create CI Sweeper Issue Fix Request
         id: issue_fix_request
-        if: steps.route.outputs.dispatch == 'true' && steps.existing_route.outputs.duplicate != 'true'
+        if: steps.route.outputs.dispatch == 'true' && steps.lifecycle.outputs.kind == 'none'
         env:
           GH_TOKEN: ${{ github.token }}
           ROUTE_DECISION_PATH: /tmp/zj-loop-ci-route-decision.json
@@ -130,6 +140,10 @@ jobs:
           SCORE="${{ steps.audit.outputs.score }}"
           LEVEL="${{ steps.audit.outputs.level }}"
           FAILING="${{ steps.workflows.outputs.failing }}"
+          CI_SWEEPER_LIFECYCLE_EVIDENCE=""
+          if [ -f /tmp/zj-loop-ci-sweeper-lifecycle-state.md ]; then
+            CI_SWEEPER_LIFECYCLE_EVIDENCE=$(cat /tmp/zj-loop-ci-sweeper-lifecycle-state.md)
+          fi
           ROUTE_EVIDENCE=$(node -e "
             const fs = require('fs');
             const path = '/tmp/zj-loop-ci-route-decision.json';
@@ -159,7 +173,7 @@ jobs:
           $([ "$FAILING" -gt 0 ] && echo "- **${FAILING}** dogfood workflow(s) failing — investigate CI.")
           $([ "${{ steps.route.outputs.dispatch }}" = "true" ] && echo "- Routed CI failure to CI Sweeper: \`${{ steps.route.outputs.dedupe_key }}\`.")
           $([ -n "${{ steps.issue_fix_request.outputs.issue_url }}" ] && echo "- Issue Fix Request: ${{ steps.issue_fix_request.outputs.issue_url }}.")
-          $([ "${{ steps.existing_route.outputs.duplicate }}" = "true" ] && echo "- CI Sweeper duplicate request found: ${{ steps.existing_route.outputs.existing_request }}.")
+          ${CI_SWEEPER_LIFECYCLE_EVIDENCE}
           ${ROUTE_EVIDENCE}
 
           ## Watch List
@@ -211,7 +225,7 @@ jobs:
           echo "outcome=${OUTCOME}" >> "$GITHUB_OUTPUT"
 
       - name: Dispatch CI Sweeper route request
-        if: steps.route.outputs.dispatch == 'true' && steps.existing_route.outputs.duplicate != 'true'
+        if: steps.route.outputs.dispatch == 'true' && steps.lifecycle.outputs.kind == 'none'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

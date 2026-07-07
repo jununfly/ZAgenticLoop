@@ -258,9 +258,10 @@ Required evidence:
 
 ### 6. CI Sweeper Request Hardening
 
-Status: candidate
+Status: implemented
 Type: version hardening for an existing live route
-Recommended next action: run after post-merge closeout is stable
+Recommended next action: dogfood through Daily Triage workflow runs and use the
+replay suite as the regression boundary for future CI Sweeper changes
 
 Proposed chain:
 
@@ -274,7 +275,7 @@ Why sixth:
 - The priority is hardening, not broadening: better loop prevention,
   source-run replay, and duplicate behavior.
 
-Recommended hardening:
+Implemented hardening:
 
 - Make generated branch denial and duplicate request evidence more explicit in
   route table docs.
@@ -285,11 +286,18 @@ Recommended hardening:
 
 Required evidence:
 
-- Replay for generated branch denied.
-- Replay for duplicate `source_run_id`.
-- Replay for repair PR and escalation issue.
+- Replay for generated branch denied: implemented in
+  `scripts/ci-sweeper-e2e-replay.test.mjs`.
+- Replay for duplicate `source_run_id` and existing lifecycle:
+  `scripts/ci-sweeper-lifecycle.test.mjs` and
+  `scripts/ci-sweeper-e2e-replay.test.mjs`.
+- Replay for repair PR and escalation issue: implemented.
 - Evidence that Daily Triage reports existing lifecycle instead of repeatedly
-  dispatching the same failed run.
+  dispatching the same failed run: implemented through
+  `scripts/ci-sweeper-lifecycle.mjs` and
+  `scripts/daily-triage-workflow-contract.test.mjs`.
+- Stale `source_run_id` route denial: implemented in
+  `scripts/route-ci-failure.test.mjs`.
 
 ### 7. Roadmap-Sliced Activation Resume / Failure Recovery
 
