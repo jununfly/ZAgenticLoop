@@ -61,7 +61,7 @@ Evidence:
 
 ## Leaf 2: Existing Lifecycle Classifier
 
-Status: pending
+Status: completed
 
 Commit intent: `feat(route): classify existing ci sweeper lifecycle`
 
@@ -78,7 +78,12 @@ Work:
 
 Evidence:
 
-- Pending.
+- Added deterministic `scripts/ci-sweeper-lifecycle.mjs`.
+- Classifier priority is first match wins: repair PR, Issue Fix Request,
+  escalation issue, then none.
+- Script emits GitHub Actions outputs plus stable `zj-loop/STATE.md` Markdown
+  evidence.
+- Verification passed: `node --test scripts/ci-sweeper-lifecycle.test.mjs`.
 
 ## Leaf 3: Daily Triage Integration
 
