@@ -71,3 +71,58 @@ not individual PRs and not calendar days.
 | The runtime route does not require Roadmap-Sliced activation; activation is only for implementation workflow. | durable doc | This test case and carrier issue #29. |
 | Dedupe uses release window keys. | durable doc | Replay tests. |
 | Breaking/security signals require human review but are not denied. | durable doc | Replay tests. |
+
+## Draft Request Candidate Follow-Up
+
+`changelog-drafter-draft-request` is the next report-only boundary after
+`changelog-drafter-report`:
+
+```text
+Release Window Evidence -> Route Decision -> Changelog Draft Request Evidence -> Changelog Drafter
+```
+
+Run:
+
+```bash
+node scripts/changelog-drafter-draft-request-e2e-replay.mjs
+node --test scripts/changelog-drafter-draft-request-e2e-replay.test.mjs
+```
+
+This follow-up route does not introduce a new `request_kind`. It records
+candidate evidence that a reported release window can enter the Changelog
+Drafter consumer later.
+
+Required input:
+
+- existing `changelog-drafter-report` evidence
+- `route_id: changelog-drafter-report`
+- status `reported` or `human-gate-required`
+- complete `release_window`
+- report dedupe key
+
+Candidate dedupe uses:
+
+```text
+draft-request:<report.dedupe_key>
+```
+
+Outcomes:
+
+- `draft-request-candidate` when the report is `reported` and has no human gate
+- `human-gate-required` when the report is valid but needs review before
+  entering the consumer
+- `duplicate` when a candidate for the same release window already exists
+- `rejected` when report evidence is missing or malformed
+- `route-denied` for publish-adjacent signals such as releases and tags
+
+The route does not generate `RELEASE_NOTES_DRAFT.md`, edit `CHANGELOG.md`,
+create changelog PRs, dispatch workflows, tag, release, publish packages, or
+start the Changelog Drafter consumer.
+
+Closeout decision audit for the follow-up route:
+
+| Decision | Classification | Durable home |
+| --- | --- | --- |
+| `changelog-drafter-draft-request` remains `report-only`; no general `draft-request` lifecycle exists yet. | durable doc | This test case and route table. |
+| Draft request candidates must reference existing `changelog-drafter-report` evidence. | deterministic gate | Replay tests. |
+| Human-gated release windows are valid but do not enter the consumer. | deterministic gate | Replay tests. |
