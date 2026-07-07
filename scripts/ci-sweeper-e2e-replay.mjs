@@ -2,6 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
+import { classifyCiSweeperLifecycle } from './ci-sweeper-lifecycle.mjs';
 import { buildCiSweeperRouteDecision } from './route-ci-failure.mjs';
 
 const DEFAULT_ROUTE_TABLE = 'zj-loop/zj-loop-route-table.yaml';
@@ -80,6 +81,44 @@ export const DEFAULT_REPLAY_SCENARIOS = [
     },
     expectOutcome: 'route-denied',
   },
+  {
+    name: 'route-denied-stale-source-run',
+    failures: [{
+      workflow: 'audit',
+      databaseId: 91005,
+      headBranch: 'main',
+      headSha: '456abc',
+      url: 'https://github.com/jununfly/ZAgenticLoop/actions/runs/91005',
+      isLatestFailure: false,
+    }],
+    sweeperResult: {
+      repairDiff: true,
+      repairOutcome: 'success',
+      validateOutcome: 'success',
+      auditOutcome: 'success',
+    },
+    expectOutcome: 'route-denied',
+  },
+  {
+    name: 'existing-escalation-issue',
+    failures: [{
+      workflow: 'audit',
+      databaseId: 91006,
+      headBranch: 'main',
+      headSha: '789abc',
+      url: 'https://github.com/jununfly/ZAgenticLoop/actions/runs/91006',
+    }],
+    existingLifecycle: {
+      escalationIssueNumber: '321',
+    },
+    sweeperResult: {
+      repairDiff: true,
+      repairOutcome: 'success',
+      validateOutcome: 'success',
+      auditOutcome: 'success',
+    },
+    expectOutcome: 'existing_escalation_issue',
+  },
 ];
 
 function allGatesSucceeded(sweeperResult) {
@@ -88,11 +127,12 @@ function allGatesSucceeded(sweeperResult) {
     && sweeperResult?.auditOutcome === 'success';
 }
 
-export function classifyCiSweeperOutcome(routeDecision, sweeperResult = {}) {
+export function classifyCiSweeperOutcome(routeDecision, sweeperResult = {}, lifecycle = null) {
   if (routeDecision.status === 'duplicate') return 'duplicate-request';
   if (routeDecision.status === 'denied') return 'route-denied';
   if (routeDecision.status === 'ignored') return 'route-ignored';
   if (!routeDecision.dispatch) return 'route-not-dispatched';
+  if (lifecycle && lifecycle.kind !== 'none') return lifecycle.kind;
 
   if (sweeperResult.repairDiff === true && allGatesSucceeded(sweeperResult)) {
     return 'repair-pr';
@@ -105,6 +145,7 @@ export function replayCiSweeperDogfood({
   routeTableText,
   failures,
   existingRequests = [],
+  existingLifecycle = {},
   sweeperResult = {},
   repository = 'jununfly/ZAgenticLoop',
   sourceRunId = 'daily-triage-replay',
@@ -116,7 +157,16 @@ export function replayCiSweeperDogfood({
     repository,
     sourceRunId,
   });
-  const outcome = classifyCiSweeperOutcome(routeDecision, sweeperResult);
+  const lifecycle = routeDecision.dispatch
+    ? classifyCiSweeperLifecycle({
+      dedupeKey: routeDecision.dedupe_key,
+      sourceWorkflow: routeDecision.source_workflow,
+      sourceRunId: routeDecision.source_run_id,
+      requestBranch: routeDecision.request_branch,
+      ...existingLifecycle,
+    })
+    : null;
+  const outcome = classifyCiSweeperOutcome(routeDecision, sweeperResult, lifecycle);
   const steps = [
     {
       name: 'daily-triage-signal',
@@ -133,7 +183,17 @@ export function replayCiSweeperDogfood({
     },
   ];
 
-  if (routeDecision.dispatch) {
+  if (lifecycle) {
+    steps.push({
+      name: 'existing-lifecycle-classification',
+      status: lifecycle.kind,
+      ref: lifecycle.ref,
+      dispatch_allowed: lifecycle.dispatch_allowed,
+      next_action: lifecycle.next_action,
+    });
+  }
+
+  if (routeDecision.dispatch && (!lifecycle || lifecycle.kind === 'none')) {
     steps.push({
       name: 'ci-sweeper-dispatch',
       status: 'pending',
@@ -155,6 +215,7 @@ export function replayCiSweeperDogfood({
     kind: 'zj-loop-ci-sweeper-e2e-replay',
     outcome,
     routeDecision,
+    lifecycle,
     steps,
   };
 }
@@ -169,6 +230,7 @@ export async function runReplaySuite({
       routeTableText,
       failures: scenario.failures,
       existingRequests: scenario.existingRequests,
+      existingLifecycle: scenario.existingLifecycle,
       sweeperResult: scenario.sweeperResult,
     });
     return {

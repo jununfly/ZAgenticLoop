@@ -350,6 +350,31 @@ Generated repair branches should be denied as producer inputs when they match
 the consumer's own branch namespace, such as `automated/ci-sweeper-*`, so a
 consumer-created repair PR cannot recursively dispatch the same consumer.
 
+For CI Sweeper specifically, existing lifecycle evidence is classified before
+dispatch in this priority order:
+
+1. `existing_repair_pr`
+2. `existing_issue_fix_request`
+3. `existing_escalation_issue`
+4. `none`
+
+The first matching lifecycle wins. Any existing lifecycle suppresses new Issue
+Fix Request creation and CI Sweeper dispatch for that source run. An open
+escalation issue for the same `source_run_id` is treated as terminal evidence
+for that run; Daily Triage reports `existing_escalation_issue` and does not
+update or spam the escalation issue. Retry requires a new source run or a new
+request, not automatic re-dispatch of the same failed run.
+
+Stale CI source runs are hard-denied before request creation. A stale run means
+the candidate `source_run_id` is no longer the latest failing run for the
+workflow being routed. The denial records `stale-source-run` evidence and does
+not create an Issue Fix Request, dispatch CI Sweeper, or trigger a Human Gate.
+
+Generated CI Sweeper repair branches remain regenerated outputs, not long-lived
+collaboration branches. When the same generated branch name is reused, the
+consumer should regenerate from current `main` and push with `--force-with-lease`
+instead of rebasing stale generated commits.
+
 ## Example Route Decisions
 
 CI failure:

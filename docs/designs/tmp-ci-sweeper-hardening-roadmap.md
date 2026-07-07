@@ -118,7 +118,7 @@ Evidence:
 
 ## Leaf 4: Replay And Durable Docs
 
-Status: pending
+Status: completed
 
 Commit intent: `docs(testing): document ci sweeper hardening replay coverage`
 
@@ -136,7 +136,17 @@ Work:
 
 Evidence:
 
-- Pending.
+- Added replay coverage for stale source runs and existing escalation issue
+  lifecycle suppression.
+- Extended CI Sweeper replay to include lifecycle classification before
+  dispatch.
+- Updated durable route-table architecture and Issue Fix Request testing docs.
+- Marked CI Sweeper Request Hardening implemented in the route decision
+  evolution checklist.
+- Verification passed:
+  `node --test scripts/ci-sweeper-e2e-replay.test.mjs scripts/ci-sweeper-workflow-contract.test.mjs scripts/daily-triage-workflow-contract.test.mjs`.
+- Verification passed: `npm run test:protocol-terminology`.
+- Verification passed: `git diff --check`.
 
 ## Closeout
 
