@@ -129,6 +129,11 @@ test('buildCiSweeperRouteDecision denies generated CI Sweeper branches to preven
   assert.equal(decision.dispatch, false);
   assert.equal(decision.status, 'denied');
   assert.equal(decision.reason, 'generated-ci-sweeper-branch');
+  assert.equal(decision.next_action, 'report-existing-generated-branch-run');
+  assert.deepEqual(decision.loop_prevention, {
+    source: 'ci-sweeper-generated-branch',
+    dispatch_allowed: false,
+  });
 });
 
 test('buildCiSweeperRouteDecision returns duplicate when an active request already uses the dedupe key', () => {
@@ -141,4 +146,24 @@ test('buildCiSweeperRouteDecision returns duplicate when an active request alrea
   assert.equal(decision.dispatch, false);
   assert.equal(decision.status, 'duplicate');
   assert.equal(decision.existing_request_id, 'ifr-12');
+});
+
+test('buildCiSweeperRouteDecision denies stale source runs before creating requests', () => {
+  const decision = buildCiSweeperRouteDecision({
+    routeTableText: ROUTE_TABLE,
+    sourceRunId: 1000,
+    failures: [{
+      workflow: 'audit',
+      databaseId: 999,
+      headBranch: 'main',
+      isLatestFailure: false,
+    }],
+  });
+
+  assert.equal(decision.dispatch, false);
+  assert.equal(decision.status, 'denied');
+  assert.equal(decision.reason, 'stale-source-run');
+  assert.equal(decision.next_action, 'report-stale-source-run');
+  assert.equal(decision.source_run_id, '999');
+  assert.equal(decision.latest_failure_required, true);
 });
