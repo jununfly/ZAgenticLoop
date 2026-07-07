@@ -7,6 +7,8 @@ import {
   buildActivationDeniedComment,
   buildActivationDuplicateComment,
   buildActivationFailedComment,
+  buildActivationResumeBlockedComment,
+  buildActivationResumeExistingComment,
   buildActivationRequestComment,
   buildUnsupportedPatternComment,
   deriveActivationState,
@@ -162,6 +164,74 @@ test('consumed lifecycle comments require resume anchors and derive consumed sta
   assert.equal(state.requests[0].currentState, 'consumed');
 });
 
+test('consumed lifecycle with resume anchors returns resume-existing instead of new activation', () => {
+  const existing = comment(1, requestComment());
+  const consumed = comment(2, buildActivationConsumedComment({
+    requestId: 'rsd-123-001',
+    sourceIssue: 123,
+    pattern: 'roadmap-sliced-development',
+    consumedAt: '2026-07-05T00:02:00Z',
+    roadmapBranch: 'zjal/issue-123',
+    roadmapFile: 'docs/plans/issue-123-roadmap.json',
+    roadmapView: 'docs/plans/issue-123-roadmap.md',
+    nextAction: 'resume roadmap slice 1-1',
+  }));
+
+  assert.deepEqual(
+    evaluateActivationCommand({
+      commandText: BASE_COMMAND,
+      requestedByPermission: 'write',
+      sourceIssue: 123,
+      comments: [existing, consumed],
+    }),
+    {
+      action: 'resume-existing',
+      pattern: 'roadmap-sliced-development',
+      existingRequestId: 'rsd-123-001',
+      consumedCommentId: 2,
+      resumeAnchors: {
+        roadmapBranch: 'zjal/issue-123',
+        roadmapFile: 'docs/plans/issue-123-roadmap.json',
+        roadmapView: 'docs/plans/issue-123-roadmap.md',
+        nextAction: 'resume roadmap slice 1-1',
+      },
+    },
+  );
+});
+
+test('consumed lifecycle missing resume anchors blocks instead of creating a second activation', () => {
+  const existing = comment(1, requestComment());
+  const consumed = comment(
+    2,
+    `<!-- zj-loop
+kind: ${ACTIVATION_KINDS.consumed}
+version: 1
+request_id: rsd-123-001
+source_issue: 123
+pattern: roadmap-sliced-development
+consumed_at: 2026-07-05T00:02:00Z
+roadmap_branch: zjal/issue-123
+-->`,
+  );
+
+  assert.deepEqual(
+    evaluateActivationCommand({
+      commandText: BASE_COMMAND,
+      requestedByPermission: 'write',
+      sourceIssue: 123,
+      comments: [existing, consumed],
+    }),
+    {
+      action: 'blocked',
+      pattern: 'roadmap-sliced-development',
+      reason: 'missing-resume-anchors',
+      existingRequestId: 'rsd-123-001',
+      consumedCommentId: 2,
+      missingResumeAnchors: ['roadmap_file', 'roadmap_view', 'next_action'],
+    },
+  );
+});
+
 test('ambiguous lifecycle state blocks new activation', () => {
   const existing = comment(1, requestComment());
   const consumed = comment(
@@ -256,4 +326,42 @@ test('fixed lifecycle outcome comments are parseable and carry audit fields', ()
   ]);
   assert.equal(unsupported[0].fields.kind, ACTIVATION_KINDS.unsupportedPattern);
   assert.equal(unsupported[0].fields.unsupported_pattern, 'daily-triage');
+
+  const resume = parseStructuredActivationComments([
+    comment(5, buildActivationResumeExistingComment({
+      sourceIssue: 123,
+      pattern: 'roadmap-sliced-development',
+      requestId: 'rsd-123-001',
+      resumedAt: '2026-07-05T00:08:00Z',
+      commandCommentId: 25,
+      commandText: BASE_COMMAND,
+      consumedCommentId: 2,
+      resumeAnchors: {
+        roadmapBranch: 'zjal/issue-123',
+        roadmapFile: 'docs/plans/issue-123-roadmap.json',
+        roadmapView: 'docs/plans/issue-123-roadmap.md',
+        nextAction: 'resume roadmap slice 1-1',
+      },
+    })),
+  ]);
+  assert.equal(resume[0].fields.kind, ACTIVATION_KINDS.resumeExisting);
+  assert.equal(resume[0].fields.resume_policy, 'resume-without-new-activation');
+  assert.equal(resume[0].fields.consumed_comment_id, '2');
+
+  const resumeBlocked = parseStructuredActivationComments([
+    comment(6, buildActivationResumeBlockedComment({
+      sourceIssue: 123,
+      pattern: 'roadmap-sliced-development',
+      requestId: 'rsd-123-001',
+      blockedAt: '2026-07-05T00:09:00Z',
+      commandCommentId: 26,
+      commandText: BASE_COMMAND,
+      consumedCommentId: 2,
+      reason: 'missing-resume-anchors',
+      missingResumeAnchors: ['roadmap_file', 'roadmap_view', 'next_action'],
+    })),
+  ]);
+  assert.equal(resumeBlocked[0].fields.kind, ACTIVATION_KINDS.resumeBlocked);
+  assert.equal(resumeBlocked[0].fields.reason, 'missing-resume-anchors');
+  assert.equal(resumeBlocked[0].fields.missing_resume_anchors, 'roadmap_file,roadmap_view,next_action');
 });
