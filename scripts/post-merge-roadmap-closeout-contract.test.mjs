@@ -82,6 +82,29 @@ test('missing contract is report-only and does not plan side effects', () => {
   assert.equal(plan.side_effects_executed, false);
 });
 
+test('legacy mapping contract shape is retired and not accepted', () => {
+  const legacyBody = [
+    '## Post-Merge Contract',
+    '',
+    '```yaml',
+    'zj-loop.post-merge-contract:',
+    '  activation_issue: 42',
+    '  roadmap_branch: zjal/legacy-shape',
+    '  no_pending_followups: true',
+    '  cleanup:',
+    '    delete_branch: true',
+    '    close_activation_issue: true',
+    '```',
+  ].join('\n');
+  const parsed = parsePostMergeContractFromPrBody(legacyBody);
+  const plan = buildRoadmapCloseoutPlan({ pr: MERGED_PR, contractResult: parsed });
+
+  assert.equal(parsed.ok, false);
+  assert.equal(parsed.reason, 'missing-contract');
+  assert.equal(plan.status, 'report-only');
+  assert.deepEqual(plan.actions, []);
+});
+
 test('branch mismatch is report-only even when the contract parses', () => {
   const parsed = parsePostMergeContractFromPrBody(VALID_BODY);
   const plan = buildRoadmapCloseoutPlan({

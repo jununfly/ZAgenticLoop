@@ -21,7 +21,8 @@ Implemented in the dogfood route table:
 - `dependency-sweeper`: request-only Issue Fix Request route.
 - `changelog-drafter-report`: report-only release-window evidence.
 - `roadmap-sliced-development`: activation-comment route.
-- `post-merge-roadmap-closeout`: report-only post-merge cleanup contract check.
+- `post-merge-roadmap-closeout`: report-only post-merge cleanup contract check
+  plus explicit guarded executor for operator-approved closeout.
 
 Key boundary: Route Decision and Dispatcher work must not do consumer work.
 Consumer claim, repair, drafting, changelog edits, PR creation, tagging,
@@ -233,6 +234,16 @@ Implemented upgrade:
   issue comment, and carrier issue closure.
 - Runtime execution uses `scripts/post-merge-roadmap-closeout.mjs`; tests use an
   injected runner and never call real `git` or `gh`.
+- Usability upgrade adds `npm run post-merge-closeout -- ...` for maintainer
+  local execution.
+- Evidence upgrade makes the executor generate the PR comment body and write the
+  full JSON plan to an artifact file.
+- Automatic trigger upgrade runs dry-run on merged PRs and comments evidence on
+  the merged PR; live cleanup remains explicit.
+- Optional live workflow dispatch requires the fixed confirmation phrase
+  `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+- Protocol upgrade accepts only the current `kind/version/consumer/mode` YAML
+  object and retires the legacy mapping shape.
 
 Required evidence:
 
@@ -242,6 +253,8 @@ Required evidence:
   by the contract gate.
 - Human approval before enabling live side effects in this repository: still
   required by `zj-loop/zj-loop-constraints.md`.
+- Workflow structure test for automatic dry-run evidence, artifact upload, and
+  fixed live confirmation phrase: implemented.
 
 ### 6. CI Sweeper Request Hardening
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from 'node:child_process';
+import { writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +13,7 @@ const execFileAsync = promisify(execFile);
 
 export const CLOSEOUT_EXECUTOR_KIND = 'zj-loop.post-merge-roadmap-closeout-executor';
 export const CLOSEOUT_EXECUTOR_VERSION = 1;
+export const LIVE_CLEANUP_CONFIRMATION_PHRASE = 'DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER';
 
 export async function defaultRunner(command, args = [], options = {}) {
   try {
@@ -175,6 +177,52 @@ export async function executePostMergeRoadmapCloseout(plan, { runner = defaultRu
   };
 }
 
+export function buildDryRunEvidenceComment(plan, {
+  artifactName = 'post-merge-roadmap-closeout-plan',
+  liveCommand,
+} = {}) {
+  const command = liveCommand ?? buildLiveCommand(plan);
+  const passedGuards = plan.executorGuards.filter((guard) => guard.pass).length;
+  const totalGuards = plan.executorGuards.length;
+  const fields = [
+    ['kind', 'zj-loop.post-merge-closeout-dry-run'],
+    ['version', CLOSEOUT_EXECUTOR_VERSION],
+    ['pr', plan.pr.number],
+    ['status', plan.status],
+    ['roadmap_branch', plan.roadmap.branch || ''],
+    ['carrier_issue', plan.carrier.issue ?? ''],
+    ['side_effects_executed', false],
+    ['artifact', artifactName],
+  ];
+  const summary = plan.status === 'dry-run'
+    ? 'Post-merge roadmap closeout dry-run passed.'
+    : 'Post-merge roadmap closeout dry-run recorded a refusal.';
+  const refusalLines = plan.refusals.length === 0
+    ? ['- Refusals: none']
+    : plan.refusals.map((refusal) => `- Refusal: ${refusal.layer}/${refusal.guard ?? 'contract'} - ${refusal.reason}`);
+
+  return [
+    summary,
+    '',
+    '<!-- zj-loop',
+    ...fields.map(([key, value]) => `${key}: ${value}`),
+    '-->',
+    '',
+    `- PR: #${plan.pr.number}`,
+    `- Status: \`${plan.status}\``,
+    `- Roadmap branch: ${plan.roadmap.branch ? `\`${plan.roadmap.branch}\`` : 'not available'}`,
+    `- Carrier issue: ${plan.carrier.issue ? `#${plan.carrier.issue}` : 'not available'}`,
+    `- Guard summary: ${passedGuards}/${totalGuards} executor guards passed`,
+    '- Side effects executed: false',
+    `- Full JSON plan: workflow artifact \`${artifactName}\``,
+    ...refusalLines,
+    '',
+    plan.status === 'dry-run'
+      ? `Live cleanup command after maintainer approval: \`${command}\``
+      : 'Live cleanup is not available until the refusals above are resolved.',
+  ].join('\n');
+}
+
 export function buildCloseoutEvidenceComment(plan) {
   const fields = [
     ['kind', 'zj-loop.post-merge-closeout-executed'],
@@ -206,6 +254,19 @@ export function buildCarrierCloseComment(plan) {
     `- Roadmap branch: \`${plan.roadmap.branch}\``,
     '- Contract guard: valid `zj-loop.post-merge-contract` with `no_pending_followups: true`.',
   ].join('\n');
+}
+
+export function buildLiveCommand(plan) {
+  const args = [
+    'npm run post-merge-closeout --',
+    `--pr ${plan.pr.number}`,
+    `--repo ${plan.repository.expected}`,
+  ];
+  if (plan.carrier.issue) {
+    args.push(`--carrier-issue ${plan.carrier.issue}`);
+  }
+  args.push('--live');
+  return args.join(' ');
 }
 
 export async function collectCloseoutInputFromGitHub({
@@ -265,7 +326,7 @@ export function parseRepositoryFromGitRemote(remoteUrl) {
   const text = String(remoteUrl ?? '').trim().replace(/\.git$/, '');
   const sshMatch = text.match(/^git@github\.com:(?<owner>[^/]+)\/(?<repo>.+)$/);
   if (sshMatch) return `${sshMatch.groups.owner}/${sshMatch.groups.repo}`;
-  const httpsMatch = text.match(/^https:\/\/github\.com\/(?<owner>[^/]+)\/(?<repo>.+)$/);
+  const httpsMatch = text.match(/^https:\/\/(?:[^@/]+@)?github\.com\/(?<owner>[^/]+)\/(?<repo>.+)$/);
   if (httpsMatch) return `${httpsMatch.groups.owner}/${httpsMatch.groups.repo}`;
   return text;
 }
@@ -361,12 +422,30 @@ function parseArgs(argv) {
       args.expectedRepo = argv[++index];
     } else if (arg === '--carrier-issue') {
       args.expectedCarrierIssue = Number(argv[++index]);
+    } else if (arg === '--out') {
+      args.out = argv[++index];
+    } else if (arg === '--comment-out') {
+      args.commentOut = argv[++index];
+    } else if (arg === '--artifact-name') {
+      args.artifactName = argv[++index];
+    } else if (arg === '--confirm-live-cleanup') {
+      args.confirmLiveCleanup = argv[++index];
+    } else if (arg === '--require-live-confirmation') {
+      args.requireLiveConfirmation = true;
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }
   }
   if (!args.prNumber) throw new Error('--pr is required');
+  args.expectedRepo = args.expectedRepo ?? process.env.GITHUB_REPOSITORY;
   if (!args.expectedRepo) throw new Error('--repo is required');
+  if (
+    args.live &&
+    args.requireLiveConfirmation &&
+    args.confirmLiveCleanup !== LIVE_CLEANUP_CONFIRMATION_PHRASE
+  ) {
+    throw new Error(`--confirm-live-cleanup must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+  }
   return args;
 }
 
@@ -381,8 +460,17 @@ async function main() {
   const result = args.live
     ? await executePostMergeRoadmapCloseout(plan)
     : plan;
+  if (args.out) {
+    await writeFile(args.out, `${JSON.stringify(result, null, 2)}\n`);
+  }
+  if (args.commentOut) {
+    const comment = args.live
+      ? buildCloseoutEvidenceComment(result)
+      : buildDryRunEvidenceComment(result, { artifactName: args.artifactName });
+    await writeFile(args.commentOut, comment);
+  }
   console.log(JSON.stringify(result, null, 2));
-  if (result.status === 'refused' || result.execution?.status === 'refused') {
+  if (args.live && (result.status === 'refused' || result.execution?.status === 'refused')) {
     process.exitCode = 1;
   }
 }
