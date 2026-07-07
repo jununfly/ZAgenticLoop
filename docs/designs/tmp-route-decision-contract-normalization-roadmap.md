@@ -137,7 +137,7 @@ Notes:
 
 ## Parent Node 3: Verification And Closeout
 
-Status: pending
+Status: in-progress
 
 Completion condition:
 
@@ -146,7 +146,7 @@ Completion condition:
 
 ### Leaf 3.1: Route Decision Gates
 
-Status: pending
+Status: completed
 
 Intent:
 
@@ -157,7 +157,10 @@ Intent:
 
 Verification evidence:
 
-- Pending.
+- `npm run test:route-decision` passed.
+- `bash scripts/ci-validate-gates.sh` passed after sandbox DNS failure was
+  rerun with network permission.
+- `git diff --check` passed.
 
 ### Leaf 3.2: Closeout Documentation
 
