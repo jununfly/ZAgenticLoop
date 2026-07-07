@@ -168,6 +168,18 @@ Activation rules:
 - Once a request is consumed, later branch, roadmap, slice, verification, or
   commit failures are resumed inside the Roadmap-Sliced lifecycle and do not
   require reactivation.
+- If a slash command repeats after a request is already consumed, activation
+  dispatch writes audit-only `zj-loop.activation-resume-existing` evidence with
+  the original `request_id`, consumed comment id, resume anchors, and
+  `resume_policy: resume-without-new-activation`; it must not create another
+  activation request.
+- If a consumed request is missing resume anchors, activation dispatch fails
+  closed with `zj-loop.activation-resume-blocked` and reason
+  `missing-resume-anchors`; the Roadmap-Sliced Consumer or human must repair the
+  consumed lifecycle evidence instead of guessing.
+- Activation dispatch records resume anchors but does not check whether
+  `roadmap_branch` or `roadmap_file` still exists. Stale anchor handling belongs
+  to the Roadmap-Sliced Consumer resume path.
 - Lifecycle comments are append-only; do not edit the original request comment.
 
 The consumed comment must include enough resume anchors for a human or agent to

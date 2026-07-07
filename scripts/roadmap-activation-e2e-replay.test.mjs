@@ -21,6 +21,22 @@ test('Daily Triage to Roadmap-Sliced Development activation replay is separate f
   assert.equal(activation.activation.fields.kind, 'zj-loop.activation-request');
 });
 
+test('activation replay distinguishes duplicate resume failed retry and blocked states', async () => {
+  const suite = await runRoadmapActivationReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+  const byName = new Map(suite.results.map((result) => [result.name, result.replay]));
+
+  assert.equal(suite.passed, true);
+  assert.equal(byName.get('activation-duplicate').outcome, 'duplicate');
+  assert.equal(byName.get('activation-resume-existing').outcome, 'resume-existing');
+  assert.equal(byName.get('activation-resume-existing').resume.resume_policy, 'resume-without-new-activation');
+  assert.equal(byName.get('activation-resume-existing').steps.at(-1).status, 'audit-only');
+  assert.equal(byName.get('activation-resume-blocked-missing-anchors').outcome, 'blocked');
+  assert.equal(byName.get('activation-resume-blocked-missing-anchors').reason, 'missing-resume-anchors');
+  assert.equal(byName.get('activation-failed-retry').outcome, 'activation-request');
+  assert.equal(byName.get('activation-ambiguous-blocked').outcome, 'blocked');
+  assert.equal(byName.get('activation-ambiguous-blocked').reason, 'ambiguous-activation-state');
+});
+
 test('activation replay denies route when dogfood route table disables Roadmap-Sliced Development', async () => {
   const routeTableText = await readFile(ROUTE_TABLE_PATH, 'utf8');
   const disabledRouteTableText = routeTableText.replace(

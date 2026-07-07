@@ -54,7 +54,7 @@ Evidence:
 
 ## Leaf 2: Replay And Durable Docs
 
-Status: pending
+Status: completed
 
 Commit intent: `docs(testing): cover roadmap activation recovery replay`
 
@@ -72,7 +72,14 @@ Work:
 
 Evidence:
 
-- Pending.
+- Added replay coverage for pending duplicate, consumed resume, malformed
+  consumed blocked resume, failed retry, and ambiguous blocked state.
+- Updated durable activation docs in the Roadmap-Sliced pattern, Route Table
+  Architecture, activation E2E testing doc, and route decision checklist.
+- Verification passed:
+  `node --test scripts/roadmap-activation-e2e-replay.test.mjs scripts/zj-loop-activation-contract.test.mjs scripts/roadmap-activation-dispatcher.test.mjs`.
+- Verification passed: `npm run test:protocol-terminology`.
+- Verification passed: `git diff --check`.
 
 ## Closeout
 
