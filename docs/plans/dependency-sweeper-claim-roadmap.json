@@ -1,0 +1,65 @@
+{
+  "title": "Dependency Sweeper Claim Contract",
+  "description": "Implement claim-only lifecycle evidence for Dependency Sweeper Issue Fix Requests without starting repair work.",
+  "activation": {
+    "carrier_issue": "https://github.com/jununfly/ZAgenticLoop/issues/33",
+    "request_comment": "https://github.com/jununfly/ZAgenticLoop/issues/33#issuecomment-4900834781",
+    "branch": "zjal/dependency-sweeper-claim"
+  },
+  "nodes": [
+    {
+      "id": "1",
+      "label": "Dependency Sweeper claim contract",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": null,
+      "children": ["1-1", "1-2", "1-3"],
+      "decisions": [
+        {
+          "q": "Does Dependency Sweeper claim start dependency repair work?",
+          "answer": "No. This slice only records claim lifecycle evidence by transitioning an existing Issue Fix Request from requested to consumed.",
+          "classification": "durable doc"
+        },
+        {
+          "q": "Which lifecycle contract owns claim state?",
+          "answer": "Use the existing Issue Fix Request lifecycle contract and append a consumed lifecycle event rather than adding a separate dependency state machine.",
+          "classification": "durable doc"
+        }
+      ],
+      "notes": "Activation request created through issue #33."
+    },
+    {
+      "id": "1-1",
+      "label": "Deterministic claim replay and tests",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "commit_intent": "Add dependency-sweeper claim replay and tests.",
+      "verification_gate": "npm run test:dependency-sweeper-claim",
+      "notes": "Implemented scripts/dependency-sweeper-claim-e2e-replay.mjs and scripts/dependency-sweeper-claim-e2e-replay.test.mjs. Verification passed: npm run test:dependency-sweeper-claim."
+    },
+    {
+      "id": "1-2",
+      "label": "Route docs and gates alignment",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "commit_intent": "Wire dependency-sweeper claim docs, package scripts, and CI gates.",
+      "verification_gate": "npm run test:route-decision && npm run validate:registry",
+      "notes": "Updated package scripts, CI validation gates, route table guards, Route Table Architecture, ZJ-LOOP dogfood status, dependency sweeper testing docs, Issue Fix Request testing docs, and route evolution checklist. Verification passed: npm run test:dependency-sweeper-route && npm run test:route-decision."
+    },
+    {
+      "id": "1-3",
+      "label": "Closeout and PR handoff evidence",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "commit_intent": "Delete process roadmap files after durable docs absorb decisions.",
+      "verification_gate": "git diff --check && bash scripts/ci-validate-gates.sh",
+      "notes": "Final verification passed before feature commit: git diff --check, npm run test:dependency-sweeper-claim, npm run test:dependency-sweeper-route, npm run test:route-decision, npm run test:issue-fix-request, npm run validate:registry, npm run check:zj-loop-init, and bash scripts/ci-validate-gates.sh. First ci-validate attempt failed on sandbox DNS for registry.npmmirror.com; rerun with network permission passed. Closeout commit remains pending."
+    }
+  ]
+}
