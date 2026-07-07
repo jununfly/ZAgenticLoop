@@ -116,7 +116,7 @@ Notes:
 
 ### Leaf 2.3: Migrate Issue Triage Report Replay
 
-Status: pending
+Status: completed
 
 Intent:
 
@@ -125,11 +125,15 @@ Intent:
 
 Verification evidence:
 
-- Pending.
+- `node --test scripts/issue-triage-report-e2e-replay.test.mjs` passed.
+- `node --test scripts/route-decision-contract.test.mjs` passed.
 
 Notes:
 
 - Do not move `statusForDecision` or `reasonForDecision`.
+- Migrated evidence normalization only. Route matching remains local because
+  issue-triage deliberately ignores `signal_kind` in route match and validates
+  it through a separate allowlist/forbidden-field contract.
 
 ## Parent Node 3: Verification And Closeout
 
