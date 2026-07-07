@@ -67,7 +67,7 @@ Local gates:
 
 ```bash
 node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
-node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
+node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs scripts/validate-post-merge-closeout-workflow.test.mjs
 ```
 
 Current dogfood status:
@@ -172,6 +172,13 @@ Current dogfood status:
 - Route: `post-merge-roadmap-closeout` in `zj-loop/zj-loop-route-table.yaml`.
 - Current mode: Route Decision remains report-only; live cleanup requires
   explicit operator invocation of `scripts/post-merge-roadmap-closeout.mjs`.
+- Automatic dry-run: `.github/workflows/post-merge-roadmap-closeout.yml`
+  comments script-generated evidence on merged PRs and uploads the full JSON
+  plan as an artifact.
+- Main live path:
+  `npm run post-merge-closeout -- --pr <number> --repo jununfly/ZAgenticLoop --carrier-issue <issue> --live`.
+- Optional live workflow dispatch requires the fixed confirmation phrase
+  `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
 - Boundary: the executor may delete only the merged `zjal/` roadmap branch named
   in the valid contract and close only the contract carrier issue after writing
   closeout evidence. It is not a generic PR cleanup agent.

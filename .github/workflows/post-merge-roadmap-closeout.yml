@@ -1,0 +1,112 @@
+name: Post-Merge Roadmap Closeout
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Merged PR number to close out"
+        required: true
+        type: string
+      carrier_issue:
+        description: "Roadmap activation carrier issue named in the contract"
+        required: true
+        type: string
+      confirm_live_cleanup:
+        description: "Type DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER to run live cleanup"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: post-merge-roadmap-closeout-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install root workflow script dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build dry-run evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ARTIFACT_NAME: post-merge-roadmap-closeout-plan-${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p /tmp/post-merge-roadmap-closeout
+          npm run post-merge-closeout -- \
+            --pr "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --out /tmp/post-merge-roadmap-closeout/plan.json \
+            --comment-out /tmp/post-merge-roadmap-closeout/comment.md \
+            --artifact-name "$ARTIFACT_NAME"
+
+      - name: Comment dry-run evidence on merged PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR_NUMBER" --body-file /tmp/post-merge-roadmap-closeout/comment.md
+
+      - name: Upload dry-run plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-merge-roadmap-closeout-plan-${{ github.event.pull_request.number }}
+          path: /tmp/post-merge-roadmap-closeout/plan.json
+          if-no-files-found: error
+
+  live-cleanup:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install root workflow script dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Execute live cleanup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          CARRIER_ISSUE: ${{ inputs.carrier_issue }}
+          CONFIRM_LIVE_CLEANUP: ${{ inputs.confirm_live_cleanup }}
+        run: |
+          mkdir -p /tmp/post-merge-roadmap-closeout
+          npm run post-merge-closeout -- \
+            --pr "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --carrier-issue "$CARRIER_ISSUE" \
+            --live \
+            --require-live-confirmation \
+            --confirm-live-cleanup "$CONFIRM_LIVE_CLEANUP" \
+            --out /tmp/post-merge-roadmap-closeout/live-result.json
+
+      - name: Upload live cleanup result artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-merge-roadmap-closeout-live-${{ inputs.pr_number }}
+          path: /tmp/post-merge-roadmap-closeout/live-result.json
+          if-no-files-found: error
