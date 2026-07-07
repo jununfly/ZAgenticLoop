@@ -70,7 +70,7 @@ disabled_dispatch_routes:
 
   - route_id: "dependency-sweeper"
     enabled: false
-    request_kind: "evidence-request"
+    request_kind: "issue-fix-request"
     consumer: "dependency-sweeper"
     evidence_store: "zj-loop/dependency-sweeper-state.md"
     note: "Enable only after dependency risk policy and verifier gates are configured."

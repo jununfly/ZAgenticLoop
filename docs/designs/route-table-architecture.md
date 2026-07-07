@@ -241,7 +241,7 @@ overwrite and must make that overwrite visible in CLI output.
 | Route | Request kind | Consumer | First behavior |
 | --- | --- | --- | --- |
 | `ci-sweeper` | `issue-fix-request` | CI Sweeper | Diagnose CI failure, propose verifier-backed minimal fix, escalate on infra or high risk. |
-| `issue-triage` | `evidence-request` | Issue Triage | Summarize issue backlog changes and propose labels; no formal lifecycle transition in L1. |
+| `issue-triage-report` | `report-only` | Issue Triage | Record issue/discussion triage observations in `zj-loop/issue-triage-state.md`; no formal lifecycle transition, public comment, label mutation, assignment, milestone, close/reopen, or batch mutation. |
 | `pr-steward` | `issue-fix-request` or `report-only` | PR Steward | Watch PRs, review comments, CI state, rebase needs, and readiness. |
 | `dependency-sweeper` | `issue-fix-request` or `report-only` | Dependency Sweeper | Handle patch/minor dependency signals with verifier-backed boundaries. |
 | `changelog-drafter-report` | `report-only` | Changelog Drafter | Record release-window evidence and human gates before any release-note drafting; never publish. |
@@ -253,6 +253,23 @@ overwrite and must make that overwrite visible in CLI output.
 that may lead to a Fix PR." It does not mean the Route Table owns or mutates
 triage state, and it must not turn `zj-loop/STATE.md` or
 `zj-loop/issue-triage-state.md` into a request queue.
+
+`issue-triage-report` is intentionally report-only. Its fixed
+`signal_kind` values are:
+
+- `missing-info-observation`
+- `possible-duplicate-observation`
+- `label-suggestion-observation`
+- `human-attention-candidate`
+- `issue-backlog-summary`
+
+Its fixed Route Decision statuses are `recorded`, `already-recorded`,
+`rejected`, and `routed-to-human-review`. `already-recorded` means the same
+report evidence already exists; it is not an issue duplicate action.
+`possible-duplicate-observation` is only an observation type. Unsupported
+signal kinds and protocol fields that imply issue lifecycle, label mutation,
+public comments, assignment, milestones, close/reopen, or duplicate actions
+must fail closed.
 
 ## Dispatcher Boundary
 
@@ -404,6 +421,33 @@ requested_action: report
 target_consumer: maintainer
 status: candidate
 created_at: 2026-07-06T00:00:00Z
+```
+
+Issue triage report:
+
+```yaml
+schema: zj-loop.route_decision.v1
+decision_id: rd_issue_triage_17fb8b9ea4db
+signal_id: issue:123:missing-info
+source: issue
+subject: issue-123
+priority: P2
+route: issue-triage-report
+route_id: issue-triage-report
+request_kind: report-only
+risk: medium
+confidence: high
+evidence:
+  - https://github.com/jununfly/ZAgenticLoop/issues/123
+producer: issue-triage
+dedupe_key: issue-triage:jununfly/ZAgenticLoop:open-issues:last-24h:missing-info-observation:issue-123
+requested_action: record-issue-triage-report
+target_consumer: issue-triage
+status: recorded
+public_action_allowed: false
+label_mutation_allowed: false
+human_route_required: false
+created_at: 2026-07-07T00:00:00Z
 ```
 
 ## Replay And Review

@@ -63,6 +63,37 @@ routes:
     failure_owner: "daily-triage"
     human_gate: "on ambiguity or high risk"
 
+  - route_id: "issue-triage-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "issue-triage"
+    evidence_store: "zj-loop/issue-triage-state.md"
+    match:
+      source: ["issue", "discussion"]
+      signal_kind:
+        - "missing-info-observation"
+        - "possible-duplicate-observation"
+        - "label-suggestion-observation"
+        - "human-attention-candidate"
+        - "issue-backlog-summary"
+    guards:
+      side_effects_allowed: false
+      public_issue_comment_allowed: false
+      label_mutation_allowed: false
+      close_reopen_allowed: false
+      assignment_allowed: false
+      milestone_allowed: false
+      formal_issue_lifecycle_transition_allowed: false
+      batch_mutation_allowed: false
+      fixed_status_enum:
+        - "recorded"
+        - "already-recorded"
+        - "rejected"
+        - "routed-to-human-review"
+    dedupe_window: "issue-triage:<repo>:<scan_window>:<signal_kind>:<subject>"
+    failure_owner: "issue-triage"
+    human_gate: "only for high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, public comment, or label mutation"
+
   - route_id: "pr-steward-report"
     enabled: true
     request_kind: "report-only"

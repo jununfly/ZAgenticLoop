@@ -1,6 +1,6 @@
 # Issue Triage Starter
 
-Scaffold for the [Issue Triage](../../patterns/issue-triage.md) loop — L1 propose-only week one. Pairs with Daily Triage as a low-risk issue queue feeder.
+Scaffold for the [Issue Triage](../../patterns/issue-triage.md) loop — L1 report-only week one. Pairs with Daily Triage as a low-risk issue queue feeder.
 
 ## Quick Start
 
@@ -18,7 +18,7 @@ npx @jununfly/zj-loop-init . --pattern issue-triage --tool codex
 Start (Grok, week one):
 
 ```
-/loop 2h Run zj-issue-triage. Read zj-loop/issue-triage-state.md first. Update Top 5 and proposed labels. No auto-apply. Escalate security and ambiguous items.
+/loop 2h Run zj-issue-triage. Read zj-loop/issue-triage-state.md first. Update Top 5 and label-suggestion observations. No auto-apply. Record human-attention candidates for security and ambiguous items.
 ```
 
 ## Files

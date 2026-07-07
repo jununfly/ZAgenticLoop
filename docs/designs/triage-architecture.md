@@ -36,7 +36,8 @@ The intended flow is:
 ```text
 Issue Triage Pattern
   -> maintains zj-loop/issue-triage-state.md
-  -> produces Top 5, needs-human, duplicate, and proposed-label summaries
+  -> produces Top 5 plus missing-info, possible-duplicate, label-suggestion,
+     human-attention, and backlog-summary observations
 
 Daily Triage Pattern
   -> consumes issue-triage summary plus CI, commits, chat, and zj-loop/STATE.md
@@ -115,8 +116,17 @@ priority, state, and route back into one label.
 ## State File Contracts
 
 `zj-loop/issue-triage-state.md` is the backlog-health view. It should hold
-issue/discussion summaries, Top 5 items, proposed labels, possible duplicates,
-needs-human items, and reporter-activity signals.
+issue/discussion summaries, Top 5 items, label-suggestion observations,
+possible-duplicate observations, human-attention candidates, backlog summaries,
+and reporter-activity signals.
+
+When Issue Triage output crosses into Route Decision, use the
+`issue-triage-report` report-only route. That route uses fixed observation
+names such as `missing-info-observation`, `possible-duplicate-observation`,
+`label-suggestion-observation`, `human-attention-candidate`, and
+`issue-backlog-summary`. It must not express formal issue lifecycle state,
+public comment instructions, label mutations, assignment, milestone changes, or
+close/reopen actions.
 
 `zj-loop/STATE.md` is the daily-attention view. It should hold current High
 Priority items, Watch items, Noise/Ignored items, recent state updates, human
@@ -178,8 +188,10 @@ Use `zj-loop-triage` when the question is:
 Use Issue Triage when the question is:
 
 - What is new or changed in the issue backlog?
-- Which issues are duplicates, under-specified, high priority, or needs-human?
-- What labels or comments should be proposed for review?
+- Which issues have possible duplicate observations, missing information,
+  high priority, or human-attention candidates?
+- What label-suggestion observations or comment candidates should be recorded
+  for review?
 
 Use `zj-triage` when the question is:
 

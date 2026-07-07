@@ -1,6 +1,6 @@
 # Issue Triage Loop
 
-**Goal**: Continuously discover, deduplicate, prioritize, and label incoming issues, feature requests, and discussions so the team (and other loops) always have a clean, actionable top-of-queue. Pure report / proposal mode in week one. Extremely low risk, high leverage.
+**Goal**: Continuously discover, summarize, prioritize, and record issue/discussion observations so the team (and other loops) always have a clean, actionable top-of-queue. Pure report / proposal mode in week one. Extremely low risk, high leverage.
 
 ## Scheduling
 
@@ -17,7 +17,7 @@ For the responsibility split between Issue Triage, Daily Triage,
 
 ## Required Skills
 
-- `zj-issue-triage` — Scans open issues, discussions, and (optionally via MCP) Linear / Jira. Dedupes, extracts signals (labels, comments, linked PRs, age, reactions), proposes priority + suggested labels + one-sentence summary.
+- `zj-issue-triage` — Scans open issues, discussions, and (optionally via MCP) Linear / Jira. Extracts signals (labels, comments, linked PRs, age, reactions), records possible-duplicate observations, priority, label-suggestion observations, and one-sentence summaries.
 - `zj-loop-verifier` (light or human) — Sanity check on the proposed triage actions / new labels before anything is applied.
 
 ## State
@@ -31,10 +31,10 @@ Compact rolling view of the current backlog health:
 Last run: 2026-06-09 09:15 UTC
 Open actionable: 14 (was 17)
 New since last run: 3
-Needs human: 2 (one potential duplicate of #412, one unclear spec)
+Human-attention candidates: 2 (one possible duplicate observation for #412, one unclear spec)
 
 ## Top 5 (by loop score)
-- #487 (bug, p1, 2d old) — "Crash on export with large files" — suggested: bug + needs-repro + area:export
+- #487 (bug, p1, 2d old) — "Crash on export with large files" — label-suggestion observation: bug + needs-repro + area:export
 - ...
 ```
 
@@ -43,10 +43,10 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 ## How the Loop Runs (Typical Cycle)
 
 1. Discover new/updated issues + discussions since last run (or all open if first run).
-2. For each: summarize intent, detect duplicates (title + embedding hints or simple text match), pull signals (age, author, linked PRs, reactions, existing labels).
-3. Score / bucket: P0 (security, prod breakage), P1 (high impact + clear), P2, P3, needs-info, duplicate.
-4. Write or update a clean prioritized list + suggested label set + short "why this matters" into the state file (and optionally a comment on the issue itself as "Loop triage note").
-5. Verifier (or human) reviews only the "needs human" bucket and any proposed label changes on sensitive areas.
+2. For each: summarize intent, record possible-duplicate observations (title + embedding hints or simple text match), pull signals (age, author, linked PRs, reactions, existing labels).
+3. Score / bucket: P0 (security, prod breakage), P1 (high impact + clear), P2, P3, missing-info observation, possible-duplicate observation, label-suggestion observation, or human-attention candidate.
+4. Write or update a clean prioritized list + label-suggestion observations + short "why this matters" into the state file. Public issue comments are not part of L1 report-only behavior.
+5. Verifier (or human) reviews only the human-attention candidates and any label-suggestion observations on sensitive areas.
 6. Record run, prune resolved items, update counts.
 
 ## Verification Strategy
@@ -64,14 +64,36 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 
 ## Tool-Specific Notes
 
+## Route Decision Boundary
+
+When Issue Triage output is passed to the Route Table, use the
+`issue-triage-report` route:
+
+```text
+Issue Backlog Signal -> Route Decision -> Issue Triage Report Evidence
+```
+
+Allowed report signal kinds are fixed:
+
+- `missing-info-observation`
+- `possible-duplicate-observation`
+- `label-suggestion-observation`
+- `human-attention-candidate`
+- `issue-backlog-summary`
+
+The report evidence target is `zj-loop/issue-triage-state.md`. The route does
+not write public issue comments, apply labels, close/reopen issues, assign
+people, change milestones, perform formal lifecycle transitions, or batch-mutate
+the issue tracker.
+
 **Grok Build TUI**:
 ```
-/loop 2h Run zj-issue-triage skill. Read zj-loop/issue-triage-state.md first. Produce updated state + suggested labels for new items only. No auto-label or close. Escalate anything ambiguous.
+/loop 2h Run zj-issue-triage skill. Read zj-loop/issue-triage-state.md first. Produce updated state + label-suggestion observations for new items only. No auto-label or close. Record human-attention candidates for ambiguous items.
 ```
 
 **Claude Code**:
 ```
-/loop 2h $zj-issue-triage — update zj-loop/issue-triage-state.md. Propose labels only on allowlisted areas. Human review for P0/P1.
+/loop 2h $zj-issue-triage — update zj-loop/issue-triage-state.md. Record label-suggestion observations only on allowlisted areas. Human review for P0/P1.
 ```
 
 **Codex**:
@@ -85,8 +107,8 @@ See `examples/github-actions/` for a starter workflow that can react to issue ev
 | Failure                  | Mitigation |
 |--------------------------|----------|
 | Over-prioritizing noisy reporter | Weight by signals the team actually cares about (reactions, linked PRs, internal +1s). Human overrides recorded in state. |
-| Duplicate false positives | Conservative matching + always surface "possible duplicate of #NNN" for human confirmation in L1. |
-| Alert fatigue on every new issue | Only notify human for the "needs human" slice. Everything else lives in the state file that Daily Triage or the engineer reads. |
+| Possible-duplicate false positives | Conservative matching + always surface "possible duplicate observation for #NNN" for human confirmation in L1. |
+| Alert fatigue on every new issue | Only notify human for the human-attention candidate slice. Everything else lives in the state file that Daily Triage or the engineer reads. |
 
 ## Success Metrics
 
