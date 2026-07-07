@@ -96,6 +96,21 @@ test('Issue Fix Request dedupe treats requested consumed and pr_opened as active
     action: 'duplicate',
     existing_request_id: 'ifr_requested',
     existing_status: 'requested',
+    existing_request_url: '',
+  });
+
+  assert.deepEqual(resolveIssueFixRequestDedupe({
+    existingRequests: [baseRequest({
+      request_id: 'ifr_with_url',
+      status: 'requested',
+      issue_url: 'https://github.com/jununfly/ZAgenticLoop/issues/200',
+    })],
+    dedupeKey: baseRequest().dedupe_key,
+  }), {
+    action: 'duplicate',
+    existing_request_id: 'ifr_with_url',
+    existing_status: 'requested',
+    existing_request_url: 'https://github.com/jununfly/ZAgenticLoop/issues/200',
   });
 
   assert.deepEqual(resolveIssueFixRequestDedupe({

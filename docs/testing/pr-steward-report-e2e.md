@@ -83,3 +83,34 @@ slice.
 | Issue Slash Command is only the activation path for implementing this slice, not the runtime route input. | durable doc | This test case. |
 | `pr-steward-report` is report-only and writes no PR comments, labels, rebases, merges, requests, or workflow dispatches. | durable doc | This test case and replay tests. |
 | PR Steward report evidence belongs in `zj-loop/pr-steward-state.md` until a later explicit route enables public PR comments. | durable doc | This test case and route table. |
+
+## Fix Request Follow-Up Route
+
+`pr-steward-fix-request` is the first side-effecting follow-up route for PR
+Steward, but its side effect is limited to creating or deduping an independent
+GitHub Issue Fix Request. It does not write source PR comments, change labels,
+rebase, merge, dispatch workflows, claim the request, or repair code.
+
+Canonical chain:
+
+```text
+Pull Request Event -> Route Decision -> Issue Fix Request -> PR Steward
+```
+
+The route is intentionally narrower than the report lane:
+
+- `source: pull_request`
+- `action: synchronize | ready_for_review`
+- `checks: failure`
+- `check_source: github_status_check_rollup`
+- `draft: false`
+- `base_branch: main`
+
+The dedupe key is:
+
+```text
+pr:<repo>:<pr_number>:head:<head_sha>:checks:failure
+```
+
+Duplicate requests return the existing request issue URL without writing back to
+the source PR.

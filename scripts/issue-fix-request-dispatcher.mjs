@@ -43,6 +43,7 @@ export function dispatchSignalToIssueFixRequest({
           consumed_by: null,
           closed_at: null,
           existing_request_id: duplicate.existing_request_id,
+          existing_request_url: duplicate.existing_request_url,
         },
       }),
     };
@@ -119,6 +120,7 @@ export function buildIssueFixRequestFromDecision({
       summary: signal?.summary ?? '',
       source_url: signal?.source_url ?? '',
     },
+    subject: buildRequestSubject(signal),
     route_decision: routeDecision,
     dedupe_key: routeDecision.dedupe_key,
     requested_consumer: {
@@ -168,12 +170,30 @@ function consumerAllowedByRoute(route, consumer) {
 }
 
 function buildDedupeKey({ routeId, signal }) {
+  if (signal?.dedupe_key) return signal.dedupe_key;
   return [
     signal?.repo ?? 'unknown-repo',
     routeId ?? 'unknown-route',
     signal?.signal_id ?? 'unknown-signal',
     scopeHash(signal?.fix_scope),
   ].join(':');
+}
+
+function buildRequestSubject(signal) {
+  if (signal?.request_subject) return signal.request_subject;
+  if (signal?.pr_number) {
+    return {
+      type: 'pull_request',
+      repo: signal?.repo ?? '',
+      pr_number: signal.pr_number,
+      head_sha: signal?.head_sha ?? '',
+      base_branch: signal?.base_branch ?? signal?.head_branch ?? '',
+    };
+  }
+  return {
+    type: signal?.source ?? 'signal',
+    repo: signal?.repo ?? '',
+  };
 }
 
 function scopeHash(fixScope) {

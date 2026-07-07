@@ -81,6 +81,31 @@ routes:
     failure_owner: "pr-steward"
     human_gate: "before comments, labels, rebase, merge, or fix request creation"
 
+  - route_id: "pr-steward-fix-request"
+    enabled: true
+    request_kind: "issue-fix-request"
+    consumer: "pr-steward"
+    evidence_store: "GitHub issues"
+    match:
+      source: ["pull_request"]
+      action: ["synchronize", "ready_for_review"]
+      checks: ["failure"]
+      check_source: ["github_status_check_rollup"]
+      draft: [false]
+      base_branch: ["main"]
+    guards:
+      independent_issue_carrier: true
+      pr_comment_allowed: false
+      label_changes_allowed: false
+      rebase_allowed: false
+      merge_allowed: false
+      workflow_dispatch_allowed: false
+      verifier_required: true
+      fix_consumer_allowlist: ["pr-steward"]
+    dedupe_window: "pr:repo:pr_number:head_sha:checks"
+    failure_owner: "pr-steward"
+    human_gate: "before PR comments, labels, rebase, merge, workflow dispatch, or consumer claim"
+
   - route_id: "ci-sweeper"
     enabled: true
     request_kind: "issue-fix-request"

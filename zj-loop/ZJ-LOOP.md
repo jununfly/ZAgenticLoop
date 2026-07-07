@@ -81,6 +81,11 @@ Current dogfood status:
   Local replay writes JSON only and records `zj-loop/pr-steward-state.md` as
   the evidence target; no PR comments, labels, rebases, merges, Issue Fix
   Requests, workflow dispatches, or consumer work are created.
+- `pr-steward-fix-request` is enabled as a bounded Issue Fix Request route for
+  failed GitHub status/check rollups on non-draft PRs targeting `main`.
+  Local replay creates or dedupes an independent request issue only; it does
+  not claim, repair, write PR comments, label, rebase, merge, or dispatch
+  workflows.
 - Daily Triage is wired to create a real Issue Fix Request carrier issue before
   dispatching CI Sweeper.
 - `dependency-sweeper` is enabled as a bounded Issue Fix Request route:

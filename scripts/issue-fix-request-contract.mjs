@@ -154,6 +154,7 @@ export function resolveIssueFixRequestDedupe({ existingRequests, dedupeKey }) {
     action: 'duplicate',
     existing_request_id: duplicate.request_id,
     existing_status: duplicate.status,
+    existing_request_url: duplicate.issue_url ?? duplicate.source_url ?? duplicate.url ?? '',
   };
 }
 
