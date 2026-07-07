@@ -244,7 +244,7 @@ overwrite and must make that overwrite visible in CLI output.
 | `issue-triage` | `evidence-request` | Issue Triage | Summarize issue backlog changes and propose labels; no formal lifecycle transition in L1. |
 | `pr-steward` | `issue-fix-request` or `report-only` | PR Steward | Watch PRs, review comments, CI state, rebase needs, and readiness. |
 | `dependency-sweeper` | `issue-fix-request` or `report-only` | Dependency Sweeper | Handle patch/minor dependency signals with verifier-backed boundaries. |
-| `changelog-drafter` | `workflow-dispatch` or `evidence-request` | Changelog Drafter | Draft release-note candidates; never publish. |
+| `changelog-drafter-report` | `report-only` | Changelog Drafter | Record release-window evidence and human gates before any release-note drafting; never publish. |
 | `roadmap-sliced-development` | `activation-comment` | Roadmap-Sliced Development | Create or consume authorized activation requests only; implementation stays with roadmap lifecycle. |
 | `human` | `report-only` | Maintainer | Security, auth, billing, infra, ambiguous, high-risk, or policy decisions. |
 | `ignore` | `report-only` | Producing loop | Record noise with reason and avoid rediscovery. |

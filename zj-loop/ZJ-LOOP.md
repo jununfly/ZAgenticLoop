@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 ```
 
@@ -81,6 +81,14 @@ Current dogfood status:
   Local replay writes JSON only and records `zj-loop/pr-steward-state.md` as
   the evidence target; no PR comments, labels, rebases, merges, Issue Fix
   Requests, workflow dispatches, or consumer work are created.
+- `changelog-drafter-report` is implemented as a release-prep report-only
+  route:
+  `Merged PR Batch / Manual Release Prep -> Route Decision -> Changelog Draft Evidence`.
+  Local replay writes JSON only and records `zj-loop/changelog-drafter-state.md`
+  as the evidence target; it does not generate release notes, edit changelogs,
+  create PRs, tag, release, publish packages, dispatch workflows, or start
+  consumer work. Breaking/security/oversized windows require human review before
+  drafting.
 - `pr-steward-fix-request` is enabled as a bounded Issue Fix Request route for
   failed GitHub status/check rollups on non-draft PRs targeting `main`.
   Local replay creates or dedupes an independent request issue only; it does
