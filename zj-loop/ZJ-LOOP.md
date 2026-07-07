@@ -166,13 +166,15 @@ Current dogfood status:
   - Escalation issue:
     https://github.com/jununfly/ZAgenticLoop/issues/18
 
-### Post-Merge (report-only roadmap closeout)
+### Post-Merge (guarded roadmap closeout)
 - Trigger: merged Roadmap-Sliced PR signal with a PR body
   `zj-loop.post-merge-contract`.
 - Route: `post-merge-roadmap-closeout` in `zj-loop/zj-loop-route-table.yaml`.
-- Current mode: local deterministic replay and report evidence only.
-- Boundary: no branch deletion, carrier issue closure, GitHub comment write, or
-  workflow dispatch until a later explicit roadmap enables side effects.
+- Current mode: Route Decision remains report-only; live cleanup requires
+  explicit operator invocation of `scripts/post-merge-roadmap-closeout.mjs`.
+- Boundary: the executor may delete only the merged `zjal/` roadmap branch named
+  in the valid contract and close only the contract carrier issue after writing
+  closeout evidence. It is not a generic PR cleanup agent.
 
 ### Changelog Drafter (L1 — draft only, high value)
 - Cadence: 1d or on release prep (manual or tag-triggered)

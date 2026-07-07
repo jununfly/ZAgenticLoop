@@ -1,9 +1,9 @@
 # Post-Merge Roadmap Closeout E2E Test Cases
 
-These test cases verify the report-only post-merge route:
+These test cases verify the post-merge route and its guarded executor:
 
 ```text
-Merged PR Signal -> Route Decision -> Post-Merge Roadmap Closeout Report Evidence
+Merged PR Signal -> Route Decision -> Post-Merge Contract -> Cleanup Actions
 ```
 
 This is a Post-Merge Cleanup `roadmap-closeout` mode for Roadmap-Sliced
@@ -15,7 +15,19 @@ The local replay proves that a merged PR signal can be routed through the
 dogfood route table, parse the PR body `zj-loop.post-merge-contract`, and
 produce reviewable report evidence plus a closeout plan.
 
-The current implementation is intentionally report-only:
+The route replay remains report-only. Live side effects are performed only by
+the explicit contract executor:
+
+```bash
+node scripts/post-merge-roadmap-closeout.mjs --pr <number> --repo jununfly/ZAgenticLoop
+node scripts/post-merge-roadmap-closeout.mjs --pr <number> --repo jununfly/ZAgenticLoop --carrier-issue <issue> --live
+```
+
+Default mode is dry-run. `--live` is required before any branch deletion, carrier
+issue comment, or carrier issue closure. The executor refuses before side
+effects unless every contract and local guard passes.
+
+The route replay itself remains report-only:
 
 - no branch deletion
 - no carrier issue closure
@@ -36,7 +48,7 @@ Run:
 
 ```bash
 node scripts/post-merge-roadmap-closeout-e2e-replay.mjs
-node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
+node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs
 ```
 
 Expected results:
@@ -55,6 +67,13 @@ Expected results:
 - Branch mismatch, fork head repository, and unknown head repository all stay
   report-only with no planned actions.
 - A disabled route denies before report evidence or closeout planning.
+- The executor dry-run lists the exact cleanup actions without side effects.
+- The executor live test uses an injected runner and proves no real `git` or
+  `gh` command is called during tests.
+- Ordinary linked issues such as `Fixes #99` are ignored; only the carrier issue
+  named in the valid contract can be closed.
+- Dirty worktree, repository mismatch, carrier mismatch, unmerged PR, and
+  unmerged local roadmap branch all refuse before side effects.
 
 ## Real GitHub Dogfood
 
@@ -62,13 +81,17 @@ Do not manufacture a synthetic merged PR only to create evidence. The first live
 dogfood run should use a real Roadmap-Sliced Development PR whose body contains
 the `Post-Merge Contract` block before merge.
 
-After that PR merges, append evidence to the merged PR comment thread:
+After that PR merges, run the executor in dry-run mode first. If the dry-run
+plan is valid and the operator has approval for post-merge closeout, run with
+`--live`.
+
+The live executor appends evidence to the carrier issue before closing it:
 
 - Route Decision
 - contract validation result
 - closeout plan
-- `side_effects_executed: false`
-- next step for enabling side effects under a later explicit roadmap
+- `side_effects_executed: true`
+- branch cleanup status
 
 The durable audit home is the PR comment. `zj-loop/STATE.md` remains Daily
 Triage memory and must not become the post-merge lifecycle store.
@@ -82,7 +105,9 @@ Triage memory and must not become the post-merge lifecycle store.
 | Contract parse | Missing or invalid `zj-loop.post-merge-contract`; report evidence still records no planned actions. |
 | Contract validation | Branch mismatch, fork/unknown repo, protected branch, missing carrier issue, or pending follow-up guard. |
 | Closeout plan | `status: report-only` and `actions: []`. |
-| Side effects | Always false in this replay; enabling them requires a later explicit roadmap. |
+| Executor dry-run | `status: dry-run`, exact actions, and `side_effects_executed: false`. |
+| Executor live | Requires `--live`; records step-by-step command evidence and closes only the contract carrier issue. |
+| Side effects | Refuse before any command when contract or executor guards fail. |
 
 ## Closeout Decision Audit
 
@@ -92,4 +117,5 @@ Triage memory and must not become the post-merge lifecycle store.
 | The local replay input is a merged PR signal, not a Daily Triage signal or issue comment. | durable doc | This test case. |
 | Report evidence belongs in the merged PR comment thread for live dogfood; local replay emits JSON only. | durable doc | This test case. |
 | Route/report evidence uses `report-only`; closeout plan uses `dry-run` when the contract is valid. | durable doc | This test case and replay tests. |
-| This slice does not enable branch deletion or carrier issue closure. | durable doc | This test case and `zj-loop/zj-loop-route-table.yaml`. |
+| Live cleanup is not part of Route Decision. It is an explicit executor invoked after a valid dry-run and operator approval. | durable doc | This test case and `scripts/post-merge-roadmap-closeout.mjs`. |
+| The executor may close only the activation carrier issue named in the valid contract. Ordinary linked issues are out of scope. | durable doc | This test case and executor tests. |
