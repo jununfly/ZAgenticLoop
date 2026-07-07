@@ -199,9 +199,10 @@ Required evidence:
 
 ### 5. Post-Merge Roadmap Closeout Execution
 
-Status: candidate
+Status: implemented
 Type: version upgrade for an existing route
-Recommended next action: implement after request/claim boundaries are stable
+Recommended next action: dogfood on real merged Roadmap-Sliced PRs and keep
+live mode behind explicit operator invocation
 
 Proposed chain:
 
@@ -217,23 +218,30 @@ Why fifth:
 - This is a good automation candidate because the action set is small and
   contract-guarded.
 
-Recommended first upgrade:
+Implemented upgrade:
 
 - Keep route id `post-merge-roadmap-closeout`.
 - Do not make it a broad cleanup agent.
 - Allow only:
   - delete merged `zjal/` branch named in valid contract
   - close only the carrier issue named in valid contract
-- Require merged PR, same repository, branch match, non-protected branch,
+- Require merged PR, same repository, branch match, non-protected branch, clean
+  worktree, expected repository, expected activation carrier issue,
   `no_pending_followups: true`, and valid `zj-loop.post-merge-contract`.
 - Missing or invalid contract remains report-only.
+- Default mode is dry-run. `--live` is required for branch deletion, carrier
+  issue comment, and carrier issue closure.
+- Runtime execution uses `scripts/post-merge-roadmap-closeout.mjs`; tests use an
+  injected runner and never call real `git` or `gh`.
 
 Required evidence:
 
-- Replay for dry-run and side-effect-enabled mode.
-- Tests proving ordinary linked issues cannot be closed.
-- Tests proving protected branches and branch mismatches are denied.
-- Human approval before enabling live side effects in this repository.
+- Replay for dry-run and side-effect-enabled mode: implemented.
+- Tests proving ordinary linked issues cannot be closed: implemented.
+- Tests proving protected branches and branch mismatches are denied: implemented
+  by the contract gate.
+- Human approval before enabling live side effects in this repository: still
+  required by `zj-loop/zj-loop-constraints.md`.
 
 ### 6. CI Sweeper Request Hardening
 
