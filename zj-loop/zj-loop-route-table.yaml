@@ -132,10 +132,19 @@ routes:
       merge_allowed: false
       workflow_dispatch_allowed: false
       verifier_required: true
+      claim_only: true
+      source_pr_comment_allowed_during_claim: false
+      label_changes_allowed_during_claim: false
+      rebase_allowed_during_claim: false
+      merge_allowed_during_claim: false
+      workflow_dispatch_allowed_during_claim: false
+      repair_allowed_during_claim: false
+      branch_creation_allowed_during_claim: false
+      fix_pr_creation_allowed_during_claim: false
       fix_consumer_allowlist: ["pr-steward"]
     dedupe_window: "pr:repo:pr_number:head_sha:checks"
     failure_owner: "pr-steward"
-    human_gate: "before PR comments, labels, rebase, merge, workflow dispatch, or consumer claim"
+    human_gate: "before source PR comments, labels, rebase, merge, workflow dispatch, repair, branch creation, or Fix PR creation"
 
   - route_id: "ci-sweeper"
     enabled: true

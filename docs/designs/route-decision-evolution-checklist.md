@@ -121,9 +121,9 @@ Required evidence:
 
 ### 3. PR Steward Claim Contract
 
-Status: candidate
+Status: implemented
 Type: version upgrade for an existing route
-Recommended next action: implement after Dependency Sweeper claim
+Recommended next action: use as reference for later claim-only PR-facing Fix Consumer slices
 
 Proposed chain:
 
@@ -152,9 +152,9 @@ Required evidence:
 
 - Replay for requested -> consumed by `pr-steward`.
 - Replay for mismatched consumer denied.
-- Replay for stale head SHA or duplicate existing request.
-- Docs in `docs/testing/pr-steward-report-e2e.md` or a new PR Steward claim test
-  case.
+- Replay for missing verifier gate, stale head SHA, non-main base, repeated
+  claim, or duplicate existing request denied before claim evidence.
+- Docs in `docs/testing/pr-steward-report-e2e.md`.
 
 ### 4. Changelog Drafter Draft Request
 

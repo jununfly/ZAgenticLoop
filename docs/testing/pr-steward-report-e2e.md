@@ -114,3 +114,47 @@ pr:<repo>:<pr_number>:head:<head_sha>:checks:failure
 
 Duplicate requests return the existing request issue URL without writing back to
 the source PR.
+
+## Claim-Only Follow-Up
+
+`pr-steward-fix-request` also has a claim-only replay for the next lifecycle
+boundary:
+
+```text
+Pull Request Event -> Route Decision -> Issue Fix Request -> PR Steward Claim Evidence
+```
+
+Run:
+
+```bash
+node scripts/pr-steward-claim-e2e-replay.mjs
+node --test scripts/pr-steward-claim-e2e-replay.test.mjs
+```
+
+The claim replay consumes only an existing `requested` Issue Fix Request and
+emits append-only lifecycle evidence for the independent request issue. It does
+not write source PR comments, mutate labels, rebase, merge, dispatch workflows,
+start repair, create branches, open Fix PRs, or enable auto-merge.
+
+Claim gates are intentionally fail-closed:
+
+- consumer and capability must be `pr-steward` /
+  `pr-review-and-readiness-fix`
+- request route must be `pr-steward-fix-request`
+- request subject must be a pull request targeting `main`
+- `verification_gate.commands` must be non-empty
+- claim input must include `current_pr_head_sha`
+- `current_pr_head_sha` must match `request.subject.head_sha`
+- request status must be `requested`
+
+Duplicate existing requests are not claimed. A stale head SHA is denied instead
+of silently consuming the old request; a new PR head must go through Route
+Decision and request creation/dedupe again.
+
+Closeout decision audit for the claim upgrade:
+
+| Decision | Classification | Durable home |
+| --- | --- | --- |
+| PR Steward claim evidence belongs on the independent Issue Fix Request as an append-only lifecycle comment, not in `zj-loop/pr-steward-state.md`. | durable doc | This test case and replay tests. |
+| Claim requires an explicit current PR head SHA and denies stale requests. | deterministic gate | `scripts/pr-steward-claim-e2e-replay.mjs`. |
+| Claim is not repair: all PR, workflow, branch, Fix PR, and auto-merge side effects are false. | deterministic gate | `scripts/pr-steward-claim-e2e-replay.test.mjs`. |

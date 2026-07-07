@@ -103,8 +103,11 @@ Current dogfood status:
 - `pr-steward-fix-request` is enabled as a bounded Issue Fix Request route for
   failed GitHub status/check rollups on non-draft PRs targeting `main`.
   Local replay creates or dedupes an independent request issue only; it does
-  not claim, repair, write PR comments, label, rebase, merge, or dispatch
-  workflows.
+  not repair, write PR comments, label, rebase, merge, or dispatch workflows.
+  Claim replay covers `requested -> consumed` for matching PR Steward requests
+  with verifier gates and a current PR head SHA match. Claim evidence belongs
+  on the independent Issue Fix Request lifecycle comments; `consumed` does not
+  start repair, create a branch, open a Fix PR, or enable auto-merge.
 - Daily Triage is wired to create a real Issue Fix Request carrier issue before
   dispatching CI Sweeper.
 - `dependency-sweeper` is enabled as a bounded Issue Fix Request route:
