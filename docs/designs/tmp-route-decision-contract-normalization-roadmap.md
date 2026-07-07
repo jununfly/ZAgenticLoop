@@ -98,7 +98,7 @@ Notes:
 
 ### Leaf 2.2: Migrate Issue Fix Request Dispatcher
 
-Status: pending
+Status: completed
 
 Intent:
 
@@ -107,7 +107,8 @@ Intent:
 
 Verification evidence:
 
-- Pending.
+- `node --test scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs` passed.
+- `node --test scripts/route-decision-contract.test.mjs` passed.
 
 Notes:
 
