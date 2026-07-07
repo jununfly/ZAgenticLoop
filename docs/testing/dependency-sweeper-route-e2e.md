@@ -21,8 +21,9 @@ The current implementation stops at:
 - `duplicate`
 - `denied`
 
-It intentionally does not simulate consumer claim, package upgrades, verifier
-execution, Fix PR creation, or escalation issues.
+It intentionally does not simulate package upgrades, verifier execution, Fix PR
+creation, or escalation issues. Claim-only lifecycle evidence is covered by the
+Dependency Sweeper Claim section below.
 
 ## Local Replay Gate
 
@@ -31,6 +32,8 @@ Run:
 ```bash
 node scripts/dependency-sweeper-route-e2e-replay.mjs
 node --test scripts/dependency-sweeper-route-e2e-replay.test.mjs
+node scripts/dependency-sweeper-claim-e2e-replay.mjs
+node --test scripts/dependency-sweeper-claim-e2e-replay.test.mjs
 ```
 
 Expected results:
@@ -44,8 +47,35 @@ Expected results:
 - High-risk and critical dependency alerts are denied before request creation.
 - Non-main dependency alerts are denied by route guards.
 - Created requests target `dependency-sweeper` with capability
-  `patch-dependency-fix`.
+  `patch-dependency-fix` or `minor-dependency-fix`.
 - Created requests include verifier commands but do not run them in replay.
+
+## Dependency Sweeper Claim
+
+The claim-only upgrade verifies this chain:
+
+```text
+Dependency Alert -> Route Decision -> Issue Fix Request -> Dependency Sweeper Claim Evidence
+```
+
+Claim replay consumes only an existing `requested` Issue Fix Request and appends
+`consumed` lifecycle evidence. It requires:
+
+- `requested_consumer.consumer_id: dependency-sweeper`
+- capability `patch-dependency-fix` or `minor-dependency-fix`
+- a non-empty verifier gate
+- `route_id: dependency-sweeper`
+
+It denies:
+
+- mismatched consumer
+- missing verifier gate
+- repeated claim of a non-`requested` request
+- major updates before request creation
+- high-risk dependency updates before request creation
+
+Claim replay still does not edit `package.json`, edit lockfiles, create
+branches, create PRs, dispatch workflows, start repair work, or auto-merge.
 
 ## Activation Boundary
 
@@ -78,14 +108,17 @@ Dogfood activation evidence:
 | Route Decision | `allowed: false` with a route guard reason. |
 | Issue Fix Request | Contract fields missing, wrong consumer, or missing verifier gate. |
 | Duplicate | `duplicate` request points at the existing active request id. |
-| Consumer work | Not present in this replay; consumer claim and Fix PR require a later explicit slice. |
+| Claim evidence | `requested -> consumed` only when consumer, capability, verifier gate, route, and request status match. |
+| Consumer repair work | Not present in this replay; package changes and Fix PR require a later explicit slice. |
 
 ## Closeout Decision Audit
 
 | Decision | Classification | Durable home |
 | --- | --- | --- |
-| Canonical chain wording is `Dependency Alert -> Route Decision -> Issue Fix Request -> Dependency Sweeper`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
+| Canonical request chain wording is `Dependency Alert -> Route Decision -> Issue Fix Request -> Dependency Sweeper`. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
+| Canonical claim chain wording is `Dependency Alert -> Route Decision -> Issue Fix Request -> Dependency Sweeper Claim Evidence`. | durable doc | This test case and claim replay tests. |
 | First route slice stops at requested, duplicate, or denied. | durable doc | This test case and replay tests. |
+| Claim slice stops at consumed lifecycle evidence and does not start repair work. | durable doc | This test case and replay tests. |
 | Only patch/minor low/medium dependency alerts may create requests. | durable doc | Route table and replay tests. |
 | Major, high, critical, and non-main dependency alerts are denied in this route. | durable doc | Route table and replay tests. |
 | Process roadmap was reviewable on branch, then deleted at closeout after durable docs absorbed key decisions. | discarded process note | Commit history and this closeout audit. |

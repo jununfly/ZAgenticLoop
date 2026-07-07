@@ -36,9 +36,11 @@ test('dependency alert creates verifier-backed Issue Fix Request for Dependency 
 test('dependency sweeper route allows minor medium alerts and duplicates existing active requests', async () => {
   const suite = await runDependencySweeperRouteReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const outcomes = Object.fromEntries(suite.results.map((result) => [result.name, result.actual]));
+  const minor = suite.results.find((result) => result.name === 'minor-medium-requested').replay;
 
   assert.equal(suite.passed, true);
   assert.equal(outcomes['minor-medium-requested'], 'requested');
+  assert.equal(minor.issueFixRequest.requested_consumer.capability, 'minor-dependency-fix');
   assert.equal(outcomes['duplicate-active-request'], 'duplicate');
 });
 

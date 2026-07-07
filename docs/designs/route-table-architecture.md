@@ -243,7 +243,7 @@ overwrite and must make that overwrite visible in CLI output.
 | `ci-sweeper` | `issue-fix-request` | CI Sweeper | Diagnose CI failure, propose verifier-backed minimal fix, escalate on infra or high risk. |
 | `issue-triage-report` | `report-only` | Issue Triage | Record issue/discussion triage observations in `zj-loop/issue-triage-state.md`; no formal lifecycle transition, public comment, label mutation, assignment, milestone, close/reopen, or batch mutation. |
 | `pr-steward` | `issue-fix-request` or `report-only` | PR Steward | Watch PRs, review comments, CI state, rebase needs, and readiness. |
-| `dependency-sweeper` | `issue-fix-request` or `report-only` | Dependency Sweeper | Handle patch/minor dependency signals with verifier-backed boundaries. |
+| `dependency-sweeper` | `issue-fix-request` | Dependency Sweeper | Create verifier-backed dependency requests and allow claim-only lifecycle evidence for patch/minor dependency signals; repair work and Fix PRs require later consumer execution. |
 | `changelog-drafter-report` | `report-only` | Changelog Drafter | Record release-window evidence and human gates before any release-note drafting; never publish. |
 | `roadmap-sliced-development` | `activation-comment` | Roadmap-Sliced Development | Create or consume authorized activation requests only; implementation stays with roadmap lifecycle. |
 | `human` | `report-only` | Maintainer | Security, auth, billing, infra, ambiguous, high-risk, or policy decisions. |

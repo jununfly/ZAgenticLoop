@@ -125,7 +125,7 @@ export function buildIssueFixRequestFromDecision({
     dedupe_key: routeDecision.dedupe_key,
     requested_consumer: {
       consumer_id: consumerId,
-      capability: consumerCapability(consumerId),
+      capability: consumerCapability(consumerId, signal),
     },
     fix_scope: {
       repo: signal?.repo ?? '',
@@ -205,11 +205,14 @@ function scopeHash(fixScope) {
     .toLowerCase() || 'general';
 }
 
-function consumerCapability(consumerId) {
+function consumerCapability(consumerId, signal) {
+  if (consumerId === 'dependency-sweeper') {
+    if (signal?.update_type === 'minor') return 'minor-dependency-fix';
+    return 'patch-dependency-fix';
+  }
   const capabilities = {
     'ci-sweeper': 'deterministic-ci-repair',
     'pr-steward': 'pr-review-and-readiness-fix',
-    'dependency-sweeper': 'patch-dependency-fix',
   };
   return capabilities[consumerId] ?? 'allowlisted-fix-consumer';
 }

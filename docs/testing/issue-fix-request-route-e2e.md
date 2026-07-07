@@ -30,7 +30,8 @@ Expected results:
 - Fixtures include `ci-sweeper`, `pr-steward`, and `dependency-sweeper` so the
   protocol does not drift into a CI-only contract.
 - The real dogfood route table enables `dependency-sweeper` as a bounded
-  Issue Fix Request route. Detailed route scenarios live in
+  Issue Fix Request route with claim-only lifecycle evidence. Detailed route
+  and claim scenarios live in
   [Dependency Sweeper Route E2E](./dependency-sweeper-route-e2e.md).
 - The real dogfood route table enables `pr-steward-fix-request` as a bounded
   Issue Fix Request route. Detailed route scenarios live in
@@ -55,9 +56,10 @@ Required evidence:
 - cleanup notes for temporary PRs/issues/branches
 
 Do not require every known Fix Consumer to run live in the first dogfood pass.
-`pr-steward-fix-request` and `dependency-sweeper` now have real dogfood routes
-for request creation only; consumer claim and Fix PR creation remain out of
-scope.
+`pr-steward-fix-request` and `dependency-sweeper` now have real dogfood routes.
+`dependency-sweeper` also has local claim-only lifecycle evidence. Fix PR
+creation remains out of scope for these consumers until a later explicit route
+enables repair execution.
 
 Current ZAgenticLoop repo status:
 

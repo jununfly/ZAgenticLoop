@@ -169,6 +169,13 @@ routes:
       branch_allowlist: ["main"]
       direct_dependency_only: true
       verifier_required: true
+      claim_only: true
+      package_manifest_edit_allowed_during_claim: false
+      lockfile_edit_allowed_during_claim: false
+      branch_creation_allowed_during_claim: false
+      pull_request_creation_allowed_during_claim: false
+      workflow_dispatch_allowed_during_claim: false
+      repair_allowed_during_claim: false
       auto_merge: false
       fix_consumer_allowlist: ["dependency-sweeper"]
     dedupe_window: "package:update_type:target_version"

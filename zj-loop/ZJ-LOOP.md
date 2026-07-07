@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 ```
 
@@ -109,8 +109,10 @@ Current dogfood status:
   dispatching CI Sweeper.
 - `dependency-sweeper` is enabled as a bounded Issue Fix Request route:
   `Dependency Alert -> Route Decision -> Issue Fix Request -> Dependency Sweeper`.
-  Local replay stops at requested, duplicate, or denied. It does not run
-  Dependency Sweeper, edit package manifests, update lockfiles, open Fix PRs, or
+  Request replay covers requested, duplicate, or denied. Claim replay covers
+  `requested -> consumed` for matching Dependency Sweeper requests with verifier
+  gates. It does not run Dependency Sweeper repair, edit package manifests,
+  update lockfiles, create branches, open Fix PRs, dispatch workflows, or
   auto-merge.
 - `roadmap-sliced-development` is enabled in the route table as an
   `activation-comment` route and covered by local activation replay.

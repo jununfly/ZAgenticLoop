@@ -79,9 +79,9 @@ Required evidence:
 
 ### 2. Dependency Sweeper Claim Contract
 
-Status: candidate
+Status: implemented
 Type: version upgrade for an existing route
-Recommended next action: implement after `issue-triage-report`
+Recommended next action: use as reference for later claim-only Fix Consumer slices
 
 Proposed chain:
 
@@ -106,12 +106,16 @@ Recommended first upgrade:
   dependency signal, patch/minor scope, and main branch.
 - Deny mismatched consumer claims and high-risk/major updates.
 - No package.json edits, lockfile edits, PR creation, or auto-merge.
+- Claim evidence transitions an existing Issue Fix Request from `requested` to
+  `consumed`; it does not start dependency repair.
 
 Required evidence:
 
 - Replay for requested -> consumed.
 - Replay for consumer mismatch denied.
-- Replay for high-risk/major human gate.
+- Replay for missing verifier gate denied.
+- Replay for non-requested request denied.
+- Replay for high-risk/major human gate before request/claim.
 - State/evidence target remains `zj-loop/dependency-sweeper-state.md` or
   structured Issue Fix Request lifecycle comments.
 
