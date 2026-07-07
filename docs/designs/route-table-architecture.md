@@ -329,6 +329,15 @@ Rules:
 - Request lifecycle records are append-only unless the route declares a
   consumer-owned mutable state file as its evidence target.
 
+For `activation-comment` routes, consumed requests are not duplicates and not
+new work. If another slash command references an already consumed
+Roadmap-Sliced Development activation, the dispatcher records audit-only
+`resume-existing` evidence and points back to the consumed request's resume
+anchors. It must not create a second activation request. Failed activation
+requests are terminal and may be followed by a new activation request. Consumed
+requests with missing resume anchors fail closed as `resume-blocked` until the
+activation evidence is repaired.
+
 ## Loop Prevention
 
 Every automated route must define:

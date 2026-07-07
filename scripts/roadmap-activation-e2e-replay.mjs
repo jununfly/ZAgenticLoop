@@ -4,6 +4,9 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 import {
+  ACTIVATION_KINDS,
+  buildActivationConsumedComment,
+  buildActivationFailedComment,
   buildActivationRequestComment,
   evaluateActivationCommand,
   parseStructuredActivationComments,
@@ -48,6 +51,54 @@ export const DEFAULT_ROADMAP_ACTIVATION_REPLAY_SCENARIOS = [
       }),
     }],
     expectOutcome: 'duplicate',
+  },
+  {
+    name: 'activation-resume-existing',
+    commandText: '/zj-loop start roadmap-sliced-development',
+    requestedByPermission: 'write',
+    sourceIssue: 325,
+    comments: activationLifecycleComments({
+      sourceIssue: 325,
+      requestId: 'rsd-325-001',
+      lifecycle: 'consumed',
+    }),
+    expectOutcome: 'resume-existing',
+  },
+  {
+    name: 'activation-resume-blocked-missing-anchors',
+    commandText: '/zj-loop start roadmap-sliced-development',
+    requestedByPermission: 'write',
+    sourceIssue: 326,
+    comments: activationLifecycleComments({
+      sourceIssue: 326,
+      requestId: 'rsd-326-001',
+      lifecycle: 'consumed-missing-anchors',
+    }),
+    expectOutcome: 'blocked',
+  },
+  {
+    name: 'activation-failed-retry',
+    commandText: '/zj-loop start roadmap-sliced-development',
+    requestedByPermission: 'write',
+    sourceIssue: 327,
+    comments: activationLifecycleComments({
+      sourceIssue: 327,
+      requestId: 'rsd-327-001',
+      lifecycle: 'failed',
+    }),
+    expectOutcome: 'activation-request',
+  },
+  {
+    name: 'activation-ambiguous-blocked',
+    commandText: '/zj-loop start roadmap-sliced-development',
+    requestedByPermission: 'write',
+    sourceIssue: 328,
+    comments: activationLifecycleComments({
+      sourceIssue: 328,
+      requestId: 'rsd-328-001',
+      lifecycle: 'ambiguous',
+    }),
+    expectOutcome: 'blocked',
   },
 ];
 
@@ -170,6 +221,49 @@ export function replayRoadmapActivation({ routeTableText, scenario }) {
     };
   }
 
+  if (evaluation.action === 'resume-existing') {
+    steps.push({
+      name: 'activation-resume-existing',
+      status: 'audit-only',
+      request_id: evaluation.existingRequestId,
+      consumed_comment_id: evaluation.consumedCommentId,
+      next_action: evaluation.resumeAnchors.nextAction,
+    });
+    return {
+      schemaVersion: 1,
+      kind: 'zj-loop-roadmap-activation-e2e-replay',
+      outcome: 'resume-existing',
+      routeDecision: decision,
+      activation: null,
+      resume: {
+        request_id: evaluation.existingRequestId,
+        consumed_comment_id: evaluation.consumedCommentId,
+        resume_policy: 'resume-without-new-activation',
+        anchors: evaluation.resumeAnchors,
+      },
+      steps,
+    };
+  }
+
+  if (evaluation.action === 'blocked') {
+    steps.push({
+      name: 'activation-blocked',
+      status: 'blocked',
+      reason: evaluation.reason,
+      request_id: evaluation.existingRequestId ?? null,
+    });
+    return {
+      schemaVersion: 1,
+      kind: 'zj-loop-roadmap-activation-e2e-replay',
+      outcome: 'blocked',
+      routeDecision: decision,
+      activation: null,
+      resume: null,
+      reason: evaluation.reason,
+      steps,
+    };
+  }
+
   steps.push({ name: `activation-${evaluation.action}`, status: evaluation.action });
   return {
     schemaVersion: 1,
@@ -179,6 +273,81 @@ export function replayRoadmapActivation({ routeTableText, scenario }) {
     activation: null,
     steps,
   };
+}
+
+function activationLifecycleComments({ sourceIssue, requestId, lifecycle }) {
+  const request = {
+    id: 1,
+    body: buildActivationRequestComment({
+      requestId,
+      sourceIssue,
+      pattern: 'roadmap-sliced-development',
+      requestedBy: 'maintainer',
+      requestedByPermission: 'write',
+      requestedAt: '2026-07-06T00:00:00Z',
+      commandCommentId: 11,
+      commandText: '/zj-loop start roadmap-sliced-development',
+    }),
+  };
+  if (lifecycle === 'failed') {
+    return [request, {
+      id: 2,
+      body: buildActivationFailedComment({
+        requestId,
+        sourceIssue,
+        pattern: 'roadmap-sliced-development',
+        failedAt: '2026-07-06T00:02:00Z',
+        reason: 'malformed-request',
+        nextAction: 'create a new activation request',
+      }),
+    }];
+  }
+  if (lifecycle === 'consumed') {
+    return [request, {
+      id: 2,
+      body: buildActivationConsumedComment({
+        requestId,
+        sourceIssue,
+        pattern: 'roadmap-sliced-development',
+        consumedAt: '2026-07-06T00:02:00Z',
+        roadmapBranch: `zjal/issue-${sourceIssue}`,
+        roadmapFile: `docs/designs/tmp-issue-${sourceIssue}-roadmap.md`,
+        roadmapView: `docs/designs/tmp-issue-${sourceIssue}-roadmap.md`,
+        nextAction: 'resume roadmap slice 1-1',
+      }),
+    }];
+  }
+  if (lifecycle === 'consumed-missing-anchors') {
+    return [request, {
+      id: 2,
+      body: `<!-- zj-loop
+kind: ${ACTIVATION_KINDS.consumed}
+version: 1
+request_id: ${requestId}
+source_issue: ${sourceIssue}
+pattern: roadmap-sliced-development
+consumed_at: 2026-07-06T00:02:00Z
+roadmap_branch: zjal/issue-${sourceIssue}
+-->`,
+    }];
+  }
+  if (lifecycle === 'ambiguous') {
+    return [
+      ...activationLifecycleComments({ sourceIssue, requestId, lifecycle: 'consumed' }),
+      {
+        id: 3,
+        body: buildActivationFailedComment({
+          requestId,
+          sourceIssue,
+          pattern: 'roadmap-sliced-development',
+          failedAt: '2026-07-06T00:03:00Z',
+          reason: 'later-failure',
+          nextAction: 'manual review',
+        }),
+      },
+    ];
+  }
+  return [request];
 }
 
 export async function runRoadmapActivationReplaySuite({

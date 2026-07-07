@@ -6,6 +6,8 @@ import {
   buildActivationDeniedComment,
   buildActivationDuplicateComment,
   buildActivationRequestComment,
+  buildActivationResumeBlockedComment,
+  buildActivationResumeExistingComment,
   buildUnsupportedPatternComment,
   evaluateActivationCommand,
   parseStartCommand,
@@ -107,6 +109,42 @@ export function dispatchRoadmapActivationCommand({
         commandCommentId,
         commandText,
         existingRequestId: evaluation.existingRequestId,
+      }),
+    };
+  }
+
+  if (evaluation.action === 'resume-existing') {
+    return {
+      action: 'resume-existing',
+      routeDecision,
+      commentBody: buildActivationResumeExistingComment({
+        sourceIssue,
+        pattern: evaluation.pattern,
+        requestId: evaluation.existingRequestId,
+        resumedAt: now,
+        commandCommentId,
+        commandText,
+        consumedCommentId: evaluation.consumedCommentId,
+        resumeAnchors: evaluation.resumeAnchors,
+      }),
+    };
+  }
+
+  if (evaluation.action === 'blocked' && evaluation.reason === 'missing-resume-anchors') {
+    return {
+      action: 'blocked',
+      routeDecision,
+      reason: evaluation.reason,
+      commentBody: buildActivationResumeBlockedComment({
+        sourceIssue,
+        pattern: evaluation.pattern,
+        requestId: evaluation.existingRequestId,
+        blockedAt: now,
+        commandCommentId,
+        commandText,
+        consumedCommentId: evaluation.consumedCommentId,
+        reason: evaluation.reason,
+        missingResumeAnchors: evaluation.missingResumeAnchors,
       }),
     };
   }

@@ -36,6 +36,14 @@ Expected results:
 - A valid maintainer/collaborator activation reaches `activation-request`.
 - Insufficient permission reaches `denied`.
 - Existing pending activation reaches `duplicate`.
+- Existing consumed activation with complete resume anchors reaches
+  `resume-existing` and records audit-only evidence; it does not create a new
+  activation request.
+- Existing consumed activation with missing resume anchors reaches `blocked`
+  with reason `missing-resume-anchors`.
+- Existing failed activation reaches `activation-request` because failed
+  requests are terminal and retry requires a new request.
+- Ambiguous activation lifecycle reaches `blocked`.
 - A disabled or malformed route reaches `route-denied`.
 - No replay step is named `issue-fix-request`.
 
@@ -51,6 +59,12 @@ When running this as dogfood:
 - Roadmap-Sliced Development consumes the activation request and owns branch,
   roadmap file, roadmap view, and next-action resume anchors.
 - Failed activation may be retried only through a new activation request.
+- Repeated slash commands after consumed activation should receive
+  `zj-loop.activation-resume-existing` audit evidence and resume the existing
+  roadmap lifecycle without reactivation.
+- If consumed activation evidence is missing resume anchors, repeated slash
+  commands should receive `zj-loop.activation-resume-blocked`; the dispatcher
+  must not guess branch/file state or create another activation request.
 
 This path proves Daily Triage can discover or report a plan-intake signal
 without becoming the dispatcher or the roadmap implementer.
@@ -88,6 +102,7 @@ Durable decisions from the roadmap were classified as follows:
 | Daily Triage is only the producer; Route Dispatcher creates activation requests; Roadmap-Sliced Development consumes them. | durable doc | This test case and `zj-loop/ZJ-LOOP.md`. |
 | `roadmap-sliced-development` is enabled as an `activation-comment` route in the dogfood route table. | durable doc | `zj-loop/zj-loop-route-table.yaml` and `zj-loop/ZJ-LOOP.md`. |
 | Activation replay must read the real route table and fail when the route is disabled or malformed. | durable doc | `scripts/roadmap-activation-e2e-replay.mjs` tests and this test case. |
+| Pending, consumed, failed, malformed consumed, and ambiguous activation states have distinct deterministic outcomes. | durable doc | `scripts/zj-loop-activation-contract.mjs`, `scripts/roadmap-activation-e2e-replay.mjs`, and this test case. |
 | Synthetic issue dogfood is acceptable when the carrier is clearly marked and closed after evidence capture. | durable doc | This test case. |
 | Feature-slice commit intent. | discarded process note | Preserved by commit history; it does not need to survive as user-facing documentation. |
 

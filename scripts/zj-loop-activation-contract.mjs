@@ -9,8 +9,12 @@ export const ACTIVATION_KINDS = {
   failed: 'zj-loop.activation-failed',
   denied: 'zj-loop.activation-denied',
   duplicate: 'zj-loop.activation-duplicate',
+  resumeExisting: 'zj-loop.activation-resume-existing',
+  resumeBlocked: 'zj-loop.activation-resume-blocked',
   unsupportedPattern: 'zj-loop.unsupported-pattern',
 };
+
+const RESUME_ANCHOR_FIELDS = ['roadmap_branch', 'roadmap_file', 'roadmap_view', 'next_action'];
 
 const STRUCTURED_COMMENT_PATTERN = /<!--\s*zj-loop(?<body>[\s\S]*?)-->/g;
 
@@ -164,6 +168,30 @@ export function evaluateActivationCommand(input) {
     };
   }
 
+  const consumedRequests = state.requests.filter((request) => request.currentState === 'consumed');
+  if (consumedRequests.length > 0) {
+    const consumed = consumedRequests[0];
+    const consumedEvent = consumed.lifecycle.find((event) => event.fields.kind === ACTIVATION_KINDS.consumed);
+    const missingResumeAnchors = missingResumeAnchorFields(consumedEvent?.fields);
+    if (missingResumeAnchors.length > 0) {
+      return {
+        action: 'blocked',
+        pattern: command.pattern,
+        reason: 'missing-resume-anchors',
+        existingRequestId: consumed.requestId,
+        consumedCommentId: consumedEvent?.commentId,
+        missingResumeAnchors,
+      };
+    }
+    return {
+      action: 'resume-existing',
+      pattern: command.pattern,
+      existingRequestId: consumed.requestId,
+      consumedCommentId: consumedEvent?.commentId,
+      resumeAnchors: normalizeResumeAnchors(consumedEvent.fields),
+    };
+  }
+
   return {
     action: 'create-request',
     pattern: command.pattern,
@@ -302,6 +330,77 @@ export function buildActivationDuplicateComment(input) {
   return formatStructuredComment(fields, 'Duplicate activation request ignored.');
 }
 
+export function buildActivationResumeExistingComment(input) {
+  const anchors = input.resumeAnchors ?? {};
+  const fields = {
+    kind: ACTIVATION_KINDS.resumeExisting,
+    version: ACTIVATION_SCHEMA_VERSION,
+    source_issue: input.sourceIssue,
+    pattern: input.pattern,
+    request_id: input.requestId,
+    resumed_at: input.resumedAt,
+    command_comment_id: input.commandCommentId,
+    command_text: input.commandText,
+    consumed_comment_id: input.consumedCommentId,
+    resume_policy: 'resume-without-new-activation',
+    roadmap_branch: anchors.roadmapBranch,
+    roadmap_file: anchors.roadmapFile,
+    roadmap_view: anchors.roadmapView,
+    next_action: anchors.nextAction,
+  };
+  assertRequiredFields(fields, [
+    'source_issue',
+    'pattern',
+    'request_id',
+    'resumed_at',
+    'command_comment_id',
+    'command_text',
+    'consumed_comment_id',
+    'resume_policy',
+    'roadmap_branch',
+    'roadmap_file',
+    'roadmap_view',
+    'next_action',
+  ]);
+
+  return formatStructuredComment(
+    fields,
+    'Activation already consumed. Resume the existing Roadmap-Sliced Development lifecycle.',
+  );
+}
+
+export function buildActivationResumeBlockedComment(input) {
+  const fields = {
+    kind: ACTIVATION_KINDS.resumeBlocked,
+    version: ACTIVATION_SCHEMA_VERSION,
+    source_issue: input.sourceIssue,
+    pattern: input.pattern,
+    request_id: input.requestId,
+    blocked_at: input.blockedAt,
+    command_comment_id: input.commandCommentId,
+    command_text: input.commandText,
+    consumed_comment_id: input.consumedCommentId,
+    reason: input.reason,
+    missing_resume_anchors: (input.missingResumeAnchors ?? []).join(','),
+  };
+  assertRequiredFields(fields, [
+    'source_issue',
+    'pattern',
+    'request_id',
+    'blocked_at',
+    'command_comment_id',
+    'command_text',
+    'consumed_comment_id',
+    'reason',
+    'missing_resume_anchors',
+  ]);
+
+  return formatStructuredComment(
+    fields,
+    'Activation resume blocked. Existing consumed activation is missing required resume anchors.',
+  );
+}
+
 export function buildUnsupportedPatternComment(input) {
   const fields = {
     kind: ACTIVATION_KINDS.unsupportedPattern,
@@ -357,6 +456,19 @@ function finalizeRequestState(record) {
   }
 
   return record;
+}
+
+function missingResumeAnchorFields(fields = {}) {
+  return RESUME_ANCHOR_FIELDS.filter((field) => !fields[field]);
+}
+
+function normalizeResumeAnchors(fields = {}) {
+  return {
+    roadmapBranch: fields.roadmap_branch,
+    roadmapFile: fields.roadmap_file,
+    roadmapView: fields.roadmap_view,
+    nextAction: fields.next_action,
+  };
 }
 
 function parseFields(rawBody) {

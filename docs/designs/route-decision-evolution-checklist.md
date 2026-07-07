@@ -301,9 +301,10 @@ Required evidence:
 
 ### 7. Roadmap-Sliced Activation Resume / Failure Recovery
 
-Status: candidate
+Status: implemented
 Type: version hardening for an existing activation route
-Recommended next action: run after CI Sweeper hardening
+Recommended next action: dogfood on repeated slash commands against consumed
+activation requests and use replay as the regression boundary
 
 Proposed chain:
 
@@ -317,19 +318,23 @@ Why seventh:
 - The next value is not a new route; it is better failure/resume evidence so
   agents know when to resume versus create a new activation request.
 
-Recommended hardening:
+Implemented hardening:
 
 - Add explicit replay for failed activation followed by a new request.
 - Add explicit replay for resume of consumed request without a new activation.
 - Add audit evidence for duplicate commands after consumed state.
 - Keep command shape parameterless in this phase.
+- Keep suitable behavior deterministic in scripts/functions rather than runtime
+  agent judgment.
 
 Required evidence:
 
-- Tests in activation contract and dispatcher.
+- Tests in activation contract and dispatcher: implemented.
 - Durable docs clarifying that failed requests are terminal, while consumed
   requests may be resumed by Roadmap-Sliced Development without a new
-  activation.
+  activation: implemented.
+- Replay coverage for pending duplicate, consumed resume, malformed consumed
+  blocked resume, failed retry, and ambiguous blocked state: implemented.
 
 ### 8. Route Decision Contract Normalization
 
