@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 ```
 
@@ -100,6 +100,14 @@ Current dogfood status:
   create PRs, tag, release, publish packages, dispatch workflows, or start
   consumer work. Breaking/security/oversized windows require human review before
   drafting.
+- `changelog-drafter-draft-request` is implemented as a report-only follow-up
+  route:
+  `Release Window Evidence -> Route Decision -> Changelog Draft Request Evidence -> Changelog Drafter`.
+  It requires existing `changelog-drafter-report` evidence, dedupes with
+  `draft-request:<report.dedupe_key>`, and records candidate evidence only. It
+  does not introduce a general `draft-request` request kind, generate
+  `RELEASE_NOTES_DRAFT.md`, edit changelogs, create changelog PRs, dispatch
+  workflows, tag, release, publish packages, or start consumer work.
 - `pr-steward-fix-request` is enabled as a bounded Issue Fix Request route for
   failed GitHub status/check rollups on non-draft PRs targeting `main`.
   Local replay creates or dedupes an independent request issue only; it does

@@ -158,9 +158,10 @@ Required evidence:
 
 ### 4. Changelog Drafter Draft Request
 
-Status: candidate
+Status: implemented
 Type: version upgrade for an existing route
-Recommended next action: implement after claim-only Fix Consumer upgrades
+Recommended next action: use as reference for report-only follow-up routes that
+separate request candidate evidence from consumer execution
 
 Proposed chain:
 
@@ -179,8 +180,8 @@ Why fourth:
 Recommended first upgrade:
 
 - New route id: `changelog-drafter-draft-request`.
-- Recommended request kind: keep `report-only` until a fixed `draft-request`
-  contract exists, or explicitly introduce a new request kind with tests.
+- Request kind remains `report-only`; this slice does not introduce a general
+  `draft-request` lifecycle.
 - Consumer: `changelog-drafter`.
 - Evidence store: `zj-loop/changelog-drafter-state.md`.
 - Input must reference an existing `changelog-drafter-report` decision.
@@ -191,8 +192,8 @@ Recommended first upgrade:
 
 Required evidence:
 
-- Contract decision on whether `draft-request` is a new request kind or a
-  report-only follow-up recommendation.
+- Contract decision that `draft-request` is not a new request kind in this
+  slice; `changelog-drafter-draft-request` is a report-only follow-up route.
 - Replay for normal draft candidate, human-gated candidate, duplicate window,
   and denied publish-adjacent signal.
 

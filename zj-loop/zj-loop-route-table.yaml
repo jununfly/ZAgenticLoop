@@ -214,6 +214,29 @@ routes:
     failure_owner: "changelog-drafter"
     human_gate: "breaking change, security note, major version, or scan window above 50 items"
 
+  - route_id: "changelog-drafter-draft-request"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "changelog-drafter"
+    evidence_store: "zj-loop/changelog-drafter-state.md"
+    match:
+      source: ["changelog-drafter-report"]
+      action: ["draft_request_candidate"]
+    guards:
+      side_effects_allowed: false
+      requires_existing_changelog_report: true
+      draft_consumer_start_allowed: false
+      release_notes_draft_allowed: false
+      changelog_edit_allowed: false
+      changelog_pr_allowed: false
+      tag_allowed: false
+      release_allowed: false
+      package_publish_allowed: false
+      workflow_dispatch_allowed: false
+    dedupe_window: "draft-request:changelog:repo:base_branch:since_ref:until_ref"
+    failure_owner: "changelog-drafter"
+    human_gate: "breaking change, security note, major version, or scan window above 50 items before draft request"
+
   - route_id: "roadmap-sliced-development"
     enabled: true
     request_kind: "activation-comment"
