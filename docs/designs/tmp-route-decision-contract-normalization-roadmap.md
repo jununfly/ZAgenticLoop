@@ -69,7 +69,7 @@ Notes:
 
 ## Parent Node 2: Narrow Call-Site Migration
 
-Status: pending
+Status: in-progress
 
 Completion condition:
 
@@ -79,7 +79,7 @@ Completion condition:
 
 ### Leaf 2.1: Migrate Report-Only Dispatcher
 
-Status: pending
+Status: completed
 
 Intent:
 
@@ -89,7 +89,8 @@ Intent:
 
 Verification evidence:
 
-- Pending.
+- `node --test scripts/report-only-route-dispatcher.test.mjs` passed.
+- `node --test scripts/route-decision-contract.test.mjs` passed.
 
 Notes:
 

@@ -1,10 +1,16 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 import { ROUTE_DECISION_SCHEMA } from './issue-fix-request-contract.mjs';
 import { findRoute } from './route-ci-failure.mjs';
+import {
+  buildReportEvidenceBase,
+  buildSideEffects,
+  normalizeEvidence,
+  routeMatchesSignal,
+  stableHash,
+} from './route-decision-contract.mjs';
 
 const DEFAULT_ROUTE_TABLE = 'zj-loop/zj-loop-route-table.yaml';
 const REPORT_EVIDENCE_SCHEMA = 'zj-loop.report_evidence.v1';
@@ -76,32 +82,20 @@ export function buildReportOnlyRouteDecision({ route, routeId, signal, createdAt
 }
 
 function buildReportEvidence({ route, signal, routeDecision, createdAt }) {
-  return {
+  return buildReportEvidenceBase({
     schema: REPORT_EVIDENCE_SCHEMA,
     status: reportStatusFor(routeDecision.route_id),
-    created_at: createdAt,
-    route_decision: routeDecision,
-    evidence_store: route?.evidence_store ?? 'zj-loop/STATE.md',
+    createdAt,
+    routeDecision,
+    evidenceStore: route?.evidence_store ?? 'zj-loop/STATE.md',
     summary: signal?.summary ?? signal?.subject ?? '',
-    next_action: nextActionFor(routeDecision),
-    side_effects: {
-      issue_fix_request_created: false,
-      activation_request_created: false,
-      workflow_dispatched: false,
-      consumer_work_started: false,
-    },
-  };
-}
-
-function routeMatchesSignal(route, signal) {
-  if (!route) return false;
-  const match = route.match ?? {};
-  const entries = Object.entries(match);
-  if (entries.length === 0) return true;
-
-  return entries.every(([key, allowedValues]) => {
-    if (!Array.isArray(allowedValues) || allowedValues.length === 0) return true;
-    return allowedValues.includes(signal?.[key]);
+    nextAction: nextActionFor(routeDecision),
+    sideEffects: buildSideEffects([
+      'issue_fix_request_created',
+      'activation_request_created',
+      'workflow_dispatched',
+      'consumer_work_started',
+    ]),
   });
 }
 
@@ -133,16 +127,6 @@ function nextActionFor(routeDecision) {
 
 function buildDedupeKey({ routeId, signalId, subject }) {
   return [routeId ?? 'unknown-route', signalId ?? 'unknown-signal', subject ?? 'unknown-subject'].join(':');
-}
-
-function normalizeEvidence(evidence) {
-  if (Array.isArray(evidence)) return evidence;
-  if (evidence) return [evidence];
-  return [];
-}
-
-function stableHash(value) {
-  return createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
 }
 
 async function main() {
