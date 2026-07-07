@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs
 ```
 
@@ -81,6 +81,17 @@ Current dogfood status:
   Local replay writes JSON only and records `zj-loop/pr-steward-state.md` as
   the evidence target; no PR comments, labels, rebases, merges, Issue Fix
   Requests, workflow dispatches, or consumer work are created.
+- `issue-triage-report` is implemented as an issue/discussion backlog
+  report-only route:
+  `Issue Backlog Signal -> Route Decision -> Issue Triage Report Evidence`.
+  Local replay writes JSON only and records `zj-loop/issue-triage-state.md` as
+  the evidence target; allowed observations are fixed to
+  `missing-info-observation`, `possible-duplicate-observation`,
+  `label-suggestion-observation`, `human-attention-candidate`, and
+  `issue-backlog-summary`. It does not write public comments, mutate labels,
+  assign issues, change milestones, close/reopen issues, perform formal
+  lifecycle transitions, batch-mutate the issue tracker, create Issue Fix
+  Requests, or start consumer work.
 - `changelog-drafter-report` is implemented as a release-prep report-only
   route:
   `Merged PR Batch / Manual Release Prep -> Route Decision -> Changelog Draft Evidence`.

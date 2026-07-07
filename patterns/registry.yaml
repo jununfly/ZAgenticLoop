@@ -209,14 +209,14 @@ patterns:
   - id: issue-triage
     name: Issue Triage
     file: issue-triage.md
-    goal: Discover, deduplicate, prioritize and label incoming issues/discussions so the team always has a clean actionable queue. Excellent low-risk companion to Daily Triage.
+    goal: Discover, summarize, prioritize, and record issue/discussion observations so the team always has a clean actionable queue. Excellent low-risk companion to Daily Triage.
     cadence: 2h-1d
     risk: low
     tools: [grok, claude-code, codex, github-actions]
     skills: [zj-issue-triage, zj-loop-verifier]
     state: zj-loop/issue-triage-state.md
-    phases: [discover, dedupe, score, propose-labels, human-review]
-    human_gates: [security, p0-p1, ambiguous-duplicates, stale-closures]
+    phases: [discover, observe, score, record-label-suggestions, human-review]
+    human_gates: [security, p0-p1, ambiguous-possible-duplicates, stale-closures]
     starter: starters/issue-triage
     week_one_mode: L1
     token_cost: low
@@ -235,9 +235,9 @@ patterns:
         max_spawns_l1: 0
         max_spawns_l2: 1
       first_loop_command:
-        grok: /loop 2h Run zj-issue-triage. Update zj-loop/issue-triage-state.md. Propose labels and priority only. No auto-apply. Human reviews the needs-human slice.
-        claude: /loop 2h $zj-issue-triage — update zj-loop/issue-triage-state.md. Suggest labels on allowlisted areas only. Report mode week one.
-        codex: "Automation 2h: zj-issue-triage → zj-loop/issue-triage-state.md. Propose only."
+        grok: /loop 2h Run zj-issue-triage. Update zj-loop/issue-triage-state.md. Record label-suggestion observations and priority only. No auto-apply. Human reviews the human-attention candidate slice.
+        claude: /loop 2h $zj-issue-triage — update zj-loop/issue-triage-state.md. Record label-suggestion observations on allowlisted areas only. Report mode week one.
+        codex: "Automation 2h: zj-issue-triage → zj-loop/issue-triage-state.md. Report observations only."
 
   - id: roadmap-sliced-development
     name: Roadmap-Sliced Development Pattern
