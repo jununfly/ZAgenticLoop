@@ -1,0 +1,33 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-daily-triage
+# zj-loop-template-version: 1
+# zj-loop-template-hash: 749d8589ea8e84c4
+
+name: ZJ Loop Daily Triage
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Gather recent workflow context
+        run: gh run list --limit 10 --json conclusion,name,headBranch,createdAt || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report-only route evidence
+        run: |
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch daily-triage-report --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

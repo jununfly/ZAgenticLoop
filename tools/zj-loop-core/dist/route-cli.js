@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+import { buildRouteDecision, DEFAULT_ROUTE_TABLE_PATH, expectedConfirmationPhrase, listRoutes, loadRouteTable, setRouteEnabled, } from './route.js';
+function optionValue(args, name) {
+    const index = args.indexOf(name);
+    if (index === -1)
+        return undefined;
+    return args[index + 1];
+}
+function hasFlag(args, name) {
+    return args.includes(name);
+}
+function positionalAfterCommand(args) {
+    const valueFlags = new Set(['--root', '--source', '--signal-id', '--confirm', '--reason']);
+    for (let index = 1; index < args.length; index += 1) {
+        const arg = args[index];
+        if (valueFlags.has(arg)) {
+            index += 1;
+            continue;
+        }
+        if (!arg.startsWith('-'))
+            return arg;
+    }
+    return undefined;
+}
+function help() {
+    return `zj-loop-route — inspect and update ZAgenticLoop Route Table policy
+
+Usage:
+  zj-loop-route status [consumer-or-route] [--root <dir>] [--json]
+  zj-loop-route dispatch <consumer-or-route> [--root <dir>] [--source <source>] [--signal-id <id>] [--json]
+  zj-loop-route enable <consumer-or-route> [--root <dir>] [--confirm <phrase>] [--reason <text>] [--json]
+  zj-loop-route disable <consumer-or-route> [--root <dir>] [--json]
+
+Side-effecting enable confirmation:
+  enable <consumer> side effects
+  enable <consumer> destructive side effects
+`;
+}
+async function main(argv = process.argv.slice(2)) {
+    if (argv.length === 0 || hasFlag(argv, '--help') || hasFlag(argv, '-h')) {
+        console.log(help());
+        return 0;
+    }
+    const [command] = argv;
+    const selector = positionalAfterCommand(argv);
+    const root = optionValue(argv, '--root') ?? '.';
+    const json = hasFlag(argv, '--json');
+    if (command === 'status') {
+        const table = await loadRouteTable(root, DEFAULT_ROUTE_TABLE_PATH);
+        const routes = listRoutes(table).filter((route) => !selector || route.route_id === selector || route.consumer === selector);
+        if (json) {
+            console.log(JSON.stringify({ routes }, null, 2));
+        }
+        else {
+            for (const route of routes) {
+                const confirm = route.side_effecting ? ` confirm="${expectedConfirmationPhrase(route)}"` : '';
+                console.log(`${route.enabled ? 'enabled ' : 'disabled'} ${route.route_id} consumer=${route.consumer} kind=${route.request_kind}${confirm}`);
+            }
+        }
+        return 0;
+    }
+    if (!selector)
+        throw new Error(`${command} requires a consumer or route id`);
+    if (command === 'dispatch') {
+        const table = await loadRouteTable(root, DEFAULT_ROUTE_TABLE_PATH);
+        const decision = buildRouteDecision({
+            table,
+            selector,
+            source: optionValue(argv, '--source'),
+            signalId: optionValue(argv, '--signal-id'),
+        });
+        console.log(JSON.stringify(decision, null, 2));
+        return decision.allowed ? 0 : 2;
+    }
+    if (command === 'enable' || command === 'disable') {
+        const result = await setRouteEnabled({
+            root,
+            selector,
+            enabled: command === 'enable',
+            confirm: optionValue(argv, '--confirm'),
+            reason: optionValue(argv, '--reason'),
+        });
+        if (json) {
+            console.log(JSON.stringify(result, null, 2));
+        }
+        else {
+            console.log(`${result.enabled ? 'enabled' : 'disabled'} ${result.route_id} consumer=${result.consumer}`);
+            if (result.side_effecting && result.enabled)
+                console.log('side effects enabled by explicit confirmation');
+            for (const step of result.next_steps)
+                console.log(`next step: ${step}`);
+        }
+        return 0;
+    }
+    throw new Error(`Unknown command: ${command}`);
+}
+main().then((code) => {
+    process.exitCode = code;
+}).catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+});

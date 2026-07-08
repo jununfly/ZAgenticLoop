@@ -1,0 +1,29 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-post-merge-cleanup
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Post-Merge Cleanup
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 50
+
+      - name: Post-merge cleanup route evidence
+        run: |
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch post-merge-cleanup --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

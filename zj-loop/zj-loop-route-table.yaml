@@ -63,6 +63,20 @@ routes:
     failure_owner: "daily-triage"
     human_gate: "on ambiguity or high risk"
 
+  - route_id: "manual-smoke-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "manual-smoke"
+    evidence_store: "GitHub Actions workflow summary"
+    match:
+      source: ["workflow-dispatch"]
+      route: ["manual-smoke-report"]
+    guards:
+      side_effects_allowed: false
+    dedupe_window: "workflow_run"
+    failure_owner: "maintainer"
+    human_gate: "none"
+
   - route_id: "issue-triage-report"
     enabled: true
     request_kind: "report-only"

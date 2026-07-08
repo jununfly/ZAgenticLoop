@@ -1,0 +1,30 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-ci-sweeper
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop CI Sweeper
+
+on:
+  workflow_run:
+    workflows: ['*']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+
+jobs:
+  sweep:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: CI sweeper route evidence
+        run: |
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch ci-sweeper --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

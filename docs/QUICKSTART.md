@@ -44,6 +44,17 @@ Swap `--tool grok` for `claude` or `codex` if needed. Swap `--pattern` for any p
 
 `zj-loop/zj-loop-route-table.yaml` is the routing control plane. It records which loop signals should stay human-readable, be ignored, remain report-only, or later dispatch to another pattern. It is policy, not a runtime queue.
 
+Optional GitHub Actions bundle:
+
+```bash
+npx @jununfly/zj-loop-init . --add github-actions
+```
+
+This adds generated `zj-loop-*.yml` workflows. Start with the manual `ZJ Loop
+Smoke` workflow; it produces Route Decision evidence and runs audit without
+creating issues, PRs, branches, or comments. Side-effecting consumers stay under
+Route Table control.
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash
@@ -96,9 +107,47 @@ No `zj-loop-init --tool openclaw` yet — copy `skills/zj-loop-triage/SKILL.md` 
 
 No `zj-loop-init --tool cursor` yet — copy skills and state from any starter, then map scheduling to editor Automations or Workflows. See the [Cursor & Windsurf appendix](./primitives-matrix.md#appendix-editor-transfer-recipes-cursor-windsurf) in the primitives matrix.
 
-### GitHub Actions only
+### GitHub Actions
 
-Workflow examples under [examples/github-actions/](../examples/github-actions/) are schema-complete; you wire the agent invocation (Codex API, `repository_dispatch`, etc.). Start with report-only outputs to a state file or issue comment.
+Install the workflow-dispatch bundle:
+
+```bash
+npx @jununfly/zj-loop-init . --add github-actions
+```
+
+Run `ZJ Loop Smoke` manually from GitHub Actions first. It should write the
+Route Decision payload to the workflow summary and run:
+
+```bash
+npx @jununfly/zj-loop-audit . --suggest
+```
+
+Then inspect Route Table status before enabling any consumer route:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
+```
+
+Enable side-effecting routes with a fixed confirmation phrase:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+```
+
+Disable is intentionally low friction:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
+```
+
+Upgrade generated workflows intentionally when package pins or templates change:
+
+```bash
+npx @jununfly/zj-loop-init . --upgrade github-actions
+```
+
+If a generated workflow was edited locally, upgrade writes the new canonical
+workflow and keeps the old one as `.bak` for review.
 
 ## 6. Read the output, commit state (1 minute)
 
@@ -127,6 +176,9 @@ npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d
 
 # Audit + suggestions
 npx @jununfly/zj-loop-audit . --suggest
+
+# Optional GitHub Actions bundle
+npx @jununfly/zj-loop-init . --add github-actions
 
 # Optional badge for your README
 npx @jununfly/zj-loop-audit . --badge

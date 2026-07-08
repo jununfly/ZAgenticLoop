@@ -15,6 +15,7 @@ It gives you a method, production patterns, starter kits, and small CLIs for mov
 | Map loops across tools | [Primitives matrix](docs/primitives-matrix.md) |
 | Check whether a repo is loop-ready | `npx @jununfly/zj-loop-audit . --suggest` |
 | Scaffold loop state and skills | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok` |
+| Add GitHub Actions smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Integrate loop knowledge through MCP | [zj-loop-mcp-server](tools/zj-loop-mcp-server/) |
@@ -51,6 +52,9 @@ npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d
 
 # Audit loop readiness and get concrete next steps
 npx @jununfly/zj-loop-audit . --suggest
+
+# Optional: install the workflow-dispatch bundle
+npx @jununfly/zj-loop-init . --add github-actions
 
 # Optional: audit run-until-done goal readiness
 npx @jununfly/zj-goal-audit . --suggest
@@ -98,6 +102,42 @@ npx @jununfly/zj-loop-audit . --suggest
 4. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold and first state update.
 
 Phased rollout: **L1 report -> L2 assisted fixes -> L3 unattended**. Do not skip the human-read step just because the loop is automated.
+
+## GitHub Actions Bundle
+
+Install the generated workflow-dispatch bundle when you want a repo-local smoke
+path and Route Table-controlled consumer workflows:
+
+```bash
+npx @jununfly/zj-loop-init . --add github-actions
+```
+
+This creates `zj-loop-*.yml` workflows with pinned package versions and
+generated metadata. Only `manual-smoke-report` is intended to run safely by
+default; side-effecting consumers still need explicit Route Table enablement:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
+```
+
+Run the `ZJ Loop Smoke` workflow manually first, then audit:
+
+```bash
+npx @jununfly/zj-loop-audit . --suggest
+```
+
+Upgrade generated workflows intentionally:
+
+```bash
+npx @jununfly/zj-loop-init . --upgrade github-actions
+```
+
+If a generated workflow was edited locally, upgrade renames the old file with a
+`.bak` suffix and writes the new canonical file in place. Review both files
+before committing; deep project-specific workflow migration remains a maintainer
+decision.
 
 ## From Plan Intake To Roadmap
 

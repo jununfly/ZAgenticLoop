@@ -1,0 +1,27 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-pr-steward
+# zj-loop-template-version: 1
+# zj-loop-template-hash: 4080703ae3af5d02
+
+name: ZJ Loop PR Steward
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  steward:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: PR steward route evidence
+        run: |
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch pr-steward --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

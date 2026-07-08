@@ -1,0 +1,29 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-changelog-drafter
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Changelog Drafter
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Changelog drafter route evidence
+        run: |
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch changelog-drafter --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

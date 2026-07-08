@@ -5,6 +5,9 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "zj-loop-route": "./dist/route-cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -17,7 +20,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/semantic.test.mjs test/cli.test.mjs",
+    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/semantic.test.mjs test/cli.test.mjs test/route.test.mjs",
     "prepublishOnly": "npm test"
   },
   "engines": {

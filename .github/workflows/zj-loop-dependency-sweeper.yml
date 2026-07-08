@@ -1,0 +1,27 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
+# zj-loop-template-version: 1
+# zj-loop-template-hash: 195d4d805168b015
+
+name: ZJ Loop Dependency Sweeper
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Dependency sweeper route evidence
+        run: |
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
