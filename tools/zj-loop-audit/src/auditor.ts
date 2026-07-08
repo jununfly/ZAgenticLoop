@@ -1,5 +1,7 @@
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
+import { parse as parseYaml } from 'yaml';
 import {
   collectProjectEvidenceFacts,
   createNodeProjectFileSystem,
@@ -63,6 +65,7 @@ export interface AuditResult {
 const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 const BUDGET_HINTS = [/budget/i, /max tokens/i, /token cap/i, /kill switch/i, /loop-pause-all/i];
 const ROUTE_TABLE_FILES = ['zj-loop/zj-loop-route-table.yaml'] as const;
+const GENERATED_WORKFLOW_PATTERN = /^zj-loop-.+\.yml$/;
 
 async function readFirstProjectText(
   fs: ProjectFileSystem,
@@ -164,6 +167,151 @@ async function detectLoopActivity(
   } catch {}
 
   return { present: evidence.length > 0, evidence: Array.from(new Set(evidence)).slice(0, 4) };
+}
+
+async function auditGeneratedWorkflowBundle(fs: ProjectFileSystem): Promise<Finding[]> {
+  const findings: Finding[] = [];
+  let workflowEntries: Awaited<ReturnType<ProjectFileSystem['listEntries']>>;
+  try {
+    workflowEntries = await fs.listEntries('.github/workflows');
+  } catch {
+    return findings;
+  }
+
+  const generatedWorkflowNames = workflowEntries
+    .filter((entry) => entry.kind === 'file' && GENERATED_WORKFLOW_PATTERN.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  if (!generatedWorkflowNames.length) return findings;
+
+  const routeTableFinding = await auditWorkflowBundleRouteTable(fs);
+  if (routeTableFinding) findings.push(routeTableFinding);
+
+  for (const name of generatedWorkflowNames) {
+    const workflowPath = `.github/workflows/${name}`;
+    const content = await fs.readTextIfExists(workflowPath);
+    if (!content) continue;
+    const hash = extractWorkflowTemplateHash(content);
+    const computed = workflowTemplateHash(content);
+    const hasGeneratedMarker = /^# zj-loop-generated: true$/m.test(content);
+    const hasTemplateId = /^# zj-loop-template-id: github-actions\/.+$/m.test(content);
+    const hasTemplateVersion = /^# zj-loop-template-version: \d+$/m.test(content);
+    const hasPinnedCore = /@jununfly\/zj-loop-core@\d+\.\d+\.\d+/.test(content);
+    const hasFloatingCore = /@jununfly\/zj-loop-core@(latest|\^|~)/.test(content);
+    if (!hasGeneratedMarker || !hasTemplateId || !hasTemplateVersion || !hash || hash !== computed) {
+      findings.push({
+        level: 'fail',
+        category: 'blocker',
+        message: `${workflowPath} has missing or invalid zj-loop generated metadata`,
+        affectsScore: false,
+        nextSteps: [
+          {
+            kind: 'command',
+            label: 'Redeploy or upgrade the GitHub Actions bundle',
+            command: 'npx @jununfly/zj-loop-init . --upgrade github-actions',
+          },
+        ],
+      });
+      continue;
+    }
+    if (hasFloatingCore || !hasPinnedCore) {
+      findings.push({
+        level: 'fail',
+        category: 'blocker',
+        message: `${workflowPath} must pin @jununfly/zj-loop-core version`,
+        affectsScore: false,
+        nextSteps: [
+          {
+            kind: 'command',
+            label: 'Redeploy pinned generated workflows',
+            command: 'npx @jununfly/zj-loop-init . --upgrade github-actions',
+          },
+        ],
+      });
+    }
+  }
+
+  if (!findings.length) {
+    findings.push({
+      level: 'ok',
+      category: 'pass',
+      message: `Generated GitHub Actions workflow bundle metadata valid (${generatedWorkflowNames.length} workflows)`,
+      affectsScore: false,
+      nextSteps: [],
+    });
+  }
+
+  return findings;
+}
+
+async function auditWorkflowBundleRouteTable(fs: ProjectFileSystem): Promise<Finding | null> {
+  const routeTable = await fs.readTextIfExists('zj-loop/zj-loop-route-table.yaml');
+  if (!routeTable) {
+    return {
+      level: 'fail',
+      category: 'blocker',
+      message: 'Generated GitHub Actions workflow bundle requires zj-loop/zj-loop-route-table.yaml',
+      affectsScore: false,
+      nextSteps: [
+        {
+          kind: 'command',
+          label: 'Install the Route Table used by generated workflows',
+          command: 'npx @jununfly/zj-loop-init . --add route-table',
+        },
+      ],
+    };
+  }
+
+  try {
+    const parsed = parseYaml(routeTable) as {
+      kind?: string;
+      routes?: Array<{ route_id?: string; enabled?: boolean; request_kind?: string }>;
+      disabled_dispatch_routes?: Array<{ route_id?: string; enabled?: boolean; request_kind?: string }>;
+    } | null;
+    if (!parsed || parsed.kind !== 'zj-loop-route-table') throw new Error('invalid route table');
+    const routes = [...(parsed.routes ?? []), ...(parsed.disabled_dispatch_routes ?? [])];
+    const smoke = routes.find((route) => route.route_id === 'manual-smoke-report');
+    if (!smoke || smoke.enabled !== true || (smoke.request_kind ?? 'report-only') !== 'report-only') {
+      return {
+        level: 'fail',
+        category: 'blocker',
+        message: 'Generated GitHub Actions workflow bundle requires enabled report-only manual-smoke-report route',
+        affectsScore: false,
+        nextSteps: [
+          {
+            kind: 'command',
+            label: 'Enable the manual smoke route',
+            command: 'npx --yes --package @jununfly/zj-loop-core zj-loop-route enable manual-smoke-report',
+          },
+        ],
+      };
+    }
+  } catch {
+    return {
+      level: 'fail',
+      category: 'blocker',
+      message: 'zj-loop/zj-loop-route-table.yaml is not a valid zj-loop Route Table',
+      affectsScore: false,
+      nextSteps: [
+        {
+          kind: 'command',
+          label: 'Regenerate the Route Table',
+          command: 'npx @jununfly/zj-loop-init . --add route-table --force',
+        },
+      ],
+    };
+  }
+
+  return null;
+}
+
+function workflowTemplateHash(text: string): string {
+  const canonical = text.replace(/^# zj-loop-template-hash: .+$/m, '# zj-loop-template-hash: <computed>');
+  return createHash('sha256').update(canonical).digest('hex').slice(0, 16);
+}
+
+function extractWorkflowTemplateHash(text: string): string | null {
+  return text.match(/^# zj-loop-template-hash: (?<hash>[a-f0-9]{16})$/m)?.groups?.hash ?? null;
 }
 
 export function computeScore(signals: LoopSignals): { score: number; level: 'L0' | 'L1' | 'L2' | 'L3'; assessment: string } {
@@ -270,6 +418,7 @@ export async function auditProject(target: string): Promise<AuditResult> {
 
   const { score, level, assessment } = computeScore(signals);
   const { findings, recommendations } = evaluateReadinessGuidance(signals, score);
+  const workflowBundleFindings = await auditGeneratedWorkflowBundle(fs);
 
   return {
     target: root,
@@ -277,7 +426,7 @@ export async function auditProject(target: string): Promise<AuditResult> {
     level,
     assessment,
     signals,
-    findings,
+    findings: [...workflowBundleFindings, ...findings],
     recommendations,
   };
 }

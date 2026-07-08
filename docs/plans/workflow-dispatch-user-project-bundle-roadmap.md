@@ -124,24 +124,43 @@ Notes:
 
 ### 4. Upgrade And Audit
 
-Status: active
+Status: completed
 
 Completion condition: installed workflow bundles can be audited and upgraded
 without floating to latest or silently overwriting user-modified files.
 
 Leaf nodes:
 
-- [ ] 4.1 Add `zj-loop-init --upgrade github-actions`.
-- [ ] 4.2 Add `.bak` backup behavior for modified generated workflows before
+- [x] 4.1 Add `zj-loop-init --upgrade github-actions`.
+- [x] 4.2 Add `.bak` backup behavior for modified generated workflows before
       writing upgraded canonical files.
-- [ ] 4.3 Add lightweight metadata/hash validation.
-- [ ] 4.4 Add `zj-loop-audit` checks for bundle presence, route defaults,
+- [x] 4.3 Add lightweight metadata/hash validation.
+- [x] 4.4 Add `zj-loop-audit` checks for bundle presence, route defaults,
       side-effect guards, pinned versions, and invalid/missing metadata as
       workflow health failures.
 
+Verification evidence:
+
+- `npm test` in `tools/zj-loop-audit`
+- `npm test` in `tools/zj-loop-init`
+- `npm test` in `tools/zj-loop-core`
+- `npm run check:zj-loop-init`
+- `node dist/cli.js ../..` in `tools/zj-loop-audit`
+- `bash scripts/before-after-demo.sh`
+- `git diff --check`
+
+Notes:
+
+- `--upgrade github-actions` writes canonical generated workflows and backs up
+  modified generated workflows to `.bak` before replacement.
+- Generated workflow metadata now includes a stable template hash.
+- `zj-loop-audit` treats invalid generated workflow metadata, missing Route
+  Table for generated workflows, disabled manual smoke route, and unpinned core
+  package references as workflow health failures.
+
 ### 5. Documentation And Dogfood
 
-Status: candidate
+Status: active
 
 Completion condition: user-facing docs explain the command path and this repo
 proves the bundle with workflow evidence.

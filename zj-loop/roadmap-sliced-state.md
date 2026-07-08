@@ -16,9 +16,9 @@ Roadmap view:
 
 Current status: `in-progress`
 
-Current focus: `4. Upgrade And Audit`
+Current focus: `5. Documentation And Dogfood`
 
-Next action: start leaf `4.1 Add zj-loop-init --upgrade github-actions`.
+Next action: start leaf `5.1 Update README and QUICKSTART with install, smoke, enable, verify, disable/rollback, and upgrade commands`.
 
 Last updated: 2026-07-08
 
@@ -37,6 +37,14 @@ Last updated: 2026-07-08
 - Slice 2 verification:
   - `npm test` in `tools/zj-loop-core`
   - `npm test` in `tools/zj-loop-init`
+- Slice 4 verification:
+  - `npm test` in `tools/zj-loop-audit`
+  - `npm test` in `tools/zj-loop-init`
+  - `npm test` in `tools/zj-loop-core`
+  - `npm run check:zj-loop-init`
+  - `node dist/cli.js ../..` in `tools/zj-loop-audit`
+  - `bash scripts/before-after-demo.sh`
+  - `git diff --check`
 
 ## Completion Condition
 

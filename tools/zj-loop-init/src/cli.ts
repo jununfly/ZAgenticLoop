@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { cp, mkdir, readFile, writeFile, access } from 'node:fs/promises';
+import { cp, mkdir, readFile, writeFile, access, rename } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadPatternRegistry, runCli, type CliHandlerContext, type CliIo, type CliSpec, type RegistryPattern } from '@jununfly/zj-loop-core';
@@ -229,7 +230,7 @@ async function copyGitHubActionsBundle(
   }
 
   for (const file of GITHUB_ACTIONS_WORKFLOW_TEMPLATES) {
-    await copyIncrementalArtifact(
+    await copyRenderedWorkflowTemplate(
       path.join(srcDir, file),
       path.join(targetDir, '.github', 'workflows', file),
       dryRun,
@@ -238,6 +239,126 @@ async function copyGitHubActionsBundle(
       `review .github/workflows/${file} or rerun with --force to overwrite intentionally`,
     );
   }
+}
+
+async function copyRenderedWorkflowTemplate(
+  src: string,
+  dest: string,
+  dryRun: boolean,
+  force: boolean,
+  io: CliIo,
+  nextStep: string,
+) {
+  if (!(await exists(src))) {
+    io.stderr(`  missing template: ${src}`);
+    return false;
+  }
+
+  if ((await exists(dest)) && !force) {
+    io.stdout(`  skipped: ${dest} already exists`);
+    io.stdout(`  next step: ${nextStep}`);
+    return true;
+  }
+
+  const body = renderWorkflowTemplate(await readFile(src, 'utf8'));
+  if (dryRun) {
+    const verb = force ? 'would overwrite' : 'would copy';
+    io.stdout(`  ${verb}: ${src} → ${dest}`);
+    if (force) io.stdout('  WARNING: --force would overwrite the existing file; review the result before committing.');
+    return true;
+  }
+
+  await mkdir(path.dirname(dest), { recursive: true });
+  await writeFile(dest, body);
+  if (force) {
+    io.stdout(`  OVERWRITTEN with --force: ${dest}`);
+    io.stdout('  WARNING: review this generated workflow before committing.');
+  } else {
+    io.stdout(`  created: ${dest}`);
+  }
+  return true;
+}
+
+async function upgradeGitHubActionsBundle(
+  targetDir: string,
+  templatesRoot: string,
+  dryRun: boolean,
+  io: CliIo,
+) {
+  const srcDir = path.join(templatesRoot, 'github-actions');
+  io.stdout(`\nzj-loop-init --upgrade github-actions → ${targetDir}${dryRun ? ' [dry-run]' : ''}\n`);
+  for (const file of GITHUB_ACTIONS_WORKFLOW_TEMPLATES) {
+    const src = path.join(srcDir, file);
+    const dest = path.join(targetDir, '.github', 'workflows', file);
+    if (!(await exists(src))) {
+      io.stderr(`  missing template: ${src}`);
+      continue;
+    }
+    const nextBody = renderWorkflowTemplate(await readFile(src, 'utf8'));
+    const nextHash = extractWorkflowTemplateHash(nextBody);
+    if (!(await exists(dest))) {
+      if (dryRun) {
+        io.stdout(`  would create: ${dest}`);
+      } else {
+        await mkdir(path.dirname(dest), { recursive: true });
+        await writeFile(dest, nextBody);
+        io.stdout(`  created: ${dest}`);
+      }
+      continue;
+    }
+
+    const currentBody = await readFile(dest, 'utf8');
+    const currentHash = extractWorkflowTemplateHash(currentBody);
+    const currentContentHash = workflowTemplateHash(currentBody);
+    const cleanGenerated = currentHash === nextHash && currentContentHash === currentHash;
+    if (!cleanGenerated) {
+      const backupPath = await nextBackupPath(dest);
+      if (dryRun) {
+        io.stdout(`  would backup modified workflow: ${dest} → ${backupPath}`);
+        io.stdout(`  would write upgraded workflow: ${dest}`);
+        continue;
+      }
+      await rename(dest, backupPath);
+      io.stdout(`  backed up modified workflow: ${dest} → ${backupPath}`);
+    }
+
+    if (dryRun) {
+      io.stdout(`  would write upgraded workflow: ${dest}`);
+    } else {
+      await writeFile(dest, nextBody);
+      io.stdout(`  upgraded: ${dest}`);
+    }
+  }
+
+  io.stdout(`\n=== Next steps ===
+  Review .github/workflows/*.bak files if any were created.
+  npx @jununfly/zj-loop-audit ${targetDir} --suggest
+`);
+  return 0;
+}
+
+function renderWorkflowTemplate(template: string): string {
+  const hash = workflowTemplateHash(template);
+  return template.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${hash}`);
+}
+
+function workflowTemplateHash(text: string): string {
+  const canonical = text.replace(/^# zj-loop-template-hash: .+$/m, '# zj-loop-template-hash: <computed>');
+  return createHash('sha256').update(canonical).digest('hex').slice(0, 16);
+}
+
+function extractWorkflowTemplateHash(text: string): string | null {
+  return text.match(/^# zj-loop-template-hash: (?<hash>[a-f0-9]{16})$/m)?.groups?.hash ?? null;
+}
+
+async function nextBackupPath(dest: string): Promise<string> {
+  let candidate = `${dest}.bak`;
+  let index = 1;
+  while (await exists(candidate)) {
+    candidate = `${dest}.bak.${index}`;
+    index += 1;
+  }
+  return candidate;
 }
 
 async function copyTemplateSkill(
@@ -476,6 +597,16 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
   const registry = await loadRegistry();
   const patterns = registry.patterns.map(requireInitPattern);
 
+  if (options.upgrade !== undefined && options.upgrade !== false) {
+    const upgradeTarget = String(options.upgrade);
+    if (upgradeTarget !== 'github-actions') {
+      io.stderr('Unknown --upgrade target: ' + upgradeTarget + '. Valid: github-actions');
+      return 1;
+    }
+    const templatesRoot = await resolveBundledOrMonorepo('templates');
+    return upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, io);
+  }
+
   if (addArtifacts.length > 0) {
     const templatesRoot = await resolveBundledOrMonorepo('templates');
     return handleAddArtifacts(addArtifacts, targetDir, templatesRoot, patterns, dryRun, force, io);
@@ -617,6 +748,7 @@ async function helpText() {
 Usage:
   zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
   zj-loop-init [target-dir] --add <safety|pattern-registry|route-table|github-actions>[,...] [--force]
+  zj-loop-init [target-dir] --upgrade github-actions
 
 Patterns:
 ${patternList}
@@ -625,6 +757,7 @@ Options:
   -p, --pattern   Pattern to scaffold
   -t, --tool      Tool target (default: grok)
   --add           Add explicit optional artifacts: safety, pattern-registry, route-table, github-actions
+  --upgrade       Upgrade generated artifacts: github-actions
   --force         Overwrite existing --add targets instead of skipping
   --dry-run       Print actions without copying
   -h, --help      This help
@@ -632,6 +765,7 @@ Options:
 Examples:
   npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
   npx @jununfly/zj-loop-init . --add safety,pattern-registry,route-table,github-actions
+  npx @jununfly/zj-loop-init . --upgrade github-actions
   npx @jununfly/zj-loop-init . -p pr-steward -t claude
 `;
 }
@@ -645,6 +779,7 @@ const SPEC: CliSpec = {
     { name: 'pattern', alias: '-p', type: 'string', description: 'Pattern to scaffold', default: 'daily-triage' },
     { name: 'tool', alias: '-t', type: 'string', description: 'Tool target', default: 'grok' },
     { name: 'add', type: 'string', description: 'Add explicit optional artifacts' },
+    { name: 'upgrade', type: 'string', description: 'Upgrade generated artifacts' },
     { name: 'force', type: 'boolean', description: 'Overwrite existing --add targets' },
     { name: 'dryRun', flag: 'dry-run', type: 'boolean', description: 'Print actions without copying' },
   ],

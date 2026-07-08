@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -10,6 +11,27 @@ import { evaluateReadinessGuidance, evaluateReadinessPolicy, parseReadinessPolic
 import { formatBadge, formatHuman, formatMarkdown } from '../dist/reporter.js';
 
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
+
+function renderWorkflowTemplate(text) {
+  const canonical = text.replace(/^# zj-loop-template-hash: .+$/m, '# zj-loop-template-hash: <computed>');
+  const hash = createHash('sha256').update(canonical).digest('hex').slice(0, 16);
+  return text.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${hash}`);
+}
+
+async function writeMinimalRouteTable(dir) {
+  await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+  await writeFile(
+    path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'),
+    `schemaVersion: 1
+kind: zj-loop-route-table
+routes:
+  - route_id: manual-smoke-report
+    enabled: true
+    request_kind: report-only
+    consumer: manual-smoke
+`,
+  );
+}
 
 function emptySignals() {
   return {
@@ -60,6 +82,95 @@ test('computeScore: empty project is L0', () => {
   const { score, level } = computeScore(emptySignals());
   assert.equal(level, 'L0');
   assert.ok(score < 38);
+});
+
+test('auditProject validates generated GitHub Actions workflow metadata', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-workflow-valid-'));
+  try {
+    await mkdir(path.join(dir, '.github', 'workflows'), { recursive: true });
+    await writeMinimalRouteTable(dir);
+    await writeFile(
+      path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'),
+      renderWorkflowTemplate(`# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-smoke
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Smoke
+
+jobs:
+  smoke:
+    steps:
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch manual-smoke-report
+`),
+    );
+
+    const result = await auditProject(dir);
+    assert.ok(result.findings.some((finding) =>
+      finding.level === 'ok' && finding.message.includes('Generated GitHub Actions workflow bundle metadata valid'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject fails generated workflow health when Route Table is missing', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-workflow-route-table-missing-'));
+  try {
+    await mkdir(path.join(dir, '.github', 'workflows'), { recursive: true });
+    await writeFile(
+      path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'),
+      renderWorkflowTemplate(`# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-smoke
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Smoke
+
+jobs:
+  smoke:
+    steps:
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch manual-smoke-report
+`),
+    );
+
+    const result = await auditProject(dir);
+    assert.ok(result.findings.some((finding) =>
+      finding.level === 'fail' && finding.message.includes('requires zj-loop/zj-loop-route-table.yaml'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject fails generated workflow health when metadata hash is invalid', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-workflow-invalid-'));
+  try {
+    await mkdir(path.join(dir, '.github', 'workflows'), { recursive: true });
+    await writeMinimalRouteTable(dir);
+    await writeFile(
+      path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'),
+      `# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-smoke
+# zj-loop-template-version: 1
+# zj-loop-template-hash: 0000000000000000
+
+name: ZJ Loop Smoke
+
+jobs:
+  smoke:
+    steps:
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch manual-smoke-report
+`,
+    );
+
+    const result = await auditProject(dir);
+    assert.ok(result.findings.some((finding) =>
+      finding.level === 'fail' && finding.message.includes('missing or invalid zj-loop generated metadata'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('computeScore: state + triage reaches L1', () => {

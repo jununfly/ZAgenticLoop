@@ -120,6 +120,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
       const body = await readFile(path.join(dir, '.github', 'workflows', workflow), 'utf8');
       assert.match(body, /zj-loop-generated: true/);
       assert.match(body, /zj-loop-template-version: 1/);
+      assert.match(body, /zj-loop-template-hash: [a-f0-9]{16}/);
     }
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
@@ -153,8 +154,45 @@ test('zj-loop-init --add github-actions skips existing workflows unless --force 
 
     const forced = await exec('node', [CLI, dir, '--add', 'github-actions', '--force']);
     assert.match(forced.stdout, /OVERWRITTEN with --force: .*zj-loop-smoke\.yml/);
-    assert.match(forced.stdout, /WARNING: --force would overwrite|WARNING: review this policy\/catalog file/);
+    assert.match(forced.stdout, /WARNING: review this generated workflow/);
     assert.notEqual(await readFile(workflowPath, 'utf8'), 'name: Custom Smoke\n');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade github-actions upgrades clean workflows', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-github-actions-'));
+  try {
+    await exec('node', [CLI, dir, '--add', 'github-actions']);
+    const workflowPath = path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml');
+    const before = await readFile(workflowPath, 'utf8');
+
+    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'github-actions']);
+    assert.match(stdout, /zj-loop-init --upgrade github-actions/);
+    assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
+    assert.equal(await readFile(workflowPath, 'utf8'), before);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade github-actions backs up modified workflows before writing canonical version', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-github-actions-bak-'));
+  try {
+    await exec('node', [CLI, dir, '--add', 'github-actions']);
+    const workflowPath = path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml');
+    await writeFile(workflowPath, `${await readFile(workflowPath, 'utf8')}\n# local edit\n`);
+
+    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'github-actions']);
+    assert.match(stdout, /backed up modified workflow: .*zj-loop-smoke\.yml → .*zj-loop-smoke\.yml\.bak/);
+    assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
+
+    const backup = await readFile(`${workflowPath}.bak`, 'utf8');
+    assert.match(backup, /# local edit/);
+    const canonical = await readFile(workflowPath, 'utf8');
+    assert.doesNotMatch(canonical, /# local edit/);
+    assert.match(canonical, /zj-loop-template-hash: [a-f0-9]{16}/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
