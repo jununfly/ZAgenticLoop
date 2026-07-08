@@ -1,0 +1,31 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-post-merge-cleanup
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Post-Merge Cleanup
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 50
+
+      - name: Post-merge cleanup route evidence
+        run: |
+          echo "consumer=post-merge-cleanup" >> "$GITHUB_STEP_SUMMARY"
+          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
+          echo "side_effects=require_destructive_route_enablement" >> "$GITHUB_STEP_SUMMARY"
+          echo "mode=report_or_guarded_closeout" >> "$GITHUB_STEP_SUMMARY"

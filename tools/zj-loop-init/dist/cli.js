@@ -9,7 +9,17 @@ const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const MONOREPO_STARTERS = path.resolve(PACKAGE_ROOT, '../../starters');
 const MONOREPO_TEMPLATES = path.resolve(PACKAGE_ROOT, '../../templates');
 const VALID_TOOLS = ['grok', 'claude', 'codex'];
-const VALID_ADD_ARTIFACTS = ['safety', 'pattern-registry', 'route-table'];
+const VALID_ADD_ARTIFACTS = ['safety', 'pattern-registry', 'route-table', 'github-actions'];
+const GITHUB_ACTIONS_WORKFLOW_TEMPLATES = [
+    'zj-loop-smoke.yml',
+    'zj-loop-daily-triage.yml',
+    'zj-loop-ci-sweeper.yml',
+    'zj-loop-pr-steward.yml',
+    'zj-loop-issue-triage.yml',
+    'zj-loop-dependency-sweeper.yml',
+    'zj-loop-changelog-drafter.yml',
+    'zj-loop-post-merge-cleanup.yml',
+];
 async function loadRegistry() {
     return loadPatternRegistry({
         candidates: [
@@ -142,12 +152,25 @@ async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns,
                 io.stdout(`  created: ${LOOP_ARTIFACTS.routeTable.primary}`);
             }
         }
+        if (artifact === 'github-actions') {
+            await copyGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
+        }
     }
     io.stdout(`\n=== Next steps ===
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
   Review any created or overwritten policy/catalog files before committing.
 `);
     return 0;
+}
+async function copyGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io) {
+    const srcDir = path.join(templatesRoot, 'github-actions');
+    if (!(await exists(srcDir))) {
+        io.stderr(`  missing template directory: ${srcDir}`);
+        return;
+    }
+    for (const file of GITHUB_ACTIONS_WORKFLOW_TEMPLATES) {
+        await copyIncrementalArtifact(path.join(srcDir, file), path.join(targetDir, '.github', 'workflows', file), dryRun, force, io, `review .github/workflows/${file} or rerun with --force to overwrite intentionally`);
+    }
 }
 async function copyTemplateSkill(templatesRoot, templateFile, targetDir, tool, skillName, dryRun, io) {
     const src = path.join(templatesRoot, templateFile);
@@ -435,7 +458,7 @@ async function helpText() {
 
 Usage:
   zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
-  zj-loop-init [target-dir] --add <safety|pattern-registry|route-table>[,...] [--force]
+  zj-loop-init [target-dir] --add <safety|pattern-registry|route-table|github-actions>[,...] [--force]
 
 Patterns:
 ${patternList}
@@ -443,14 +466,14 @@ ${patternList}
 Options:
   -p, --pattern   Pattern to scaffold
   -t, --tool      Tool target (default: grok)
-  --add           Add explicit optional artifacts: safety, pattern-registry, route-table
+  --add           Add explicit optional artifacts: safety, pattern-registry, route-table, github-actions
   --force         Overwrite existing --add targets instead of skipping
   --dry-run       Print actions without copying
   -h, --help      This help
 
 Examples:
   npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-  npx @jununfly/zj-loop-init . --add safety,pattern-registry,route-table
+  npx @jununfly/zj-loop-init . --add safety,pattern-registry,route-table,github-actions
   npx @jununfly/zj-loop-init . -p pr-steward -t claude
 `;
 }

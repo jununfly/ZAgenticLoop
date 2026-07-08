@@ -1,0 +1,31 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-issue-triage
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened, labeled]
+  schedule:
+    - cron: '0 */2 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Issue triage route evidence
+        run: |
+          echo "consumer=issue-triage" >> "$GITHUB_STEP_SUMMARY"
+          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
+          echo "side_effects=require_route_table_enablement" >> "$GITHUB_STEP_SUMMARY"
+          echo "mode=report-only-by-default" >> "$GITHUB_STEP_SUMMARY"

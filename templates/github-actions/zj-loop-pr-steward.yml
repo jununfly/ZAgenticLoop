@@ -1,0 +1,29 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-pr-steward
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop PR Steward
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  steward:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: PR steward route evidence
+        run: |
+          echo "consumer=pr-steward" >> "$GITHUB_STEP_SUMMARY"
+          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
+          echo "side_effects=require_route_table_enablement" >> "$GITHUB_STEP_SUMMARY"
+          echo "mode=report-evidence" >> "$GITHUB_STEP_SUMMARY"

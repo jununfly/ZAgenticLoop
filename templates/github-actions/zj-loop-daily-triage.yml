@@ -1,0 +1,35 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-daily-triage
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Daily Triage
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Gather recent workflow context
+        run: gh run list --limit 10 --json conclusion,name,headBranch,createdAt || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report-only route evidence
+        run: |
+          echo "producer=daily-triage" >> "$GITHUB_STEP_SUMMARY"
+          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
+          echo "side_effects=disabled_until_route_enabled" >> "$GITHUB_STEP_SUMMARY"
+          echo "next_step=wire project agent runtime or explicit dispatcher package" >> "$GITHUB_STEP_SUMMARY"

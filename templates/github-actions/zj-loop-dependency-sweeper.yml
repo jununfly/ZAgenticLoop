@@ -1,0 +1,29 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Dependency Sweeper
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Dependency sweeper route evidence
+        run: |
+          echo "consumer=dependency-sweeper" >> "$GITHUB_STEP_SUMMARY"
+          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
+          echo "side_effects=require_route_table_enablement" >> "$GITHUB_STEP_SUMMARY"
+          echo "mode=claim_or_pr_after_route_enablement" >> "$GITHUB_STEP_SUMMARY"

@@ -99,6 +99,58 @@ test('zj-loop-init --add scaffolds explicit optional artifacts', async () => {
   }
 });
 
+test('zj-loop-init --add github-actions scaffolds the workflow bundle', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-github-actions-'));
+  try {
+    const { stdout } = await exec('node', [CLI, dir, '--add', 'github-actions']);
+    assert.match(stdout, /zj-loop-init --add: github-actions/);
+
+    const workflows = [
+      'zj-loop-smoke.yml',
+      'zj-loop-daily-triage.yml',
+      'zj-loop-ci-sweeper.yml',
+      'zj-loop-pr-steward.yml',
+      'zj-loop-issue-triage.yml',
+      'zj-loop-dependency-sweeper.yml',
+      'zj-loop-changelog-drafter.yml',
+      'zj-loop-post-merge-cleanup.yml',
+    ];
+
+    for (const workflow of workflows) {
+      const body = await readFile(path.join(dir, '.github', 'workflows', workflow), 'utf8');
+      assert.match(body, /zj-loop-generated: true/);
+      assert.match(body, /zj-loop-template-version: 1/);
+    }
+
+    const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
+    assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.3/);
+    assert.match(smoke, /request_kind=report-only/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --add github-actions skips existing workflows unless --force is explicit', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-github-actions-skip-'));
+  try {
+    await mkdir(path.join(dir, '.github', 'workflows'), { recursive: true });
+    const workflowPath = path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml');
+    await writeFile(workflowPath, 'name: Custom Smoke\n');
+
+    const skipped = await exec('node', [CLI, dir, '--add', 'github-actions']);
+    assert.match(skipped.stdout, /skipped: .*zj-loop-smoke\.yml already exists/);
+    assert.match(skipped.stdout, /next step: review \.github\/workflows\/zj-loop-smoke\.yml/);
+    assert.equal(await readFile(workflowPath, 'utf8'), 'name: Custom Smoke\n');
+
+    const forced = await exec('node', [CLI, dir, '--add', 'github-actions', '--force']);
+    assert.match(forced.stdout, /OVERWRITTEN with --force: .*zj-loop-smoke\.yml/);
+    assert.match(forced.stdout, /WARNING: --force would overwrite|WARNING: review this policy\/catalog file/);
+    assert.notEqual(await readFile(workflowPath, 'utf8'), 'name: Custom Smoke\n');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init --add skips existing files unless --force is explicit', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-skip-'));
   try {

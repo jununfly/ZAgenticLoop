@@ -1,0 +1,33 @@
+# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-ci-sweeper
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop CI Sweeper
+
+on:
+  workflow_run:
+    workflows: ['*']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+
+jobs:
+  sweep:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: CI sweeper route evidence
+        run: |
+          echo "consumer=ci-sweeper" >> "$GITHUB_STEP_SUMMARY"
+          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
+          echo "side_effects=require_route_table_enablement" >> "$GITHUB_STEP_SUMMARY"
+          echo "repair_scope=bounded_validate_audit_failures" >> "$GITHUB_STEP_SUMMARY"
+          echo "next_step=enable with zj-loop-route enable ci-sweeper" >> "$GITHUB_STEP_SUMMARY"

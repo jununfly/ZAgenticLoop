@@ -53,6 +53,24 @@ maintaining starter-specific copies:
 npx @jununfly/zj-loop-init . --add route-table
 ```
 
+Install the portable GitHub Actions workflow-dispatch bundle with:
+
+```bash
+npx @jununfly/zj-loop-init . --add github-actions
+```
+
+This writes the full known workflow bundle to `.github/workflows/`. The bundle
+includes a manual smoke/report-only workflow plus allowlisted consumer workflow
+templates. Side-effecting consumers still require explicit Route Table
+enablement; generated workflow files alone do not authorize side effects.
+
+Existing generated files are skipped by default. Use `--force` only when you
+intend to overwrite an existing workflow:
+
+```bash
+npx @jununfly/zj-loop-init . --add github-actions --force
+```
+
 ## Tools
 
 - `grok` (default)
