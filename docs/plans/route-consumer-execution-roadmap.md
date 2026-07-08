@@ -320,7 +320,7 @@ Evidence:
 
 ### 2-2 Dependency Sweeper Runner
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -332,6 +332,16 @@ Verification:
 
 - E2E replay for request -> claim -> bounded repair PR or escalation.
 - Capability match tests.
+
+Evidence:
+
+- Added `zj-loop/dependency-sweeper-state.md` documenting current claim-only
+  capability and runner-missing boundary.
+- Dogfood Reference Case now points to the state file and Route Table truth.
+- `node --test scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- Decision: do not promote Dependency Sweeper to live until a verifier-backed
+  repair PR or escalation runner exists.
 
 ### 2-3 PR Steward Runner
 
@@ -434,4 +444,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-2 Dependency Sweeper Runner`.
+Continue with `2-3 PR Steward Runner`.

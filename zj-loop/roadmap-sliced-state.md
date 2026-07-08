@@ -7,12 +7,13 @@ Last run: 2026-07-08
 - Roadmap id: route-consumer-execution
 - Branch: zjal/route-consumer-execution
 - Current parent node: consumer-runner-completion
-- Current leaf: 2-2-dependency-sweeper-runner
+- Current leaf: 2-3-pr-steward-runner
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 2-2-dependency-sweeper-runner | completed | `zj-loop/dependency-sweeper-state.md`; Dogfood Reference Case; dependency route/claim replay tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 2-1-ci-sweeper-completion-evidence | completed | `zj-loop/ci-sweeper-state.md`; Dogfood Reference Case; CI Sweeper deterministic/lifecycle/e2e tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 1-7-audit-fail-upgrade-branch | completed | `tools/zj-loop-audit/src/auditor.ts`; generated bundle fail test; live readiness fail test; `npm run build`; `node --test tools/zj-loop-audit/test/auditor.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 1-6-template-and-init-defaults | completed | `templates/zj-loop-route-table.yaml.template`; `node --test test/cli.test.mjs` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `bash scripts/ci-validate-gates.sh` with network rerun | pending |
