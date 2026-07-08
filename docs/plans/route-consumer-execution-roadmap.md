@@ -400,7 +400,7 @@ Evidence:
 
 ### 2-5 Post-Merge Cleanup Consumer
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -413,6 +413,18 @@ Verification:
 
 - Post-merge closeout tests and dry-run/live guard tests.
 - Evidence includes cleanup-done, cleanup-skipped, or escalation.
+
+Evidence:
+
+- Added `zj-loop/post-merge-state.md` documenting current dry-run route,
+  replayed runner, and narrow live cleanup boundary.
+- Dogfood Reference Case now points to the Post-Merge Cleanup state file and
+  Route Table truth.
+- `node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs scripts/validate-post-merge-closeout-workflow.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- Decision: keep automatic behavior dry-run; live cleanup remains fixed-phrase
+  operator execution limited to contract carrier issue closeout and merged
+  `zjal/*` branch deletion.
 
 ### 2-6 Roadmap-Sliced Activation Consumer
 
@@ -466,4 +478,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-5 Post-Merge Cleanup Consumer`.
+Continue with `2-6 Roadmap-Sliced Activation Consumer`.
