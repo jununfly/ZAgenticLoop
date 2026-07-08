@@ -242,6 +242,11 @@ Progress:
   evidence, produces draft evidence or draft PR actions, and records that no
   tags, releases, package publishes, or final changelog acceptance happen in the
   draft consumer.
+- Issue Triage Action now has a packaged action-plan API and
+  `zj-loop-issue-triage-action action-plan` command that loads Route Table
+  state, validates allowlisted labels/fixed comment templates, escalates human
+  guarded requests, and rejects live side effects while the consumer remains
+  dry-run only.
 
 Evidence:
 
