@@ -296,7 +296,7 @@ bounded execution.
 
 ### 2-1 CI Sweeper Completion Evidence
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -308,6 +308,15 @@ Verification:
 
 - Existing CI Sweeper deterministic repair tests and validate/audit gates.
 - Recent live or replay evidence linked from Route Table/docs.
+
+Evidence:
+
+- Updated `zj-loop/ci-sweeper-state.md` with live dogfood evidence and
+  completion boundaries.
+- Updated Dogfood Reference Case to mark CI Sweeper as live dogfooded
+  `fix-runner` with `repair-pr` / `escalation-issue` outcomes.
+- `node --test scripts/ci-sweeper-deterministic-repair.test.mjs scripts/ci-sweeper-e2e-replay.test.mjs scripts/ci-sweeper-lifecycle.test.mjs scripts/route-ci-failure.test.mjs scripts/ci-sweeper-workflow-contract.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
 
 ### 2-2 Dependency Sweeper Runner
 
@@ -425,4 +434,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `1-7 Audit Fail Upgrade Branch`.
+Continue with `2-2 Dependency Sweeper Runner`.

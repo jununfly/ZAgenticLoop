@@ -37,7 +37,7 @@ are guarded live operations that require explicit operator intent.
 | Validate Patterns & Registry | `.github/workflows/validate-patterns.yml`, `scripts/ci-validate-gates.sh` | Push and PR gate | Keeps pattern docs, registry, starters, release workflows, route replays, and tool package tests aligned. |
 | Workflow-Dispatch User Bundle | `.github/workflows/zj-loop-*.yml`, `templates/github-actions/`, `zj-loop-init --add/--upgrade github-actions` | Generated bundle smoke plus Route Table-controlled consumers | Proves user-project generated workflows install cleanly, carry metadata/hash evidence, pin package versions, and run through Route Decision instead of embedding local dogfood scripts. Manual smoke is the default safe path; side-effecting consumers require explicit Route Table enablement. |
 | Daily Triage | `.github/workflows/daily-triage.yml`, `zj-loop/STATE.md`, `zj-loop/zj-loop-run-log.md` | Scheduled producer plus generated state PR | Updates operational memory, emits route candidates, and may dispatch allowlisted consumers. Its generated state PR auto-merge is a narrow exception limited to loop state/run-log files. |
-| CI Sweeper | `.github/workflows/ci-sweeper.yml`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/ci-sweeper-state.md` | Route-dispatched deterministic repair | Handles validate/audit failures only. It opens a repair PR only when deterministic repair creates non-state diffs and repair/validate/audit gates pass; otherwise it escalates. |
+| CI Sweeper | `.github/workflows/ci-sweeper.yml`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/ci-sweeper-state.md` | Live dogfooded `fix-runner` | Handles validate/audit failures only. Completion forms are `repair-pr` when deterministic repair creates non-state diffs and repair/validate/audit gates pass, or `escalation-issue` otherwise. |
 | Route Decision replay suite | `scripts/*route*replay*.mjs`, `scripts/*dispatcher*.mjs`, `scripts/*contract*.mjs` | Local deterministic protocol evidence | Proves route decisions, request creation, duplicate suppression, denials, claims, and recovery paths without requiring live GitHub side effects. |
 | Roadmap activation | `roadmap-activation-dispatcher.mjs`, `zj-loop-activation-contract.mjs`, route table `roadmap-sliced-development` row | Issue-triggered activation-comment route | Authorized slash commands create append-only activation requests only. Roadmap-Sliced Development consumes explicit issue/request ids and owns branch, roadmap, implementation, verification, and PR handoff. |
 | PR Steward routes | PR Steward report/fix-request/claim replay scripts | Report-only and Issue Fix Request protocol evidence | Report routes do not comment, label, rebase, merge, dispatch workflows, repair, or open Fix PRs. Claim evidence consumes a request but still does not perform repair. |
@@ -147,6 +147,10 @@ CI Sweeper is intentionally narrow:
 
 CI Sweeper is not a general-purpose autonomous coding agent. Broader repair
 ability requires a separate route and consumer contract.
+
+Current Route Table truth: `consumer_kind: fix-runner`,
+`execution.mode: live`, `side_effect_level: pr`, `maturity.runner:
+dogfooded`. The live evidence is recorded in `zj-loop/ci-sweeper-state.md`.
 
 ## Post-Merge Roadmap Closeout
 
