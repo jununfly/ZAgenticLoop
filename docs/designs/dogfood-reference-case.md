@@ -9,6 +9,10 @@ Operational run details, one-off evidence links, and current live status belong
 in `zj-loop/ZJ-LOOP.md`, workflow runs, issues, PRs, and consumer-owned state
 files. This document keeps the stable dogfood capability map.
 
+Route consumer execution vocabulary, maturity levels, hard gates, capability
+matching, and completion forms are defined in
+[`route-consumer-execution-architecture.md`](route-consumer-execution-architecture.md).
+
 ## Purpose
 
 The reference repo should not only describe Agentic Loop Working. It should run
@@ -33,14 +37,14 @@ are guarded live operations that require explicit operator intent.
 | Validate Patterns & Registry | `.github/workflows/validate-patterns.yml`, `scripts/ci-validate-gates.sh` | Push and PR gate | Keeps pattern docs, registry, starters, release workflows, route replays, and tool package tests aligned. |
 | Workflow-Dispatch User Bundle | `.github/workflows/zj-loop-*.yml`, `templates/github-actions/`, `zj-loop-init --add/--upgrade github-actions` | Generated bundle smoke plus Route Table-controlled consumers | Proves user-project generated workflows install cleanly, carry metadata/hash evidence, pin package versions, and run through Route Decision instead of embedding local dogfood scripts. Manual smoke is the default safe path; side-effecting consumers require explicit Route Table enablement. |
 | Daily Triage | `.github/workflows/daily-triage.yml`, `zj-loop/STATE.md`, `zj-loop/zj-loop-run-log.md` | Scheduled producer plus generated state PR | Updates operational memory, emits route candidates, and may dispatch allowlisted consumers. Its generated state PR auto-merge is a narrow exception limited to loop state/run-log files. |
-| CI Sweeper | `.github/workflows/ci-sweeper.yml`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/ci-sweeper-state.md` | Route-dispatched deterministic repair | Handles validate/audit failures only. It opens a repair PR only when deterministic repair creates non-state diffs and repair/validate/audit gates pass; otherwise it escalates. |
+| CI Sweeper | `.github/workflows/ci-sweeper.yml`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/ci-sweeper-state.md` | Live dogfooded `fix-runner` | Handles validate/audit failures only. Completion forms are `repair-pr` when deterministic repair creates non-state diffs and repair/validate/audit gates pass, or `escalation-issue` otherwise. |
 | Route Decision replay suite | `scripts/*route*replay*.mjs`, `scripts/*dispatcher*.mjs`, `scripts/*contract*.mjs` | Local deterministic protocol evidence | Proves route decisions, request creation, duplicate suppression, denials, claims, and recovery paths without requiring live GitHub side effects. |
-| Roadmap activation | `roadmap-activation-dispatcher.mjs`, `zj-loop-activation-contract.mjs`, route table `roadmap-sliced-development` row | Issue-triggered activation-comment route | Authorized slash commands create append-only activation requests only. Roadmap-Sliced Development consumes explicit issue/request ids and owns branch, roadmap, implementation, verification, and PR handoff. |
-| PR Steward routes | PR Steward report/fix-request/claim replay scripts | Report-only and Issue Fix Request protocol evidence | Report routes do not comment, label, rebase, merge, dispatch workflows, repair, or open Fix PRs. Claim evidence consumes a request but still does not perform repair. |
+| Roadmap activation | `roadmap-activation-dispatcher.mjs`, `zj-loop-activation-contract.mjs`, route table `roadmap-sliced-development` row, `zj-loop/roadmap-activation-state.md` | Live issue-triggered activation-comment route | Authorized slash commands create append-only activation requests only. Route Table truth is `consumer_kind: activation-consumer`, `execution.mode: live`, and `maturity.runner: dogfooded`; Roadmap-Sliced Development consumes explicit issue/request ids and owns branch, roadmap, implementation, verification, and PR handoff. |
+| PR Steward routes | PR Steward report/fix-request/claim replay scripts, `zj-loop/pr-steward-state.md` | Report-only plus claim-only Issue Fix Request protocol evidence | Report routes do not comment, label, rebase, merge, dispatch workflows, repair, or open Fix PRs. Fix request Route Table truth is `consumer_kind: fix-runner`, `execution.mode: claim-only`, and `maturity.runner: missing`; claim evidence consumes a request but still does not perform repair. |
 | Issue Triage report route | Issue triage report replay scripts and `zj-loop/issue-triage-state.md` | Report-only protocol evidence | Records allowed issue observations only. It must not perform formal issue lifecycle transitions, public comments, labels, assignments, milestones, close/reopen, or batch mutation. |
-| Dependency Sweeper routes | Dependency route and claim replay scripts | Issue Fix Request protocol evidence | Supports bounded request and claim lifecycle evidence. It does not edit manifests, update lockfiles, create branches, open Fix PRs, dispatch workflows, or auto-merge. |
-| Changelog Drafter | `.github/workflows/changelog-drafter.yml`, report/draft-request replay scripts | Report-only workflow and protocol evidence | Opens or refreshes release-prep issues and records draft request candidates. It does not edit changelogs, create PRs, tag, release, or publish. |
-| Post-Merge Roadmap Closeout | `.github/workflows/post-merge-roadmap-closeout.yml`, `scripts/post-merge-roadmap-closeout.mjs` | Automatic dry-run plus guarded live cleanup | Merged Roadmap-Sliced PRs get dry-run evidence and artifacts. Live branch deletion and carrier issue closure require explicit operator invocation and fixed confirmation phrase. |
+| Dependency Sweeper routes | Dependency route and claim replay scripts, `zj-loop/dependency-sweeper-state.md` | Claim-only Issue Fix Request protocol evidence | Supports bounded request and claim lifecycle evidence. Route Table truth is `consumer_kind: fix-runner`, `execution.mode: claim-only`, and `maturity.runner: missing`; it does not edit manifests, update lockfiles, create branches, open Fix PRs, dispatch workflows, or auto-merge. |
+| Changelog Drafter | `.github/workflows/changelog-drafter.yml`, report/draft-request replay scripts, `zj-loop/changelog-drafter-state.md` | Report-only workflow and protocol evidence | Records release-window evidence and draft request candidates. Route Table truth is `consumer_kind: draft-consumer`, `execution.mode: report-only`, and `maturity.runner: missing`; it does not generate release notes, edit changelogs, create PRs, tag, release, publish, dispatch workflows, or start consumer work. |
+| Post-Merge Roadmap Closeout | `.github/workflows/post-merge-roadmap-closeout.yml`, `scripts/post-merge-roadmap-closeout.mjs`, `zj-loop/post-merge-state.md` | Automatic dry-run plus guarded live cleanup | Merged Roadmap-Sliced PRs get dry-run evidence and artifacts. Route Table truth is `consumer_kind: cleanup-consumer`, `execution.mode: dry-run`, and `maturity.runner: replayed`; live branch deletion and carrier issue closure require explicit operator invocation and fixed confirmation phrase. |
 | Release Workflow Validation | `scripts/validate-release-workflows.mjs` | Validate gate | Ensures every release-managed package has matching workflow, tag pattern, and pack output. |
 | Drift Check | `tools/zj-loop-sync` | Tool package test and optional manual check | Detects mismatch between loop state, loop config, route table, and required files. |
 | Runtime Constraints | `zj-loop/zj-loop-constraints.md`, `skills/zj-loop-constraints/SKILL.md` | Skill-level guardrail | Makes repo-specific operating rules loadable at run start. |
@@ -125,6 +129,26 @@ Daily Triage remains a producer. It may update operational memory, create
 reviewable evidence, and hand off to an allowlisted dispatcher. It must not
 perform product or code fixes directly.
 
+## Report-Only Boundaries
+
+These routes are intentionally outside the action-capable completion target:
+
+- `human`
+- `ignore`
+- `daily-triage-report`
+- `manual-smoke-report`
+- `issue-triage-report`
+- `pr-steward-report`
+- `changelog-drafter-report`
+- `changelog-drafter-draft-request`
+
+They may create local evidence, workflow summaries, or human-readable status.
+They must not create Issue Fix Requests, activation requests, workflow
+dispatches, branches, PRs, labels, public issue comments, issue lifecycle
+transitions, or consumer work. If a future route needs side effects, add a
+separate action-capable route with its own consumer kind, guards, verification,
+and completion form.
+
 ## CI Sweeper Flow
 
 CI Sweeper is intentionally narrow:
@@ -143,6 +167,10 @@ CI Sweeper is intentionally narrow:
 
 CI Sweeper is not a general-purpose autonomous coding agent. Broader repair
 ability requires a separate route and consumer contract.
+
+Current Route Table truth: `consumer_kind: fix-runner`,
+`execution.mode: live`, `side_effect_level: pr`, `maturity.runner:
+dogfooded`. The live evidence is recorded in `zj-loop/ci-sweeper-state.md`.
 
 ## Post-Merge Roadmap Closeout
 

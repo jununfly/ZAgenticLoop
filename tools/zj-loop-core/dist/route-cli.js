@@ -52,10 +52,7 @@ async function main(argv = process.argv.slice(2)) {
             console.log(JSON.stringify({ routes }, null, 2));
         }
         else {
-            for (const route of routes) {
-                const confirm = route.side_effecting ? ` confirm="${expectedConfirmationPhrase(route)}"` : '';
-                console.log(`${route.enabled ? 'enabled ' : 'disabled'} ${route.route_id} consumer=${route.consumer} kind=${route.request_kind}${confirm}`);
-            }
+            console.log(formatRouteStatusTable(routes));
         }
         return 0;
     }
@@ -93,6 +90,26 @@ async function main(argv = process.argv.slice(2)) {
         return 0;
     }
     throw new Error(`Unknown command: ${command}`);
+}
+function formatRouteStatusTable(routes) {
+    const rows = [
+        ['enabled', 'route', 'consumer', 'kind', 'mode', 'sidefx', 'protocol', 'runner', 'confirm'],
+        ...routes.map((route) => [
+            route.enabled ? 'yes' : 'no',
+            route.route_id,
+            route.consumer,
+            route.consumer_kind,
+            route.execution_mode,
+            route.side_effect_level,
+            route.maturity_protocol,
+            route.maturity_runner,
+            route.side_effecting && !route.enabled ? expectedConfirmationPhrase(route) : '',
+        ]),
+    ];
+    const widths = rows[0].map((_, column) => Math.max(...rows.map((row) => row[column].length)));
+    return rows
+        .map((row) => row.map((value, column) => value.padEnd(widths[column])).join('  ').trimEnd())
+        .join('\n');
 }
 main().then((code) => {
     process.exitCode = code;

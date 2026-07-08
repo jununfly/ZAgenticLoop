@@ -5,6 +5,11 @@ durable architecture reference for maintainers and advanced users who need to
 understand how signals move from discovery into the correct loop without making
 Daily Triage the central executor.
 
+Route Table routing semantics and request carriers are defined here. Consumer
+execution readiness, maturity, capabilities, side effect levels, and completion
+forms are defined in
+[`route-consumer-execution-architecture.md`](route-consumer-execution-architecture.md).
+
 ## Purpose
 
 The Route Table is a routing control plane. It answers:

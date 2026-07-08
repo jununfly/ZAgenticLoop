@@ -1,0 +1,224 @@
+# Route Consumer Execution Architecture
+
+This document is the durable architecture reference for Route consumer
+execution in ZAgenticLoop. It defines how a Route consumer moves from report
+evidence to bounded execution without letting protocol evidence masquerade as
+live capability.
+
+`docs/designs/route-table-architecture.md` defines the routing control plane.
+This document defines execution readiness and completion boundaries for the
+consumers behind those routes.
+
+## Goal
+
+Every action-capable Route consumer should eventually execute to its own
+bounded completion form, while report-only consumers remain visibly report-only.
+The system must make partial readiness obvious:
+
+- a route can be enabled without being live
+- a protocol can be replayed without having a runner
+- a request can be claimable without starting repair
+- a live runner must carry recent successful evidence
+
+## Control Surfaces
+
+`zj-loop/zj-loop-route-table.yaml` is the project-specific source of truth for
+execution state. It owns:
+
+- route enablement
+- consumer kind
+- execution mode
+- side effect level
+- protocol and runner maturity
+- light consumer capabilities
+- recent evidence pointers
+
+`patterns/registry.yaml` does not carry execution state. It remains a product
+catalog for pattern discovery and capability declaration.
+
+## Consumer Kinds
+
+Consumer kind is mandatory because it constrains what a route is allowed to do.
+
+| Kind | Role | Allowed completion boundary |
+| --- | --- | --- |
+| `producer-router` | Produces route evidence or dispatch candidates. | Report evidence only. |
+| `report-consumer` | Records observations without starting work. | Report evidence only. |
+| `human-gate` | Hands high or unknown risk to a human. | Human decision evidence. |
+| `fix-runner` | Consumes Issue Fix Requests. | Repair PR or escalation issue. |
+| `draft-consumer` | Produces reviewable drafts. | Draft PR, draft evidence, or escalation issue. |
+| `cleanup-consumer` | Performs narrow post-merge cleanup. | Cleanup done, cleanup skipped, or escalation issue. |
+| `activation-consumer` | Consumes activation requests and bootstraps a bounded roadmap lifecycle. | Roadmap branch/PR, activation failed, or activation resumable. |
+
+Daily Triage is a producer/router. It may update operational memory and create
+or dispatch bounded requests through allowlisted routes, but it must not repair
+code, bump dependencies, draft releases, mutate issues directly, or implement
+roadmap slices.
+
+Issue Triage report routes remain report-only. Future side effects require a
+separate `issue-triage-action` consumer.
+
+## Execution Modes
+
+`execution.mode` is a fixed enum:
+
+| Mode | Meaning |
+| --- | --- |
+| `report-only` | Records evidence or recommendations. No request consumption or work execution. |
+| `request-only` | May create a durable request carrier, but does not claim or execute it. |
+| `claim-only` | May consume a matching request and record claim evidence, but does not perform the work. |
+| `dry-run` | Computes and records an execution plan without destructive or final side effects. |
+| `live` | Performs bounded side effects permitted by consumer kind, capabilities, and route guards. |
+
+`zj-loop-route enable` only makes a route visible and eligible for dispatch
+consideration. It does not authorize live side effects.
+
+Live execution must be enabled through a separate command shape that requires a
+fixed confirmation phrase, for example:
+
+```bash
+zj-loop-route execution set <route-or-consumer> --mode live --confirm "enable <consumer> live execution"
+```
+
+## Side Effect Levels
+
+`execution.side_effect_level` is a fixed enum:
+
+```text
+none
+evidence
+request
+claim
+issue-comment
+label
+branch
+pr
+draft-pr
+cleanup
+```
+
+The level is the maximum side effect expected from the route's current
+execution mode. It is not a permission to ignore route guards or consumer kind
+boundaries.
+
+## Maturity
+
+Maturity is split because protocol readiness and runner readiness are different
+things.
+
+```yaml
+maturity:
+  protocol: missing | designed | replayed | dogfooded | user-project-ready
+  runner: missing | designed | replayed | dogfooded | user-project-ready
+```
+
+Examples:
+
+- A route may have `protocol: replayed` and `runner: missing` when request,
+  claim, or report evidence exists but no runner performs the work.
+- A dogfooded runner may still be scoped narrowly, such as CI Sweeper repairing
+  validate/audit generated artifacts only.
+- A user-project-ready runner must work through generated bundle paths and
+  published package APIs, not repository-local scripts.
+
+Live execution requires:
+
+- `maturity.runner` is `dogfooded` or `user-project-ready`
+- recent successful evidence is linked in the Route Table or durable docs
+- route kind, capabilities, request verifier requirements, and side effect
+  level are compatible
+
+## Capabilities
+
+Consumer capabilities live in the Route Table as light contract fields:
+
+```yaml
+capabilities:
+  scopes: ["ci", "validate-patterns"]
+  verifiers: ["ci-validate-gates", "ci-audit-gates", "diff-check"]
+  max_side_effect_level: "pr"
+```
+
+If a consumer grows too complex, it may link to an optional external manifest,
+but the Route Table remains the first place to check execution truth.
+
+Automatic claim eligibility must be deterministic. A consumer may claim a
+request only when all of these match:
+
+- route-level allowlist
+- request schema and active status
+- request-level verifier requirements
+- consumer capabilities
+- consumer kind and max side effect level
+- source scope and evidence completeness
+
+Matching failure must produce report or escalation evidence, not a claim.
+
+## Completion Forms
+
+Do not collapse all consumer outcomes into "fix". Each action-capable consumer
+has its own completion form.
+
+| Kind | Completion forms |
+| --- | --- |
+| `fix-runner` | `repair-pr`, `escalation-issue` |
+| `draft-consumer` | `draft-pr`, `draft-evidence`, `escalation-issue` |
+| `cleanup-consumer` | `cleanup-done`, `cleanup-skipped`, `escalation-issue` |
+| `activation-consumer` | `roadmap-branch-pr`, `activation-failed`, `activation-resumable` |
+
+No consumer may auto-merge to `main`. Human review remains the merge boundary.
+
+## Hard Gates
+
+The terminal architecture is complete only when these gates are enforceable:
+
+1. Route Table rows declare `enabled`, `consumer_kind`, `execution`,
+   `maturity`, and `capabilities`.
+2. Live execution requires dogfooded or user-project-ready runner evidence.
+3. Request and claim paths pass schema, allowlist, capability, verifier, active
+   status, and evidence checks.
+4. Consumers generate replayable evidence for success, skip, failure, or
+   escalation.
+5. Consumer kind constrains side effects. Producer/report routes must not
+   perform worker side effects.
+6. Failures write back to a carrier, workflow summary, state file, or
+   escalation issue; silent failure is invalid.
+7. Repair and draft consumers stop at PR or draft PR boundaries. Cleanup
+   consumers may only perform narrow contract-backed cleanup.
+8. Generated user-project bundles use published deterministic scripts or APIs,
+   not repository-local dogfood scripts.
+
+## Current Dogfood Map
+
+The dogfood Route Table is the operational truth. At the time this architecture
+was introduced:
+
+| Consumer | Kind | Execution mode | Runner maturity | Notes |
+| --- | --- | --- | --- | --- |
+| Daily Triage | `producer-router` | `report-only` | `missing` | Producer and report surface, not a worker. |
+| Issue Triage | `report-consumer` | `report-only` | `missing` | Side effects require future `issue-triage-action`. |
+| PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
+| PR Steward fix request | `fix-runner` | `claim-only` | `missing` | Can consume matching request evidence; no repair yet. |
+| CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
+| Dependency Sweeper | `fix-runner` | `claim-only` | `missing` | Request and claim evidence only. |
+| Changelog Drafter | `draft-consumer` | `report-only` | `missing` | Draft request evidence only. |
+| Roadmap-Sliced Development | `activation-consumer` | `live` | `dogfooded` | Activation bootstrap is live; slice execution remains bounded by roadmap gates. |
+| Post-Merge Cleanup | `cleanup-consumer` | `dry-run` | `replayed` | Automatic dry-run; live cleanup remains guarded by contract and confirmation. |
+
+`docs/designs/dogfood-reference-case.md` keeps the current dogfood overview and
+may include operational links. This document owns the architecture vocabulary.
+
+## Release Boundary
+
+Do not publish a release that claims complete Route consumer execution until
+both layers are complete:
+
+1. Execution contract foundation: Route Table fields, status/audit visibility,
+   deterministic capability checks, generated template defaults, and durable
+   docs.
+2. Consumer runner completion: every action-capable consumer either executes to
+   its bounded completion form with evidence, or is explicitly marked as not yet
+   runner-ready and not live.
+
+Milestone commits and PRs are allowed before both layers complete, but product
+copy must not imply that all consumers are live.

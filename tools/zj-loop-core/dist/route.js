@@ -2,6 +2,18 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
 export const DEFAULT_ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
+const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
+const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
+const MATURITY_LEVELS = new Set(['missing', 'designed', 'replayed', 'dogfooded', 'user-project-ready']);
+const CONSUMER_KIND_LIMITS = {
+    'producer-router': { modes: ['report-only', 'request-only'], maxSideEffect: 'request' },
+    'report-consumer': { modes: ['report-only'], maxSideEffect: 'evidence' },
+    'human-gate': { modes: ['report-only'], maxSideEffect: 'evidence' },
+    'fix-runner': { modes: ['request-only', 'claim-only', 'dry-run', 'live'], maxSideEffect: 'pr' },
+    'draft-consumer': { modes: ['report-only', 'request-only', 'dry-run', 'live'], maxSideEffect: 'draft-pr' },
+    'cleanup-consumer': { modes: ['report-only', 'dry-run', 'live'], maxSideEffect: 'cleanup' },
+    'activation-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'branch' },
+};
 export async function loadRouteTable(root, routeTablePath = DEFAULT_ROUTE_TABLE_PATH) {
     const filePath = path.resolve(root, routeTablePath);
     return parseRouteTable(await readFile(filePath, 'utf8'));
@@ -18,6 +30,80 @@ export function listRoutes(table) {
         ...normalizeRouteSection(table.routes, 'routes'),
         ...normalizeRouteSection(table.disabled_dispatch_routes, 'disabled_dispatch_routes'),
     ];
+}
+export function validateRouteExecutionContract(route) {
+    const errors = [];
+    const warnings = [];
+    const limits = CONSUMER_KIND_LIMITS[route.consumer_kind];
+    if (!limits)
+        errors.push(`unknown consumer_kind: ${route.consumer_kind}`);
+    if (!EXECUTION_MODES.has(route.execution_mode))
+        errors.push(`unknown execution.mode: ${route.execution_mode}`);
+    if (!SIDE_EFFECT_LEVELS.includes(route.side_effect_level))
+        errors.push(`unknown side_effect_level: ${route.side_effect_level}`);
+    if (!MATURITY_LEVELS.has(route.maturity_protocol))
+        errors.push(`unknown maturity.protocol: ${route.maturity_protocol}`);
+    if (!MATURITY_LEVELS.has(route.maturity_runner))
+        errors.push(`unknown maturity.runner: ${route.maturity_runner}`);
+    if (limits) {
+        if (!limits.modes.includes(route.execution_mode)) {
+            errors.push(`${route.consumer_kind} cannot use execution.mode=${route.execution_mode}`);
+        }
+        if (sideEffectRank(route.side_effect_level) > sideEffectRank(limits.maxSideEffect)) {
+            errors.push(`${route.consumer_kind} cannot use side_effect_level=${route.side_effect_level}`);
+        }
+        if (sideEffectRank(route.max_side_effect_level) > sideEffectRank(limits.maxSideEffect)) {
+            errors.push(`${route.consumer_kind} cannot claim max_side_effect_level=${route.max_side_effect_level}`);
+        }
+    }
+    if (route.execution_mode === 'live' && !isRouteLiveReady(route)) {
+        errors.push('live execution requires runner maturity dogfooded or user-project-ready and non-evidence side-effect boundary');
+    }
+    if (route.request_kind === 'report-only' && route.execution_mode !== 'report-only' && route.execution_mode !== 'dry-run') {
+        warnings.push('report-only request kind should not imply request consumption or work execution');
+    }
+    return { route_id: route.route_id, valid: errors.length === 0, errors, warnings };
+}
+export function isRouteLiveReady(route) {
+    return (route.execution_mode === 'live' &&
+        (route.maturity_runner === 'dogfooded' || route.maturity_runner === 'user-project-ready') &&
+        sideEffectRank(route.side_effect_level) > sideEffectRank('evidence') &&
+        route.recent_success_evidence.length > 0);
+}
+export function canClaimRequest(input) {
+    const consumer = input.consumer ?? input.route.consumer;
+    const missing = [];
+    if (input.route.consumer !== consumer)
+        missing.push('consumer mismatch');
+    if (!input.route.enabled)
+        missing.push('route disabled');
+    if (input.route.consumer_kind !== 'fix-runner')
+        missing.push('route is not a fix-runner');
+    if (input.route.execution_mode !== 'claim-only' && input.route.execution_mode !== 'live') {
+        missing.push('route execution mode cannot claim');
+    }
+    if (input.request.status !== 'requested')
+        missing.push('request status is not requested');
+    if (input.request.requested_consumer && input.request.requested_consumer !== consumer) {
+        missing.push('request consumer mismatch');
+    }
+    for (const scope of input.request.fix_scope?.scopes ?? []) {
+        if (!input.route.capability_scopes.includes(scope))
+            missing.push(`missing scope capability: ${scope}`);
+    }
+    const requiredVerifiers = [
+        ...(input.request.verifier_requirements ?? []),
+        ...(input.request.verification_gate?.verifiers ?? []),
+    ];
+    for (const verifier of requiredVerifiers) {
+        if (!input.route.capability_verifiers.includes(verifier))
+            missing.push(`missing verifier capability: ${verifier}`);
+    }
+    return {
+        allowed: missing.length === 0,
+        reason: missing.length === 0 ? 'claim allowed' : 'claim denied',
+        missing,
+    };
 }
 export function findRoute(table, selector) {
     const matches = listRoutes(table).filter((route) => route.route_id === selector || route.consumer === selector);
@@ -87,18 +173,65 @@ function normalizeRouteSection(routes, section) {
         const routeId = requireString(route.route_id, 'route_id');
         const consumer = requireString(route.consumer, `consumer for ${routeId}`);
         const requestKind = route.request_kind ?? 'report-only';
+        const consumerKind = route.consumer_kind ?? inferConsumerKind(route);
+        const executionMode = route.execution?.mode ?? inferExecutionMode(route);
+        const sideEffectLevel = route.execution?.side_effect_level ?? inferSideEffectLevel(route);
+        const maturityProtocol = route.maturity?.protocol ?? 'missing';
+        const maturityRunner = route.maturity?.runner ?? 'missing';
+        const maxSideEffectLevel = route.capabilities?.max_side_effect_level ?? sideEffectLevel;
+        const capabilityScopes = route.capabilities?.scopes ?? [];
+        const capabilityVerifiers = route.capabilities?.verifiers ?? [];
+        const recentSuccessEvidence = route.execution?.recent_success_evidence ?? [];
         const destructive = Boolean(route.guards?.destructive_actions_enabled === false || route.mode?.includes('closeout'));
-        const sideEffecting = requestKind !== 'report-only' || destructive;
+        const sideEffecting = requestKind !== 'report-only' || destructive || sideEffectRank(sideEffectLevel) > sideEffectRank('evidence');
         return {
             route_id: routeId,
             consumer,
+            consumer_kind: consumerKind,
             enabled: route.enabled === true,
             request_kind: requestKind,
+            execution_mode: executionMode,
+            side_effect_level: sideEffectLevel,
+            maturity_protocol: maturityProtocol,
+            maturity_runner: maturityRunner,
+            max_side_effect_level: maxSideEffectLevel,
+            capability_scopes: capabilityScopes,
+            capability_verifiers: capabilityVerifiers,
+            recent_success_evidence: recentSuccessEvidence,
             section,
             destructive,
             side_effecting: sideEffecting,
         };
     });
+}
+function inferConsumerKind(route) {
+    if (route.request_kind === 'issue-fix-request')
+        return 'fix-runner';
+    if (route.request_kind === 'activation-comment')
+        return 'activation-consumer';
+    if (route.consumer === 'post-merge-cleanup')
+        return 'cleanup-consumer';
+    if (route.consumer === 'daily-triage')
+        return 'producer-router';
+    return 'report-consumer';
+}
+function inferExecutionMode(route) {
+    if (route.request_kind === 'issue-fix-request')
+        return route.guards?.claim_only === true ? 'claim-only' : 'request-only';
+    if (route.request_kind === 'activation-comment')
+        return 'request-only';
+    return 'report-only';
+}
+function inferSideEffectLevel(route) {
+    if (route.request_kind === 'issue-fix-request')
+        return route.guards?.claim_only === true ? 'claim' : 'request';
+    if (route.request_kind === 'activation-comment')
+        return 'request';
+    return 'evidence';
+}
+function sideEffectRank(level) {
+    const index = SIDE_EFFECT_LEVELS.indexOf(level);
+    return index === -1 ? Number.POSITIVE_INFINITY : index;
 }
 function findMutableRoute(table, routeId) {
     const route = [...(table.routes ?? []), ...(table.disabled_dispatch_routes ?? [])].find((entry) => entry.route_id === routeId);

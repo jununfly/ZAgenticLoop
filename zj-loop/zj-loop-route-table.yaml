@@ -28,6 +28,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "maintainer"
+    consumer_kind: "human-gate"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["human-decision"]
+    maturity:
+      protocol: "dogfooded"
+      runner: "missing"
+    capabilities:
+      scopes: ["high-risk-review", "unknown-risk-review"]
+      verifiers: ["human-review"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/STATE.md"
     match:
       risk: ["high", "unknown"]
@@ -41,6 +53,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "daily-triage"
+    consumer_kind: "producer-router"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "dogfooded"
+      runner: "missing"
+    capabilities:
+      scopes: ["noise-suppression", "route-decision"]
+      verifiers: ["route-decision-evidence"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/STATE.md"
     match:
       route: ["ignore"]
@@ -54,6 +78,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "daily-triage"
+    consumer_kind: "producer-router"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "dogfooded"
+      runner: "missing"
+    capabilities:
+      scopes: ["daily-triage", "route-decision", "state-report"]
+      verifiers: ["route-decision-evidence", "state-update"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/STATE.md"
     match:
       route: ["daily-triage"]
@@ -67,6 +103,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "manual-smoke"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "dogfooded"
+      runner: "missing"
+    capabilities:
+      scopes: ["manual-smoke", "generated-workflow"]
+      verifiers: ["workflow-summary"]
+      max_side_effect_level: "evidence"
     evidence_store: "GitHub Actions workflow summary"
     match:
       source: ["workflow-dispatch"]
@@ -81,6 +129,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "issue-triage"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "replayed"
+      runner: "missing"
+    capabilities:
+      scopes: ["issue-backlog", "discussion-backlog", "triage-observation"]
+      verifiers: ["route-replay", "forbidden-side-effect-check"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/issue-triage-state.md"
     match:
       source: ["issue", "discussion"]
@@ -112,6 +172,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "pr-steward"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "replayed"
+      runner: "missing"
+    capabilities:
+      scopes: ["pull-request", "status-observation"]
+      verifiers: ["route-replay", "forbidden-side-effect-check"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/pr-steward-state.md"
     match:
       source: ["pull_request"]
@@ -130,6 +202,18 @@ routes:
     enabled: true
     request_kind: "issue-fix-request"
     consumer: "pr-steward"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "claim-only"
+      side_effect_level: "claim"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "replayed"
+      runner: "missing"
+    capabilities:
+      scopes: ["pull-request", "failed-check-rollup"]
+      verifiers: ["status-check-rollup", "request-claim", "current-pr-head-sha"]
+      max_side_effect_level: "claim"
     evidence_store: "GitHub issues"
     match:
       source: ["pull_request"]
@@ -164,6 +248,21 @@ routes:
     enabled: true
     request_kind: "issue-fix-request"
     consumer: "ci-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "live"
+      side_effect_level: "pr"
+      completion_forms: ["repair-pr", "escalation-issue"]
+      recent_success_evidence:
+        - "https://github.com/jununfly/ZAgenticLoop/actions/runs/28790735629"
+        - "https://github.com/jununfly/ZAgenticLoop/issues/18"
+    maturity:
+      protocol: "dogfooded"
+      runner: "dogfooded"
+    capabilities:
+      scopes: ["ci", "validate-patterns", "audit", "generated-workflow"]
+      verifiers: ["ci-validate-gates", "ci-audit-gates", "diff-check"]
+      max_side_effect_level: "pr"
     evidence_store: "zj-loop/ci-sweeper-state.md"
     match:
       source: ["ci"]
@@ -183,6 +282,18 @@ routes:
     enabled: true
     request_kind: "issue-fix-request"
     consumer: "dependency-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "claim-only"
+      side_effect_level: "claim"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "replayed"
+      runner: "missing"
+    capabilities:
+      scopes: ["dependency", "patch-update", "minor-update"]
+      verifiers: ["request-claim", "package-risk-check", "verification-gate"]
+      max_side_effect_level: "claim"
     evidence_store: "zj-loop/dependency-sweeper-state.md"
     match:
       source: ["dependency"]
@@ -209,6 +320,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "changelog-drafter"
+    consumer_kind: "draft-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["draft-evidence"]
+    maturity:
+      protocol: "replayed"
+      runner: "missing"
+    capabilities:
+      scopes: ["release-prep", "merged-pr-batch", "changelog-observation"]
+      verifiers: ["route-replay", "human-review-boundary"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/changelog-drafter-state.md"
     match:
       source: ["pull_request", "human"]
@@ -232,6 +355,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "changelog-drafter"
+    consumer_kind: "draft-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["draft-pr", "draft-evidence", "escalation-issue"]
+    maturity:
+      protocol: "replayed"
+      runner: "missing"
+    capabilities:
+      scopes: ["release-prep", "draft-request"]
+      verifiers: ["existing-changelog-report", "dedupe-check"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/changelog-drafter-state.md"
     match:
       source: ["changelog-drafter-report"]
@@ -255,6 +390,24 @@ routes:
     enabled: true
     request_kind: "activation-comment"
     consumer: "roadmap-sliced-development"
+    consumer_kind: "activation-consumer"
+    execution:
+      mode: "live"
+      side_effect_level: "branch"
+      completion_forms:
+        - "roadmap-branch-pr"
+        - "activation-failed"
+        - "activation-resumable"
+      recent_success_evidence:
+        - "https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4893007904"
+        - "https://github.com/jununfly/ZAgenticLoop/issues/21#issuecomment-4893302147"
+    maturity:
+      protocol: "dogfooded"
+      runner: "dogfooded"
+    capabilities:
+      scopes: ["roadmap-activation", "roadmap-bootstrap", "branch-bootstrap"]
+      verifiers: ["activation-comment", "resume-anchors", "roadmap-gates"]
+      max_side_effect_level: "branch"
     evidence_store: "append-only GitHub issue comments"
     match:
       source: ["issue", "daily-triage", "human"]
@@ -273,6 +426,21 @@ routes:
     request_kind: "report-only"
     consumer: "post-merge-cleanup"
     mode: "roadmap-closeout"
+    consumer_kind: "cleanup-consumer"
+    execution:
+      mode: "dry-run"
+      side_effect_level: "issue-comment"
+      completion_forms:
+        - "cleanup-done"
+        - "cleanup-skipped"
+        - "escalation-issue"
+    maturity:
+      protocol: "replayed"
+      runner: "replayed"
+    capabilities:
+      scopes: ["roadmap-closeout", "merged-zjal-branch", "carrier-issue-closeout"]
+      verifiers: ["post-merge-contract", "branch-prefix-allowlist", "fixed-confirmation-phrase"]
+      max_side_effect_level: "cleanup"
     evidence_store: "GitHub pull request comment"
     match:
       source: ["pull_request"]
