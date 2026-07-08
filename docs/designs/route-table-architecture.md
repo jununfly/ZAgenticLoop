@@ -122,6 +122,28 @@ represent activation progress, and do not store activation lifecycle in
 `zj-loop/issue-triage-state.md`; plan activation lifecycle is derived from
 append-only structured GitHub issue comments.
 
+### Contract Construction Helpers
+
+Shared Route Decision helper code may normalize only low-level construction
+concerns such as stable ids, evidence arrays, route match diagnostics,
+false-by-default side-effect flags, duplicate evidence metadata, and report
+evidence base fields.
+
+Shared helpers must not own route lifecycle decisions. In particular, they must
+not introduce a global `statusForDecision`, generic `dispatchRouteDecision()`,
+runtime queue, worker, consumer runner, or mega dispatcher. Request-kind
+specific lifecycle remains with the route-specific dispatcher or replay file.
+
+Route-specific replay files are durable protocol evidence and must remain
+readable independently. They may reuse shared construction helpers, but they
+must continue to document the concrete chain semantics for report-only routes,
+Issue Fix Requests, activation comments, claims, and post-merge closeout.
+
+Names that look similar are not automatically shared semantics. For example,
+`issue-triage-report` keeps route matching local because it deliberately ignores
+`signal_kind` during route matching and validates signal kind through a separate
+allowlist and forbidden-field contract.
+
 ## Request Kinds
 
 Request kinds are intentionally separate. A Route Table can govern all of them,
