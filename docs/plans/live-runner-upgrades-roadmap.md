@@ -1,7 +1,7 @@
 # Live Runner Upgrades Roadmap
 
 Roadmap id: `live-runner-upgrades`
-Branch: `zjal/live-runner-upgrades`
+Branch: `zjal/dependency-sweeper-live-runner`
 Status: active
 Started: 2026-07-08
 
@@ -188,7 +188,7 @@ Evidence:
 
 ### 2-2 Dependency Sweeper Live Runner
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -203,6 +203,27 @@ Verification:
 - Replay covers request -> claim -> repair PR.
 - Replay covers request -> claim -> escalation issue.
 - Tests prove no manifest/lockfile edits occur before claim eligibility.
+
+Evidence:
+
+- Added `scripts/dependency-sweeper-live-runner.mjs`, a guarded npm
+  patch/minor runner that only acts on already consumed Dependency Sweeper Issue
+  Fix Requests.
+- Added `scripts/dependency-sweeper-live-runner.test.mjs` covering package
+  subject propagation, claim-before-repair refusal, repair PR evidence,
+  escalation evidence, high-risk refusal, empty-diff escalation, explicit
+  dependency section guard, and fixed confirmation phrase guard.
+- Extended Issue Fix Request subjects and Route Decisions with dependency
+  package/version/risk fields needed by the runner.
+- Updated Route Table truth to `maturity.runner: replayed` while keeping
+  `execution.mode: claim-only`.
+- Updated Dependency Sweeper state, Dogfood Reference Case, Route Table
+  Architecture, and Route Consumer Execution Architecture.
+- `node --test scripts/dependency-sweeper-live-runner.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs` passed.
+- Decision: do not promote `dependency-sweeper` to `execution.mode: live` in
+  this slice. The runner is replayed and guarded, but live promotion still
+  requires real workflow-dispatch dogfood evidence for repair PR or escalation
+  issue creation.
 
 ### 2-3 PR Steward Live Runner
 
