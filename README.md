@@ -139,6 +139,19 @@ If a generated workflow was edited locally, upgrade renames the old file with a
 before committing; deep project-specific workflow migration remains a maintainer
 decision.
 
+Current dogfood automation boundaries:
+
+| Consumer route | Current mode | What it can do today |
+|----------------|--------------|----------------------|
+| `ci-sweeper` | `live` | Create verifier-backed repair PRs or escalation evidence for narrow validate/audit failures. |
+| `roadmap-sliced-development` | `live` | Consume authorized activation comments and bootstrap a bounded roadmap branch/PR lifecycle. |
+| `post-merge-roadmap-closeout` | `dry-run` | Plan branch/issue cleanup after merged Roadmap-Sliced PRs; live cleanup needs explicit operator confirmation. |
+| `dependency-sweeper` | `claim-only` with replayed runner | Claim eligible dependency fix requests and replay repair/escalation evidence; no live manifest edits or PRs yet. |
+| `pr-steward-fix-request` | `claim-only` with replayed runner | Claim eligible failed-PR-check requests and replay repair/escalation evidence; no source PR mutation. |
+| `changelog-drafter-draft-request` | `report-only` with replayed runner | Record draft request evidence and replay draft evidence/PR outcomes; no live changelog edits yet. |
+| `issue-triage-action` | `dry-run` with replayed runner | Plan allowlisted labels or fixed comment templates; no live issue mutation yet. |
+| Report routes | `report-only` | Record evidence only. |
+
 ## From Plan Intake To Roadmap
 
 When an issue is really a PRD, plan, or multi-slice initiative, keep Daily Triage
