@@ -134,6 +134,16 @@ as `ci-sweeper`, `roadmap-sliced-development`, `pr-steward-fix-request`,
 live paths only after their generated workflow and packaged runner are marked
 `user-project-ready`.
 
+Generated workflows should call the packaged consumer gate before any runner
+side effects:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
+```
+
+The plan blocks disabled routes, invalid execution contracts, and routes that
+are dogfooded but not yet `user-project-ready`.
+
 Run the `ZJ Loop Smoke` workflow manually first, then audit:
 
 ```bash

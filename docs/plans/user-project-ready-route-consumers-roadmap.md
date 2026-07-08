@@ -83,7 +83,7 @@ instead of repository-local scripts.
 
 ### Leaf 2-1: Runner Command Contract
 
-Status: in-progress
+Status: completed
 
 Intent:
 
@@ -97,9 +97,19 @@ Verification:
 - route replay tests for deny/skip/success/failure evidence
 - `git diff --check`
 
+Evidence:
+
+- Added published package contract API `buildConsumerRunPlan()`.
+- Added `zj-loop-consumer plan <route-or-consumer>` CLI.
+- The plan blocks disabled routes, invalid execution contracts, and
+  action-capable routes that are dogfooded/replayed but not
+  `user-project-ready`.
+- Report-only routes produce an evidence plan without worker side effects.
+- README, Chinese README, and Quickstart document the packaged consumer gate.
+
 ### Leaf 2-2: Consumer Runner Promotion
 
-Status: pending
+Status: in-progress
 
 Intent:
 

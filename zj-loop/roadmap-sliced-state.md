@@ -8,13 +8,14 @@ Last run: 2026-07-09
 - Branch: codex-user-project-ready-route-consumers
 - Status: active
 - Current parent node: packaged-consumer-runner-surface
-- Current leaf: 2-1-runner-command-contract
+- Current leaf: 2-2-consumer-runner-promotion
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
-| 2-1-runner-command-contract | in-progress | Next slice: define package CLI/API command contract for action-capable generated workflow consumers after Route Decision authorization | pending |
+| 2-2-consumer-runner-promotion | in-progress | Next slice: promote existing consumer runner logic into packaged deterministic surfaces and generated workflow call paths | pending |
+| 2-1-runner-command-contract | completed | Added `buildConsumerRunPlan()` and `zj-loop-consumer plan`; blocks disabled routes, invalid execution contracts, and non-`user-project-ready` action routes; report-only routes produce evidence plans; `cd tools/zj-loop-core && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-2-user-project-readiness-status-surface | completed | `zj-loop-route status` table/JSON exposes readiness and `user_project_ready`; README/README.zh-CN/Quickstart describe route self-selection and `dogfooded-live` vs `user-project-ready`; `cd tools/zj-loop-core && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-1-generated-bundle-route-identity-alignment | completed | Generated workflow templates and dogfood generated workflows now dispatch `pr-steward-report`, `issue-triage-report`, `changelog-drafter-report`, and `post-merge-roadmap-closeout`; generated Route Table template separates report/action/fix-request route ids; `cd tools/zj-loop-init && npm test`; `npm run check:zj-loop-init`; `git diff --check` | `7e46acd` |
 | user-project-ready-route-consumers-roadmap | active | Issue-triggered Activation Request process accepted by human; roadmap seeded from `docs/plans/user-project-ready-route-consumer-checklist.md` | pending |

@@ -130,6 +130,16 @@ Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
 只有在 generated workflow 和 packaged runner 都标记为 `user-project-ready`
 后，才应被当作用户项目 live path。
 
+Generated workflows 在任何 runner 副作用前，都应该调用发布包里的 consumer
+gate：
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
+```
+
+这个 plan 会阻止 disabled route、无效 execution contract，以及只有 dogfood
+证据但尚未 `user-project-ready` 的 route。
+
 先手动运行 `ZJ Loop Smoke` workflow，再执行审计：
 
 ```bash
