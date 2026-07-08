@@ -457,7 +457,7 @@ Evidence:
 
 ### 2-7 Report-Only Boundaries
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -470,6 +470,19 @@ Verification:
 
 - Route Table kind/mode validation rejects side effects on report-only routes.
 - Docs do not describe report-only routes as runners.
+
+Evidence:
+
+- Added `zj-loop/issue-triage-state.md` documenting report-only issue triage
+  observations and forbidden side effects.
+- Dogfood Reference Case now has a dedicated Report-Only Boundaries section
+  for non-action-capable routes.
+- `node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- Decision: keep Daily Triage, Issue Triage report, manual smoke, human,
+  ignore, PR report, and Changelog report/draft-request outside the
+  action-capable completion target unless separate action-capable routes are
+  added.
 
 ### 2-8 Release Readiness Closeout
 
@@ -491,4 +504,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-7 Report-Only Boundaries`.
+Continue with `2-8 Release Readiness Closeout`.

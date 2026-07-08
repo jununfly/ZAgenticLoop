@@ -129,6 +129,26 @@ Daily Triage remains a producer. It may update operational memory, create
 reviewable evidence, and hand off to an allowlisted dispatcher. It must not
 perform product or code fixes directly.
 
+## Report-Only Boundaries
+
+These routes are intentionally outside the action-capable completion target:
+
+- `human`
+- `ignore`
+- `daily-triage-report`
+- `manual-smoke-report`
+- `issue-triage-report`
+- `pr-steward-report`
+- `changelog-drafter-report`
+- `changelog-drafter-draft-request`
+
+They may create local evidence, workflow summaries, or human-readable status.
+They must not create Issue Fix Requests, activation requests, workflow
+dispatches, branches, PRs, labels, public issue comments, issue lifecycle
+transitions, or consumer work. If a future route needs side effects, add a
+separate action-capable route with its own consumer kind, guards, verification,
+and completion form.
+
 ## CI Sweeper Flow
 
 CI Sweeper is intentionally narrow:

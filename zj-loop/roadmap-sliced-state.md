@@ -7,12 +7,13 @@ Last run: 2026-07-08
 - Roadmap id: route-consumer-execution
 - Branch: zjal/route-consumer-execution
 - Current parent node: consumer-runner-completion
-- Current leaf: 2-7-report-only-boundaries
+- Current leaf: 2-8-release-readiness-closeout
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 2-7-report-only-boundaries | completed | `zj-loop/issue-triage-state.md`; Dogfood Reference Case report-only boundary section; report-only dispatcher and issue triage replay tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 2-6-roadmap-sliced-activation-consumer | completed | `zj-loop/roadmap-activation-state.md`; Dogfood Reference Case; roadmap activation replay/dispatcher tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 2-5-post-merge-cleanup-consumer | completed | `zj-loop/post-merge-state.md`; Dogfood Reference Case; post-merge contract/e2e/executor/workflow tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 2-4-changelog-drafter-draft-consumer | completed | `zj-loop/changelog-drafter-state.md`; Dogfood Reference Case; Changelog Drafter report/draft-request replay tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
