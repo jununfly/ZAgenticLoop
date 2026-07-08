@@ -60,6 +60,20 @@ routes:
     failure_owner: "__PATTERN_ID__"
     human_gate: "on ambiguity or high risk"
 
+  - route_id: "manual-smoke-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "manual-smoke"
+    evidence_store: "GitHub Actions workflow summary"
+    match:
+      source: ["workflow-dispatch"]
+      route: ["manual-smoke-report"]
+    guards:
+      side_effects_allowed: false
+    dedupe_window: "workflow_run"
+    failure_owner: "maintainer"
+    human_gate: "none"
+
 disabled_dispatch_routes:
   - route_id: "ci-sweeper"
     enabled: false
@@ -68,12 +82,33 @@ disabled_dispatch_routes:
     evidence_store: "zj-loop/ci-sweeper-state.md"
     note: "Enable only after CI Sweeper workflow, budget, and failure owner are configured."
 
+  - route_id: "pr-steward"
+    enabled: false
+    request_kind: "workflow-dispatch"
+    consumer: "pr-steward"
+    evidence_store: "zj-loop/pr-steward-state.md"
+    note: "Enable only after PR Steward workflow, review boundaries, and evidence store are configured."
+
+  - route_id: "issue-triage"
+    enabled: false
+    request_kind: "workflow-dispatch"
+    consumer: "issue-triage"
+    evidence_store: "zj-loop/issue-triage-state.md"
+    note: "Enable only after issue triage policy and public mutation guards are configured."
+
   - route_id: "dependency-sweeper"
     enabled: false
     request_kind: "issue-fix-request"
     consumer: "dependency-sweeper"
     evidence_store: "zj-loop/dependency-sweeper-state.md"
     note: "Enable only after dependency risk policy and verifier gates are configured."
+
+  - route_id: "changelog-drafter"
+    enabled: false
+    request_kind: "workflow-dispatch"
+    consumer: "changelog-drafter"
+    evidence_store: "zj-loop/changelog-drafter-state.md"
+    note: "Enable only after release/changelog boundaries and evidence store are configured."
 
   - route_id: "roadmap-sliced-development"
     enabled: false

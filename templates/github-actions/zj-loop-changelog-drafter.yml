@@ -25,7 +25,5 @@ jobs:
 
       - name: Changelog drafter route evidence
         run: |
-          echo "consumer=changelog-drafter" >> "$GITHUB_STEP_SUMMARY"
-          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
-          echo "side_effects=require_route_table_enablement" >> "$GITHUB_STEP_SUMMARY"
-          echo "mode=draft_request_after_route_enablement" >> "$GITHUB_STEP_SUMMARY"
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch changelog-drafter --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

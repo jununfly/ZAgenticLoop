@@ -16,10 +16,9 @@ Roadmap view:
 
 Current status: `in-progress`
 
-Current focus: `2. Deterministic Route Dispatch Surface`
+Current focus: `4. Upgrade And Audit`
 
-Next action: start leaf `2.1 Identify the existing package best suited to host
-dispatch commands`.
+Next action: start leaf `4.1 Add zj-loop-init --upgrade github-actions`.
 
 Last updated: 2026-07-08
 
@@ -35,6 +34,9 @@ Last updated: 2026-07-08
 - Slice 1 verification:
   - `npm test` in `tools/zj-loop-init`
   - `npm run check:zj-loop-init`
+- Slice 2 verification:
+  - `npm test` in `tools/zj-loop-core`
+  - `npm test` in `tools/zj-loop-init`
 
 ## Completion Condition
 

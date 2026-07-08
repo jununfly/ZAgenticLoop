@@ -68,7 +68,7 @@ Notes:
 
 ### 2. Deterministic Route Dispatch Surface
 
-Status: active
+Status: completed
 
 Completion condition: workflows call published package commands/APIs for route
 matching, request ids, duplicate handling, payload validation, and evidence
@@ -76,32 +76,55 @@ rendering instead of embedding complex generated scripts.
 
 Leaf nodes:
 
-- [ ] 2.1 Identify the existing package best suited to host dispatch commands.
-- [ ] 2.2 Implement the minimal deterministic dispatch command/API needed by
+- [x] 2.1 Identify the existing package best suited to host dispatch commands.
+- [x] 2.2 Implement the minimal deterministic dispatch command/API needed by
       generated workflows.
-- [ ] 2.3 Add package tests for allowed route, disabled route, invalid consumer,
+- [x] 2.3 Add package tests for allowed route, disabled route, invalid consumer,
       and report-only smoke behavior.
+
+Verification evidence:
+
+- `npm test` in `tools/zj-loop-core`
+- `npm test` in `tools/zj-loop-init`
+
+Notes:
+
+- `zj-loop-route` is exposed as a `@jununfly/zj-loop-core` bin. This keeps
+  deterministic Route Table behavior in the shared domain package instead of
+  creating another package surface.
+- Generated workflows now call
+  `npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch ...`.
 
 ### 3. Route Enablement CLI
 
-Status: candidate
+Status: completed
 
 Completion condition: `zj-loop-route enable/disable/status` updates Route Table
 policy predictably and safely.
 
 Leaf nodes:
 
-- [ ] 3.1 Add `zj-loop-route status`.
-- [ ] 3.2 Add `zj-loop-route enable <consumer>` with fixed confirmation phrases
+- [x] 3.1 Add `zj-loop-route status`.
+- [x] 3.2 Add `zj-loop-route enable <consumer>` with fixed confirmation phrases
       for side-effecting/destructive routes.
-- [ ] 3.3 Add `zj-loop-route disable <consumer>` as a low-friction rollback
+- [x] 3.3 Add `zj-loop-route disable <consumer>` as a low-friction rollback
       path.
-- [ ] 3.4 Keep Route Table writes limited to necessary state and low-churn audit
+- [x] 3.4 Keep Route Table writes limited to necessary state and low-churn audit
       fields.
+
+Verification evidence:
+
+- `npm test` in `tools/zj-loop-core`
+
+Notes:
+
+- `enable` requires predictable confirmation phrases for side-effecting routes.
+- `disable` is low-friction and removes `enabled_reason`.
+- Route Table writes are limited to `enabled` and optional `enabled_reason`.
 
 ### 4. Upgrade And Audit
 
-Status: candidate
+Status: active
 
 Completion condition: installed workflow bundles can be audited and upgraded
 without floating to latest or silently overwriting user-modified files.

@@ -124,7 +124,16 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
     assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.3/);
-    assert.match(smoke, /request_kind=report-only/);
+    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.2/);
+    assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
+
+    const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(routeTable, /route_id: "manual-smoke-report"/);
+    assert.match(routeTable, /consumer: "manual-smoke"/);
+    assert.match(routeTable, /route_id: "ci-sweeper"/);
+    assert.match(routeTable, /route_id: "pr-steward"/);
+    assert.match(routeTable, /route_id: "issue-triage"/);
+    assert.match(routeTable, /route_id: "changelog-drafter"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

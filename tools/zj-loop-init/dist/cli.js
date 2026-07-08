@@ -153,6 +153,10 @@ async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns,
             }
         }
         if (artifact === 'github-actions') {
+            const defaultPattern = patterns.find((pattern) => pattern.id === 'daily-triage') ?? patterns[0];
+            if (defaultPattern) {
+                await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io);
+            }
             await copyGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
         }
     }

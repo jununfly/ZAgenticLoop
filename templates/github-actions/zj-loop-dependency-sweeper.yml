@@ -23,7 +23,5 @@ jobs:
 
       - name: Dependency sweeper route evidence
         run: |
-          echo "consumer=dependency-sweeper" >> "$GITHUB_STEP_SUMMARY"
-          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
-          echo "side_effects=require_route_table_enablement" >> "$GITHUB_STEP_SUMMARY"
-          echo "mode=claim_or_pr_after_route_enablement" >> "$GITHUB_STEP_SUMMARY"
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

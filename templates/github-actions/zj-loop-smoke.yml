@@ -23,12 +23,8 @@ jobs:
 
       - name: Smoke route decision
         run: |
-          echo "schema=zj-loop.route_decision.v1" >> "$GITHUB_STEP_SUMMARY"
-          echo "route=manual-smoke-report" >> "$GITHUB_STEP_SUMMARY"
-          echo "request_kind=report-only" >> "$GITHUB_STEP_SUMMARY"
-          echo "target_consumer=none" >> "$GITHUB_STEP_SUMMARY"
-          echo "side_effects=disabled" >> "$GITHUB_STEP_SUMMARY"
-          echo "route_table=zj-loop/zj-loop-route-table.yaml" >> "$GITHUB_STEP_SUMMARY"
+          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
+          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Audit installed loop readiness
         run: npx @jununfly/zj-loop-audit@0.1.3 . --suggest
