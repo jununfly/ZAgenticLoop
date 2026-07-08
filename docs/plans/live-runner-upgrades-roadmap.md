@@ -1,7 +1,7 @@
 # Live Runner Upgrades Roadmap
 
 Roadmap id: `live-runner-upgrades`
-Branch: `zjal/dependency-sweeper-live-runner`
+Branch: `zjal/pr-steward-live-runner`
 Status: active
 Started: 2026-07-08
 
@@ -227,7 +227,7 @@ Evidence:
 
 ### 2-3 PR Steward Live Runner
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -241,6 +241,24 @@ Verification:
 
 - Replay covers current-head-SHA match, stale-head denial, non-main denial,
   repair PR/escalation completion, and no source PR side effects.
+
+Evidence:
+
+- Added `scripts/pr-steward-live-runner.mjs`, a guarded runner for already
+  consumed PR Steward Issue Fix Requests.
+- Added `scripts/pr-steward-live-runner.test.mjs` covering claim-before-repair
+  refusal, current-head-SHA match, stale-head denial, non-main denial, repair
+  PR evidence, escalation issue evidence, verifier failure escalation, repair
+  file allowlist, fixed confirmation phrase, and no source PR side effects.
+- Updated Route Table truth to `maturity.runner: replayed` while keeping
+  `execution.mode: claim-only`.
+- Updated PR Steward state, Dogfood Reference Case, Route Table Architecture,
+  and Route Consumer Execution Architecture.
+- `node --test scripts/pr-steward-live-runner.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs` passed.
+- Decision: do not promote `pr-steward-fix-request` to `execution.mode: live`
+  in this slice. The runner is replayed and guarded, but live promotion still
+  requires real workflow-dispatch dogfood evidence for independent repair PR or
+  escalation issue creation.
 
 ## Layer 3: Draft and Triage Actions
 
