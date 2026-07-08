@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import {
   buildRouteDecision,
   canClaimRequest,
+  classifyRouteReadiness,
   expectedConfirmationPhrase,
   isRouteLiveReady,
   listRoutes,
@@ -156,6 +157,8 @@ test('route execution contract validates kind, mode, maturity, and live evidence
   const ciSweeper = routes.find((item) => item.route_id === 'ci-sweeper');
   assert.ok(ciSweeper);
   assert.deepEqual(ciSweeper.completion_forms, ['repair-pr', 'escalation-issue']);
+  assert.equal(ciSweeper.readiness, 'dogfooded-live');
+  assert.equal(ciSweeper.user_project_ready, false);
   assert.equal(isRouteLiveReady(ciSweeper), true);
   assert.equal(validateRouteExecutionContract(ciSweeper).valid, true);
 
@@ -168,6 +171,44 @@ test('route execution contract validates kind, mode, maturity, and live evidence
   const validation = validateRouteExecutionContract(invalid);
   assert.equal(validation.valid, false);
   assert.match(validation.errors.join('\n'), /report-consumer cannot use execution.mode=live/);
+});
+
+test('classifyRouteReadiness distinguishes user-project-ready from dogfood and replay evidence', () => {
+  assert.deepEqual(
+    classifyRouteReadiness({
+      executionMode: 'live',
+      sideEffectLevel: 'pr',
+      maturityRunner: 'user-project-ready',
+      recentSuccessEvidence: [],
+    }),
+    { readiness: 'user-project-ready', reasons: ['runner maturity is user-project-ready'] },
+  );
+
+  assert.equal(
+    classifyRouteReadiness({
+      executionMode: 'live',
+      sideEffectLevel: 'pr',
+      maturityRunner: 'dogfooded',
+      recentSuccessEvidence: ['https://example.test/run/1'],
+    }).readiness,
+    'dogfooded-live',
+  );
+  assert.equal(
+    classifyRouteReadiness({
+      executionMode: 'claim-only',
+      sideEffectLevel: 'claim',
+      maturityRunner: 'replayed',
+    }).readiness,
+    'replayed',
+  );
+  assert.equal(
+    classifyRouteReadiness({
+      executionMode: 'live',
+      sideEffectLevel: 'pr',
+      maturityRunner: 'missing',
+    }).readiness,
+    'live-missing-evidence',
+  );
 });
 
 test('route execution contract rejects invalid completion forms and missing live evidence', () => {
@@ -232,11 +273,12 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
   try {
     const status = spawnSync(process.execPath, [CLI, 'status', '--root', dir], { encoding: 'utf8' });
     assert.equal(status.status, 0);
-    assert.match(status.stdout, /enabled\s+route\s+consumer\s+kind\s+mode\s+sidefx\s+protocol\s+runner/);
+    assert.match(status.stdout, /enabled\s+route\s+consumer\s+kind\s+mode\s+sidefx\s+protocol\s+runner\s+readiness/);
     assert.match(status.stdout, /manual-smoke-report/);
     assert.match(status.stdout, /ci-sweeper/);
     assert.match(status.stdout, /fix-runner/);
     assert.match(status.stdout, /live/);
+    assert.match(status.stdout, /dogfooded-live/);
 
     const dispatch = spawnSync(process.execPath, [CLI, 'dispatch', 'ci-sweeper', '--root', dir], { encoding: 'utf8' });
     assert.equal(dispatch.status, 2);
@@ -249,6 +291,8 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
     const parsedStatus = JSON.parse(statusJson.stdout);
     assert.equal(parsedStatus.routes[0].consumer_kind, 'fix-runner');
     assert.equal(parsedStatus.routes[0].execution_mode, 'live');
+    assert.equal(parsedStatus.routes[0].readiness, 'dogfooded-live');
+    assert.equal(parsedStatus.routes[0].user_project_ready, false);
     assert.deepEqual(parsedStatus.routes[0].capability_verifiers, ['ci-validate-gates', 'diff-check']);
   } finally {
     await rm(dir, { recursive: true, force: true });

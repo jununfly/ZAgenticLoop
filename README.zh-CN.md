@@ -110,14 +110,25 @@ npx @jununfly/zj-loop-init . --add github-actions
 ```
 
 生成的 `zj-loop-*.yml` workflows 会带上固定 package version 和 generated
-metadata。默认只有 `manual-smoke-report` 是安全主路径；有副作用的 consumer
-仍然需要显式通过 Route Table 启用：
+metadata。默认只有 `manual-smoke-report` 是安全主路径。把 Route Table status
+当成可选链路菜单使用；它会显示每条 route 的 mode、runner maturity、
+readiness 和需要的固定确认短语。`dogfooded-live` 表示 reference repo 已有
+证据，`user-project-ready` 才表示 generated bundle 能在用户项目中调用已发布
+package runner。有副作用的 consumer 仍然需要显式通过 Route Table 启用：
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
 npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
 npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
 ```
+
+用户项目的第一条启用链路应按 route readiness 自选，而不是按安装顺序固定。
+Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
+`roadmap-sliced-development`、`pr-steward-fix-request`、
+`dependency-sweeper`、`changelog-drafter-draft-request`、
+`issue-triage-action`、`post-merge-roadmap-closeout` 等 action-capable routes
+只有在 generated workflow 和 packaged runner 都标记为 `user-project-ready`
+后，才应被当作用户项目 live path。
 
 先手动运行 `ZJ Loop Smoke` workflow，再执行审计：
 

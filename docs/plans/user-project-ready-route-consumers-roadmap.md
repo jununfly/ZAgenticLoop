@@ -50,7 +50,7 @@ Evidence:
 
 ### Leaf 1-2: User-Project Readiness Status Surface
 
-Status: pending
+Status: completed
 
 Intent:
 
@@ -65,6 +65,17 @@ Verification:
 - `node tools/zj-loop-audit/dist/cli.js .`
 - `git diff --check`
 
+Evidence:
+
+- `zj-loop-route status` now includes a `readiness` column.
+- `zj-loop-route status --json` exposes `readiness`,
+  `readiness_reasons`, and `user_project_ready`.
+- `classifyRouteReadiness()` separates `user-project-ready`,
+  `dogfooded-live`, `live-missing-evidence`, `replayed`, `designed`, and
+  `missing` so dogfood evidence cannot masquerade as user-project readiness.
+- README, Chinese README, and Quickstart describe route self-selection and the
+  difference between `dogfooded-live` and `user-project-ready`.
+
 ## Parent 2: Packaged Consumer Runner Surface
 
 Completion condition: generated workflows call published package commands/APIs
@@ -72,7 +83,7 @@ instead of repository-local scripts.
 
 ### Leaf 2-1: Runner Command Contract
 
-Status: pending
+Status: in-progress
 
 Intent:
 

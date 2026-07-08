@@ -128,6 +128,11 @@ Then inspect Route Table status before enabling any consumer route:
 npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
 ```
 
+Treat this output as the route selection menu. The `readiness` column separates
+reference-repo evidence from user-project readiness: `dogfooded-live` is proven
+inside this repo; `user-project-ready` means the generated bundle can call a
+published package runner in a user project.
+
 Enable side-effecting routes with a fixed confirmation phrase:
 
 ```bash

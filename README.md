@@ -114,13 +114,25 @@ npx @jununfly/zj-loop-init . --add github-actions
 
 This creates `zj-loop-*.yml` workflows with pinned package versions and
 generated metadata. Only `manual-smoke-report` is intended to run safely by
-default; side-effecting consumers still need explicit Route Table enablement:
+default. Use Route Table status as the selection menu; it shows each route's
+mode, runner maturity, readiness, and required confirmation phrase. A
+`dogfooded-live` route has reference-repo evidence, while `user-project-ready`
+means the generated bundle can call a published package runner in user
+projects. Side-effecting consumers still need explicit Route Table enablement:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
 npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
 npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
 ```
+
+Choose the first enabled path by route readiness, not by installation order.
+Report-only routes are intentionally evidence-only; action-capable routes such
+as `ci-sweeper`, `roadmap-sliced-development`, `pr-steward-fix-request`,
+`dependency-sweeper`, `changelog-drafter-draft-request`,
+`issue-triage-action`, and `post-merge-roadmap-closeout` become user-project
+live paths only after their generated workflow and packaged runner are marked
+`user-project-ready`.
 
 Run the `ZJ Loop Smoke` workflow manually first, then audit:
 

@@ -54,10 +54,21 @@ export type RouteStatus = {
   capability_scopes: string[];
   capability_verifiers: string[];
   recent_success_evidence: string[];
+  readiness: RouteReadiness;
+  readiness_reasons: string[];
+  user_project_ready: boolean;
   section: 'routes' | 'disabled_dispatch_routes';
   destructive: boolean;
   side_effecting: boolean;
 };
+
+export type RouteReadiness =
+  | 'user-project-ready'
+  | 'dogfooded-live'
+  | 'live-missing-evidence'
+  | 'replayed'
+  | 'designed'
+  | 'missing';
 
 export type RouteDecision = {
   schema: 'zj-loop.route_decision.v1';
@@ -329,6 +340,12 @@ function normalizeRouteSection(
     const recentSuccessEvidence = route.execution?.recent_success_evidence ?? [];
     const destructive = Boolean(route.guards?.destructive_actions_enabled === false || route.mode?.includes('closeout'));
     const sideEffecting = requestKind !== 'report-only' || destructive || sideEffectRank(sideEffectLevel) > sideEffectRank('evidence');
+    const readiness = classifyRouteReadiness({
+      executionMode,
+      sideEffectLevel,
+      maturityRunner,
+      recentSuccessEvidence,
+    });
     return {
       route_id: routeId,
       consumer,
@@ -344,11 +361,65 @@ function normalizeRouteSection(
       capability_scopes: capabilityScopes,
       capability_verifiers: capabilityVerifiers,
       recent_success_evidence: recentSuccessEvidence,
+      readiness: readiness.readiness,
+      readiness_reasons: readiness.reasons,
+      user_project_ready: readiness.readiness === 'user-project-ready',
       section,
       destructive,
       side_effecting: sideEffecting,
     };
   });
+}
+
+export function classifyRouteReadiness(input: {
+  executionMode: string;
+  sideEffectLevel: string;
+  maturityRunner: string;
+  recentSuccessEvidence?: string[];
+}): { readiness: RouteReadiness; reasons: string[] } {
+  const evidence = input.recentSuccessEvidence ?? [];
+  if (input.maturityRunner === 'user-project-ready') {
+    return {
+      readiness: 'user-project-ready',
+      reasons: ['runner maturity is user-project-ready'],
+    };
+  }
+
+  if (input.executionMode === 'live') {
+    if (
+      input.maturityRunner === 'dogfooded' &&
+      sideEffectRank(input.sideEffectLevel) > sideEffectRank('evidence') &&
+      evidence.length > 0
+    ) {
+      return {
+        readiness: 'dogfooded-live',
+        reasons: ['live dogfood evidence exists', 'not yet promoted to user-project-ready'],
+      };
+    }
+    return {
+      readiness: 'live-missing-evidence',
+      reasons: ['live execution requires runner maturity and recent evidence before promotion'],
+    };
+  }
+
+  if (input.maturityRunner === 'replayed' || input.maturityRunner === 'dogfooded') {
+    return {
+      readiness: 'replayed',
+      reasons: [`runner maturity is ${input.maturityRunner}; generated-bundle live evidence is still required`],
+    };
+  }
+
+  if (input.maturityRunner === 'designed') {
+    return {
+      readiness: 'designed',
+      reasons: ['runner contract is designed but not replayed or dogfooded'],
+    };
+  }
+
+  return {
+    readiness: 'missing',
+    reasons: ['runner is missing'],
+  };
 }
 
 function inferConsumerKind(route: RouteTableRoute): string {
