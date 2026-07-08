@@ -428,7 +428,7 @@ Evidence:
 
 ### 2-6 Roadmap-Sliced Activation Consumer
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -441,6 +441,19 @@ Verification:
 
 - Activation request replay and resume/failure tests.
 - Dogfood evidence for issue-triggered activation leading to roadmap branch/PR.
+
+Evidence:
+
+- Added `zj-loop/roadmap-activation-state.md` documenting live activation
+  capability, dogfood evidence, replay coverage, and bounded implementation
+  boundary.
+- Dogfood Reference Case now points to the Roadmap Activation state file and
+  Route Table truth.
+- `node --test scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- Decision: activation may auto-consume and bootstrap branch/process state, but
+  slice implementation remains bounded by Roadmap-Sliced gates and must not
+  become an unbounded auto loop.
 
 ### 2-7 Report-Only Boundaries
 
@@ -478,4 +491,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-6 Roadmap-Sliced Activation Consumer`.
+Continue with `2-7 Report-Only Boundaries`.
