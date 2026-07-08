@@ -261,7 +261,7 @@ Evidence:
 
 ### 1-7 Audit Fail Upgrade Branch
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -277,6 +277,17 @@ Verification:
 - `cd tools/zj-loop-audit && npm run build`
 - `node dist/cli.js ../..`
 - `git diff --check`.
+
+Evidence:
+
+- Generated workflow bundles now fail audit when Route Table rows are missing
+  execution transparency fields.
+- Live routes without runner maturity/evidence and kind/mode/side-effect
+  inconsistencies now fail audit.
+- Non-bundle missing fields remain warning-level to preserve migration path.
+- `npm run build` passed in `tools/zj-loop-audit`.
+- `node --test tools/zj-loop-audit/test/auditor.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
 
 ## Layer 2: Consumer Runner Completion
 

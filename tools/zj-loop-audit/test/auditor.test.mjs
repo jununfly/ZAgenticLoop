@@ -29,6 +29,17 @@ routes:
     enabled: true
     request_kind: report-only
     consumer: manual-smoke
+    consumer_kind: report-consumer
+    execution:
+      mode: report-only
+      side_effect_level: evidence
+    maturity:
+      protocol: designed
+      runner: missing
+    capabilities:
+      scopes: [manual-smoke]
+      verifiers: [workflow-summary]
+      max_side_effect_level: evidence
 `,
   );
 }
@@ -180,8 +191,50 @@ routes:
       finding.message.includes('Route manual-smoke-report is missing execution transparency fields'),
     ));
     assert.ok(result.findings.some((finding) =>
-      finding.level === 'warn' &&
+      finding.level === 'fail' &&
       finding.message.includes('Route ci-sweeper execution contract needs attention'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject fails generated bundles with route rows missing execution transparency fields', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-generated-route-execution-fail-'));
+  try {
+    await mkdir(path.join(dir, '.github', 'workflows'), { recursive: true });
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(
+      path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'),
+      `schemaVersion: 1
+kind: zj-loop-route-table
+routes:
+  - route_id: manual-smoke-report
+    enabled: true
+    request_kind: report-only
+    consumer: manual-smoke
+`,
+    );
+    await writeFile(
+      path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'),
+      renderWorkflowTemplate(`# zj-loop-generated: true
+# zj-loop-template-id: github-actions/zj-loop-smoke
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+name: ZJ Loop Smoke
+
+jobs:
+  smoke:
+    steps:
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch manual-smoke-report
+`),
+    );
+
+    const result = await auditProject(dir);
+    assert.ok(result.findings.some((finding) =>
+      finding.level === 'fail' &&
+      finding.message.includes('Route manual-smoke-report is missing execution transparency fields'),
     ));
   } finally {
     await rm(dir, { recursive: true, force: true });

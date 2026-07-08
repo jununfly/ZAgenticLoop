@@ -322,6 +322,7 @@ async function auditRouteExecutionContractWarnings(fs: ProjectFileSystem): Promi
   if (!routeTable) return [];
 
   const findings: Finding[] = [];
+  const hasGeneratedWorkflowBundle = await projectHasGeneratedWorkflowBundle(fs);
   let rawRoutes: Array<Record<string, unknown>> = [];
   try {
     const raw = parseYaml(routeTable) as {
@@ -333,9 +334,19 @@ async function auditRouteExecutionContractWarnings(fs: ProjectFileSystem): Promi
     for (const route of rawRoutes) {
       const validation = validateRawRouteExecutionContract(route);
       if (validation.errors.length || validation.warnings.length) {
+        const hardErrors = validation.errors.filter((error) =>
+          error.includes('live execution requires') ||
+          error.includes('cannot use execution.mode') ||
+          error.includes('cannot use side_effect_level') ||
+          error.includes('cannot claim max_side_effect_level') ||
+          error.includes('unknown consumer_kind') ||
+          error.includes('unknown execution.mode') ||
+          error.includes('unknown side_effect_level') ||
+          error.includes('unknown maturity.'),
+        );
         findings.push({
-          level: 'warn',
-          category: 'hardening',
+          level: hardErrors.length ? 'fail' : 'warn',
+          category: hardErrors.length ? 'blocker' : 'hardening',
           message: `Route ${validation.routeId} execution contract needs attention: ${[...validation.errors, ...validation.warnings].join('; ')}`,
           affectsScore: false,
           nextSteps: [
@@ -357,8 +368,8 @@ async function auditRouteExecutionContractWarnings(fs: ProjectFileSystem): Promi
     const missing = requiredFields.filter((field) => route[field] === undefined);
     if (missing.length) {
       findings.push({
-        level: 'warn',
-        category: 'hardening',
+        level: hasGeneratedWorkflowBundle ? 'fail' : 'warn',
+        category: hasGeneratedWorkflowBundle ? 'blocker' : 'hardening',
         message: `Route ${routeId} is missing execution transparency fields: ${missing.join(', ')}`,
         affectsScore: false,
         nextSteps: [
@@ -372,6 +383,16 @@ async function auditRouteExecutionContractWarnings(fs: ProjectFileSystem): Promi
   }
 
   return findings;
+}
+
+async function projectHasGeneratedWorkflowBundle(fs: ProjectFileSystem): Promise<boolean> {
+  let workflowEntries: Awaited<ReturnType<ProjectFileSystem['listEntries']>>;
+  try {
+    workflowEntries = await fs.listEntries('.github/workflows');
+  } catch {
+    return false;
+  }
+  return workflowEntries.some((entry) => entry.kind === 'file' && GENERATED_WORKFLOW_PATTERN.test(entry.name));
 }
 
 function validateRawRouteExecutionContract(route: Record<string, unknown>): {

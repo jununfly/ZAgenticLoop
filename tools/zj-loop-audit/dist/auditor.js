@@ -247,6 +247,7 @@ async function auditRouteExecutionContractWarnings(fs) {
     if (!routeTable)
         return [];
     const findings = [];
+    const hasGeneratedWorkflowBundle = await projectHasGeneratedWorkflowBundle(fs);
     let rawRoutes = [];
     try {
         const raw = parseYaml(routeTable);
@@ -254,9 +255,17 @@ async function auditRouteExecutionContractWarnings(fs) {
         for (const route of rawRoutes) {
             const validation = validateRawRouteExecutionContract(route);
             if (validation.errors.length || validation.warnings.length) {
+                const hardErrors = validation.errors.filter((error) => error.includes('live execution requires') ||
+                    error.includes('cannot use execution.mode') ||
+                    error.includes('cannot use side_effect_level') ||
+                    error.includes('cannot claim max_side_effect_level') ||
+                    error.includes('unknown consumer_kind') ||
+                    error.includes('unknown execution.mode') ||
+                    error.includes('unknown side_effect_level') ||
+                    error.includes('unknown maturity.'));
                 findings.push({
-                    level: 'warn',
-                    category: 'hardening',
+                    level: hardErrors.length ? 'fail' : 'warn',
+                    category: hardErrors.length ? 'blocker' : 'hardening',
                     message: `Route ${validation.routeId} execution contract needs attention: ${[...validation.errors, ...validation.warnings].join('; ')}`,
                     affectsScore: false,
                     nextSteps: [
@@ -278,8 +287,8 @@ async function auditRouteExecutionContractWarnings(fs) {
         const missing = requiredFields.filter((field) => route[field] === undefined);
         if (missing.length) {
             findings.push({
-                level: 'warn',
-                category: 'hardening',
+                level: hasGeneratedWorkflowBundle ? 'fail' : 'warn',
+                category: hasGeneratedWorkflowBundle ? 'blocker' : 'hardening',
                 message: `Route ${routeId} is missing execution transparency fields: ${missing.join(', ')}`,
                 affectsScore: false,
                 nextSteps: [
@@ -292,6 +301,16 @@ async function auditRouteExecutionContractWarnings(fs) {
         }
     }
     return findings;
+}
+async function projectHasGeneratedWorkflowBundle(fs) {
+    let workflowEntries;
+    try {
+        workflowEntries = await fs.listEntries('.github/workflows');
+    }
+    catch {
+        return false;
+    }
+    return workflowEntries.some((entry) => entry.kind === 'file' && GENERATED_WORKFLOW_PATTERN.test(entry.name));
 }
 function validateRawRouteExecutionContract(route) {
     const errors = [];

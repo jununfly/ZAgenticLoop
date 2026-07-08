@@ -6,13 +6,14 @@ Last run: 2026-07-08
 
 - Roadmap id: route-consumer-execution
 - Branch: zjal/route-consumer-execution
-- Current parent node: execution-contract-foundation
-- Current leaf: 1-7-audit-fail-upgrade-branch
+- Current parent node: consumer-runner-completion
+- Current leaf: 2-1-ci-sweeper-completion-evidence
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 1-7-audit-fail-upgrade-branch | completed | `tools/zj-loop-audit/src/auditor.ts`; generated bundle fail test; live readiness fail test; `npm run build`; `node --test tools/zj-loop-audit/test/auditor.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 1-6-template-and-init-defaults | completed | `templates/zj-loop-route-table.yaml.template`; `node --test test/cli.test.mjs` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `bash scripts/ci-validate-gates.sh` with network rerun | pending |
 | 1-5-audit-warning-branch | completed | `tools/zj-loop-audit/src/auditor.ts`; audit warning test; `npm run build`; `node --test tools/zj-loop-audit/test/auditor.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 1-4-status-surface | completed | `zj-loop-route status` capability table; JSON detail path; `npm run build`; `node --test tools/zj-loop-core/test/route.test.mjs` | pending |
