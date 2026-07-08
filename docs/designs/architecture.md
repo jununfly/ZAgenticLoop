@@ -286,6 +286,15 @@ skill or agent folders stay where those host tools require them. The `zj-loop/`
 namespace is for project-local loop memory and operating artifacts, not a forced
 relocation of every tool integration.
 
+For this repository, committed artifacts are the alignment surface:
+`skills/`, `starters/`, `templates/`, `patterns/registry.yaml`, `zj-loop/`,
+`tools/`, workflows, and durable docs. A root `.codex/` directory is a
+tool-host local install surface for the current workstation or agent runtime. It
+may be visible during development, but it is not a durable repository artifact
+and must not be used as a completeness check for packaged skills or registry
+entries. Starter-owned tool-host directories are different: they are committed
+examples or scaffold outputs and may be validated as part of starter behavior.
+
 The public roadmap-sliced development pattern id is
 `roadmap-sliced-development`, with starter files under
 `starters/roadmap-sliced-development/`. The older

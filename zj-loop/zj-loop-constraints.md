@@ -4,10 +4,25 @@ These constraints are binding for loops operating on this repository. Load them 
 
 ## Operating Mode
 
-- Daily triage is report-only: update `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md`, then hand findings to a human.
+- Daily triage is report-only for product and code work: it may update
+  `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md`, then hand findings to a
+  human or an allowlisted dispatcher.
 - Assisted fixes may prepare changes in a branch or isolated worktree, but humans merge.
 - Never auto-merge to `main`.
 - Never mark a draft PR ready, merge a PR, close an issue, or publish a release without human approval.
+- Narrow exception: Daily Triage may squash-merge only its own generated
+  operational state PR when all of these are true:
+  - the PR changes only `zj-loop/STATE.md` and/or
+    `zj-loop/zj-loop-run-log.md`
+  - `scripts/ci-validate-gates.sh` and `scripts/ci-audit-gates.sh` pass in the
+    Daily Triage workflow before the PR is opened or merged
+  - the workflow posts the required inline commit statuses for the generated
+    branch
+  - the branch name is the deterministic `automated/daily-triage-*` generated
+    state branch
+  - the merge deletes the generated branch
+  This exception must not be reused for code, docs, pattern, workflow, release,
+  or dependency PRs.
 - Narrow exception: Post-Merge Cleanup `roadmap-closeout` may close only the
   Roadmap activation carrier issue named in a valid merged-PR
   `zj-loop.post-merge-contract`. It must not close ordinary linked issues.
