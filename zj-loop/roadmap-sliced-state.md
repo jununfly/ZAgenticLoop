@@ -8,12 +8,13 @@ Last run: 2026-07-08
 - Branch: zjal/live-runner-upgrades
 - Status: active
 - Current parent node: cleanup-and-fix-runners
-- Current leaf: 2-1-post-merge-cleanup-live-runner
+- Current leaf: 2-2-dependency-sweeper-live-runner
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 2-1-post-merge-cleanup-live-runner | completed | `scripts/post-merge-roadmap-closeout.mjs`; `scripts/post-merge-roadmap-closeout.test.mjs`; `zj-loop/post-merge-state.md`; `node --test scripts/post-merge-roadmap-closeout.test.mjs scripts/live-runner-contract.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-2-route-table-live-eligibility-gate | completed | `tools/zj-loop-core/src/route.ts`; `tools/zj-loop-core/test/route.test.mjs`; `npm run build`; `node --test tools/zj-loop-core/test/route.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-1-runner-lifecycle-contract | completed | `scripts/live-runner-contract.mjs`; `scripts/live-runner-contract.test.mjs`; Route Consumer Execution Architecture; `node --test scripts/live-runner-contract.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | live-runner-upgrades-roadmap | completed | `docs/plans/live-runner-upgrades-roadmap.md`; Route Table baseline review; `git diff --check` | pending |

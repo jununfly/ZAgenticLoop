@@ -99,6 +99,9 @@ test('live execution runs guarded cleanup and closes only the contract carrier i
 
   assert.equal(result.status, 'executed');
   assert.equal(result.side_effects_executed, true);
+  assert.equal(result.runner_evidence.schema, 'zj-loop.live_runner_evidence.v1');
+  assert.equal(result.runner_evidence.completion_form, 'cleanup-done');
+  assert.equal(result.runner_evidence.status, 'completed');
   assert.deepEqual(calls.map((call) => call.slice(0, 4)), [
     ['git', 'fetch', 'origin'],
     ['git', 'switch', 'main'],
@@ -130,10 +133,20 @@ test('live execution skips absent local and remote branches but still records cl
   const result = await executePostMergeRoadmapCloseout(buildPlan({ live: true }), { runner });
 
   assert.equal(result.status, 'executed');
+  assert.equal(result.runner_evidence.side_effects.executed, true);
   assert.equal(calls.some((call) => call.join(' ') === 'git branch -d zjal/post-merge-closeout-executor'), false);
   assert.equal(calls.some((call) => call.join(' ') === 'git push origin --delete zjal/post-merge-closeout-executor'), false);
   assert.ok(result.execution.steps.some((step) => step.name === 'delete-local-branch' && step.status === 'skipped'));
   assert.ok(result.execution.steps.some((step) => step.name === 'delete-remote-branch' && step.status === 'skipped'));
+});
+
+test('refused live execution returns escalation-shaped runner evidence', async () => {
+  const result = await executePostMergeRoadmapCloseout(buildPlan({ pr: { ...MERGED_PR, merged: false } }));
+
+  assert.equal(result.execution.status, 'refused');
+  assert.equal(result.runner_evidence.completion_form, 'escalation-issue');
+  assert.equal(result.runner_evidence.status, 'escalated');
+  assert.equal(result.runner_evidence.side_effects.executed, false);
 });
 
 test('refuses unmerged PR, dirty worktree, repository mismatch, and carrier mismatch before side effects', () => {

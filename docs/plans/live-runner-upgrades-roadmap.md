@@ -155,7 +155,7 @@ Purpose: upgrade the highest-value bounded runners first.
 
 ### 2-1 Post-Merge Cleanup Live Runner
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -171,6 +171,20 @@ Verification:
 
 - Post-merge contract, executor, workflow, and e2e replay tests.
 - Route Table live readiness tests.
+
+Evidence:
+
+- Post-Merge live executor now returns `zj-loop.live_runner_evidence.v1`
+  evidence for executed cleanup and refused escalation-shaped outcomes.
+- `zj-loop/post-merge-state.md` records that the executor is live-capable while
+  the Route Table remains `dry-run` until real workflow-dispatch live evidence
+  exists.
+- `node --test scripts/post-merge-roadmap-closeout.test.mjs scripts/live-runner-contract.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- `git diff --check` passed.
+- Decision: do not promote `post-merge-roadmap-closeout` to
+  `execution.mode: live` in this slice. The current automatic route is dry-run;
+  live cleanup remains explicit operator execution with fixed confirmation.
 
 ### 2-2 Dependency Sweeper Live Runner
 
@@ -281,4 +295,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-1 Post-Merge Cleanup Live Runner`.
+Continue with `2-2 Dependency Sweeper Live Runner`.
