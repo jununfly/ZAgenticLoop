@@ -220,6 +220,11 @@ Progress:
 - The package-level API keeps execution planning route-specific instead of
   introducing a generic live runner that would blur repair, draft, and cleanup
   lifecycles.
+- Post-Merge Roadmap Closeout now has a packaged closeout-plan API and
+  `zj-loop-post-merge-closeout closeout-plan` command for contract parsing,
+  dry-run guard evidence, GitHub PR input collection, and structured dry-run
+  comments. Destructive live cleanup remains behind the route-specific closeout
+  boundary and fixed confirmation phrase.
 
 Evidence:
 
