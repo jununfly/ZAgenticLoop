@@ -140,9 +140,22 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(routeTable, /capabilities:/);
     assert.match(routeTable, /route_id: "ci-sweeper"/);
     assert.match(routeTable, /consumer_kind: "fix-runner"/);
-    assert.match(routeTable, /route_id: "pr-steward"/);
-    assert.match(routeTable, /route_id: "issue-triage"/);
-    assert.match(routeTable, /route_id: "changelog-drafter"/);
+    assert.match(routeTable, /route_id: "pr-steward-report"/);
+    assert.match(routeTable, /route_id: "pr-steward-fix-request"/);
+    assert.match(routeTable, /route_id: "issue-triage-report"/);
+    assert.match(routeTable, /route_id: "issue-triage-action"/);
+    assert.match(routeTable, /route_id: "changelog-drafter-report"/);
+    assert.match(routeTable, /route_id: "changelog-drafter-draft-request"/);
+    assert.match(routeTable, /route_id: "post-merge-roadmap-closeout"/);
+
+    const prSteward = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-pr-steward.yml'), 'utf8');
+    assert.match(prSteward, /zj-loop-route dispatch pr-steward-report/);
+    const issueTriage = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-issue-triage.yml'), 'utf8');
+    assert.match(issueTriage, /zj-loop-route dispatch issue-triage-report/);
+    const changelogDrafter = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-changelog-drafter.yml'), 'utf8');
+    assert.match(changelogDrafter, /zj-loop-route dispatch changelog-drafter-report/);
+    const postMergeCleanup = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
+    assert.match(postMergeCleanup, /zj-loop-route dispatch post-merge-roadmap-closeout/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

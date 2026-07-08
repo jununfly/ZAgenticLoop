@@ -4,16 +4,18 @@ Last run: 2026-07-09
 
 ## Active Roadmap
 
-- Roadmap id: live-runner-upgrades
-- Branch: zjal/live-runner-closeout
-- Status: completed
-- Current parent node: release-readiness
-- Current leaf: none
+- Roadmap id: user-project-ready-route-consumers
+- Branch: codex-user-project-ready-route-consumers
+- Status: active
+- Current parent node: shared-user-project-readiness-contract
+- Current leaf: 1-1-generated-bundle-route-identity-alignment
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 1-1-generated-bundle-route-identity-alignment | completed | Generated workflow templates and dogfood generated workflows now dispatch `pr-steward-report`, `issue-triage-report`, `changelog-drafter-report`, and `post-merge-roadmap-closeout`; generated Route Table template separates report/action/fix-request route ids; `cd tools/zj-loop-init && npm test`; `npm run check:zj-loop-init`; `git diff --check` | pending |
+| user-project-ready-route-consumers-roadmap | active | Issue-triggered Activation Request process accepted by human; roadmap seeded from `docs/plans/user-project-ready-route-consumer-checklist.md` | pending |
 | 4-2-closeout | completed | `bash scripts/ci-validate-gates.sh` passed after network-enabled rerun; `bash scripts/ci-audit-gates.sh` passed; `git diff --check`; durable docs/state already carry the live/non-live runner matrix and verification commands; process roadmap `docs/plans/live-runner-upgrades-roadmap.md` deleted | pending |
 | 4-1-product-and-docs-alignment | completed | README and README.zh-CN automation boundary tables; Chinese GitHub Actions bundle section; `zj-loop/ZJ-LOOP.md` and Dogfood Reference verification command updates; roadmap/state branch and next-leaf alignment; `git diff --check`; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 3-2-issue-triage-action-route-design | completed | `scripts/issue-triage-action-runner.mjs`; `scripts/issue-triage-action-runner.test.mjs`; `scripts/live-runner-contract.mjs`; `tools/zj-loop-core/src/route.ts`; `tools/zj-loop-audit/src/auditor.ts`; `zj-loop/issue-triage-state.md`; Route Table/doc updates; `npm run build` in `tools/zj-loop-core`; `npm run build` in `tools/zj-loop-audit`; `node --test scripts/issue-triage-action-runner.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `node --test tools/zj-loop-core/test/route.test.mjs`; `npm run test:route-decision`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
