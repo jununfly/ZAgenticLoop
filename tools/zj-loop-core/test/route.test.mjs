@@ -29,6 +29,7 @@ routes:
     execution:
       mode: "report-only"
       side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
     maturity:
       protocol: "dogfooded"
       runner: "missing"
@@ -45,6 +46,7 @@ routes:
     execution:
       mode: "dry-run"
       side_effect_level: "issue-comment"
+      completion_forms: ["cleanup-done", "cleanup-skipped", "escalation-issue"]
     maturity:
       protocol: "replayed"
       runner: "replayed"
@@ -64,6 +66,7 @@ disabled_dispatch_routes:
     execution:
       mode: "live"
       side_effect_level: "pr"
+      completion_forms: ["repair-pr", "escalation-issue"]
       recent_success_evidence:
         - "https://example.test/run/1"
     maturity:
@@ -152,6 +155,7 @@ test('route execution contract validates kind, mode, maturity, and live evidence
   const routes = listRoutes(parseRouteTable(ROUTE_TABLE));
   const ciSweeper = routes.find((item) => item.route_id === 'ci-sweeper');
   assert.ok(ciSweeper);
+  assert.deepEqual(ciSweeper.completion_forms, ['repair-pr', 'escalation-issue']);
   assert.equal(isRouteLiveReady(ciSweeper), true);
   assert.equal(validateRouteExecutionContract(ciSweeper).valid, true);
 
@@ -164,6 +168,29 @@ test('route execution contract validates kind, mode, maturity, and live evidence
   const validation = validateRouteExecutionContract(invalid);
   assert.equal(validation.valid, false);
   assert.match(validation.errors.join('\n'), /report-consumer cannot use execution.mode=live/);
+});
+
+test('route execution contract rejects invalid completion forms and missing live evidence', () => {
+  const routes = listRoutes(parseRouteTable(ROUTE_TABLE));
+  const ciSweeper = routes.find((item) => item.route_id === 'ci-sweeper');
+  assert.ok(ciSweeper);
+
+  const invalidCompletion = validateRouteExecutionContract({
+    ...ciSweeper,
+    completion_forms: ['draft-pr'],
+  });
+  const missingEvidence = validateRouteExecutionContract({
+    ...ciSweeper,
+    recent_success_evidence: [],
+  });
+
+  assert.equal(invalidCompletion.valid, false);
+  assert.match(invalidCompletion.errors.join('\n'), /fix-runner cannot use completion_form=draft-pr/);
+  assert.equal(missingEvidence.valid, false);
+  assert.match(
+    missingEvidence.errors.join('\n'),
+    /live execution requires runner maturity dogfooded or user-project-ready and non-evidence side-effect boundary/,
+  );
 });
 
 test('canClaimRequest requires enabled route, fix-runner kind, active request, scopes, and verifiers', () => {

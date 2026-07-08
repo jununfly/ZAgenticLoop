@@ -124,7 +124,7 @@ Evidence:
 
 ### 1-2 Route Table Live Eligibility Gate
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -137,6 +137,17 @@ Verification:
 
 - `tools/zj-loop-core` route tests cover live-ready and not-live-ready examples.
 - `zj-loop-audit` catches live rows without sufficient runner evidence.
+
+Evidence:
+
+- Extended `@jununfly/zj-loop-core` RouteStatus with `completion_forms`.
+- `validateRouteExecutionContract` now rejects consumer-kind/completion-form
+  mismatches and missing completion forms.
+- Added route tests for invalid completion forms and missing live evidence.
+- `npm run build` passed in `tools/zj-loop-core`.
+- `node --test tools/zj-loop-core/test/route.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- `git diff --check` passed.
 
 ## Layer 2: Cleanup and Fix Runners
 
@@ -270,4 +281,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `1-2 Route Table Live Eligibility Gate`.
+Continue with `2-1 Post-Merge Cleanup Live Runner`.

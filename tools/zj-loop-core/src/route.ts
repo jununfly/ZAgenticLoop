@@ -47,6 +47,7 @@ export type RouteStatus = {
   request_kind: string;
   execution_mode: string;
   side_effect_level: string;
+  completion_forms: string[];
   maturity_protocol: string;
   maturity_runner: string;
   max_side_effect_level: string;
@@ -115,14 +116,14 @@ const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'd
 const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
 const MATURITY_LEVELS = new Set(['missing', 'designed', 'replayed', 'dogfooded', 'user-project-ready']);
 
-const CONSUMER_KIND_LIMITS: Record<string, { modes: string[]; maxSideEffect: string }> = {
-  'producer-router': { modes: ['report-only', 'request-only'], maxSideEffect: 'request' },
-  'report-consumer': { modes: ['report-only'], maxSideEffect: 'evidence' },
-  'human-gate': { modes: ['report-only'], maxSideEffect: 'evidence' },
-  'fix-runner': { modes: ['request-only', 'claim-only', 'dry-run', 'live'], maxSideEffect: 'pr' },
-  'draft-consumer': { modes: ['report-only', 'request-only', 'dry-run', 'live'], maxSideEffect: 'draft-pr' },
-  'cleanup-consumer': { modes: ['report-only', 'dry-run', 'live'], maxSideEffect: 'cleanup' },
-  'activation-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'branch' },
+const CONSUMER_KIND_LIMITS: Record<string, { modes: string[]; maxSideEffect: string; completionForms: string[] }> = {
+  'producer-router': { modes: ['report-only', 'request-only'], maxSideEffect: 'request', completionForms: ['report-evidence'] },
+  'report-consumer': { modes: ['report-only'], maxSideEffect: 'evidence', completionForms: ['report-evidence'] },
+  'human-gate': { modes: ['report-only'], maxSideEffect: 'evidence', completionForms: ['human-decision'] },
+  'fix-runner': { modes: ['request-only', 'claim-only', 'dry-run', 'live'], maxSideEffect: 'pr', completionForms: ['repair-pr', 'escalation-issue'] },
+  'draft-consumer': { modes: ['report-only', 'request-only', 'dry-run', 'live'], maxSideEffect: 'draft-pr', completionForms: ['draft-pr', 'draft-evidence', 'escalation-issue'] },
+  'cleanup-consumer': { modes: ['report-only', 'dry-run', 'live'], maxSideEffect: 'cleanup', completionForms: ['cleanup-done', 'cleanup-skipped', 'escalation-issue'] },
+  'activation-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'branch', completionForms: ['roadmap-branch-pr', 'activation-failed', 'activation-resumable'] },
 };
 
 export async function loadRouteTable(root: string, routeTablePath = DEFAULT_ROUTE_TABLE_PATH): Promise<RouteTableDocument> {
@@ -164,6 +165,14 @@ export function validateRouteExecutionContract(route: RouteStatus): RouteExecuti
     }
     if (sideEffectRank(route.max_side_effect_level) > sideEffectRank(limits.maxSideEffect)) {
       errors.push(`${route.consumer_kind} cannot claim max_side_effect_level=${route.max_side_effect_level}`);
+    }
+    if (route.completion_forms.length === 0) {
+      errors.push(`${route.consumer_kind} must declare at least one completion_form`);
+    }
+    for (const form of route.completion_forms) {
+      if (!limits.completionForms.includes(form)) {
+        errors.push(`${route.consumer_kind} cannot use completion_form=${form}`);
+      }
     }
   }
 
@@ -310,6 +319,7 @@ function normalizeRouteSection(
     const consumerKind = route.consumer_kind ?? inferConsumerKind(route);
     const executionMode = route.execution?.mode ?? inferExecutionMode(route);
     const sideEffectLevel = route.execution?.side_effect_level ?? inferSideEffectLevel(route);
+    const completionForms = route.execution?.completion_forms ?? [];
     const maturityProtocol = route.maturity?.protocol ?? 'missing';
     const maturityRunner = route.maturity?.runner ?? 'missing';
     const maxSideEffectLevel = route.capabilities?.max_side_effect_level ?? sideEffectLevel;
@@ -326,6 +336,7 @@ function normalizeRouteSection(
       request_kind: requestKind,
       execution_mode: executionMode,
       side_effect_level: sideEffectLevel,
+      completion_forms: completionForms,
       maturity_protocol: maturityProtocol,
       maturity_runner: maturityRunner,
       max_side_effect_level: maxSideEffectLevel,
