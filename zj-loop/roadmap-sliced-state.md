@@ -4,16 +4,17 @@ Last run: 2026-07-08
 
 ## Active Roadmap
 
-- Roadmap id: route-consumer-execution
-- Branch: zjal/route-consumer-execution
-- Status: completed
-- Current parent node: closeout
-- Current leaf: none
+- Roadmap id: live-runner-upgrades
+- Branch: zjal/live-runner-upgrades
+- Status: active
+- Current parent node: live-runner-substrate
+- Current leaf: 1-1-runner-lifecycle-contract
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| live-runner-upgrades-roadmap | completed | `docs/plans/live-runner-upgrades-roadmap.md`; Route Table baseline review; `git diff --check` | pending |
 | 2-8-release-readiness-closeout | completed | `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check`; process roadmap deleted after durable docs/state absorbed key decisions | pending |
 | 2-7-report-only-boundaries | completed | `zj-loop/issue-triage-state.md`; Dogfood Reference Case report-only boundary section; report-only dispatcher and issue triage replay tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 2-6-roadmap-sliced-activation-consumer | completed | `zj-loop/roadmap-activation-state.md`; Dogfood Reference Case; roadmap activation replay/dispatcher tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
@@ -50,6 +51,9 @@ Last run: 2026-07-08
 
 ## Closeout Notes
 
+- Active process roadmap:
+  `docs/plans/live-runner-upgrades-roadmap.md`. It must be merged into durable
+  docs/state or deleted at closeout.
 - Process roadmap `docs/plans/route-consumer-execution-roadmap.md` was deleted
   after durable docs and consumer-owned state files absorbed the key decisions,
   capability map, and verification evidence.
