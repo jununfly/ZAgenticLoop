@@ -9,6 +9,10 @@ Operational run details, one-off evidence links, and current live status belong
 in `zj-loop/ZJ-LOOP.md`, workflow runs, issues, PRs, and consumer-owned state
 files. This document keeps the stable dogfood capability map.
 
+Route consumer execution vocabulary, maturity levels, hard gates, capability
+matching, and completion forms are defined in
+[`route-consumer-execution-architecture.md`](route-consumer-execution-architecture.md).
+
 ## Purpose
 
 The reference repo should not only describe Agentic Loop Working. It should run

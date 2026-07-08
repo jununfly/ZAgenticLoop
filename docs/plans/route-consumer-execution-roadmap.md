@@ -124,7 +124,7 @@ Durable decision target:
 
 ### 1-2 Durable Architecture Doc
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -139,6 +139,13 @@ Verification:
 - Terminology matches Route Table fields.
 - No uppercase retired planning-signal protocol names are introduced.
 - `git diff --check`.
+
+Evidence:
+
+- Added `docs/designs/route-consumer-execution-architecture.md`.
+- Linked it from Route Table Architecture and Dogfood Reference Case.
+- Retired uppercase planning-signal protocol terms were not introduced.
+- `git diff --check` passed.
 
 ### 1-3 Deterministic Contract Helpers
 
@@ -367,4 +374,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `1-2 Durable Architecture Doc`.
+Continue with `1-3 Deterministic Contract Helpers`.
