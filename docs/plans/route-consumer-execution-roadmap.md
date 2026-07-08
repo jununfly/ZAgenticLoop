@@ -345,7 +345,7 @@ Evidence:
 
 ### 2-3 PR Steward Runner
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -359,6 +359,17 @@ Verification:
 - E2E replay for failed status/check rollup -> Issue Fix Request -> claim ->
   bounded outcome.
 - Capability match tests.
+
+Evidence:
+
+- Added `zj-loop/pr-steward-state.md` documenting current report-only and
+  claim-only capability.
+- Dogfood Reference Case now points to the PR Steward state file and Route
+  Table truth.
+- `node --test scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- Decision: do not promote PR Steward to live until a current-head-SHA
+  verifier-backed repair PR or escalation runner exists.
 
 ### 2-4 Changelog Drafter Draft Consumer
 
@@ -444,4 +455,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-3 PR Steward Runner`.
+Continue with `2-4 Changelog Drafter Draft Consumer`.
