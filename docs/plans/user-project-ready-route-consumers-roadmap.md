@@ -232,6 +232,11 @@ Progress:
   `zj-loop-dependency-sweeper repair-plan` command that validates consumed
   Issue Fix Requests, produces deterministic repair PR actions, and returns
   live-runner evidence through an injected runner boundary.
+- PR Steward now has a packaged fix-plan API and `zj-loop-pr-steward fix-plan`
+  command that validates consumed PR Issue Fix Requests, verifies the source PR
+  head SHA, produces either independent repair PR actions or an escalation
+  issue action, and records that the source PR is not commented, labeled,
+  rebased, merged, or workflow-dispatched by the runner.
 
 Evidence:
 
