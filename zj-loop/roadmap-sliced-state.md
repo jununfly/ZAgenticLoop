@@ -13,7 +13,7 @@ Last run: 2026-07-08
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
-| workflow-dispatch-user-project-bundle | completed | README, Quickstart, Route Table Architecture, Dogfood Reference Case, generated `zj-loop-*.yml` workflows, audit/validate gates | `2637db0`, `9672593` |
+| workflow-dispatch-user-project-bundle | completed | README, Quickstart, Route Table Architecture, Dogfood Reference Case, generated `zj-loop-*.yml` workflows, audit/validate gates | `2637db0`, `9672593`, PR #53 |
 
 ## Human Gates
 
@@ -29,7 +29,7 @@ Last run: 2026-07-08
 - [x] Durable decisions are moved into docs or PR body
 - [x] Verification evidence is attached before commit
 - [x] Closeout commit is separate from final feature slice
-- [ ] PR handoff includes branch cleanup plan
+- [x] PR handoff includes branch cleanup plan
 
 ## Closeout Notes
 
@@ -42,3 +42,4 @@ Last run: 2026-07-08
   - `docs/designs/dogfood-reference-case.md`
 - Branch cleanup plan: delete `zjal/workflow-dispatch-user-project-bundle` after
   human-reviewed PR merge.
+- PR handoff: https://github.com/jununfly/ZAgenticLoop/pull/53
