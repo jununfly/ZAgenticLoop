@@ -168,6 +168,28 @@ has its own completion form.
 
 No consumer may auto-merge to `main`. Human review remains the merge boundary.
 
+## Live Runner Evidence
+
+Live runners keep their route-specific lifecycle contracts. Issue Fix Requests,
+activation comments, and post-merge contracts are not interchangeable and must
+not be hidden behind a generic queue.
+
+The shared layer is only a small evidence envelope for completed runner work.
+`scripts/live-runner-contract.mjs` validates:
+
+- `schema: zj-loop.live_runner_evidence.v1`
+- runner and route identity
+- consumer kind and execution mode
+- kind-specific completion form
+- source request/signal identity
+- verifier evidence
+- side effect level and actions
+- dedupe key
+
+This envelope is for live-runner evidence, not for deciding whether a route
+should run. Route-specific dispatchers still own matching, dedupe, lifecycle
+state, retry policy, and escalation behavior.
+
 ## Hard Gates
 
 The terminal architecture is complete only when these gates are enforceable:

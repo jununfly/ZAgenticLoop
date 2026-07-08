@@ -90,7 +90,7 @@ Purpose: avoid each consumer inventing its own side-effect lifecycle.
 
 ### 1-1 Runner Lifecycle Contract
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -108,6 +108,19 @@ Verification:
 - New or updated contract tests cover accepted and rejected live-runner
   evidence examples.
 - `git diff --check`.
+
+Evidence:
+
+- Added `scripts/live-runner-contract.mjs` with deterministic live-runner
+  evidence validation, comment build, and comment parse helpers.
+- Added `scripts/live-runner-contract.test.mjs` covering accepted completion
+  forms, kind/form mismatch, status/form mismatch, required verifier/source
+  evidence, side-effect shape, and comment round-trip.
+- Updated Route Consumer Execution Architecture with the shared evidence
+  envelope boundary.
+- `node --test scripts/live-runner-contract.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- `git diff --check` passed.
 
 ### 1-2 Route Table Live Eligibility Gate
 
@@ -257,4 +270,4 @@ Verification:
 
 ## Current Next Leaf
 
-Start with `1-1 Runner Lifecycle Contract`.
+Continue with `1-2 Route Table Live Eligibility Gate`.
