@@ -1,19 +1,20 @@
 # Roadmap-Sliced Development State — ZAgenticLoop
 
-Last run: 2026-07-08
+Last run: 2026-07-09
 
 ## Active Roadmap
 
 - Roadmap id: live-runner-upgrades
-- Branch: zjal/issue-triage-action-route
+- Branch: zjal/live-runner-docs-alignment
 - Status: active
 - Current parent node: release-readiness
-- Current leaf: 4-1-product-and-docs-alignment
+- Current leaf: 4-2-closeout
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 4-1-product-and-docs-alignment | completed | README and README.zh-CN automation boundary tables; Chinese GitHub Actions bundle section; `zj-loop/ZJ-LOOP.md` and Dogfood Reference verification command updates; roadmap/state branch and next-leaf alignment; `git diff --check`; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 3-2-issue-triage-action-route-design | completed | `scripts/issue-triage-action-runner.mjs`; `scripts/issue-triage-action-runner.test.mjs`; `scripts/live-runner-contract.mjs`; `tools/zj-loop-core/src/route.ts`; `tools/zj-loop-audit/src/auditor.ts`; `zj-loop/issue-triage-state.md`; Route Table/doc updates; `npm run build` in `tools/zj-loop-core`; `npm run build` in `tools/zj-loop-audit`; `node --test scripts/issue-triage-action-runner.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `node --test tools/zj-loop-core/test/route.test.mjs`; `npm run test:route-decision`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 3-1-changelog-drafter-live-draft-consumer | completed | `scripts/changelog-drafter-live-runner.mjs`; `scripts/changelog-drafter-live-runner.test.mjs`; `scripts/write-file-once.mjs`; `scripts/write-file-once.test.mjs`; `zj-loop/changelog-drafter-state.md`; Route Table/doc updates; `node --test scripts/changelog-drafter-live-runner.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `git diff --check` | `89dc12e` |
 | 2-3-pr-steward-live-runner | completed | `scripts/pr-steward-live-runner.mjs`; `scripts/pr-steward-live-runner.test.mjs`; `zj-loop/pr-steward-state.md`; Route Table/doc updates; `node --test scripts/pr-steward-live-runner.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `git diff --check` | `7b3b69a` |

@@ -214,8 +214,7 @@ The terminal architecture is complete only when these gates are enforceable:
 
 ## Current Dogfood Map
 
-The dogfood Route Table is the operational truth. At the time this architecture
-was introduced:
+The dogfood Route Table is the operational truth. Current dogfood capability:
 
 | Consumer | Kind | Execution mode | Runner maturity | Notes |
 | --- | --- | --- | --- | --- |

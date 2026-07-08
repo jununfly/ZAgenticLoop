@@ -49,8 +49,8 @@ Signal -> Route Decision -> Issue Fix Request -> Fix Consumer -> Fix PR
 
 This repo keeps Route Table policy in `zj-loop/zj-loop-route-table.yaml`.
 `ci-sweeper` is the first live allowlisted Fix Consumer. `pr-steward` and
-`dependency-sweeper` are covered by protocol fixtures and can be enabled as
-separate dogfood slices.
+`dependency-sweeper` now have replayed live runners but remain `claim-only`
+until workflow-dispatch dogfood evidence supports live promotion.
 
 Roadmap-Sliced Development is intentionally separate: it consumes
 `activation-comment` requests, not Issue Fix Requests. The dogfood route is:
@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/issue-triage-action-runner.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-live-runner.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-live-runner.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-live-runner.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/live-runner-contract.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs scripts/validate-post-merge-closeout-workflow.test.mjs
 ```
 
@@ -92,6 +92,11 @@ Current dogfood status:
   assign issues, change milestones, close/reopen issues, perform formal
   lifecycle transitions, batch-mutate the issue tracker, create Issue Fix
   Requests, or start consumer work.
+- `issue-triage-action` is implemented as a separate dry-run action consumer:
+  `Issue Triage Report Evidence -> Triage Action Request -> Issue Triage Action Evidence`.
+  It accepts only allowlisted labels and fixed comment templates, refuses live
+  issue mutation, rejects unsupported/freeform actions, and escalates hard
+  human-guard cases. It must not be folded back into `issue-triage-report`.
 - `changelog-drafter-report` is implemented as a release-prep report-only
   route:
   `Merged PR Batch / Manual Release Prep -> Route Decision -> Changelog Draft Evidence`.
@@ -108,6 +113,9 @@ Current dogfood status:
   does not introduce a general `draft-request` request kind, generate
   `RELEASE_NOTES_DRAFT.md`, edit changelogs, create changelog PRs, dispatch
   workflows, tag, release, publish packages, or start consumer work.
+  `scripts/changelog-drafter-live-runner.mjs` can replay draft evidence, draft
+  PR, or escalation outcomes, but the route remains report-only until
+  workflow-dispatch dogfood evidence exists.
 - `pr-steward-fix-request` is enabled as a bounded Issue Fix Request route for
   failed GitHub status/check rollups on non-draft PRs targeting `main`.
   Local replay creates or dedupes an independent request issue only; it does
@@ -116,6 +124,9 @@ Current dogfood status:
   with verifier gates and a current PR head SHA match. Claim evidence belongs
   on the independent Issue Fix Request lifecycle comments; `consumed` does not
   start repair, create a branch, open a Fix PR, or enable auto-merge.
+  `scripts/pr-steward-live-runner.mjs` can replay repair PR or escalation
+  evidence after claim, but the route is not live until workflow-dispatch
+  dogfood evidence exists.
 - Daily Triage is wired to create a real Issue Fix Request carrier issue before
   dispatching CI Sweeper.
 - `dependency-sweeper` is enabled as a bounded Issue Fix Request route:
@@ -125,6 +136,9 @@ Current dogfood status:
   gates. It does not run Dependency Sweeper repair, edit package manifests,
   update lockfiles, create branches, open Fix PRs, dispatch workflows, or
   auto-merge.
+  `scripts/dependency-sweeper-live-runner.mjs` can replay repair PR or
+  escalation evidence after claim, but the route is not live until
+  workflow-dispatch dogfood evidence exists.
 - `roadmap-sliced-development` is enabled in the route table as an
   `activation-comment` route and covered by local activation replay.
 - Roadmap activation dogfood evidence has been captured:

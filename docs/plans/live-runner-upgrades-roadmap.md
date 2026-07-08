@@ -1,7 +1,7 @@
 # Live Runner Upgrades Roadmap
 
 Roadmap id: `live-runner-upgrades`
-Branch: `zjal/issue-triage-action-route`
+Branch: `zjal/live-runner-docs-alignment`
 Status: active
 Started: 2026-07-08
 
@@ -34,13 +34,15 @@ Upgrade candidates:
 
 - `post-merge-roadmap-closeout`: `dry-run` cleanup-consumer with replayed
   runner. Candidate for guarded live cleanup.
-- `dependency-sweeper`: `claim-only` fix-runner with missing runner. Candidate
-  for verifier-backed dependency repair PR or escalation.
-- `pr-steward-fix-request`: `claim-only` fix-runner with missing runner.
-  Candidate for verifier-backed PR repair/escalation handoff, not PR mutation.
-- `changelog-drafter-draft-request`: `report-only` draft-consumer with missing
-  runner. Candidate for draft evidence or draft PR.
-- `issue-triage-report`: must stay report-only. Future side effects require a
+- `dependency-sweeper`: `claim-only` fix-runner with replayed runner. Candidate
+  for workflow-dispatch dogfood before live promotion.
+- `pr-steward-fix-request`: `claim-only` fix-runner with replayed runner.
+  Candidate for workflow-dispatch dogfood before live promotion.
+- `changelog-drafter-draft-request`: `report-only` draft-consumer with replayed
+  runner. Candidate for workflow-dispatch dogfood before live promotion.
+- `issue-triage-action`: `dry-run` triage-action-consumer with replayed runner.
+  Candidate for workflow-dispatch dogfood before any live issue mutation.
+- `issue-triage-report`: must stay report-only. Side effects belong to the
   separate `issue-triage-action` consumer.
 
 ## Durable Decisions
@@ -343,7 +345,7 @@ Evidence:
 
 ### 4-1 Product and Docs Alignment
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -355,6 +357,18 @@ Verification:
 
 - Docs match Route Table truth.
 - No product copy claims all consumers are live unless they are.
+
+Evidence:
+
+- Updated README and README.zh-CN with current automation boundary tables.
+- Updated the Chinese README with the generated GitHub Actions bundle setup
+  and Route Table enable/disable commands.
+- Updated `zj-loop/ZJ-LOOP.md` and Dogfood Reference verification commands to
+  include replayed live runner/action tests.
+- Updated this roadmap and Roadmap-Sliced state to reflect the current branch
+  and completed 4-1 slice.
+- `git diff --check` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
 
 ### 4-2 Closeout
 
@@ -375,4 +389,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `4-1 Product and Docs Alignment`.
+Continue with `4-2 Closeout`.
