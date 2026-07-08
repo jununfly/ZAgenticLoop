@@ -20,6 +20,7 @@ const CONSUMER_KIND_LIMITS = {
     'draft-consumer': { modes: ['report-only', 'request-only', 'dry-run', 'live'], maxSideEffect: 'draft-pr' },
     'cleanup-consumer': { modes: ['report-only', 'dry-run', 'live'], maxSideEffect: 'cleanup' },
     'activation-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'branch' },
+    'triage-action-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'label' },
 };
 async function readFirstProjectText(fs, candidates) {
     for (const candidate of candidates) {

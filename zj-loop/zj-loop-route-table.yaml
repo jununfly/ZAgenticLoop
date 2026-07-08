@@ -168,6 +168,52 @@ routes:
     failure_owner: "issue-triage"
     human_gate: "only for high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, public comment, or label mutation"
 
+  - route_id: "issue-triage-action"
+    enabled: true
+    request_kind: "triage-action-request"
+    consumer: "issue-triage-action"
+    consumer_kind: "triage-action-consumer"
+    execution:
+      mode: "dry-run"
+      side_effect_level: "label"
+      completion_forms: ["triage-label-applied", "triage-comment-posted", "triage-action-skipped", "escalation-issue"]
+    maturity:
+      protocol: "designed"
+      runner: "replayed"
+    capabilities:
+      scopes: ["issue-backlog", "triage-label", "fixed-triage-comment"]
+      verifiers: ["route-replay", "allowlisted-triage-action", "forbidden-side-effect-check"]
+      max_side_effect_level: "label"
+    evidence_store: "zj-loop/issue-triage-state.md"
+    match:
+      source: ["issue-triage-report", "maintainer"]
+      requested_action:
+        - "apply-allowlisted-label"
+        - "post-fixed-triage-comment"
+    guards:
+      side_effects_allowed: false
+      live_side_effects_allowed: false
+      public_issue_comment_allowed: "fixed-template-only"
+      label_mutation_allowed: "allowlist-only"
+      label_allowlist: ["needs-info", "duplicate-candidate", "ready-for-roadmap-review"]
+      fixed_comment_templates:
+        - "needs-info-request"
+        - "duplicate-candidate-note"
+        - "roadmap-review-ready-note"
+      close_reopen_allowed: false
+      assignment_allowed: false
+      milestone_allowed: false
+      formal_issue_lifecycle_transition_allowed: false
+      batch_mutation_allowed: false
+      fixed_status_enum:
+        - "dry-run-completed"
+        - "skipped"
+        - "rejected"
+        - "escalated"
+    dedupe_window: "issue-triage-action:<repo>:<issue>:<requested_action>:<action_value>"
+    failure_owner: "issue-triage-action"
+    human_gate: "required for unsupported labels, freeform comments, high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, assignment, milestone, close/reopen, or batch mutation"
+
   - route_id: "pr-steward-report"
     enabled: true
     request_kind: "report-only"

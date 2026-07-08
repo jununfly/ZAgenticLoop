@@ -1,7 +1,7 @@
 # Live Runner Upgrades Roadmap
 
 Roadmap id: `live-runner-upgrades`
-Branch: `zjal/changelog-drafter-live-runner`
+Branch: `zjal/issue-triage-action-route`
 Status: active
 Started: 2026-07-08
 
@@ -302,7 +302,7 @@ Evidence:
 
 ### 3-2 Issue Triage Action Route Design
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -317,6 +317,27 @@ Verification:
 - Report-only replay still proves `issue-triage-report` cannot mutate issues.
 - Any action route remains disabled or non-live until its own runner and tests
   exist.
+
+Evidence:
+
+- Added `triage-action-consumer` to the Route execution and live-runner
+  evidence contracts.
+- Added `issue-triage-action` as a separate dry-run Route Table row with
+  allowlisted labels, fixed comment templates, human-guard escalation, and no
+  live side effects.
+- Added `scripts/issue-triage-action-runner.mjs` and
+  `scripts/issue-triage-action-runner.test.mjs` covering allowlisted label
+  dry-run, fixed comment dry-run, unsupported label rejection, freeform comment
+  rejection, human-guard escalation, and live refusal.
+- Updated Issue Triage state and durable docs to preserve the report/action
+  boundary.
+- `npm run build` passed in `tools/zj-loop-core`.
+- `npm run build` passed in `tools/zj-loop-audit`.
+- `node --test scripts/issue-triage-action-runner.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs` passed.
+- `node --test tools/zj-loop-core/test/route.test.mjs` passed.
+- `npm run test:route-decision` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- `git diff --check` passed.
 
 ## Layer 4: Release Readiness
 
@@ -354,4 +375,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-2 Dependency Sweeper Live Runner`.
+Continue with `4-1 Product and Docs Alignment`.

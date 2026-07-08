@@ -12,6 +12,7 @@ export const COMPLETION_FORMS_BY_KIND = {
   'draft-consumer': ['draft-pr', 'draft-evidence', 'escalation-issue'],
   'cleanup-consumer': ['cleanup-done', 'cleanup-skipped', 'escalation-issue'],
   'activation-consumer': ['roadmap-branch-pr', 'activation-failed', 'activation-resumable'],
+  'triage-action-consumer': ['triage-label-applied', 'triage-comment-posted', 'triage-action-skipped', 'escalation-issue'],
 };
 
 export const SIDE_EFFECT_LEVELS = [
@@ -170,5 +171,11 @@ function validateCompletionStatus(evidence, errors) {
   }
   if (form === 'activation-resumable' && !['completed', 'skipped'].includes(status)) {
     errors.push('activation-resumable completion_form requires status completed or skipped');
+  }
+  if (form === 'triage-action-skipped' && status !== 'skipped') {
+    errors.push('triage-action-skipped completion_form requires status skipped');
+  }
+  if (['triage-label-applied', 'triage-comment-posted'].includes(form) && status !== 'completed') {
+    errors.push(`${form} completion_form requires status completed`);
   }
 }

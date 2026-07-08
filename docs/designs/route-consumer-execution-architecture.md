@@ -49,14 +49,16 @@ Consumer kind is mandatory because it constrains what a route is allowed to do.
 | `draft-consumer` | Produces reviewable drafts. | Draft PR, draft evidence, or escalation issue. |
 | `cleanup-consumer` | Performs narrow post-merge cleanup. | Cleanup done, cleanup skipped, or escalation issue. |
 | `activation-consumer` | Consumes activation requests and bootstraps a bounded roadmap lifecycle. | Roadmap branch/PR, activation failed, or activation resumable. |
+| `triage-action-consumer` | Performs bounded issue triage side effects. | Triage label applied, triage comment posted, action skipped, or escalation issue. |
 
 Daily Triage is a producer/router. It may update operational memory and create
 or dispatch bounded requests through allowlisted routes, but it must not repair
 code, bump dependencies, draft releases, mutate issues directly, or implement
 roadmap slices.
 
-Issue Triage report routes remain report-only. Future side effects require a
-separate `issue-triage-action` consumer.
+Issue Triage report routes remain report-only. Bounded side effects belong to
+the separate `issue-triage-action` consumer and require their own Route Table
+row, allowlist, runner evidence, and live promotion.
 
 ## Execution Modes
 
@@ -218,7 +220,8 @@ was introduced:
 | Consumer | Kind | Execution mode | Runner maturity | Notes |
 | --- | --- | --- | --- | --- |
 | Daily Triage | `producer-router` | `report-only` | `missing` | Producer and report surface, not a worker. |
-| Issue Triage | `report-consumer` | `report-only` | `missing` | Side effects require future `issue-triage-action`. |
+| Issue Triage | `report-consumer` | `report-only` | `missing` | Side effects belong to the separate dry-run `issue-triage-action` route. |
+| Issue Triage Action | `triage-action-consumer` | `dry-run` | `replayed` | Separate action-capable route for narrowly allowlisted labels and fixed comment templates; refuses live mutation until dogfood evidence exists. |
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
 | PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; not live until workflow-dispatch dogfood evidence exists. |
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
