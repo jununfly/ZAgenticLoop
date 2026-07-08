@@ -202,7 +202,7 @@ Evidence:
 
 ### 1-5 Audit Warning Branch
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -219,6 +219,17 @@ Verification:
 - `cd tools/zj-loop-audit && npm run build`
 - `node dist/cli.js ../..`
 - `git diff --check`.
+
+Evidence:
+
+- Added warning-level Route Table execution transparency checks to
+  `zj-loop-audit`.
+- Added audit tests for missing transparency fields and live mode without
+  recent evidence.
+- `npm run build` passed in `tools/zj-loop-audit`.
+- `node --test tools/zj-loop-audit/test/auditor.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3 and no route
+  execution warnings for the current dogfood table.
 
 ### 1-6 Template and Init Defaults
 
@@ -393,4 +404,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `1-5 Audit Warning Branch`.
+Continue with `1-6 Template and Init Defaults`.

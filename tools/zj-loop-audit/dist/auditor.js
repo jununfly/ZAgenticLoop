@@ -9,6 +9,18 @@ const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 const BUDGET_HINTS = [/budget/i, /max tokens/i, /token cap/i, /kill switch/i, /loop-pause-all/i];
 const ROUTE_TABLE_FILES = ['zj-loop/zj-loop-route-table.yaml'];
 const GENERATED_WORKFLOW_PATTERN = /^zj-loop-.+\.yml$/;
+const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
+const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
+const MATURITY_LEVELS = new Set(['missing', 'designed', 'replayed', 'dogfooded', 'user-project-ready']);
+const CONSUMER_KIND_LIMITS = {
+    'producer-router': { modes: ['report-only', 'request-only'], maxSideEffect: 'request' },
+    'report-consumer': { modes: ['report-only'], maxSideEffect: 'evidence' },
+    'human-gate': { modes: ['report-only'], maxSideEffect: 'evidence' },
+    'fix-runner': { modes: ['request-only', 'claim-only', 'dry-run', 'live'], maxSideEffect: 'pr' },
+    'draft-consumer': { modes: ['report-only', 'request-only', 'dry-run', 'live'], maxSideEffect: 'draft-pr' },
+    'cleanup-consumer': { modes: ['report-only', 'dry-run', 'live'], maxSideEffect: 'cleanup' },
+    'activation-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'branch' },
+};
 async function readFirstProjectText(fs, candidates) {
     for (const candidate of candidates) {
         const content = await fs.readTextIfExists(candidate);
@@ -230,6 +242,115 @@ async function auditWorkflowBundleRouteTable(fs) {
     }
     return null;
 }
+async function auditRouteExecutionContractWarnings(fs) {
+    const routeTable = await fs.readTextIfExists('zj-loop/zj-loop-route-table.yaml');
+    if (!routeTable)
+        return [];
+    const findings = [];
+    let rawRoutes = [];
+    try {
+        const raw = parseYaml(routeTable);
+        rawRoutes = [...(raw?.routes ?? []), ...(raw?.disabled_dispatch_routes ?? [])];
+        for (const route of rawRoutes) {
+            const validation = validateRawRouteExecutionContract(route);
+            if (validation.errors.length || validation.warnings.length) {
+                findings.push({
+                    level: 'warn',
+                    category: 'hardening',
+                    message: `Route ${validation.routeId} execution contract needs attention: ${[...validation.errors, ...validation.warnings].join('; ')}`,
+                    affectsScore: false,
+                    nextSteps: [
+                        {
+                            kind: 'manual-review',
+                            label: 'Align Route Table execution mode, maturity, side effect level, and capabilities',
+                        },
+                    ],
+                });
+            }
+        }
+    }
+    catch {
+        return [];
+    }
+    const requiredFields = ['consumer_kind', 'execution', 'maturity', 'capabilities'];
+    for (const route of rawRoutes) {
+        const routeId = typeof route.route_id === 'string' ? route.route_id : 'unknown-route';
+        const missing = requiredFields.filter((field) => route[field] === undefined);
+        if (missing.length) {
+            findings.push({
+                level: 'warn',
+                category: 'hardening',
+                message: `Route ${routeId} is missing execution transparency fields: ${missing.join(', ')}`,
+                affectsScore: false,
+                nextSteps: [
+                    {
+                        kind: 'manual-review',
+                        label: 'Add consumer_kind, execution, maturity, and capabilities fields to the Route Table row',
+                    },
+                ],
+            });
+        }
+    }
+    return findings;
+}
+function validateRawRouteExecutionContract(route) {
+    const errors = [];
+    const warnings = [];
+    const routeId = typeof route.route_id === 'string' ? route.route_id : 'unknown-route';
+    const consumerKind = stringField(route.consumer_kind);
+    const execution = objectField(route.execution);
+    const maturity = objectField(route.maturity);
+    const capabilities = objectField(route.capabilities);
+    const mode = stringField(execution?.mode);
+    const sideEffectLevel = stringField(execution?.side_effect_level);
+    const maturityProtocol = stringField(maturity?.protocol);
+    const maturityRunner = stringField(maturity?.runner);
+    const maxSideEffectLevel = stringField(capabilities?.max_side_effect_level) ?? sideEffectLevel;
+    const recentSuccessEvidence = arrayField(execution?.recent_success_evidence);
+    const requestKind = stringField(route.request_kind) ?? 'report-only';
+    const limits = consumerKind ? CONSUMER_KIND_LIMITS[consumerKind] : undefined;
+    if (consumerKind && !limits)
+        errors.push(`unknown consumer_kind: ${consumerKind}`);
+    if (mode && !EXECUTION_MODES.has(mode))
+        errors.push(`unknown execution.mode: ${mode}`);
+    if (sideEffectLevel && !SIDE_EFFECT_LEVELS.includes(sideEffectLevel))
+        errors.push(`unknown side_effect_level: ${sideEffectLevel}`);
+    if (maturityProtocol && !MATURITY_LEVELS.has(maturityProtocol))
+        errors.push(`unknown maturity.protocol: ${maturityProtocol}`);
+    if (maturityRunner && !MATURITY_LEVELS.has(maturityRunner))
+        errors.push(`unknown maturity.runner: ${maturityRunner}`);
+    if (limits && mode && !limits.modes.includes(mode))
+        errors.push(`${consumerKind} cannot use execution.mode=${mode}`);
+    if (limits && sideEffectLevel && sideEffectRank(sideEffectLevel) > sideEffectRank(limits.maxSideEffect)) {
+        errors.push(`${consumerKind} cannot use side_effect_level=${sideEffectLevel}`);
+    }
+    if (limits && maxSideEffectLevel && sideEffectRank(maxSideEffectLevel) > sideEffectRank(limits.maxSideEffect)) {
+        errors.push(`${consumerKind} cannot claim max_side_effect_level=${maxSideEffectLevel}`);
+    }
+    if (mode === 'live') {
+        const runnerReady = maturityRunner === 'dogfooded' || maturityRunner === 'user-project-ready';
+        if (!runnerReady || !sideEffectLevel || sideEffectRank(sideEffectLevel) <= sideEffectRank('evidence') || recentSuccessEvidence.length === 0) {
+            errors.push('live execution requires runner maturity dogfooded or user-project-ready and recent success evidence');
+        }
+    }
+    if (requestKind === 'report-only' && mode && mode !== 'report-only' && mode !== 'dry-run') {
+        warnings.push('report-only request kind should not imply request consumption or work execution');
+    }
+    return { routeId, errors, warnings };
+}
+function objectField(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+function stringField(value) {
+    return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+function arrayField(value) {
+    return Array.isArray(value) ? value : [];
+}
+function sideEffectRank(level) {
+    const index = SIDE_EFFECT_LEVELS.indexOf(level);
+    return index === -1 ? Number.POSITIVE_INFINITY : index;
+}
 function workflowTemplateHash(text) {
     const canonical = text.replace(/^# zj-loop-template-hash: .+$/m, '# zj-loop-template-hash: <computed>');
     return createHash('sha256').update(canonical).digest('hex').slice(0, 16);
@@ -325,13 +446,14 @@ export async function auditProject(target) {
     const { score, level, assessment } = computeScore(signals);
     const { findings, recommendations } = evaluateReadinessGuidance(signals, score);
     const workflowBundleFindings = await auditGeneratedWorkflowBundle(fs);
+    const routeExecutionFindings = await auditRouteExecutionContractWarnings(fs);
     return {
         target: root,
         score,
         level,
         assessment,
         signals,
-        findings: [...workflowBundleFindings, ...findings],
+        findings: [...workflowBundleFindings, ...routeExecutionFindings, ...findings],
         recommendations,
     };
 }

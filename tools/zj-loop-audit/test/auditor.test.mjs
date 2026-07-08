@@ -143,6 +143,51 @@ jobs:
   }
 });
 
+test('auditProject warns for missing or inconsistent route execution transparency fields', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-route-execution-warning-'));
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(
+      path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'),
+      `schemaVersion: 1
+kind: zj-loop-route-table
+routes:
+  - route_id: manual-smoke-report
+    enabled: true
+    request_kind: report-only
+    consumer: manual-smoke
+  - route_id: ci-sweeper
+    enabled: true
+    request_kind: issue-fix-request
+    consumer: ci-sweeper
+    consumer_kind: fix-runner
+    execution:
+      mode: live
+      side_effect_level: pr
+    maturity:
+      protocol: dogfooded
+      runner: dogfooded
+    capabilities:
+      scopes: [ci]
+      verifiers: [ci-validate-gates]
+      max_side_effect_level: pr
+`,
+    );
+
+    const result = await auditProject(dir);
+    assert.ok(result.findings.some((finding) =>
+      finding.level === 'warn' &&
+      finding.message.includes('Route manual-smoke-report is missing execution transparency fields'),
+    ));
+    assert.ok(result.findings.some((finding) =>
+      finding.level === 'warn' &&
+      finding.message.includes('Route ci-sweeper execution contract needs attention'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('auditProject fails generated workflow health when metadata hash is invalid', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-workflow-invalid-'));
   try {
