@@ -8,13 +8,14 @@ Last run: 2026-07-09
 - Branch: codex-user-project-ready-route-consumers
 - Status: active
 - Current parent node: packaged-consumer-runner-surface
-- Current leaf: 2-2-consumer-runner-promotion
+- Current leaf: 2-3-route-specific-consumer-runner-promotion
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
-| 2-2-consumer-runner-promotion | in-progress | Next slice: promote existing consumer runner logic into packaged deterministic surfaces and generated workflow call paths | pending |
+| 2-3-route-specific-consumer-runner-promotion | in-progress | Next slice: promote route-specific runner logic into packaged deterministic surfaces without relying on repository-local `scripts/` in user projects | pending |
+| 2-2-generated-workflow-consumer-gate-integration | completed | Generated workflows and dogfood generated workflows now call `zj-loop-consumer plan` after Route Decision; core pin prepared for `0.1.3`; generated metadata hashes valid; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 2-1-runner-command-contract | completed | Added `buildConsumerRunPlan()` and `zj-loop-consumer plan`; blocks disabled routes, invalid execution contracts, and non-`user-project-ready` action routes; report-only routes produce evidence plans; `cd tools/zj-loop-core && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-2-user-project-readiness-status-surface | completed | `zj-loop-route status` table/JSON exposes readiness and `user_project_ready`; README/README.zh-CN/Quickstart describe route self-selection and `dogfooded-live` vs `user-project-ready`; `cd tools/zj-loop-core && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-1-generated-bundle-route-identity-alignment | completed | Generated workflow templates and dogfood generated workflows now dispatch `pr-steward-report`, `issue-triage-report`, `changelog-drafter-report`, and `post-merge-roadmap-closeout`; generated Route Table template separates report/action/fix-request route ids; `cd tools/zj-loop-init && npm test`; `npm run check:zj-loop-init`; `git diff --check` | `7e46acd` |

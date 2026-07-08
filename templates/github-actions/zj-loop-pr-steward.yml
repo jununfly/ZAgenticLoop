@@ -23,5 +23,7 @@ jobs:
 
       - name: PR steward route evidence
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch pr-steward-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch pr-steward-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan pr-steward-report --json > consumer-plan.json || true
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
+          cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

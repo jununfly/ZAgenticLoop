@@ -125,7 +125,7 @@ npx @jununfly/zj-loop-audit . --suggest
 Then inspect Route Table status before enabling any consumer route:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
 ```
 
 Treat this output as the route selection menu. The `readiness` column separates
@@ -143,13 +143,13 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --js
 Enable side-effecting routes with a fixed confirmation phrase:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
 ```
 
 Disable is intentionally low friction:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweeper
 ```
 
 Upgrade generated workflows intentionally when package pins or templates change:

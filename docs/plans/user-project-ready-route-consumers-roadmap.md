@@ -107,7 +107,36 @@ Evidence:
 - Report-only routes produce an evidence plan without worker side effects.
 - README, Chinese README, and Quickstart document the packaged consumer gate.
 
-### Leaf 2-2: Consumer Runner Promotion
+### Leaf 2-2: Generated Workflow Consumer Gate Integration
+
+Status: completed
+
+Intent:
+
+- Make every generated workflow call the published `zj-loop-consumer plan`
+  contract after Route Decision evidence.
+- Pin generated workflow core package references to the next core version that
+  contains the consumer gate.
+- Keep non-user-project-ready action routes blocked rather than silently
+  running side effects.
+
+Verification:
+
+- `cd tools/zj-loop-core && npm test`
+- `cd tools/zj-loop-init && npm test`
+- `node tools/zj-loop-audit/dist/cli.js .`
+- `git diff --check`
+
+Evidence:
+
+- All `templates/github-actions/zj-loop-*.yml` workflows now write
+  `consumer-plan.json` to the workflow summary.
+- Dogfood generated workflows under `.github/workflows/zj-loop-*.yml` are
+  synchronized and carry valid generated metadata hashes.
+- `@jununfly/zj-loop-core` is prepared for `0.1.3` so generated workflows can
+  pin a package version containing `zj-loop-consumer`.
+
+### Leaf 2-3: Route-Specific Consumer Runner Promotion
 
 Status: in-progress
 

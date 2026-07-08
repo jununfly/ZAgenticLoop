@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 195d4d805168b015
+# zj-loop-template-hash: adc4130b6c5b1055
 
 name: ZJ Loop Dependency Sweeper
 
@@ -23,5 +23,7 @@ jobs:
 
       - name: Dependency sweeper route evidence
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan dependency-sweeper --json > consumer-plan.json || true
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
+          cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

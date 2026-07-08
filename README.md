@@ -121,9 +121,9 @@ means the generated bundle can call a published package runner in user
 projects. Side-effecting consumers still need explicit Route Table enablement:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweeper
 ```
 
 Choose the first enabled path by route readiness, not by installation order.
