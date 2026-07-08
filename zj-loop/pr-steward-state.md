@@ -12,7 +12,7 @@ Last run: 2026-07-08
   - Consumer kind: `fix-runner`
   - Execution mode: `claim-only`
   - Protocol maturity: `replayed`
-  - Runner maturity: `missing`
+  - Runner maturity: `replayed`
 
 ## Evidence
 
@@ -22,11 +22,23 @@ Last run: 2026-07-08
   `scripts/pr-steward-fix-request-e2e-replay.test.mjs`.
 - Claim replay covers matching Issue Fix Request `requested -> consumed`:
   `scripts/pr-steward-claim-e2e-replay.test.mjs`.
+- Live runner replay covers `consumed -> repair-pr` and
+  `consumed -> escalation-issue` outcomes without mutating the source PR:
+  `scripts/pr-steward-live-runner.test.mjs`.
 
 ## Boundary
 
-PR Steward is not live repair automation in this repository yet. It must not
-write source PR comments, mutate labels, rebase, merge, dispatch workflows,
-create repair branches, or open Fix PRs. A future runner upgrade must add
-current-head-SHA verifier-backed repair PR or escalation evidence before
-changing the fix request route to `execution.mode: live`.
+PR Steward is not live repair automation in this repository yet. The fix
+request route remains `claim-only`, so automatic routing must not write source
+PR comments, mutate labels, rebase, merge, dispatch workflows, create repair
+branches, or open Fix PRs.
+
+`scripts/pr-steward-live-runner.mjs` is now a replayed, guarded runner for
+already consumed PR Steward Issue Fix Requests. It requires the fixed
+confirmation phrase `CREATE_PR_STEWARD_FIX_PR_OR_ESCALATION`, a clean working
+tree, a current source PR head SHA match, `main` as the source PR base, verifier
+commands, and either an explicit repair command plus repair file allowlist or
+an escalation issue path. Repair PRs are independent branches against `main`;
+the runner records source PR side effects as false. The route may move to
+`execution.mode: live` only after real workflow-dispatch dogfood evidence shows
+the runner can create a verifier-backed repair PR or escalation issue safely.

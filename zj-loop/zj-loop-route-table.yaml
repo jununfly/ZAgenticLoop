@@ -209,7 +209,7 @@ routes:
       completion_forms: ["repair-pr", "escalation-issue"]
     maturity:
       protocol: "replayed"
-      runner: "missing"
+      runner: "replayed"
     capabilities:
       scopes: ["pull-request", "failed-check-rollup"]
       verifiers: ["status-check-rollup", "request-claim", "current-pr-head-sha"]

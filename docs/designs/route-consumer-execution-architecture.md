@@ -220,7 +220,7 @@ was introduced:
 | Daily Triage | `producer-router` | `report-only` | `missing` | Producer and report surface, not a worker. |
 | Issue Triage | `report-consumer` | `report-only` | `missing` | Side effects require future `issue-triage-action`. |
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
-| PR Steward fix request | `fix-runner` | `claim-only` | `missing` | Can consume matching request evidence; no repair yet. |
+| PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; not live until workflow-dispatch dogfood evidence exists. |
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
 | Dependency Sweeper | `fix-runner` | `claim-only` | `replayed` | Request/claim evidence plus replayed repair PR or escalation runner; not live until workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `draft-consumer` | `report-only` | `missing` | Draft request evidence only. |
