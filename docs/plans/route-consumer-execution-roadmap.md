@@ -373,7 +373,7 @@ Evidence:
 
 ### 2-4 Changelog Drafter Draft Consumer
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -386,6 +386,17 @@ Verification:
 
 - E2E replay for release window evidence -> draft request -> draft outcome or
   escalation.
+
+Evidence:
+
+- Added `zj-loop/changelog-drafter-state.md` documenting current report-only
+  draft-consumer capability and runner-missing boundary.
+- Dogfood Reference Case now points to the Changelog Drafter state file and
+  Route Table truth.
+- `node --test scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs` passed.
+- `node tools/zj-loop-audit/dist/cli.js .` passed with L3.
+- Decision: do not promote Changelog Drafter beyond report-only until a
+  bounded draft PR, draft evidence, or escalation runner exists.
 
 ### 2-5 Post-Merge Cleanup Consumer
 
@@ -455,4 +466,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `2-4 Changelog Drafter Draft Consumer`.
+Continue with `2-5 Post-Merge Cleanup Consumer`.
