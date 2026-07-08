@@ -205,14 +205,24 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
   try {
     const status = spawnSync(process.execPath, [CLI, 'status', '--root', dir], { encoding: 'utf8' });
     assert.equal(status.status, 0);
+    assert.match(status.stdout, /enabled\s+route\s+consumer\s+kind\s+mode\s+sidefx\s+protocol\s+runner/);
     assert.match(status.stdout, /manual-smoke-report/);
     assert.match(status.stdout, /ci-sweeper/);
+    assert.match(status.stdout, /fix-runner/);
+    assert.match(status.stdout, /live/);
 
     const dispatch = spawnSync(process.execPath, [CLI, 'dispatch', 'ci-sweeper', '--root', dir], { encoding: 'utf8' });
     assert.equal(dispatch.status, 2);
     const parsed = JSON.parse(dispatch.stdout);
     assert.equal(parsed.allowed, false);
     assert.equal(parsed.route, 'ci-sweeper');
+
+    const statusJson = spawnSync(process.execPath, [CLI, 'status', 'ci-sweeper', '--root', dir, '--json'], { encoding: 'utf8' });
+    assert.equal(statusJson.status, 0);
+    const parsedStatus = JSON.parse(statusJson.stdout);
+    assert.equal(parsedStatus.routes[0].consumer_kind, 'fix-runner');
+    assert.equal(parsedStatus.routes[0].execution_mode, 'live');
+    assert.deepEqual(parsedStatus.routes[0].capability_verifiers, ['ci-validate-gates', 'diff-check']);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

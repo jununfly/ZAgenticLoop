@@ -7,12 +7,13 @@ Last run: 2026-07-08
 - Roadmap id: route-consumer-execution
 - Branch: zjal/route-consumer-execution
 - Current parent node: execution-contract-foundation
-- Current leaf: 1-4-status-surface
+- Current leaf: 1-5-audit-warning-branch
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 1-4-status-surface | completed | `zj-loop-route status` capability table; JSON detail path; `npm run build`; `node --test tools/zj-loop-core/test/route.test.mjs` | pending |
 | 1-3-deterministic-contract-helpers | completed | `tools/zj-loop-core/src/route.ts`; `tools/zj-loop-core/test/route.test.mjs`; `npm run build`; `node --test tools/zj-loop-core/test/route.test.mjs`; dogfood Route Table contract helper validation | pending |
 | 1-2-durable-architecture-doc | completed | `docs/designs/route-consumer-execution-architecture.md`; linked from route table/dogfood docs; `git diff --check` | pending |
 | 1-1-dogfood-route-table-truth | completed | `zj-loop/zj-loop-route-table.yaml`; existing parser read 13 routes; `git diff --check` | pending |

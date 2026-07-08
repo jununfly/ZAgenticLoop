@@ -177,7 +177,7 @@ Evidence:
 
 ### 1-4 Status Surface
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -190,6 +190,15 @@ Verification:
 - CLI test or deterministic fixture covers table and JSON output.
 - Existing CLI commands still work.
 - `git diff --check`.
+
+Evidence:
+
+- `zj-loop-route status` now prints a compact capability table by default.
+- `zj-loop-route status --json` preserves full route capability fields.
+- `npm run build` passed in `tools/zj-loop-core`.
+- `node --test tools/zj-loop-core/test/route.test.mjs` passed.
+- `node tools/zj-loop-core/dist/route-cli.js status --root .` shows the
+  dogfood capability table.
 
 ### 1-5 Audit Warning Branch
 
@@ -384,4 +393,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `1-4 Status Surface`.
+Continue with `1-5 Audit Warning Branch`.
