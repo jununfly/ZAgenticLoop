@@ -6,13 +6,15 @@ Last run: 2026-07-08
 
 - Roadmap id: route-consumer-execution
 - Branch: zjal/route-consumer-execution
-- Current parent node: consumer-runner-completion
-- Current leaf: 2-8-release-readiness-closeout
+- Status: completed
+- Current parent node: closeout
+- Current leaf: none
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 2-8-release-readiness-closeout | completed | `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check`; process roadmap deleted after durable docs/state absorbed key decisions | pending |
 | 2-7-report-only-boundaries | completed | `zj-loop/issue-triage-state.md`; Dogfood Reference Case report-only boundary section; report-only dispatcher and issue triage replay tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 2-6-roadmap-sliced-activation-consumer | completed | `zj-loop/roadmap-activation-state.md`; Dogfood Reference Case; roadmap activation replay/dispatcher tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
 | 2-5-post-merge-cleanup-consumer | completed | `zj-loop/post-merge-state.md`; Dogfood Reference Case; post-merge contract/e2e/executor/workflow tests; `node tools/zj-loop-audit/dist/cli.js .` | pending |
@@ -27,7 +29,7 @@ Last run: 2026-07-08
 | 1-3-deterministic-contract-helpers | completed | `tools/zj-loop-core/src/route.ts`; `tools/zj-loop-core/test/route.test.mjs`; `npm run build`; `node --test tools/zj-loop-core/test/route.test.mjs`; dogfood Route Table contract helper validation | pending |
 | 1-2-durable-architecture-doc | completed | `docs/designs/route-consumer-execution-architecture.md`; linked from route table/dogfood docs; `git diff --check` | pending |
 | 1-1-dogfood-route-table-truth | completed | `zj-loop/zj-loop-route-table.yaml`; existing parser read 13 routes; `git diff --check` | pending |
-| route-consumer-execution-roadmap | completed | `docs/plans/route-consumer-execution-roadmap.md`; `git diff --check` | pending |
+| route-consumer-execution-roadmap | completed | Process roadmap created, executed, then deleted at closeout after durable docs/state absorbed key decisions | pending |
 | workflow-dispatch-user-project-bundle | completed | README, Quickstart, Route Table Architecture, Dogfood Reference Case, generated `zj-loop-*.yml` workflows, audit/validate gates | `2637db0`, `9672593`, PR #53 |
 
 ## Human Gates
@@ -48,16 +50,23 @@ Last run: 2026-07-08
 
 ## Closeout Notes
 
-- Active process roadmap:
-  `docs/plans/route-consumer-execution-roadmap.md`. It must be merged into
-  durable docs or PR body before deletion at closeout.
-- Process roadmap files were deleted after durable docs absorbed the key
-  decisions.
+- Process roadmap `docs/plans/route-consumer-execution-roadmap.md` was deleted
+  after durable docs and consumer-owned state files absorbed the key decisions,
+  capability map, and verification evidence.
 - Durable references:
-  - `README.md`
-  - `docs/QUICKSTART.md`
+  - `docs/designs/route-consumer-execution-architecture.md`
   - `docs/designs/route-table-architecture.md`
   - `docs/designs/dogfood-reference-case.md`
-- Branch cleanup plan: delete `zjal/workflow-dispatch-user-project-bundle` after
+  - `zj-loop/ci-sweeper-state.md`
+  - `zj-loop/dependency-sweeper-state.md`
+  - `zj-loop/pr-steward-state.md`
+  - `zj-loop/changelog-drafter-state.md`
+  - `zj-loop/post-merge-state.md`
+  - `zj-loop/roadmap-activation-state.md`
+  - `zj-loop/issue-triage-state.md`
+- Full closeout gates passed on 2026-07-08:
+  - `bash scripts/ci-validate-gates.sh`
+  - `bash scripts/ci-audit-gates.sh`
+  - `git diff --check`
+- Branch cleanup plan: delete `zjal/route-consumer-execution` after
   human-reviewed PR merge.
-- PR handoff: https://github.com/jununfly/ZAgenticLoop/pull/53
