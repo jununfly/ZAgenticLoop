@@ -196,7 +196,7 @@ Evidence:
 
 ### Leaf 2-5: Route-Specific Execution APIs
 
-Status: in-progress
+Status: completed
 
 Intent:
 
@@ -247,6 +247,11 @@ Progress:
   state, validates allowlisted labels/fixed comment templates, escalates human
   guarded requests, and rejects live side effects while the consumer remains
   dry-run only.
+- Roadmap Activation now has a packaged activation-plan API and
+  `zj-loop-roadmap-activation activation-plan` command that keeps
+  activation-comment separate from Issue Fix Request, enforces maintainer/write
+  permission, returns create/duplicate/resume/denied audit comments, and blocks
+  duplicate activation loops.
 
 Evidence:
 
