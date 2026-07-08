@@ -1,7 +1,7 @@
 # Live Runner Upgrades Roadmap
 
 Roadmap id: `live-runner-upgrades`
-Branch: `zjal/pr-steward-live-runner`
+Branch: `zjal/changelog-drafter-live-runner`
 Status: active
 Started: 2026-07-08
 
@@ -266,7 +266,7 @@ Purpose: handle non-fix consumers without pretending reports are runners.
 
 ### 3-1 Changelog Drafter Live Draft Consumer
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -279,6 +279,26 @@ Verification:
 
 - Replay covers draft evidence/draft PR, duplicate, human-gated window,
   missing report rejection, and escalation.
+
+Evidence:
+
+- Added `scripts/changelog-drafter-live-runner.mjs`, a guarded runner for
+  existing Changelog Drafter `draft-request-candidate` evidence.
+- Added `scripts/changelog-drafter-live-runner.test.mjs` covering
+  `draft-evidence`, `draft-pr`, empty-diff escalation, human-gated refusal,
+  duplicate refusal, safe draft path guard, fixed confirmation phrase, and
+  release-side-effect denial.
+- Added `scripts/write-file-once.mjs` and `scripts/write-file-once.test.mjs`
+  as a deterministic helper for draft artifact creation without overwrite.
+- Updated Route Table truth to `maturity.runner: replayed` while keeping
+  `execution.mode: report-only`.
+- Updated Changelog Drafter state, Dogfood Reference Case, Route Table
+  Architecture, and Route Consumer Execution Architecture.
+- `node --test scripts/changelog-drafter-live-runner.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs` passed.
+- Decision: do not promote `changelog-drafter-draft-request` beyond
+  `execution.mode: report-only` in this slice. The runner is replayed and
+  guarded, but live promotion still requires real workflow-dispatch dogfood
+  evidence for draft evidence or draft PR creation.
 
 ### 3-2 Issue Triage Action Route Design
 
