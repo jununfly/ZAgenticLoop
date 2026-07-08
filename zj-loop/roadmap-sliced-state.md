@@ -14,11 +14,11 @@ Roadmap file:
 Roadmap view:
 `docs/plans/workflow-dispatch-user-project-bundle-checklist.md`
 
-Current status: `in-progress`
+Current status: `completed`
 
-Current focus: `5. Documentation And Dogfood`
+Current focus: `closeout`
 
-Next action: start leaf `5.1 Update README and QUICKSTART with install, smoke, enable, verify, disable/rollback, and upgrade commands`.
+Next action: prepare closeout PR with roadmap/process cleanup after review.
 
 Last updated: 2026-07-08
 
@@ -45,6 +45,15 @@ Last updated: 2026-07-08
   - `node dist/cli.js ../..` in `tools/zj-loop-audit`
   - `bash scripts/before-after-demo.sh`
   - `git diff --check`
+- Slice 5 verification:
+  - `node tools/zj-loop-init/dist/cli.js . --add github-actions`
+  - `node tools/zj-loop-core/dist/route-cli.js status`
+  - `node tools/zj-loop-core/dist/route-cli.js dispatch manual-smoke-report --json`
+  - `node tools/zj-loop-core/dist/route-cli.js dispatch ci-sweeper --json`
+  - `node tools/zj-loop-init/dist/cli.js . --upgrade github-actions --dry-run`
+  - `node dist/cli.js ../..` in `tools/zj-loop-audit`
+  - `bash scripts/ci-audit-gates.sh`
+  - `bash scripts/ci-validate-gates.sh`
 
 ## Completion Condition
 

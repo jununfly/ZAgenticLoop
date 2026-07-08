@@ -160,20 +160,41 @@ Notes:
 
 ### 5. Documentation And Dogfood
 
-Status: active
+Status: completed
 
 Completion condition: user-facing docs explain the command path and this repo
 proves the bundle with workflow evidence.
 
 Leaf nodes:
 
-- [ ] 5.1 Update README and QUICKSTART with install, smoke, enable, verify,
+- [x] 5.1 Update README and QUICKSTART with install, smoke, enable, verify,
       disable/rollback, and upgrade commands.
-- [ ] 5.2 Add or update durable design docs with final workflow-dispatch bundle
+- [x] 5.2 Add or update durable design docs with final workflow-dispatch bundle
       architecture decisions.
-- [ ] 5.3 Dogfood the manual smoke/report-only route in this repository.
-- [ ] 5.4 Dogfood at least one side-effecting consumer route through explicit
+- [x] 5.3 Dogfood the manual smoke/report-only route in this repository.
+- [x] 5.4 Dogfood at least one side-effecting consumer route through explicit
       Route Table enablement and evidence capture.
+
+Verification evidence:
+
+- `node tools/zj-loop-init/dist/cli.js . --add github-actions`
+- `node tools/zj-loop-core/dist/route-cli.js status`
+- `node tools/zj-loop-core/dist/route-cli.js dispatch manual-smoke-report --json`
+- `node tools/zj-loop-core/dist/route-cli.js dispatch ci-sweeper --json`
+- `node tools/zj-loop-init/dist/cli.js . --upgrade github-actions --dry-run`
+- `node dist/cli.js ../..` in `tools/zj-loop-audit`
+- `bash scripts/ci-audit-gates.sh`
+- `bash scripts/ci-validate-gates.sh`
+
+Notes:
+
+- The reference repo now carries generated `zj-loop-*.yml` workflow bundle
+  files alongside its hand-maintained dogfood workflows.
+- README, Quickstart, Route Table Architecture, and Dogfood Reference Case now
+  describe install, smoke, route enablement, rollback, upgrade, metadata health,
+  and dogfood boundaries.
+- `ci-validate-gates.sh` first failed on npm mirror DNS inside the sandbox; the
+  same command passed when rerun with network access.
 
 ## Decisions
 

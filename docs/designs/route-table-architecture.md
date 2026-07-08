@@ -258,6 +258,34 @@ route-table`, which renders the shared template with the default Daily Triage
 context. Existing route tables are skipped by default; `--force` performs a real
 overwrite and must make that overwrite visible in CLI output.
 
+## Workflow-Dispatch Bundle
+
+`zj-loop-init . --add github-actions` installs the generated GitHub Actions
+bundle for user projects. The bundle is portable workflow wiring, not hidden
+business logic:
+
+- generated workflows are named `zj-loop-*.yml`
+- workflow files include generated metadata and a template hash
+- workflow package references are pinned
+- workflows call published `@jununfly/zj-loop-*` commands for deterministic
+  Route Decision behavior
+- workflows do not reinterpret Route Table semantics locally
+
+The default runnable path is `manual-smoke-report`. It is report-only and writes
+Route Decision evidence to the workflow summary. Side-effecting consumers remain
+controlled by `zj-loop/zj-loop-route-table.yaml` and should be enabled with
+`zj-loop-route enable <consumer> --confirm "<fixed phrase>"`.
+
+`zj-loop-init . --upgrade github-actions` is the upgrade path for official
+generated workflows. If a generated workflow was modified, upgrade renames the
+old file with a `.bak` suffix and writes the new canonical workflow at the
+original path. The `.bak` file is a basic overwrite-protection mechanism, not a
+promise to migrate arbitrary local workflow customizations.
+
+`zj-loop-audit` treats invalid generated workflow metadata, missing Route Table
+for generated workflows, a disabled/non-report manual smoke route, and unpinned
+core package references as workflow health failures.
+
 ## First Route Set
 
 | Route | Request kind | Consumer | First behavior |

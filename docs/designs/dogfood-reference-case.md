@@ -31,6 +31,7 @@ are guarded live operations that require explicit operator intent.
 | --- | --- | --- | --- |
 | Loop Readiness Audit | `.github/workflows/audit.yml`, `scripts/ci-audit-gates.sh`, `tools/zj-loop-audit` | Push, PR, and scheduled gate | Proves this repo and starters meet readiness gates; does not change product code. |
 | Validate Patterns & Registry | `.github/workflows/validate-patterns.yml`, `scripts/ci-validate-gates.sh` | Push and PR gate | Keeps pattern docs, registry, starters, release workflows, route replays, and tool package tests aligned. |
+| Workflow-Dispatch User Bundle | `.github/workflows/zj-loop-*.yml`, `templates/github-actions/`, `zj-loop-init --add/--upgrade github-actions` | Generated bundle smoke plus Route Table-controlled consumers | Proves user-project generated workflows install cleanly, carry metadata/hash evidence, pin package versions, and run through Route Decision instead of embedding local dogfood scripts. Manual smoke is the default safe path; side-effecting consumers require explicit Route Table enablement. |
 | Daily Triage | `.github/workflows/daily-triage.yml`, `zj-loop/STATE.md`, `zj-loop/zj-loop-run-log.md` | Scheduled producer plus generated state PR | Updates operational memory, emits route candidates, and may dispatch allowlisted consumers. Its generated state PR auto-merge is a narrow exception limited to loop state/run-log files. |
 | CI Sweeper | `.github/workflows/ci-sweeper.yml`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/ci-sweeper-state.md` | Route-dispatched deterministic repair | Handles validate/audit failures only. It opens a repair PR only when deterministic repair creates non-state diffs and repair/validate/audit gates pass; otherwise it escalates. |
 | Route Decision replay suite | `scripts/*route*replay*.mjs`, `scripts/*dispatcher*.mjs`, `scripts/*contract*.mjs` | Local deterministic protocol evidence | Proves route decisions, request creation, duplicate suppression, denials, claims, and recovery paths without requiring live GitHub side effects. |
@@ -52,6 +53,8 @@ The committed dogfood surface is:
 - `zj-loop/` operational memory, budget, constraints, safety, route table, and
   consumer-owned state files
 - `.github/workflows/` repository-specific automation
+- `.github/workflows/zj-loop-*.yml` generated user-project workflow bundle
+  dogfood evidence
 - `scripts/` deterministic route, replay, workflow, and release gates
 - `tools/` package source and tests
 - `patterns/`, `starters/`, `templates/`, and `skills/` as the published
@@ -80,6 +83,27 @@ A registry skill name may be carried by:
 Reusable ZAgenticLoop skills should graduate into `skills/`. Starter-specific
 execution nodes may stay inside starter/tool-specific paths. Missing
 `skills/<name>/SKILL.md` is therefore not automatically a registry error.
+
+## Workflow-Dispatch Bundle Flow
+
+The generated bundle proves the user-project install path separately from this
+repository's hand-maintained dogfood workflows:
+
+1. `zj-loop-init . --add github-actions` creates `zj-loop-*.yml` workflows.
+2. Generated metadata and template hashes identify official generated files.
+3. `ZJ Loop Smoke` runs by manual `workflow_dispatch` and dispatches
+   `manual-smoke-report` through `zj-loop-route`.
+4. `zj-loop-audit` verifies generated workflow metadata, Route Table presence,
+   manual smoke route defaults, and pinned core package references.
+5. Side-effecting generated consumer workflows stay governed by
+   `zj-loop/zj-loop-route-table.yaml`; enabling them is an explicit maintainer
+   action with a fixed confirmation phrase.
+6. `zj-loop-init . --upgrade github-actions` updates canonical generated
+   workflows and preserves locally modified generated files as `.bak`.
+
+The generated bundle must remain portable. It should call published package
+commands/APIs and avoid repository-local scripts that user projects would not
+have.
 
 ## Daily Triage Flow
 
@@ -155,6 +179,8 @@ run links. Keep this design document focused on stable capability boundaries.
 When dogfood config changes, check:
 
 - Workflow paths use `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md`.
+- Generated `zj-loop-*.yml` workflow metadata hashes validate with
+  `zj-loop-audit`.
 - Pattern registry state paths use `zj-loop/*-state.md`.
 - Starter README copy commands create state files under `zj-loop/`.
 - `zj-loop/zj-loop-route-table.yaml` exists and keeps cross-component dispatch
