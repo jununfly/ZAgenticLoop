@@ -8,6 +8,10 @@ import {
   buildRoadmapCloseoutPlan,
   parsePostMergeContractFromPrBody,
 } from './post-merge-roadmap-closeout-contract.mjs';
+import {
+  buildLiveRunnerEvidence,
+  validateLiveRunnerEvidence,
+} from './live-runner-contract.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -103,7 +107,7 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
 
 export async function executePostMergeRoadmapCloseout(plan, { runner = defaultRunner } = {}) {
   if (plan.status !== 'ready-for-live-execution') {
-    return {
+    const refused = {
       ...plan,
       execution: {
         status: 'refused',
@@ -111,6 +115,10 @@ export async function executePostMergeRoadmapCloseout(plan, { runner = defaultRu
         steps: [],
       },
       side_effects_executed: false,
+    };
+    return {
+      ...refused,
+      runner_evidence: buildPostMergeLiveRunnerEvidence(refused),
     };
   }
 
@@ -166,7 +174,7 @@ export async function executePostMergeRoadmapCloseout(plan, { runner = defaultRu
     buildCarrierCloseComment(plan),
   ]);
 
-  return {
+  const executed = {
     ...plan,
     status: 'executed',
     side_effects_executed: true,
@@ -175,6 +183,56 @@ export async function executePostMergeRoadmapCloseout(plan, { runner = defaultRu
       steps,
     },
   };
+  return {
+    ...executed,
+    runner_evidence: buildPostMergeLiveRunnerEvidence(executed),
+  };
+}
+
+export function buildPostMergeLiveRunnerEvidence(result, { createdAt = new Date().toISOString() } = {}) {
+  const executed = result?.status === 'executed';
+  const completionForm = executed ? 'cleanup-done' : 'escalation-issue';
+  const evidence = buildLiveRunnerEvidence({
+    runner_id: 'post-merge-cleanup',
+    route_id: 'post-merge-roadmap-closeout',
+    consumer_kind: 'cleanup-consumer',
+    execution_mode: 'live',
+    completion_form: completionForm,
+    status: executed ? 'completed' : 'escalated',
+    dedupe_key: `post-merge-roadmap-closeout:${result?.pr?.number ?? 'unknown'}`,
+    created_at: createdAt,
+    source: {
+      kind: 'post-merge-contract',
+      id: String(result?.pr?.number ?? ''),
+      url: result?.pr?.url ?? '',
+    },
+    verifier_evidence: [
+      {
+        kind: 'post-merge-contract',
+        status: result?.contractPlan?.validation?.ok === true ? 'passed' : 'failed',
+      },
+      ...((result?.executorGuards ?? []).map((guard) => ({
+        kind: 'executor-guard',
+        name: guard.name,
+        status: guard.pass ? 'passed' : 'failed',
+      }))),
+    ],
+    side_effects: {
+      executed: result?.side_effects_executed === true,
+      level: 'cleanup',
+      actions: (result?.execution?.steps ?? []).map((step) => ({
+        kind: step.name,
+        status: step.status,
+        reason: step.reason,
+        branch: step.branch,
+      })),
+    },
+  });
+  const validation = validateLiveRunnerEvidence(evidence);
+  if (!validation.ok) {
+    throw new Error(`Invalid post-merge live runner evidence: ${validation.errors.join(', ')}`);
+  }
+  return evidence;
 }
 
 export function buildDryRunEvidenceComment(plan, {

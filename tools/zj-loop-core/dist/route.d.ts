@@ -40,6 +40,7 @@ export type RouteStatus = {
     request_kind: string;
     execution_mode: string;
     side_effect_level: string;
+    completion_forms: string[];
     maturity_protocol: string;
     maturity_runner: string;
     max_side_effect_level: string;

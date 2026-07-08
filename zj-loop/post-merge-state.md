@@ -27,6 +27,10 @@ Last run: 2026-07-08
 - Workflow validation verifies automatic dry-run on merged PRs and fixed
   confirmation gating for live cleanup:
   `scripts/validate-post-merge-closeout-workflow.test.mjs`.
+- Live executor results now include a shared
+  `zj-loop.live_runner_evidence.v1` envelope for executed cleanup and refused
+  escalation-shaped outcomes:
+  `scripts/post-merge-roadmap-closeout.test.mjs`.
 
 ## Boundary
 
@@ -38,3 +42,7 @@ Live cleanup may delete only the merged `zjal/*` roadmap branch named in a valid
 named in that same contract. Live execution requires explicit operator
 invocation plus the fixed confirmation phrase
 `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+
+The Route Table remains `execution.mode: dry-run` until a real
+`workflow_dispatch` live cleanup run records recent successful evidence. The
+executor is live-capable; the automatic route is not promoted to live yet.
