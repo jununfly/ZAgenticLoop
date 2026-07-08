@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ROUTE_DECISION_SCHEMA } from './issue-fix-request-contract.mjs';
 import { findRoute } from './route-ci-failure.mjs';
+import { normalizeEvidence } from './route-decision-contract.mjs';
 
 const DEFAULT_ROUTE_TABLE = 'zj-loop/zj-loop-route-table.yaml';
 const ROUTE_ID = 'issue-triage-report';
@@ -464,12 +465,6 @@ function renderIssueTriageEvidenceDocument(report) {
     `- Evidence store: \`${report.evidence_store}\``,
     '',
   ].join('\n');
-}
-
-function normalizeEvidence(evidence) {
-  if (Array.isArray(evidence)) return evidence;
-  if (evidence) return [evidence];
-  return [];
 }
 
 function issueNumberFromSubject(subject) {

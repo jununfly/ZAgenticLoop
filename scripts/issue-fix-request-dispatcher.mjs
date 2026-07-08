@@ -1,11 +1,10 @@
-import { createHash } from 'node:crypto';
-
 import { parseRouteTable } from './route-ci-failure.mjs';
 import {
   ISSUE_FIX_REQUEST_SCHEMA,
   ROUTE_DECISION_SCHEMA,
   resolveIssueFixRequestDedupe,
 } from './issue-fix-request-contract.mjs';
+import { routeMatchesSignal, stableHash } from './route-decision-contract.mjs';
 
 export function dispatchSignalToIssueFixRequest({
   routeTableText,
@@ -81,7 +80,7 @@ export function buildRouteDecision({ route, routeId, signal, createdAt = new Dat
   if (route.request_kind !== 'issue-fix-request') {
     return { ...base, reason: 'route-kind-not-issue-fix-request' };
   }
-  if (!signalMatchesRoute(route, signal)) {
+  if (!routeMatchesSignal(route, signal)) {
     return { ...base, reason: 'signal-does-not-match-route' };
   }
 
@@ -146,17 +145,6 @@ export function buildIssueFixRequestFromDecision({
   };
 }
 
-function signalMatchesRoute(route, signal) {
-  const match = route?.match ?? {};
-  const entries = Object.entries(match);
-  if (entries.length === 0) return true;
-
-  return entries.every(([key, allowedValues]) => {
-    if (!Array.isArray(allowedValues) || allowedValues.length === 0) return true;
-    return allowedValues.includes(signal?.[key]);
-  });
-}
-
 function branchAllowedByRoute(route, branchName) {
   const allowlist = route?.guards?.branch_allowlist;
   if (!Array.isArray(allowlist) || allowlist.length === 0) return true;
@@ -215,8 +203,4 @@ function consumerCapability(consumerId, signal) {
     'pr-steward': 'pr-review-and-readiness-fix',
   };
   return capabilities[consumerId] ?? 'allowlisted-fix-consumer';
-}
-
-function stableHash(value) {
-  return createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
 }
