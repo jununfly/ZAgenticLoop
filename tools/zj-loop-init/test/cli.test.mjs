@@ -75,6 +75,10 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /primary_pattern: "issue-triage"/);
     assert.match(routeTable, /route_id: "issue-triage-report"/);
+    assert.match(routeTable, /consumer_kind: "report-consumer"/);
+    assert.match(routeTable, /mode: "report-only"/);
+    assert.match(routeTable, /side_effect_level: "evidence"/);
+    assert.match(routeTable, /runner: "missing"/);
     assert.match(routeTable, /evidence_store: "zj-loop\/issue-triage-state\.md"/);
     assert.doesNotMatch(routeTable, /status_store/);
     assert.doesNotMatch(routeTable, /state-request/);
@@ -131,7 +135,11 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);
     assert.match(routeTable, /consumer: "manual-smoke"/);
+    assert.match(routeTable, /consumer_kind: "report-consumer"/);
+    assert.match(routeTable, /maturity:/);
+    assert.match(routeTable, /capabilities:/);
     assert.match(routeTable, /route_id: "ci-sweeper"/);
+    assert.match(routeTable, /consumer_kind: "fix-runner"/);
     assert.match(routeTable, /route_id: "pr-steward"/);
     assert.match(routeTable, /route_id: "issue-triage"/);
     assert.match(routeTable, /route_id: "changelog-drafter"/);

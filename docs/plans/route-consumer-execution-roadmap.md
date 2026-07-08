@@ -233,7 +233,7 @@ Evidence:
 
 ### 1-6 Template and Init Defaults
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -248,6 +248,16 @@ Verification:
 - `npm run check:zj-loop-init`
 - `bash scripts/ci-validate-gates.sh`
 - `git diff --check`.
+
+Evidence:
+
+- Updated canonical route table template with execution, maturity,
+  capabilities, and truthful non-live defaults.
+- `zj-loop-init` bundled assets were regenerated through its bundle script.
+- `node --test test/cli.test.mjs` passed in `tools/zj-loop-init`.
+- `npm run check:zj-loop-init` passed.
+- `bash scripts/ci-validate-gates.sh` passed after rerun with network access
+  because the sandboxed first run could not resolve `registry.npmmirror.com`.
 
 ### 1-7 Audit Fail Upgrade Branch
 
@@ -404,4 +414,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `1-6 Template and Init Defaults`.
+Continue with `1-7 Audit Fail Upgrade Branch`.

@@ -25,6 +25,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "maintainer"
+    consumer_kind: "human-gate"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["human-decision"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["high-risk-review", "unknown-risk-review"]
+      verifiers: ["human-review"]
+      max_side_effect_level: "evidence"
     evidence_store: "__PATTERN_STATE__"
     match:
       risk: ["high", "unknown"]
@@ -38,6 +50,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "producer"
+    consumer_kind: "producer-router"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["noise-suppression", "route-decision"]
+      verifiers: ["route-decision-evidence"]
+      max_side_effect_level: "evidence"
     evidence_store: "__PATTERN_STATE__"
     match:
       route: ["ignore"]
@@ -51,6 +75,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "__PATTERN_ID__"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["__PATTERN_ID__", "route-decision"]
+      verifiers: ["route-decision-evidence"]
+      max_side_effect_level: "evidence"
     evidence_store: "__PATTERN_STATE__"
     match:
       route: ["__PATTERN_ID__"]
@@ -64,6 +100,18 @@ routes:
     enabled: true
     request_kind: "report-only"
     consumer: "manual-smoke"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["manual-smoke", "generated-workflow"]
+      verifiers: ["workflow-summary"]
+      max_side_effect_level: "evidence"
     evidence_store: "GitHub Actions workflow summary"
     match:
       source: ["workflow-dispatch"]
@@ -77,22 +125,58 @@ routes:
 disabled_dispatch_routes:
   - route_id: "ci-sweeper"
     enabled: false
-    request_kind: "workflow-dispatch"
+    request_kind: "issue-fix-request"
     consumer: "ci-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "request-only"
+      side_effect_level: "request"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["ci", "generated-workflow"]
+      verifiers: ["workflow-run", "gates", "diff-check"]
+      max_side_effect_level: "request"
     evidence_store: "zj-loop/ci-sweeper-state.md"
     note: "Enable only after CI Sweeper workflow, budget, and failure owner are configured."
 
   - route_id: "pr-steward"
     enabled: false
-    request_kind: "workflow-dispatch"
+    request_kind: "issue-fix-request"
     consumer: "pr-steward"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "request-only"
+      side_effect_level: "request"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["pull-request", "failed-check-rollup"]
+      verifiers: ["status-check-rollup", "request-claim"]
+      max_side_effect_level: "request"
     evidence_store: "zj-loop/pr-steward-state.md"
     note: "Enable only after PR Steward workflow, review boundaries, and evidence store are configured."
 
   - route_id: "issue-triage"
     enabled: false
-    request_kind: "workflow-dispatch"
+    request_kind: "report-only"
     consumer: "issue-triage"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["issue-backlog", "triage-observation"]
+      verifiers: ["route-decision-evidence", "forbidden-side-effect-check"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/issue-triage-state.md"
     note: "Enable only after issue triage policy and public mutation guards are configured."
 
@@ -100,13 +184,37 @@ disabled_dispatch_routes:
     enabled: false
     request_kind: "issue-fix-request"
     consumer: "dependency-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "request-only"
+      side_effect_level: "request"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["dependency", "patch-update", "minor-update"]
+      verifiers: ["package-risk-check", "verification-gate"]
+      max_side_effect_level: "request"
     evidence_store: "zj-loop/dependency-sweeper-state.md"
     note: "Enable only after dependency risk policy and verifier gates are configured."
 
   - route_id: "changelog-drafter"
     enabled: false
-    request_kind: "workflow-dispatch"
+    request_kind: "report-only"
     consumer: "changelog-drafter"
+    consumer_kind: "draft-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["draft-pr", "draft-evidence", "escalation-issue"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["release-prep", "merged-pr-batch", "changelog-observation"]
+      verifiers: ["route-decision-evidence", "human-review-boundary"]
+      max_side_effect_level: "evidence"
     evidence_store: "zj-loop/changelog-drafter-state.md"
     note: "Enable only after release/changelog boundaries and evidence store are configured."
 
@@ -114,6 +222,18 @@ disabled_dispatch_routes:
     enabled: false
     request_kind: "activation-comment"
     consumer: "roadmap-sliced-development"
+    consumer_kind: "activation-consumer"
+    execution:
+      mode: "request-only"
+      side_effect_level: "request"
+      completion_forms: ["roadmap-branch-pr", "activation-failed", "activation-resumable"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["roadmap-activation", "roadmap-bootstrap"]
+      verifiers: ["activation-comment", "resume-anchors", "roadmap-gates"]
+      max_side_effect_level: "branch"
     evidence_store: "append-only GitHub issue comments"
     note: "Activation creates a request only; Roadmap-Sliced Development owns execution."
 
@@ -122,6 +242,18 @@ disabled_dispatch_routes:
     request_kind: "report-only"
     consumer: "post-merge-cleanup"
     mode: "roadmap-closeout"
+    consumer_kind: "cleanup-consumer"
+    execution:
+      mode: "dry-run"
+      side_effect_level: "issue-comment"
+      completion_forms: ["cleanup-done", "cleanup-skipped", "escalation-issue"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: ["roadmap-closeout", "merged-zjal-branch", "carrier-issue-closeout"]
+      verifiers: ["post-merge-contract", "branch-prefix-allowlist", "fixed-confirmation-phrase"]
+      max_side_effect_level: "cleanup"
     evidence_store: "GitHub pull request comment"
     guards:
       requires_post_merge_contract: true
