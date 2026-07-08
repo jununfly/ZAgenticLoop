@@ -268,6 +268,7 @@ overwrite and must make that overwrite visible in CLI output.
 | `dependency-sweeper` | `issue-fix-request` | Dependency Sweeper | Create verifier-backed dependency requests and allow claim-only lifecycle evidence for patch/minor dependency signals; repair work and Fix PRs require later consumer execution. |
 | `changelog-drafter-report` / `changelog-drafter-draft-request` | `report-only` | Changelog Drafter | Record release-window evidence, then record draft request candidate evidence from an existing report; never draft, edit changelogs, create PRs, tag, release, publish, or dispatch workflows inside Route Decision. |
 | `roadmap-sliced-development` | `activation-comment` | Roadmap-Sliced Development | Create or consume authorized activation requests only; implementation stays with roadmap lifecycle. |
+| `post-merge-roadmap-closeout` | `report-only` | Post-Merge Cleanup | Validate merged Roadmap-Sliced PR closeout contracts and plan guarded cleanup; live branch deletion and carrier issue closure require explicit operator invocation. |
 | `human` | `report-only` | Maintainer | Security, auth, billing, infra, ambiguous, high-risk, or policy decisions. |
 | `ignore` | `report-only` | Producing loop | Record noise with reason and avoid rediscovery. |
 
@@ -319,6 +320,20 @@ rules. For example, Roadmap-Sliced Development consumes an explicit activation
 request and then resumes within its own roadmap lifecycle. CI Sweeper records
 attempts and failures in CI Sweeper-owned evidence/state, not in Daily Triage
 state.
+
+### Explicit Non-Goals
+
+The Route Decision layer must not grow into a general automation executor by
+accident. These actions require explicit future routes or consumer-owned
+execution contracts:
+
+- tag-triggered or release-triggered Changelog Drafter automation
+- automatic changelog PRs
+- package publishing
+- auto-merge for any consumer
+- broad workflow-dispatch routes without durable request evidence
+- formal issue lifecycle transitions from Daily Triage
+- replacing route-specific replay files with one opaque mega-dispatcher
 
 ## Request Lifecycle
 
