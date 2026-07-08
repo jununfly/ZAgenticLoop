@@ -362,7 +362,7 @@ routes:
       completion_forms: ["draft-pr", "draft-evidence", "escalation-issue"]
     maturity:
       protocol: "replayed"
-      runner: "missing"
+      runner: "replayed"
     capabilities:
       scopes: ["release-prep", "draft-request"]
       verifiers: ["existing-changelog-report", "dedupe-check"]

@@ -5,15 +5,16 @@ Last run: 2026-07-08
 ## Active Roadmap
 
 - Roadmap id: live-runner-upgrades
-- Branch: zjal/pr-steward-live-runner
+- Branch: zjal/changelog-drafter-live-runner
 - Status: active
 - Current parent node: cleanup-and-fix-runners
-- Current leaf: 3-1-changelog-drafter-live-draft-consumer
+- Current leaf: 3-2-issue-triage-action-route-design
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 3-1-changelog-drafter-live-draft-consumer | completed | `scripts/changelog-drafter-live-runner.mjs`; `scripts/changelog-drafter-live-runner.test.mjs`; `scripts/write-file-once.mjs`; `scripts/write-file-once.test.mjs`; `zj-loop/changelog-drafter-state.md`; Route Table/doc updates; `node --test scripts/changelog-drafter-live-runner.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `git diff --check` | pending |
 | 2-3-pr-steward-live-runner | completed | `scripts/pr-steward-live-runner.mjs`; `scripts/pr-steward-live-runner.test.mjs`; `zj-loop/pr-steward-state.md`; Route Table/doc updates; `node --test scripts/pr-steward-live-runner.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `git diff --check` | `7b3b69a` |
 | 2-2-dependency-sweeper-live-runner | completed | `scripts/dependency-sweeper-live-runner.mjs`; `scripts/dependency-sweeper-live-runner.test.mjs`; `scripts/issue-fix-request-dispatcher.mjs`; `zj-loop/dependency-sweeper-state.md`; Route Table/doc updates; `node --test scripts/dependency-sweeper-live-runner.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `git diff --check` | `8bb37a3` |
 | 2-1-post-merge-cleanup-live-runner | completed | `scripts/post-merge-roadmap-closeout.mjs`; `scripts/post-merge-roadmap-closeout.test.mjs`; `zj-loop/post-merge-state.md`; `node --test scripts/post-merge-roadmap-closeout.test.mjs scripts/live-runner-contract.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
