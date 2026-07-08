@@ -170,7 +170,31 @@ Evidence:
   Post-Merge Closeout use their narrow commands. Report workflows stay on the
   generic planner to avoid conflating report evidence with fix/action requests.
 
-### Leaf 2-4: Route-Specific Execution APIs
+### Leaf 2-4: Packaged Live Runner Evidence Contract
+
+Status: completed
+
+Intent:
+
+- Move the shared live-runner evidence envelope out of repository-local
+  `scripts/` into `@jununfly/zj-loop-core`.
+- Preserve consumer-kind completion forms, side-effect levels, status checks,
+  and append-only structured comment parsing.
+
+Verification:
+
+- `cd tools/zj-loop-core && npm test`
+- `git diff --check`
+
+Evidence:
+
+- Added `buildLiveRunnerEvidence()`, `validateLiveRunnerEvidence()`,
+  `buildLiveRunnerEvidenceComment()`, and
+  `parseLiveRunnerEvidenceComments()` to the published core package.
+- Added core tests for consumer-kind completion form validation, invalid status
+  rejection, structured comment roundtrip, and invalid JSON reporting.
+
+### Leaf 2-5: Route-Specific Execution APIs
 
 Status: in-progress
 
