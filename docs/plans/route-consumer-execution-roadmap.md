@@ -89,7 +89,7 @@ Purpose: make the system unable to misrepresent capability.
 
 ### 1-1 Dogfood Route Table Truth
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -109,6 +109,13 @@ Verification:
 - YAML remains parseable by existing scripts.
 - No route is silently promoted to live.
 - `git diff --check`.
+
+Evidence:
+
+- Existing `zj-loop-core` parser read all 13 routes after the field update.
+- `git diff --check` passed.
+- Live mode is limited to currently dogfooded bounded consumers:
+  `ci-sweeper` and `roadmap-sliced-development`.
 
 Durable decision target:
 
@@ -360,4 +367,4 @@ Verification:
 
 ## Current Next Leaf
 
-Start with `1-1 Dogfood Route Table Truth`.
+Continue with `1-2 Durable Architecture Doc`.
