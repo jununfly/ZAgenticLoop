@@ -237,6 +237,11 @@ Progress:
   head SHA, produces either independent repair PR actions or an escalation
   issue action, and records that the source PR is not commented, labeled,
   rebased, merged, or workflow-dispatched by the runner.
+- Changelog Drafter now has a packaged draft-plan API and
+  `zj-loop-changelog-drafter draft-plan` command that validates draft request
+  evidence, produces draft evidence or draft PR actions, and records that no
+  tags, releases, package publishes, or final changelog acceptance happen in the
+  draft consumer.
 
 Evidence:
 
