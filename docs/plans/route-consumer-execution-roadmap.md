@@ -149,7 +149,7 @@ Evidence:
 
 ### 1-3 Deterministic Contract Helpers
 
-Status: pending
+Status: completed
 
 Scope:
 
@@ -164,6 +164,16 @@ Verification:
 - Node tests cover accepted and rejected examples.
 - Existing route replay tests still pass.
 - `git diff --check`.
+
+Evidence:
+
+- Added deterministic `validateRouteExecutionContract`, `isRouteLiveReady`,
+  and `canClaimRequest` helpers in `@jununfly/zj-loop-core`.
+- Added route tests for kind/mode validation, live readiness, and claim
+  capability/verifier matching.
+- `npm run build` passed in `tools/zj-loop-core`.
+- `node --test tools/zj-loop-core/test/route.test.mjs` passed.
+- Current dogfood Route Table validates with the new contract helper.
 
 ### 1-4 Status Surface
 
@@ -374,4 +384,4 @@ Verification:
 
 ## Current Next Leaf
 
-Continue with `1-3 Deterministic Contract Helpers`.
+Continue with `1-4 Status Surface`.
