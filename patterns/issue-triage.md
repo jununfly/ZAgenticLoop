@@ -86,6 +86,11 @@ not write public issue comments, apply labels, close/reopen issues, assign
 people, change milestones, perform formal lifecycle transitions, or batch-mutate
 the issue tracker.
 
+If a triage observation should become a bounded issue side effect, route it
+through the separate `issue-triage-action` consumer. That route is dry-run by
+default and only accepts fixed action requests for allowlisted labels or fixed
+comment templates. Do not add these side effects to `issue-triage-report`.
+
 **Grok Build TUI**:
 ```
 /loop 2h Run zj-issue-triage skill. Read zj-loop/issue-triage-state.md first. Produce updated state + label-suggestion observations for new items only. No auto-label or close. Record human-attention candidates for ambiguous items.

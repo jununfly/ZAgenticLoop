@@ -70,6 +70,19 @@ test('validates draft cleanup and activation completion forms by consumer kind',
     status: 'failed',
     side_effects: { executed: false, level: 'branch', actions: [] },
   })).ok, true);
+
+  assert.equal(validateLiveRunnerEvidence(validEvidence({
+    runner_id: 'issue-triage-action',
+    route_id: 'issue-triage-action',
+    consumer_kind: 'triage-action-consumer',
+    execution_mode: 'dry-run',
+    completion_form: 'triage-label-applied',
+    side_effects: {
+      executed: false,
+      level: 'label',
+      actions: [{ kind: 'label', label: 'needs-info', mode: 'dry-run' }],
+    },
+  })).ok, true);
 });
 
 test('rejects mismatched completion forms and statuses', () => {
