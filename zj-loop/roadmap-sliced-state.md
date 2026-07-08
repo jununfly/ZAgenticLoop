@@ -5,15 +5,16 @@ Last run: 2026-07-08
 ## Active Roadmap
 
 - Roadmap id: live-runner-upgrades
-- Branch: zjal/live-runner-upgrades
+- Branch: zjal/dependency-sweeper-live-runner
 - Status: active
 - Current parent node: cleanup-and-fix-runners
-- Current leaf: 2-2-dependency-sweeper-live-runner
+- Current leaf: 2-3-pr-steward-live-runner
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 2-2-dependency-sweeper-live-runner | completed | `scripts/dependency-sweeper-live-runner.mjs`; `scripts/dependency-sweeper-live-runner.test.mjs`; `scripts/issue-fix-request-dispatcher.mjs`; `zj-loop/dependency-sweeper-state.md`; Route Table/doc updates; `node --test scripts/dependency-sweeper-live-runner.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/live-runner-contract.test.mjs`; `git diff --check` | `8bb37a3` |
 | 2-1-post-merge-cleanup-live-runner | completed | `scripts/post-merge-roadmap-closeout.mjs`; `scripts/post-merge-roadmap-closeout.test.mjs`; `zj-loop/post-merge-state.md`; `node --test scripts/post-merge-roadmap-closeout.test.mjs scripts/live-runner-contract.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-2-route-table-live-eligibility-gate | completed | `tools/zj-loop-core/src/route.ts`; `tools/zj-loop-core/test/route.test.mjs`; `npm run build`; `node --test tools/zj-loop-core/test/route.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-1-runner-lifecycle-contract | completed | `scripts/live-runner-contract.mjs`; `scripts/live-runner-contract.test.mjs`; Route Consumer Execution Architecture; `node --test scripts/live-runner-contract.test.mjs`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |

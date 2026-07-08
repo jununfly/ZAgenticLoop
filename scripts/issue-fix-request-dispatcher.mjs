@@ -72,6 +72,9 @@ export function buildRouteDecision({ route, routeId, signal, createdAt = new Dat
     dedupe_key: buildDedupeKey({ routeId, signal }),
     reason: '',
     source_run_id: signal?.source_run_id ?? '',
+    risk: signal?.risk ?? '',
+    priority: signal?.priority ?? '',
+    confidence: signal?.confidence ?? '',
     created_at: createdAt,
   };
 
@@ -176,6 +179,19 @@ function buildRequestSubject(signal) {
       pr_number: signal.pr_number,
       head_sha: signal?.head_sha ?? '',
       base_branch: signal?.base_branch ?? signal?.head_branch ?? '',
+    };
+  }
+  if (signal?.source === 'dependency') {
+    return {
+      type: 'dependency',
+      repo: signal?.repo ?? '',
+      ecosystem: signal?.ecosystem ?? 'npm',
+      package_name: signal?.package_name ?? '',
+      current_version: signal?.current_version ?? '',
+      target_version: signal?.target_version ?? '',
+      update_type: signal?.update_type ?? '',
+      dependency_section: signal?.dependency_section ?? '',
+      manifest_files: signal?.fix_scope?.files_or_areas ?? [],
     };
   }
   return {

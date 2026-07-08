@@ -31,6 +31,7 @@ const BASE_SIGNAL = {
       'lockfile edits during claim',
     ],
   },
+  dependency_section: 'dependencies',
   acceptance_criteria: [
     'Claim the dependency fix request for Dependency Sweeper.',
     'Record consumed lifecycle evidence without starting dependency repair.',

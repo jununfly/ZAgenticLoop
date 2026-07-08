@@ -222,7 +222,7 @@ was introduced:
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
 | PR Steward fix request | `fix-runner` | `claim-only` | `missing` | Can consume matching request evidence; no repair yet. |
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
-| Dependency Sweeper | `fix-runner` | `claim-only` | `missing` | Request and claim evidence only. |
+| Dependency Sweeper | `fix-runner` | `claim-only` | `replayed` | Request/claim evidence plus replayed repair PR or escalation runner; not live until workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `draft-consumer` | `report-only` | `missing` | Draft request evidence only. |
 | Roadmap-Sliced Development | `activation-consumer` | `live` | `dogfooded` | Activation bootstrap is live; slice execution remains bounded by roadmap gates. |
 | Post-Merge Cleanup | `cleanup-consumer` | `dry-run` | `replayed` | Automatic dry-run; live cleanup remains guarded by contract and confirmation. |

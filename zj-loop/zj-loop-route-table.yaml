@@ -289,7 +289,7 @@ routes:
       completion_forms: ["repair-pr", "escalation-issue"]
     maturity:
       protocol: "replayed"
-      runner: "missing"
+      runner: "replayed"
     capabilities:
       scopes: ["dependency", "patch-update", "minor-update"]
       verifiers: ["request-claim", "package-risk-check", "verification-gate"]
