@@ -212,6 +212,21 @@ Verification:
 - `npm run test:post-merge-roadmap-closeout`
 - `git diff --check`
 
+Progress:
+
+- CI Sweeper now has a packaged repair-plan API and
+  `zj-loop-ci-sweeper repair-plan` command that returns deterministic command
+  evidence for package builds and root validation commands.
+- The package-level API keeps execution planning route-specific instead of
+  introducing a generic live runner that would blur repair, draft, and cleanup
+  lifecycles.
+
+Evidence:
+
+- `cd tools/zj-loop-core && npm test`
+- `node tools/zj-loop-audit/dist/cli.js .`
+- `git diff --check`
+
 ## Parent 3: Generated-Bundle E2E Dogfood
 
 Completion condition: every action-capable consumer has generated-bundle
