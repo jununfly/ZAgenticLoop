@@ -225,6 +225,13 @@ Progress:
   dry-run guard evidence, GitHub PR input collection, and structured dry-run
   comments. Destructive live cleanup remains behind the route-specific closeout
   boundary and fixed confirmation phrase.
+- Issue Fix Request contract helpers now live in `@jununfly/zj-loop-core` for
+  shared fix-runner validation, comments, dedupe, state derivation, and lifecycle
+  transitions.
+- Dependency Sweeper now has a packaged repair-plan API and
+  `zj-loop-dependency-sweeper repair-plan` command that validates consumed
+  Issue Fix Requests, produces deterministic repair PR actions, and returns
+  live-runner evidence through an injected runner boundary.
 
 Evidence:
 
