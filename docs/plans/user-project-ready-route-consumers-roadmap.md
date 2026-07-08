@@ -138,18 +138,52 @@ Evidence:
 
 ### Leaf 2-3: Route-Specific Consumer Runner Promotion
 
+Status: completed
+
+Intent:
+
+- Promote route-specific consumer entry points into published package surfaces
+  without collapsing distinct consumer lifecycles into a generic runner.
+- Keep shared guard logic in `zj-loop-consumer plan`, while each action-capable
+  route has a narrow command that pins route identity.
+- Use narrow commands in generated workflows where the workflow is already an
+  action-capable route.
+
+Verification:
+
+- `cd tools/zj-loop-core && npm test`
+- `cd tools/zj-loop-init && npm test`
+- `node tools/zj-loop-audit/dist/cli.js .`
+- `git diff --check`
+
+Evidence:
+
+- Added narrow commands for action-capable routes:
+  `zj-loop-ci-sweeper`, `zj-loop-roadmap-activation`,
+  `zj-loop-pr-steward`, `zj-loop-dependency-sweeper`,
+  `zj-loop-changelog-drafter`, `zj-loop-issue-triage-action`, and
+  `zj-loop-post-merge-closeout`.
+- Each command currently owns the route-specific entry point and delegates to
+  the shared consumer plan gate; it does not yet execute route-specific
+  repair/draft/cleanup side effects.
+- Generated action-capable workflows for CI Sweeper, Dependency Sweeper, and
+  Post-Merge Closeout use their narrow commands. Report workflows stay on the
+  generic planner to avoid conflating report evidence with fix/action requests.
+
+### Leaf 2-4: Route-Specific Execution APIs
+
 Status: in-progress
 
 Intent:
 
-- Promote existing replay/live runner logic into packaged deterministic surfaces
-  for CI Sweeper, Roadmap activation, PR Steward, Dependency Sweeper, Changelog
-  Drafter, Issue Triage Action, and Post-Merge Roadmap Closeout.
-- Generated workflows must not call repository-local `scripts/`.
+- Move concrete repair/draft/cleanup execution planning and evidence builders
+  out of repository-local `scripts/` into package APIs behind the narrow
+  commands.
+- Preserve route-specific request carriers and completion forms.
 
 Verification:
 
-- targeted consumer runner tests
+- targeted route-specific command tests
 - `npm run test:route-decision`
 - `npm run test:post-merge-roadmap-closeout`
 - `git diff --check`

@@ -134,10 +134,14 @@ inside this repo; `user-project-ready` means the generated bundle can call a
 published package runner in a user project.
 
 Generated workflows should also pass through the packaged consumer gate before
-runner side effects:
+runner side effects. Use the generic planner for report-only routes and the
+narrow command for action-capable routes:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-ci-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
 ```
 
 Enable side-effecting routes with a fixed confirmation phrase:

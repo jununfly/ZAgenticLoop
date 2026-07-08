@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-ci-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: d38c5041057c75c7
+# zj-loop-template-hash: 085cc1ffc439c209
 
 name: ZJ Loop CI Sweeper
 
@@ -27,6 +27,6 @@ jobs:
       - name: CI sweeper route evidence
         run: |
           npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch ci-sweeper --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan ci-sweeper --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-ci-sweeper plan --json > consumer-plan.json || true
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

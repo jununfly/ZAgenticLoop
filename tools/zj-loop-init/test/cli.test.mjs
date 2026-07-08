@@ -132,6 +132,12 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.3/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /zj-loop-consumer plan manual-smoke-report/);
+    const ciSweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-ci-sweeper.yml'), 'utf8');
+    assert.match(ciSweeper, /zj-loop-ci-sweeper plan/);
+    const dependencySweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-dependency-sweeper.yml'), 'utf8');
+    assert.match(dependencySweeper, /zj-loop-dependency-sweeper plan/);
+    const postMergeCleanup = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
+    assert.match(postMergeCleanup, /zj-loop-post-merge-closeout plan/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);
@@ -155,7 +161,6 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(issueTriage, /zj-loop-route dispatch issue-triage-report/);
     const changelogDrafter = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-changelog-drafter.yml'), 'utf8');
     assert.match(changelogDrafter, /zj-loop-route dispatch changelog-drafter-report/);
-    const postMergeCleanup = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
     assert.match(postMergeCleanup, /zj-loop-route dispatch post-merge-roadmap-closeout/);
   } finally {
     await rm(dir, { recursive: true, force: true });

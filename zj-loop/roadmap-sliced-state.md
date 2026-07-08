@@ -8,13 +8,14 @@ Last run: 2026-07-09
 - Branch: codex-user-project-ready-route-consumers
 - Status: active
 - Current parent node: packaged-consumer-runner-surface
-- Current leaf: 2-3-route-specific-consumer-runner-promotion
+- Current leaf: 2-4-route-specific-execution-apis
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
-| 2-3-route-specific-consumer-runner-promotion | in-progress | Next slice: promote route-specific runner logic into packaged deterministic surfaces without relying on repository-local `scripts/` in user projects | pending |
+| 2-4-route-specific-execution-apis | in-progress | Next slice: move concrete repair/draft/cleanup execution planning and evidence builders out of repository-local `scripts/` into package APIs behind narrow commands | pending |
+| 2-3-route-specific-consumer-runner-promotion | completed | Added narrow package commands for action-capable routes; commands pin route identity and delegate to shared consumer plan gate; generated action-capable workflows for CI Sweeper, Dependency Sweeper, and Post-Merge Closeout use narrow commands while report workflows stay generic; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 2-2-generated-workflow-consumer-gate-integration | completed | Generated workflows and dogfood generated workflows now call `zj-loop-consumer plan` after Route Decision; core pin prepared for `0.1.3`; generated metadata hashes valid; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 2-1-runner-command-contract | completed | Added `buildConsumerRunPlan()` and `zj-loop-consumer plan`; blocks disabled routes, invalid execution contracts, and non-`user-project-ready` action routes; report-only routes produce evidence plans; `cd tools/zj-loop-core && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |
 | 1-2-user-project-readiness-status-surface | completed | `zj-loop-route status` table/JSON exposes readiness and `user_project_ready`; README/README.zh-CN/Quickstart describe route self-selection and `dogfooded-live` vs `user-project-ready`; `cd tools/zj-loop-core && npm test`; `node tools/zj-loop-audit/dist/cli.js .`; `git diff --check` | pending |

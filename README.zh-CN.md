@@ -131,10 +131,14 @@ Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
 后，才应被当作用户项目 live path。
 
 Generated workflows 在任何 runner 副作用前，都应该调用发布包里的 consumer
-gate：
+gate。有 action 能力的 route 优先使用自己的窄命令；report-only route 可以使用
+generic planner：
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-ci-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
 ```
 
 这个 plan 会阻止 disabled route、无效 execution contract，以及只有 dogfood
