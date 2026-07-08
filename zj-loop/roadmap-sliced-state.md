@@ -1,62 +1,44 @@
-# Roadmap-Sliced State
+# Roadmap-Sliced Development State — ZAgenticLoop
 
-Roadmap id: `workflow-dispatch-user-project-bundle`
+Last run: 2026-07-08
 
-Carrier issue: https://github.com/jununfly/ZAgenticLoop/issues/52
+## Active Roadmap
 
-Activation request: `rsd-52-workflow-dispatch-bundle`
+- Roadmap id:
+- Branch:
+- Current parent node:
+- Current leaf:
 
-Roadmap branch: `zjal/workflow-dispatch-user-project-bundle`
+## Slice Status
 
-Roadmap file:
-`docs/plans/workflow-dispatch-user-project-bundle-roadmap.md`
+| Leaf | Status | Evidence | Commit / PR |
+|------|--------|----------|-------------|
+| workflow-dispatch-user-project-bundle | completed | README, Quickstart, Route Table Architecture, Dogfood Reference Case, generated `zj-loop-*.yml` workflows, audit/validate gates | `2637db0`, `9672593` |
 
-Roadmap view:
-`docs/plans/workflow-dispatch-user-project-bundle-checklist.md`
+## Human Gates
 
-Current status: `completed`
+- Naming or public terminology:
+- Scope expansion:
+- Release/package identity:
+- Branch merge approval:
+- Process roadmap deletion or durable retention:
 
-Current focus: `closeout`
+## Closeout Checklist
 
-Next action: prepare closeout PR with roadmap/process cleanup after review.
+- [x] All leaf nodes are completed, deferred, or linked to follow-up
+- [x] Durable decisions are moved into docs or PR body
+- [x] Verification evidence is attached before commit
+- [x] Closeout commit is separate from final feature slice
+- [ ] PR handoff includes branch cleanup plan
 
-Last updated: 2026-07-08
+## Closeout Notes
 
-## Process Evidence
-
-- GitHub carrier issue created: #52
-- Slash command comment:
-  https://github.com/jununfly/ZAgenticLoop/issues/52#issuecomment-4912094358
-- Activation request comment:
-  https://github.com/jununfly/ZAgenticLoop/issues/52#issuecomment-4912098429
-- Activation consumed comment:
-  https://github.com/jununfly/ZAgenticLoop/issues/52#issuecomment-4912126166
-- Slice 1 verification:
-  - `npm test` in `tools/zj-loop-init`
-  - `npm run check:zj-loop-init`
-- Slice 2 verification:
-  - `npm test` in `tools/zj-loop-core`
-  - `npm test` in `tools/zj-loop-init`
-- Slice 4 verification:
-  - `npm test` in `tools/zj-loop-audit`
-  - `npm test` in `tools/zj-loop-init`
-  - `npm test` in `tools/zj-loop-core`
-  - `npm run check:zj-loop-init`
-  - `node dist/cli.js ../..` in `tools/zj-loop-audit`
-  - `bash scripts/before-after-demo.sh`
-  - `git diff --check`
-- Slice 5 verification:
-  - `node tools/zj-loop-init/dist/cli.js . --add github-actions`
-  - `node tools/zj-loop-core/dist/route-cli.js status`
-  - `node tools/zj-loop-core/dist/route-cli.js dispatch manual-smoke-report --json`
-  - `node tools/zj-loop-core/dist/route-cli.js dispatch ci-sweeper --json`
-  - `node tools/zj-loop-init/dist/cli.js . --upgrade github-actions --dry-run`
-  - `node dist/cli.js ../..` in `tools/zj-loop-audit`
-  - `bash scripts/ci-audit-gates.sh`
-  - `bash scripts/ci-validate-gates.sh`
-
-## Completion Condition
-
-All roadmap parent nodes are completed or explicitly deferred with linked
-follow-up evidence, durable design decisions are merged into long-lived docs,
-and process roadmap files are either removed or migrated during closeout.
+- Process roadmap files were deleted after durable docs absorbed the key
+  decisions.
+- Durable references:
+  - `README.md`
+  - `docs/QUICKSTART.md`
+  - `docs/designs/route-table-architecture.md`
+  - `docs/designs/dogfood-reference-case.md`
+- Branch cleanup plan: delete `zjal/workflow-dispatch-user-project-bundle` after
+  human-reviewed PR merge.
