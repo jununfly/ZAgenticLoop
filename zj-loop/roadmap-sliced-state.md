@@ -4,15 +4,16 @@ Last run: 2026-07-08
 
 ## Active Roadmap
 
-- Roadmap id:
-- Branch:
-- Current parent node:
-- Current leaf:
+- Roadmap id: route-consumer-execution
+- Branch: zjal/route-consumer-execution
+- Current parent node: execution-contract-foundation
+- Current leaf: 1-1-dogfood-route-table-truth
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| route-consumer-execution-roadmap | completed | `docs/plans/route-consumer-execution-roadmap.md`; `git diff --check` | pending |
 | workflow-dispatch-user-project-bundle | completed | README, Quickstart, Route Table Architecture, Dogfood Reference Case, generated `zj-loop-*.yml` workflows, audit/validate gates | `2637db0`, `9672593`, PR #53 |
 
 ## Human Gates
@@ -33,6 +34,9 @@ Last run: 2026-07-08
 
 ## Closeout Notes
 
+- Active process roadmap:
+  `docs/plans/route-consumer-execution-roadmap.md`. It must be merged into
+  durable docs or PR body before deletion at closeout.
 - Process roadmap files were deleted after durable docs absorbed the key
   decisions.
 - Durable references:
