@@ -27,7 +27,7 @@ Leaf nodes:
 | --- | --- | --- |
 | `1-1-design-current-handoff-gap` | completed | Record the observed product gap and target behavior before implementation. |
 | `1-2-implement-next-command-surfacing` | completed | Expose the next command in the appropriate PRD issue flow without broadening report-only defaults. |
-| `1-3-verify-and-document-dogfood` | pending | Prove the route chain remains replayable and side-effect boundaries are clear. |
+| `1-3-verify-and-document-dogfood` | completed | Prove the route chain remains replayable and side-effect boundaries are clear. |
 
 ## Leaf 1-1 Findings
 
@@ -96,6 +96,19 @@ Verification evidence:
 - `npm run validate:registry`
 - `node tools/zj-loop-core/dist/prd-handoff-cli.js handoff-plan --prd-issue-url https://github.com/jununfly/ZCodeGraph/issues/678 --next-command "Ask Codex: Run the roadmap-sliced-development loop for ZCodeGraph issue #678." --json`
 - `git diff --check`
+
+## Leaf 1-3 Dogfood Evidence
+
+Durable dogfood documentation now includes the PRD Handoff Planner in
+`docs/designs/dogfood-reference-case.md` and records Daily Triage's report-only
+handoff behavior.
+
+Live chain evidence:
+
+- Issue Fix Request carrier: https://github.com/jununfly/ZAgenticLoop/issues/70
+- Activation request comment: https://github.com/jununfly/ZAgenticLoop/issues/70#issuecomment-4924234140
+- Activation consumed comment: https://github.com/jununfly/ZAgenticLoop/issues/70#issuecomment-4924293521
+- Roadmap Activation draft PR: https://github.com/jununfly/ZAgenticLoop/pull/71
 
 ## Gates
 
