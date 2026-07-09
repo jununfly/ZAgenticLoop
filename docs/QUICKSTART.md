@@ -152,6 +152,18 @@ The first execution-ready user-project choices are:
   `CONFIRM_TRIAGE_TRANSITION` to produce dry-run `zj-triage` transition
   evidence. `ready-for-agent` confirmations plan an Issue Fix Request; no live
   tracker mutation happens yet.
+- **Surface a PRD next-command handoff:** when triage identifies a ready PRD or
+  plan issue, generate the stable handoff comment and exact manual command:
+
+  ```bash
+  npx --yes --package @jununfly/zj-loop-core zj-loop-prd-handoff handoff-plan \
+    --prd-issue-url https://github.com/OWNER/REPO/issues/123 \
+    --next-command 'Ask Codex: "Run the roadmap-sliced-development loop for issue #123..."'
+  ```
+
+  Default `report-only` mode prints the `gh issue comment ...` command but does
+  not write to GitHub. Use `--mode comment-enabled` only when the route/workflow
+  explicitly allows PRD issue comments.
 - **Close out merged roadmap work:** use `post-merge-roadmap-closeout` in
   dry-run first. Live branch deletion and carrier issue closure require the
   fixed phrase

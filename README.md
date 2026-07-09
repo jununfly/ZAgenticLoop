@@ -242,6 +242,20 @@ First-version rules:
 - Roadmap-Sliced Development consumes an explicit issue/request id and resumes
   from roadmap state after consumption.
 
+When triage finds a ready PRD/plan issue and can name the exact next command,
+surface that handoff explicitly instead of leaving it only in local state:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-prd-handoff handoff-plan \
+  --prd-issue-url https://github.com/OWNER/REPO/issues/123 \
+  --next-command 'Ask Codex: "Run the roadmap-sliced-development loop for issue #123..."'
+```
+
+Default `report-only` mode prints the stable comment body and exact manual
+`gh issue comment ...` command. `--mode comment-enabled` is an explicit opt-in
+for workflows that are allowed to write PRD issue comments and must use the
+marker `<!-- zj-loop:prd-next-command-handoff -->` for idempotency.
+
 See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patterns/roadmap-sliced-development.md), and [Triage Architecture](docs/designs/triage-architecture.md).
 
 ## Tool Packages

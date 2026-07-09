@@ -37,6 +37,7 @@ are guarded live operations that require explicit operator intent.
 | Validate Patterns & Registry | `.github/workflows/validate-patterns.yml`, `scripts/ci-validate-gates.sh` | Push and PR gate | Keeps pattern docs, registry, starters, release workflows, route replays, and tool package tests aligned. |
 | Workflow-Dispatch User Bundle | `.github/workflows/zj-loop-*.yml`, `templates/github-actions/`, `zj-loop-init --add/--upgrade github-actions` | Generated bundle smoke plus Route Table-controlled consumers | Proves user-project generated workflows install cleanly, carry metadata/hash evidence, pin package versions, and run through Route Decision instead of embedding local dogfood scripts. Manual smoke is the default safe path; side-effecting consumers require explicit Route Table enablement. |
 | Daily Triage | `.github/workflows/daily-triage.yml`, `zj-loop/STATE.md`, `zj-loop/zj-loop-run-log.md` | Scheduled producer plus generated state PR | Updates operational memory, emits route candidates, and may dispatch allowlisted consumers. Its generated state PR auto-merge is a narrow exception limited to loop state/run-log files. |
+| PRD Handoff Planner | `zj-loop-prd-handoff handoff-plan`, `tools/zj-loop-core/src/prd-handoff-runner.ts` | Deterministic report-only handoff planner | Converts a ready PRD/plan issue plus exact next command into a stable handoff comment body and manual `gh issue comment ...` command. Default mode performs no GitHub writes; `comment-enabled` is explicit opt-in planning and callers must enforce marker-based idempotency. |
 | CI Sweeper | `.github/workflows/ci-sweeper.yml`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/ci-sweeper-state.md` | Live dogfooded `fix-runner` | Handles validate/audit failures only. Completion forms are `repair-pr` when deterministic repair creates non-state diffs and repair/validate/audit gates pass, or `escalation-issue` otherwise. |
 | Route Decision replay suite | `scripts/*route*replay*.mjs`, `scripts/*dispatcher*.mjs`, `scripts/*contract*.mjs` | Local deterministic protocol evidence | Proves route decisions, request creation, duplicate suppression, denials, claims, and recovery paths without requiring live GitHub side effects. |
 | Roadmap activation | `roadmap-activation-dispatcher.mjs`, `zj-loop-activation-contract.mjs`, route table `roadmap-sliced-development` row, `zj-loop/roadmap-activation-state.md` | Live issue-triggered activation-comment route | Authorized slash commands create append-only activation requests only. Route Table truth is `consumer_kind: activation-consumer`, `execution.mode: live`, and `maturity.runner: dogfooded`; Roadmap-Sliced Development consumes explicit issue/request ids and owns branch, roadmap, implementation, verification, and PR handoff. |
@@ -134,10 +135,14 @@ Daily Triage is the clearest self-running dogfood loop:
 5. Rewrite `zj-loop/STATE.md` and append `zj-loop/zj-loop-run-log.md`.
 6. Create an Issue Fix Request and dispatch CI Sweeper only when route guards
    pass and no matching lifecycle exists.
-7. Run validate/audit gates for the generated state branch.
-8. Open and squash-merge a generated state PR only when the narrow exception in
+7. When a ready PRD/plan issue has an exact next implementation command, use
+   `zj-loop-prd-handoff handoff-plan` to expose where the handoff lives. In
+   default report-only mode this produces a manual `gh issue comment ...`
+   command instead of writing to GitHub.
+8. Run validate/audit gates for the generated state branch.
+9. Open and squash-merge a generated state PR only when the narrow exception in
    `zj-loop/zj-loop-constraints.md` applies.
-9. Open or refresh weekly loop report issues.
+10. Open or refresh weekly loop report issues.
 
 Daily Triage remains a producer. It may update operational memory, create
 reviewable evidence, and hand off to an allowlisted dispatcher. It must not

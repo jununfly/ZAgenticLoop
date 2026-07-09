@@ -15,3 +15,4 @@ export * from './changelog-drafter-runner.js';
 export * from './issue-triage-action-runner.js';
 export * from './issue-triage-transition-runner.js';
 export * from './roadmap-activation-runner.js';
+export * from './prd-handoff-runner.js';
