@@ -19,7 +19,7 @@ Last run: 2026-07-08
   - Runner maturity: `replayed`
 - Route: `issue-triage-transition`
   - Consumer kind: `triage-action-consumer`
-  - Execution mode: `dry-run`
+  - Execution mode: `request-only`
   - Completion forms: `triage-transition-confirmed`,
     `issue-fix-request-created`, `triage-action-skipped`, `escalation-issue`
   - Protocol maturity: `designed`
@@ -51,8 +51,8 @@ Last run: 2026-07-08
   `scripts/issue-triage-action-runner.test.mjs`.
 - Issue Triage Transition runner verifies maintainer/collaborator confirmation,
   exact slash command matching, fixed confirmation phrase, `ready-for-agent`
-  Issue Fix Request planning, `needs-info` triage notes planning, and default
-  `wontfix` escalation:
+  Issue Fix Request carrier body generation, `needs-info` triage notes
+  planning, and default `wontfix` escalation:
   `tools/zj-loop-core/test/issue-triage-transition-runner.test.mjs`.
 
 ## Boundary
@@ -65,10 +65,10 @@ batch-mutate an issue tracker, create Issue Fix Requests, or start consumer
 work.
 
 Issue side effects are separated into `issue-triage-transition` and
-`issue-triage-action`. Both routes are dry-run, replayed consumers only.
-`issue-triage-transition` handles canonical `zj-triage` role/comment plans and
-`ready-for-agent` Issue Fix Request plans after fixed confirmation.
+`issue-triage-action`. `issue-triage-transition` is a request-only, replayed
+consumer that creates or dedupes independent Issue Fix Request carriers for
+`ready-for-agent` after fixed confirmation.
 `issue-triage-action` handles narrowly allowlisted labels or fixed comment
-templates. Neither route may perform live issue mutation until workflow-dispatch
-dogfood evidence exists and the Route Table is explicitly promoted to
+templates and remains dry-run. Neither route may perform source issue mutation
+until workflow-dispatch dogfood evidence exists and the Route Table is explicitly promoted to
 `execution.mode: live`.

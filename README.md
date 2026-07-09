@@ -138,9 +138,9 @@ The first execution-ready route set is:
 - `ci-sweeper`: failed workflow to durable GitHub Issue Fix Request.
 - `issue-backlog-triage`: open issue backlog to recommended triage transition
   evidence with fixed confirmation commands.
-- `issue-triage-transition`: maintainer/collaborator confirmation to dry-run
-  `zj-triage` transition evidence and `ready-for-agent` Issue Fix Request
-  plans.
+- `issue-triage-transition`: maintainer/collaborator confirmation to
+  request-only Issue Fix Request carriers for `ready-for-agent`
+  recommendations.
 - `post-merge-roadmap-closeout`: merged Roadmap-Sliced PR to guarded dry-run
   closeout, with optional fixed-phrase live cleanup.
 
@@ -161,7 +161,7 @@ Generated bundle route menu:
 | `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | Enable when dependency signals should become bounded fix-request repair plans. |
 | `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | Enable when release-window evidence should produce draft evidence or draft PR plans. |
 | `issue-backlog-triage` | `zj-loop-issue-triage.yml` | Enable when open issues should produce recommended `zj-triage` transition requests without tracker mutation. |
-| `issue-triage-transition` | `zj-loop-issue-triage.yml` | Enable when maintainers should confirm recommended triage transitions through fixed request ids and dry-run evidence. |
+| `issue-triage-transition` | `zj-loop-issue-triage.yml` | Enable when maintainers should confirm recommended triage transitions and create request-only Issue Fix Request carriers. |
 | `issue-triage-action` | `zj-loop-issue-triage.yml` | Enable for dry-run allowlisted label/comment action plans. |
 | `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | Enable after Roadmap-Sliced PRs carry closeout contracts. |
 
@@ -217,7 +217,7 @@ Current dogfood automation boundaries:
 | `pr-steward-fix-request` | `claim-only` with replayed runner | Claim eligible failed-PR-check requests and replay repair/escalation evidence; no source PR mutation. |
 | `changelog-drafter-draft-request` | `report-only` with replayed runner | Record draft request evidence and replay draft evidence/PR outcomes; no live changelog edits yet. |
 | `issue-backlog-triage` | `report-only` | Record recommended triage transition evidence and confirmation commands; no comments, labels, closes, or Issue Fix Requests until confirmed side effects are enabled. |
-| `issue-triage-transition` | `dry-run` with replayed runner | Validate maintainer/collaborator confirmation and plan `zj-triage` role/comment/Issue Fix Request side effects; covered by `issue-backlog-triage -> issue-triage-transition` E2E replay; no live tracker mutation yet. |
+| `issue-triage-transition` | `request-only` with replayed runner | Validate maintainer/collaborator confirmation and create/dedupe independent Issue Fix Request carriers for `ready-for-agent`; covered by `issue-backlog-triage -> issue-triage-transition` E2E replay; no live tracker mutation yet. |
 | `issue-triage-action` | `dry-run` with replayed runner | Plan allowlisted labels or fixed comment templates; no live issue mutation yet. |
 | Report routes | `report-only` | Record evidence only. |
 

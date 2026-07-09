@@ -100,14 +100,14 @@ Current dogfood status:
   It accepts only allowlisted labels and fixed comment templates, refuses live
   issue mutation, rejects unsupported/freeform actions, and escalates hard
   human-guard cases. It must not be folded back into `issue-backlog-triage`.
-- `issue-triage-transition` is implemented as a separate dry-run confirmed
+- `issue-triage-transition` is implemented as a separate request-only confirmed
   transition consumer:
-  `Recommended Triage Transition -> Confirmed Triage Transition -> ZJ Triage Role/Brief Plan`.
+  `Recommended Triage Transition -> Confirmed Triage Transition -> Issue Fix Request Carrier`.
   It requires maintainer/collaborator permission, the exact
   `/zj-loop confirm-triage-transition <request-id>` command, and fixed
-  `CONFIRM_TRIAGE_TRANSITION` workflow confirmation phrase. It plans
-  `zj-triage` role/comment side effects and `ready-for-agent` Issue Fix
-  Requests, but does not mutate the tracker live.
+  `CONFIRM_TRIAGE_TRANSITION` workflow confirmation phrase. It creates or
+  dedupes independent `ready-for-agent` Issue Fix Request carriers, but does
+  not mutate the source issue tracker live.
 - `changelog-drafter-report` is implemented as a release-prep report-only
   route:
   `Merged PR Batch / Manual Release Prep -> Route Decision -> Changelog Draft Evidence`.

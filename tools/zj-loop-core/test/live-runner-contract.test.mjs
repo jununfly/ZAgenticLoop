@@ -26,6 +26,14 @@ function validEvidence(overrides = {}) {
 
 test('live runner evidence validates completion forms by consumer kind', () => {
   assert.equal(validateLiveRunnerEvidence(validEvidence()).ok, true);
+  assert.equal(validateLiveRunnerEvidence(validEvidence({
+    consumer_kind: 'triage-action-consumer',
+    route_id: 'issue-triage-transition',
+    runner_id: 'issue-triage-transition',
+    execution_mode: 'request-only',
+    completion_form: 'issue-fix-request-created',
+    side_effects: { executed: false, level: 'request', actions: [] },
+  })).ok, true);
 
   const invalid = validateLiveRunnerEvidence(validEvidence({
     consumer_kind: 'report-consumer',

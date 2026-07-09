@@ -78,17 +78,17 @@ roles, brief/comment templates, unusual-transition guards, and maintainer
 override rules.
 
 Confirmed transitions are handled by the separate `issue-triage-transition`
-consumer. That route is dry-run by default: it validates maintainer/collaborator
+consumer. That route is request-only by default: it validates maintainer/collaborator
 permission, the exact slash command, and the fixed workflow confirmation phrase
-`CONFIRM_TRIAGE_TRANSITION`, then plans tracker role changes and the
-`zj-triage` brief/comment. For `ready-for-agent`, it also plans the Issue Fix
-Request that a Fix Consumer may later claim. It still does not mutate the issue
-tracker live until the Route Table is explicitly promoted.
+`CONFIRM_TRIAGE_TRANSITION`. For `ready-for-agent`, it creates or dedupes the
+independent Issue Fix Request carrier that a Fix Consumer may later claim. It
+still does not mutate the source issue tracker until the Route Table is
+explicitly promoted.
 
 | Side effects setting | What happens |
 | --- | --- |
 | Off by default | The loop records recommended transition evidence, request ids, reasons, confidence, brief drafts, and confirmation commands. It does not comment, label, close, reopen, or create Issue Fix Requests. |
-| Enabled and confirmed | The confirmed request may set tracker state/labels, write the `zj-triage` brief/comment, and for `ready-for-agent` create an Issue Fix Request after the state and brief are written successfully. |
+| Enabled and confirmed | The confirmed request may create or dedupe an independent Issue Fix Request carrier for `ready-for-agent`. It still does not set tracker state/labels or write public comments on the source issue. |
 
 `wontfix` is a recommendation candidate only. Default confirmation blocks it for
 human review; it must not auto-close, auto-label, or write out-of-scope records.
@@ -132,8 +132,9 @@ Requests, or batch-mutate the issue tracker in recommendation mode.
 
 If a triage observation should become a bounded issue side effect, route
 canonical state transitions through `issue-triage-transition`, and route narrow
-label/comment actions through `issue-triage-action`. Both routes are dry-run by
-default. Do not add these side effects to `issue-backlog-triage`.
+label/comment actions through `issue-triage-action`. `issue-triage-transition`
+is request-only by default; `issue-triage-action` remains dry-run by default.
+Do not add these side effects to `issue-backlog-triage`.
 
 **Grok Build TUI**:
 ```

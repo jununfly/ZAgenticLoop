@@ -220,8 +220,8 @@ routes:
     consumer: "issue-triage-transition"
     consumer_kind: "triage-action-consumer"
     execution:
-      mode: "dry-run"
-      side_effect_level: "label"
+      mode: "request-only"
+      side_effect_level: "request"
       completion_forms: ["triage-transition-confirmed", "issue-fix-request-created", "triage-action-skipped", "escalation-issue"]
     maturity:
       protocol: "designed"
@@ -229,19 +229,19 @@ routes:
     capabilities:
       scopes: ["issue-backlog", "triage-transition", "zj-triage-role"]
       verifiers: ["route-replay", "zj-triage-brief", "forbidden-side-effect-check"]
-      max_side_effect_level: "label"
+      max_side_effect_level: "request"
     evidence_store: "zj-loop/issue-triage-state.md"
     match:
       source: ["issue-backlog-triage", "maintainer"]
       requested_action:
         - "confirm-triage-transition"
     guards:
-      side_effects_allowed: false
+      side_effects_allowed: "request-carrier-only"
       live_side_effects_allowed: false
       actor_permission_required: "maintainer-or-collaborator"
       fixed_confirmation_phrase: "CONFIRM_TRIAGE_TRANSITION"
-      public_issue_comment_allowed: "zj-triage-template-only"
-      label_mutation_allowed: "canonical-triage-role-only"
+      public_issue_comment_allowed: false
+      label_mutation_allowed: false
       close_reopen_allowed: false
       assignment_allowed: false
       milestone_allowed: false
@@ -253,7 +253,7 @@ routes:
         - "escalated"
     dedupe_window: "issue-triage-transition:<repo>:<issue>:<recommended_state>:<request_id>"
     failure_owner: "issue-triage-transition"
-    human_gate: "required for wontfix, unauthorized actors, mismatched confirmation command, missing fixed confirmation phrase, risk flags, live mutation, close/reopen, assignment, milestone, or batch mutation"
+    human_gate: "required for wontfix, unauthorized actors, mismatched confirmation command, missing fixed confirmation phrase, risk flags, tracker mutation, close/reopen, assignment, milestone, or batch mutation"
 
   - route_id: "pr-steward-report"
     enabled: true

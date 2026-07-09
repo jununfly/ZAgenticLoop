@@ -82,3 +82,8 @@ export declare function runIssueTriageTransitionRunner(input: {
     };
     run_id: string;
 };
+export declare function buildIssueTriageTransitionIssueFixRequestTitle(issueFixRequest: any): string;
+export declare function buildIssueTriageTransitionIssueFixRequestBody(input: {
+    issueFixRequest: any;
+    triageComment?: string | null;
+}): string;

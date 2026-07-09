@@ -261,8 +261,8 @@ disabled_dispatch_routes:
     consumer: "issue-triage-transition"
     consumer_kind: "triage-action-consumer"
     execution:
-      mode: "dry-run"
-      side_effect_level: "label"
+      mode: "request-only"
+      side_effect_level: "request"
       completion_forms: ["triage-transition-confirmed", "issue-fix-request-created", "triage-action-skipped", "escalation-issue"]
     maturity:
       protocol: "install-ready"
@@ -270,21 +270,21 @@ disabled_dispatch_routes:
     capabilities:
       scopes: ["issue-backlog", "triage-transition", "zj-triage-role"]
       verifiers: ["route-replay", "zj-triage-brief", "forbidden-side-effect-check"]
-      max_side_effect_level: "label"
+      max_side_effect_level: "request"
     evidence_store: "zj-loop/issue-triage-state.md"
     guards:
-      side_effects_allowed: false
+      side_effects_allowed: "request-carrier-only"
       live_side_effects_allowed: false
       actor_permission_required: "maintainer-or-collaborator"
       fixed_confirmation_phrase: "CONFIRM_TRIAGE_TRANSITION"
-      public_issue_comment_allowed: "zj-triage-template-only"
-      label_mutation_allowed: "canonical-triage-role-only"
+      public_issue_comment_allowed: false
+      label_mutation_allowed: false
       close_reopen_allowed: false
       assignment_allowed: false
       milestone_allowed: false
       batch_mutation_allowed: false
       wontfix_default_confirmation_allowed: false
-    note: "Enable when maintainers should confirm recommended triage transitions through fixed request ids and dry-run evidence."
+    note: "Enable when maintainers should confirm recommended triage transitions and create independent Issue Fix Request carriers for ready-for-agent recommendations."
 
   - route_id: "dependency-sweeper"
     enabled: false

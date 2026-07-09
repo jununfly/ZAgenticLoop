@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-issue-triage
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 37baf35a8f81fbe4
+# zj-loop-template-hash: 09d4d74a8d9c775d
 
 name: ZJ Loop Issue Triage
 
@@ -27,7 +27,7 @@ on:
 
 permissions:
   contents: read
-  issues: read
+  issues: write
   pull-requests: read
 
 jobs:
@@ -58,6 +58,21 @@ jobs:
               --confirmation-phrase "$TRIAGE_TRANSITION_CONFIRMATION" \
               --json > transition-plan.json || true
             cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
+            if jq -e '.decision.status == "confirmed" and .confirmed_transition.issue_fix_request != null' transition-plan.json >/dev/null; then
+              npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-issue-triage-transition request-body \
+                --transition-plan transition-plan.json \
+                --out issue-fix-request-body.md \
+                --title-out issue-fix-request-title.txt \
+                --json > issue-fix-request-body-result.json
+              REQUEST_ID="$(jq -r '.confirmed_transition.issue_fix_request.request_id' transition-plan.json)"
+              EXISTING_URL="$(gh issue list --state open --search "$REQUEST_ID in:body" --json url --jq '.[0].url // ""')"
+              if [ -n "$EXISTING_URL" ]; then
+                printf '\nExisting Issue Fix Request: %s\n' "$EXISTING_URL" >> "$GITHUB_STEP_SUMMARY"
+              else
+                ISSUE_URL="$(gh issue create --title "$(cat issue-fix-request-title.txt)" --body-file issue-fix-request-body.md)"
+                printf '\nCreated Issue Fix Request: %s\n' "$ISSUE_URL" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
           fi
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

@@ -76,8 +76,8 @@ export function validateLiveRunnerEvidence(evidence) {
   if (!RUNNER_EVIDENCE_STATUSES.includes(evidence.status)) {
     errors.push(`unsupported status ${evidence.status}`);
   }
-  if (!['live', 'dry-run'].includes(evidence.execution_mode)) {
-    errors.push('execution_mode must be live or dry-run');
+  if (!['live', 'dry-run', 'request-only'].includes(evidence.execution_mode)) {
+    errors.push('execution_mode must be live, dry-run, or request-only');
   }
   if (!Array.isArray(evidence.verifier_evidence) || evidence.verifier_evidence.length === 0) {
     errors.push('verifier_evidence must be a non-empty array');

@@ -84,6 +84,8 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     assert.doesNotMatch(routeTable, /state-request/);
     assert.match(routeTable, /route_id: "issue-triage-action"[\s\S]*?enabled: false/);
     assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?enabled: false/);
+    assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?mode: "request-only"/);
+    assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?side_effect_level: "request"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -174,6 +176,8 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
     assert.match(issueTriage, /zj-loop-issue-triage-action action-plan/);
     assert.match(issueTriage, /zj-loop-issue-triage-transition confirm-plan/);
+    assert.match(issueTriage, /zj-loop-issue-triage-transition request-body/);
+    assert.match(issueTriage, /gh issue create/);
     assert.match(issueTriage, /triage_transition_confirmation/);
     assert.doesNotMatch(issueTriage, /'\$\{\{ inputs\./);
     const changelogDrafter = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-changelog-drafter.yml'), 'utf8');
