@@ -112,9 +112,11 @@ npx @jununfly/zj-loop-init . --add github-actions
 生成的 `zj-loop-*.yml` workflows 会带上固定 package version 和 generated
 metadata。默认只有 `manual-smoke-report` 是安全主路径。把 Route Table status
 当成可选链路菜单使用；它会显示每条 route 的 mode、runner maturity、
-readiness 和需要的固定确认短语。`dogfooded-live` 表示 reference repo 已有
-证据，`user-project-ready` 才表示 generated bundle 能在用户项目中调用已发布
-package runner。有副作用的 consumer 仍然需要显式通过 Route Table 启用：
+readiness 和需要的固定确认短语。`dogfood-verified` 表示 reference repo 已有
+证据；`install-ready` 表示 generated bundle 能在用户项目中生成 route policy、
+workflow、package command 和 plan/report evidence；`execution-ready` 表示真实
+signal 能变成 durable request carrier，并产出有边界的 consumer outcome。有副作用的
+consumer 仍然需要显式通过 Route Table 启用：
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
@@ -127,7 +129,7 @@ Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
 `roadmap-sliced-development`、`pr-steward-fix-request`、
 `dependency-sweeper`、`changelog-drafter-draft-request`、
 `issue-triage-action`、`post-merge-roadmap-closeout` 等 action-capable routes
-只有在 generated workflow 和 packaged runner 都标记为 `user-project-ready`
+只有在 generated workflow 和 packaged runner 都标记为 `execution-ready`
 后，才应被当作用户项目 live path。
 
 Generated bundle route menu：
@@ -154,8 +156,8 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --jso
 npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
 ```
 
-这个 plan 会阻止 disabled route、无效 execution contract，以及只有 dogfood
-证据但尚未 `user-project-ready` 的 route。
+这个 plan 会阻止 disabled route、无效 execution contract，以及只有
+`dogfood-verified` 或 `install-ready`、但尚未 `execution-ready` 的 route。
 
 发布前，generated-bundle gate 会检查 workflow/template drift、
 `@jununfly/zj-loop-core` package pin，以及 Route Table readiness contract：

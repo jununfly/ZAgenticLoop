@@ -49,12 +49,14 @@ export type RouteStatus = {
     recent_success_evidence: string[];
     readiness: RouteReadiness;
     readiness_reasons: string[];
+    install_ready: boolean;
+    execution_ready: boolean;
     user_project_ready: boolean;
     section: 'routes' | 'disabled_dispatch_routes';
     destructive: boolean;
     side_effecting: boolean;
 };
-export type RouteReadiness = 'user-project-ready' | 'dogfooded-live' | 'live-missing-evidence' | 'replayed' | 'designed' | 'missing';
+export type RouteReadiness = 'install-ready' | 'execution-ready' | 'dogfood-verified' | 'live-missing-evidence' | 'replayed' | 'designed' | 'missing';
 export type RouteDecision = {
     schema: 'zj-loop.route_decision.v1';
     decision_id: string;

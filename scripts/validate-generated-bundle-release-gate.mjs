@@ -28,6 +28,8 @@ const ACTION_READY_ROUTES = new Set([
   'post-merge-roadmap-closeout',
 ]);
 
+const INSTALL_OR_EXECUTION_READY = new Set(['install-ready', 'execution-ready']);
+
 function workflowTemplateHash(text) {
   const canonical = text.replace(/^# zj-loop-template-hash: .+$/m, '# zj-loop-template-hash: <computed>');
   return createHash('sha256').update(canonical).digest('hex').slice(0, 16);
@@ -88,7 +90,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
         errors.push(`${workflowFile} dispatches unknown Route Table route: ${routeId}`);
         continue;
       }
-      if (route.maturity?.runner !== 'user-project-ready') {
+      if (!INSTALL_OR_EXECUTION_READY.has(route.maturity?.runner)) {
         errors.push(`${workflowFile} dispatches ${routeId}, but template runner maturity is ${route.maturity?.runner ?? 'missing'}`);
       }
       if (ACTION_READY_ROUTES.has(routeId) && route.enabled !== false) {
@@ -103,8 +105,8 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
       errors.push(`Route Table template missing action-capable route: ${routeId}`);
       continue;
     }
-    if (route.maturity?.runner !== 'user-project-ready') {
-      errors.push(`${routeId} runner maturity must be user-project-ready before release`);
+    if (!INSTALL_OR_EXECUTION_READY.has(route.maturity?.runner)) {
+      errors.push(`${routeId} runner maturity must be install-ready or execution-ready before release`);
     }
     if (route.enabled !== false) {
       errors.push(`${routeId} must be disabled by default before release`);

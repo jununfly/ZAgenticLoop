@@ -67,8 +67,8 @@ disabled_dispatch_routes:
       recent_success_evidence:
         - "https://example.test/run/2"
     maturity:
-      protocol: "user-project-ready"
-      runner: "user-project-ready"
+      protocol: "install-ready"
+      runner: "install-ready"
     capabilities:
       scopes: ["dependency"]
       verifiers: ["verification-gate"]
@@ -85,8 +85,8 @@ disabled_dispatch_routes:
       recent_success_evidence:
         - "https://example.test/run/3"
     maturity:
-      protocol: "user-project-ready"
-      runner: "user-project-ready"
+      protocol: "execution-ready"
+      runner: "execution-ready"
     capabilities:
       scopes: ["pull-request"]
       verifiers: ["status-check-rollup"]
@@ -103,8 +103,8 @@ disabled_dispatch_routes:
       recent_success_evidence:
         - "https://example.test/run/4"
     maturity:
-      protocol: "user-project-ready"
-      runner: "user-project-ready"
+      protocol: "execution-ready"
+      runner: "execution-ready"
     capabilities:
       scopes: ["issue-backlog", "triage-label"]
       verifiers: ["allowlisted-triage-action"]
@@ -142,20 +142,20 @@ test('buildConsumerRunPlan allows report-only routes as evidence plans', async (
   }
 });
 
-test('buildConsumerRunPlan blocks dogfooded live routes until user-project-ready', async () => {
+test('buildConsumerRunPlan blocks dogfood-verified live routes until execution-ready', async () => {
   const dir = await setupRouteTable();
   try {
     const plan = await buildConsumerRunPlan({ root: dir, selector: 'ci-sweeper' });
     assert.equal(plan.status, 'blocked');
     assert.equal(plan.allowed, false);
-    assert.equal(plan.readiness, 'dogfooded-live');
-    assert.match(plan.reason, /not user-project-ready/);
+    assert.equal(plan.readiness, 'dogfood-verified');
+    assert.match(plan.reason, /not execution-ready/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });
 
-test('buildConsumerRunPlan allows enabled user-project-ready action routes', async () => {
+test('buildConsumerRunPlan allows enabled execution-ready action routes', async () => {
   const table = parseRouteTable(ROUTE_TABLE);
   const route = listRoutes(table).find((item) => item.route_id === 'pr-steward-fix-request');
   assert.ok(route);
@@ -165,6 +165,8 @@ test('buildConsumerRunPlan allows enabled user-project-ready action routes', asy
   });
   assert.equal(plan.status, 'ready');
   assert.equal(plan.allowed, true);
+  assert.equal(plan.install_ready, true);
+  assert.equal(plan.execution_ready, true);
   assert.equal(plan.user_project_ready, true);
 });
 

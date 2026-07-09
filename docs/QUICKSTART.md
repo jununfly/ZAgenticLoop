@@ -129,9 +129,11 @@ npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
 ```
 
 Treat this output as the route selection menu. The `readiness` column separates
-reference-repo evidence from user-project readiness: `dogfooded-live` is proven
-inside this repo; `user-project-ready` means the generated bundle can call a
-published package runner in a user project.
+reference-repo evidence from user-project capability: `dogfood-verified` is
+proven inside this repo; `install-ready` means the generated bundle can
+scaffold route policy, workflows, package commands, and plan/report evidence;
+`execution-ready` means real signals can become durable request carriers and
+bounded consumer outcomes.
 
 Pick the first route deliberately:
 

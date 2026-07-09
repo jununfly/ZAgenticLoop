@@ -78,7 +78,7 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     assert.match(routeTable, /consumer_kind: "report-consumer"/);
     assert.match(routeTable, /mode: "report-only"/);
     assert.match(routeTable, /side_effect_level: "evidence"/);
-    assert.match(routeTable, /runner: "user-project-ready"/);
+    assert.match(routeTable, /runner: "install-ready"/);
     assert.match(routeTable, /evidence_store: "zj-loop\/issue-triage-state\.md"/);
     assert.doesNotMatch(routeTable, /status_store/);
     assert.doesNotMatch(routeTable, /state-request/);

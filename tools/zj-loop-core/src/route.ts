@@ -56,6 +56,8 @@ export type RouteStatus = {
   recent_success_evidence: string[];
   readiness: RouteReadiness;
   readiness_reasons: string[];
+  install_ready: boolean;
+  execution_ready: boolean;
   user_project_ready: boolean;
   section: 'routes' | 'disabled_dispatch_routes';
   destructive: boolean;
@@ -63,8 +65,9 @@ export type RouteStatus = {
 };
 
 export type RouteReadiness =
-  | 'user-project-ready'
-  | 'dogfooded-live'
+  | 'install-ready'
+  | 'execution-ready'
+  | 'dogfood-verified'
   | 'live-missing-evidence'
   | 'replayed'
   | 'designed'
@@ -125,7 +128,15 @@ export type ClaimEligibility = {
 
 const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
 const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
-const MATURITY_LEVELS = new Set(['missing', 'designed', 'replayed', 'dogfooded', 'user-project-ready']);
+const MATURITY_LEVELS = new Set([
+  'missing',
+  'designed',
+  'replayed',
+  'dogfooded',
+  'install-ready',
+  'execution-ready',
+  'user-project-ready',
+]);
 
 const CONSUMER_KIND_LIMITS: Record<string, { modes: string[]; maxSideEffect: string; completionForms: string[] }> = {
   'producer-router': { modes: ['report-only', 'request-only'], maxSideEffect: 'request', completionForms: ['report-evidence'] },
@@ -189,7 +200,7 @@ export function validateRouteExecutionContract(route: RouteStatus): RouteExecuti
   }
 
   if (route.execution_mode === 'live' && !isRouteLiveReady(route)) {
-    errors.push('live execution requires runner maturity dogfooded or user-project-ready and non-evidence side-effect boundary');
+    errors.push('live execution requires runner maturity dogfooded or execution-ready and non-evidence side-effect boundary');
   }
   if (route.request_kind === 'report-only' && route.execution_mode !== 'report-only' && route.execution_mode !== 'dry-run') {
     warnings.push('report-only request kind should not imply request consumption or work execution');
@@ -200,7 +211,7 @@ export function validateRouteExecutionContract(route: RouteStatus): RouteExecuti
 export function isRouteLiveReady(route: RouteStatus): boolean {
   return (
     route.execution_mode === 'live' &&
-    (route.maturity_runner === 'dogfooded' || route.maturity_runner === 'user-project-ready') &&
+    (route.maturity_runner === 'dogfooded' || route.maturity_runner === 'execution-ready') &&
     sideEffectRank(route.side_effect_level) > sideEffectRank('evidence') &&
     route.recent_success_evidence.length > 0
   );
@@ -363,7 +374,9 @@ function normalizeRouteSection(
       recent_success_evidence: recentSuccessEvidence,
       readiness: readiness.readiness,
       readiness_reasons: readiness.reasons,
-      user_project_ready: readiness.readiness === 'user-project-ready',
+      install_ready: readiness.readiness === 'install-ready' || readiness.readiness === 'execution-ready',
+      execution_ready: readiness.readiness === 'execution-ready',
+      user_project_ready: readiness.readiness === 'install-ready' || readiness.readiness === 'execution-ready',
       section,
       destructive,
       side_effecting: sideEffecting,
@@ -378,10 +391,24 @@ export function classifyRouteReadiness(input: {
   recentSuccessEvidence?: string[];
 }): { readiness: RouteReadiness; reasons: string[] } {
   const evidence = input.recentSuccessEvidence ?? [];
+  if (input.maturityRunner === 'execution-ready') {
+    return {
+      readiness: 'execution-ready',
+      reasons: ['runner maturity is execution-ready'],
+    };
+  }
+
+  if (input.maturityRunner === 'install-ready') {
+    return {
+      readiness: 'install-ready',
+      reasons: ['runner maturity is install-ready'],
+    };
+  }
+
   if (input.maturityRunner === 'user-project-ready') {
     return {
-      readiness: 'user-project-ready',
-      reasons: ['runner maturity is user-project-ready'],
+      readiness: 'install-ready',
+      reasons: ['legacy runner maturity user-project-ready maps to install-ready'],
     };
   }
 
@@ -392,8 +419,8 @@ export function classifyRouteReadiness(input: {
       evidence.length > 0
     ) {
       return {
-        readiness: 'dogfooded-live',
-        reasons: ['live dogfood evidence exists', 'not yet promoted to user-project-ready'],
+        readiness: 'dogfood-verified',
+        reasons: ['live dogfood evidence exists', 'not yet promoted to execution-ready'],
       };
     }
     return {

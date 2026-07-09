@@ -20,6 +20,8 @@ export function buildConsumerRunPlanFromRoute(input) {
         execution_mode: input.route.execution_mode,
         request_kind: input.route.request_kind,
         readiness: input.route.readiness,
+        install_ready: input.route.install_ready,
+        execution_ready: input.route.execution_ready,
         user_project_ready: input.route.user_project_ready,
         allowed: false,
         status: 'blocked',
@@ -46,6 +48,8 @@ export function buildConsumerRunPlanFromRoute(input) {
             execution_mode: input.route.execution_mode,
             request_kind: input.route.request_kind,
             readiness: input.route.readiness,
+            install_ready: input.route.install_ready,
+            execution_ready: input.route.execution_ready,
             user_project_ready: input.route.user_project_ready,
             allowed: true,
             status: 'report-only',
@@ -55,10 +59,10 @@ export function buildConsumerRunPlanFromRoute(input) {
             validation,
         };
     }
-    if (!input.route.user_project_ready) {
-        return blocked('route runner is not user-project-ready', [
+    if (!input.route.execution_ready) {
+        return blocked('route runner is not execution-ready', [
             `Current readiness: ${input.route.readiness}`,
-            'Do not run user-project side effects until the generated bundle calls a published package runner with evidence.',
+            'Do not run user-project side effects until the route can process real signals into durable carriers and bounded outcomes.',
         ]);
     }
     return {
@@ -69,10 +73,12 @@ export function buildConsumerRunPlanFromRoute(input) {
         execution_mode: input.route.execution_mode,
         request_kind: input.route.request_kind,
         readiness: input.route.readiness,
+        install_ready: input.route.install_ready,
+        execution_ready: input.route.execution_ready,
         user_project_ready: input.route.user_project_ready,
         allowed: true,
         status: 'ready',
-        reason: 'route is enabled and user-project-ready',
+        reason: 'route is enabled and execution-ready',
         next_steps: [`Run packaged ${input.route.consumer} runner.`],
         route_decision: input.routeDecision,
         validation,

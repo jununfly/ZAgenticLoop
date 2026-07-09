@@ -4,7 +4,15 @@ import YAML from 'yaml';
 export const DEFAULT_ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
 const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
 const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
-const MATURITY_LEVELS = new Set(['missing', 'designed', 'replayed', 'dogfooded', 'user-project-ready']);
+const MATURITY_LEVELS = new Set([
+    'missing',
+    'designed',
+    'replayed',
+    'dogfooded',
+    'install-ready',
+    'execution-ready',
+    'user-project-ready',
+]);
 const CONSUMER_KIND_LIMITS = {
     'producer-router': { modes: ['report-only', 'request-only'], maxSideEffect: 'request', completionForms: ['report-evidence'] },
     'report-consumer': { modes: ['report-only'], maxSideEffect: 'evidence', completionForms: ['report-evidence'] },
@@ -66,7 +74,7 @@ export function validateRouteExecutionContract(route) {
         }
     }
     if (route.execution_mode === 'live' && !isRouteLiveReady(route)) {
-        errors.push('live execution requires runner maturity dogfooded or user-project-ready and non-evidence side-effect boundary');
+        errors.push('live execution requires runner maturity dogfooded or execution-ready and non-evidence side-effect boundary');
     }
     if (route.request_kind === 'report-only' && route.execution_mode !== 'report-only' && route.execution_mode !== 'dry-run') {
         warnings.push('report-only request kind should not imply request consumption or work execution');
@@ -75,7 +83,7 @@ export function validateRouteExecutionContract(route) {
 }
 export function isRouteLiveReady(route) {
     return (route.execution_mode === 'live' &&
-        (route.maturity_runner === 'dogfooded' || route.maturity_runner === 'user-project-ready') &&
+        (route.maturity_runner === 'dogfooded' || route.maturity_runner === 'execution-ready') &&
         sideEffectRank(route.side_effect_level) > sideEffectRank('evidence') &&
         route.recent_success_evidence.length > 0);
 }
@@ -217,7 +225,9 @@ function normalizeRouteSection(routes, section) {
             recent_success_evidence: recentSuccessEvidence,
             readiness: readiness.readiness,
             readiness_reasons: readiness.reasons,
-            user_project_ready: readiness.readiness === 'user-project-ready',
+            install_ready: readiness.readiness === 'install-ready' || readiness.readiness === 'execution-ready',
+            execution_ready: readiness.readiness === 'execution-ready',
+            user_project_ready: readiness.readiness === 'install-ready' || readiness.readiness === 'execution-ready',
             section,
             destructive,
             side_effecting: sideEffecting,
@@ -226,10 +236,22 @@ function normalizeRouteSection(routes, section) {
 }
 export function classifyRouteReadiness(input) {
     const evidence = input.recentSuccessEvidence ?? [];
+    if (input.maturityRunner === 'execution-ready') {
+        return {
+            readiness: 'execution-ready',
+            reasons: ['runner maturity is execution-ready'],
+        };
+    }
+    if (input.maturityRunner === 'install-ready') {
+        return {
+            readiness: 'install-ready',
+            reasons: ['runner maturity is install-ready'],
+        };
+    }
     if (input.maturityRunner === 'user-project-ready') {
         return {
-            readiness: 'user-project-ready',
-            reasons: ['runner maturity is user-project-ready'],
+            readiness: 'install-ready',
+            reasons: ['legacy runner maturity user-project-ready maps to install-ready'],
         };
     }
     if (input.executionMode === 'live') {
@@ -237,8 +259,8 @@ export function classifyRouteReadiness(input) {
             sideEffectRank(input.sideEffectLevel) > sideEffectRank('evidence') &&
             evidence.length > 0) {
             return {
-                readiness: 'dogfooded-live',
-                reasons: ['live dogfood evidence exists', 'not yet promoted to user-project-ready'],
+                readiness: 'dogfood-verified',
+                reasons: ['live dogfood evidence exists', 'not yet promoted to execution-ready'],
             };
         }
         return {
