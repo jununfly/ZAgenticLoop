@@ -43,7 +43,7 @@ are guarded live operations that require explicit operator intent.
 | Roadmap activation | `roadmap-activation-dispatcher.mjs`, `zj-loop-activation-contract.mjs`, route table `roadmap-sliced-development` row, `zj-loop/roadmap-activation-state.md` | Live issue-triggered activation-comment route | Authorized slash commands create append-only activation requests only. Route Table truth is `consumer_kind: activation-consumer`, `execution.mode: live`, and `maturity.runner: dogfooded`; Roadmap-Sliced Development consumes explicit issue/request ids and owns branch, roadmap, implementation, verification, and PR handoff. |
 | PR Steward routes | PR Steward report/fix-request/claim replay scripts, replayed live runner, `zj-loop/pr-steward-state.md` | Report-only plus claim-only route with replayed repair/escalation runner | Report routes do not comment, label, rebase, merge, dispatch workflows, repair, or open Fix PRs. Fix request Route Table truth is `consumer_kind: fix-runner`, `execution.mode: claim-only`, and `maturity.runner: replayed`; claim evidence consumes a request, and the replayed runner can produce independent `repair-pr` / `escalation-issue` evidence without mutating the source PR. |
 | Issue Backlog Triage route | Issue backlog triage replay scripts and `zj-loop/issue-triage-state.md` | Report-only protocol evidence | Records allowed issue observations and recommended triage transitions only. It must not perform formal issue lifecycle transitions, public comments, labels, assignments, milestones, close/reopen, Issue Fix Request creation, or batch mutation in recommendation mode. |
-| Issue Triage transition route | `tools/zj-loop-core/src/issue-triage-transition-runner.ts`, `scripts/issue-triage-transition-e2e-replay.mjs`, route table `issue-triage-transition` row, `zj-loop/issue-triage-state.md` | Request-only confirmed-transition consumer with replayed runner | Consumes fixed recommended transition requests after maintainer/collaborator confirmation and creates or dedupes source issue Issue Fix Request comments for `ready-for-agent`. Independent Issue Fix Request issues are narrow exceptions, not the default. The E2E replay covers `issue-backlog-triage -> issue-triage-transition -> source issue request carrier`. Route Table truth is `execution.mode: request-only`, `maturity.runner: replayed`; source issue tracker label/state mutation is refused until explicit promotion. |
+| Issue Triage transition route | `tools/zj-loop-core/src/issue-triage-transition-runner.ts`, `scripts/issue-triage-transition-e2e-replay.mjs`, route table `issue-triage-transition` row, `zj-loop/issue-triage-state.md` | Request-only confirmed-transition consumer with live workflow-dispatch dogfood evidence | Consumes fixed recommended transition requests after maintainer/collaborator confirmation and creates or dedupes source issue Issue Fix Request comments for `ready-for-agent`. Independent Issue Fix Request issues are narrow exceptions, not the default. The E2E replay covers `issue-backlog-triage -> issue-triage-transition -> source issue request carrier`; live dogfood on #7 proved workflow-dispatch execution, marker-based dedupe, and source issue request comment creation. Route Table truth remains `execution.mode: request-only`; source issue tracker label/state mutation is refused until explicit promotion. |
 | Issue Triage action route | `scripts/issue-triage-action-runner.mjs`, route table `issue-triage-action` row, `zj-loop/issue-triage-state.md` | Dry-run action consumer with replayed runner | Separate `triage-action-consumer` route for allowlisted labels and fixed comment templates. Route Table truth is `execution.mode: dry-run`, `maturity.runner: replayed`; live issue mutation is refused until workflow-dispatch dogfood evidence supports explicit promotion. |
 | Dependency Sweeper routes | Dependency route/claim replay scripts, replayed live runner, `zj-loop/dependency-sweeper-state.md` | Claim-only route with replayed repair/escalation runner | Supports bounded request and claim lifecycle evidence plus replayed `repair-pr` / `escalation-issue` live-runner evidence. Route Table truth remains `consumer_kind: fix-runner`, `execution.mode: claim-only`, and `maturity.runner: replayed`; automatic routing does not edit manifests, update lockfiles, create branches, open Fix PRs, dispatch workflows, or auto-merge until real workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `.github/workflows/changelog-drafter.yml`, report/draft-request replay scripts, replayed live runner, `zj-loop/changelog-drafter-state.md` | Report-only route with replayed draft evidence/PR runner | Records release-window evidence and draft request candidates. Route Table truth is `consumer_kind: draft-consumer`, `execution.mode: report-only`, and `maturity.runner: replayed`; the replayed runner can produce `draft-evidence` or an independent `draft-pr`, but automatic routing does not generate release notes, edit changelogs, create PRs, tag, release, publish, dispatch workflows, or start consumer work until workflow-dispatch dogfood evidence exists. |
@@ -160,6 +160,50 @@ isolation.
 
 This boundary keeps the user-visible issue as the lifecycle home and prevents
 the resolved request from drifting away from the original report.
+
+## Issue Backlog Triage Dogfood Evidence
+
+The 2026-07-09 `issue-backlog-triage` dogfood run used #7 as the real source
+issue and reached the current supported live boundary:
+
+```text
+Issue Backlog
+-> Route Decision
+-> Recommended Triage Transition
+-> Confirmed Triage Transition
+-> Source Issue Fix Request Comment
+```
+
+Durable human-readable result:
+
+- Source issue: [#7](https://github.com/jununfly/ZAgenticLoop/issues/7)
+- Successful workflow-dispatch run:
+  [29018974110](https://github.com/jununfly/ZAgenticLoop/actions/runs/29018974110)
+- Source issue request carrier:
+  [issuecomment-4925192831](https://github.com/jununfly/ZAgenticLoop/issues/7#issuecomment-4925192831)
+- Dedupe result: exactly one `<!-- zj-loop:issue-fix-request` comment on #7.
+
+The run exposed two real workflow issues before succeeding:
+
+- [#75](https://github.com/jununfly/ZAgenticLoop/pull/75) fixed false dedupe
+  where a maintainer confirmation comment containing the transition request id
+  could be mistaken for an existing Issue Fix Request carrier. Dedupe now
+  requires the structured Issue Fix Request marker plus the request id.
+- [#77](https://github.com/jununfly/ZAgenticLoop/pull/77) fixed missing
+  `GH_TOKEN: ${{ github.token }}` for workflow `gh issue view/comment` calls.
+
+This dogfood evidence is split intentionally:
+
+- This document keeps the stable, human-readable capability story and findings.
+- `zj-loop/issue-triage-state.md` keeps the route-owned, replayable evidence
+  links and status facts that future agents can inspect without reconstructing
+  the run from chat.
+
+Follow-up gap: #7 and #77 were closed manually by the maintainer after success.
+The loop did not automatically produce or execute a closeout plan for directly
+related source issues and repair PRs. Future closeout work should make the next
+close action explicit, including target issue/PR, close reason, required guard,
+and evidence links.
 
 ## Report-Only Boundaries
 

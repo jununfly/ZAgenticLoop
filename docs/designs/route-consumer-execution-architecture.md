@@ -216,6 +216,22 @@ The terminal architecture is complete only when these gates are enforceable:
 8. Generated user-project bundles use published deterministic scripts or APIs,
    not repository-local dogfood scripts.
 
+For a route to claim `user-project-ready`, replay evidence is necessary but no
+longer sufficient. The route must also have route-owned live evidence:
+
+- local replay passes against the real Route Table
+- a live `workflow_dispatch` run succeeds on the generated or dogfood workflow
+- the successful run leaves replayable GitHub issue, PR, comment, or artifact
+  evidence
+- dedupe evidence proves the route did not create duplicate side effects
+- at least one live failure path is recorded and either fixed by a PR or
+  explicitly waived with a durable reason
+
+This gate was added after the 2026-07-09 `issue-backlog-triage` dogfood run:
+local replay passed, but live workflow execution exposed a comment-dedupe bug
+and a missing `GH_TOKEN` configuration before the source issue request carrier
+successfully landed on #7.
+
 ## Current Dogfood Map
 
 The dogfood Route Table is the operational truth. Current dogfood capability:
@@ -224,7 +240,7 @@ The dogfood Route Table is the operational truth. Current dogfood capability:
 | --- | --- | --- | --- | --- |
 | Daily Triage | `producer-router` | `report-only` | `missing` | Producer and report surface, not a worker. |
 | Issue Triage | `report-consumer` | `report-only` | `missing` | Side effects belong to the separate dry-run `issue-triage-action` route. |
-| Issue Triage Transition | `triage-action-consumer` | `request-only` | `replayed` | Separate confirmed-transition route for fixed request ids, fixed confirmation phrase, and `ready-for-agent` source issue Issue Fix Request comments; E2E replay proves `issue-backlog-triage -> issue-triage-transition -> source issue request carrier`; refuses source issue tracker label/state mutation until promotion. |
+| Issue Triage Transition | `triage-action-consumer` | `request-only` | `replayed` plus live workflow-dispatch evidence | Separate confirmed-transition route for fixed request ids, fixed confirmation phrase, and `ready-for-agent` source issue Issue Fix Request comments; E2E replay proves `issue-backlog-triage -> issue-triage-transition -> source issue request carrier`; live dogfood on #7 proved workflow-dispatch execution, marker-based dedupe, and source issue request comment creation; refuses source issue tracker label/state mutation until promotion. |
 | Issue Triage Action | `triage-action-consumer` | `dry-run` | `replayed` | Separate action-capable route for narrowly allowlisted labels and fixed comment templates; refuses live mutation until dogfood evidence exists. |
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
 | PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; not live until workflow-dispatch dogfood evidence exists. |
