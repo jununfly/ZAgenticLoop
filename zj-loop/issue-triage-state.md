@@ -23,7 +23,7 @@ Last run: 2026-07-09
   - Completion forms: `triage-transition-confirmed`,
     `issue-fix-request-created`, `triage-action-skipped`, `escalation-issue`
   - Protocol maturity: `designed`
-  - Runner maturity: `replayed`
+  - Runner maturity: `replayed` plus live workflow-dispatch dogfood evidence
 
 ## Allowed Observations
 
@@ -139,7 +139,7 @@ Confirmed request:
 CONFIRM_TRIAGE_TRANSITION
 ```
 
-Execution evidence:
+Historical execution evidence:
 
 - Maintainer confirmation comment was present on source issue #7:
   https://github.com/jununfly/ZAgenticLoop/issues/7#issuecomment-4924123652
@@ -179,3 +179,60 @@ status: requested
 failure_policy.retry: new_request_only
 verification_gate.commands: git diff --check
 ```
+
+## Source Issue Carrier Live Dogfood — 2026-07-09
+
+Live chain:
+
+```text
+Issue Backlog
+-> Route Decision
+-> Recommended Triage Transition
+-> Confirmed Triage Transition
+-> Source Issue Fix Request Comment
+```
+
+Replay and live evidence:
+
+- Local replay gate: `npm run test:issue-backlog-triage`.
+- Local transition gate: `npm run test:issue-triage-transition-e2e`.
+- Live workflow-dispatch run:
+  https://github.com/jununfly/ZAgenticLoop/actions/runs/29018974110
+- Source issue request carrier:
+  https://github.com/jununfly/ZAgenticLoop/issues/7#issuecomment-4925192831
+- Source issue: https://github.com/jununfly/ZAgenticLoop/issues/7
+- Confirmed transition request id: `triage-transition-ea7301f8e65a`.
+- Issue Fix Request id: `ifr_triage_10ad5374e8d7`.
+- Requested consumer: `roadmap-sliced-development`.
+
+Live side-effect audit:
+
+```text
+source_issue: https://github.com/jununfly/ZAgenticLoop/issues/7
+public_issue_comment_created_by_runner: true
+public_issue_comment_kind: source_issue_issue_fix_request
+tracker_state_changed: false
+label_changed: false
+assignment_changed: false
+milestone_changed: false
+issue_closed_or_reopened_by_runner: false
+formal_lifecycle_transitioned: false
+independent_issue_fix_request_created: false
+consumer_work_started: false
+dedupe_result: exactly_one_structured_issue_fix_request_comment
+```
+
+Live dogfood failures found before success:
+
+| Failure | Repair PR | Result |
+| --- | --- | --- |
+| Maintainer confirmation comments containing the transition request id could be mistaken for an existing Issue Fix Request carrier. | [#75](https://github.com/jununfly/ZAgenticLoop/pull/75) | Dedupe now requires `<!-- zj-loop:issue-fix-request` plus the request id. |
+| GitHub Actions step used `gh issue view/comment` without `GH_TOKEN`. | [#77](https://github.com/jununfly/ZAgenticLoop/pull/77) | Workflow step now sets `GH_TOKEN: ${{ github.token }}`. |
+
+Closeout gap:
+
+- Directly related issues/PRs were not closed by the loop after success.
+- #7 and #77 were closed manually by the maintainer.
+- Future closeout planning should make the next close action explicit and
+  auditable: close target, close reason, evidence links, guard, and whether the
+  action is only recommended or can be executed by a narrow closeout consumer.
