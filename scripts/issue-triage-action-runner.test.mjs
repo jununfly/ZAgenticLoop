@@ -9,7 +9,7 @@ import {
   runIssueTriageActionReplaySuite,
   runIssueTriageActionRunner,
 } from './issue-triage-action-runner.mjs';
-import { runIssueTriageReportReplaySuite } from './issue-triage-report-e2e-replay.mjs';
+import { runIssueBacklogTriageReplaySuite } from './issue-backlog-triage-e2e-replay.mjs';
 
 const ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
 
@@ -84,12 +84,12 @@ test('issue triage action route refuses live execution until dogfood enables it'
   assert.equal(result.validation.ok, true);
 });
 
-test('issue triage report remains report-only after action route is added', async () => {
-  const suite = await runIssueTriageReportReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+test('issue backlog triage remains report-only after action route is added', async () => {
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const report = suite.results.find((item) => item.name === 'missing-info-recorded').replay;
 
   assert.equal(suite.passed, true);
-  assert.equal(report.routeDecision.route_id, 'issue-triage-report');
+  assert.equal(report.routeDecision.route_id, 'issue-backlog-triage');
   assert.equal(report.routeDecision.request_kind, 'report-only');
   assert.equal(report.routeDecision.public_action_allowed, false);
   assert.equal(report.issueTriageReport.side_effects.consumer_work_started, false);

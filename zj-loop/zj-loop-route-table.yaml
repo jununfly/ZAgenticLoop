@@ -125,7 +125,7 @@ routes:
     failure_owner: "maintainer"
     human_gate: "none"
 
-  - route_id: "issue-triage-report"
+  - route_id: "issue-backlog-triage"
     enabled: true
     request_kind: "report-only"
     consumer: "issue-triage"
@@ -164,7 +164,7 @@ routes:
         - "already-recorded"
         - "rejected"
         - "routed-to-human-review"
-    dedupe_window: "issue-triage:<repo>:<scan_window>:<signal_kind>:<subject>"
+    dedupe_window: "issue-backlog-triage:<repo>:<scan_window>:<signal_kind>:<subject>"
     failure_owner: "issue-triage"
     human_gate: "only for high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, public comment, or label mutation"
 
@@ -186,7 +186,7 @@ routes:
       max_side_effect_level: "label"
     evidence_store: "zj-loop/issue-triage-state.md"
     match:
-      source: ["issue-triage-report", "maintainer"]
+      source: ["issue-backlog-triage", "maintainer"]
       requested_action:
         - "apply-allowlisted-label"
         - "post-fixed-triage-comment"
@@ -213,6 +213,47 @@ routes:
     dedupe_window: "issue-triage-action:<repo>:<issue>:<requested_action>:<action_value>"
     failure_owner: "issue-triage-action"
     human_gate: "required for unsupported labels, freeform comments, high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, assignment, milestone, close/reopen, or batch mutation"
+
+  - route_id: "issue-triage-transition"
+    enabled: true
+    request_kind: "triage-transition-confirmation"
+    consumer: "issue-triage-transition"
+    consumer_kind: "triage-action-consumer"
+    execution:
+      mode: "request-only"
+      side_effect_level: "request"
+      completion_forms: ["triage-transition-confirmed", "issue-fix-request-created", "triage-action-skipped", "escalation-issue"]
+    maturity:
+      protocol: "designed"
+      runner: "replayed"
+    capabilities:
+      scopes: ["issue-backlog", "triage-transition", "zj-triage-role"]
+      verifiers: ["route-replay", "zj-triage-brief", "forbidden-side-effect-check"]
+      max_side_effect_level: "request"
+    evidence_store: "zj-loop/issue-triage-state.md"
+    match:
+      source: ["issue-backlog-triage", "maintainer"]
+      requested_action:
+        - "confirm-triage-transition"
+    guards:
+      side_effects_allowed: "request-carrier-only"
+      live_side_effects_allowed: false
+      actor_permission_required: "maintainer-or-collaborator"
+      fixed_confirmation_phrase: "CONFIRM_TRIAGE_TRANSITION"
+      public_issue_comment_allowed: false
+      label_mutation_allowed: false
+      close_reopen_allowed: false
+      assignment_allowed: false
+      milestone_allowed: false
+      batch_mutation_allowed: false
+      wontfix_default_confirmation_allowed: false
+      fixed_status_enum:
+        - "confirmed"
+        - "rejected"
+        - "escalated"
+    dedupe_window: "issue-triage-transition:<repo>:<issue>:<recommended_state>:<request_id>"
+    failure_owner: "issue-triage-transition"
+    human_gate: "required for wontfix, unauthorized actors, mismatched confirmation command, missing fixed confirmation phrase, risk flags, tracker mutation, close/reopen, assignment, milestone, or batch mutation"
 
   - route_id: "pr-steward-report"
     enabled: true

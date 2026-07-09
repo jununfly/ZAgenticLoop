@@ -21,7 +21,18 @@ const CONSUMER_KIND_LIMITS = {
     'draft-consumer': { modes: ['report-only', 'request-only', 'dry-run', 'live'], maxSideEffect: 'draft-pr', completionForms: ['draft-pr', 'draft-evidence', 'escalation-issue'] },
     'cleanup-consumer': { modes: ['report-only', 'dry-run', 'live'], maxSideEffect: 'cleanup', completionForms: ['cleanup-done', 'cleanup-skipped', 'escalation-issue'] },
     'activation-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'branch', completionForms: ['roadmap-branch-pr', 'activation-failed', 'activation-resumable'] },
-    'triage-action-consumer': { modes: ['request-only', 'dry-run', 'live'], maxSideEffect: 'label', completionForms: ['triage-label-applied', 'triage-comment-posted', 'triage-action-skipped', 'escalation-issue'] },
+    'triage-action-consumer': {
+        modes: ['request-only', 'dry-run', 'live'],
+        maxSideEffect: 'label',
+        completionForms: [
+            'triage-label-applied',
+            'triage-comment-posted',
+            'triage-transition-confirmed',
+            'issue-fix-request-created',
+            'triage-action-skipped',
+            'escalation-issue',
+        ],
+    },
 };
 export async function loadRouteTable(root, routeTablePath = DEFAULT_ROUTE_TABLE_PATH) {
     const filePath = path.resolve(root, routeTablePath);

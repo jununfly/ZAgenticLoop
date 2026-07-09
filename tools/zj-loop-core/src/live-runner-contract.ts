@@ -12,7 +12,14 @@ export const COMPLETION_FORMS_BY_KIND = {
   'draft-consumer': ['draft-pr', 'draft-evidence', 'escalation-issue'],
   'cleanup-consumer': ['cleanup-done', 'cleanup-skipped', 'escalation-issue'],
   'activation-consumer': ['roadmap-branch-pr', 'activation-failed', 'activation-resumable'],
-  'triage-action-consumer': ['triage-label-applied', 'triage-comment-posted', 'triage-action-skipped', 'escalation-issue'],
+  'triage-action-consumer': [
+    'triage-label-applied',
+    'triage-comment-posted',
+    'triage-transition-confirmed',
+    'issue-fix-request-created',
+    'triage-action-skipped',
+    'escalation-issue',
+  ],
 } as const;
 
 export const LIVE_RUNNER_SIDE_EFFECT_LEVELS = [
@@ -30,7 +37,7 @@ export const LIVE_RUNNER_SIDE_EFFECT_LEVELS = [
 
 export type LiveRunnerConsumerKind = keyof typeof COMPLETION_FORMS_BY_KIND;
 export type LiveRunnerEvidenceStatus = typeof RUNNER_EVIDENCE_STATUSES[number];
-export type LiveRunnerExecutionMode = 'live' | 'dry-run';
+export type LiveRunnerExecutionMode = 'live' | 'dry-run' | 'request-only';
 
 export type LiveRunnerEvidence = {
   schema: typeof LIVE_RUNNER_EVIDENCE_SCHEMA;
@@ -122,8 +129,8 @@ export function validateLiveRunnerEvidence(evidence: unknown): { ok: boolean; er
   if (!RUNNER_EVIDENCE_STATUSES.includes(value.status as LiveRunnerEvidenceStatus)) {
     errors.push(`unsupported status ${String(value.status)}`);
   }
-  if (value.execution_mode !== 'live' && value.execution_mode !== 'dry-run') {
-    errors.push('execution_mode must be live or dry-run');
+  if (value.execution_mode !== 'live' && value.execution_mode !== 'dry-run' && value.execution_mode !== 'request-only') {
+    errors.push('execution_mode must be live, dry-run, or request-only');
   }
   if (!Array.isArray(value.verifier_evidence) || value.verifier_evidence.length === 0) {
     errors.push('verifier_evidence must be a non-empty array');

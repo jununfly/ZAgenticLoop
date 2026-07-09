@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-issue-triage
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 179122c8ffd8a3a7
+# zj-loop-template-hash: 09d4d74a8d9c775d
 
 name: ZJ Loop Issue Triage
 
@@ -16,10 +16,18 @@ on:
         description: 'Issue Triage Action Request JSON'
         required: false
         default: ''
+      triage_transition_request_json:
+        description: 'Recommended Triage Transition JSON'
+        required: false
+        default: ''
+      triage_transition_confirmation:
+        description: 'Fixed confirmation phrase for confirmed triage transition'
+        required: false
+        default: ''
 
 permissions:
   contents: read
-  issues: read
+  issues: write
   pull-requests: read
 
 jobs:
@@ -31,15 +39,40 @@ jobs:
       - name: Issue triage route evidence
         env:
           TRIAGE_ACTION_REQUEST_JSON: ${{ inputs.triage_action_request_json }}
+          TRIAGE_TRANSITION_REQUEST_JSON: ${{ inputs.triage_transition_request_json }}
+          TRIAGE_TRANSITION_CONFIRMATION: ${{ inputs.triage_transition_confirmation }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch issue-triage-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan issue-triage-report --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch issue-backlog-triage --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan issue-backlog-triage --json > consumer-plan.json || true
           if [ -n "$TRIAGE_ACTION_REQUEST_JSON" ]; then
             printf '%s\n' "$TRIAGE_ACTION_REQUEST_JSON" > triage-action-request.json
             npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-issue-triage-action action-plan \
               --request triage-action-request.json \
               --json > action-plan.json || true
             cat action-plan.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "$TRIAGE_TRANSITION_REQUEST_JSON" ]; then
+            printf '%s\n' "$TRIAGE_TRANSITION_REQUEST_JSON" > triage-transition-request.json
+            npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-issue-triage-transition confirm-plan \
+              --request triage-transition-request.json \
+              --confirmation-phrase "$TRIAGE_TRANSITION_CONFIRMATION" \
+              --json > transition-plan.json || true
+            cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
+            if jq -e '.decision.status == "confirmed" and .confirmed_transition.issue_fix_request != null' transition-plan.json >/dev/null; then
+              npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-issue-triage-transition request-body \
+                --transition-plan transition-plan.json \
+                --out issue-fix-request-body.md \
+                --title-out issue-fix-request-title.txt \
+                --json > issue-fix-request-body-result.json
+              REQUEST_ID="$(jq -r '.confirmed_transition.issue_fix_request.request_id' transition-plan.json)"
+              EXISTING_URL="$(gh issue list --state open --search "$REQUEST_ID in:body" --json url --jq '.[0].url // ""')"
+              if [ -n "$EXISTING_URL" ]; then
+                printf '\nExisting Issue Fix Request: %s\n' "$EXISTING_URL" >> "$GITHUB_STEP_SUMMARY"
+              else
+                ISSUE_URL="$(gh issue create --title "$(cat issue-fix-request-title.txt)" --body-file issue-fix-request-body.md)"
+                printf '\nCreated Issue Fix Request: %s\n' "$ISSUE_URL" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
           fi
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

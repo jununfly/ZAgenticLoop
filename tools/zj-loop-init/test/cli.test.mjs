@@ -74,7 +74,7 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /primary_pattern: "issue-triage"/);
-    assert.match(routeTable, /route_id: "issue-triage-report"/);
+    assert.match(routeTable, /route_id: "issue-backlog-triage"/);
     assert.match(routeTable, /consumer_kind: "report-consumer"/);
     assert.match(routeTable, /mode: "report-only"/);
     assert.match(routeTable, /side_effect_level: "evidence"/);
@@ -83,6 +83,9 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     assert.doesNotMatch(routeTable, /status_store/);
     assert.doesNotMatch(routeTable, /state-request/);
     assert.match(routeTable, /route_id: "issue-triage-action"[\s\S]*?enabled: false/);
+    assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?enabled: false/);
+    assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?mode: "request-only"/);
+    assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?side_effect_level: "request"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -157,8 +160,9 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(routeTable, /consumer_kind: "fix-runner"/);
     assert.match(routeTable, /route_id: "pr-steward-report"/);
     assert.match(routeTable, /route_id: "pr-steward-fix-request"/);
-    assert.match(routeTable, /route_id: "issue-triage-report"/);
+    assert.match(routeTable, /route_id: "issue-backlog-triage"/);
     assert.match(routeTable, /route_id: "issue-triage-action"/);
+    assert.match(routeTable, /route_id: "issue-triage-transition"/);
     assert.match(routeTable, /route_id: "changelog-drafter-report"/);
     assert.match(routeTable, /route_id: "changelog-drafter-draft-request"/);
     assert.match(routeTable, /route_id: "roadmap-sliced-development"/);
@@ -169,8 +173,12 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(prSteward, /zj-loop-pr-steward fix-plan/);
     assert.doesNotMatch(prSteward, /'\$\{\{ inputs\./);
     const issueTriage = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-issue-triage.yml'), 'utf8');
-    assert.match(issueTriage, /zj-loop-route dispatch issue-triage-report/);
+    assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
     assert.match(issueTriage, /zj-loop-issue-triage-action action-plan/);
+    assert.match(issueTriage, /zj-loop-issue-triage-transition confirm-plan/);
+    assert.match(issueTriage, /zj-loop-issue-triage-transition request-body/);
+    assert.match(issueTriage, /gh issue create/);
+    assert.match(issueTriage, /triage_transition_confirmation/);
     assert.doesNotMatch(issueTriage, /'\$\{\{ inputs\./);
     const changelogDrafter = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-changelog-drafter.yml'), 'utf8');
     assert.match(changelogDrafter, /zj-loop-route dispatch changelog-drafter-report/);

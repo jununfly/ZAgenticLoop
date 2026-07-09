@@ -145,7 +145,7 @@ must continue to document the concrete chain semantics for report-only routes,
 Issue Fix Requests, activation comments, claims, and post-merge closeout.
 
 Names that look similar are not automatically shared semantics. For example,
-`issue-triage-report` keeps route matching local because it deliberately ignores
+`issue-backlog-triage` keeps route matching local because it deliberately ignores
 `signal_kind` during route matching and validates signal kind through a separate
 allowlist and forbidden-field contract.
 
@@ -296,7 +296,8 @@ core package references as workflow health failures.
 | Route | Request kind | Consumer | First behavior |
 | --- | --- | --- | --- |
 | `ci-sweeper` | `issue-fix-request` | CI Sweeper | Diagnose CI failure, propose verifier-backed minimal fix, escalate on infra or high risk. |
-| `issue-triage-report` | `report-only` | Issue Triage | Record issue/discussion triage observations in `zj-loop/issue-triage-state.md`; no formal lifecycle transition, public comment, label mutation, assignment, milestone, close/reopen, or batch mutation. |
+| `issue-backlog-triage` | `report-only` | Issue Triage | Record issue/discussion triage observations and recommended triage transitions in `zj-loop/issue-triage-state.md`; no formal lifecycle transition, public comment, label mutation, assignment, milestone, close/reopen, Issue Fix Request creation, or batch mutation in recommendation mode. |
+| `issue-triage-transition` | `triage-transition-confirmation` | Issue Triage Transition | Request-only. Consumes maintainer/collaborator confirmed recommended transitions, validates the fixed confirmation command/phrase, and for `ready-for-agent` creates or dedupes an independent Issue Fix Request carrier. Live source issue tracker mutation requires later explicit promotion. |
 | `issue-triage-action` | `triage-action-request` | Issue Triage Action | Dry-run only. Plans narrowly allowlisted labels or fixed comment templates and refuses unsupported/freeform/high-risk actions. Live issue mutation requires a later explicit Route Table promotion backed by workflow-dispatch dogfood evidence. |
 | `pr-steward-report` / `pr-steward-fix-request` | `report-only` / `issue-fix-request` | PR Steward | Watch PR events as report evidence, create/dedupe independent failed-check Issue Fix Requests, and allow claim-only lifecycle evidence; a replayed runner can produce independent repair PR or escalation evidence after claim, but the dogfood route is not live until workflow-dispatch evidence exists. Source PR comments, labels, rebase, merge, and workflow dispatch remain forbidden. |
 | `dependency-sweeper` | `issue-fix-request` | Dependency Sweeper | Create verifier-backed dependency requests and allow claim-only lifecycle evidence for patch/minor dependency signals; a replayed runner can produce repair PR or escalation evidence after claim, but the dogfood route is not live until workflow-dispatch evidence exists. |
@@ -311,7 +312,7 @@ that may lead to a Fix PR." It does not mean the Route Table owns or mutates
 triage state, and it must not turn `zj-loop/STATE.md` or
 `zj-loop/issue-triage-state.md` into a request queue.
 
-`issue-triage-report` is intentionally report-only. Its fixed
+`issue-backlog-triage` is intentionally report-only. Its fixed
 `signal_kind` values are:
 
 - `missing-info-observation`
@@ -322,7 +323,7 @@ triage state, and it must not turn `zj-loop/STATE.md` or
 
 Its fixed Route Decision statuses are `recorded`, `already-recorded`,
 `rejected`, and `routed-to-human-review`. `already-recorded` means the same
-report evidence already exists; it is not an issue duplicate action.
+recommendation evidence already exists; it is not an issue duplicate action.
 `possible-duplicate-observation` is only an observation type. Unsupported
 signal kinds and protocol fields that imply issue lifecycle, label mutation,
 public comments, assignment, milestones, close/reopen, or duplicate actions
@@ -528,7 +529,7 @@ status: candidate
 created_at: 2026-07-06T00:00:00Z
 ```
 
-Issue triage report:
+Issue backlog triage recommendation:
 
 ```yaml
 schema: zj-loop.route_decision.v1
@@ -537,22 +538,47 @@ signal_id: issue:123:missing-info
 source: issue
 subject: issue-123
 priority: P2
-route: issue-triage-report
-route_id: issue-triage-report
+route: issue-backlog-triage
+route_id: issue-backlog-triage
 request_kind: report-only
 risk: medium
 confidence: high
 evidence:
   - https://github.com/jununfly/ZAgenticLoop/issues/123
 producer: issue-triage
-dedupe_key: issue-triage:jununfly/ZAgenticLoop:open-issues:last-24h:missing-info-observation:issue-123
-requested_action: record-issue-triage-report
+dedupe_key: issue-backlog-triage:jununfly/ZAgenticLoop:open-issues:last-24h:missing-info-observation:issue-123
+requested_action: record-issue-backlog-triage
 target_consumer: issue-triage
 status: recorded
 public_action_allowed: false
 label_mutation_allowed: false
 human_route_required: false
 created_at: 2026-07-07T00:00:00Z
+```
+
+Recommended transition evidence:
+
+```yaml
+schema: zj-loop.recommended_triage_transition.v1
+request_id: triage-transition-654e7c6cf5bc
+source:
+  tracker: github
+  repo: jununfly/ZAgenticLoop
+  issue: 123
+  issue_url: https://github.com/jununfly/ZAgenticLoop/issues/123
+  scan_window: open-issues:last-24h
+route_decision:
+  route_id: issue-backlog-triage
+  status: recommended
+category_role: enhancement
+recommended_state: needs-info
+confidence: high
+confirm_command: /zj-loop confirm-triage-transition triage-transition-654e7c6cf5bc
+required_actor_permission: maintainer-or-collaborator
+side_effects_if_confirmed:
+  set_tracker_state: true
+  write_triage_comment: true
+  create_issue_fix_request: false
 ```
 
 ## Replay And Review

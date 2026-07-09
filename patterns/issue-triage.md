@@ -49,6 +49,50 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 5. Verifier (or human) reviews only the human-attention candidates and any label-suggestion observations on sensitive areas.
 6. Record run, prune resolved items, update counts.
 
+## Recommended Triage Transitions
+
+The route can produce a fixed recommendation request without mutating the issue
+tracker:
+
+```text
+GitHub/GitLab Issues Backlog
+-> Route Decision
+-> recommended triage transitions
+-> confirmed triage transition
+-> zj-triage canonical state role + brief/comment
+-> if ready-for-agent: Issue Fix Request
+-> Fix Consumer may claim
+```
+
+Recommendation mode is enabled by default. It writes workflow/state evidence
+only and includes a fixed confirmation command:
+
+```text
+/zj-loop confirm-triage-transition <request-id>
+```
+
+Only maintainers/collaborators may confirm. The command intentionally accepts
+only the request id; it does not accept an inline issue number, label, or state
+argument. Confirmed transitions use `zj-triage` semantics for canonical state
+roles, brief/comment templates, unusual-transition guards, and maintainer
+override rules.
+
+Confirmed transitions are handled by the separate `issue-triage-transition`
+consumer. That route is request-only by default: it validates maintainer/collaborator
+permission, the exact slash command, and the fixed workflow confirmation phrase
+`CONFIRM_TRIAGE_TRANSITION`. For `ready-for-agent`, it creates or dedupes the
+independent Issue Fix Request carrier that a Fix Consumer may later claim. It
+still does not mutate the source issue tracker until the Route Table is
+explicitly promoted.
+
+| Side effects setting | What happens |
+| --- | --- |
+| Off by default | The loop records recommended transition evidence, request ids, reasons, confidence, brief drafts, and confirmation commands. It does not comment, label, close, reopen, or create Issue Fix Requests. |
+| Enabled and confirmed | The confirmed request may create or dedupe an independent Issue Fix Request carrier for `ready-for-agent`. It still does not set tracker state/labels or write public comments on the source issue. |
+
+`wontfix` is a recommendation candidate only. Default confirmation blocks it for
+human review; it must not auto-close, auto-label, or write out-of-scope records.
+
 ## Verification Strategy
 
 - The loop **never auto-labels or closes** in L1.
@@ -67,10 +111,10 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 ## Route Decision Boundary
 
 When Issue Triage output is passed to the Route Table, use the
-`issue-triage-report` route:
+`issue-backlog-triage` route:
 
 ```text
-Issue Backlog Signal -> Route Decision -> Issue Triage Report Evidence
+GitHub/GitLab Issues Backlog -> Route Decision -> Recommended Triage Transition Evidence
 ```
 
 Allowed report signal kinds are fixed:
@@ -81,15 +125,16 @@ Allowed report signal kinds are fixed:
 - `human-attention-candidate`
 - `issue-backlog-summary`
 
-The report evidence target is `zj-loop/issue-triage-state.md`. The route does
-not write public issue comments, apply labels, close/reopen issues, assign
-people, change milestones, perform formal lifecycle transitions, or batch-mutate
-the issue tracker.
+The evidence target is `zj-loop/issue-triage-state.md`. The route does not
+write public issue comments, apply labels, close/reopen issues, assign people,
+change milestones, perform formal lifecycle transitions, create Issue Fix
+Requests, or batch-mutate the issue tracker in recommendation mode.
 
-If a triage observation should become a bounded issue side effect, route it
-through the separate `issue-triage-action` consumer. That route is dry-run by
-default and only accepts fixed action requests for allowlisted labels or fixed
-comment templates. Do not add these side effects to `issue-triage-report`.
+If a triage observation should become a bounded issue side effect, route
+canonical state transitions through `issue-triage-transition`, and route narrow
+label/comment actions through `issue-triage-action`. `issue-triage-transition`
+is request-only by default; `issue-triage-action` remains dry-run by default.
+Do not add these side effects to `issue-backlog-triage`.
 
 **Grok Build TUI**:
 ```

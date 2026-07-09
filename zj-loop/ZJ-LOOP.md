@@ -66,7 +66,7 @@ request id.
 Local gates:
 
 ```bash
-node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-triage-report-e2e-replay.test.mjs scripts/issue-triage-action-runner.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-live-runner.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-live-runner.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-live-runner.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/live-runner-contract.test.mjs
+node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-backlog-triage-e2e-replay.test.mjs scripts/issue-triage-action-runner.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-live-runner.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-live-runner.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-live-runner.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/live-runner-contract.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs scripts/validate-post-merge-closeout-workflow.test.mjs
 ```
 
@@ -81,11 +81,14 @@ Current dogfood status:
   Local replay writes JSON only and records `zj-loop/pr-steward-state.md` as
   the evidence target; no PR comments, labels, rebases, merges, Issue Fix
   Requests, workflow dispatches, or consumer work are created.
-- `issue-triage-report` is implemented as an issue/discussion backlog
+- `issue-backlog-triage` is implemented as an issue/discussion backlog
   report-only route:
-  `Issue Backlog Signal -> Route Decision -> Issue Triage Report Evidence`.
+  `GitHub/GitLab Issues Backlog -> Route Decision -> Recommended Triage Transition Evidence`.
   Local replay writes JSON only and records `zj-loop/issue-triage-state.md` as
-  the evidence target; allowed observations are fixed to
+  the evidence target; accepted issue-specific signals include fixed
+  `zj-loop.recommended_triage_transition.v1` contracts with request ids,
+  confirmation commands, recommended `zj-triage` state roles, and brief drafts.
+  Allowed observations are fixed to
   `missing-info-observation`, `possible-duplicate-observation`,
   `label-suggestion-observation`, `human-attention-candidate`, and
   `issue-backlog-summary`. It does not write public comments, mutate labels,
@@ -93,10 +96,18 @@ Current dogfood status:
   lifecycle transitions, batch-mutate the issue tracker, create Issue Fix
   Requests, or start consumer work.
 - `issue-triage-action` is implemented as a separate dry-run action consumer:
-  `Issue Triage Report Evidence -> Triage Action Request -> Issue Triage Action Evidence`.
+  `Issue Backlog Triage Evidence -> Triage Action Request -> Issue Triage Action Evidence`.
   It accepts only allowlisted labels and fixed comment templates, refuses live
   issue mutation, rejects unsupported/freeform actions, and escalates hard
-  human-guard cases. It must not be folded back into `issue-triage-report`.
+  human-guard cases. It must not be folded back into `issue-backlog-triage`.
+- `issue-triage-transition` is implemented as a separate request-only confirmed
+  transition consumer:
+  `Recommended Triage Transition -> Confirmed Triage Transition -> Issue Fix Request Carrier`.
+  It requires maintainer/collaborator permission, the exact
+  `/zj-loop confirm-triage-transition <request-id>` command, and fixed
+  `CONFIRM_TRIAGE_TRANSITION` workflow confirmation phrase. It creates or
+  dedupes independent `ready-for-agent` Issue Fix Request carriers, but does
+  not mutate the source issue tracker live.
 - `changelog-drafter-report` is implemented as a release-prep report-only
   route:
   `Merged PR Batch / Manual Release Prep -> Route Decision -> Changelog Draft Evidence`.

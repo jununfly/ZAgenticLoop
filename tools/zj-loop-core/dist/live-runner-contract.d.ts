@@ -5,12 +5,12 @@ export declare const COMPLETION_FORMS_BY_KIND: {
     readonly 'draft-consumer': readonly ["draft-pr", "draft-evidence", "escalation-issue"];
     readonly 'cleanup-consumer': readonly ["cleanup-done", "cleanup-skipped", "escalation-issue"];
     readonly 'activation-consumer': readonly ["roadmap-branch-pr", "activation-failed", "activation-resumable"];
-    readonly 'triage-action-consumer': readonly ["triage-label-applied", "triage-comment-posted", "triage-action-skipped", "escalation-issue"];
+    readonly 'triage-action-consumer': readonly ["triage-label-applied", "triage-comment-posted", "triage-transition-confirmed", "issue-fix-request-created", "triage-action-skipped", "escalation-issue"];
 };
 export declare const LIVE_RUNNER_SIDE_EFFECT_LEVELS: readonly ["none", "evidence", "request", "claim", "issue-comment", "label", "branch", "pr", "draft-pr", "cleanup"];
 export type LiveRunnerConsumerKind = keyof typeof COMPLETION_FORMS_BY_KIND;
 export type LiveRunnerEvidenceStatus = typeof RUNNER_EVIDENCE_STATUSES[number];
-export type LiveRunnerExecutionMode = 'live' | 'dry-run';
+export type LiveRunnerExecutionMode = 'live' | 'dry-run' | 'request-only';
 export type LiveRunnerEvidence = {
     schema: typeof LIVE_RUNNER_EVIDENCE_SCHEMA;
     runner_id: string;

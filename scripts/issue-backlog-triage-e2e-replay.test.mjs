@@ -4,39 +4,47 @@ import test from 'node:test';
 
 import {
   ALLOWED_ISSUE_TRIAGE_SIGNAL_KINDS,
-  replayIssueTriageReport,
-  runIssueTriageReportReplaySuite,
-} from './issue-triage-report-e2e-replay.mjs';
+  ALLOWED_TRIAGE_STATE_ROLES,
+  replayIssueBacklogTriage,
+  runIssueBacklogTriageReplaySuite,
+} from './issue-backlog-triage-e2e-replay.mjs';
 
 const ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
 
-test('issue triage report records allowed observations without public side effects', async () => {
-  const suite = await runIssueTriageReportReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+test('issue backlog triage records allowed observations without public side effects', async () => {
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const result = suite.results.find((item) => item.name === 'missing-info-recorded');
   const replay = result.replay;
 
   assert.equal(result.pass, true);
   assert.equal(replay.outcome, 'recorded');
-  assert.equal(replay.routeDecision.route_id, 'issue-triage-report');
+  assert.equal(replay.routeDecision.route_id, 'issue-backlog-triage');
   assert.equal(replay.routeDecision.request_kind, 'report-only');
   assert.equal(replay.routeDecision.target_consumer, 'issue-triage');
   assert.equal(replay.routeDecision.status, 'recorded');
   assert.equal(replay.routeDecision.public_action_allowed, false);
   assert.equal(replay.routeDecision.label_mutation_allowed, false);
   assert.equal(replay.issueTriageReport.evidence_store, 'zj-loop/issue-triage-state.md');
+  assert.equal(replay.recommendedTriageTransition.schema, 'zj-loop.recommended_triage_transition.v1');
+  assert.equal(replay.recommendedTriageTransition.recommended_state, 'needs-info');
+  assert.match(replay.recommendedTriageTransition.request_id, /^triage-transition-/);
+  assert.match(replay.recommendedTriageTransition.confirm_command, /^\/zj-loop confirm-triage-transition triage-transition-/);
+  assert.equal(replay.recommendedTriageTransition.required_actor_permission, 'maintainer-or-collaborator');
   assert.deepEqual(replay.issueTriageReport.side_effects, {
     public_issue_comment_created: false,
+    tracker_state_changed: false,
     label_changed: false,
     assignment_changed: false,
     milestone_changed: false,
     issue_closed_or_reopened: false,
     formal_lifecycle_transitioned: false,
+    issue_fix_request_created: false,
     consumer_work_started: false,
   });
 });
 
-test('issue triage report uses fixed signal kind and status enums', async () => {
-  const suite = await runIssueTriageReportReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+test('issue backlog triage uses fixed signal kind and status enums', async () => {
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const statuses = suite.results.map((result) => result.replay.routeDecision.status);
 
   assert.equal(suite.passed, true);
@@ -53,11 +61,19 @@ test('issue triage report uses fixed signal kind and status enums', async () => 
     'rejected',
     'routed-to-human-review',
     'recorded',
+    'recorded',
+    'recorded',
+  ]);
+  assert.deepEqual(ALLOWED_TRIAGE_STATE_ROLES, [
+    'needs-info',
+    'ready-for-agent',
+    'ready-for-human',
+    'wontfix',
   ]);
 });
 
 test('already-recorded is report evidence dedupe, not issue duplicate action', async () => {
-  const suite = await runIssueTriageReportReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const replay = suite.results.find((item) => item.name === 'already-recorded').replay;
 
   assert.equal(replay.routeDecision.status, 'already-recorded');
@@ -68,7 +84,7 @@ test('already-recorded is report evidence dedupe, not issue duplicate action', a
 });
 
 test('unsupported signal kinds are rejected instead of guessed', async () => {
-  const suite = await runIssueTriageReportReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const replay = suite.results.find((item) => item.name === 'unsupported-signal-kind').replay;
 
   assert.equal(replay.routeDecision.status, 'rejected');
@@ -79,7 +95,7 @@ test('unsupported signal kinds are rejected instead of guessed', async () => {
 });
 
 test('human-attention-candidate only becomes human route when hard guard matches', async () => {
-  const suite = await runIssueTriageReportReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const replay = suite.results.find((item) => item.name === 'human-review-required').replay;
 
   assert.equal(replay.routeDecision.status, 'routed-to-human-review');
@@ -91,7 +107,7 @@ test('human-attention-candidate only becomes human route when hard guard matches
 
 test('human-attention-candidate is report-only without a hard human guard', async () => {
   const routeTableText = await readFile(ROUTE_TABLE_PATH, 'utf8');
-  const replay = replayIssueTriageReport({
+  const replay = replayIssueBacklogTriage({
     routeTableText,
     scenario: {
       signal: {
@@ -139,7 +155,7 @@ test('forbidden lifecycle, label, comment, and duplicate action fields are rejec
   ];
 
   for (const field of forbiddenFields) {
-    const replay = replayIssueTriageReport({
+    const replay = replayIssueBacklogTriage({
       routeTableText,
       scenario: {
         signal: {
@@ -165,11 +181,43 @@ test('forbidden lifecycle, label, comment, and duplicate action fields are rejec
 });
 
 test('backlog summary remains summary evidence and never batch mutation', async () => {
-  const suite = await runIssueTriageReportReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const replay = suite.results.find((item) => item.name === 'backlog-summary-recorded').replay;
 
   assert.equal(replay.routeDecision.status, 'recorded');
   assert.equal(replay.issueTriageReport.triage_observation.signal_kind, 'issue-backlog-summary');
   assert.equal(replay.issueTriageReport.triage_observation.batch_mutation_allowed, false);
   assert.equal(replay.routeDecision.guards.batch_mutation_allowed, false);
+});
+
+test('ready-for-agent recommendation declares Issue Fix Request side effect only after confirmation', async () => {
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+  const replay = suite.results.find((item) => item.name === 'ready-for-agent-recommended').replay;
+  const transition = replay.recommendedTriageTransition;
+
+  assert.equal(replay.routeDecision.status, 'recorded');
+  assert.equal(transition.category_role, 'bug');
+  assert.equal(transition.recommended_state, 'ready-for-agent');
+  assert.equal(transition.brief_draft.kind, 'agent-brief');
+  assert.equal(transition.side_effects_if_confirmed.set_tracker_state, true);
+  assert.equal(transition.side_effects_if_confirmed.write_triage_comment, true);
+  assert.equal(transition.side_effects_if_confirmed.create_issue_fix_request, 'ready-for-agent-only');
+  assert.equal(replay.issueTriageReport.side_effects.issue_fix_request_created, false);
+});
+
+test('wontfix candidate is recommendation evidence but blocked from default confirmation side effects', async () => {
+  const suite = await runIssueBacklogTriageReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
+  const replay = suite.results.find((item) => item.name === 'wontfix-candidate-requires-human-confirmation').replay;
+  const transition = replay.recommendedTriageTransition;
+
+  assert.equal(replay.routeDecision.status, 'recorded');
+  assert.equal(transition.recommended_state, 'wontfix');
+  assert.equal(transition.brief_draft.kind, 'wontfix-note');
+  assert.equal(transition.confirmation.wontfix_requires_human_review, true);
+  assert.deepEqual(transition.side_effects_if_confirmed, {
+    set_tracker_state: false,
+    write_triage_comment: false,
+    create_issue_fix_request: false,
+  });
+  assert.equal(replay.issueTriageReport.side_effects.issue_closed_or_reopened, false);
 });
