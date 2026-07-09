@@ -1,0 +1,60 @@
+{
+  "schema": "zj-loop.roadmap_sliced_development.v1",
+  "roadmap_id": "issue-backlog-triage-dogfood",
+  "activation_request_id": "act-70-ic-kwdotjxusc8aaaabjygahg-8c94c5b9",
+  "source": {
+    "carrier_issue": "https://github.com/jununfly/ZAgenticLoop/issues/70",
+    "activation_comment": "https://github.com/jununfly/ZAgenticLoop/issues/70#issuecomment-4924234140",
+    "original_issue": "https://github.com/jununfly/ZAgenticLoop/issues/7",
+    "issue_fix_request_id": "ifr_triage_c57037197eb2"
+  },
+  "branch": "zjal/act-70-ic-kwdotjxusc8aaaabjygahg-8c94c5b9-issue-backlog-triage-dogfood",
+  "status": "active",
+  "max_slices": 30,
+  "hard_gates": [
+    "branch",
+    "leaf gate",
+    "commit intent",
+    "evidence before commit",
+    "gate-backed status",
+    "decision audit",
+    "separate closeout commit"
+  ],
+  "parent_nodes": [
+    {
+      "id": "p1-prd-next-command-handoff",
+      "title": "Surface PRD next-command handoff on the PRD issue",
+      "status": "active",
+      "completion_condition": "All child leaf nodes are completed, deferred, or linked as follow-up, and the durable decision is captured before closeout.",
+      "leaf_nodes": [
+        {
+          "id": "1-1-design-current-handoff-gap",
+          "title": "Confirm current PRD handoff behavior and exact missing user-facing next command",
+          "status": "pending",
+          "commit_intent": "Record the observed product gap and target behavior before implementation.",
+          "verification_evidence": []
+        },
+        {
+          "id": "1-2-implement-next-command-surfacing",
+          "title": "Implement deterministic PRD issue next-command handoff surfacing",
+          "status": "pending",
+          "commit_intent": "Expose the next command in the appropriate PRD issue flow without broadening report-only defaults.",
+          "verification_evidence": []
+        },
+        {
+          "id": "1-3-verify-and-document-dogfood",
+          "title": "Verify the issue-backlog-triage to roadmap activation dogfood chain and document evidence",
+          "status": "pending",
+          "commit_intent": "Prove the route chain remains replayable and side-effect boundaries are clear.",
+          "verification_evidence": []
+        }
+      ]
+    }
+  ],
+  "closeout": {
+    "process_files_default": "delete-or-migrate-before-merge",
+    "durable_docs_required": true,
+    "post_merge_branch_cleanup": "delete merged roadmap branch by default",
+    "carrier_issue_cleanup": "post-merge closeout may close only #70 if the PR contract is present and guards pass"
+  }
+}
