@@ -22,6 +22,7 @@
     "test:changelog-drafter-report": "node --test scripts/changelog-drafter-report-e2e-replay.test.mjs",
     "test:changelog-drafter-draft-request": "node --test scripts/changelog-drafter-draft-request-e2e-replay.test.mjs",
     "test:changelog-drafter-live-runner": "node --test scripts/changelog-drafter-live-runner.test.mjs scripts/write-file-once.test.mjs",
+    "roadmap-handoff:body": "node scripts/roadmap-handoff-gate.mjs --render-pr-body",
     "test:roadmap-handoff": "node --test scripts/roadmap-handoff-gate.test.mjs",
     "test:protocol-terminology": "node --test scripts/protocol-terminology-gate.test.mjs && node scripts/protocol-terminology-gate.mjs",
     "post-merge-closeout": "node scripts/post-merge-roadmap-closeout.mjs",

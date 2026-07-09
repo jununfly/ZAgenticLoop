@@ -580,6 +580,22 @@ Post-closeout continuation rule:
 - `roadmap loop complete` means PR handoff is complete, not merely that closeout
   was committed.
 
+Deterministic PR body handoff:
+
+- Before opening or updating the PR, generate the PR body from structured
+  handoff input instead of hand-writing the post-merge contract:
+
+  ```bash
+  ROADMAP_HANDOFF_GATE_PATH=/path/to/handoff-input.json npm run roadmap-handoff:body
+  ```
+
+- Use the generated body for `gh pr create --body-file` or `gh pr edit
+  --body-file`, then run `npm run test:roadmap-handoff` or the
+  `scripts/roadmap-handoff-gate.mjs` gate with the live PR evidence.
+- If the generated body is not used, the PR handoff is still responsible for a
+  valid `zj-loop.post-merge-contract`; otherwise post-merge cleanup must remain
+  report-only.
+
 Roadmap evidence policy:
 
 - Include roadmap JSON/Markdown in the PR when it helps reviewers inspect the
