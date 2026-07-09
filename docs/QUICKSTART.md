@@ -145,6 +145,13 @@ The first execution-ready user-project choices are:
 - **Turn a CI failure into reviewable repair work:** enable `ci-sweeper`. A
   failing workflow can create a separate GitHub Issue Fix Request so the fix
   consumer has a durable carrier instead of guessing from workflow logs.
+- **Turn issue backlog signals into triage-ready work:** enable
+  `issue-backlog-triage` for recommendation evidence, then use
+  `issue-triage-transition` with
+  `/zj-loop confirm-triage-transition <request-id>` and
+  `CONFIRM_TRIAGE_TRANSITION` to produce dry-run `zj-triage` transition
+  evidence. `ready-for-agent` confirmations plan an Issue Fix Request; no live
+  tracker mutation happens yet.
 - **Close out merged roadmap work:** use `post-merge-roadmap-closeout` in
   dry-run first. Live branch deletion and carrier issue closure require the
   fixed phrase

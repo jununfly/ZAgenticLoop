@@ -138,13 +138,15 @@ The first execution-ready route set is:
 - `ci-sweeper`: failed workflow to durable GitHub Issue Fix Request.
 - `issue-backlog-triage`: open issue backlog to recommended triage transition
   evidence with fixed confirmation commands.
+- `issue-triage-transition`: maintainer/collaborator confirmation to dry-run
+  `zj-triage` transition evidence and `ready-for-agent` Issue Fix Request
+  plans.
 - `post-merge-roadmap-closeout`: merged Roadmap-Sliced PR to guarded dry-run
   closeout, with optional fixed-phrase live cleanup.
 
 Report-only routes are intentionally evidence-only; other action-capable routes
 such as `pr-steward-fix-request`, `dependency-sweeper`,
-`changelog-drafter-draft-request`, `issue-triage-action`, and
-`issue-triage-transition` become
+`changelog-drafter-draft-request` and `issue-triage-action` become
 user-project live paths only after their generated workflow and packaged runner
 are marked `execution-ready`.
 
@@ -215,7 +217,7 @@ Current dogfood automation boundaries:
 | `pr-steward-fix-request` | `claim-only` with replayed runner | Claim eligible failed-PR-check requests and replay repair/escalation evidence; no source PR mutation. |
 | `changelog-drafter-draft-request` | `report-only` with replayed runner | Record draft request evidence and replay draft evidence/PR outcomes; no live changelog edits yet. |
 | `issue-backlog-triage` | `report-only` | Record recommended triage transition evidence and confirmation commands; no comments, labels, closes, or Issue Fix Requests until confirmed side effects are enabled. |
-| `issue-triage-transition` | `dry-run` with replayed runner | Validate maintainer/collaborator confirmation and plan `zj-triage` role/comment/Issue Fix Request side effects; no live tracker mutation yet. |
+| `issue-triage-transition` | `dry-run` with replayed runner | Validate maintainer/collaborator confirmation and plan `zj-triage` role/comment/Issue Fix Request side effects; covered by `issue-backlog-triage -> issue-triage-transition` E2E replay; no live tracker mutation yet. |
 | `issue-triage-action` | `dry-run` with replayed runner | Plan allowlisted labels or fixed comment templates; no live issue mutation yet. |
 | Report routes | `report-only` | Record evidence only. |
 

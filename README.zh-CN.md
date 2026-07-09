@@ -128,11 +128,12 @@ npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweepe
 Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
 `roadmap-sliced-development`、`pr-steward-fix-request`、
 `dependency-sweeper`、`changelog-drafter-draft-request`、
-`issue-backlog-triage`、`issue-triage-transition`、`issue-triage-action`、
-`post-merge-roadmap-closeout` 等 routes
-只有在 generated workflow 和 packaged runner 都标记为 `execution-ready`
-后，才应被当作用户项目可执行路径；其中 report-only route 仍然只记录
-evidence，不代表允许 live side effects。
+`issue-backlog-triage` 和 `issue-triage-transition` 已经能形成
+open issues -> recommended triage transition -> confirmed transition ->
+Issue Fix Request plan 的 dry-run 链路；`issue-triage-action`、
+`post-merge-roadmap-closeout` 等 routes 只有在 generated workflow 和
+packaged runner 都标记为 `execution-ready` 后，才应被当作用户项目可执行路径；
+其中 report-only route 仍然只记录 evidence，不代表允许 live side effects。
 
 Generated bundle route menu：
 
@@ -197,7 +198,7 @@ workflow 自定义逻辑仍然是 maintainer 决策。
 | `pr-steward-fix-request` | `claim-only` with replayed runner | Claim 合格 failed-PR-check request，并 replay repair/escalation evidence；不修改 source PR。 |
 | `changelog-drafter-draft-request` | `report-only` with replayed runner | 记录 draft request evidence，并 replay draft evidence/PR outcome；还不会 live 修改 changelog。 |
 | `issue-backlog-triage` | `report-only` | 记录 recommended triage transition evidence 和确认命令；确认副作用启用前，不评论、不打标、不关闭 issue、不创建 Issue Fix Request。 |
-| `issue-triage-transition` | `dry-run` with replayed runner | 校验 maintainer/collaborator 确认，规划 `zj-triage` role/comment/Issue Fix Request side effects；还不会 live 修改 tracker。 |
+| `issue-triage-transition` | `dry-run` with replayed runner | 校验 maintainer/collaborator 确认，规划 `zj-triage` role/comment/Issue Fix Request side effects；已有 `issue-backlog-triage -> issue-triage-transition` E2E replay；还不会 live 修改 tracker。 |
 | `issue-triage-action` | `dry-run` with replayed runner | 规划 allowlisted label 或 fixed comment template；还不会 live 修改 issue。 |
 | Report routes | `report-only` | 只记录 evidence。 |
 

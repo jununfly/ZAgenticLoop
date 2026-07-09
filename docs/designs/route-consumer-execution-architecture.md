@@ -224,7 +224,7 @@ The dogfood Route Table is the operational truth. Current dogfood capability:
 | --- | --- | --- | --- | --- |
 | Daily Triage | `producer-router` | `report-only` | `missing` | Producer and report surface, not a worker. |
 | Issue Triage | `report-consumer` | `report-only` | `missing` | Side effects belong to the separate dry-run `issue-triage-action` route. |
-| Issue Triage Transition | `triage-action-consumer` | `dry-run` | `replayed` | Separate confirmed-transition route for fixed request ids, fixed confirmation phrase, `zj-triage` role/comment plans, and `ready-for-agent` Issue Fix Request plans; refuses live mutation until promotion. |
+| Issue Triage Transition | `triage-action-consumer` | `dry-run` | `replayed` | Separate confirmed-transition route for fixed request ids, fixed confirmation phrase, `zj-triage` role/comment plans, and `ready-for-agent` Issue Fix Request plans; E2E replay proves `issue-backlog-triage -> issue-triage-transition -> Issue Fix Request plan`; refuses live mutation until promotion. |
 | Issue Triage Action | `triage-action-consumer` | `dry-run` | `replayed` | Separate action-capable route for narrowly allowlisted labels and fixed comment templates; refuses live mutation until dogfood evidence exists. |
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
 | PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; not live until workflow-dispatch dogfood evidence exists. |

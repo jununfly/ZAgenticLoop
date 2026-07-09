@@ -23,6 +23,7 @@ The first route set is deliberately small:
 | --- | --- | --- | --- |
 | `roadmap-sliced-development` | A maintainer comments `/zj-loop start roadmap-sliced-development` on a plan issue and gets a bounded roadmap branch/PR bootstrap. | Disabled until explicitly enabled. Generated workflow can produce activation, contract, and bounded-slice evidence. | Activation can create the roadmap lifecycle. Slice execution is bounded by `max_slices`, default `30`, and Roadmap-Sliced gates. |
 | `ci-sweeper` | A failing workflow can become a durable GitHub Issue Fix Request instead of disappearing in Actions history. | Disabled until explicitly enabled. Generated workflow records Route Decision and consumer plan evidence. | When allowed, it creates an independent Issue Fix Request carrier for bounded fix-runner consumption or escalation. |
+| `issue-backlog-triage` -> `issue-triage-transition` | Open issue backlog signals become recommended `zj-triage` transitions, then maintainer/collaborator confirmation produces dry-run transition evidence and `ready-for-agent` Issue Fix Request plans. | Recommendation evidence is report-only. Confirmed transition requires an exact request id and fixed confirmation phrase. | No live tracker mutation yet. The useful boundary is dry-run transition evidence plus a replayable Issue Fix Request plan. |
 | `post-merge-roadmap-closeout` | After a Roadmap-Sliced PR is merged, cleanup can be planned and, with explicit confirmation, close only the activation carrier and delete only the merged roadmap branch. | Dry-run by default. | Live cleanup requires the fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` and valid post-merge contract guards. |
 
 All other action-capable routes remain selectable future paths, but should not
@@ -96,6 +97,30 @@ Use this path when a workflow failure should become reviewable repair work.
 
 The generated workflow should not hide failures in workflow logs only. The
 durable GitHub issue carrier is what makes the problem auditable and replayable.
+
+## Issue Backlog Triage Path
+
+Use this path when open issues should become actionable triage evidence without
+batch-editing the tracker.
+
+1. `issue-backlog-triage` records allowed issue backlog observations and emits
+   `zj-loop.recommended_triage_transition.v1` evidence.
+2. A maintainer or collaborator confirms a specific request:
+
+```text
+/zj-loop confirm-triage-transition <request-id>
+```
+
+3. The confirmation path also requires the fixed workflow phrase
+   `CONFIRM_TRIAGE_TRANSITION`.
+4. `issue-triage-transition` plans `zj-triage` role/comment side effects and,
+   for `ready-for-agent`, plans an Issue Fix Request for downstream consumer
+   routing.
+
+This route is execution-ready as a dry-run bridge. It must not mutate labels,
+write public comments, close issues, assign owners, set milestones, or start
+consumer work until a future promotion explicitly adds live side effects and
+new dogfood evidence.
 
 ## Post-Merge Closeout Path
 

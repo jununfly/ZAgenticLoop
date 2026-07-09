@@ -5,15 +5,16 @@ Last run: 2026-07-09
 ## Active Roadmap
 
 - Roadmap id: user-project-ready-route-consumers
-- Branch: codex-user-project-ready-route-consumers
-- Status: completed
-- Current parent node: closeout
-- Current leaf: closeout
+- Branch: zjal/act-65-4922393657-8c94c5b9-execution-ready-user-project-route-bundle
+- Status: active
+- Current parent node: issue-route-user-project-readiness
+- Current leaf: issue-triage-transition-e2e-replay
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| issue-triage-transition-e2e-replay | completed | Added deterministic `scripts/issue-triage-transition-e2e-replay.mjs` and tests proving `issue-backlog-triage -> issue-triage-transition -> Issue Fix Request plan` against the real dogfood Route Table; replay covers `ready-for-agent` Issue Fix Request planning, `needs-info` triage-only confirmation, and `wontfix` escalation without tracker operations; wired the test into `npm run test:route-decision` and `scripts/ci-validate-gates.sh`; added `docs/testing/issue-triage-transition-e2e.md`; updated README/README.zh-CN/Quickstart/User Project Execution-Ready Bundle/Dogfood Reference Case/Route Consumer Execution Architecture to describe the dry-run user-project boundary; `npm run test:issue-triage-transition-e2e`; `npm run test:route-decision`; `bash scripts/ci-validate-gates.sh`; `git diff --check` | pending |
 | issue-triage-transition-confirmed-dry-run | completed | Added `issue-triage-transition` as a separate dry-run confirmed-transition consumer; core runner/CLI consume `zj-loop.recommended_triage_transition.v1`, require maintainer/collaborator permission, exact `/zj-loop confirm-triage-transition <request-id>`, and fixed `CONFIRM_TRIAGE_TRANSITION`; runner plans `zj-triage` role/comment side effects and `ready-for-agent` Issue Fix Request evidence without live tracker mutation; `wontfix` defaults to escalation; Route Table/template/generated workflow expose `triage_transition_request_json` and `triage_transition_confirmation`; README/Quickstart/pattern/design/state docs updated; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `npm run test:issue-triage-transition`; `npm run test:generated-bundle-release-gate`; `npm run test:route-decision`; `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | pending |
 | issue-backlog-triage-recommendation-mode | completed | `issue-triage-report` route id retired in favor of `issue-backlog-triage`; route/table/template/workflow/init tests now use the new route id; deterministic replay emits `zj-loop.recommended_triage_transition.v1` evidence with fixed request id, `/zj-loop confirm-triage-transition <request-id>`, `zj-triage` category/state roles, brief drafts, dedupe key, stale-after, and explicit confirmed side-effect plan; `ready-for-agent` recommendations declare Issue Fix Request creation only after confirmed side effects, while `wontfix` candidates block default confirmation side effects; README/Quickstart/pattern/design/testing docs expose recommendation mode and side-effect off/on semantics; `node --test scripts/issue-backlog-triage-e2e-replay.test.mjs scripts/issue-triage-action-runner.test.mjs`; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `npm run test:route-decision`; `npm run test:generated-bundle-release-gate`; `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | pending |
 | user-project-ready-route-consumers-closeout | completed | Process checklist and roadmap were merged into durable docs and deleted; README/README.zh-CN/Quickstart carry user-facing route selection; Dogfood Reference Case and Route Consumer Execution Architecture carry architecture/release gate decisions; `zj-loop/roadmap-sliced-state.md` retains slice evidence and commits; `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | `a75e33f` |
