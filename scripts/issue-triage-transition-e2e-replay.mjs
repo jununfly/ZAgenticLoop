@@ -105,7 +105,7 @@ export async function runIssueTriageTransitionE2EReplaySuite({
       expected: scenario.expectStatus,
       actual,
       pass: actual === scenario.expectStatus && transitionReplay?.validation?.ok === true,
-      chain: 'GitHub/GitLab Issues Backlog -> Route Decision -> Recommended Triage Transition -> Confirmed Triage Transition -> Issue Fix Request Carrier',
+      chain: 'GitHub/GitLab Issues Backlog -> Route Decision -> Recommended Triage Transition -> Confirmed Triage Transition -> Source Issue Fix Request Comment',
       backlogReplay,
       transitionReplay,
       issueFixRequestPlanned,

@@ -50,6 +50,9 @@ test('Issue Triage Transition confirms ready-for-agent into Issue Fix Request ca
   assert.equal(result.confirmed_transition.confirmed_state, 'ready-for-agent');
   assert.equal(result.confirmed_transition.triage_comment.startsWith(TRIAGE_AI_DISCLAIMER), true);
   assert.equal(result.confirmed_transition.issue_fix_request.status, 'requested');
+  assert.equal(result.confirmed_transition.issue_fix_request.carrier.kind, 'source-issue-comment');
+  assert.equal(result.confirmed_transition.issue_fix_request.carrier.issue, 126);
+  assert.equal(result.confirmed_transition.issue_fix_request.carrier.independent_issue_allowed, false);
 });
 
 test('Issue Triage Transition Issue Fix Request body carries a parseable request comment', () => {
@@ -62,9 +65,11 @@ test('Issue Triage Transition Issue Fix Request body carries a parseable request
   const parsed = parseIssueFixRequestComments([{ id: 1, body }]);
 
   assert.match(title, /^\[Issue Fix Request\] issue-triage-transition:/);
+  assert.match(body, /Carrier: `source-issue-comment`/);
   assert.equal(parsed.length, 1);
   assert.equal(parsed[0].request.request_id, result.confirmed_transition.issue_fix_request.request_id);
   assert.equal(parsed[0].request.requested_consumer.consumer_id, 'roadmap-sliced-development');
+  assert.equal(parsed[0].request.carrier.kind, 'source-issue-comment');
 });
 
 test('Issue Triage Transition confirms needs-info without Issue Fix Request carrier', () => {

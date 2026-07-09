@@ -79,6 +79,14 @@ export type PostMergeCloseoutPlan = {
   };
   contractPlan: any;
   executorGuards: Array<{ name: string; pass: boolean; reason: string }>;
+  confirmation: {
+    required: boolean;
+    confirmation_location: string[];
+    required_phrase: typeof LIVE_CLEANUP_CONFIRMATION_PHRASE;
+    side_effects: string[];
+    why_required: string;
+    audit_target: string[];
+  };
   refusals: Array<{ layer: string; reason: string; guard?: string }>;
   actions: any[];
 };
@@ -288,8 +296,35 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
     },
     contractPlan,
     executorGuards,
+    confirmation: buildLiveCleanupConfirmation({ prNumber: pr.number ?? null, carrierIssue }),
     refusals,
     actions: executable ? buildExecutableActions({ branch, carrierIssue }) : [],
+  };
+}
+
+function buildLiveCleanupConfirmation(
+  input: { prNumber: number | null; carrierIssue: number | null },
+): PostMergeCloseoutPlan['confirmation'] {
+  return {
+    required: true,
+    confirmation_location: [
+      'Codex chat reply when a local maintainer is operating the closeout CLI',
+      'workflow_dispatch input confirm_live_cleanup when using GitHub Actions',
+    ],
+    required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
+    side_effects: [
+      'switch local checkout to main and fast-forward from origin/main',
+      'delete the merged zjal/ roadmap branch locally when present and merged',
+      'delete the merged zjal/ roadmap branch on origin when present',
+      `append closeout evidence to carrier issue #${input.carrierIssue ?? 'unknown'}`,
+      `close carrier issue #${input.carrierIssue ?? 'unknown'}`,
+    ],
+    why_required: 'Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable.',
+    audit_target: [
+      `merged PR #${input.prNumber ?? 'unknown'}`,
+      `carrier issue #${input.carrierIssue ?? 'unknown'}`,
+      'post-merge closeout JSON plan',
+    ],
   };
 }
 
@@ -507,6 +542,13 @@ export function buildDryRunEvidenceComment(
     plan.status === 'dry-run'
       ? `Live cleanup command after maintainer approval: \`${command}\``
       : 'Live cleanup is not available until the refusals above are resolved.',
+    '',
+    '### Confirmation required for live cleanup',
+    '',
+    `- Reply/input location: ${plan.confirmation.confirmation_location.join('; ')}`,
+    `- Required phrase: \`${plan.confirmation.required_phrase}\``,
+    `- Why required: ${plan.confirmation.why_required}`,
+    `- Audit target: ${plan.confirmation.audit_target.join('; ')}`,
   ].join('\n');
 }
 

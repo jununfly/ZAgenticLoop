@@ -68,6 +68,14 @@ export type PostMergeCloseoutPlan = {
         pass: boolean;
         reason: string;
     }>;
+    confirmation: {
+        required: boolean;
+        confirmation_location: string[];
+        required_phrase: typeof LIVE_CLEANUP_CONFIRMATION_PHRASE;
+        side_effects: string[];
+        why_required: string;
+        audit_target: string[];
+    };
     refusals: Array<{
         layer: string;
         reason: string;
@@ -193,6 +201,14 @@ export declare function executePostMergeRoadmapCloseout(plan: PostMergeCloseoutP
         pass: boolean;
         reason: string;
     }>;
+    confirmation: {
+        required: boolean;
+        confirmation_location: string[];
+        required_phrase: typeof LIVE_CLEANUP_CONFIRMATION_PHRASE;
+        side_effects: string[];
+        why_required: string;
+        audit_target: string[];
+    };
     refusals: Array<{
         layer: string;
         reason: string;

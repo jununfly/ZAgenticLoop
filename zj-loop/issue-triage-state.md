@@ -117,8 +117,11 @@ work.
 
 Issue side effects are separated into `issue-triage-transition` and
 `issue-triage-action`. `issue-triage-transition` is a request-only, replayed
-consumer that creates or dedupes independent Issue Fix Request carriers for
-`ready-for-agent` after fixed confirmation.
+consumer that creates or dedupes Issue Fix Request comments on the source issue
+for `ready-for-agent` after fixed confirmation. Independent Issue Fix Request
+issues are narrow exceptions for missing source issues, cross-repository
+permission limits, source issues unsuitable for automation evidence, or explicit
+human-requested isolation.
 `issue-triage-action` handles narrowly allowlisted labels or fixed comment
 templates and remains dry-run. Neither route may perform source issue mutation
 until workflow-dispatch dogfood evidence exists and the Route Table is explicitly promoted to
@@ -144,10 +147,11 @@ Execution evidence:
   `@jununfly/zj-loop-core@0.1.3 zj-loop-issue-triage-transition confirm-plan`.
 - Confirmed transition status: `confirmed`.
 - Planned Issue Fix Request id: `ifr_triage_c57037197eb2`.
-- Created independent Issue Fix Request carrier:
+- Historical dogfood created an independent Issue Fix Request carrier:
   [#70](https://github.com/jununfly/ZAgenticLoop/issues/70).
-- Dedupe lookup for `ifr_triage_c57037197eb2` now returns existing carrier
-  [#70](https://github.com/jununfly/ZAgenticLoop/issues/70).
+- Follow-up simplification work found this split carrier created status drift
+  risk because source issue #7 was not the lifecycle home. New confirmed
+  transitions default to source issue Issue Fix Request comments instead.
 
 Source issue side-effect audit after confirmed transition:
 

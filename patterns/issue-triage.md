@@ -80,15 +80,19 @@ override rules.
 Confirmed transitions are handled by the separate `issue-triage-transition`
 consumer. That route is request-only by default: it validates maintainer/collaborator
 permission, the exact slash command, and the fixed workflow confirmation phrase
-`CONFIRM_TRIAGE_TRANSITION`. For `ready-for-agent`, it creates or dedupes the
-independent Issue Fix Request carrier that a Fix Consumer may later claim. It
-still does not mutate the source issue tracker until the Route Table is
-explicitly promoted.
+`CONFIRM_TRIAGE_TRANSITION`. For `ready-for-agent`, it creates or dedupes a
+parseable Issue Fix Request request on the source issue as a structured comment
+when that source issue already exists. A Fix Consumer may later claim that
+request from the source issue lifecycle. Creating an independent Issue Fix
+Request issue is a narrow exception for missing source issues, cross-repository
+permission limits, source issues unsuitable for automation evidence, or explicit
+human-requested isolation. It still does not mutate tracker labels/state until
+the Route Table is explicitly promoted.
 
 | Side effects setting | What happens |
 | --- | --- |
 | Off by default | The loop records recommended transition evidence, request ids, reasons, confidence, brief drafts, and confirmation commands. It does not comment, label, close, reopen, or create Issue Fix Requests. |
-| Enabled and confirmed | The confirmed request may create or dedupe an independent Issue Fix Request carrier for `ready-for-agent`. It still does not set tracker state/labels or write public comments on the source issue. |
+| Enabled and confirmed | The confirmed request may create or dedupe a source issue Issue Fix Request comment for `ready-for-agent`. It still does not set tracker state/labels. Independent carrier issues require an explicit exception reason. |
 
 `wontfix` is a recommendation candidate only. Default confirmation blocks it for
 human review; it must not auto-close, auto-label, or write out-of-scope records.

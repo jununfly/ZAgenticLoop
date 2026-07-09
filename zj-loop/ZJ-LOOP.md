@@ -102,12 +102,14 @@ Current dogfood status:
   human-guard cases. It must not be folded back into `issue-backlog-triage`.
 - `issue-triage-transition` is implemented as a separate request-only confirmed
   transition consumer:
-  `Recommended Triage Transition -> Confirmed Triage Transition -> Issue Fix Request Carrier`.
+  `Recommended Triage Transition -> Confirmed Triage Transition -> Source Issue Fix Request Comment`.
   It requires maintainer/collaborator permission, the exact
   `/zj-loop confirm-triage-transition <request-id>` command, and fixed
   `CONFIRM_TRIAGE_TRANSITION` workflow confirmation phrase. It creates or
-  dedupes independent `ready-for-agent` Issue Fix Request carriers, but does
-  not mutate the source issue tracker live.
+  dedupes `ready-for-agent` Issue Fix Request comments on the source issue by
+  default. Independent Issue Fix Request issues are narrow exceptions and must
+  explain why the source issue cannot carry the lifecycle. It does not mutate
+  source issue labels/state live.
 - `changelog-drafter-report` is implemented as a release-prep report-only
   route:
   `Merged PR Batch / Manual Release Prep -> Route Decision -> Changelog Draft Evidence`.
