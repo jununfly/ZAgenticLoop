@@ -2,6 +2,7 @@ import { RouteStatus } from './route.js';
 export declare const ACTIVATION_SCHEMA_VERSION = 1;
 export declare const ALLOWED_ACTIVATION_PATTERNS: string[];
 export declare const ALLOWED_ACTIVATION_PERMISSIONS: string[];
+export declare const DEFAULT_BOUNDED_SLICE_MAX_SLICES = 30;
 export declare const ROADMAP_ACTIVATION_LOOP_MARKER = "zj-loop.generated.roadmap-activation";
 export declare const ACTIVATION_KINDS: {
     readonly request: "zj-loop.activation-request";
@@ -324,6 +325,46 @@ export declare function buildRoadmapActivationPrContract(input: {
         processRoadmapPath?: string;
     };
 }): string;
+export declare function buildRoadmapBoundedSlicePack(input: {
+    activationRequestId: string;
+    roadmapPath: string;
+    branchName: string;
+    maxSlices?: number;
+    leafSlices?: any[];
+    allowedPaths?: string[];
+    verificationCommands?: string[];
+}): {
+    schema: string;
+    activation_request_id: string;
+    run_mode: string;
+    max_slices: number;
+    branch_name: string;
+    roadmap_path: string;
+    status: string;
+    selected_slices: {
+        slice_id: string;
+        title: string;
+        parent_id: string;
+        status: string;
+        allowed_paths: any;
+        verification_commands: any;
+        commit_intent: string;
+    }[];
+    continuation_conditions: string[];
+    stop_conditions: string[];
+    result_requirements: string[];
+    next_steps: string[];
+};
+export declare function verifyRoadmapBoundedSliceResult(input: {
+    pack: any;
+    result: any;
+}): {
+    schema: string;
+    status: string;
+    errors: string[];
+    checked_slices: any;
+    max_slices: number;
+};
 export type RoadmapActivationLifecycleState = 'requested' | 'consumed' | 'running' | 'blocked' | 'failed' | 'completed' | 'merged';
 export declare function classifyRoadmapActivationLifecycleTransition(input: {
     currentState?: string;

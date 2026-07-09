@@ -7,6 +7,7 @@ import { RouteStatus } from './route.js';
 export const ACTIVATION_SCHEMA_VERSION = 1;
 export const ALLOWED_ACTIVATION_PATTERNS = ['roadmap-sliced-development'];
 export const ALLOWED_ACTIVATION_PERMISSIONS = ['admin', 'maintain', 'write'];
+export const DEFAULT_BOUNDED_SLICE_MAX_SLICES = 30;
 export const ROADMAP_ACTIVATION_LOOP_MARKER = 'zj-loop.generated.roadmap-activation';
 export const ACTIVATION_KINDS = {
   request: 'zj-loop.activation-request',
@@ -21,6 +22,27 @@ export const ACTIVATION_KINDS = {
 
 const RESUME_ANCHOR_FIELDS = ['roadmap_branch', 'roadmap_file', 'roadmap_view', 'next_action'];
 const STRUCTURED_COMMENT_PATTERN = /<!--\s*zj-loop(?<body>[\s\S]*?)-->/g;
+const BOUNDED_SLICE_CONTINUATION_CONDITIONS = [
+  'current leaf exists in the roadmap process file',
+  'current leaf is not completed or deferred',
+  'current branch is the activation branch',
+  'working tree is clean or changes are attributable to the current slice',
+  'slice status, notes, and evidence can be updated before commit',
+  'at least one verification command can run and be recorded',
+  'slice commit can be created with reviewable intent',
+  'completed_slices is less than max_slices',
+];
+const BOUNDED_SLICE_STOP_CONDITIONS = [
+  'max_slices reached',
+  'no eligible leaf remains',
+  'verification failed',
+  'high-risk path encountered',
+  'roadmap process file is invalid',
+  'requirements are ambiguous and need a human decision',
+  'dirty worktree cannot be attributed to the current slice',
+  'denylisted secret, auth, billing, payment, infrastructure, or migration path encountered',
+  'token, budget, or pause gate triggered',
+];
 
 export async function readActivationComments(path: string) {
   return JSON.parse(await readFile(path, 'utf8'));
@@ -491,6 +513,115 @@ export function buildRoadmapActivationPrContract(input: {
   ].join('\n');
 }
 
+export function buildRoadmapBoundedSlicePack(input: {
+  activationRequestId: string;
+  roadmapPath: string;
+  branchName: string;
+  maxSlices?: number;
+  leafSlices?: any[];
+  allowedPaths?: string[];
+  verificationCommands?: string[];
+}) {
+  const maxSlices = normalizeMaxSlices(input.maxSlices);
+  const leafSlices = Array.isArray(input.leafSlices) ? input.leafSlices : [];
+  const selectedSlices = leafSlices
+    .filter((slice) => isEligibleLeafSlice(slice))
+    .slice(0, maxSlices)
+    .map((slice, index) => ({
+      slice_id: String(slice.slice_id ?? slice.id ?? `slice-${index + 1}`),
+      title: String(slice.title ?? slice.name ?? `Slice ${index + 1}`),
+      parent_id: slice.parent_id === undefined ? '' : String(slice.parent_id),
+      status: String(slice.status ?? 'pending'),
+      allowed_paths: Array.isArray(slice.allowed_paths) ? slice.allowed_paths.map(String) : (input.allowedPaths ?? []),
+      verification_commands: Array.isArray(slice.verification_commands)
+        ? slice.verification_commands.map(String)
+        : (input.verificationCommands ?? []),
+      commit_intent: String(slice.commit_intent ?? `Implement ${String(slice.title ?? slice.name ?? `slice ${index + 1}`)}`),
+    }));
+
+  return {
+    schema: 'zj-loop.roadmap_bounded_slice_pack.v1',
+    activation_request_id: input.activationRequestId,
+    run_mode: 'bounded-slices',
+    max_slices: maxSlices,
+    branch_name: input.branchName,
+    roadmap_path: input.roadmapPath,
+    status: selectedSlices.length > 0 ? 'ready' : 'no-eligible-leaf',
+    selected_slices: selectedSlices,
+    continuation_conditions: [...BOUNDED_SLICE_CONTINUATION_CONDITIONS],
+    stop_conditions: [...BOUNDED_SLICE_STOP_CONDITIONS],
+    result_requirements: [
+      'each selected slice must report status, notes, and evidence',
+      'each completed slice must report at least one verification command result',
+      'each completed slice must report commit intent and commit hash or equivalent reviewable commit evidence',
+      'runner must stop immediately when any fixed stop condition is hit',
+    ],
+    next_steps: selectedSlices.length > 0
+      ? [
+          'Pass this pack to the configured external agent executor.',
+          'Require the executor to return a gate-backed bounded slice result.',
+          'Verify the result with zj-loop-roadmap-activation bounded-slices-verify before continuing.',
+        ]
+      : [
+          'Mark the roadmap activation as blocked or completed after human review.',
+          'Do not invent new leaf slices from this runner.',
+        ],
+  };
+}
+
+export function verifyRoadmapBoundedSliceResult(input: { pack: any; result: any }) {
+  const errors: string[] = [];
+  const pack = input.pack ?? {};
+  const result = input.result ?? {};
+  const maxSlices = normalizeMaxSlices(pack.max_slices);
+  const selectedSlices = Array.isArray(pack.selected_slices) ? pack.selected_slices : [];
+  const sliceResults = Array.isArray(result.slice_results) ? result.slice_results : [];
+
+  if (pack.schema !== 'zj-loop.roadmap_bounded_slice_pack.v1') errors.push('pack schema must be zj-loop.roadmap_bounded_slice_pack.v1');
+  if (result.schema !== 'zj-loop.roadmap_bounded_slice_result.v1') errors.push('result schema must be zj-loop.roadmap_bounded_slice_result.v1');
+  if (result.activation_request_id !== pack.activation_request_id) errors.push('activation_request_id must match pack');
+  if (result.branch_name !== pack.branch_name) errors.push('branch_name must match pack');
+  if (sliceResults.length > maxSlices) errors.push('slice_results exceeds max_slices');
+
+  const selectedIds = new Set(selectedSlices.map((slice: any) => String(slice.slice_id)));
+  for (const slice of sliceResults) {
+    const sliceId = String(slice.slice_id ?? '');
+    if (!selectedIds.has(sliceId)) errors.push(`slice ${sliceId || '<missing>'} was not selected by pack`);
+    if (!['completed', 'deferred', 'blocked'].includes(String(slice.status))) {
+      errors.push(`slice ${sliceId || '<missing>'} status must be completed, deferred, or blocked`);
+    }
+    if (!String(slice.notes ?? '').trim()) errors.push(`slice ${sliceId || '<missing>'} notes are required`);
+    if (!Array.isArray(slice.evidence) || slice.evidence.length === 0) {
+      errors.push(`slice ${sliceId || '<missing>'} evidence is required`);
+    }
+    if (slice.status === 'completed') {
+      if (!Array.isArray(slice.verification) || slice.verification.length === 0) {
+        errors.push(`slice ${sliceId || '<missing>'} verification evidence is required`);
+      }
+      if (!slice.verification?.some((entry: any) => String(entry.status) === 'passed' || String(entry.exit_code) === '0')) {
+        errors.push(`slice ${sliceId || '<missing>'} must include a passed verification command`);
+      }
+      if (!String(slice.commit?.intent ?? '').trim()) errors.push(`slice ${sliceId || '<missing>'} commit intent is required`);
+      if (!String(slice.commit?.hash ?? '').trim() && !String(slice.commit?.evidence ?? '').trim()) {
+        errors.push(`slice ${sliceId || '<missing>'} commit hash or reviewable commit evidence is required`);
+      }
+    }
+  }
+
+  const stopReason = String(result.stop_reason ?? '');
+  if (stopReason && !BOUNDED_SLICE_STOP_CONDITIONS.includes(stopReason)) {
+    errors.push(`stop_reason must be one of the fixed stop conditions: ${stopReason}`);
+  }
+
+  return {
+    schema: 'zj-loop.roadmap_bounded_slice_verification.v1',
+    status: errors.length === 0 ? 'passed' : 'failed',
+    errors,
+    checked_slices: sliceResults.length,
+    max_slices: maxSlices,
+  };
+}
+
 export type RoadmapActivationLifecycleState =
   | 'requested'
   | 'consumed'
@@ -499,6 +630,17 @@ export type RoadmapActivationLifecycleState =
   | 'failed'
   | 'completed'
   | 'merged';
+
+function normalizeMaxSlices(value: unknown) {
+  const parsed = Number(value ?? DEFAULT_BOUNDED_SLICE_MAX_SLICES);
+  if (!Number.isInteger(parsed) || parsed < 1) return DEFAULT_BOUNDED_SLICE_MAX_SLICES;
+  return parsed;
+}
+
+function isEligibleLeafSlice(slice: any) {
+  const status = String(slice?.status ?? 'pending').toLowerCase();
+  return status !== 'completed' && status !== 'deferred';
+}
 
 export function classifyRoadmapActivationLifecycleTransition(input: {
   currentState?: string;

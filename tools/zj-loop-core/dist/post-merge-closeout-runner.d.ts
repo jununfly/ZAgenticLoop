@@ -155,6 +155,53 @@ export declare function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
 export declare function buildPostMergeLiveRunnerEvidence(result: any, { createdAt }?: {
     createdAt?: string;
 }): import("./live-runner-contract.js").LiveRunnerEvidence;
+export declare function executePostMergeRoadmapCloseout(plan: PostMergeCloseoutPlan, { runner }?: {
+    runner?: CommandRunner;
+}): Promise<{
+    runner_evidence: import("./live-runner-contract.js").LiveRunnerEvidence;
+    status: string;
+    side_effects_executed: boolean;
+    execution: {
+        status: string;
+        steps: any[];
+    };
+    schemaVersion: typeof CLOSEOUT_EXECUTOR_VERSION;
+    kind: typeof CLOSEOUT_EXECUTOR_KIND;
+    mode: "dry-run" | "live";
+    pr: {
+        number: number | null;
+        url: string;
+        merged: boolean;
+        baseRefName: string;
+        headRefName: string;
+    };
+    repository: {
+        expected: string;
+        current: string;
+    };
+    roadmap: {
+        id: string;
+        branch: string;
+    };
+    carrier: {
+        issue: number | null;
+        expectedIssue: number | null;
+    };
+    contractPlan: any;
+    executorGuards: Array<{
+        name: string;
+        pass: boolean;
+        reason: string;
+    }>;
+    refusals: Array<{
+        layer: string;
+        reason: string;
+        guard?: string;
+    }>;
+    actions: any[];
+}>;
+export declare function buildCloseoutEvidenceComment(plan: PostMergeCloseoutPlan): string;
+export declare function buildCarrierCloseComment(plan: PostMergeCloseoutPlan): string;
 export declare function buildDryRunEvidenceComment(plan: PostMergeCloseoutPlan, { artifactName, liveCommand, }?: {
     artifactName?: string;
     liveCommand?: string;

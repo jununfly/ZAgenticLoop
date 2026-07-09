@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -8,12 +8,14 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildActivationRequestComment,
+  buildRoadmapBoundedSlicePack,
   buildRoadmapActivationBranchName,
   buildRoadmapActivationPrContract,
   buildRoadmapActivationPrTitle,
   dispatchRoadmapActivationCommand,
   hasRoadmapActivationLoopMarker,
   parseStructuredActivationComments,
+  verifyRoadmapBoundedSliceResult,
 } from '../tools/zj-loop-core/dist/roadmap-activation-runner.js';
 import {
   findRoute,
@@ -28,6 +30,7 @@ export async function validateRoadmapActivationUserProjectFixture(root = ROOT) {
   const project = path.join(dir, 'project');
 
   try {
+    await ensureLocalZJLoopInitRuntime(root);
     await exec(process.execPath, [path.join(root, 'tools/zj-loop-init/dist/cli.js'), project, '--add', 'github-actions']);
     const routeTablePath = path.join(project, 'zj-loop', 'zj-loop-route-table.yaml');
     const routeTableText = await readFile(routeTablePath, 'utf8');
@@ -75,6 +78,34 @@ export async function validateRoadmapActivationUserProjectFixture(root = ROOT) {
     assertFixture(branchName.startsWith(`zjal/${activationRequestId}-`), 'branch name should include activation id');
     assertFixture(prTitle.startsWith('Roadmap Activation:'), 'PR title should use fixed prefix');
     assertFixture(prContract.includes('zj-loop.roadmap_activation_pr_contract.v1'), 'PR contract should include schema');
+    const boundedSlicePack = buildRoadmapBoundedSlicePack({
+      activationRequestId,
+      branchName,
+      roadmapPath: 'docs/plans/roadmap-activation-321.md',
+      leafSlices: [
+        { id: '1-1', title: 'Prepare bounded execution', status: 'pending', verification_commands: ['npm test'] },
+      ],
+    });
+    const boundedSliceVerification = verifyRoadmapBoundedSliceResult({
+      pack: boundedSlicePack,
+      result: {
+        schema: 'zj-loop.roadmap_bounded_slice_result.v1',
+        activation_request_id: activationRequestId,
+        branch_name: branchName,
+        slice_results: [{
+          slice_id: '1-1',
+          status: 'completed',
+          notes: 'Prepared bounded execution.',
+          evidence: ['pack produced'],
+          verification: [{ command: 'npm test', status: 'passed', exit_code: 0 }],
+          commit: { intent: 'Prepare bounded execution', evidence: 'fixture commit evidence' },
+        }],
+        stop_reason: 'max_slices reached',
+      },
+    });
+    assertFixture(boundedSlicePack.max_slices === 30, 'bounded slice pack should default to 30 slices');
+    assertFixture(boundedSlicePack.selected_slices.length === 1, 'bounded slice pack should select eligible leaf');
+    assertFixture(boundedSliceVerification.status === 'passed', 'bounded slice result verification should pass');
 
     const duplicate = dispatchRoadmapActivationCommand({
       route,
@@ -120,10 +151,34 @@ export async function validateRoadmapActivationUserProjectFixture(root = ROOT) {
       activationRequestId,
       branchName,
       prTitle,
-      scenarios: ['created', 'duplicate', 'denied', 'disabled', 'loop-marker'],
+      maxSlices: boundedSlicePack.max_slices,
+      scenarios: ['created', 'bounded-slices-pack', 'bounded-slices-verify', 'duplicate', 'denied', 'disabled', 'loop-marker'],
     };
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function ensureLocalZJLoopInitRuntime(root) {
+  const initRoot = path.join(root, 'tools/zj-loop-init');
+  const currentCorePackage = JSON.parse(await readFile(path.join(root, 'tools/zj-loop-core/package.json'), 'utf8'));
+  const installedCorePackageRoot = path.join(initRoot, 'node_modules/@jununfly/zj-loop-core');
+  const installedCorePackagePath = path.join(installedCorePackageRoot, 'package.json');
+
+  try {
+    const installedCorePackage = JSON.parse(await readFile(installedCorePackagePath, 'utf8'));
+    if (installedCorePackage.version === currentCorePackage.version) return;
+  } catch {
+    // Missing runtime dependency is expected in clean CI checkouts.
+  }
+
+  await rm(installedCorePackageRoot, { recursive: true, force: true });
+  await mkdir(path.dirname(installedCorePackageRoot), { recursive: true });
+  await symlink(path.join(root, 'tools/zj-loop-core'), installedCorePackageRoot, 'dir');
+
+  const installed = await lstat(installedCorePackageRoot);
+  if (!installed.isSymbolicLink()) {
+    throw new Error('failed to link local @jununfly/zj-loop-core runtime for zj-loop-init fixture');
   }
 }
 

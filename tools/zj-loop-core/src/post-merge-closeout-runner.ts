@@ -341,6 +341,126 @@ export function buildPostMergeLiveRunnerEvidence(
   return evidence;
 }
 
+export async function executePostMergeRoadmapCloseout(
+  plan: PostMergeCloseoutPlan,
+  { runner = defaultPostMergeRunner }: { runner?: CommandRunner } = {},
+) {
+  if (plan.status !== 'ready-for-live-execution') {
+    const refused = {
+      ...plan,
+      execution: {
+        status: 'refused',
+        reason: 'plan-not-ready-for-live-execution',
+        steps: [],
+      },
+      side_effects_executed: false,
+    };
+    return {
+      ...refused,
+      runner_evidence: buildPostMergeLiveRunnerEvidence(refused),
+    };
+  }
+
+  const branch = plan.roadmap.branch;
+  const issue = plan.carrier.issue;
+  const steps: any[] = [];
+
+  await runRequired(steps, runner, 'git', ['fetch', 'origin']);
+  await runRequired(steps, runner, 'git', ['switch', 'main']);
+  await runRequired(steps, runner, 'git', ['merge', '--ff-only', 'origin/main']);
+
+  const localBranchProbe = await runProbe(steps, runner, 'git', [
+    'show-ref',
+    '--verify',
+    '--quiet',
+    `refs/heads/${branch}`,
+  ]);
+  if (localBranchProbe.exitCode === 0) {
+    const mergedBranches = await runRequired(steps, runner, 'git', ['branch', '--merged', 'main']);
+    if (!branchListContains(mergedBranches.stdout, branch)) {
+      throw new Error(`refusing to delete local branch ${branch}: not listed in git branch --merged main`);
+    }
+    await runRequired(steps, runner, 'git', ['branch', '-d', branch]);
+  } else {
+    steps.push({ name: 'delete-local-branch', status: 'skipped', reason: 'local-branch-absent', branch });
+  }
+
+  const remoteBranchProbe = await runProbe(steps, runner, 'git', [
+    'ls-remote',
+    '--exit-code',
+    '--heads',
+    'origin',
+    branch,
+  ]);
+  if (remoteBranchProbe.exitCode === 0) {
+    await runRequired(steps, runner, 'git', ['push', 'origin', '--delete', branch]);
+  } else {
+    steps.push({ name: 'delete-remote-branch', status: 'skipped', reason: 'remote-branch-absent', branch });
+  }
+
+  await runRequired(steps, runner, 'gh', [
+    'issue',
+    'comment',
+    String(issue),
+    '--body',
+    buildCloseoutEvidenceComment(plan),
+  ]);
+  await runRequired(steps, runner, 'gh', [
+    'issue',
+    'close',
+    String(issue),
+    '--comment',
+    buildCarrierCloseComment(plan),
+  ]);
+
+  const executed = {
+    ...plan,
+    status: 'executed',
+    side_effects_executed: true,
+    execution: {
+      status: 'executed',
+      steps,
+    },
+  };
+  return {
+    ...executed,
+    runner_evidence: buildPostMergeLiveRunnerEvidence(executed),
+  };
+}
+
+export function buildCloseoutEvidenceComment(plan: PostMergeCloseoutPlan) {
+  const fields = [
+    ['kind', 'zj-loop.post-merge-closeout-executed'],
+    ['version', CLOSEOUT_EXECUTOR_VERSION],
+    ['pr', plan.pr.number],
+    ['roadmap_branch', plan.roadmap.branch],
+    ['carrier_issue', plan.carrier.issue],
+    ['side_effects_executed', true],
+  ];
+  return [
+    'Post-merge roadmap closeout executed.',
+    '',
+    '<!-- zj-loop',
+    ...fields.map(([key, value]) => `${key}: ${value}`),
+    '-->',
+    '',
+    `- PR: #${plan.pr.number}`,
+    `- Roadmap branch: \`${plan.roadmap.branch}\``,
+    `- Carrier issue: #${plan.carrier.issue}`,
+    '- Cleanup: merged roadmap branch deleted when present; carrier issue closing follows this evidence comment.',
+  ].join('\n');
+}
+
+export function buildCarrierCloseComment(plan: PostMergeCloseoutPlan) {
+  return [
+    'Closing this Roadmap-Sliced Development activation carrier after post-merge closeout.',
+    '',
+    `- PR: #${plan.pr.number}`,
+    `- Roadmap branch: \`${plan.roadmap.branch}\``,
+    '- Contract guard: valid `zj-loop.post-merge-contract` with `no_pending_followups: true`.',
+  ].join('\n');
+}
+
 export function buildDryRunEvidenceComment(
   plan: PostMergeCloseoutPlan,
   {
@@ -564,8 +684,29 @@ async function runRequired(
   return result;
 }
 
+async function runProbe(
+  steps: any[],
+  runner: CommandRunner,
+  command: string,
+  args: string[],
+): Promise<CommandResult> {
+  const result = await runner(command, args);
+  steps.push({ name: commandStepName(command, args), status: result.exitCode === 0 ? 'present' : 'absent', command, args });
+  if (![0, 1, 2].includes(result.exitCode)) {
+    throw new Error(`${command} ${args.join(' ')} probe failed with exit ${result.exitCode}: ${result.stderr}`);
+  }
+  return result;
+}
+
 function commandStepName(command: string, args: string[]) {
   return [command, ...args.slice(0, 2)].join(' ');
+}
+
+function branchListContains(stdout: string, branch: string) {
+  return String(stdout ?? '')
+    .split('\n')
+    .map((line) => line.replace(/^\*\s*/, '').trim())
+    .includes(branch);
 }
 
 function isProtectedOrLongLivedBranch(branch: string | undefined) {

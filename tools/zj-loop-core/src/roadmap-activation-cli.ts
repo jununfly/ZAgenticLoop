@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 
 import {
+  buildRoadmapBoundedSlicePack,
   buildActivationRequestId,
   buildRoadmapActivationBranchName,
   buildRoadmapActivationPrContract,
@@ -9,6 +10,7 @@ import {
   dispatchRoadmapActivationCommand,
   readActivationComments,
   renderRoadmapActivationWorkflowSummary,
+  verifyRoadmapBoundedSliceResult,
 } from './roadmap-activation-runner.js';
 import { runCli } from './cli.js';
 import { findRoute, loadRouteTable } from './route.js';
@@ -77,6 +79,66 @@ if (argv[0] === 'activation-plan') {
       }
       if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());
       if (!result.routeDecision.allowed && result.action !== 'denied' && result.action !== 'unsupported-pattern') return 1;
+    },
+  }, argv);
+} else if (argv[0] === 'bounded-slices-pack') {
+  process.exitCode = await runCli({
+    name: 'zj-loop-roadmap-activation',
+    description: 'Build deterministic bounded-slices execution pack for Roadmap-Sliced Development.',
+    usage: 'zj-loop-roadmap-activation bounded-slices-pack --activation-request-id <id> --roadmap-path <path> --branch-name <branch> [--slices <path>] [--max-slices <n>] [--out <path>] [--json]',
+    options: [
+      { name: 'command', type: 'positional', description: 'Command', default: 'bounded-slices-pack' },
+      { name: 'activation-request-id', type: 'string', description: 'Stable activation request id' },
+      { name: 'roadmap-path', type: 'string', description: 'Process roadmap path' },
+      { name: 'branch-name', type: 'string', description: 'Activation branch name' },
+      { name: 'slices', type: 'string', description: 'JSON file containing leaf slice definitions' },
+      { name: 'max-slices', type: 'string', description: 'Maximum leaf slices to pack; defaults to 30' },
+      { name: 'out', type: 'string', description: 'Write JSON result to this path' },
+      { name: 'json', type: 'boolean', description: 'Print JSON output' },
+    ],
+    async handler({ io, options }) {
+      for (const key of ['activation-request-id', 'roadmap-path', 'branch-name']) {
+        if (typeof options[key] !== 'string') throw new Error(`--${key} is required`);
+      }
+      const leafSlices = typeof options.slices === 'string'
+        ? JSON.parse(await readFile(String(options.slices), 'utf8'))
+        : [];
+      const result = buildRoadmapBoundedSlicePack({
+        activationRequestId: String(options['activation-request-id']),
+        roadmapPath: String(options['roadmap-path']),
+        branchName: String(options['branch-name']),
+        maxSlices: typeof options['max-slices'] === 'string' ? Number(options['max-slices']) : undefined,
+        leafSlices,
+      });
+      const text = `${JSON.stringify(result, null, 2)}\n`;
+      if (typeof options.out === 'string') await writeFile(options.out, text);
+      if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());
+    },
+  }, argv);
+} else if (argv[0] === 'bounded-slices-verify') {
+  process.exitCode = await runCli({
+    name: 'zj-loop-roadmap-activation',
+    description: 'Verify gate-backed bounded-slices result evidence.',
+    usage: 'zj-loop-roadmap-activation bounded-slices-verify --pack <path> --result <path> [--out <path>] [--json]',
+    options: [
+      { name: 'command', type: 'positional', description: 'Command', default: 'bounded-slices-verify' },
+      { name: 'pack', type: 'string', description: 'Bounded-slices pack JSON path' },
+      { name: 'result', type: 'string', description: 'Bounded-slices result JSON path' },
+      { name: 'out', type: 'string', description: 'Write JSON verification to this path' },
+      { name: 'json', type: 'boolean', description: 'Print JSON output' },
+    ],
+    async handler({ io, options }) {
+      for (const key of ['pack', 'result']) {
+        if (typeof options[key] !== 'string') throw new Error(`--${key} is required`);
+      }
+      const verification = verifyRoadmapBoundedSliceResult({
+        pack: JSON.parse(await readFile(String(options.pack), 'utf8')),
+        result: JSON.parse(await readFile(String(options.result), 'utf8')),
+      });
+      const text = `${JSON.stringify(verification, null, 2)}\n`;
+      if (typeof options.out === 'string') await writeFile(options.out, text);
+      if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());
+      if (verification.status !== 'passed') return 1;
     },
   }, argv);
 } else if (argv[0] === 'contract-plan') {
