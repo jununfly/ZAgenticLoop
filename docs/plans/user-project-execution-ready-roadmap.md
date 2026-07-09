@@ -58,10 +58,18 @@ to Activation Request to Route Dispatcher to consumer dry-run plan, including
 disabled, duplicate, invalid actor, missing permission, and loop-prevention
 cases.
 
-- [ ] Leaf 3-1: add fixture/replay script for local Roadmap Activation
+- [x] Leaf 3-1: add fixture/replay script for local Roadmap Activation
   execution-ready dry-run.
-- [ ] Leaf 3-2: wire fixture into release gate.
-- [ ] Leaf 3-3: document GitHub smoke fixture as dogfood/periodic validation.
+  - Status: completed.
+  - Verification: `node --test
+    scripts/roadmap-activation-user-project-fixture.test.mjs` passed.
+- [x] Leaf 3-2: wire fixture into release gate.
+  - Status: completed.
+  - Verification: `npm run test:generated-bundle-release-gate` passed.
+- [x] Leaf 3-3: document GitHub smoke fixture as dogfood/periodic validation.
+  - Status: completed.
+  - Verification: documented in
+    `docs/testing/roadmap-activation-user-project-fixture.md`.
 
 ## Parent 4: Closeout And Durable Docs
 

@@ -5,6 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
+import { validateRoadmapActivationUserProjectFixture } from './roadmap-activation-user-project-fixture.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GENERATED_WORKFLOWS = [
   'zj-loop-smoke.yml',
@@ -114,17 +116,19 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
   }
 
   if (errors.length) throw new Error(errors.join('\n'));
+  const roadmapActivationFixture = await validateRoadmapActivationUserProjectFixture(root);
   return {
     workflowCount: GENERATED_WORKFLOWS.length,
     coreVersion: expectedCoreVersion,
     actionReadyRouteCount: ACTION_READY_ROUTES.size,
+    roadmapActivationFixture,
   };
 }
 
 async function main() {
   const result = await validateGeneratedBundleReleaseGate();
   console.log(
-    `Generated bundle release gate valid: ${result.workflowCount} workflows, core ${result.coreVersion}, ${result.actionReadyRouteCount} action routes ✓`,
+    `Generated bundle release gate valid: ${result.workflowCount} workflows, core ${result.coreVersion}, ${result.actionReadyRouteCount} action routes, Roadmap Activation fixture ${result.roadmapActivationFixture.activationRequestId} ✓`,
   );
 }
 
