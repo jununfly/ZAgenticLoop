@@ -12,11 +12,13 @@ import {
   buildRoadmapActivationPrContract,
   buildRoadmapActivationPrTitle,
   dispatchRoadmapActivationCommand,
-  findRoute,
   hasRoadmapActivationLoopMarker,
-  parseRouteTable,
   parseStructuredActivationComments,
-} from '../tools/zj-loop-core/dist/index.js';
+} from '../tools/zj-loop-core/dist/roadmap-activation-runner.js';
+import {
+  findRoute,
+  parseRouteTable,
+} from '../tools/zj-loop-core/dist/route.js';
 
 const exec = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
