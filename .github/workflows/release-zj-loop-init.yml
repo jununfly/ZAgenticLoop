@@ -31,7 +31,7 @@ jobs:
           cache-dependency-path: tools/zj-loop-init/package-lock.json
 
       - name: Ensure npm supports provenance publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@10.9.8
 
       - name: Test, build & publish
         working-directory: tools/zj-loop-init
