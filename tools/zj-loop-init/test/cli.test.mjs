@@ -174,6 +174,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.doesNotMatch(prSteward, /'\$\{\{ inputs\./);
     const issueTriage = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-issue-triage.yml'), 'utf8');
     assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
+    assert.match(issueTriage, /GH_TOKEN: \$\{\{ github\.token \}\}/);
     assert.match(issueTriage, /zj-loop-issue-triage-action action-plan/);
     assert.match(issueTriage, /zj-loop-issue-triage-transition confirm-plan/);
     assert.match(issueTriage, /zj-loop-issue-triage-transition request-body/);
