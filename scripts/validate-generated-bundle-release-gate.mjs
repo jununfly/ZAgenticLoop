@@ -24,6 +24,7 @@ const ACTION_READY_ROUTES = new Set([
   'ci-sweeper',
   'pr-steward-fix-request',
   'issue-triage-action',
+  'issue-triage-transition',
   'dependency-sweeper',
   'changelog-drafter-draft-request',
   'roadmap-sliced-development',

@@ -77,6 +77,14 @@ argument. Confirmed transitions use `zj-triage` semantics for canonical state
 roles, brief/comment templates, unusual-transition guards, and maintainer
 override rules.
 
+Confirmed transitions are handled by the separate `issue-triage-transition`
+consumer. That route is dry-run by default: it validates maintainer/collaborator
+permission, the exact slash command, and the fixed workflow confirmation phrase
+`CONFIRM_TRIAGE_TRANSITION`, then plans tracker role changes and the
+`zj-triage` brief/comment. For `ready-for-agent`, it also plans the Issue Fix
+Request that a Fix Consumer may later claim. It still does not mutate the issue
+tracker live until the Route Table is explicitly promoted.
+
 | Side effects setting | What happens |
 | --- | --- |
 | Off by default | The loop records recommended transition evidence, request ids, reasons, confidence, brief drafts, and confirmation commands. It does not comment, label, close, reopen, or create Issue Fix Requests. |
@@ -122,10 +130,10 @@ write public issue comments, apply labels, close/reopen issues, assign people,
 change milestones, perform formal lifecycle transitions, create Issue Fix
 Requests, or batch-mutate the issue tracker in recommendation mode.
 
-If a triage observation should become a bounded issue side effect, route it
-through the separate `issue-triage-action` consumer. That route is dry-run by
-default and only accepts fixed action requests for allowlisted labels or fixed
-comment templates. Do not add these side effects to `issue-backlog-triage`.
+If a triage observation should become a bounded issue side effect, route
+canonical state transitions through `issue-triage-transition`, and route narrow
+label/comment actions through `issue-triage-action`. Both routes are dry-run by
+default. Do not add these side effects to `issue-backlog-triage`.
 
 **Grok Build TUI**:
 ```

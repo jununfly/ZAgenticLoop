@@ -10,7 +10,14 @@ export const COMPLETION_FORMS_BY_KIND = {
     'draft-consumer': ['draft-pr', 'draft-evidence', 'escalation-issue'],
     'cleanup-consumer': ['cleanup-done', 'cleanup-skipped', 'escalation-issue'],
     'activation-consumer': ['roadmap-branch-pr', 'activation-failed', 'activation-resumable'],
-    'triage-action-consumer': ['triage-label-applied', 'triage-comment-posted', 'triage-action-skipped', 'escalation-issue'],
+    'triage-action-consumer': [
+        'triage-label-applied',
+        'triage-comment-posted',
+        'triage-transition-confirmed',
+        'issue-fix-request-created',
+        'triage-action-skipped',
+        'escalation-issue',
+    ],
 };
 export const LIVE_RUNNER_SIDE_EFFECT_LEVELS = [
     'none',

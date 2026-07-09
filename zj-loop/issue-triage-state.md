@@ -17,6 +17,13 @@ Last run: 2026-07-08
     `triage-action-skipped`, `escalation-issue`
   - Protocol maturity: `designed`
   - Runner maturity: `replayed`
+- Route: `issue-triage-transition`
+  - Consumer kind: `triage-action-consumer`
+  - Execution mode: `dry-run`
+  - Completion forms: `triage-transition-confirmed`,
+    `issue-fix-request-created`, `triage-action-skipped`, `escalation-issue`
+  - Protocol maturity: `designed`
+  - Runner maturity: `replayed`
 
 ## Allowed Observations
 
@@ -42,6 +49,11 @@ Last run: 2026-07-08
   comment dry-run, unsupported label rejection, freeform comment rejection,
   human-guard escalation, and live refusal until dogfood enables it:
   `scripts/issue-triage-action-runner.test.mjs`.
+- Issue Triage Transition runner verifies maintainer/collaborator confirmation,
+  exact slash command matching, fixed confirmation phrase, `ready-for-agent`
+  Issue Fix Request planning, `needs-info` triage notes planning, and default
+  `wontfix` escalation:
+  `tools/zj-loop-core/test/issue-triage-transition-runner.test.mjs`.
 
 ## Boundary
 
@@ -52,8 +64,11 @@ milestones, close/reopen issues, perform formal lifecycle transitions,
 batch-mutate an issue tracker, create Issue Fix Requests, or start consumer
 work.
 
-Issue side effects are separated into `issue-triage-action`. That route is a
-dry-run, replayed consumer only. It may plan narrowly allowlisted labels or
-fixed comment templates, but it must not perform live issue mutation until
-workflow-dispatch dogfood evidence exists and the Route Table is explicitly
-promoted to `execution.mode: live`.
+Issue side effects are separated into `issue-triage-transition` and
+`issue-triage-action`. Both routes are dry-run, replayed consumers only.
+`issue-triage-transition` handles canonical `zj-triage` role/comment plans and
+`ready-for-agent` Issue Fix Request plans after fixed confirmation.
+`issue-triage-action` handles narrowly allowlisted labels or fixed comment
+templates. Neither route may perform live issue mutation until workflow-dispatch
+dogfood evidence exists and the Route Table is explicitly promoted to
+`execution.mode: live`.

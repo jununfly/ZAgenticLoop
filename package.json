@@ -13,6 +13,7 @@
     "test:dependency-sweeper-live-runner": "node --test scripts/dependency-sweeper-live-runner.test.mjs",
     "test:issue-backlog-triage": "node --test scripts/issue-backlog-triage-e2e-replay.test.mjs",
     "test:issue-triage-action": "node --test scripts/issue-triage-action-runner.test.mjs scripts/live-runner-contract.test.mjs",
+    "test:issue-triage-transition": "cd tools/zj-loop-core && npm run build && node --test test/issue-triage-transition-runner.test.mjs",
     "test:pr-steward-report": "node --test scripts/pr-steward-report-e2e-replay.test.mjs",
     "test:pr-steward-fix-request": "node --test scripts/pr-steward-fix-request-e2e-replay.test.mjs",
     "test:pr-steward-claim": "node --test scripts/pr-steward-claim-e2e-replay.test.mjs",

@@ -255,6 +255,37 @@ disabled_dispatch_routes:
       batch_mutation_allowed: false
     note: "Enable dry-run first; live issue mutation requires later explicit promotion and generated-bundle evidence."
 
+  - route_id: "issue-triage-transition"
+    enabled: false
+    request_kind: "triage-transition-confirmation"
+    consumer: "issue-triage-transition"
+    consumer_kind: "triage-action-consumer"
+    execution:
+      mode: "dry-run"
+      side_effect_level: "label"
+      completion_forms: ["triage-transition-confirmed", "issue-fix-request-created", "triage-action-skipped", "escalation-issue"]
+    maturity:
+      protocol: "install-ready"
+      runner: "install-ready"
+    capabilities:
+      scopes: ["issue-backlog", "triage-transition", "zj-triage-role"]
+      verifiers: ["route-replay", "zj-triage-brief", "forbidden-side-effect-check"]
+      max_side_effect_level: "label"
+    evidence_store: "zj-loop/issue-triage-state.md"
+    guards:
+      side_effects_allowed: false
+      live_side_effects_allowed: false
+      actor_permission_required: "maintainer-or-collaborator"
+      fixed_confirmation_phrase: "CONFIRM_TRIAGE_TRANSITION"
+      public_issue_comment_allowed: "zj-triage-template-only"
+      label_mutation_allowed: "canonical-triage-role-only"
+      close_reopen_allowed: false
+      assignment_allowed: false
+      milestone_allowed: false
+      batch_mutation_allowed: false
+      wontfix_default_confirmation_allowed: false
+    note: "Enable when maintainers should confirm recommended triage transitions through fixed request ids and dry-run evidence."
+
   - route_id: "dependency-sweeper"
     enabled: false
     request_kind: "issue-fix-request"
