@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-issue-triage
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 1027cf8a7e652741
+# zj-loop-template-hash: 4bc4a3ddbcbf12ab
 
 name: ZJ Loop Issue Triage
 
@@ -38,6 +38,7 @@ jobs:
 
       - name: Issue triage route evidence
         env:
+          GH_TOKEN: ${{ github.token }}
           TRIAGE_ACTION_REQUEST_JSON: ${{ inputs.triage_action_request_json }}
           TRIAGE_TRANSITION_REQUEST_JSON: ${{ inputs.triage_transition_request_json }}
           TRIAGE_TRANSITION_CONFIRMATION: ${{ inputs.triage_transition_confirmation }}
