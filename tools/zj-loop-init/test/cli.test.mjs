@@ -44,6 +44,24 @@ test('zj-loop-init dry-run scaffolds daily-triage', async () => {
   }
 });
 
+test('zj-loop-init scaffolds daily-triage runtime files with examples and gitignore entries', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-daily-triage-runtime-'));
+  try {
+    await exec('node', [CLI, dir, '--pattern', 'daily-triage', '--tool', 'grok']);
+    await access(path.join(dir, 'zj-loop', 'STATE.md'));
+    await access(path.join(dir, 'zj-loop', 'STATE.md.example'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md.example'));
+
+    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+    assert.match(gitignore, /# ZJ Loop local runtime state/);
+    assert.match(gitignore, /zj-loop\/STATE\.md/);
+    assert.match(gitignore, /zj-loop\/zj-loop-run-log\.md/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init accepts roadmap-sliced-development canonical id only', async () => {
   const canonical = await exec('node', [
     CLI,
@@ -86,6 +104,26 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?enabled: false/);
     assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?mode: "request-only"/);
     assert.match(routeTable, /route_id: "issue-triage-transition"[\s\S]*?side_effect_level: "request"/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init does not overwrite an existing loop contract unless --force is explicit', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-existing-loop-contract-'));
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    const loopPath = path.join(dir, 'zj-loop', 'ZJ-LOOP.md');
+    await writeFile(loopPath, '# Existing Loop Contract\n');
+
+    const skipped = await exec('node', [CLI, dir, '--pattern', 'daily-triage', '--tool', 'grok']);
+    assert.match(skipped.stdout, /skipped: zj-loop\/ZJ-LOOP\.md already exists/);
+    assert.match(skipped.stdout, /rerun with --force to replace it intentionally/);
+    assert.equal(await readFile(loopPath, 'utf8'), '# Existing Loop Contract\n');
+
+    const forced = await exec('node', [CLI, dir, '--pattern', 'daily-triage', '--tool', 'grok', '--force']);
+    assert.match(forced.stdout, /OVERWRITTEN with --force: zj-loop\/ZJ-LOOP\.md/);
+    assert.notEqual(await readFile(loopPath, 'utf8'), '# Existing Loop Contract\n');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

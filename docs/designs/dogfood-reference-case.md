@@ -112,6 +112,28 @@ The generated bundle must remain portable. It should call published package
 commands/APIs and avoid repository-local scripts that user projects would not
 have.
 
+## Issue 6 Consumption Evidence
+
+Issue [#6](https://github.com/jununfly/ZAgenticLoop/issues/6) was consumed as a
+real `issue-backlog-triage -> issue-triage-transition ->
+roadmap-sliced-development` dogfood case:
+
+1. `issue-triage-transition` created a source issue Issue Fix Request comment:
+   [issuecomment-4925604217](https://github.com/jununfly/ZAgenticLoop/issues/6#issuecomment-4925604217).
+2. The maintainer added `/zj-loop start roadmap-sliced-development` on the
+   source issue:
+   [issuecomment-4925642070](https://github.com/jununfly/ZAgenticLoop/issues/6#issuecomment-4925642070).
+3. `ZJ Loop Roadmap Activation` ran successfully:
+   [29022420139](https://github.com/jununfly/ZAgenticLoop/actions/runs/29022420139).
+4. Roadmap-Sliced Development executed on branch
+   `zjal/issue-6-daily-triage-local-registry`.
+
+The run fixed the product gap that caused the original ZCodeGraph dogfood
+confusion: cost estimation now uses local registry truth by default, init no
+longer silently replaces the active loop contract, daily-triage runtime state
+has local/default-safe scaffolding, and docs distinguish readiness from
+execution authority.
+
 Release readiness for the generated bundle is checked by
 `npm run test:generated-bundle-release-gate`. The gate fails if generated
 workflows drift from templates, if generated workflows pin a different

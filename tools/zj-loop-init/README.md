@@ -46,6 +46,15 @@ Every scaffold also creates:
 - `zj-loop/zj-loop-constraints.md` — structured runtime constraints
 - `zj-loop-budget` skill — runtime budget guard at start/end of each run
 
+For `daily-triage`, `zj-loop/STATE.md` and
+`zj-loop/zj-loop-run-log.md` are local runtime files by default. The init command
+also creates `.example` copies and adds the live runtime files to `.gitignore`,
+so teams do not accidentally commit one machine's cursor.
+
+If `zj-loop/ZJ-LOOP.md` already exists, init skips it by default and prints a
+next step. Use `--force` only when you intentionally want to replace the active
+loop contract.
+
 Manual starter copies should use the same canonical route table instead of
 maintaining starter-specific copies:
 

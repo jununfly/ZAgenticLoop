@@ -426,6 +426,15 @@ The architecture-improvement roadmap produced these durable outcomes:
 - `zj-loop-cost`, `zj-loop-sync`, `zj-loop-audit`, and `zj-loop-init` now share
   the core single-command CLI harness while preserving their product-specific
   output and side effects.
+- `zj-loop-cost` treats the user project as the normal source of truth: a
+  project root makes `patterns/registry.yaml` preferred over packaged defaults,
+  `--registry` selects an explicit registry, `--package-registry` intentionally
+  falls back to bundled metadata, and both human and JSON output include the
+  registry source.
+- `zj-loop-init` protects the active loop contract by skipping an existing
+  `zj-loop/ZJ-LOOP.md` unless `--force` is explicit. For `daily-triage`, init
+  now scaffolds local runtime state files alongside `.example` templates and
+  adds the live cursor/run-log files to the target `.gitignore`.
 - User-project loop artifacts now converge under the `zj-loop/` namespace, with
   init, audit, sync, MCP, starters, templates, examples, and docs aligned to
   `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`,
