@@ -4,7 +4,27 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Architecture](docs/designs/architecture.md) · [Route Table Architecture](docs/designs/route-table-architecture.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Release playbook](docs/RELEASE.md)
+
+## What's New In This Release
+
+This release is centered on two dogfood-proven routes that turn loop design into
+an executable user-project path:
+
+1. **Plan/PRD intake to Roadmap-Sliced Development**
+   Maintainer issue comments can activate `roadmap-sliced-development`, create
+   a bounded roadmap branch/PR handoff, preserve process evidence, and finish
+   with guarded post-merge closeout.
+
+2. **Issue backlog triage to source-issue request handoff**
+   Open issues can be scanned into stable triage recommendations. A
+   maintainer/collaborator can confirm a transition, and the system creates or
+   dedupes request evidence on the source issue instead of spawning confusing
+   duplicate carrier issues.
+
+The release also tightens the architecture around Route Decision, Route Table
+control, consumer execution, and triage state so agents can see where authority
+lives instead of guessing from prose.
 
 ## What You Get
 
@@ -27,9 +47,24 @@ It gives you a method, production patterns, starter kits, and small CLIs for mov
 The shortest mental model: **Pattern -> Starter -> Route Table -> Memory -> Verifier -> Story**.
 
 - **User story:** move from ad-hoc prompting to repeatable Agentic Loop Working without giving up human judgment.
-- **Backbone:** choose a Pattern, scaffold a Starter, keep routing policy in `zj-loop/zj-loop-route-table.yaml`, preserve Memory in state/run logs, add verifier separation, and use Human Gates for risky boundaries.
+- **Backbone:** choose a Pattern, scaffold a Starter, keep routing policy in `zj-loop/zj-loop-route-table.yaml`, preserve Memory in state/run logs, route signals through deterministic consumers, and use Human Gates only at risky boundaries.
 - **Adoption path:** Quickstart with Daily Triage, run report-only, audit structural readiness, estimate cost from the local registry, then raise execution authority only after real loop activity is visible.
 - **Evidence:** the pattern catalog is backed by [registry metadata](patterns/registry.yaml), [production stories](stories/), and this repo's [dogfood reference case](docs/designs/dogfood-reference-case.md).
+
+## Architecture Map
+
+The larger architecture docs are meant to answer different questions:
+
+| Question | Read |
+|----------|------|
+| How do packages, patterns, starters, registry data, MCP, and CLIs fit together? | [Architecture](docs/designs/architecture.md) |
+| Where does routing policy live, and how does a signal become a route decision? | [Route Table Architecture](docs/designs/route-table-architecture.md) |
+| How should issue and daily triage divide discovery, recommendation, and side effects? | [Triage Architecture](docs/designs/triage-architecture.md) |
+| What separates a route being installed, dogfood-verified, execution-ready, or live? | [Route Consumer Execution Architecture](docs/designs/route-consumer-execution-architecture.md) |
+
+The important boundary: **readiness is not authority**. Readiness says the repo
+has the structure and evidence to run a loop. Authority is granted by Route
+Table status, route mode, confirmation phrases, and consumer-specific guards.
 
 ## Dogfood Reference
 
@@ -125,24 +160,29 @@ bounded consumer outcomes. Side-effecting consumers still need explicit Route
 Table enablement:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route disable ci-sweeper
 ```
 
 Choose the first enabled path by route readiness, not by installation order.
-The first execution-ready route set is:
+The first execution-ready route set now has two practical user-facing paths:
 
 - `roadmap-sliced-development`: issue slash command to Activation Request to
   bounded roadmap branch/PR bootstrap.
-- `ci-sweeper`: failed workflow to durable GitHub Issue Fix Request.
 - `issue-backlog-triage`: open issue backlog to recommended triage transition
   evidence with fixed confirmation commands.
 - `issue-triage-transition`: maintainer/collaborator confirmation to
   request-only source issue Issue Fix Request comments for `ready-for-agent`
   recommendations.
+- `ci-sweeper`: failed workflow to durable GitHub Issue Fix Request.
 - `post-merge-roadmap-closeout`: merged Roadmap-Sliced PR to guarded dry-run
   closeout, with optional fixed-phrase live cleanup.
+
+Those paths are deliberately request-backed: report-only scanners recommend,
+confirmed transitions create durable request evidence, and execution consumers
+produce branches, PRs, repair plans, or closeout evidence inside their own
+authority boundary.
 
 Report-only routes are intentionally evidence-only; other action-capable routes
 such as `pr-steward-fix-request`, `dependency-sweeper`,
@@ -262,12 +302,12 @@ See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patte
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
-| `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.3` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, state files, budget, and run logs | `0.1.6` |
-| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.3` |
-| `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.4` |
-| `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state and config | `0.1.2` |
-| `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, route table, state, and safety docs | `0.1.3` |
+| `@jununfly/zj-loop-core` | library + route CLIs | Shared registry, route decisions, consumer runners, project evidence, semantic queries, and CLI harness | `0.1.4` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, local runtime state, generated workflow bundle, budget, and run logs | `0.1.7` |
+| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score, policy suggestions, and generated artifact checks | `0.1.4` |
+| `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by local/project registry, pattern, level, and cadence | `0.1.5` |
+| `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state, route table, generated workflows, and config | `0.1.3` |
+| `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, route table, triage state, state, and safety docs | `0.1.4` |
 | `@jununfly/zj-goal-audit` | `zj-goal-audit` | Goal Readiness Score for bounded run-until-done work | `0.1.1` |
 
 Release details live in [docs/RELEASE.md](docs/RELEASE.md). The first release used `NPM_TOKEN`; Trusted Publisher is tracked as a post-first-release hardening step.

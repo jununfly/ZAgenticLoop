@@ -1,0 +1,107 @@
+{
+  "title": "Release Preparation",
+  "description": "Prepare the next ZAgenticLoop npm release using package-level tags and Roadmap-Sliced handoff discipline.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Release Preparation",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Release scope and version policy",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Which packages have release-relevant local changes since their latest package tag?",
+          "answer": "Release candidates: @jununfly/zj-loop-core, @jununfly/zj-loop-init, @jununfly/zj-loop-cost, @jununfly/zj-loop-audit, @jununfly/zj-loop-sync, @jununfly/zj-loop-mcp-server. @jununfly/zj-goal-audit has no package-local changes since zj-goal-audit-v0.1.1.",
+          "note": "Verified by git diff --name-only <latest-package-tag>..HEAD per package and npm view latest versions."
+        },
+        {
+          "q": "Should the release include every package with package-local changes and skip unchanged packages?",
+          "answer": "Yes. Publish patch releases for core, init, cost, audit, sync, and mcp-server; skip goal-audit because it has no package-local change since its latest tag.",
+          "note": "User confirmed. README must also be updated to emphasize the two completed live routes and summarize major architecture documents."
+        }
+      ],
+      "notes": "Scope confirmed: release six changed packages as patch versions; skip zj-goal-audit."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Package version bump and changelog readiness",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "How should package versions be bumped for this release?",
+          "answer": "Patch bump the six changed release-managed packages: core 0.1.4, init 0.1.7, cost 0.1.5, audit 0.1.4, sync 0.1.3, mcp-server 0.1.4. Leave goal-audit at 0.1.1.",
+          "note": "Package lock root versions were updated by npm version --no-git-tag-version. README now presents the two dogfood-proven routes and links major architecture docs."
+        }
+      ],
+      "notes": "Versions and README release positioning updated. Audit changelog has 0.1.4 entry; other changed packages do not currently maintain package-local changelogs."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Release verification gates",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Which release verification gates passed before PR handoff?",
+          "answer": "Passed: six changed package test suites; npm run test:release-workflows; npm run test:release-ready; npm run test:generated-bundle-release-gate; npm run check:zj-loop-init; bash scripts/ci-audit-gates.sh; bash scripts/ci-validate-gates.sh; git diff --check.",
+          "note": "ci-validate first hit npm registry DNS in sandbox, then passed with network access. Generated bundle gate exposed stale core pins; fixed templates, generated workflows, docs, and tests."
+        }
+      ],
+      "notes": "All release verification gates passed after updating generated workflow/package pins and test expectations."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Post-publish smoke and closeout",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": "After publish, smoke npm view/npx for released packages and then close out process roadmap into durable release notes if needed."
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Tag push and workflow monitoring",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "When should release tags be pushed?",
+          "answer": "After the release-prep PR is reviewed and merged to origin/main. Tags should be created from the final main commit, not from the preparation branch.",
+          "note": "This preserves human review for workflow/template changes and keeps tag-triggered npm publish workflows on reviewed main."
+        }
+      ],
+      "notes": "Pending human merge of release-prep PR. After merge, tag six package releases from origin/main and monitor release workflows."
+    }
+  },
+  "metadata": {
+    "created": "2026-07-09 22:11:20",
+    "updated": "2026-07-09 22:28:08",
+    "md_file": "docs/plans/release-prep-roadmap.md"
+  }
+}
