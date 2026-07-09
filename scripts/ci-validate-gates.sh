@@ -25,7 +25,7 @@ test -f templates/zj-loop-run-log.md.template || (echo "Missing zj-loop-run-log 
 test -f templates/zj-loop-budget.md.template || (echo "Missing zj-loop-budget template"; exit 1)
 echo "Templates present ✓"
 
-npm install --no-save yaml@2 ajv@8
+npm install --no-save yaml@2 ajv@8 zod@3
 node scripts/validate-registry.mjs
 node scripts/check-zj-loop-init-sync.mjs
 node scripts/validate-release-workflows.mjs

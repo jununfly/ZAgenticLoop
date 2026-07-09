@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -30,6 +30,7 @@ export async function validateRoadmapActivationUserProjectFixture(root = ROOT) {
   const project = path.join(dir, 'project');
 
   try {
+    await ensureLocalZJLoopInitRuntime(root);
     await exec(process.execPath, [path.join(root, 'tools/zj-loop-init/dist/cli.js'), project, '--add', 'github-actions']);
     const routeTablePath = path.join(project, 'zj-loop', 'zj-loop-route-table.yaml');
     const routeTableText = await readFile(routeTablePath, 'utf8');
@@ -155,6 +156,29 @@ export async function validateRoadmapActivationUserProjectFixture(root = ROOT) {
     };
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function ensureLocalZJLoopInitRuntime(root) {
+  const initRoot = path.join(root, 'tools/zj-loop-init');
+  const currentCorePackage = JSON.parse(await readFile(path.join(root, 'tools/zj-loop-core/package.json'), 'utf8'));
+  const installedCorePackageRoot = path.join(initRoot, 'node_modules/@jununfly/zj-loop-core');
+  const installedCorePackagePath = path.join(installedCorePackageRoot, 'package.json');
+
+  try {
+    const installedCorePackage = JSON.parse(await readFile(installedCorePackagePath, 'utf8'));
+    if (installedCorePackage.version === currentCorePackage.version) return;
+  } catch {
+    // Missing runtime dependency is expected in clean CI checkouts.
+  }
+
+  await rm(installedCorePackageRoot, { recursive: true, force: true });
+  await mkdir(path.dirname(installedCorePackageRoot), { recursive: true });
+  await symlink(path.join(root, 'tools/zj-loop-core'), installedCorePackageRoot, 'dir');
+
+  const installed = await lstat(installedCorePackageRoot);
+  if (!installed.isSymbolicLink()) {
+    throw new Error('failed to link local @jununfly/zj-loop-core runtime for zj-loop-init fixture');
   }
 }
 
