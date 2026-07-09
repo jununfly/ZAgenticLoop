@@ -177,6 +177,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     const roadmapActivation = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-roadmap-activation.yml'), 'utf8');
     assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
     assert.match(roadmapActivation, /zj-loop-roadmap-activation activation-plan/);
+    assert.match(roadmapActivation, /zj-loop-roadmap-activation contract-plan/);
     assert.doesNotMatch(roadmapActivation, /'\$\{\{ inputs\./);
     assert.match(postMergeCleanup, /zj-loop-route dispatch post-merge-roadmap-closeout/);
   } finally {

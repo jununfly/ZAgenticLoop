@@ -38,11 +38,18 @@ authorization, dedupe, stable IDs, carrier comments, route validation,
 branch/PR/contract generation, lifecycle classification, loop prevention, and
 workflow summary next steps.
 
-- [ ] Leaf 2-1: add Roadmap Activation contract helpers for stable IDs,
+- [x] Leaf 2-1: add Roadmap Activation contract helpers for stable IDs,
   branch/PR naming, PR body contract, lifecycle transitions, and loop markers.
-- [ ] Leaf 2-2: expose contract helpers through the Roadmap Activation CLI.
-- [ ] Leaf 2-3: update workflow template to call deterministic package
+  - Status: completed.
+  - Verification: `npm run test:zj-loop-core` passed.
+- [x] Leaf 2-2: expose contract helpers through the Roadmap Activation CLI.
+  - Status: completed.
+  - Verification: `npm run test:zj-loop-core` passed.
+- [x] Leaf 2-3: update workflow template to call deterministic package
   commands and emit structured evidence.
+  - Status: completed.
+  - Verification: `npm run test:zj-loop-core`, `npm run test:zj-loop-init`,
+    and `npm run test:generated-bundle-release-gate` passed.
 
 ## Parent 3: Deterministic User-Project Fixture
 
