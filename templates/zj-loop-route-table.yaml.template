@@ -31,8 +31,8 @@ routes:
       side_effect_level: "evidence"
       completion_forms: ["human-decision"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["high-risk-review", "unknown-risk-review"]
       verifiers: ["human-review"]
@@ -56,8 +56,8 @@ routes:
       side_effect_level: "evidence"
       completion_forms: ["report-evidence"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["noise-suppression", "route-decision"]
       verifiers: ["route-decision-evidence"]
@@ -81,8 +81,8 @@ routes:
       side_effect_level: "evidence"
       completion_forms: ["report-evidence"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["__PATTERN_ID__", "route-decision"]
       verifiers: ["route-decision-evidence"]
@@ -106,8 +106,8 @@ routes:
       side_effect_level: "evidence"
       completion_forms: ["report-evidence"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["manual-smoke", "generated-workflow"]
       verifiers: ["workflow-summary"]
@@ -133,8 +133,8 @@ disabled_dispatch_routes:
       side_effect_level: "request"
       completion_forms: ["repair-pr", "escalation-issue"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["ci", "generated-workflow"]
       verifiers: ["workflow-run", "gates", "diff-check"]
@@ -152,8 +152,8 @@ disabled_dispatch_routes:
       side_effect_level: "evidence"
       completion_forms: ["report-evidence"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["pull-request", "status-observation"]
       verifiers: ["route-decision-evidence", "forbidden-side-effect-check"]
@@ -177,8 +177,8 @@ disabled_dispatch_routes:
       side_effect_level: "claim"
       completion_forms: ["repair-pr", "escalation-issue"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["pull-request", "failed-check-rollup"]
       verifiers: ["status-check-rollup", "request-claim"]
@@ -208,8 +208,8 @@ disabled_dispatch_routes:
       side_effect_level: "evidence"
       completion_forms: ["report-evidence"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["issue-backlog", "triage-observation"]
       verifiers: ["route-decision-evidence", "forbidden-side-effect-check"]
@@ -236,8 +236,8 @@ disabled_dispatch_routes:
       side_effect_level: "label"
       completion_forms: ["triage-label-applied", "triage-comment-posted", "triage-action-skipped", "escalation-issue"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["issue-backlog", "triage-label", "fixed-triage-comment"]
       verifiers: ["allowlisted-triage-action", "forbidden-side-effect-check"]
@@ -265,8 +265,8 @@ disabled_dispatch_routes:
       side_effect_level: "request"
       completion_forms: ["repair-pr", "escalation-issue"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["dependency", "patch-update", "minor-update"]
       verifiers: ["package-risk-check", "verification-gate"]
@@ -284,8 +284,8 @@ disabled_dispatch_routes:
       side_effect_level: "evidence"
       completion_forms: ["draft-pr", "draft-evidence", "escalation-issue"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["release-prep", "merged-pr-batch", "changelog-observation"]
       verifiers: ["route-decision-evidence", "human-review-boundary"]
@@ -304,16 +304,16 @@ disabled_dispatch_routes:
 
   - route_id: "changelog-drafter-draft-request"
     enabled: false
-    request_kind: "report-only"
+    request_kind: "draft-request"
     consumer: "changelog-drafter"
     consumer_kind: "draft-consumer"
     execution:
-      mode: "report-only"
+      mode: "dry-run"
       side_effect_level: "evidence"
       completion_forms: ["draft-pr", "draft-evidence", "escalation-issue"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["release-prep", "draft-request"]
       verifiers: ["existing-changelog-report", "dedupe-check"]
@@ -342,8 +342,8 @@ disabled_dispatch_routes:
       side_effect_level: "request"
       completion_forms: ["roadmap-branch-pr", "activation-failed", "activation-resumable"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["roadmap-activation", "roadmap-bootstrap"]
       verifiers: ["activation-comment", "resume-anchors", "roadmap-gates"]
@@ -362,8 +362,8 @@ disabled_dispatch_routes:
       side_effect_level: "issue-comment"
       completion_forms: ["cleanup-done", "cleanup-skipped", "escalation-issue"]
     maturity:
-      protocol: "designed"
-      runner: "missing"
+      protocol: "user-project-ready"
+      runner: "user-project-ready"
     capabilities:
       scopes: ["roadmap-closeout", "merged-zjal-branch", "carrier-issue-closeout"]
       verifiers: ["post-merge-contract", "branch-prefix-allowlist", "fixed-confirmation-phrase"]

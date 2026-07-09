@@ -30,6 +30,7 @@ const GITHUB_ACTIONS_WORKFLOW_TEMPLATES = [
   'zj-loop-issue-triage.yml',
   'zj-loop-dependency-sweeper.yml',
   'zj-loop-changelog-drafter.yml',
+  'zj-loop-roadmap-activation.yml',
   'zj-loop-post-merge-cleanup.yml',
 ] as const;
 

@@ -267,7 +267,7 @@ user-project-ready.
 
 ### Leaf 3-1: Generated Bundle Test Harness
 
-Status: pending
+Status: completed
 
 Intent:
 
@@ -277,7 +277,39 @@ Intent:
 
 Verification:
 
-- generated-bundle E2E tests
+- `cd tools/zj-loop-init && npm test`
+- `cd tools/zj-loop-core && npm test`
+- `npm run check:zj-loop-init`
+- `node tools/zj-loop-audit/dist/cli.js .`
+- `git diff --check`
+
+Evidence:
+
+- Generated GitHub Actions bundle now includes
+  `zj-loop-roadmap-activation.yml`, so Roadmap-Sliced activation is part of the
+  same user-project workflow surface as the other route consumers.
+- Generated action-capable workflows call the narrow packaged route commands:
+  `zj-loop-ci-sweeper repair-plan`,
+  `zj-loop-dependency-sweeper repair-plan`,
+  `zj-loop-pr-steward fix-plan`,
+  `zj-loop-changelog-drafter draft-plan`,
+  `zj-loop-issue-triage-action action-plan`,
+  `zj-loop-roadmap-activation activation-plan`, and
+  `zj-loop-post-merge-closeout closeout-plan`.
+- Workflow-dispatch JSON inputs are passed through environment variables before
+  writing request files, avoiding brittle shell interpolation of user-provided
+  JSON.
+- The generated Route Table template marks generated-bundle routes as
+  `user-project-ready` while keeping side-effecting routes disabled by default;
+  enablement remains explicit through Route Table commands and fixed
+  confirmation phrases.
+- `tools/zj-loop-init/test/cli.test.mjs` asserts the 9-workflow bundle, narrow
+  command calls, Route Table route ids, default-disabled action route, and the
+  no direct single-quoted `${{ inputs.* }}` shell interpolation guard.
+- Dogfood `zj-loop/zj-loop-route-table.yaml` remains a current-repo evidence
+  matrix, not a blind copy of the user-project template; differences are
+  intentional because dogfood maturity records this repository's live/replayed
+  status.
 - `bash scripts/ci-validate-gates.sh`
 - `bash scripts/ci-audit-gates.sh`
 
