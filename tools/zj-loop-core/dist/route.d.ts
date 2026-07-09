@@ -47,10 +47,14 @@ export type RouteStatus = {
     capability_scopes: string[];
     capability_verifiers: string[];
     recent_success_evidence: string[];
+    readiness: RouteReadiness;
+    readiness_reasons: string[];
+    user_project_ready: boolean;
     section: 'routes' | 'disabled_dispatch_routes';
     destructive: boolean;
     side_effecting: boolean;
 };
+export type RouteReadiness = 'user-project-ready' | 'dogfooded-live' | 'live-missing-evidence' | 'replayed' | 'designed' | 'missing';
 export type RouteDecision = {
     schema: 'zj-loop.route_decision.v1';
     decision_id: string;
@@ -125,4 +129,13 @@ export declare function setRouteEnabled(input: {
     reason?: string;
     routeTablePath?: string;
 }): Promise<RouteChangeResult>;
+export declare function classifyRouteReadiness(input: {
+    executionMode: string;
+    sideEffectLevel: string;
+    maturityRunner: string;
+    recentSuccessEvidence?: string[];
+}): {
+    readiness: RouteReadiness;
+    reasons: string[];
+};
 export declare function expectedConfirmationPhrase(route: RouteStatus): string;

@@ -78,11 +78,11 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     assert.match(routeTable, /consumer_kind: "report-consumer"/);
     assert.match(routeTable, /mode: "report-only"/);
     assert.match(routeTable, /side_effect_level: "evidence"/);
-    assert.match(routeTable, /runner: "missing"/);
+    assert.match(routeTable, /runner: "user-project-ready"/);
     assert.match(routeTable, /evidence_store: "zj-loop\/issue-triage-state\.md"/);
     assert.doesNotMatch(routeTable, /status_store/);
     assert.doesNotMatch(routeTable, /state-request/);
-    assert.match(routeTable, /enabled: false/);
+    assert.match(routeTable, /route_id: "issue-triage-action"[\s\S]*?enabled: false/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -117,6 +117,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
       'zj-loop-issue-triage.yml',
       'zj-loop-dependency-sweeper.yml',
       'zj-loop-changelog-drafter.yml',
+      'zj-loop-roadmap-activation.yml',
       'zj-loop-post-merge-cleanup.yml',
     ];
 
@@ -129,8 +130,20 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
     assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.3/);
-    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.2/);
+    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.3/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
+    assert.match(smoke, /zj-loop-consumer plan manual-smoke-report/);
+    const ciSweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-ci-sweeper.yml'), 'utf8');
+    assert.match(ciSweeper, /zj-loop-ci-sweeper plan/);
+    assert.match(ciSweeper, /zj-loop-ci-sweeper repair-plan/);
+    const dependencySweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-dependency-sweeper.yml'), 'utf8');
+    assert.match(dependencySweeper, /zj-loop-dependency-sweeper plan/);
+    assert.match(dependencySweeper, /zj-loop-dependency-sweeper repair-plan/);
+    assert.doesNotMatch(dependencySweeper, /'\$\{\{ inputs\./);
+    const postMergeCleanup = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
+    assert.match(postMergeCleanup, /zj-loop-post-merge-closeout plan/);
+    assert.match(postMergeCleanup, /zj-loop-post-merge-closeout closeout-plan/);
+    assert.doesNotMatch(postMergeCleanup, /'\$\{\{ inputs\./);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);
@@ -140,9 +153,32 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(routeTable, /capabilities:/);
     assert.match(routeTable, /route_id: "ci-sweeper"/);
     assert.match(routeTable, /consumer_kind: "fix-runner"/);
-    assert.match(routeTable, /route_id: "pr-steward"/);
-    assert.match(routeTable, /route_id: "issue-triage"/);
-    assert.match(routeTable, /route_id: "changelog-drafter"/);
+    assert.match(routeTable, /route_id: "pr-steward-report"/);
+    assert.match(routeTable, /route_id: "pr-steward-fix-request"/);
+    assert.match(routeTable, /route_id: "issue-triage-report"/);
+    assert.match(routeTable, /route_id: "issue-triage-action"/);
+    assert.match(routeTable, /route_id: "changelog-drafter-report"/);
+    assert.match(routeTable, /route_id: "changelog-drafter-draft-request"/);
+    assert.match(routeTable, /route_id: "roadmap-sliced-development"/);
+    assert.match(routeTable, /route_id: "post-merge-roadmap-closeout"/);
+
+    const prSteward = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-pr-steward.yml'), 'utf8');
+    assert.match(prSteward, /zj-loop-route dispatch pr-steward-report/);
+    assert.match(prSteward, /zj-loop-pr-steward fix-plan/);
+    assert.doesNotMatch(prSteward, /'\$\{\{ inputs\./);
+    const issueTriage = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-issue-triage.yml'), 'utf8');
+    assert.match(issueTriage, /zj-loop-route dispatch issue-triage-report/);
+    assert.match(issueTriage, /zj-loop-issue-triage-action action-plan/);
+    assert.doesNotMatch(issueTriage, /'\$\{\{ inputs\./);
+    const changelogDrafter = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-changelog-drafter.yml'), 'utf8');
+    assert.match(changelogDrafter, /zj-loop-route dispatch changelog-drafter-report/);
+    assert.match(changelogDrafter, /zj-loop-changelog-drafter draft-plan/);
+    assert.doesNotMatch(changelogDrafter, /'\$\{\{ inputs\./);
+    const roadmapActivation = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-roadmap-activation.yml'), 'utf8');
+    assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
+    assert.match(roadmapActivation, /zj-loop-roadmap-activation activation-plan/);
+    assert.doesNotMatch(roadmapActivation, /'\$\{\{ inputs\./);
+    assert.match(postMergeCleanup, /zj-loop-route dispatch post-merge-roadmap-closeout/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

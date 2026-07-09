@@ -93,7 +93,7 @@ async function main(argv = process.argv.slice(2)) {
 }
 function formatRouteStatusTable(routes) {
     const rows = [
-        ['enabled', 'route', 'consumer', 'kind', 'mode', 'sidefx', 'protocol', 'runner', 'confirm'],
+        ['enabled', 'route', 'consumer', 'kind', 'mode', 'sidefx', 'protocol', 'runner', 'readiness', 'confirm'],
         ...routes.map((route) => [
             route.enabled ? 'yes' : 'no',
             route.route_id,
@@ -103,6 +103,7 @@ function formatRouteStatusTable(routes) {
             route.side_effect_level,
             route.maturity_protocol,
             route.maturity_runner,
+            route.readiness,
             route.side_effecting && !route.enabled ? expectedConfirmationPhrase(route) : '',
         ]),
     ];

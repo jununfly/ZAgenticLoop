@@ -110,13 +110,58 @@ npx @jununfly/zj-loop-init . --add github-actions
 ```
 
 生成的 `zj-loop-*.yml` workflows 会带上固定 package version 和 generated
-metadata。默认只有 `manual-smoke-report` 是安全主路径；有副作用的 consumer
-仍然需要显式通过 Route Table 启用：
+metadata。默认只有 `manual-smoke-report` 是安全主路径。把 Route Table status
+当成可选链路菜单使用；它会显示每条 route 的 mode、runner maturity、
+readiness 和需要的固定确认短语。`dogfooded-live` 表示 reference repo 已有
+证据，`user-project-ready` 才表示 generated bundle 能在用户项目中调用已发布
+package runner。有副作用的 consumer 仍然需要显式通过 Route Table 启用：
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweeper
+```
+
+用户项目的第一条启用链路应按 route readiness 自选，而不是按安装顺序固定。
+Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
+`roadmap-sliced-development`、`pr-steward-fix-request`、
+`dependency-sweeper`、`changelog-drafter-draft-request`、
+`issue-triage-action`、`post-merge-roadmap-closeout` 等 action-capable routes
+只有在 generated workflow 和 packaged runner 都标记为 `user-project-ready`
+后，才应被当作用户项目 live path。
+
+Generated bundle route menu：
+
+| Route | Workflow | 首次使用场景 |
+|-------|----------|--------------|
+| `manual-smoke-report` | `zj-loop-smoke.yml` | 先运行它；确认 checkout、package pin、Route Decision 和 audit surface。 |
+| `ci-sweeper` | `zj-loop-ci-sweeper.yml` | 当你希望 CI failure 生成 deterministic repair-plan evidence 时启用。 |
+| `roadmap-sliced-development` | `zj-loop-roadmap-activation.yml` | 当 issue comment 需要创建 Roadmap-Sliced activation request 时启用。 |
+| `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | 当 PR check failure 需要创建/消费独立 fix request 时启用。 |
+| `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | 当 dependency signal 需要成为有边界的 fix-request repair plan 时启用。 |
+| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | 当 release-window evidence 需要生成 draft evidence 或 draft PR plan 时启用。 |
+| `issue-triage-action` | `zj-loop-issue-triage.yml` | 当你需要 dry-run allowlisted label/comment action plan 时启用。 |
+| `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | 当 Roadmap-Sliced PR 带有 closeout contract 后启用。 |
+
+Generated workflows 在任何 runner 副作用前，都应该调用发布包里的 consumer
+gate。有 action 能力的 route 优先使用自己的窄命令；report-only route 可以使用
+generic planner：
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-ci-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
+```
+
+这个 plan 会阻止 disabled route、无效 execution contract，以及只有 dogfood
+证据但尚未 `user-project-ready` 的 route。
+
+发布前，generated-bundle gate 会检查 workflow/template drift、
+`@jununfly/zj-loop-core` package pin，以及 Route Table readiness contract：
+
+```bash
+npm run test:generated-bundle-release-gate
 ```
 
 先手动运行 `ZJ Loop Smoke` workflow，再执行审计：

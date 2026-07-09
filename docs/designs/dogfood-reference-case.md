@@ -110,6 +110,13 @@ The generated bundle must remain portable. It should call published package
 commands/APIs and avoid repository-local scripts that user projects would not
 have.
 
+Release readiness for the generated bundle is checked by
+`npm run test:generated-bundle-release-gate`. The gate fails if generated
+workflows drift from templates, if generated workflows pin a different
+`@jununfly/zj-loop-core` version than the current package, if a workflow
+dispatches an unknown Route Table route, or if an action-capable generated route
+is not `user-project-ready` while still disabled by default.
+
 ## Daily Triage Flow
 
 Daily Triage is the clearest self-running dogfood loop:

@@ -114,12 +114,58 @@ npx @jununfly/zj-loop-init . --add github-actions
 
 This creates `zj-loop-*.yml` workflows with pinned package versions and
 generated metadata. Only `manual-smoke-report` is intended to run safely by
-default; side-effecting consumers still need explicit Route Table enablement:
+default. Use Route Table status as the selection menu; it shows each route's
+mode, runner maturity, readiness, and required confirmation phrase. A
+`dogfooded-live` route has reference-repo evidence, while `user-project-ready`
+means the generated bundle can call a published package runner in user
+projects. Side-effecting consumers still need explicit Route Table enablement:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweeper
+```
+
+Choose the first enabled path by route readiness, not by installation order.
+Report-only routes are intentionally evidence-only; action-capable routes such
+as `ci-sweeper`, `roadmap-sliced-development`, `pr-steward-fix-request`,
+`dependency-sweeper`, `changelog-drafter-draft-request`,
+`issue-triage-action`, and `post-merge-roadmap-closeout` become user-project
+live paths only after their generated workflow and packaged runner are marked
+`user-project-ready`.
+
+Generated bundle route menu:
+
+| Route | Workflow | First use |
+|-------|----------|-----------|
+| `manual-smoke-report` | `zj-loop-smoke.yml` | Run first; confirms checkout, package pin, Route Decision, and audit surface. |
+| `ci-sweeper` | `zj-loop-ci-sweeper.yml` | Enable when you want CI failures converted into deterministic repair-plan evidence. |
+| `roadmap-sliced-development` | `zj-loop-roadmap-activation.yml` | Enable when issue comments should create Roadmap-Sliced activation requests. |
+| `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | Enable when PR check failures should create/consume independent fix requests. |
+| `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | Enable when dependency signals should become bounded fix-request repair plans. |
+| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | Enable when release-window evidence should produce draft evidence or draft PR plans. |
+| `issue-triage-action` | `zj-loop-issue-triage.yml` | Enable for dry-run allowlisted label/comment action plans. |
+| `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | Enable after Roadmap-Sliced PRs carry closeout contracts. |
+
+Generated workflows should call the packaged consumer gate before any runner
+side effects. Action-capable routes should prefer their narrow command, while
+report-only routes may use the generic planner:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-ci-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
+```
+
+The plan blocks disabled routes, invalid execution contracts, and routes that
+are dogfooded but not yet `user-project-ready`.
+
+Before release, the generated-bundle gate checks workflow/template drift,
+`@jununfly/zj-loop-core` package pins, and Route Table readiness contracts:
+
+```bash
+npm run test:generated-bundle-release-gate
 ```
 
 Run the `ZJ Loop Smoke` workflow manually first, then audit:

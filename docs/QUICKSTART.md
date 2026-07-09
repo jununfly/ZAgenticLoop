@@ -125,19 +125,48 @@ npx @jununfly/zj-loop-audit . --suggest
 Then inspect Route Table status before enabling any consumer route:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
+```
+
+Treat this output as the route selection menu. The `readiness` column separates
+reference-repo evidence from user-project readiness: `dogfooded-live` is proven
+inside this repo; `user-project-ready` means the generated bundle can call a
+published package runner in a user project.
+
+Pick the first route deliberately:
+
+| Route | Workflow | First use |
+|-------|----------|-----------|
+| `manual-smoke-report` | `zj-loop-smoke.yml` | Safe first run. |
+| `ci-sweeper` | `zj-loop-ci-sweeper.yml` | CI repair-plan evidence. |
+| `roadmap-sliced-development` | `zj-loop-roadmap-activation.yml` | Issue-comment activation requests. |
+| `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | PR failure fix requests. |
+| `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | Dependency fix-request repair plans. |
+| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | Release-window draft plans. |
+| `issue-triage-action` | `zj-loop-issue-triage.yml` | Dry-run allowlisted triage actions. |
+| `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | Roadmap PR closeout plans. |
+
+Generated workflows should also pass through the packaged consumer gate before
+runner side effects. Use the generic planner for report-only routes and the
+narrow command for action-capable routes:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-ci-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --json
+npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
 ```
 
 Enable side-effecting routes with a fixed confirmation phrase:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
 ```
 
 Disable is intentionally low friction:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweeper
 ```
 
 Upgrade generated workflows intentionally when package pins or templates change:
@@ -148,6 +177,12 @@ npx @jununfly/zj-loop-init . --upgrade github-actions
 
 If a generated workflow was edited locally, upgrade writes the new canonical
 workflow and keeps the old one as `.bak` for review.
+
+For release checks, run:
+
+```bash
+npm run test:generated-bundle-release-gate
+```
 
 ## 6. Read the output, commit state (1 minute)
 

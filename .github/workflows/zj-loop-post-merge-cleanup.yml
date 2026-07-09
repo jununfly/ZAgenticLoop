@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-post-merge-cleanup
 # zj-loop-template-version: 1
-# zj-loop-template-hash: a5e8920095814134
+# zj-loop-template-hash: 62d090a2d75d34be
 
 name: ZJ Loop Post-Merge Cleanup
 
@@ -9,6 +9,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Merged PR number with post-merge contract'
+        required: false
+        default: ''
+      carrier_issue:
+        description: 'Expected activation carrier issue'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -24,6 +33,19 @@ jobs:
           fetch-depth: 50
 
       - name: Post-merge cleanup route evidence
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          CARRIER_ISSUE: ${{ inputs.carrier_issue }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch post-merge-cleanup --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch post-merge-roadmap-closeout --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-post-merge-closeout plan --json > consumer-plan.json || true
+          if [ -n "$PR_NUMBER" ]; then
+            args=(--pr "$PR_NUMBER" --repo "${{ github.repository }}")
+            if [ -n "$CARRIER_ISSUE" ]; then
+              args+=(--carrier-issue "$CARRIER_ISSUE")
+            fi
+            npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-post-merge-closeout closeout-plan "${args[@]}" --json > closeout-plan.json || true
+            cat closeout-plan.json >> "$GITHUB_STEP_SUMMARY"
+          fi
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
+          cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

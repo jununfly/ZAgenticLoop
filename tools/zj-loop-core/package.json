@@ -1,12 +1,20 @@
 {
   "name": "@jununfly/zj-loop-core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Shared Agentic Loop Working domain models and registry loading utilities.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "zj-loop-route": "./dist/route-cli.js"
+    "zj-loop-route": "./dist/route-cli.js",
+    "zj-loop-consumer": "./dist/consumer-cli.js",
+    "zj-loop-ci-sweeper": "./dist/ci-sweeper-cli.js",
+    "zj-loop-roadmap-activation": "./dist/roadmap-activation-cli.js",
+    "zj-loop-pr-steward": "./dist/pr-steward-cli.js",
+    "zj-loop-dependency-sweeper": "./dist/dependency-sweeper-cli.js",
+    "zj-loop-changelog-drafter": "./dist/changelog-drafter-cli.js",
+    "zj-loop-issue-triage-action": "./dist/issue-triage-action-cli.js",
+    "zj-loop-post-merge-closeout": "./dist/post-merge-closeout-cli.js"
   },
   "exports": {
     ".": {
@@ -20,7 +28,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/semantic.test.mjs test/cli.test.mjs test/route.test.mjs",
+    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/semantic.test.mjs test/cli.test.mjs test/route.test.mjs test/consumer-runner.test.mjs test/live-runner-contract.test.mjs test/ci-sweeper-runner.test.mjs test/post-merge-closeout-runner.test.mjs test/dependency-sweeper-runner.test.mjs test/pr-steward-runner.test.mjs test/changelog-drafter-runner.test.mjs test/issue-triage-action-runner.test.mjs test/roadmap-activation-runner.test.mjs",
     "prepublishOnly": "npm test"
   },
   "engines": {

@@ -1,12 +1,21 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-changelog-drafter
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 10a1ceab6c4376df
+# zj-loop-template-hash: 002846c9ca470b21
 
 name: ZJ Loop Changelog Drafter
 
 on:
   workflow_dispatch:
+    inputs:
+      changelog_draft_request_json:
+        description: 'Changelog draft request JSON'
+        required: false
+        default: ''
+      draft_mode:
+        description: 'Draft mode: evidence or pr'
+        required: false
+        default: 'evidence'
   push:
     tags: ['v*']
 
@@ -24,6 +33,19 @@ jobs:
           fetch-depth: 0
 
       - name: Changelog drafter route evidence
+        env:
+          CHANGELOG_DRAFT_REQUEST_JSON: ${{ inputs.changelog_draft_request_json }}
+          DRAFT_MODE: ${{ inputs.draft_mode }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.2 zj-loop-route dispatch changelog-drafter --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch changelog-drafter-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan changelog-drafter-report --json > consumer-plan.json || true
+          if [ -n "$CHANGELOG_DRAFT_REQUEST_JSON" ]; then
+            printf '%s\n' "$CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json
+            npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-changelog-drafter draft-plan \
+              --request changelog-draft-request.json \
+              --draft-mode "$DRAFT_MODE" \
+              --json > draft-plan.json || true
+            cat draft-plan.json >> "$GITHUB_STEP_SUMMARY"
+          fi
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
+          cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
