@@ -25,9 +25,43 @@ Leaf nodes:
 
 | Leaf | Status | Commit intent |
 | --- | --- | --- |
-| `1-1-design-current-handoff-gap` | pending | Record the observed product gap and target behavior before implementation. |
+| `1-1-design-current-handoff-gap` | completed | Record the observed product gap and target behavior before implementation. |
 | `1-2-implement-next-command-surfacing` | pending | Expose the next command in the appropriate PRD issue flow without broadening report-only defaults. |
 | `1-3-verify-and-document-dogfood` | pending | Prove the route chain remains replayable and side-effect boundaries are clear. |
+
+## Leaf 1-1 Findings
+
+Issue #7 reports a real dogfood gap from
+`jununfly/ZCodeGraph#678`: the next implementation command was visible in local
+triage state, but not on the PRD issue that serves as the handoff object.
+
+Current behavior:
+
+- `.github/workflows/daily-triage.yml` writes `zj-loop/STATE.md`, run-log
+  evidence, CI route evidence, and CI Sweeper Issue Fix Requests.
+- `patterns/daily-triage.md` keeps Daily Triage report-only by default and
+  treats `zj-loop/STATE.md` as triage memory, not an activation queue.
+- `issue-backlog-triage` and `issue-triage-transition` can recommend and confirm
+  `ready-for-agent` transitions, then create independent Issue Fix Request
+  carriers, but they do not define a PRD next-command handoff comment.
+
+Implementation target for leaf `1-2`:
+
+- Preserve report-only defaults.
+- Produce an exact manual `gh issue comment ...` command when PRD issue comments
+  are disabled.
+- Allow live PRD issue commenting only behind explicit opt-in.
+- Use a deterministic marker and stable body shape so repeated runs can skip or
+  update instead of spamming.
+- Make output explicit about where the handoff lives: local state, PRD issue
+  comment, or both.
+
+Verification evidence:
+
+- `gh issue view 7 --comments --json number,title,body,comments,url,labels,state`
+- `rg "next command|next-command|handoff|PRD|prd|zj-to-prd|to-prd|Issue Fix Request|roadmap-sliced-development|confirm-triage-transition" -n README.md README.zh-CN.md docs patterns scripts tools .github zj-loop`
+- `sed -n '1,240p' .github/workflows/daily-triage.yml`
+- `sed -n '1,220p' patterns/daily-triage.md`
 
 ## Gates
 

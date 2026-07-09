@@ -30,9 +30,22 @@
         {
           "id": "1-1-design-current-handoff-gap",
           "title": "Confirm current PRD handoff behavior and exact missing user-facing next command",
-          "status": "pending",
+          "status": "completed",
           "commit_intent": "Record the observed product gap and target behavior before implementation.",
-          "verification_evidence": []
+          "notes": [
+            "Issue #7 reports a real dogfood gap from jununfly/ZCodeGraph#678: the next implementation command was visible in local triage state, but not on the PRD issue that serves as the handoff object.",
+            "Current Daily Triage workflow writes zj-loop/STATE.md and CI route evidence; it does not scan PRD issues or emit PRD next-command handoff comments.",
+            "Current issue-backlog-triage flow recommends triage transitions and can create an independent Issue Fix Request after maintainer confirmation; it does not define a PRD handoff comment protocol.",
+            "The implementation target should preserve report-only defaults by producing an exact manual gh issue comment command when issue comments are disabled, and only writing a PRD issue comment when an explicit comment mode is enabled.",
+            "The handoff comment needs a deterministic marker and stable body shape so repeated runs can skip or update instead of spamming."
+          ],
+          "verification_evidence": [
+            "gh issue view 7 --comments --json number,title,body,comments,url,labels,state",
+            "rg \"next command|next-command|handoff|PRD|prd|zj-to-prd|to-prd|Issue Fix Request|roadmap-sliced-development|confirm-triage-transition\" -n README.md README.zh-CN.md docs patterns scripts tools .github zj-loop",
+            "sed -n '1,240p' .github/workflows/daily-triage.yml",
+            "sed -n '1,220p' patterns/daily-triage.md"
+          ],
+          "completed_at": "2026-07-09T18:58:00+08:00"
         },
         {
           "id": "1-2-implement-next-command-surfacing",
