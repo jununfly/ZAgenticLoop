@@ -7,11 +7,13 @@ function formatTokens(n) {
         return `${Math.round(n / 1_000)}k`;
     return String(n);
 }
-export function formatEstimateHuman(r) {
+export function formatEstimateHuman(r, registry) {
     const lines = [];
     lines.push('');
     lines.push(`Loop Cost Estimate — ${r.patternName} (${r.patternId})`);
     lines.push('═'.repeat(50));
+    if (registry)
+        lines.push(`Registry: ${registry.label} ${registry.path}`);
     lines.push(`Cadence: ${r.cadence}  →  ${r.runsPerDay} runs/day`);
     lines.push(`Level: ${r.level}  ·  Registry tier: ${r.tokenCostTier}`);
     lines.push(`Suggested daily cap: ${formatTokens(r.suggestedDailyCap)} tokens`);

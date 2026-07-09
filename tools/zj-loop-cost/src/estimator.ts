@@ -31,11 +31,12 @@ function formatTokens(n: number): string {
   return String(n);
 }
 
-export function formatEstimateHuman(r: EstimateResult): string {
+export function formatEstimateHuman(r: EstimateResult, registry?: { label: string; path: string }): string {
   const lines: string[] = [];
   lines.push('');
   lines.push(`Loop Cost Estimate — ${r.patternName} (${r.patternId})`);
   lines.push('═'.repeat(50));
+  if (registry) lines.push(`Registry: ${registry.label} ${registry.path}`);
   lines.push(`Cadence: ${r.cadence}  →  ${r.runsPerDay} runs/day`);
   lines.push(`Level: ${r.level}  ·  Registry tier: ${r.tokenCostTier}`);
   lines.push(`Suggested daily cap: ${formatTokens(r.suggestedDailyCap)} tokens`);
