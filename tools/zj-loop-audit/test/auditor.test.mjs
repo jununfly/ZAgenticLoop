@@ -8,7 +8,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { auditProject, computeScore } from '../dist/auditor.js';
 import { evaluateReadinessGuidance, evaluateReadinessPolicy, parseReadinessPolicy } from '../dist/readiness-rules.js';
-import { formatBadge, formatHuman, formatMarkdown } from '../dist/reporter.js';
+import { formatBadge, formatHuman, formatMarkdown, formatSuggestionGroups } from '../dist/reporter.js';
 
 const CLI = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 
@@ -503,6 +503,56 @@ guidance:
     ],
     recommendations: ['Review zj-loop/STATE.md, zj-loop/ci-sweeper-state.md'],
   });
+});
+
+test('reporter: optional audit findings do not read as readiness blockers at 100 score', () => {
+  const result = {
+    target: '.',
+    score: 100,
+    level: 'L3',
+    assessment: 'Strong loop readiness — good candidate for L3 with explicit gates.',
+    signals: l3CandidateSignals(),
+    findings: [
+      {
+        level: 'warn',
+        category: 'hardening',
+        message: 'No zj-loop/zj-loop-safety.md found.',
+        affectsScore: true,
+        nextSteps: [
+          {
+            kind: 'command',
+            label: 'Scaffold the canonical loop safety policy.',
+            command: 'npx @jununfly/zj-loop-init . --add safety',
+          },
+        ],
+      },
+      {
+        level: 'warn',
+        category: 'future-tooling',
+        message: 'No patterns/registry.yaml (machine-readable index for future tools).',
+        affectsScore: true,
+        nextSteps: [
+          {
+            kind: 'command',
+            label: 'Scaffold a pattern registry when publishing reusable patterns.',
+            command: 'npx @jununfly/zj-loop-init . --add pattern-registry',
+          },
+        ],
+      },
+    ],
+    recommendations: [],
+  };
+
+  const human = formatHuman(result);
+  assert.match(human, /optional score contribution; does not block loop execution/);
+  assert.match(human, /future-tooling score contribution; does not block loop execution/);
+  assert.doesNotMatch(human, /No zj-loop\/zj-loop-safety\.md found\. \(affects score\/level\)/);
+  assert.doesNotMatch(human, /No patterns\/registry\.yaml .* \(affects score\/level\)/);
+
+  const suggestions = formatSuggestionGroups(result);
+  assert.match(suggestions, /states score\/level impact and whether it blocks loop execution/);
+  assert.match(suggestions, /Score impact: optional score contribution; does not block loop execution\./);
+  assert.match(suggestions, /Score impact: future-tooling score contribution; does not block loop execution\./);
 });
 
 test('auditProject: empty directory scores low', async () => {
