@@ -37,11 +37,11 @@ jobs:
           CHANGELOG_DRAFT_REQUEST_JSON: ${{ inputs.changelog_draft_request_json }}
           DRAFT_MODE: ${{ inputs.draft_mode }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch changelog-drafter-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan changelog-drafter-report --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch changelog-drafter-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-consumer plan changelog-drafter-report --json > consumer-plan.json || true
           if [ -n "$CHANGELOG_DRAFT_REQUEST_JSON" ]; then
             printf '%s\n' "$CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json
-            npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-changelog-drafter draft-plan \
+            npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-changelog-drafter draft-plan \
               --request changelog-draft-request.json \
               --draft-mode "$DRAFT_MODE" \
               --json > draft-plan.json || true

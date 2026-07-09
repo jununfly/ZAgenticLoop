@@ -39,7 +39,7 @@ After installing the bundle:
 3. Run:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route status
 ```
 
 The status output is the route menu. Use it to choose the first route instead of
@@ -51,15 +51,15 @@ Enable side-effecting routes only when their row has the expected maturity and
 you accept the side-effect boundary:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route enable post-merge-roadmap-closeout --confirm "enable post-merge-roadmap-closeout side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route enable post-merge-roadmap-closeout --confirm "enable post-merge-roadmap-closeout side effects"
 ```
 
 Disable stays low-friction:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route disable ci-sweeper
 ```
 
 ## Roadmap Activation Path

@@ -112,7 +112,7 @@ name: ZJ Loop Smoke
 jobs:
   smoke:
     steps:
-      - run: npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch manual-smoke-report
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch manual-smoke-report
 `),
     );
 
@@ -141,7 +141,7 @@ name: ZJ Loop Smoke
 jobs:
   smoke:
     steps:
-      - run: npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch manual-smoke-report
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch manual-smoke-report
 `),
     );
 
@@ -227,7 +227,7 @@ name: ZJ Loop Smoke
 jobs:
   smoke:
     steps:
-      - run: npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch manual-smoke-report
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch manual-smoke-report
 `),
     );
 
@@ -258,7 +258,7 @@ name: ZJ Loop Smoke
 jobs:
   smoke:
     steps:
-      - run: npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch manual-smoke-report
+      - run: npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch manual-smoke-report
 `,
     );
 

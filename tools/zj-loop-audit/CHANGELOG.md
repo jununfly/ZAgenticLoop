@@ -2,6 +2,13 @@
 
 All notable changes to `@jununfly/zj-loop-audit` are documented here.
 
+## [0.1.4] - 2026-07-09
+
+### Changed
+- Audit generated bundle readiness against the current workflow and route-table contracts.
+- Clarify readiness versus execution authority in user-facing package documentation.
+- Keep audit guidance aligned with local runtime state files and generated artifact policy.
+
 ## [0.1.3] - 2026-07-05
 
 ### Changed
