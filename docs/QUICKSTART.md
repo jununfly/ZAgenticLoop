@@ -135,6 +135,21 @@ scaffold route policy, workflows, package commands, and plan/report evidence;
 `execution-ready` means real signals can become durable request carriers and
 bounded consumer outcomes.
 
+The first execution-ready user-project choices are:
+
+- **Turn a plan issue into a roadmap run:** enable
+  `roadmap-sliced-development`, then comment
+  `/zj-loop start roadmap-sliced-development` on the plan issue. The generated
+  workflow creates Activation Request evidence, a branch/PR contract, and a
+  bounded-slice pack with `max_slices` defaulting to `30`.
+- **Turn a CI failure into reviewable repair work:** enable `ci-sweeper`. A
+  failing workflow can create a separate GitHub Issue Fix Request so the fix
+  consumer has a durable carrier instead of guessing from workflow logs.
+- **Close out merged roadmap work:** use `post-merge-roadmap-closeout` in
+  dry-run first. Live branch deletion and carrier issue closure require the
+  fixed phrase
+  `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+
 Pick the first route deliberately:
 
 | Route | Workflow | First use |
@@ -185,6 +200,9 @@ For release checks, run:
 ```bash
 npm run test:generated-bundle-release-gate
 ```
+
+The longer reference is
+[User-project execution-ready bundle](./designs/user-project-execution-ready-bundle.md).
 
 ## 6. Read the output, commit state (1 minute)
 

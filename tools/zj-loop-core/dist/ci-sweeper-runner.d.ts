@@ -8,6 +8,14 @@ export type CiSweeperRepairPlan = {
     package_directories: string[];
     commands: CommandStep[];
 };
+export declare function buildCiSweeperIssueFixRequestBody(input: {
+    routeDecision: any;
+    repo: string;
+    workflowName?: string;
+    runId?: string;
+    sourceUrl?: string;
+    createdAt?: string;
+}): string;
 export declare function getCiSweeperPackageBuildPlan(packages: Array<{
     directory: string;
 }>): string[];

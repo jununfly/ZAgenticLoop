@@ -136,6 +136,8 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     const ciSweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-ci-sweeper.yml'), 'utf8');
     assert.match(ciSweeper, /zj-loop-ci-sweeper plan/);
     assert.match(ciSweeper, /zj-loop-ci-sweeper repair-plan/);
+    assert.match(ciSweeper, /zj-loop-ci-sweeper request-body/);
+    assert.match(ciSweeper, /gh issue create/);
     const dependencySweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-dependency-sweeper.yml'), 'utf8');
     assert.match(dependencySweeper, /zj-loop-dependency-sweeper plan/);
     assert.match(dependencySweeper, /zj-loop-dependency-sweeper repair-plan/);
@@ -178,8 +180,12 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
     assert.match(roadmapActivation, /zj-loop-roadmap-activation activation-plan/);
     assert.match(roadmapActivation, /zj-loop-roadmap-activation contract-plan/);
+    assert.match(roadmapActivation, /zj-loop-roadmap-activation bounded-slices-pack/);
+    assert.match(roadmapActivation, /max_slices/);
     assert.doesNotMatch(roadmapActivation, /'\$\{\{ inputs\./);
     assert.match(postMergeCleanup, /zj-loop-route dispatch post-merge-roadmap-closeout/);
+    assert.match(postMergeCleanup, /live_cleanup_confirmation/);
+    assert.match(postMergeCleanup, /zj-loop-post-merge-closeout live-closeout/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
+  buildRoadmapBoundedSlicePack,
   buildActivationRequestId,
   buildActivationConsumedComment,
   buildActivationRequestComment,
@@ -17,6 +18,7 @@ import {
   hasRoadmapActivationLoopMarker,
   parseStructuredActivationComments,
   renderRoadmapActivationWorkflowSummary,
+  verifyRoadmapBoundedSliceResult,
 } from '../dist/index.js';
 
 const ROADMAP_ACTIVATION_CLI = fileURLToPath(new URL('../dist/roadmap-activation-cli.js', import.meta.url));
@@ -286,4 +288,131 @@ test('Roadmap Activation contract-plan CLI renders deterministic PR contract evi
     'Open or update the Roadmap Activation PR with the contract block.',
     'Start Roadmap-Sliced Consumer execution from the Activation Request scope.',
   ]);
+});
+
+test('Roadmap Activation bounded slice pack defaults to 30 and selects eligible leaf slices only', () => {
+  const pack = buildRoadmapBoundedSlicePack({
+    activationRequestId: 'act-321-11-abcdef12',
+    roadmapPath: 'docs/plans/example.md',
+    branchName: 'zjal/act-321-11-abcdef12-example',
+    leafSlices: [
+      { id: '1-1', title: 'Add contract', status: 'pending', verification_commands: ['npm test'] },
+      { id: '1-2', title: 'Already done', status: 'completed' },
+      { id: '1-3', title: 'Deferred', status: 'deferred' },
+      { id: '1-4', title: 'Add docs', status: 'active', allowed_paths: ['README.md'] },
+    ],
+  });
+
+  assert.equal(pack.schema, 'zj-loop.roadmap_bounded_slice_pack.v1');
+  assert.equal(pack.run_mode, 'bounded-slices');
+  assert.equal(pack.max_slices, 30);
+  assert.equal(pack.status, 'ready');
+  assert.deepEqual(pack.selected_slices.map((slice) => slice.slice_id), ['1-1', '1-4']);
+  assert.match(pack.stop_conditions.join('\n'), /max_slices reached/);
+  assert.match(pack.continuation_conditions.join('\n'), /completed_slices is less than max_slices/);
+});
+
+test('Roadmap Activation bounded slice result verification requires gate-backed evidence', () => {
+  const pack = buildRoadmapBoundedSlicePack({
+    activationRequestId: 'act-321-11-abcdef12',
+    roadmapPath: 'docs/plans/example.md',
+    branchName: 'zjal/act-321-11-abcdef12-example',
+    maxSlices: 1,
+    leafSlices: [{ id: '1-1', title: 'Add contract', status: 'pending' }],
+  });
+  const passing = verifyRoadmapBoundedSliceResult({
+    pack,
+    result: {
+      schema: 'zj-loop.roadmap_bounded_slice_result.v1',
+      activation_request_id: 'act-321-11-abcdef12',
+      branch_name: 'zjal/act-321-11-abcdef12-example',
+      slice_results: [{
+        slice_id: '1-1',
+        status: 'completed',
+        notes: 'Implemented contract.',
+        evidence: ['updated roadmap state'],
+        verification: [{ command: 'npm test', status: 'passed', exit_code: 0 }],
+        commit: { intent: 'Add contract', hash: 'abc1234' },
+      }],
+      stop_reason: 'max_slices reached',
+    },
+  });
+  const failing = verifyRoadmapBoundedSliceResult({
+    pack,
+    result: {
+      schema: 'zj-loop.roadmap_bounded_slice_result.v1',
+      activation_request_id: 'act-321-11-abcdef12',
+      branch_name: 'zjal/act-321-11-abcdef12-example',
+      slice_results: [{
+        slice_id: '1-1',
+        status: 'completed',
+        notes: '',
+        evidence: [],
+        verification: [],
+        commit: { intent: '' },
+      }],
+      stop_reason: 'agent guessed it was enough',
+    },
+  });
+
+  assert.equal(passing.status, 'passed');
+  assert.equal(failing.status, 'failed');
+  assert.match(failing.errors.join('\n'), /notes are required/);
+  assert.match(failing.errors.join('\n'), /stop_reason must be one of the fixed stop conditions/);
+});
+
+test('Roadmap Activation bounded-slices CLI packs and verifies deterministic result evidence', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-roadmap-bounded-slices-'));
+  const slicesPath = path.join(dir, 'slices.json');
+  const packPath = path.join(dir, 'pack.json');
+  const resultPath = path.join(dir, 'result.json');
+  await writeFile(slicesPath, JSON.stringify([
+    { id: '1-1', title: 'Add contract', status: 'pending', verification_commands: ['npm test'] },
+  ]));
+  try {
+    const packResult = spawnSync(process.execPath, [
+      ROADMAP_ACTIVATION_CLI,
+      'bounded-slices-pack',
+      '--activation-request-id',
+      'act-321-11-abcdef12',
+      '--roadmap-path',
+      'docs/plans/example.md',
+      '--branch-name',
+      'zjal/act-321-11-abcdef12-example',
+      '--slices',
+      slicesPath,
+      '--out',
+      packPath,
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(packResult.status, 0);
+    const pack = JSON.parse(packResult.stdout);
+    await writeFile(resultPath, JSON.stringify({
+      schema: 'zj-loop.roadmap_bounded_slice_result.v1',
+      activation_request_id: pack.activation_request_id,
+      branch_name: pack.branch_name,
+      slice_results: [{
+        slice_id: '1-1',
+        status: 'completed',
+        notes: 'Implemented contract.',
+        evidence: ['contract test passed'],
+        verification: [{ command: 'npm test', status: 'passed', exit_code: 0 }],
+        commit: { intent: 'Add contract', evidence: 'commit would be created by runner' },
+      }],
+      stop_reason: 'max_slices reached',
+    }));
+    const verifyResult = spawnSync(process.execPath, [
+      ROADMAP_ACTIVATION_CLI,
+      'bounded-slices-verify',
+      '--pack',
+      packPath,
+      '--result',
+      resultPath,
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(verifyResult.status, 0);
+    assert.equal(JSON.parse(verifyResult.stdout).status, 'passed');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

@@ -4,6 +4,7 @@ import {
   buildDryRunEvidenceComment,
   buildPostMergeRoadmapCloseoutExecutionPlan,
   collectCloseoutInputFromGitHub,
+  executePostMergeRoadmapCloseout,
   LIVE_CLEANUP_CONFIRMATION_PHRASE,
   parseRepositoryFromGitRemote,
 } from '../dist/index.js';
@@ -94,6 +95,46 @@ test('post-merge closeout plan refuses unsafe executor contexts', () => {
   assert.ok(wrongRepo.refusals.some((refusal) => refusal.guard === 'current-repository'));
   assert.equal(wrongCarrier.status, 'refused');
   assert.ok(wrongCarrier.refusals.some((refusal) => refusal.guard === 'expected-carrier-issue'));
+});
+
+test('post-merge closeout live execution deletes only contract branch and closes only carrier issue', async () => {
+  const calls = [];
+  const runner = async (command, args) => {
+    calls.push([command, ...args]);
+    const text = [command, ...args].join(' ');
+    if (text === 'git branch --merged main') {
+      return { command, args, exitCode: 0, stdout: '* main\n  zjal/post-merge-closeout-executor\n', stderr: '' };
+    }
+    if (text === 'git ls-remote --exit-code --heads origin zjal/post-merge-closeout-executor') {
+      return { command, args, exitCode: 0, stdout: 'abc\trefs/heads/zjal/post-merge-closeout-executor\n', stderr: '' };
+    }
+    return { command, args, exitCode: 0, stdout: '', stderr: '' };
+  };
+  const result = await executePostMergeRoadmapCloseout(buildPlan({ live: true }), { runner });
+
+  assert.equal(result.status, 'executed');
+  assert.equal(result.side_effects_executed, true);
+  assert.equal(result.runner_evidence.schema, 'zj-loop.live_runner_evidence.v1');
+  assert.equal(result.runner_evidence.completion_form, 'cleanup-done');
+  assert.equal(calls.some((call) => call.join(' ') === 'git branch -d zjal/post-merge-closeout-executor'), true);
+  assert.equal(calls.some((call) => call.join(' ') === 'git push origin --delete zjal/post-merge-closeout-executor'), true);
+  assert.equal(calls.some((call) => call.join(' ') === 'gh issue close 39 --comment Closing this Roadmap-Sliced Development activation carrier after post-merge closeout.\n\n- PR: #41\n- Roadmap branch: `zjal/post-merge-closeout-executor`\n- Contract guard: valid `zj-loop.post-merge-contract` with `no_pending_followups: true`.'), true);
+  assert.equal(calls.some((call) => call.includes('99')), false);
+});
+
+test('post-merge closeout live execution refuses unmerged branch deletion', async () => {
+  const runner = async (command, args) => {
+    const text = [command, ...args].join(' ');
+    if (text === 'git branch --merged main') {
+      return { command, args, exitCode: 0, stdout: '* main\n', stderr: '' };
+    }
+    return { command, args, exitCode: 0, stdout: '', stderr: '' };
+  };
+
+  await assert.rejects(
+    executePostMergeRoadmapCloseout(buildPlan({ live: true }), { runner }),
+    /not listed in git branch --merged main/,
+  );
 });
 
 test('post-merge dry-run evidence comment uses packaged command names', () => {

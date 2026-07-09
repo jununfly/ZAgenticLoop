@@ -259,5 +259,11 @@ creation, Route Decision, branch/PR contract evidence, duplicate handling,
 permission denial, disabled route denial, and loop marker detection without live
 GitHub writes.
 
+The first user-project execution-ready bundle is documented in
+[User Project Execution-Ready Bundle](./user-project-execution-ready-bundle.md).
+It currently centers on `roadmap-sliced-development`, `ci-sweeper`, and
+`post-merge-roadmap-closeout`, with side-effect routes disabled by default and
+fixed confirmation phrases for live boundaries.
+
 Milestone commits and PRs are allowed before both layers complete, but product
 copy must not imply that all consumers are live.

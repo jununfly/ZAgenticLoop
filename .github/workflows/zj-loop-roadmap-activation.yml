@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-roadmap-activation
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 332ce27d1518d906
+# zj-loop-template-hash: b9acd4751cc6d441
 
 name: ZJ Loop Roadmap Activation
 
@@ -35,6 +35,14 @@ on:
         description: 'Existing issue comments JSON array'
         required: false
         default: '[]'
+      leaf_slices_json:
+        description: 'Roadmap leaf slices JSON array for bounded-slices pack mode'
+        required: false
+        default: '[]'
+      max_slices:
+        description: 'Maximum slices for bounded execution pack'
+        required: false
+        default: '30'
 
 permissions:
   contents: read
@@ -55,8 +63,13 @@ jobs:
           COMMAND_COMMENT_ID: ${{ inputs.command_comment_id }}
           ACTIVATION_TITLE: ${{ inputs.activation_title }}
           COMMENTS_JSON: ${{ inputs.comments_json }}
+          LEAF_SLICES_JSON: ${{ inputs.leaf_slices_json }}
+          MAX_SLICES: ${{ inputs.max_slices }}
         run: |
+          printf '## ZJ Loop Roadmap Activation\n\n' >> "$GITHUB_STEP_SUMMARY"
+          printf 'Signal: maintainer slash command for `roadmap-sliced-development`.\n\n' >> "$GITHUB_STEP_SUMMARY"
           printf '%s\n' "$COMMENTS_JSON" > activation-comments.json
+          printf '%s\n' "$LEAF_SLICES_JSON" > leaf-slices.json
           npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch roadmap-sliced-development --json > route-decision.json || true
           npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-roadmap-activation plan --json > consumer-plan.json || true
           npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-roadmap-activation activation-plan \
@@ -80,10 +93,27 @@ jobs:
               --source-comment-url "$SOURCE_COMMENT_URL" \
               --process-roadmap-path "docs/plans/roadmap-activation-${SOURCE_ISSUE}.md" \
               --json > contract-plan.json || true
+            BRANCH_NAME="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('contract-plan.json','utf8')); process.stdout.write(p.branchName || '')")"
+            npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-roadmap-activation bounded-slices-pack \
+              --activation-request-id "$ACTIVATION_REQUEST_ID" \
+              --roadmap-path "docs/plans/roadmap-activation-${SOURCE_ISSUE}.md" \
+              --branch-name "$BRANCH_NAME" \
+              --slices leaf-slices.json \
+              --max-slices "$MAX_SLICES" \
+              --json > bounded-slices-pack.json || true
+            printf 'Created activation evidence and bounded roadmap execution pack.\n\n' >> "$GITHUB_STEP_SUMMARY"
           else
             printf '%s\n' '{"schema":"zj-loop.roadmap_activation_contract_plan.v1","status":"skipped","reason":"activation request was not created"}' > contract-plan.json
+            printf '%s\n' '{"schema":"zj-loop.roadmap_bounded_slice_pack.v1","status":"skipped","reason":"activation request was not created"}' > bounded-slices-pack.json
+            printf 'Activation request was not created. Inspect the plan evidence below for authorization, duplicate, route, or loop-prevention reasons.\n\n' >> "$GITHUB_STEP_SUMMARY"
           fi
+          printf '### Route Decision\n\n' >> "$GITHUB_STEP_SUMMARY"
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n\n### Consumer Plan\n\n' >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n\n### Activation Plan\n\n' >> "$GITHUB_STEP_SUMMARY"
           cat activation-plan.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n\n### Contract Plan\n\n' >> "$GITHUB_STEP_SUMMARY"
           cat contract-plan.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n\n### Bounded Slice Pack\n\n' >> "$GITHUB_STEP_SUMMARY"
+          cat bounded-slices-pack.json >> "$GITHUB_STEP_SUMMARY"

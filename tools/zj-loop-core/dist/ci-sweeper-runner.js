@@ -1,5 +1,82 @@
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { buildIssueFixRequestComment, ISSUE_FIX_REQUEST_SCHEMA, } from './issue-fix-request-contract.js';
+export function buildCiSweeperIssueFixRequestBody(input) {
+    const routeDecision = input.routeDecision ?? {};
+    const signalId = String(routeDecision.signal_id ?? routeDecision.source_signal_id ?? `ci:${input.runId ?? 'unknown-run'}`);
+    const dedupeKey = String(routeDecision.dedupe_key ?? `${input.repo}:ci-sweeper:${signalId}:generated-workflow`);
+    const request = {
+        schema: ISSUE_FIX_REQUEST_SCHEMA,
+        request_id: `ifr_${stableHash(dedupeKey)}`,
+        status: 'requested',
+        created_at: input.createdAt ?? routeDecision.created_at ?? new Date().toISOString(),
+        source_signal: {
+            signal_id: signalId,
+            source: 'ci',
+            summary: String(routeDecision.subject ?? input.workflowName ?? 'CI workflow failure'),
+            source_url: input.sourceUrl ?? routeDecision.source_url ?? '',
+        },
+        subject: {
+            type: 'ci',
+            repo: input.repo,
+            workflow: input.workflowName ?? '',
+            run_id: input.runId ?? routeDecision.source_run_id ?? '',
+            source_url: input.sourceUrl ?? routeDecision.source_url ?? '',
+        },
+        route_decision: {
+            ...routeDecision,
+            target_consumer: routeDecision.target_consumer ?? 'ci-sweeper',
+            request_kind: routeDecision.request_kind ?? 'issue-fix-request',
+            dedupe_key: dedupeKey,
+        },
+        dedupe_key: dedupeKey,
+        requested_consumer: {
+            consumer_id: 'ci-sweeper',
+            capability: 'deterministic-ci-repair',
+        },
+        fix_scope: {
+            repo: input.repo,
+            files_or_areas: ['scripts/', '.github/workflows/', 'zj-loop/'],
+            non_goals: ['auto-merge'],
+        },
+        acceptance_criteria: [
+            'Open a verifier-backed Fix PR or append failed/escalation evidence.',
+            'Do not auto-merge the Fix PR.',
+        ],
+        verification_gate: {
+            commands: [
+                'bash scripts/ci-validate-gates.sh',
+                'bash scripts/ci-audit-gates.sh',
+            ],
+        },
+        failure_policy: {
+            on_failure: 'failed_requires_new_request',
+            retry: 'new_request_only',
+        },
+        lifecycle: {
+            linked_pr: null,
+            consumed_by: null,
+            closed_at: null,
+        },
+    };
+    return [
+        `# Issue Fix Request: ${request.requested_consumer.consumer_id}`,
+        '',
+        buildIssueFixRequestComment(request).trim(),
+        '',
+        '## Human-readable summary',
+        '',
+        `- Source signal: \`${signalId}\``,
+        `- Route decision: \`${routeDecision.decision_id ?? 'unknown'}\``,
+        `- Consumer: \`${request.requested_consumer.consumer_id}\``,
+        `- Dedupe key: \`${dedupeKey}\``,
+        `- Source URL: ${request.source_signal.source_url || '(none)'}`,
+        '',
+        'The Fix Consumer must open a verifier-backed Fix PR or append failed/escalation evidence.',
+        '',
+    ].join('\n');
+}
 export function getCiSweeperPackageBuildPlan(packages) {
     return packages.map((releasePackage) => releasePackage.directory);
 }
@@ -43,4 +120,7 @@ async function packageHasScript(root, directory, scriptName) {
     const packageJsonPath = path.join(root, directory, 'package.json');
     const pkg = JSON.parse(await readFile(packageJsonPath, 'utf8'));
     return Boolean(pkg.scripts?.[scriptName]);
+}
+function stableHash(value) {
+    return createHash('sha256').update(value).digest('hex').slice(0, 12);
 }

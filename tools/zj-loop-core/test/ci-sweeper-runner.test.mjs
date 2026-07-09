@@ -1,15 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
+  buildCiSweeperIssueFixRequestBody,
   buildCiSweeperRepairCommands,
   buildCiSweeperRepairPlan,
   formatCommandStep,
   getCiSweeperPackageBuildPlan,
+  parseIssueFixRequestComments,
 } from '../dist/index.js';
 
 const CI_SWEEPER_CLI = fileURLToPath(new URL('../dist/ci-sweeper-cli.js', import.meta.url));
@@ -82,6 +84,81 @@ test('zj-loop-ci-sweeper repair-plan CLI prints JSON plan', async () => {
     const parsed = JSON.parse(result.stdout);
     assert.equal(parsed.schema, 'zj-loop.ci_sweeper_repair_plan.v1');
     assert.equal(parsed.commands[0].cwd, 'tools/example');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('CI Sweeper request body carries a parseable Issue Fix Request', () => {
+  const body = buildCiSweeperIssueFixRequestBody({
+    repo: 'example/repo',
+    workflowName: 'validate',
+    runId: '123',
+    sourceUrl: 'https://github.com/example/repo/actions/runs/123',
+    routeDecision: {
+      schema: 'zj-loop.route_decision.v1',
+      decision_id: 'rd_ci_123',
+      signal_id: 'ci:123',
+      source: 'ci',
+      route: 'ci-sweeper',
+      request_kind: 'issue-fix-request',
+      requested_action: 'dispatch',
+      target_consumer: 'ci-sweeper',
+      allowed: true,
+      status: 'pending',
+      reason: 'route matched',
+      evidence: ['workflow_run:123'],
+      dedupe_key: 'example/repo:ci-sweeper:ci:123:generated-workflow',
+      created_at: '2026-07-09T00:00:00Z',
+    },
+  });
+  const parsed = parseIssueFixRequestComments([{ id: 1, body }])[0];
+
+  assert.equal(parsed.validation.ok, true);
+  assert.equal(parsed.request.requested_consumer.consumer_id, 'ci-sweeper');
+  assert.equal(parsed.request.subject.type, 'ci');
+  assert.equal(parsed.request.failure_policy.retry, 'new_request_only');
+});
+
+test('zj-loop-ci-sweeper request-body CLI writes issue body', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-ci-sweeper-request-body-'));
+  const routeDecisionPath = path.join(dir, 'route-decision.json');
+  const outPath = path.join(dir, 'issue-body.md');
+  await writeFile(routeDecisionPath, JSON.stringify({
+    schema: 'zj-loop.route_decision.v1',
+    decision_id: 'rd_ci_456',
+    signal_id: 'ci:456',
+    source: 'ci',
+    route: 'ci-sweeper',
+    request_kind: 'issue-fix-request',
+    requested_action: 'dispatch',
+    target_consumer: 'ci-sweeper',
+    allowed: true,
+    status: 'pending',
+    reason: 'route matched',
+    evidence: ['workflow_run:456'],
+    dedupe_key: 'example/repo:ci-sweeper:ci:456:generated-workflow',
+  }));
+  try {
+    const result = spawnSync(process.execPath, [
+      CI_SWEEPER_CLI,
+      'request-body',
+      '--route-decision',
+      routeDecisionPath,
+      '--repo',
+      'example/repo',
+      '--workflow',
+      'validate',
+      '--run-id',
+      '456',
+      '--out',
+      outPath,
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    assert.equal(JSON.parse(result.stdout).written, true);
+    const body = await readFile(outPath, 'utf8');
+    assert.equal(parseIssueFixRequestComments([{ id: 1, body }])[0].validation.ok, true);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

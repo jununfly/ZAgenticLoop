@@ -4,7 +4,7 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Primitives matrix](docs/primitives-matrix.md) · [Release playbook](docs/RELEASE.md)
 
 ## What You Get
 
@@ -16,6 +16,7 @@ It gives you a method, production patterns, starter kits, and small CLIs for mov
 | Check whether a repo is loop-ready | `npx @jununfly/zj-loop-audit . --suggest` |
 | Scaffold loop state and skills | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok` |
 | Add GitHub Actions smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
+| Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Integrate loop knowledge through MCP | [zj-loop-mcp-server](tools/zj-loop-mcp-server/) |
@@ -130,12 +131,19 @@ npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweepe
 ```
 
 Choose the first enabled path by route readiness, not by installation order.
-Report-only routes are intentionally evidence-only; action-capable routes such
-as `ci-sweeper`, `roadmap-sliced-development`, `pr-steward-fix-request`,
-`dependency-sweeper`, `changelog-drafter-draft-request`,
-`issue-triage-action`, and `post-merge-roadmap-closeout` become user-project
-live paths only after their generated workflow and packaged runner are marked
-`execution-ready`.
+The first execution-ready route set is:
+
+- `roadmap-sliced-development`: issue slash command to Activation Request to
+  bounded roadmap branch/PR bootstrap.
+- `ci-sweeper`: failed workflow to durable GitHub Issue Fix Request.
+- `post-merge-roadmap-closeout`: merged Roadmap-Sliced PR to guarded dry-run
+  closeout, with optional fixed-phrase live cleanup.
+
+Report-only routes are intentionally evidence-only; other action-capable routes
+such as `pr-steward-fix-request`, `dependency-sweeper`,
+`changelog-drafter-draft-request`, and `issue-triage-action` become
+user-project live paths only after their generated workflow and packaged runner
+are marked `execution-ready`.
 
 Generated bundle route menu:
 
@@ -176,6 +184,9 @@ Run the `ZJ Loop Smoke` workflow manually first, then audit:
 ```bash
 npx @jununfly/zj-loop-audit . --suggest
 ```
+
+For the complete user-project story and safety boundaries, see
+[User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md).
 
 Upgrade generated workflows intentionally:
 
@@ -228,7 +239,7 @@ See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patte
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
-| `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.2` |
+| `@jununfly/zj-loop-core` | library | Shared registry, project evidence, semantic queries, and CLI harness | `0.1.3` |
 | `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, state files, budget, and run logs | `0.1.6` |
 | `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score and suggestions | `0.1.3` |
 | `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by pattern, level, and cadence | `0.1.4` |
