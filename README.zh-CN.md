@@ -130,6 +130,19 @@ Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
 只有在 generated workflow 和 packaged runner 都标记为 `user-project-ready`
 后，才应被当作用户项目 live path。
 
+Generated bundle route menu：
+
+| Route | Workflow | 首次使用场景 |
+|-------|----------|--------------|
+| `manual-smoke-report` | `zj-loop-smoke.yml` | 先运行它；确认 checkout、package pin、Route Decision 和 audit surface。 |
+| `ci-sweeper` | `zj-loop-ci-sweeper.yml` | 当你希望 CI failure 生成 deterministic repair-plan evidence 时启用。 |
+| `roadmap-sliced-development` | `zj-loop-roadmap-activation.yml` | 当 issue comment 需要创建 Roadmap-Sliced activation request 时启用。 |
+| `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | 当 PR check failure 需要创建/消费独立 fix request 时启用。 |
+| `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | 当 dependency signal 需要成为有边界的 fix-request repair plan 时启用。 |
+| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | 当 release-window evidence 需要生成 draft evidence 或 draft PR plan 时启用。 |
+| `issue-triage-action` | `zj-loop-issue-triage.yml` | 当你需要 dry-run allowlisted label/comment action plan 时启用。 |
+| `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | 当 Roadmap-Sliced PR 带有 closeout contract 后启用。 |
+
 Generated workflows 在任何 runner 副作用前，都应该调用发布包里的 consumer
 gate。有 action 能力的 route 优先使用自己的窄命令；report-only route 可以使用
 generic planner：
@@ -143,6 +156,13 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --js
 
 这个 plan 会阻止 disabled route、无效 execution contract，以及只有 dogfood
 证据但尚未 `user-project-ready` 的 route。
+
+发布前，generated-bundle gate 会检查 workflow/template drift、
+`@jununfly/zj-loop-core` package pin，以及 Route Table readiness contract：
+
+```bash
+npm run test:generated-bundle-release-gate
+```
 
 先手动运行 `ZJ Loop Smoke` workflow，再执行审计：
 

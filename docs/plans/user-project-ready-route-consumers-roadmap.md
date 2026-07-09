@@ -310,12 +310,10 @@ Evidence:
   matrix, not a blind copy of the user-project template; differences are
   intentional because dogfood maturity records this repository's live/replayed
   status.
-- `bash scripts/ci-validate-gates.sh`
-- `bash scripts/ci-audit-gates.sh`
 
 ### Leaf 3-2: Product Docs And Release Gate
 
-Status: pending
+Status: completed
 
 Intent:
 
@@ -327,6 +325,24 @@ Intent:
 
 Verification:
 
+- `bash scripts/ci-validate-gates.sh`
+- `bash scripts/ci-audit-gates.sh`
+- `git diff --check`
+
+Evidence:
+
+- README, README.zh-CN, and Quickstart now expose the generated-bundle route
+  menu so user projects can choose their first ready path deliberately.
+- Dogfood Reference Case and Route Consumer Execution Architecture now document
+  the generated-bundle release gate and the distinction between user-project
+  template readiness and this repository's dogfood evidence matrix.
+- Added `scripts/validate-generated-bundle-release-gate.mjs` and
+  `npm run test:generated-bundle-release-gate`.
+- `scripts/ci-validate-gates.sh` now runs the generated-bundle release gate,
+  covering workflow/template drift, `@jununfly/zj-loop-core` package pin drift,
+  Route Table route existence, and default-disabled action route readiness.
+- `node scripts/validate-generated-bundle-release-gate.mjs`
+- `npm run check:zj-loop-init`
 - `bash scripts/ci-validate-gates.sh`
 - `bash scripts/ci-audit-gates.sh`
 - `git diff --check`

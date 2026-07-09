@@ -134,6 +134,19 @@ as `ci-sweeper`, `roadmap-sliced-development`, `pr-steward-fix-request`,
 live paths only after their generated workflow and packaged runner are marked
 `user-project-ready`.
 
+Generated bundle route menu:
+
+| Route | Workflow | First use |
+|-------|----------|-----------|
+| `manual-smoke-report` | `zj-loop-smoke.yml` | Run first; confirms checkout, package pin, Route Decision, and audit surface. |
+| `ci-sweeper` | `zj-loop-ci-sweeper.yml` | Enable when you want CI failures converted into deterministic repair-plan evidence. |
+| `roadmap-sliced-development` | `zj-loop-roadmap-activation.yml` | Enable when issue comments should create Roadmap-Sliced activation requests. |
+| `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | Enable when PR check failures should create/consume independent fix requests. |
+| `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | Enable when dependency signals should become bounded fix-request repair plans. |
+| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | Enable when release-window evidence should produce draft evidence or draft PR plans. |
+| `issue-triage-action` | `zj-loop-issue-triage.yml` | Enable for dry-run allowlisted label/comment action plans. |
+| `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | Enable after Roadmap-Sliced PRs carry closeout contracts. |
+
 Generated workflows should call the packaged consumer gate before any runner
 side effects. Action-capable routes should prefer their narrow command, while
 report-only routes may use the generic planner:
@@ -147,6 +160,13 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --js
 
 The plan blocks disabled routes, invalid execution contracts, and routes that
 are dogfooded but not yet `user-project-ready`.
+
+Before release, the generated-bundle gate checks workflow/template drift,
+`@jununfly/zj-loop-core` package pins, and Route Table readiness contracts:
+
+```bash
+npm run test:generated-bundle-release-gate
+```
 
 Run the `ZJ Loop Smoke` workflow manually first, then audit:
 

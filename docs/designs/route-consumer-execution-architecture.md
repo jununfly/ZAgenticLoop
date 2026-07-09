@@ -244,5 +244,11 @@ both layers are complete:
    its bounded completion form with evidence, or is explicitly marked as not yet
    runner-ready and not live.
 
+The generated-bundle release gate is `npm run
+test:generated-bundle-release-gate`. It checks workflow/template drift, generated
+workflow `@jununfly/zj-loop-core` package pins, Route Table route existence, and
+the rule that action-capable generated routes may be `user-project-ready` only
+while remaining disabled by default until the user explicitly enables them.
+
 Milestone commits and PRs are allowed before both layers complete, but product
 copy must not imply that all consumers are live.
