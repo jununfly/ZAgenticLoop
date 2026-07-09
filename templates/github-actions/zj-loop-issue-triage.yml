@@ -66,7 +66,7 @@ jobs:
                 --json > issue-fix-request-body-result.json
               REQUEST_ID="$(jq -r '.confirmed_transition.issue_fix_request.request_id' transition-plan.json)"
               SOURCE_ISSUE="$(jq -r '.confirmed_transition.issue_fix_request.source_signal.issue' transition-plan.json)"
-              EXISTING_URL="$(gh issue view "$SOURCE_ISSUE" --json comments --jq ".comments[] | select(.body | contains(\"${REQUEST_ID}\")) | .url" | head -n 1)"
+              EXISTING_URL="$(gh issue view "$SOURCE_ISSUE" --json comments --jq ".comments[] | select((.body | contains(\"<!-- zj-loop:issue-fix-request\")) and (.body | contains(\"${REQUEST_ID}\"))) | .url" | head -n 1)"
               if [ -n "$EXISTING_URL" ]; then
                 printf '\nExisting source issue Issue Fix Request comment: %s\n' "$EXISTING_URL" >> "$GITHUB_STEP_SUMMARY"
               else

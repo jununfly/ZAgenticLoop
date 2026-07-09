@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-issue-triage
 # zj-loop-template-version: 1
-# zj-loop-template-hash: f41e71a2d7440a8e
+# zj-loop-template-hash: 1027cf8a7e652741
 
 name: ZJ Loop Issue Triage
 
@@ -66,7 +66,7 @@ jobs:
                 --json > issue-fix-request-body-result.json
               REQUEST_ID="$(jq -r '.confirmed_transition.issue_fix_request.request_id' transition-plan.json)"
               SOURCE_ISSUE="$(jq -r '.confirmed_transition.issue_fix_request.source_signal.issue' transition-plan.json)"
-              EXISTING_URL="$(gh issue view "$SOURCE_ISSUE" --json comments --jq ".comments[] | select(.body | contains(\"${REQUEST_ID}\")) | .url" | head -n 1)"
+              EXISTING_URL="$(gh issue view "$SOURCE_ISSUE" --json comments --jq ".comments[] | select((.body | contains(\"<!-- zj-loop:issue-fix-request\")) and (.body | contains(\"${REQUEST_ID}\"))) | .url" | head -n 1)"
               if [ -n "$EXISTING_URL" ]; then
                 printf '\nExisting source issue Issue Fix Request comment: %s\n' "$EXISTING_URL" >> "$GITHUB_STEP_SUMMARY"
               else
