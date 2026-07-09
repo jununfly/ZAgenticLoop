@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { evaluateRoadmapHandoffGate } from './roadmap-handoff-gate.mjs';
+import { buildRoadmapHandoffPrBody, evaluateRoadmapHandoffGate } from './roadmap-handoff-gate.mjs';
 
 const PR_BODY = [
   '## Verification',
@@ -59,6 +59,33 @@ const VALID_INPUT = {
 
 test('passes only after closeout has a pushed branch and reviewable PR handoff', () => {
   const result = evaluateRoadmapHandoffGate(VALID_INPUT);
+
+  assert.equal(result.status, 'passed');
+  assert.deepEqual(result.errors, []);
+});
+
+test('renders a PR body with a valid post-merge closeout contract', () => {
+  const body = buildRoadmapHandoffPrBody({
+    roadmapId: 'dependency-sweeper-route',
+    branchName: 'zjal/dependency-sweeper-route',
+    activationCarrierIssue: 23,
+    summary: 'Complete dependency sweeper route.',
+    verification: ['npm run test:dependency-sweeper-route passed'],
+    durableDocs: ['docs/testing/dependency-sweeper-route-e2e.md'],
+    closeoutCommit: 'abc1234',
+  });
+
+  assert.match(body, /## Post-Merge Contract/);
+  assert.match(body, /kind: zj-loop\.post-merge-contract/);
+  assert.match(body, /issue: 23/);
+
+  const result = evaluateRoadmapHandoffGate({
+    ...VALID_INPUT,
+    pr: {
+      ...VALID_INPUT.pr,
+      body,
+    },
+  });
 
   assert.equal(result.status, 'passed');
   assert.deepEqual(result.errors, []);

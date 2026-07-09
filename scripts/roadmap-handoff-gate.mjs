@@ -15,6 +15,71 @@ const REQUIRED_PR_BODY_MARKERS = [
   },
 ];
 
+export function buildRoadmapHandoffPrBody(input = {}) {
+  const roadmapId = requiredString(input.roadmapId, 'roadmapId');
+  const branchName = requiredString(input.branchName ?? input.branch, 'branchName');
+  const activationCarrierIssue = normalizeOptionalInteger(input.activationCarrierIssue ?? input.carrierIssue);
+  const closeCarrierIssue = activationCarrierIssue !== null;
+  const verification = normalizeList(input.verification, ['Verification completed; see commit and CI evidence.']);
+  const durableDocs = normalizeList(input.durableDocs, ['Durable docs updated or confirmed not required.']);
+  const closeoutStatus = input.closeoutStatus ?? 'complete';
+  const closeoutCommit = input.closeoutCommit ?? 'included in this PR';
+  const branchCleanupPlan =
+    input.branchCleanupPlan ?? `Delete ${branchName} after merge via post-merge roadmap closeout.`;
+  const noPendingFollowups = input.noPendingFollowups !== false;
+
+  const contractLines = [
+    'kind: zj-loop.post-merge-contract',
+    'version: 1',
+    'consumer: post-merge-cleanup',
+    'mode: roadmap-closeout',
+    'roadmap:',
+    `  id: ${roadmapId}`,
+    `  branch: ${branchName}`,
+    'carrier:',
+    activationCarrierIssue === null ? '  issue: null' : `  issue: ${activationCarrierIssue}`,
+    'cleanup:',
+    '  delete_merged_branch: true',
+    `  close_carrier_issue: ${closeCarrierIssue ? 'true' : 'false'}`,
+    'safety:',
+    '  require_pr_merged: true',
+    '  require_branch_merged: true',
+    `  no_pending_followups: ${noPendingFollowups ? 'true' : 'false'}`,
+    '  missing_contract_behavior: report-only',
+  ];
+
+  return [
+    '## Summary',
+    '',
+    input.summary ?? `Complete roadmap ${roadmapId}.`,
+    '',
+    '## Verification',
+    '',
+    ...verification.map((item) => `- ${item}`),
+    '',
+    '## Closeout Status',
+    '',
+    `- Closeout status: ${closeoutStatus}`,
+    `- Closeout commit: ${closeoutCommit}`,
+    '- Process roadmap files: removed or promoted into durable docs before PR handoff.',
+    '',
+    '## Durable Docs',
+    '',
+    ...durableDocs.map((item) => `- ${item}`),
+    '',
+    '## Branch Cleanup',
+    '',
+    `- ${branchCleanupPlan}`,
+    '',
+    '## Post-Merge Contract',
+    '',
+    '```yaml',
+    ...contractLines,
+    '```',
+    '',
+  ].join('\n');
+}
+
 export function evaluateRoadmapHandoffGate(input = {}) {
   const errors = [];
   const warnings = [];
@@ -89,6 +154,15 @@ export function evaluateRoadmapHandoffGate(input = {}) {
 
 async function main() {
   const input = await readInput();
+  if (process.argv.includes('--render-pr-body')) {
+    const body = buildRoadmapHandoffPrBody(input);
+    if (process.env.ROADMAP_HANDOFF_PR_BODY_OUT) {
+      await writeFile(process.env.ROADMAP_HANDOFF_PR_BODY_OUT, body);
+    }
+    console.log(body);
+    return;
+  }
+
   const result = evaluateRoadmapHandoffGate(input);
 
   if (process.env.ROADMAP_HANDOFF_GATE_OUT) {
@@ -107,6 +181,24 @@ async function readInput() {
     return JSON.parse(await readFile(process.env.ROADMAP_HANDOFF_GATE_PATH, 'utf8'));
   }
   throw new Error('Set ROADMAP_HANDOFF_GATE_JSON or ROADMAP_HANDOFF_GATE_PATH');
+}
+
+function requiredString(value, key) {
+  const text = String(value ?? '').trim();
+  if (!text) throw new Error(`${key} is required`);
+  return text;
+}
+
+function normalizeList(value, fallback) {
+  if (!Array.isArray(value)) return fallback;
+  const items = value.map((item) => String(item ?? '').trim()).filter(Boolean);
+  return items.length > 0 ? items : fallback;
+}
+
+function normalizeOptionalInteger(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const number = Number(value);
+  return Number.isInteger(number) ? number : null;
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1] === fileURLToPath(import.meta.url)) {
