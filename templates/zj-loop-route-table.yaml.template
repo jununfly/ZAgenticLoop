@@ -284,7 +284,7 @@ disabled_dispatch_routes:
       milestone_allowed: false
       batch_mutation_allowed: false
       wontfix_default_confirmation_allowed: false
-    note: "Enable when maintainers should confirm recommended triage transitions and create independent Issue Fix Request carriers for ready-for-agent recommendations."
+    note: "Enable when maintainers should confirm recommended triage transitions and create source issue Issue Fix Request comments for ready-for-agent recommendations."
 
   - route_id: "dependency-sweeper"
     enabled: false

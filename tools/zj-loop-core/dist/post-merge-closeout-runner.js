@@ -205,8 +205,32 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
         },
         contractPlan,
         executorGuards,
+        confirmation: buildLiveCleanupConfirmation({ prNumber: pr.number ?? null, carrierIssue }),
         refusals,
         actions: executable ? buildExecutableActions({ branch, carrierIssue }) : [],
+    };
+}
+function buildLiveCleanupConfirmation(input) {
+    return {
+        required: true,
+        confirmation_location: [
+            'Codex chat reply when a local maintainer is operating the closeout CLI',
+            'workflow_dispatch input confirm_live_cleanup when using GitHub Actions',
+        ],
+        required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
+        side_effects: [
+            'switch local checkout to main and fast-forward from origin/main',
+            'delete the merged zjal/ roadmap branch locally when present and merged',
+            'delete the merged zjal/ roadmap branch on origin when present',
+            `append closeout evidence to carrier issue #${input.carrierIssue ?? 'unknown'}`,
+            `close carrier issue #${input.carrierIssue ?? 'unknown'}`,
+        ],
+        why_required: 'Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable.',
+        audit_target: [
+            `merged PR #${input.prNumber ?? 'unknown'}`,
+            `carrier issue #${input.carrierIssue ?? 'unknown'}`,
+            'post-merge closeout JSON plan',
+        ],
     };
 }
 export function buildPostMergeLiveRunnerEvidence(result, { createdAt = new Date().toISOString() } = {}) {
@@ -402,6 +426,13 @@ export function buildDryRunEvidenceComment(plan, { artifactName = 'post-merge-ro
         plan.status === 'dry-run'
             ? `Live cleanup command after maintainer approval: \`${command}\``
             : 'Live cleanup is not available until the refusals above are resolved.',
+        '',
+        '### Confirmation required for live cleanup',
+        '',
+        `- Reply/input location: ${plan.confirmation.confirmation_location.join('; ')}`,
+        `- Required phrase: \`${plan.confirmation.required_phrase}\``,
+        `- Why required: ${plan.confirmation.why_required}`,
+        `- Audit target: ${plan.confirmation.audit_target.join('; ')}`,
     ].join('\n');
 }
 export function buildLiveCommand(plan) {

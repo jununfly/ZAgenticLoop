@@ -53,6 +53,16 @@ export declare function runIssueTriageTransitionRunner(input: {
                 dedupe_key: string;
             };
             dedupe_key: string;
+            carrier: {
+                kind: string;
+                reason: string;
+                repo: any;
+                issue: any;
+                url: any;
+                independent_issue_allowed: boolean;
+                independent_issue_exception_required: boolean;
+                fallback_exceptions: string[];
+            };
             requested_consumer: {
                 consumer_id: string;
             };

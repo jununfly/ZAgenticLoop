@@ -1,0 +1,418 @@
+{
+  "title": "Dogfood 链路简化与 Issue 复用",
+  "description": "收纳 issue-backlog-triage 端到端 dogfood 后暴露的问题：已有 source issue 时复用原 issue、减少 human 确认和跨位置切换、简化 route/consumer/protocol 概念。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Dogfood 链路简化与 Issue 复用",
+      "status": "completed",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6"
+      ],
+      "decisions": [],
+      "notes": "Implemented source issue request carrier default for issue-triage-transition; generated workflow now comments on source issue instead of creating a new Issue Fix Request issue; post-merge dry-run plan/comment now exposes structured confirmation guidance. Verification: tools/zj-loop-core npm test; tools/zj-loop-init npm test; npm run test:generated-bundle-release-gate; npm run test:issue-triage-transition-e2e; npm run test:route-decision; npm run validate:registry."
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "目标原则与边界收敛",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-1-1",
+        "1-1-2",
+        "1-1-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "source issue lifecycle 承载模型",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "顺滑 loop 自动化体验",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "route 与运行时协议简化",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3",
+        "1-4-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "确认交互与 GitHub 评论模板",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3",
+        "1-5-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "证据分层与端到端完成标准",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "默认复用已有 source issue",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "已有 source issue 时是否仍应创建新的 Issue Fix Request issue？",
+          "answer": "默认不应该；已有 issue tracker item 时应复用 source issue 作为 lifecycle carrier 和状态回写对象，避免 source issue 与新 carrier issue 状态割裂。",
+          "note": "独立 Issue Fix Request 只应作为无 source issue、跨 repo 权限不足、原 issue 不适合承载自动流程证据，或 human 明确要求隔离时的窄例外。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "减少 human gate 的安全自动化原则",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "当前链路是否过于依赖 human 在多个位置反复确认？",
+          "answer": "是；需要尽可能减少确认点，让 loop 链路在安全边界内自动连续执行，避免单人和多人项目都感到繁琐。",
+          "note": "保留 human gate 应聚焦高风险、破坏性或权限升级动作，而不是每个中间转换都停下。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1-3": {
+      "id": "1-1-3",
+      "label": "内部协议精确但用户主路径简化",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "当前概念或组件数量是否放大 human 和 agent 的误解概率？",
+          "answer": "是；route、consumer、request、activation、carrier、transition 等概念需要合并展示和分层隐藏，只把用户必须操作的少数概念暴露在主路径。",
+          "note": "内部协议可保留精确性，但用户故事和 agent 执行入口必须更少、更顺。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "source issue 作为 activation 与执行状态载体",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "source issue 承载哪些 lifecycle 信息？",
+          "answer": "已有 source issue 时，Activation Request、执行状态、PR handoff、closeout evidence 和最终状态更新都应追加到 source issue 上。",
+          "note": "这样 source issue 就是用户可见的真实问题闭环，而不是被独立 carrier issue 分流。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "source issue closeout 回写与状态联动",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "为什么 source issue 必须参与 closeout？",
+          "answer": "如果实现只关闭独立 Issue Fix Request，而 source issue 没有状态更新或 evidence 链接，用户看到的真实问题仍像未处理，链路会制造状态割裂。",
+          "note": "closeout evidence 应优先写回 source issue；独立 carrier 存在时也必须反向链接和同步最终状态。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "独立 Issue Fix Request 窄例外规则",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "什么时候仍允许独立 Issue Fix Request？",
+          "answer": "仅在没有 source issue、跨 repo 权限不足、原 issue 不适合承载自动流程证据，或 human 明确要求隔离时允许。",
+          "note": "独立 carrier 不应成为默认路径；它必须解释为什么不能复用 source issue。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "自动连续执行取代走一步一停",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "顺滑 loop 的体验目标是什么？",
+          "answer": "从推荐 transition 到 activation、Roadmap-Sliced 执行、PR handoff、post-merge closeout，应尽量自动连续执行。",
+          "note": "只有高风险、破坏性动作、权限升级或无法判断的设计问题才停下来 grill human。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "最少 human gate 与固定确认点",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "哪些确认点应该保留？",
+          "answer": "保留少数必要 human gate：高风险变更、破坏性副作用、权限/发布/merge 类动作，以及策略无法自动判定的产品决策。",
+          "note": "低风险中间状态转换不应反复要求人在不同位置回复。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "route 名称与运行时信号去混淆",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "route 名称和运行时链路容易混淆在哪里？",
+          "answer": "issue-backlog-triage、issue-triage-transition、roadmap-sliced-development、post-merge-roadmap-closeout 分工清楚，但实际执行时 Agent 容易把实现 route 的开发 activation 和 route 运行时处理的信号混在一起。",
+          "note": "这是核心风险；文档修正之外，还需要命名、输出和确定性脚本减少误读空间。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "report-only 到 request-only 边界脚本化",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "report-only 到 request-only 的边界为什么要持续压实？",
+          "answer": "issue-backlog-triage 不能直接创建 Issue Fix Request，必须经过 confirmed transition；但 Agent 为了走通链路时容易越权。",
+          "note": "确定性脚本和测试应承担边界保护，不能只靠自然语言说明。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "issue-backlog-triage 推荐 transition 价值定位",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "issue-backlog-triage 的价值边界是什么？",
+          "answer": "issue-backlog-triage 的价值不在于自动改 issue，而在于稳定地产生推荐 transition。",
+          "note": "真正 side effect 应继续交给独立 consumer，但独立 consumer 是否新建 issue 需受 source issue 复用规则约束。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-4": {
+      "id": "1-4-4",
+      "label": "用户主路径概念合并与内部协议隐藏",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "如何降低概念过多导致的误解？",
+          "answer": "用户主路径只暴露少数可操作概念；route、consumer、request、activation、carrier、transition 等内部协议在文档和 CLI 输出中分层隐藏。",
+          "note": "高级用户和维护者仍可查看内部协议，但默认用户故事应围绕问题、自动处理、PR、closeout 展开。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "handoff 位置一等输出",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "handoff 位置不够显性的问题是什么？",
+          "answer": "Issue Fix Request carrier 创建后，如果下一步让 Roadmap-Sliced 接手的命令只在本地 state 或对话里，链路就不够可回放。",
+          "note": "zj-loop-prd-handoff 是对该缺口的补强，但后续仍需把 handoff 位置作为协议输出和用户体验的一等对象。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "固定确认短语位置结构化",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "固定确认短语交互位置为什么是问题？",
+          "answer": "用户问在哪里回复，说明协议虽然安全，但用户体验不直观。",
+          "note": "每次要求固定短语时必须明确回复位置：当前 Codex 对话、GitHub issue comment，还是 workflow_dispatch 输入。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "confirmation schema 统一字段",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "确认动作统一 schema 应包含什么？",
+          "answer": "所有需要 human 确认的动作统一输出 confirmation_location、required_phrase、side_effects、why_required。",
+          "note": "后续可补充 will_execute、will_not_execute、audit_target，以减少误确认。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-4": {
+      "id": "1-5-4",
+      "label": "GitHub issue comment 统一可读模板",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "为什么需要统一 GitHub issue comment 模板？",
+          "answer": "前几次写入 GitHub issue 的字号、加粗、换行混乱，可读性差，会削弱审计和用户信任。",
+          "note": "结构化隐藏块和人读摘要应分层，公共评论模板应稳定、简短、格式一致。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "dogfood evidence 三层分类",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "dogfood 文档应如何区分 evidence？",
+          "answer": "dogfood 文档应区分本地 replay evidence、GitHub live evidence、post-merge cleanup evidence。",
+          "note": "不同 evidence 的可信度、可回放性和副作用边界不同，不能混在同一类状态描述里。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "Roadmap-Sliced activation 完成标准扩展",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Roadmap-Sliced activation 的成功标准应到哪里？",
+          "answer": "Roadmap-Sliced activation 的成功标准不应停在创建 branch/PR。",
+          "note": "应包含 PR handoff 和 post-merge closeout，否则链路尾部仍靠记忆，容易残留分支、carrier issue 和 lifecycle 状态。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "post-merge closeout 产品化提示",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "post-merge closeout 的摩擦是什么？",
+          "answer": "不做 closeout 会残留分支、carrier issue 和 activation lifecycle，后续 duplicate/resume/finished 判断会变脏。",
+          "note": "guarded live cleanup 已走通，但 dry-run 后如何 live cleanup 的提示需要更产品化。"
+        }
+      ],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-09 19:24:38",
+    "updated": "2026-07-09 19:53:07",
+    "md_file": "docs/plans/dogfood-flow-simplification-roadmap.md"
+  }
+}

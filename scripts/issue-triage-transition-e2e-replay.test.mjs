@@ -7,7 +7,7 @@ import {
 
 const ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
 
-test('confirmed issue triage transition reaches Issue Fix Request carrier for ready-for-agent', async () => {
+test('confirmed issue triage transition reaches source issue request carrier for ready-for-agent', async () => {
   const suite = await runIssueTriageTransitionE2EReplaySuite({ routeTablePath: ROUTE_TABLE_PATH });
   const result = suite.results.find((item) => item.name === 'ready-for-agent-confirmed-plans-issue-fix-request');
 
@@ -20,6 +20,7 @@ test('confirmed issue triage transition reaches Issue Fix Request carrier for re
   assert.equal(result.transitionReplay.evidence.completion_form, 'issue-fix-request-created');
   assert.equal(result.transitionReplay.evidence.side_effects.executed, false);
   assert.equal(result.transitionReplay.confirmed_transition.issue_fix_request.status, 'requested');
+  assert.equal(result.transitionReplay.confirmed_transition.issue_fix_request.carrier.kind, 'source-issue-comment');
   assert.equal(result.transitionReplay.confirmed_transition.issue_fix_request.requested_consumer.consumer_id, 'roadmap-sliced-development');
 });
 

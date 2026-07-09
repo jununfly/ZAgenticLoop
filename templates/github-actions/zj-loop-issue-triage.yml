@@ -65,12 +65,13 @@ jobs:
                 --title-out issue-fix-request-title.txt \
                 --json > issue-fix-request-body-result.json
               REQUEST_ID="$(jq -r '.confirmed_transition.issue_fix_request.request_id' transition-plan.json)"
-              EXISTING_URL="$(gh issue list --state open --search "$REQUEST_ID in:body" --json url --jq '.[0].url // ""')"
+              SOURCE_ISSUE="$(jq -r '.confirmed_transition.issue_fix_request.source_signal.issue' transition-plan.json)"
+              EXISTING_URL="$(gh issue view "$SOURCE_ISSUE" --json comments --jq ".comments[] | select(.body | contains(\"${REQUEST_ID}\")) | .url" | head -n 1)"
               if [ -n "$EXISTING_URL" ]; then
-                printf '\nExisting Issue Fix Request: %s\n' "$EXISTING_URL" >> "$GITHUB_STEP_SUMMARY"
+                printf '\nExisting source issue Issue Fix Request comment: %s\n' "$EXISTING_URL" >> "$GITHUB_STEP_SUMMARY"
               else
-                ISSUE_URL="$(gh issue create --title "$(cat issue-fix-request-title.txt)" --body-file issue-fix-request-body.md)"
-                printf '\nCreated Issue Fix Request: %s\n' "$ISSUE_URL" >> "$GITHUB_STEP_SUMMARY"
+                COMMENT_URL="$(gh issue comment "$SOURCE_ISSUE" --body-file issue-fix-request-body.md)"
+                printf '\nCreated source issue Issue Fix Request comment: %s\n' "$COMMENT_URL" >> "$GITHUB_STEP_SUMMARY"
               fi
             fi
           fi

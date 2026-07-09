@@ -23,7 +23,7 @@ The first route set is deliberately small:
 | --- | --- | --- | --- |
 | `roadmap-sliced-development` | A maintainer comments `/zj-loop start roadmap-sliced-development` on a plan issue and gets a bounded roadmap branch/PR bootstrap. | Disabled until explicitly enabled. Generated workflow can produce activation, contract, and bounded-slice evidence. | Activation can create the roadmap lifecycle. Slice execution is bounded by `max_slices`, default `30`, and Roadmap-Sliced gates. |
 | `ci-sweeper` | A failing workflow can become a durable GitHub Issue Fix Request instead of disappearing in Actions history. | Disabled until explicitly enabled. Generated workflow records Route Decision and consumer plan evidence. | When allowed, it creates an independent Issue Fix Request carrier for bounded fix-runner consumption or escalation. |
-| `issue-backlog-triage` -> `issue-triage-transition` | Open issue backlog signals become recommended `zj-triage` transitions, then maintainer/collaborator confirmation creates request-only Issue Fix Request carriers for `ready-for-agent`. | Recommendation evidence is report-only. Confirmed transition requires an exact request id and fixed confirmation phrase. | No live tracker mutation. The useful boundary is an independent, replayable Issue Fix Request carrier. |
+| `issue-backlog-triage` -> `issue-triage-transition` | Open issue backlog signals become recommended `zj-triage` transitions, then maintainer/collaborator confirmation creates request-only Issue Fix Request comments on the source issue for `ready-for-agent`. | Recommendation evidence is report-only. Confirmed transition requires an exact request id and fixed confirmation phrase. | No live tracker label/state mutation. The useful boundary is a replayable request comment on the user-visible source issue. |
 | `post-merge-roadmap-closeout` | After a Roadmap-Sliced PR is merged, cleanup can be planned and, with explicit confirmation, close only the activation carrier and delete only the merged roadmap branch. | Dry-run by default. | Live cleanup requires the fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` and valid post-merge contract guards. |
 
 All other action-capable routes remain selectable future paths, but should not
@@ -113,14 +113,17 @@ batch-editing the tracker.
 
 3. The confirmation path also requires the fixed workflow phrase
    `CONFIRM_TRIAGE_TRANSITION`.
-4. `issue-triage-transition` creates or dedupes an Issue Fix Request carrier
-   for `ready-for-agent` so downstream consumer routing has a durable request.
+4. `issue-triage-transition` creates or dedupes an Issue Fix Request comment on
+   the source issue for `ready-for-agent` so downstream consumer routing has a
+   durable request without splitting lifecycle state.
 
 This route is execution-ready as a request-only bridge. It may create an
-independent Issue Fix Request carrier, but it must not mutate labels, write
-public comments on the source issue, close issues, assign owners, set
-milestones, or start consumer work until a future promotion explicitly adds
-live side effects and new dogfood evidence.
+independent Issue Fix Request carrier only for narrow exceptions such as a
+missing source issue, cross-repository permission limits, source issues
+unsuitable for automation evidence, or explicit human-requested isolation. It
+must not mutate labels, close issues, assign owners, set milestones, or start
+consumer work until a future promotion explicitly adds live side effects and new
+dogfood evidence.
 
 ## Post-Merge Closeout Path
 

@@ -3,12 +3,14 @@
 These test cases verify the confirmed issue triage transition route:
 
 ```text
-GitHub/GitLab Issues Backlog -> Route Decision -> Recommended Triage Transition -> Confirmed Triage Transition -> Issue Fix Request Carrier
+GitHub/GitLab Issues Backlog -> Route Decision -> Recommended Triage Transition -> Confirmed Triage Transition -> Source Issue Fix Request Comment
 ```
 
-This is the bridge from recommendation mode to a reviewable request carrier. It
-does not mutate tracker state, write public comments, change labels, close
-issues, or start consumer work.
+This is the bridge from recommendation mode to a reviewable request carrier on
+the source issue. It does not mutate tracker state, change labels, close issues,
+or start consumer work. The only request side effect after confirmation is a
+deduped structured Issue Fix Request comment on the source issue. Creating an
+independent Issue Fix Request issue is reserved for explicit narrow exceptions.
 
 ## Scope
 
@@ -24,10 +26,9 @@ It first runs `issue-backlog-triage` to create
 - the fixed confirmation phrase `CONFIRM_TRIAGE_TRANSITION`
 
 When the recommended state is `ready-for-agent`, the confirmed transition
-creates or dedupes an Issue Fix Request for `roadmap-sliced-development`.
-Other triage states
-remain triage-only evidence unless a later promoted route explicitly supports
-live side effects.
+creates or dedupes an Issue Fix Request for `roadmap-sliced-development` on the
+source issue comment thread. Other triage states remain triage-only evidence
+unless a later promoted route explicitly supports live side effects.
 
 ## Local Replay Gate
 
@@ -43,7 +44,7 @@ Expected results:
 
 - Replay suite returns `passed: true` with the real Route Table.
 - `ready-for-agent` reaches completion form `issue-fix-request-created` with
-  `execution_mode: request-only`.
+  `execution_mode: request-only` and `carrier.kind: source-issue-comment`.
 - `needs-info` reaches completion form `triage-transition-confirmed` without an
   Issue Fix Request.
 - `wontfix` candidates escalate and do not produce tracker operations.
@@ -65,5 +66,5 @@ Expected results:
 | Decision | Classification | Durable home |
 | --- | --- | --- |
 | Confirmed transition is separate from recommendation evidence. | durable doc | This test case, `docs/designs/triage-architecture.md`, and `zj-loop/issue-triage-state.md`. |
-| `ready-for-agent` can only create an Issue Fix Request carrier after fixed confirmation. | durable doc | This test case and `patterns/issue-triage.md`. |
+| `ready-for-agent` can only create an Issue Fix Request carrier after fixed confirmation, and existing source issues are the default carrier location. | durable doc | This test case and `patterns/issue-triage.md`. |
 | Source issue tracker mutation remains refused until explicitly promoted. | durable doc | This test case, Route Table, and Dogfood Reference Case. |

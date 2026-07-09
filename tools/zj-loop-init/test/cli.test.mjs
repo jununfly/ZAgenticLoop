@@ -177,7 +177,8 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(issueTriage, /zj-loop-issue-triage-action action-plan/);
     assert.match(issueTriage, /zj-loop-issue-triage-transition confirm-plan/);
     assert.match(issueTriage, /zj-loop-issue-triage-transition request-body/);
-    assert.match(issueTriage, /gh issue create/);
+    assert.match(issueTriage, /gh issue comment "\$SOURCE_ISSUE" --body-file issue-fix-request-body\.md/);
+    assert.doesNotMatch(issueTriage, /gh issue create/);
     assert.match(issueTriage, /triage_transition_confirmation/);
     assert.doesNotMatch(issueTriage, /'\$\{\{ inputs\./);
     const changelogDrafter = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-changelog-drafter.yml'), 'utf8');

@@ -99,18 +99,19 @@ export function buildIssueTriageTransitionIssueFixRequestBody(input) {
     const request = input.issueFixRequest;
     const comment = buildIssueFixRequestComment(request).trim();
     return [
-        `# Issue Fix Request: ${request.requested_consumer.consumer_id}`,
+        `## Issue Fix Request: ${request.requested_consumer.consumer_id}`,
         '',
         comment,
         '',
-        '## Human-readable summary',
+        '### Summary',
         '',
         `- Source issue: ${request.source_signal.url || `${request.source_signal.repo}#${request.source_signal.issue}`}`,
+        `- Carrier: \`${request.carrier?.kind ?? 'independent-issue'}\``,
         `- Source route: \`${request.source_signal.source}\``,
         `- Requested consumer: \`${request.requested_consumer.consumer_id}\``,
         `- Dedupe key: \`${request.dedupe_key}\``,
         '',
-        '## Triage brief',
+        '### Triage brief',
         '',
         input.triageComment ?? request.acceptance_criteria.join('\n'),
         '',
@@ -208,6 +209,7 @@ function commentFor(request, decisionResult) {
 function issueFixRequestFor(request, decisionResult, createdAt) {
     if (decisionResult.status !== 'confirmed' || request.recommended_state !== 'ready-for-agent')
         return null;
+    const sourceIssueUrl = request.source.issue_url || `https://github.com/${request.source.repo}/issues/${request.source.issue}`;
     return {
         schema: 'zj-loop.issue_fix_request.v1',
         request_id: `ifr_triage_${stableHash(request.dedupe_key)}`,
@@ -217,7 +219,7 @@ function issueFixRequestFor(request, decisionResult, createdAt) {
             source: 'issue-backlog-triage',
             repo: request.source.repo,
             issue: request.source.issue,
-            url: request.source.issue_url,
+            url: sourceIssueUrl,
         },
         route_decision: {
             route_id: 'issue-backlog-triage',
@@ -226,6 +228,21 @@ function issueFixRequestFor(request, decisionResult, createdAt) {
             dedupe_key: `issue-fix-request:${request.source.repo}:${request.source.issue}:ready-for-agent`,
         },
         dedupe_key: `issue-fix-request:${request.source.repo}:${request.source.issue}:ready-for-agent`,
+        carrier: {
+            kind: 'source-issue-comment',
+            reason: 'source issue already exists; keep lifecycle evidence and closeout on the user-visible issue',
+            repo: request.source.repo,
+            issue: request.source.issue,
+            url: sourceIssueUrl,
+            independent_issue_allowed: false,
+            independent_issue_exception_required: true,
+            fallback_exceptions: [
+                'missing-source-issue',
+                'cross-repository-permission-unavailable',
+                'source-issue-unsuitable-for-automation-evidence',
+                'human-requested-isolation',
+            ],
+        },
         requested_consumer: { consumer_id: 'roadmap-sliced-development' },
         fix_scope: { scopes: ['issue-fix'], areas: ['triage-confirmed'] },
         acceptance_criteria: [request.brief_draft.body],

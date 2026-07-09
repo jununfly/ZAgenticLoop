@@ -84,6 +84,9 @@ Expected results:
 - The workflow uploads the full dry-run JSON plan as an artifact.
 - Optional live workflow dispatch requires the fixed confirmation phrase
   `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+- Dry-run JSON and generated comments expose structured confirmation guidance:
+  `confirmation_location`, `required_phrase`, `side_effects`, `why_required`,
+  and `audit_target`.
 
 ## Real GitHub Dogfood
 
@@ -102,8 +105,10 @@ closeout, use the maintainer-local command as the main live path:
 npm run post-merge-closeout -- --pr <number> --repo jununfly/ZAgenticLoop --carrier-issue <issue> --live
 ```
 
-The optional workflow-dispatch live path requires `pr_number`, `carrier_issue`,
-and the fixed confirmation phrase:
+The dry-run evidence says where the fixed phrase belongs. A local maintainer can
+reply in the current Codex chat when operating the local CLI. The optional
+workflow-dispatch live path requires `pr_number`, `carrier_issue`, and the fixed
+confirmation phrase in the `confirm_live_cleanup` input:
 
 ```text
 DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER
