@@ -426,6 +426,32 @@ async function copyFile(src, dest, dryRun, io) {
     io.stdout(`  copied: ${src} → ${dest}`);
     return true;
 }
+async function writeLoopContract(src, dest, dryRun, force, io) {
+    if (!(await exists(src)))
+        return false;
+    if ((await exists(dest)) && !force) {
+        io.stdout(`  skipped: ${LOOP_ARTIFACTS.config.primary} already exists`);
+        io.stdout('  next step: review the existing loop contract or rerun with --force to replace it intentionally');
+        return true;
+    }
+    if (dryRun) {
+        const verb = force ? 'would overwrite' : 'would copy';
+        io.stdout(`  ${verb}: ${src} → ${dest}`);
+        if (force)
+            io.stdout('  WARNING: --force would replace the existing loop contract; review the result before committing.');
+        return true;
+    }
+    await mkdir(path.dirname(dest), { recursive: true });
+    await cp(src, dest, { force: true });
+    if (force) {
+        io.stdout(`  OVERWRITTEN with --force: ${LOOP_ARTIFACTS.config.primary}`);
+        io.stdout('  WARNING: review this active loop contract before committing.');
+    }
+    else {
+        io.stdout(`  copied: ${src} → ${dest}`);
+    }
+    return true;
+}
 function firstLoopCommand(pattern, tool) {
     return pattern.init.first_loop_command[tool];
 }
@@ -532,7 +558,7 @@ async function handleInitCommand({ io, options }) {
     }
     const loopMd = path.join(effectiveStarter, 'ZJ-LOOP.md');
     if (await exists(loopMd)) {
-        await copyFile(loopMd, path.join(targetDir, LOOP_ARTIFACTS.config.primary), dryRun, io);
+        await writeLoopContract(loopMd, path.join(targetDir, LOOP_ARTIFACTS.config.primary), dryRun, force, io);
     }
     await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
     await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);

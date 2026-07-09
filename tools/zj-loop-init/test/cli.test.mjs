@@ -91,6 +91,26 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
   }
 });
 
+test('zj-loop-init does not overwrite an existing loop contract unless --force is explicit', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-existing-loop-contract-'));
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    const loopPath = path.join(dir, 'zj-loop', 'ZJ-LOOP.md');
+    await writeFile(loopPath, '# Existing Loop Contract\n');
+
+    const skipped = await exec('node', [CLI, dir, '--pattern', 'daily-triage', '--tool', 'grok']);
+    assert.match(skipped.stdout, /skipped: zj-loop\/ZJ-LOOP\.md already exists/);
+    assert.match(skipped.stdout, /rerun with --force to replace it intentionally/);
+    assert.equal(await readFile(loopPath, 'utf8'), '# Existing Loop Contract\n');
+
+    const forced = await exec('node', [CLI, dir, '--pattern', 'daily-triage', '--tool', 'grok', '--force']);
+    assert.match(forced.stdout, /OVERWRITTEN with --force: zj-loop\/ZJ-LOOP\.md/);
+    assert.notEqual(await readFile(loopPath, 'utf8'), '# Existing Loop Contract\n');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init --add scaffolds explicit optional artifacts', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-'));
   try {
