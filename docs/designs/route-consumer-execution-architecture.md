@@ -110,8 +110,8 @@ things.
 
 ```yaml
 maturity:
-  protocol: missing | designed | replayed | dogfooded | user-project-ready
-  runner: missing | designed | replayed | dogfooded | user-project-ready
+  protocol: missing | designed | replayed | dogfooded | install-ready | execution-ready
+  runner: missing | designed | replayed | dogfooded | install-ready | execution-ready
 ```
 
 Examples:
@@ -120,12 +120,15 @@ Examples:
   claim, or report evidence exists but no runner performs the work.
 - A dogfooded runner may still be scoped narrowly, such as CI Sweeper repairing
   validate/audit generated artifacts only.
-- A user-project-ready runner must work through generated bundle paths and
+- An `install-ready` runner can be generated into user projects with Route
+  Table rows, workflows, package commands, and plan/report evidence.
+- An `execution-ready` runner must process real signals into durable request
+  carriers and bounded consumer outcomes through generated bundle paths and
   published package APIs, not repository-local scripts.
 
 Live execution requires:
 
-- `maturity.runner` is `dogfooded` or `user-project-ready`
+- `maturity.runner` is `execution-ready`
 - recent successful evidence is linked in the Route Table or durable docs
 - route kind, capabilities, request verifier requirements, and side effect
   level are compatible
@@ -198,7 +201,8 @@ The terminal architecture is complete only when these gates are enforceable:
 
 1. Route Table rows declare `enabled`, `consumer_kind`, `execution`,
    `maturity`, and `capabilities`.
-2. Live execution requires dogfooded or user-project-ready runner evidence.
+2. Live execution requires `execution-ready` runner evidence. Dogfood evidence
+   may support promotion, but is not itself a user-project execution claim.
 3. Request and claim paths pass schema, allowlist, capability, verifier, active
    status, and evidence checks.
 4. Consumers generate replayable evidence for success, skip, failure, or
@@ -226,7 +230,7 @@ The dogfood Route Table is the operational truth. Current dogfood capability:
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
 | Dependency Sweeper | `fix-runner` | `claim-only` | `replayed` | Request/claim evidence plus replayed repair PR or escalation runner; not live until workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `draft-consumer` | `report-only` | `replayed` | Report/draft-request evidence plus replayed draft evidence or draft PR runner; not live until workflow-dispatch dogfood evidence exists. |
-| Roadmap-Sliced Development | `activation-consumer` | `live` | `dogfooded` | Activation bootstrap is live; slice execution remains bounded by roadmap gates. |
+| Roadmap-Sliced Development | `activation-consumer` | `request-only` generated bundle, live dogfood bootstrap | `install-ready` generated bundle, dogfooded reference path | Activation bootstrap has deterministic request/contract evidence; slice execution remains bounded by roadmap gates. |
 | Post-Merge Cleanup | `cleanup-consumer` | `dry-run` | `replayed` | Automatic dry-run; live cleanup remains guarded by contract and confirmation. |
 
 `docs/designs/dogfood-reference-case.md` keeps the current dogfood overview and
@@ -247,8 +251,13 @@ both layers are complete:
 The generated-bundle release gate is `npm run
 test:generated-bundle-release-gate`. It checks workflow/template drift, generated
 workflow `@jununfly/zj-loop-core` package pins, Route Table route existence, and
-the rule that action-capable generated routes may be `user-project-ready` only
-while remaining disabled by default until the user explicitly enables them.
+the rule that action-capable generated routes must be `install-ready` or
+`execution-ready` while remaining disabled by default until the user explicitly
+enables them. It also runs the deterministic Roadmap Activation user-project
+fixture, which validates issue-comment activation, Activation Request carrier
+creation, Route Decision, branch/PR contract evidence, duplicate handling,
+permission denial, disabled route denial, and loop marker detection without live
+GitHub writes.
 
 Milestone commits and PRs are allowed before both layers complete, but product
 copy must not imply that all consumers are live.

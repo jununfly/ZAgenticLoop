@@ -78,7 +78,7 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     assert.match(routeTable, /consumer_kind: "report-consumer"/);
     assert.match(routeTable, /mode: "report-only"/);
     assert.match(routeTable, /side_effect_level: "evidence"/);
-    assert.match(routeTable, /runner: "user-project-ready"/);
+    assert.match(routeTable, /runner: "install-ready"/);
     assert.match(routeTable, /evidence_store: "zj-loop\/issue-triage-state\.md"/);
     assert.doesNotMatch(routeTable, /status_store/);
     assert.doesNotMatch(routeTable, /state-request/);
@@ -177,6 +177,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     const roadmapActivation = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-roadmap-activation.yml'), 'utf8');
     assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
     assert.match(roadmapActivation, /zj-loop-roadmap-activation activation-plan/);
+    assert.match(roadmapActivation, /zj-loop-roadmap-activation contract-plan/);
     assert.doesNotMatch(roadmapActivation, /'\$\{\{ inputs\./);
     assert.match(postMergeCleanup, /zj-loop-route dispatch post-merge-roadmap-closeout/);
   } finally {

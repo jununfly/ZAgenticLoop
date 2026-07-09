@@ -8,6 +8,8 @@ export type ConsumerRunPlan = {
     execution_mode: string;
     request_kind: string;
     readiness: string;
+    install_ready: boolean;
+    execution_ready: boolean;
     user_project_ready: boolean;
     allowed: boolean;
     status: ConsumerRunPlanStatus;

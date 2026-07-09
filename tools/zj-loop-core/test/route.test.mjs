@@ -157,7 +157,9 @@ test('route execution contract validates kind, mode, maturity, and live evidence
   const ciSweeper = routes.find((item) => item.route_id === 'ci-sweeper');
   assert.ok(ciSweeper);
   assert.deepEqual(ciSweeper.completion_forms, ['repair-pr', 'escalation-issue']);
-  assert.equal(ciSweeper.readiness, 'dogfooded-live');
+  assert.equal(ciSweeper.readiness, 'dogfood-verified');
+  assert.equal(ciSweeper.install_ready, false);
+  assert.equal(ciSweeper.execution_ready, false);
   assert.equal(ciSweeper.user_project_ready, false);
   assert.equal(isRouteLiveReady(ciSweeper), true);
   assert.equal(validateRouteExecutionContract(ciSweeper).valid, true);
@@ -173,15 +175,35 @@ test('route execution contract validates kind, mode, maturity, and live evidence
   assert.match(validation.errors.join('\n'), /report-consumer cannot use execution.mode=live/);
 });
 
-test('classifyRouteReadiness distinguishes user-project-ready from dogfood and replay evidence', () => {
+test('classifyRouteReadiness distinguishes install-ready execution-ready dogfood and replay evidence', () => {
   assert.deepEqual(
     classifyRouteReadiness({
       executionMode: 'live',
       sideEffectLevel: 'pr',
+      maturityRunner: 'execution-ready',
+      recentSuccessEvidence: [],
+    }),
+    { readiness: 'execution-ready', reasons: ['runner maturity is execution-ready'] },
+  );
+
+  assert.deepEqual(
+    classifyRouteReadiness({
+      executionMode: 'request-only',
+      sideEffectLevel: 'request',
+      maturityRunner: 'install-ready',
+      recentSuccessEvidence: [],
+    }),
+    { readiness: 'install-ready', reasons: ['runner maturity is install-ready'] },
+  );
+
+  assert.deepEqual(
+    classifyRouteReadiness({
+      executionMode: 'request-only',
+      sideEffectLevel: 'request',
       maturityRunner: 'user-project-ready',
       recentSuccessEvidence: [],
     }),
-    { readiness: 'user-project-ready', reasons: ['runner maturity is user-project-ready'] },
+    { readiness: 'install-ready', reasons: ['legacy runner maturity user-project-ready maps to install-ready'] },
   );
 
   assert.equal(
@@ -191,7 +213,7 @@ test('classifyRouteReadiness distinguishes user-project-ready from dogfood and r
       maturityRunner: 'dogfooded',
       recentSuccessEvidence: ['https://example.test/run/1'],
     }).readiness,
-    'dogfooded-live',
+    'dogfood-verified',
   );
   assert.equal(
     classifyRouteReadiness({
@@ -230,7 +252,7 @@ test('route execution contract rejects invalid completion forms and missing live
   assert.equal(missingEvidence.valid, false);
   assert.match(
     missingEvidence.errors.join('\n'),
-    /live execution requires runner maturity dogfooded or user-project-ready and non-evidence side-effect boundary/,
+    /live execution requires runner maturity dogfooded or execution-ready and non-evidence side-effect boundary/,
   );
 });
 
@@ -278,7 +300,7 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
     assert.match(status.stdout, /ci-sweeper/);
     assert.match(status.stdout, /fix-runner/);
     assert.match(status.stdout, /live/);
-    assert.match(status.stdout, /dogfooded-live/);
+    assert.match(status.stdout, /dogfood-verified/);
 
     const dispatch = spawnSync(process.execPath, [CLI, 'dispatch', 'ci-sweeper', '--root', dir], { encoding: 'utf8' });
     assert.equal(dispatch.status, 2);
@@ -291,7 +313,9 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
     const parsedStatus = JSON.parse(statusJson.stdout);
     assert.equal(parsedStatus.routes[0].consumer_kind, 'fix-runner');
     assert.equal(parsedStatus.routes[0].execution_mode, 'live');
-    assert.equal(parsedStatus.routes[0].readiness, 'dogfooded-live');
+    assert.equal(parsedStatus.routes[0].readiness, 'dogfood-verified');
+    assert.equal(parsedStatus.routes[0].install_ready, false);
+    assert.equal(parsedStatus.routes[0].execution_ready, false);
     assert.equal(parsedStatus.routes[0].user_project_ready, false);
     assert.deepEqual(parsedStatus.routes[0].capability_verifiers, ['ci-validate-gates', 'diff-check']);
   } finally {

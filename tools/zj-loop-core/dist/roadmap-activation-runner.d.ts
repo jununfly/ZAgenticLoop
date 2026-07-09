@@ -2,6 +2,7 @@ import { RouteStatus } from './route.js';
 export declare const ACTIVATION_SCHEMA_VERSION = 1;
 export declare const ALLOWED_ACTIVATION_PATTERNS: string[];
 export declare const ALLOWED_ACTIVATION_PERMISSIONS: string[];
+export declare const ROADMAP_ACTIVATION_LOOP_MARKER = "zj-loop.generated.roadmap-activation";
 export declare const ACTIVATION_KINDS: {
     readonly request: "zj-loop.activation-request";
     readonly consumed: "zj-loop.activation-consumed";
@@ -295,5 +296,55 @@ export declare function buildRoadmapActivationRouteDecision(input: {
     created_at: string;
 };
 export declare function buildActivationRequestComment(input: any): string;
+export declare function buildActivationRequestId(input: {
+    sourceIssue: string | number;
+    commandCommentId: string | number;
+    commandText: string;
+}): string;
+export declare function buildRoadmapActivationBranchName(input: {
+    activationRequestId: string;
+    title?: string;
+    sourceIssue?: string | number;
+}): string;
+export declare function buildRoadmapActivationPrTitle(input: {
+    title?: string;
+    sourceIssue?: string | number;
+}): string;
+export declare function buildRoadmapActivationPrContract(input: {
+    activationRequestId: string;
+    sourceIssueUrl: string;
+    sourceCommentUrl: string;
+    routeId?: string;
+    consumerId?: string;
+    branchName: string;
+    lifecycleState: RoadmapActivationLifecycleState;
+    closeoutContract: {
+        activationCarrierIssue?: string | number;
+        branchName?: string;
+        processRoadmapPath?: string;
+    };
+}): string;
+export type RoadmapActivationLifecycleState = 'requested' | 'consumed' | 'running' | 'blocked' | 'failed' | 'completed' | 'merged';
+export declare function classifyRoadmapActivationLifecycleTransition(input: {
+    currentState?: string;
+    nextState: string;
+    verificationFailureKind?: 'technical' | 'decision' | 'red-contract-test';
+}): {
+    allowed: boolean;
+    state: string;
+    nextState: string;
+    reason: string;
+};
+export declare function hasRoadmapActivationLoopMarker(input: {
+    body?: string;
+    author?: string;
+}): boolean;
+export declare function renderRoadmapActivationWorkflowSummary(input: {
+    action: string;
+    routeDecision: any;
+    activationRequestId?: string;
+    branchName?: string;
+    nextSteps?: string[];
+}): string;
 export declare function buildActivationConsumedComment(input: any): string;
 export declare function buildActivationFailedComment(input: any): string;

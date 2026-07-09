@@ -6,10 +6,17 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
+  buildActivationRequestId,
   buildActivationConsumedComment,
   buildActivationRequestComment,
+  buildRoadmapActivationBranchName,
+  buildRoadmapActivationPrContract,
+  buildRoadmapActivationPrTitle,
+  classifyRoadmapActivationLifecycleTransition,
   dispatchRoadmapActivationCommand,
+  hasRoadmapActivationLoopMarker,
   parseStructuredActivationComments,
+  renderRoadmapActivationWorkflowSummary,
 } from '../dist/index.js';
 
 const ROADMAP_ACTIVATION_CLI = fileURLToPath(new URL('../dist/roadmap-activation-cli.js', import.meta.url));
@@ -58,7 +65,90 @@ test('Roadmap Activation creates activation request comments for allowed command
   assert.equal(result.routeDecision.request_kind, 'activation-comment');
   assert.equal(result.routeDecision.allowed, true);
   assert.equal(parsed.fields.kind, 'zj-loop.activation-request');
+  assert.equal(parsed.fields.activation_request_id, parsed.fields.request_id);
   assert.equal(parsed.fields.pattern, 'roadmap-sliced-development');
+});
+
+test('Roadmap Activation deterministic contract helpers produce stable ids and PR contracts', () => {
+  const requestId = buildActivationRequestId({
+    sourceIssue: 321,
+    commandCommentId: 11,
+    commandText: '/zj-loop start roadmap-sliced-development',
+  });
+  const branchName = buildRoadmapActivationBranchName({
+    activationRequestId: requestId,
+    title: 'Implement execution ready activation',
+  });
+  const prTitle = buildRoadmapActivationPrTitle({ title: 'Implement execution ready activation' });
+  const contract = buildRoadmapActivationPrContract({
+    activationRequestId: requestId,
+    sourceIssueUrl: 'https://github.com/example/repo/issues/321',
+    sourceCommentUrl: 'https://github.com/example/repo/issues/321#issuecomment-11',
+    branchName,
+    lifecycleState: 'running',
+    closeoutContract: {
+      activationCarrierIssue: 321,
+      processRoadmapPath: 'docs/plans/example.md',
+    },
+  });
+
+  assert.equal(requestId, buildActivationRequestId({
+    sourceIssue: 321,
+    commandCommentId: 11,
+    commandText: '/zj-loop start roadmap-sliced-development',
+  }));
+  assert.match(requestId, /^act-321-11-[a-f0-9]{8}$/);
+  assert.equal(branchName, `zjal/${requestId}-implement-execution-ready-activation`);
+  assert.equal(prTitle, 'Roadmap Activation: Implement execution ready activation');
+  assert.match(contract, /zj-loop\.roadmap_activation_pr_contract\.v1/);
+  assert.match(contract, /"activation_request_id": "act-321-11-/);
+  assert.match(contract, /branch_name: `zjal\/act-321-11-/);
+});
+
+test('Roadmap Activation lifecycle helper separates red tests from blocked and failed states', () => {
+  assert.deepEqual(
+    classifyRoadmapActivationLifecycleTransition({
+      currentState: 'running',
+      nextState: 'running',
+      verificationFailureKind: 'red-contract-test',
+    }),
+    {
+      allowed: true,
+      state: 'running',
+      nextState: 'running',
+      reason: 'red-contract-test-is-implementation-signal',
+    },
+  );
+  assert.equal(classifyRoadmapActivationLifecycleTransition({
+    currentState: 'running',
+    nextState: 'failed',
+    verificationFailureKind: 'technical',
+  }).allowed, true);
+  assert.equal(classifyRoadmapActivationLifecycleTransition({
+    currentState: 'running',
+    nextState: 'blocked',
+    verificationFailureKind: 'decision',
+  }).allowed, true);
+  assert.equal(classifyRoadmapActivationLifecycleTransition({
+    currentState: 'completed',
+    nextState: 'running',
+  }).allowed, false);
+});
+
+test('Roadmap Activation loop marker and workflow summary are deterministic', () => {
+  assert.equal(hasRoadmapActivationLoopMarker({ body: '<!-- zj-loop.generated.roadmap-activation -->' }), true);
+  assert.equal(hasRoadmapActivationLoopMarker({ body: '<!-- zj-loop\ngenerated_by: roadmap-activation\n-->' }), true);
+  assert.equal(hasRoadmapActivationLoopMarker({ body: 'human comment' }), false);
+
+  const summary = renderRoadmapActivationWorkflowSummary({
+    action: 'create-request',
+    routeDecision: { route: 'roadmap-sliced-development', allowed: true, reason: 'activation route matched' },
+    activationRequestId: 'act-321-11-abcdef12',
+    branchName: 'zjal/act-321-11-abcdef12-example',
+  });
+  assert.match(summary, /## ZJ Loop Roadmap Activation/);
+  assert.match(summary, /activation_request_id: `act-321-11-abcdef12`/);
+  assert.match(summary, /Trigger the Roadmap-Sliced Consumer/);
 });
 
 test('Roadmap Activation returns duplicate and resume comments instead of new requests', () => {
@@ -159,8 +249,41 @@ test('Roadmap Activation activation-plan CLI reads route table and writes commen
     assert.equal(result.status, 0);
     const parsed = JSON.parse(result.stdout);
     assert.equal(parsed.action, 'create-request');
+    assert.match(parsed.activationRequestId, /^act-321-11-/);
     assert.equal(parsed.commentCreated, true);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('Roadmap Activation contract-plan CLI renders deterministic PR contract evidence', () => {
+  const result = spawnSync(process.execPath, [
+    ROADMAP_ACTIVATION_CLI,
+    'contract-plan',
+    '--activation-request-id',
+    'act-321-11-abcdef12',
+    '--title',
+    'Implement execution ready activation',
+    '--source-issue',
+    '321',
+    '--source-issue-url',
+    'https://github.com/example/repo/issues/321',
+    '--source-comment-url',
+    'https://github.com/example/repo/issues/321#issuecomment-11',
+    '--process-roadmap-path',
+    'docs/plans/example.md',
+    '--json',
+  ], { encoding: 'utf8' });
+
+  assert.equal(result.status, 0);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.schema, 'zj-loop.roadmap_activation_contract_plan.v1');
+  assert.equal(parsed.branchName, 'zjal/act-321-11-abcdef12-implement-execution-ready-activation');
+  assert.equal(parsed.prTitle, 'Roadmap Activation: Implement execution ready activation');
+  assert.match(parsed.prContract, /zj-loop\.roadmap_activation_pr_contract\.v1/);
+  assert.deepEqual(parsed.nextSteps, [
+    'Create or update the roadmap branch from the current base branch.',
+    'Open or update the Roadmap Activation PR with the contract block.',
+    'Start Roadmap-Sliced Consumer execution from the Activation Request scope.',
+  ]);
 });

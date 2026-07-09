@@ -7,6 +7,7 @@ import { RouteStatus } from './route.js';
 export const ACTIVATION_SCHEMA_VERSION = 1;
 export const ALLOWED_ACTIVATION_PATTERNS = ['roadmap-sliced-development'];
 export const ALLOWED_ACTIVATION_PERMISSIONS = ['admin', 'maintain', 'write'];
+export const ROADMAP_ACTIVATION_LOOP_MARKER = 'zj-loop.generated.roadmap-activation';
 export const ACTIVATION_KINDS = {
   request: 'zj-loop.activation-request',
   consumed: 'zj-loop.activation-consumed',
@@ -219,7 +220,11 @@ export function dispatchRoadmapActivationCommand(input: {
   requestId?: string;
 }) {
   const now = input.now ?? new Date().toISOString();
-  const requestId = input.requestId ?? `rsd-${input.sourceIssue}-${stableTimestamp(now)}`;
+  const requestId = input.requestId ?? buildActivationRequestId({
+    sourceIssue: input.sourceIssue,
+    commandCommentId: input.commandCommentId,
+    commandText: input.commandText,
+  });
   const command = parseStartCommand(input.commandText);
   const routeDecision = buildRoadmapActivationRouteDecision({
     route: input.route,
@@ -405,6 +410,7 @@ export function buildActivationRequestComment(input: any) {
     kind: ACTIVATION_KINDS.request,
     version: ACTIVATION_SCHEMA_VERSION,
     request_id: input.requestId,
+    activation_request_id: input.requestId,
     source_issue: input.sourceIssue,
     pattern: input.pattern,
     requested_by: input.requestedBy,
@@ -414,6 +420,146 @@ export function buildActivationRequestComment(input: any) {
     command_comment_id: input.commandCommentId,
     command_text: input.commandText,
   }, 'Roadmap-Sliced Development activation requested.');
+}
+
+export function buildActivationRequestId(input: {
+  sourceIssue: string | number;
+  commandCommentId: string | number;
+  commandText: string;
+}) {
+  const sourceIssue = slugPart(input.sourceIssue, 'issue');
+  const commentId = slugPart(input.commandCommentId, 'comment');
+  const commandHash = stableHash(input.commandText).slice(0, 8);
+  return `act-${sourceIssue}-${commentId}-${commandHash}`;
+}
+
+export function buildRoadmapActivationBranchName(input: {
+  activationRequestId: string;
+  title?: string;
+  sourceIssue?: string | number;
+}) {
+  const slug = slugify(input.title ?? `issue-${input.sourceIssue ?? 'activation'}`);
+  return `zjal/${slugify(input.activationRequestId)}-${slug}`;
+}
+
+export function buildRoadmapActivationPrTitle(input: { title?: string; sourceIssue?: string | number }) {
+  const title = String(input.title ?? `issue #${input.sourceIssue ?? 'unknown'}`).trim();
+  return `Roadmap Activation: ${title}`;
+}
+
+export function buildRoadmapActivationPrContract(input: {
+  activationRequestId: string;
+  sourceIssueUrl: string;
+  sourceCommentUrl: string;
+  routeId?: string;
+  consumerId?: string;
+  branchName: string;
+  lifecycleState: RoadmapActivationLifecycleState;
+  closeoutContract: {
+    activationCarrierIssue?: string | number;
+    branchName?: string;
+    processRoadmapPath?: string;
+  };
+}) {
+  const contract = {
+    schema: 'zj-loop.roadmap_activation_pr_contract.v1',
+    activation_request_id: input.activationRequestId,
+    source_issue_url: input.sourceIssueUrl,
+    source_comment_url: input.sourceCommentUrl,
+    route_id: input.routeId ?? 'roadmap-sliced-development',
+    consumer_id: input.consumerId ?? 'roadmap-sliced-development',
+    branch_name: input.branchName,
+    lifecycle_state: input.lifecycleState,
+    closeout_contract: {
+      activation_carrier_issue: input.closeoutContract.activationCarrierIssue ?? '',
+      branch_name: input.closeoutContract.branchName ?? input.branchName,
+      process_roadmap_path: input.closeoutContract.processRoadmapPath ?? '',
+    },
+  };
+  return [
+    '<!-- zj-loop.roadmap-activation-pr-contract',
+    JSON.stringify(contract, null, 2),
+    '-->',
+    '### Roadmap Activation Contract',
+    '',
+    `- activation_request_id: \`${contract.activation_request_id}\``,
+    `- route_id: \`${contract.route_id}\``,
+    `- consumer_id: \`${contract.consumer_id}\``,
+    `- branch_name: \`${contract.branch_name}\``,
+    `- lifecycle_state: \`${contract.lifecycle_state}\``,
+    '',
+  ].join('\n');
+}
+
+export type RoadmapActivationLifecycleState =
+  | 'requested'
+  | 'consumed'
+  | 'running'
+  | 'blocked'
+  | 'failed'
+  | 'completed'
+  | 'merged';
+
+export function classifyRoadmapActivationLifecycleTransition(input: {
+  currentState?: string;
+  nextState: string;
+  verificationFailureKind?: 'technical' | 'decision' | 'red-contract-test';
+}) {
+  const current = normalizeLifecycleState(input.currentState ?? 'requested');
+  const next = normalizeLifecycleState(input.nextState);
+  if (!current) {
+    return { allowed: false, state: 'requested', nextState: input.nextState, reason: 'unknown-current-lifecycle-state' };
+  }
+  if (!next) {
+    return { allowed: false, state: current, nextState: input.nextState, reason: 'unknown-lifecycle-state' };
+  }
+  if (input.verificationFailureKind === 'technical') {
+    return { allowed: next === 'failed', state: next, nextState: next, reason: 'technical-failure-enters-failed' };
+  }
+  if (input.verificationFailureKind === 'decision') {
+    return { allowed: next === 'blocked', state: next, nextState: next, reason: 'decision-or-risk-enters-blocked' };
+  }
+  if (input.verificationFailureKind === 'red-contract-test') {
+    return { allowed: next === 'running', state: next, nextState: next, reason: 'red-contract-test-is-implementation-signal' };
+  }
+
+  const allowed = allowedLifecycleTransitions(current).includes(next);
+  return {
+    allowed,
+    state: allowed ? next : current,
+    nextState: next,
+    reason: allowed ? 'lifecycle-transition-allowed' : 'lifecycle-transition-denied',
+  };
+}
+
+export function hasRoadmapActivationLoopMarker(input: { body?: string; author?: string }) {
+  const body = String(input.body ?? '');
+  return body.includes(ROADMAP_ACTIVATION_LOOP_MARKER) || /<!--\s*zj-loop[\s\S]*generated_by:\s*roadmap-activation/.test(body);
+}
+
+export function renderRoadmapActivationWorkflowSummary(input: {
+  action: string;
+  routeDecision: any;
+  activationRequestId?: string;
+  branchName?: string;
+  nextSteps?: string[];
+}) {
+  const nextSteps = input.nextSteps ?? defaultRoadmapActivationNextSteps(input);
+  return [
+    '## ZJ Loop Roadmap Activation',
+    '',
+    `- action: \`${input.action}\``,
+    `- route: \`${input.routeDecision?.route ?? 'roadmap-sliced-development'}\``,
+    `- allowed: \`${Boolean(input.routeDecision?.allowed)}\``,
+    `- reason: \`${input.routeDecision?.reason ?? 'n/a'}\``,
+    input.activationRequestId ? `- activation_request_id: \`${input.activationRequestId}\`` : null,
+    input.branchName ? `- branch_name: \`${input.branchName}\`` : null,
+    '',
+    '### Next Steps',
+    '',
+    ...nextSteps.map((step) => `- ${step}`),
+    '',
+  ].filter((line) => line !== null).join('\n');
 }
 
 export function buildActivationConsumedComment(input: any) {
@@ -522,6 +668,51 @@ function buildUnsupportedPatternComment(input: any) {
   }, 'Unsupported ZAgenticLoop activation pattern.');
 }
 
+function normalizeLifecycleState(value: string): RoadmapActivationLifecycleState | null {
+  const normalized = String(value ?? '').trim();
+  if (
+    normalized === 'requested' ||
+    normalized === 'consumed' ||
+    normalized === 'running' ||
+    normalized === 'blocked' ||
+    normalized === 'failed' ||
+    normalized === 'completed' ||
+    normalized === 'merged'
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
+function allowedLifecycleTransitions(state: RoadmapActivationLifecycleState): RoadmapActivationLifecycleState[] {
+  if (state === 'requested') return ['consumed', 'blocked', 'failed'];
+  if (state === 'consumed') return ['running', 'blocked', 'failed'];
+  if (state === 'running') return ['blocked', 'failed', 'completed'];
+  if (state === 'blocked') return ['running', 'failed'];
+  if (state === 'failed') return ['running'];
+  if (state === 'completed') return ['merged'];
+  return [];
+}
+
+function defaultRoadmapActivationNextSteps(input: { action: string; routeDecision: any }) {
+  if (input.action === 'create-request') {
+    return ['Append the activation request comment.', 'Trigger the Roadmap-Sliced Consumer for this activation request.'];
+  }
+  if (input.action === 'duplicate') {
+    return ['Do not create a new request.', 'Resume or inspect the existing activation request id.'];
+  }
+  if (input.action === 'denied') {
+    return ['Leave the denial audit comment.', 'Ask a maintainer or collaborator to issue the command if appropriate.'];
+  }
+  if (input.action === 'blocked') {
+    return ['Stop automation.', 'Record the human-grill decision before resuming.'];
+  }
+  if (input.routeDecision?.allowed === false) {
+    return ['Inspect Route Table status.', 'Enable the route with the fixed confirmation phrase only if appropriate.'];
+  }
+  return ['Inspect workflow evidence.', 'Continue only through the routed consumer contract.'];
+}
+
 function finalizeRequestState(record: any) {
   if (!record.request) return { ...record, currentState: 'inconsistent' };
   const terminalEvents = record.lifecycle.filter((event: any) =>
@@ -611,4 +802,16 @@ function stableTimestamp(value: string) {
 
 function stableHash(value: string) {
   return createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
+}
+
+function slugPart(value: string | number, fallback: string) {
+  return slugify(String(value ?? fallback)) || fallback;
+}
+
+function slugify(value: string) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
 }

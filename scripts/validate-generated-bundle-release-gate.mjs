@@ -5,6 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
+import { validateRoadmapActivationUserProjectFixture } from './roadmap-activation-user-project-fixture.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GENERATED_WORKFLOWS = [
   'zj-loop-smoke.yml',
@@ -27,6 +29,8 @@ const ACTION_READY_ROUTES = new Set([
   'roadmap-sliced-development',
   'post-merge-roadmap-closeout',
 ]);
+
+const INSTALL_OR_EXECUTION_READY = new Set(['install-ready', 'execution-ready']);
 
 function workflowTemplateHash(text) {
   const canonical = text.replace(/^# zj-loop-template-hash: .+$/m, '# zj-loop-template-hash: <computed>');
@@ -88,7 +92,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
         errors.push(`${workflowFile} dispatches unknown Route Table route: ${routeId}`);
         continue;
       }
-      if (route.maturity?.runner !== 'user-project-ready') {
+      if (!INSTALL_OR_EXECUTION_READY.has(route.maturity?.runner)) {
         errors.push(`${workflowFile} dispatches ${routeId}, but template runner maturity is ${route.maturity?.runner ?? 'missing'}`);
       }
       if (ACTION_READY_ROUTES.has(routeId) && route.enabled !== false) {
@@ -103,8 +107,8 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
       errors.push(`Route Table template missing action-capable route: ${routeId}`);
       continue;
     }
-    if (route.maturity?.runner !== 'user-project-ready') {
-      errors.push(`${routeId} runner maturity must be user-project-ready before release`);
+    if (!INSTALL_OR_EXECUTION_READY.has(route.maturity?.runner)) {
+      errors.push(`${routeId} runner maturity must be install-ready or execution-ready before release`);
     }
     if (route.enabled !== false) {
       errors.push(`${routeId} must be disabled by default before release`);
@@ -112,17 +116,19 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
   }
 
   if (errors.length) throw new Error(errors.join('\n'));
+  const roadmapActivationFixture = await validateRoadmapActivationUserProjectFixture(root);
   return {
     workflowCount: GENERATED_WORKFLOWS.length,
     coreVersion: expectedCoreVersion,
     actionReadyRouteCount: ACTION_READY_ROUTES.size,
+    roadmapActivationFixture,
   };
 }
 
 async function main() {
   const result = await validateGeneratedBundleReleaseGate();
   console.log(
-    `Generated bundle release gate valid: ${result.workflowCount} workflows, core ${result.coreVersion}, ${result.actionReadyRouteCount} action routes ✓`,
+    `Generated bundle release gate valid: ${result.workflowCount} workflows, core ${result.coreVersion}, ${result.actionReadyRouteCount} action routes, Roadmap Activation fixture ${result.roadmapActivationFixture.activationRequestId} ✓`,
   );
 }
 

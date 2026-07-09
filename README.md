@@ -115,10 +115,13 @@ npx @jununfly/zj-loop-init . --add github-actions
 This creates `zj-loop-*.yml` workflows with pinned package versions and
 generated metadata. Only `manual-smoke-report` is intended to run safely by
 default. Use Route Table status as the selection menu; it shows each route's
-mode, runner maturity, readiness, and required confirmation phrase. A
-`dogfooded-live` route has reference-repo evidence, while `user-project-ready`
-means the generated bundle can call a published package runner in user
-projects. Side-effecting consumers still need explicit Route Table enablement:
+mode, runner maturity, readiness, and required confirmation phrase.
+`dogfood-verified` means the route has reference-repo evidence.
+`install-ready` means the generated bundle can scaffold route policy,
+workflows, package commands, and plan/report evidence in a user project.
+`execution-ready` means real signals can become durable request carriers and
+bounded consumer outcomes. Side-effecting consumers still need explicit Route
+Table enablement:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route status
@@ -132,7 +135,7 @@ as `ci-sweeper`, `roadmap-sliced-development`, `pr-steward-fix-request`,
 `dependency-sweeper`, `changelog-drafter-draft-request`,
 `issue-triage-action`, and `post-merge-roadmap-closeout` become user-project
 live paths only after their generated workflow and packaged runner are marked
-`user-project-ready`.
+`execution-ready`.
 
 Generated bundle route menu:
 
@@ -159,7 +162,7 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --js
 ```
 
 The plan blocks disabled routes, invalid execution contracts, and routes that
-are dogfooded but not yet `user-project-ready`.
+are dogfood-verified or install-ready but not yet `execution-ready`.
 
 Before release, the generated-bundle gate checks workflow/template drift,
 `@jununfly/zj-loop-core` package pins, and Route Table readiness contracts:
