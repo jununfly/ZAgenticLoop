@@ -2,21 +2,24 @@
 
 Estimate daily token spend for [agentic loop working](https://github.com/jununfly/ZAgenticLoop) patterns by cadence and readiness level (L1–L3).
 
-Uses cost metadata from `patterns/registry.yaml`.
+Uses cost metadata from `patterns/registry.yaml`. When run with a project root,
+the project-local registry is preferred over the packaged default.
 
 ## Install & Run
 
 ```bash
-npx @jununfly/zj-loop-cost --pattern ci-sweeper --cadence 15m --level L2
-npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --json
+npx @jununfly/zj-loop-cost . --pattern ci-sweeper --cadence 15m --level L2
+npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --json
+npx @jununfly/zj-loop-cost --registry patterns/registry.yaml --pattern daily-triage
+npx @jununfly/zj-loop-cost --package-registry --pattern daily-triage
 npx @jununfly/zj-loop-cost --list
 ```
 
 If `npx` stalls on package resolution, use an installed binary or npm's local cache:
 
 ```bash
-zj-loop-cost --pattern daily-triage --level L1
-npm exec --offline --package=@jununfly/zj-loop-cost -- zj-loop-cost --pattern daily-triage --level L1
+zj-loop-cost . --pattern daily-triage --level L1
+npm exec --offline --package=@jununfly/zj-loop-cost -- zj-loop-cost . --pattern daily-triage --level L1
 ```
 
 **From this repo:**
@@ -32,8 +35,10 @@ npm test
 | Flag | Description |
 |------|-------------|
 | `--pattern` | Pattern id (see `--list`) |
+| `--registry` | Explicit registry file |
+| `--package-registry` | Use packaged registry defaults first |
 | `--cadence` | Override cadence (e.g. `15m`, `1d`) |
-| `--level` | `L1`, `L2`, or `L3` (default `L1`) |
+| `--level` | `L1`, `L2`, or `L3` cost/readiness model (default `L1`) |
 | `--conservative` | Use slower cadence from ranges |
 | `--json` | Machine-readable output |
 
@@ -47,5 +52,8 @@ Each estimate includes:
 - **Realistic blend** — level-based mix (documented in output)
 
 Pair with `zj-loop/zj-loop-budget.md` (scaffolded by `zj-loop-init`) and `zj-loop-audit` cost observability checks.
+
+Cost level is not execution authority. Route Table policy and pattern-specific
+guards decide whether a loop is report-only, request-only, dry-run, or live.
 
 See [docs/operating-loops.md](../../docs/operating-loops.md).

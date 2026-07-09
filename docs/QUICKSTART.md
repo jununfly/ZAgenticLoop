@@ -40,7 +40,7 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 
 Swap `--tool grok` for `claude` or `codex` if needed. Swap `--pattern` for any pattern from [patterns/registry.yaml](../patterns/registry.yaml).
 
-`zj-loop-init` copies the starter kit, creates `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/zj-loop-budget.md`, and `zj-loop/zj-loop-run-log.md`, then prints your first command.
+`zj-loop-init` copies the starter kit, creates `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/zj-loop-budget.md`, and `zj-loop/zj-loop-run-log.md`, then prints your first command. For Daily Triage, `STATE.md` and `zj-loop-run-log.md` are local runtime files by default and `.example` templates are created beside them.
 
 `zj-loop/zj-loop-route-table.yaml` is the routing control plane. It records which loop signals should stay human-readable, be ignored, remain report-only, or later dispatch to another pattern. It is policy, not a runtime queue.
 
@@ -58,10 +58,10 @@ Route Table control.
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash
-npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d
+npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
 ```
 
-Adjust `--pattern`, `--level` (L1 → L2 → L3), and `--cadence` to match what you plan to run. High-frequency loops (CI Sweeper at 5m) can burn tokens fast — slow the cadence or require early-exit triage first.
+Adjust `--pattern`, `--level` (readiness/cost model), and `--cadence` to match what you plan to run. `zj-loop-cost .` prefers your local `patterns/registry.yaml`; use `--package-registry` only when you intentionally want package defaults. High-frequency loops (CI Sweeper at 5m) can burn tokens fast — slow the cadence or require early-exit triage first.
 
 ## 4. Audit readiness (30 seconds)
 
@@ -69,7 +69,7 @@ Adjust `--pattern`, `--level` (L1 → L2 → L3), and `--cadence` to match what 
 npx @jununfly/zj-loop-audit . --suggest
 ```
 
-Scores 0–100 with concrete next steps. Re-run after each improvement. Paste a badge when you're proud of the score:
+Scores 0–100 with concrete next steps. This is readiness, not permission to mutate issues, code, branches, or releases. Execution authority still comes from the Route Table, workflow inputs, fixed confirmation phrases, and pattern-specific guards. Re-run after each improvement. Paste a badge when you're proud of the score:
 
 ```bash
 npx @jununfly/zj-loop-audit . --badge

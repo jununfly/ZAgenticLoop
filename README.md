@@ -17,7 +17,7 @@ It gives you a method, production patterns, starter kits, and small CLIs for mov
 | Scaffold loop state and skills | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok` |
 | Add GitHub Actions smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
 | Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
-| Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d` |
+| Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Integrate loop knowledge through MCP | [zj-loop-mcp-server](tools/zj-loop-mcp-server/) |
 | Turn a PRD/plan issue into a roadmap run | Comment `/zj-loop start roadmap-sliced-development` as a maintainer/collaborator |
@@ -28,7 +28,7 @@ The shortest mental model: **Pattern -> Starter -> Route Table -> Memory -> Veri
 
 - **User story:** move from ad-hoc prompting to repeatable Agentic Loop Working without giving up human judgment.
 - **Backbone:** choose a Pattern, scaffold a Starter, keep routing policy in `zj-loop/zj-loop-route-table.yaml`, preserve Memory in state/run logs, add verifier separation, and use Human Gates for risky boundaries.
-- **Adoption path:** Quickstart with Daily Triage, run L1 report-only, audit readiness, estimate cost, then graduate toward L2/L3 only after real loop activity is visible.
+- **Adoption path:** Quickstart with Daily Triage, run report-only, audit structural readiness, estimate cost from the local registry, then raise execution authority only after real loop activity is visible.
 - **Evidence:** the pattern catalog is backed by [registry metadata](patterns/registry.yaml), [production stories](stories/), and this repo's [dogfood reference case](docs/designs/dogfood-reference-case.md).
 
 ## Dogfood Reference
@@ -49,7 +49,7 @@ Use the public npm packages directly:
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 
 # Estimate operating cost before scheduling
-npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d
+npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
 
 # Audit loop readiness and get concrete next steps
 npx @jununfly/zj-loop-audit . --suggest
@@ -65,7 +65,7 @@ When contributing from source, run the same tools from this monorepo:
 
 ```bash
 cd tools/zj-loop-init && npm ci && npm test && node dist/cli.js /path/to/project --pattern daily-triage --tool grok
-cd tools/zj-loop-cost && npm ci && npm test && node dist/cli.js --pattern daily-triage --level L1 --cadence 1d
+cd tools/zj-loop-cost && npm ci && npm test && node dist/cli.js /path/to/project --pattern daily-triage --level L1 --cadence 1d
 cd tools/zj-loop-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
 cd tools/zj-goal-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
 ```
@@ -90,7 +90,7 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 2. Check cost and readiness:
 
 ```bash
-npx @jununfly/zj-loop-cost --pattern daily-triage --level L1 --cadence 1d
+npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
 npx @jununfly/zj-loop-audit . --suggest
 ```
 
@@ -100,9 +100,9 @@ npx @jununfly/zj-loop-audit . --suggest
 /loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
-4. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold and first state update.
+4. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold. For Daily Triage, `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md` are local runtime files by default; commit the `.example` templates and policy files, not the cursor-bearing local state.
 
-Phased rollout: **L1 report -> L2 assisted fixes -> L3 unattended**. Do not skip the human-read step just because the loop is automated.
+Phased rollout separates two axes: **readiness level** says how prepared the repo is; **execution authority** says what the loop may actually do. Start with report-only authority even when audit readiness is high. Do not skip the human-read step just because the loop is automated.
 
 ## GitHub Actions Bundle
 
