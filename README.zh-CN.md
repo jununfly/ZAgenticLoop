@@ -202,6 +202,20 @@ workflow 自定义逻辑仍然是 maintainer 决策。
 | `issue-triage-action` | `dry-run` with replayed runner | 规划 allowlisted label 或 fixed comment template；还不会 live 修改 issue。 |
 | Report routes | `report-only` | 只记录 evidence。 |
 
+当 triage 发现 ready PRD/plan issue，并能给出明确下一步命令时，不要只把
+命令留在本地 state。用确定性 handoff planner 生成稳定评论和手动命令：
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-prd-handoff handoff-plan \
+  --prd-issue-url https://github.com/OWNER/REPO/issues/123 \
+  --next-command 'Ask Codex: "Run the roadmap-sliced-development loop for issue #123..."'
+```
+
+默认 `report-only` 模式只打印 comment body 和精确的
+`gh issue comment ...` 命令，不写 GitHub。只有 route/workflow 明确允许
+PRD issue comment 时，才使用 `--mode comment-enabled`；写入方必须用
+`<!-- zj-loop:prd-next-command-handoff -->` 做幂等去重。
+
 ## Tool Packages
 
 | Package | CLI | 用途 | 当前版本 |

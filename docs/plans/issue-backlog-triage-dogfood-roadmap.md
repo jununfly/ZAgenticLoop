@@ -26,7 +26,7 @@ Leaf nodes:
 | Leaf | Status | Commit intent |
 | --- | --- | --- |
 | `1-1-design-current-handoff-gap` | completed | Record the observed product gap and target behavior before implementation. |
-| `1-2-implement-next-command-surfacing` | pending | Expose the next command in the appropriate PRD issue flow without broadening report-only defaults. |
+| `1-2-implement-next-command-surfacing` | completed | Expose the next command in the appropriate PRD issue flow without broadening report-only defaults. |
 | `1-3-verify-and-document-dogfood` | pending | Prove the route chain remains replayable and side-effect boundaries are clear. |
 
 ## Leaf 1-1 Findings
@@ -62,6 +62,40 @@ Verification evidence:
 - `rg "next command|next-command|handoff|PRD|prd|zj-to-prd|to-prd|Issue Fix Request|roadmap-sliced-development|confirm-triage-transition" -n README.md README.zh-CN.md docs patterns scripts tools .github zj-loop`
 - `sed -n '1,240p' .github/workflows/daily-triage.yml`
 - `sed -n '1,220p' patterns/daily-triage.md`
+
+## Leaf 1-2 Implementation Notes
+
+Implemented a deterministic PRD handoff planner in `@jununfly/zj-loop-core`:
+
+- CLI: `zj-loop-prd-handoff handoff-plan`
+- API: `runPrdHandoffRunner`
+- Marker: `<!-- zj-loop:prd-next-command-handoff -->`
+- Default mode: `report-only`
+
+The planner emits:
+
+- stable comment body
+- exact manual `gh issue comment ...` command
+- handoff locations (`local-report`, `manual-gh-command`, or
+  `prd-issue-comment`)
+- idempotency policy
+- side-effect audit showing no GitHub write was executed by the planner
+
+Documentation updates:
+
+- `patterns/daily-triage.md`
+- `docs/QUICKSTART.md`
+- `README.md`
+- `README.zh-CN.md`
+
+Verification evidence:
+
+- `cd tools/zj-loop-core && npm test`
+- `npm run test:generated-bundle-release-gate`
+- `node --test scripts/validate-release-workflows.test.mjs`
+- `npm run validate:registry`
+- `node tools/zj-loop-core/dist/prd-handoff-cli.js handoff-plan --prd-issue-url https://github.com/jununfly/ZCodeGraph/issues/678 --next-command "Ask Codex: Run the roadmap-sliced-development loop for ZCodeGraph issue #678." --json`
+- `git diff --check`
 
 ## Gates
 

@@ -82,6 +82,32 @@ Current first-version constraints:
 - Labels remain routing metadata. `zj-loop/STATE.md` remains triage memory, not
   an activation queue.
 
+## PRD Next-Command Handoff
+
+When Daily Triage finds a ready PRD/plan issue and can name the exact next
+implementation command, the PRD issue is the human and agent handoff object. Do
+not leave the command only in local state.
+
+Use the deterministic PRD handoff planner:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-prd-handoff handoff-plan \
+  --prd-issue-url https://github.com/OWNER/REPO/issues/123 \
+  --next-command 'Ask Codex: "Run the roadmap-sliced-development loop for issue #123..."'
+```
+
+Default `report-only` mode does not write to GitHub. It prints:
+
+- the stable handoff comment body
+- the idempotency marker `<!-- zj-loop:prd-next-command-handoff -->`
+- the exact manual `gh issue comment ...` command for a maintainer to run
+- the locations where the handoff currently lives
+
+Only use `--mode comment-enabled` when issue-comment write authority has been
+explicitly enabled by route/workflow policy. Even then, the core planner only
+plans the comment; the workflow or caller owns GitHub writes and must use the
+marker to skip or update an existing handoff instead of spamming duplicates.
+
 ## Post-Run Critique
 
 After each Daily Triage run, record:

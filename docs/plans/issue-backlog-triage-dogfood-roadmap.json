@@ -50,9 +50,24 @@
         {
           "id": "1-2-implement-next-command-surfacing",
           "title": "Implement deterministic PRD issue next-command handoff surfacing",
-          "status": "pending",
+          "status": "completed",
           "commit_intent": "Expose the next command in the appropriate PRD issue flow without broadening report-only defaults.",
-          "verification_evidence": []
+          "notes": [
+            "Added `zj-loop-prd-handoff handoff-plan` in @jununfly/zj-loop-core.",
+            "The runner builds a stable PRD handoff comment body with marker `<!-- zj-loop:prd-next-command-handoff -->`.",
+            "Default `report-only` mode produces an exact manual `gh issue comment ...` command and records handoff locations without executing GitHub writes.",
+            "`comment-enabled` is an explicit opt-in planning mode; the core command still does not perform network writes.",
+            "README, README.zh-CN, QUICKSTART, and Daily Triage pattern docs now point users and agents to the deterministic command."
+          ],
+          "verification_evidence": [
+            "cd tools/zj-loop-core && npm test",
+            "npm run test:generated-bundle-release-gate",
+            "node --test scripts/validate-release-workflows.test.mjs",
+            "npm run validate:registry",
+            "node tools/zj-loop-core/dist/prd-handoff-cli.js handoff-plan --prd-issue-url https://github.com/jununfly/ZCodeGraph/issues/678 --next-command \"Ask Codex: Run the roadmap-sliced-development loop for ZCodeGraph issue #678.\" --json",
+            "git diff --check"
+          ],
+          "completed_at": "2026-07-09T19:08:00+08:00"
         },
         {
           "id": "1-3-verify-and-document-dogfood",
