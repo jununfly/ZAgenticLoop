@@ -104,7 +104,7 @@ export function formatSuggestionGroups(r) {
     const lines = [
         '',
         '=== Suggested actions ===',
-        'Grouped by product category. Each item states whether it affects the readiness score.',
+        'Grouped by product category. Each item states score/level impact and whether it blocks loop execution.',
         '',
     ];
     for (const category of CATEGORY_ORDER) {
@@ -136,6 +136,16 @@ function findingsByCategory(findings, category) {
 function formatScoreImpact(finding) {
     if (finding.category === 'pass')
         return 'score satisfied';
+    if (finding.category === 'hardening') {
+        return finding.affectsScore
+            ? 'optional score contribution; does not block loop execution'
+            : 'optional hardening; does not affect score';
+    }
+    if (finding.category === 'future-tooling') {
+        return finding.affectsScore
+            ? 'future-tooling score contribution; does not block loop execution'
+            : 'future tooling; does not affect score';
+    }
     return finding.affectsScore ? 'affects score/level' : 'does not affect score';
 }
 function formatNextStep(step) {
