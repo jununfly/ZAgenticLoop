@@ -115,7 +115,12 @@ Release readiness for the generated bundle is checked by
 workflows drift from templates, if generated workflows pin a different
 `@jununfly/zj-loop-core` version than the current package, if a workflow
 dispatches an unknown Route Table route, or if an action-capable generated route
-is not `user-project-ready` while still disabled by default.
+is not `install-ready` or `execution-ready` while still disabled by default. The
+gate also runs the deterministic Roadmap Activation user-project fixture, which
+generates a temporary bundle, enables the Roadmap Activation route in that
+fixture, simulates an issue-comment slash command, verifies Activation Request
+creation, branch/PR contract evidence, duplicate handling, permission denial,
+disabled route denial, and loop marker detection.
 
 ## Daily Triage Flow
 
