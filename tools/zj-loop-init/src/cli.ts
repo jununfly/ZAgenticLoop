@@ -494,7 +494,9 @@ async function scaffoldObservability(
     }
   }
 
-  if (!(await exists(runLogPath))) {
+  if (pattern.id === 'daily-triage') {
+    await copyRuntimeExampleAndLocal(runLogTemplate, runLogPath, dryRun, io);
+  } else if (!(await exists(runLogPath))) {
     await copyFile(runLogTemplate, runLogPath, dryRun, io);
   }
 
@@ -576,6 +578,32 @@ async function copyFile(src: string, dest: string, dryRun: boolean, io: CliIo) {
   await mkdir(path.dirname(dest), { recursive: true });
   await cp(src, dest);
   io.stdout(`  copied: ${src} → ${dest}`);
+  return true;
+}
+
+async function ensureGitignoreEntries(targetDir: string, entries: string[], dryRun: boolean, io: CliIo) {
+  const gitignorePath = path.join(targetDir, '.gitignore');
+  const existing = (await exists(gitignorePath)) ? await readFile(gitignorePath, 'utf8') : '';
+  const existingLines = new Set(existing.split(/\r?\n/));
+  const missing = entries.filter((entry) => !existingLines.has(entry));
+  if (!missing.length) return;
+
+  if (dryRun) {
+    io.stdout(`  would update: .gitignore (${missing.join(', ')})`);
+    return;
+  }
+
+  const prefix = existing.length && !existing.endsWith('\n') ? '\n' : '';
+  const heading = existing.includes('# ZJ Loop local runtime state') ? '' : '# ZJ Loop local runtime state\n';
+  await writeFile(gitignorePath, `${existing}${prefix}${heading}${missing.join('\n')}\n`);
+  io.stdout('  updated: .gitignore (ZJ Loop local runtime state)');
+}
+
+async function copyRuntimeExampleAndLocal(src: string, dest: string, dryRun: boolean, io: CliIo) {
+  if (!(await exists(src))) return false;
+  const exampleDest = `${dest}.example`;
+  if (!(await exists(exampleDest))) await copyFile(src, exampleDest, dryRun, io);
+  if (!(await exists(dest))) await copyFile(src, dest, dryRun, io);
   return true;
 }
 
@@ -721,11 +749,19 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
   const stateExample = path.join(effectiveStarter, `${stateFile}.example`);
   const stateDest = path.join(targetDir, stateOutputPath);
   if (await exists(stateExample)) {
-    await copyFile(stateExample, stateDest, dryRun, io);
+    if (selectedPattern.id === 'daily-triage') {
+      await copyRuntimeExampleAndLocal(stateExample, stateDest, dryRun, io);
+    } else {
+      await copyFile(stateExample, stateDest, dryRun, io);
+    }
   } else {
     const alt = path.join(effectiveStarter, 'STATE.md.example');
     if (await exists(alt)) {
-      await copyFile(alt, stateDest, dryRun, io);
+      if (selectedPattern.id === 'daily-triage') {
+        await copyRuntimeExampleAndLocal(alt, stateDest, dryRun, io);
+      } else {
+        await copyFile(alt, stateDest, dryRun, io);
+      }
     }
   }
 
@@ -736,6 +772,12 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
 
   await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
   await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
+  if (selectedPattern.id === 'daily-triage') {
+    await ensureGitignoreEntries(targetDir, [
+      stateOutputPath,
+      LOOP_ARTIFACTS.runLog.primary,
+    ], dryRun, io);
+  }
 
   await scaffoldConstraints(targetDir, templatesRoot, tool, dryRun, io);
   await scaffoldRouteTable(selectedPattern, targetDir, templatesRoot, dryRun, io);

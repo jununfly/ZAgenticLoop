@@ -44,6 +44,24 @@ test('zj-loop-init dry-run scaffolds daily-triage', async () => {
   }
 });
 
+test('zj-loop-init scaffolds daily-triage runtime files with examples and gitignore entries', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-daily-triage-runtime-'));
+  try {
+    await exec('node', [CLI, dir, '--pattern', 'daily-triage', '--tool', 'grok']);
+    await access(path.join(dir, 'zj-loop', 'STATE.md'));
+    await access(path.join(dir, 'zj-loop', 'STATE.md.example'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
+    await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md.example'));
+
+    const gitignore = await readFile(path.join(dir, '.gitignore'), 'utf8');
+    assert.match(gitignore, /# ZJ Loop local runtime state/);
+    assert.match(gitignore, /zj-loop\/STATE\.md/);
+    assert.match(gitignore, /zj-loop\/zj-loop-run-log\.md/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init accepts roadmap-sliced-development canonical id only', async () => {
   const canonical = await exec('node', [
     CLI,
