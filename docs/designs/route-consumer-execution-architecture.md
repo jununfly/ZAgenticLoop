@@ -56,7 +56,7 @@ or dispatch bounded requests through allowlisted routes, but it must not repair
 code, bump dependencies, draft releases, mutate issues directly, or implement
 roadmap slices.
 
-Issue Triage report routes remain report-only. Bounded side effects belong to
+Issue Backlog Triage routes remain report-only. Bounded side effects belong to
 the separate `issue-triage-action` consumer and require their own Route Table
 row, allowlist, runner evidence, and live promotion.
 

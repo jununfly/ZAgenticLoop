@@ -198,7 +198,7 @@ disabled_dispatch_routes:
       fix_consumer_allowlist: ["pr-steward"]
     note: "Enable only after PR Steward fix-request carrier, claim policy, review boundaries, and evidence store are configured."
 
-  - route_id: "issue-triage-report"
+  - route_id: "issue-backlog-triage"
     enabled: false
     request_kind: "report-only"
     consumer: "issue-triage"
@@ -224,7 +224,7 @@ disabled_dispatch_routes:
       milestone_allowed: false
       formal_issue_lifecycle_transition_allowed: false
       batch_mutation_allowed: false
-    note: "Issue Triage report route records issue observations only."
+    note: "Issue Backlog Triage route records issue observations only."
 
   - route_id: "issue-triage-action"
     enabled: false

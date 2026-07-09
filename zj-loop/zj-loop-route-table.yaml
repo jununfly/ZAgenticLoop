@@ -125,7 +125,7 @@ routes:
     failure_owner: "maintainer"
     human_gate: "none"
 
-  - route_id: "issue-triage-report"
+  - route_id: "issue-backlog-triage"
     enabled: true
     request_kind: "report-only"
     consumer: "issue-triage"
@@ -164,7 +164,7 @@ routes:
         - "already-recorded"
         - "rejected"
         - "routed-to-human-review"
-    dedupe_window: "issue-triage:<repo>:<scan_window>:<signal_kind>:<subject>"
+    dedupe_window: "issue-backlog-triage:<repo>:<scan_window>:<signal_kind>:<subject>"
     failure_owner: "issue-triage"
     human_gate: "only for high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, public comment, or label mutation"
 
@@ -186,7 +186,7 @@ routes:
       max_side_effect_level: "label"
     evidence_store: "zj-loop/issue-triage-state.md"
     match:
-      source: ["issue-triage-report", "maintainer"]
+      source: ["issue-backlog-triage", "maintainer"]
       requested_action:
         - "apply-allowlisted-label"
         - "post-fixed-triage-comment"

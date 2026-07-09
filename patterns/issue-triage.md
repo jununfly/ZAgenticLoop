@@ -49,6 +49,42 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 5. Verifier (or human) reviews only the human-attention candidates and any label-suggestion observations on sensitive areas.
 6. Record run, prune resolved items, update counts.
 
+## Recommended Triage Transitions
+
+The route can produce a fixed recommendation request without mutating the issue
+tracker:
+
+```text
+GitHub/GitLab Issues Backlog
+-> Route Decision
+-> recommended triage transitions
+-> confirmed triage transition
+-> zj-triage canonical state role + brief/comment
+-> if ready-for-agent: Issue Fix Request
+-> Fix Consumer may claim
+```
+
+Recommendation mode is enabled by default. It writes workflow/state evidence
+only and includes a fixed confirmation command:
+
+```text
+/zj-loop confirm-triage-transition <request-id>
+```
+
+Only maintainers/collaborators may confirm. The command intentionally accepts
+only the request id; it does not accept an inline issue number, label, or state
+argument. Confirmed transitions use `zj-triage` semantics for canonical state
+roles, brief/comment templates, unusual-transition guards, and maintainer
+override rules.
+
+| Side effects setting | What happens |
+| --- | --- |
+| Off by default | The loop records recommended transition evidence, request ids, reasons, confidence, brief drafts, and confirmation commands. It does not comment, label, close, reopen, or create Issue Fix Requests. |
+| Enabled and confirmed | The confirmed request may set tracker state/labels, write the `zj-triage` brief/comment, and for `ready-for-agent` create an Issue Fix Request after the state and brief are written successfully. |
+
+`wontfix` is a recommendation candidate only. Default confirmation blocks it for
+human review; it must not auto-close, auto-label, or write out-of-scope records.
+
 ## Verification Strategy
 
 - The loop **never auto-labels or closes** in L1.
@@ -67,10 +103,10 @@ The loop prunes closed/merged items and only keeps "needs attention" items.
 ## Route Decision Boundary
 
 When Issue Triage output is passed to the Route Table, use the
-`issue-triage-report` route:
+`issue-backlog-triage` route:
 
 ```text
-Issue Backlog Signal -> Route Decision -> Issue Triage Report Evidence
+GitHub/GitLab Issues Backlog -> Route Decision -> Recommended Triage Transition Evidence
 ```
 
 Allowed report signal kinds are fixed:
@@ -81,15 +117,15 @@ Allowed report signal kinds are fixed:
 - `human-attention-candidate`
 - `issue-backlog-summary`
 
-The report evidence target is `zj-loop/issue-triage-state.md`. The route does
-not write public issue comments, apply labels, close/reopen issues, assign
-people, change milestones, perform formal lifecycle transitions, or batch-mutate
-the issue tracker.
+The evidence target is `zj-loop/issue-triage-state.md`. The route does not
+write public issue comments, apply labels, close/reopen issues, assign people,
+change milestones, perform formal lifecycle transitions, create Issue Fix
+Requests, or batch-mutate the issue tracker in recommendation mode.
 
 If a triage observation should become a bounded issue side effect, route it
 through the separate `issue-triage-action` consumer. That route is dry-run by
 default and only accepts fixed action requests for allowlisted labels or fixed
-comment templates. Do not add these side effects to `issue-triage-report`.
+comment templates. Do not add these side effects to `issue-backlog-triage`.
 
 **Grok Build TUI**:
 ```

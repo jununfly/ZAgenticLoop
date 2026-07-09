@@ -4,7 +4,7 @@ Last run: 2026-07-08
 
 ## Current Capability
 
-- Route: `issue-triage-report`
+- Route: `issue-backlog-triage`
   - Consumer kind: `report-consumer`
   - Execution mode: `report-only`
   - Completion form: `report-evidence`
@@ -28,10 +28,12 @@ Last run: 2026-07-08
 
 ## Evidence
 
-- Issue Triage replay verifies allowed observations, fixed status enum,
-  already-recorded dedupe, unsupported signal rejection, hard human guard
-  routing, and forbidden protocol fields:
-  `scripts/issue-triage-report-e2e-replay.test.mjs`.
+- Issue Backlog Triage replay verifies allowed observations, recommended
+  triage transition contracts, fixed status enum, already-recorded dedupe,
+  unsupported signal rejection, hard human guard routing, forbidden protocol
+  fields, `ready-for-agent` Issue Fix Request side-effect planning, and
+  `wontfix` default confirmation blocking:
+  `scripts/issue-backlog-triage-e2e-replay.test.mjs`.
 - Report-only dispatcher replay verifies `human`, `ignore`, and
   `daily-triage-report` create evidence without Issue Fix Requests, activation
   requests, workflow dispatch, or consumer work:
@@ -43,10 +45,12 @@ Last run: 2026-07-08
 
 ## Boundary
 
-Issue Triage is report-only in this repository. It must not write public issue
-comments, mutate labels, assign issues, set milestones, close/reopen issues,
-perform formal lifecycle transitions, batch-mutate an issue tracker, create
-Issue Fix Requests, or start consumer work.
+Issue Backlog Triage is report-only in this repository. It may record
+recommended triage transition evidence and fixed confirmation commands, but it
+must not write public issue comments, mutate labels, assign issues, set
+milestones, close/reopen issues, perform formal lifecycle transitions,
+batch-mutate an issue tracker, create Issue Fix Requests, or start consumer
+work.
 
 Issue side effects are separated into `issue-triage-action`. That route is a
 dry-run, replayed consumer only. It may plan narrowly allowlisted labels or

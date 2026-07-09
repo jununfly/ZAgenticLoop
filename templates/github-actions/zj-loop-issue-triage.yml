@@ -32,8 +32,8 @@ jobs:
         env:
           TRIAGE_ACTION_REQUEST_JSON: ${{ inputs.triage_action_request_json }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch issue-triage-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan issue-triage-report --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route dispatch issue-backlog-triage --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-consumer plan issue-backlog-triage --json > consumer-plan.json || true
           if [ -n "$TRIAGE_ACTION_REQUEST_JSON" ]; then
             printf '%s\n' "$TRIAGE_ACTION_REQUEST_JSON" > triage-action-request.json
             npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-issue-triage-action action-plan \

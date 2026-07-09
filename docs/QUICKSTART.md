@@ -160,6 +160,7 @@ Pick the first route deliberately:
 | `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | PR failure fix requests. |
 | `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | Dependency fix-request repair plans. |
 | `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | Release-window draft plans. |
+| `issue-backlog-triage` | `zj-loop-issue-triage.yml` | Open issues to recommended triage transitions without tracker mutation. |
 | `issue-triage-action` | `zj-loop-issue-triage.yml` | Dry-run allowlisted triage actions. |
 | `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | Roadmap PR closeout plans. |
 

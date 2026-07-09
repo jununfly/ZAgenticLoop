@@ -121,12 +121,20 @@ possible-duplicate observations, human-attention candidates, backlog summaries,
 and reporter-activity signals.
 
 When Issue Triage output crosses into Route Decision, use the
-`issue-triage-report` report-only route. That route uses fixed observation
+`issue-backlog-triage` report-only route. That route uses fixed observation
 names such as `missing-info-observation`, `possible-duplicate-observation`,
 `label-suggestion-observation`, `human-attention-candidate`, and
-`issue-backlog-summary`. It must not express formal issue lifecycle state,
-public comment instructions, label mutations, assignment, milestone changes, or
-close/reopen actions.
+`issue-backlog-summary`. Recommendation mode may emit
+`zj-loop.recommended_triage_transition.v1` evidence with a fixed
+`/zj-loop confirm-triage-transition <request-id>` command, but it must not apply
+formal issue lifecycle state, public comments, label mutations, assignment,
+milestone changes, Issue Fix Requests, or close/reopen actions.
+
+Confirmed triage transitions are a separate side-effect step. They must use
+`zj-triage` canonical state roles (`needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`), brief/comment semantics, unusual-transition
+guards, and maintainer override rules. `wontfix` recommendations remain blocked
+by default and require human review before any close/label/out-of-scope action.
 
 `zj-loop/STATE.md` is the daily-attention view. It should hold current High
 Priority items, Watch items, Noise/Ignored items, recent state updates, human

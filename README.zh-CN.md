@@ -128,9 +128,10 @@ npx --yes --package @jununfly/zj-loop-core@0.1.3 zj-loop-route disable ci-sweepe
 Report-only routes 有意保持只记录 evidence；`ci-sweeper`、
 `roadmap-sliced-development`、`pr-steward-fix-request`、
 `dependency-sweeper`、`changelog-drafter-draft-request`、
-`issue-triage-action`、`post-merge-roadmap-closeout` 等 action-capable routes
+`issue-backlog-triage`、`issue-triage-action`、`post-merge-roadmap-closeout` 等 routes
 只有在 generated workflow 和 packaged runner 都标记为 `execution-ready`
-后，才应被当作用户项目 live path。
+后，才应被当作用户项目可执行路径；其中 report-only route 仍然只记录
+evidence，不代表允许 live side effects。
 
 Generated bundle route menu：
 
@@ -142,6 +143,7 @@ Generated bundle route menu：
 | `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | 当 PR check failure 需要创建/消费独立 fix request 时启用。 |
 | `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | 当 dependency signal 需要成为有边界的 fix-request repair plan 时启用。 |
 | `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | 当 release-window evidence 需要生成 draft evidence 或 draft PR plan 时启用。 |
+| `issue-backlog-triage` | `zj-loop-issue-triage.yml` | 当 open issues 需要生成推荐的 `zj-triage` transition request，但暂不修改 tracker 时启用。 |
 | `issue-triage-action` | `zj-loop-issue-triage.yml` | 当你需要 dry-run allowlisted label/comment action plan 时启用。 |
 | `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | 当 Roadmap-Sliced PR 带有 closeout contract 后启用。 |
 
@@ -192,6 +194,7 @@ workflow 自定义逻辑仍然是 maintainer 决策。
 | `dependency-sweeper` | `claim-only` with replayed runner | Claim 合格 dependency fix request，并 replay repair/escalation evidence；还不会 live 修改 manifest 或创建 PR。 |
 | `pr-steward-fix-request` | `claim-only` with replayed runner | Claim 合格 failed-PR-check request，并 replay repair/escalation evidence；不修改 source PR。 |
 | `changelog-drafter-draft-request` | `report-only` with replayed runner | 记录 draft request evidence，并 replay draft evidence/PR outcome；还不会 live 修改 changelog。 |
+| `issue-backlog-triage` | `report-only` | 记录 recommended triage transition evidence 和确认命令；确认副作用启用前，不评论、不打标、不关闭 issue、不创建 Issue Fix Request。 |
 | `issue-triage-action` | `dry-run` with replayed runner | 规划 allowlisted label 或 fixed comment template；还不会 live 修改 issue。 |
 | Report routes | `report-only` | 只记录 evidence。 |
 

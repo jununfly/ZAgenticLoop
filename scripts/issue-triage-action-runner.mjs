@@ -43,10 +43,10 @@ export function buildIssueTriageActionRequest(overrides = {}) {
   const request = {
     schema: ISSUE_TRIAGE_ACTION_REQUEST_SCHEMA,
     request_id: 'itar_issue_123_needs_info',
-    source_report_id: 'issue-triage:jununfly/ZAgenticLoop:open-issues:last-24h:missing-info-observation:issue-123',
+    source_report_id: 'issue-backlog-triage:jununfly/ZAgenticLoop:open-issues:last-24h:missing-info-observation:issue-123',
     repo: 'jununfly/ZAgenticLoop',
     issue: 123,
-    source: 'issue-triage-report',
+    source: 'issue-backlog-triage',
     requested_action: 'apply-allowlisted-label',
     action_value: 'needs-info',
     risk: 'low',
