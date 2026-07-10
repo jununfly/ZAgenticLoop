@@ -15,6 +15,11 @@ export type ConsumerRunPlan = {
     status: ConsumerRunPlanStatus;
     reason: string;
     next_steps: string[];
+    route_specific_artifacts: Array<{
+        path: string;
+        role: 'primary-result' | 'supporting-evidence';
+        description: string;
+    }>;
     route_decision: RouteDecision;
     validation: {
         valid: boolean;

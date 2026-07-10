@@ -92,6 +92,7 @@ export type PostMergeCloseoutPlan = {
   roadmap: {
     id: string;
     branch: string;
+    targetBranch: string;
   };
   carrier: {
     issue: number | null;
@@ -270,6 +271,7 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
   const contract = contractResult.contract;
   const branch = contract?.roadmap?.branch ?? '';
   const carrierIssue = contract?.carrier?.issue ?? null;
+  const targetBranch = pr.baseRefName ?? '';
   const expectedRepo = input.expectedRepo ?? pr.baseRepository ?? pr.repository ?? '';
   const currentRepo = input.currentRepo ?? '';
   const executorGuards = buildExecutorGuards({
@@ -321,6 +323,7 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
     roadmap: {
       id: contract?.roadmap?.id ?? '',
       branch,
+      targetBranch,
     },
     carrier: {
       issue: carrierIssue,
@@ -336,7 +339,7 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
       contractAuthorized: executable,
     }),
     refusals,
-    actions: executable ? buildExecutableActions({ branch, carrierIssue }) : [],
+    actions: executable ? buildExecutableActions({ branch, carrierIssue, targetBranch }) : [],
   };
 }
 
@@ -356,7 +359,7 @@ function buildLiveCleanupConfirmation(
     confirmation_location: confirmationLocationsFor(input.provider),
     required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
     side_effects: [
-      'switch local checkout to main and fast-forward from origin/main',
+      'switch local checkout to the review target branch and fast-forward from origin',
       'delete the merged zjal- roadmap branch locally when present and merged',
       'delete the merged zjal- roadmap branch on origin when present',
       `append closeout evidence to carrier issue #${input.carrierIssue ?? 'unknown'}`,
@@ -377,7 +380,6 @@ function confirmationLocationsFor(provider: 'github' | 'gitlab'): string[] {
   if (provider === 'gitlab') {
     return [
       'Codex chat reply when a local maintainer is operating the closeout CLI',
-      'GitLab manual pipeline variable ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION',
     ];
   }
   return [
@@ -464,12 +466,13 @@ export async function executePostMergeRoadmapCloseout(
   }
 
   const branch = plan.roadmap.branch;
+  const targetBranch = plan.roadmap.targetBranch;
   const issue = plan.carrier.issue;
   const steps: any[] = [];
 
   await runRequired(steps, runner, 'git', ['fetch', 'origin']);
-  await runRequired(steps, runner, 'git', ['switch', 'main']);
-  await runRequired(steps, runner, 'git', ['merge', '--ff-only', 'origin/main']);
+  await runRequired(steps, runner, 'git', ['switch', targetBranch]);
+  await runRequired(steps, runner, 'git', ['merge', '--ff-only', `origin/${targetBranch}`]);
 
   const localBranchProbe = await runProbe(steps, runner, 'git', [
     'show-ref',
@@ -478,9 +481,9 @@ export async function executePostMergeRoadmapCloseout(
     `refs/heads/${branch}`,
   ]);
   if (localBranchProbe.exitCode === 0) {
-    const mergedBranches = await runRequired(steps, runner, 'git', ['branch', '--merged', 'main']);
+    const mergedBranches = await runRequired(steps, runner, 'git', ['branch', '--merged', targetBranch]);
     if (!branchListContains(mergedBranches.stdout, branch)) {
-      throw new Error(`refusing to delete local branch ${branch}: not listed in git branch --merged main`);
+      throw new Error(`refusing to delete local branch ${branch}: not listed in git branch --merged ${targetBranch}`);
     }
     await runRequired(steps, runner, 'git', ['branch', '-d', branch]);
   } else {
@@ -632,15 +635,10 @@ export function buildDryRunEvidenceComment(
 
 export function buildLiveCommand(plan: PostMergeCloseoutPlan): string {
   if (plan.review.provider === 'gitlab') {
-    const args = [
-      'Run GitLab manual job zj_loop_post_merge_cleanup',
-      `ZJ_LOOP_MERGE_REQUEST_IID=${plan.review.number ?? 'unknown'}`,
-      `ZJ_LOOP_CARRIER_ISSUE=${plan.carrier.issue ?? 'unknown'}`,
-    ];
-    if (plan.confirmation.required) {
-      args.push(`ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION=${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
-    }
-    return args.join(' ');
+    return [
+      'Review GitLab artifact closeout-plan.json',
+      'Generated GitLab bundle produces dry-run/live-plan evidence only; live cleanup side effects are not wired in the GitLab CI fragment.',
+    ].join('. ');
   }
   const args = [
     'zj-loop-post-merge-closeout live-closeout',
@@ -801,11 +799,12 @@ function buildExecutorGuards(input: {
 }) {
   const branch = input.contract?.roadmap?.branch;
   const carrierIssue = input.contract?.carrier?.issue;
+  const targetBranch = input.pr.baseRefName;
   return [
     {
-      name: 'base-branch-main',
-      pass: input.pr.baseRefName === 'main',
-      reason: 'PR base branch must be main',
+      name: 'target-branch-present',
+      pass: Boolean(targetBranch && typeof targetBranch === 'string' && targetBranch.trim() && targetBranch !== branch),
+      reason: 'review target branch must be present and must not equal the roadmap branch',
     },
     {
       name: 'current-repository',
@@ -830,11 +829,11 @@ function buildExecutorGuards(input: {
   ];
 }
 
-function buildExecutableActions(input: { branch: string; carrierIssue: number | null }) {
+function buildExecutableActions(input: { branch: string; carrierIssue: number | null; targetBranch: string }) {
   return [
     { name: 'fetch_origin', command: ['git', 'fetch', 'origin'] },
-    { name: 'switch_main', command: ['git', 'switch', 'main'] },
-    { name: 'fast_forward_main', command: ['git', 'merge', '--ff-only', 'origin/main'] },
+    { name: 'switch_target_branch', command: ['git', 'switch', input.targetBranch] },
+    { name: 'fast_forward_target_branch', command: ['git', 'merge', '--ff-only', `origin/${input.targetBranch}`] },
     { name: 'delete_local_branch_if_present_and_merged', branch: input.branch },
     { name: 'delete_remote_branch_if_present', branch: input.branch },
     { name: 'comment_carrier_issue', issue: input.carrierIssue },

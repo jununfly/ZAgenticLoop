@@ -73,8 +73,8 @@ test('dry-run plan is executable only after contract and executor guards pass', 
     plan.actions.map((action) => action.name),
     [
       'fetch_origin',
-      'switch_main',
-      'fast_forward_main',
+      'switch_target_branch',
+      'fast_forward_target_branch',
       'delete_local_branch_if_present_and_merged',
       'delete_remote_branch_if_present',
       'comment_carrier_issue',
@@ -167,18 +167,21 @@ test('refuses unmerged PR, dirty worktree, repository mismatch, and carrier mism
   assert.ok(wrongCarrier.refusals.some((refusal) => refusal.guard === 'expected-carrier-issue'));
 });
 
-test('refuses local branch deletion when branch is not merged into main', async () => {
+test('refuses local branch deletion when branch is not merged into the target branch', async () => {
   const runner = async (command, args) => {
     const text = [command, ...args].join(' ');
-    if (text === 'git branch --merged main') {
-      return { exitCode: 0, stdout: '* main\n', stderr: '' };
+    if (text === 'git branch --merged release/current') {
+      return { exitCode: 0, stdout: '* release/current\n', stderr: '' };
     }
     return { exitCode: 0, stdout: '', stderr: '' };
   };
 
   await assert.rejects(
-    executePostMergeRoadmapCloseout(buildPlan({ live: true }), { runner }),
-    /not listed in git branch --merged main/,
+    executePostMergeRoadmapCloseout(buildPlan({
+      live: true,
+      pr: { ...MERGED_PR, baseRefName: 'release/current' },
+    }), { runner }),
+    /not listed in git branch --merged release\/current/,
   );
 });
 

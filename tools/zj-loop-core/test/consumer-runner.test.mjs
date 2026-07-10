@@ -54,6 +54,22 @@ routes:
       scopes: ["ci"]
       verifiers: ["ci-validate-gates", "diff-check"]
       max_side_effect_level: "pr"
+  - route_id: "post-merge-roadmap-closeout"
+    enabled: true
+    request_kind: "post-merge-review"
+    consumer: "post-merge-cleanup"
+    consumer_kind: "cleanup-consumer"
+    execution:
+      mode: "dry-run"
+      side_effect_level: "cleanup"
+      completion_forms: ["cleanup-done", "cleanup-skipped", "escalation-issue"]
+    maturity:
+      protocol: "install-ready"
+      runner: "install-ready"
+    capabilities:
+      scopes: ["roadmap-closeout"]
+      verifiers: ["post-merge-contract"]
+      max_side_effect_level: "cleanup"
 disabled_dispatch_routes:
   - route_id: "dependency-sweeper"
     enabled: false
@@ -150,6 +166,25 @@ test('buildConsumerRunPlan blocks dogfood-verified live routes until execution-r
     assert.equal(plan.allowed, false);
     assert.equal(plan.readiness, 'dogfood-verified');
     assert.match(plan.reason, /not execution-ready/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('buildConsumerRunPlan points blocked route-specific jobs at primary artifacts', async () => {
+  const dir = await setupRouteTable();
+  try {
+    const plan = await buildConsumerRunPlan({ root: dir, selector: 'post-merge-roadmap-closeout' });
+    assert.equal(plan.status, 'blocked');
+    assert.equal(plan.reason, 'route runner is not execution-ready');
+    assert.deepEqual(plan.route_specific_artifacts, [
+      {
+        path: 'closeout-plan.json',
+        role: 'primary-result',
+        description: 'Post-Merge Roadmap Closeout dry-run/refusal/live-readiness plan.',
+      },
+    ]);
+    assert.match(plan.next_steps.join('\n'), /Inspect route-specific artifact: closeout-plan\.json/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

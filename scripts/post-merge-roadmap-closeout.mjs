@@ -58,6 +58,7 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
   const contract = contractResult.contract;
   const branch = contract?.roadmap?.branch ?? '';
   const carrierIssue = contract?.carrier?.issue ?? null;
+  const targetBranch = pr.baseRefName ?? '';
   const expectedRepo = input.expectedRepo ?? pr.baseRepository ?? pr.repository ?? '';
   const currentRepo = input.currentRepo ?? '';
   const expectedCarrierIssue = input.expectedCarrierIssue;
@@ -99,6 +100,7 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
     roadmap: {
       id: contract?.roadmap?.id ?? '',
       branch,
+      targetBranch,
     },
     carrier: {
       issue: carrierIssue,
@@ -112,7 +114,7 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
       contractAuthorized: executable,
     }),
     refusals,
-    actions: executable ? buildExecutableActions({ branch, carrierIssue }) : [],
+    actions: executable ? buildExecutableActions({ branch, carrierIssue, targetBranch }) : [],
   };
 }
 
@@ -126,7 +128,7 @@ function buildLiveCleanupConfirmation({ prNumber, carrierIssue, contractAuthoriz
     ],
     required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
     side_effects: [
-      'switch local checkout to main and fast-forward from origin/main',
+      'switch local checkout to the review target branch and fast-forward from origin',
       'delete the merged zjal- roadmap branch locally when present and merged',
       'delete the merged zjal- roadmap branch on origin when present',
       `append closeout evidence to carrier issue #${carrierIssue ?? 'unknown'}`,
@@ -161,12 +163,13 @@ export async function executePostMergeRoadmapCloseout(plan, { runner = defaultRu
   }
 
   const branch = plan.roadmap.branch;
+  const targetBranch = plan.roadmap.targetBranch;
   const issue = plan.carrier.issue;
   const steps = [];
 
   await runRequired(steps, runner, 'git', ['fetch', 'origin']);
-  await runRequired(steps, runner, 'git', ['switch', 'main']);
-  await runRequired(steps, runner, 'git', ['merge', '--ff-only', 'origin/main']);
+  await runRequired(steps, runner, 'git', ['switch', targetBranch]);
+  await runRequired(steps, runner, 'git', ['merge', '--ff-only', `origin/${targetBranch}`]);
 
   const localBranchProbe = await runProbe(steps, runner, 'git', [
     'show-ref',
@@ -175,9 +178,9 @@ export async function executePostMergeRoadmapCloseout(plan, { runner = defaultRu
     `refs/heads/${branch}`,
   ]);
   if (localBranchProbe.exitCode === 0) {
-    const mergedBranches = await runRequired(steps, runner, 'git', ['branch', '--merged', 'main']);
+    const mergedBranches = await runRequired(steps, runner, 'git', ['branch', '--merged', targetBranch]);
     if (!branchListContains(mergedBranches.stdout, branch)) {
-      throw new Error(`refusing to delete local branch ${branch}: not listed in git branch --merged main`);
+      throw new Error(`refusing to delete local branch ${branch}: not listed in git branch --merged ${targetBranch}`);
     }
     await runRequired(steps, runner, 'git', ['branch', '-d', branch]);
   } else {
@@ -448,11 +451,12 @@ export function parseRepositoryFromGitRemote(remoteUrl) {
 function buildExecutorGuards({ pr, contract, currentRepo, expectedRepo, gitStatus, expectedCarrierIssue }) {
   const branch = contract?.roadmap?.branch;
   const carrierIssue = contract?.carrier?.issue;
+  const targetBranch = pr.baseRefName;
   return [
     {
-      name: 'base-branch-main',
-      pass: pr.baseRefName === 'main',
-      reason: 'PR base branch must be main',
+      name: 'target-branch-present',
+      pass: Boolean(targetBranch && typeof targetBranch === 'string' && targetBranch.trim() && targetBranch !== branch),
+      reason: 'review target branch must be present and must not equal the roadmap branch',
     },
     {
       name: 'current-repository',
@@ -477,11 +481,11 @@ function buildExecutorGuards({ pr, contract, currentRepo, expectedRepo, gitStatu
   ];
 }
 
-function buildExecutableActions({ branch, carrierIssue }) {
+function buildExecutableActions({ branch, carrierIssue, targetBranch }) {
   return [
     { name: 'fetch_origin', command: ['git', 'fetch', 'origin'] },
-    { name: 'switch_main', command: ['git', 'switch', 'main'] },
-    { name: 'fast_forward_main', command: ['git', 'merge', '--ff-only', 'origin/main'] },
+    { name: 'switch_target_branch', command: ['git', 'switch', targetBranch] },
+    { name: 'fast_forward_target_branch', command: ['git', 'merge', '--ff-only', `origin/${targetBranch}`] },
     { name: 'delete_local_branch_if_present_and_merged', branch },
     { name: 'delete_remote_branch_if_present', branch },
     { name: 'comment_carrier_issue', issue: carrierIssue },

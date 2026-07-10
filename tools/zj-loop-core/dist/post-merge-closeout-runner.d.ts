@@ -70,6 +70,7 @@ export type PostMergeCloseoutPlan = {
     roadmap: {
         id: string;
         branch: string;
+        targetBranch: string;
     };
     carrier: {
         issue: number | null;
@@ -215,6 +216,7 @@ export declare function executePostMergeRoadmapCloseout(plan: PostMergeCloseoutP
     roadmap: {
         id: string;
         branch: string;
+        targetBranch: string;
     };
     carrier: {
         issue: number | null;

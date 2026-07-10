@@ -24,6 +24,11 @@ export type ConsumerRunPlan = {
   status: ConsumerRunPlanStatus;
   reason: string;
   next_steps: string[];
+  route_specific_artifacts: Array<{
+    path: string;
+    role: 'primary-result' | 'supporting-evidence';
+    description: string;
+  }>;
   route_decision: RouteDecision;
   validation: {
     valid: boolean;
@@ -54,6 +59,7 @@ export function buildConsumerRunPlanFromRoute(input: {
   routeDecision: RouteDecision;
 }): ConsumerRunPlan {
   const validation = validateRouteExecutionContract(input.route);
+  const routeSpecificArtifacts = routeSpecificArtifactsFor(input.route.route_id);
   const blocked = (reason: string, nextSteps: string[]): ConsumerRunPlan => ({
     schema: 'zj-loop.consumer_run_plan.v1',
     route_id: input.route.route_id,
@@ -68,7 +74,11 @@ export function buildConsumerRunPlanFromRoute(input: {
     allowed: false,
     status: 'blocked',
     reason,
-    next_steps: nextSteps,
+    next_steps: [
+      ...nextSteps,
+      ...artifactNextSteps(routeSpecificArtifacts),
+    ],
+    route_specific_artifacts: routeSpecificArtifacts,
     route_decision: input.routeDecision,
     validation,
   });
@@ -100,6 +110,7 @@ export function buildConsumerRunPlanFromRoute(input: {
       status: 'report-only',
       reason: 'report-only route records evidence and does not run worker side effects',
       next_steps: ['Write report evidence to the workflow summary or configured evidence store.'],
+      route_specific_artifacts: routeSpecificArtifacts,
       route_decision: input.routeDecision,
       validation,
     };
@@ -127,7 +138,35 @@ export function buildConsumerRunPlanFromRoute(input: {
     status: 'ready',
     reason: 'route is enabled and execution-ready',
     next_steps: [`Run packaged ${input.route.consumer} runner.`],
+    route_specific_artifacts: routeSpecificArtifacts,
     route_decision: input.routeDecision,
     validation,
   };
+}
+
+function routeSpecificArtifactsFor(routeId: string): ConsumerRunPlan['route_specific_artifacts'] {
+  if (routeId === 'roadmap-sliced-development') {
+    return [
+      {
+        path: 'contract-plan.json',
+        role: 'primary-result',
+        description: 'Roadmap Activation review contract and post-merge closeout contract plan.',
+      },
+    ];
+  }
+  if (routeId === 'post-merge-roadmap-closeout') {
+    return [
+      {
+        path: 'closeout-plan.json',
+        role: 'primary-result',
+        description: 'Post-Merge Roadmap Closeout dry-run/refusal/live-readiness plan.',
+      },
+    ];
+  }
+  return [];
+}
+
+function artifactNextSteps(artifacts: ConsumerRunPlan['route_specific_artifacts']): string[] {
+  if (artifacts.length === 0) return [];
+  return artifacts.map((artifact) => `Inspect route-specific artifact: ${artifact.path} (${artifact.description})`);
 }
