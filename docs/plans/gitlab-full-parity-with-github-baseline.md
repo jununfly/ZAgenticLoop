@@ -415,9 +415,37 @@ Evidence:
 
 ### 10. Docs, README, And Quickstart Provider Parity
 
-Status: pending
+Status: completed
 
 Intent:
 
 - Update README, Quickstart, and durable docs for GitHub/GitLab provider
   parity, install commands, and current route capability boundaries.
+
+Allowed paths:
+
+- `README.md`
+- `README.zh-CN.md`
+- `docs/QUICKSTART.md`
+- `docs/plans/gitlab-full-parity-with-github-baseline.md`
+
+Verification:
+
+- `npm run test:provider-parity-gate` — passed
+- `git diff --check` — passed
+
+Evidence:
+
+- README now presents GitHub Actions and GitLab CI as explicit provider
+  adapters instead of implying GitHub Actions is the universal automation
+  surface.
+- README documents `zj-loop-init . --add gitlab-ci` and
+  `zj-loop-init . --upgrade gitlab-ci`, GitLab generated fragment location,
+  token boundary, current GitLab route surfaces, and the explicit live MR
+  side-effect refusal boundary.
+- README architecture map links to Provider Adapter Parity Architecture.
+- Quickstart now includes an optional GitLab provider adapter path, a GitLab CI
+  first-run section, generated artifact expectations, upgrade command, and the
+  provider parity release gate.
+- Chinese README now includes the GitLab CI adapter path, provider distinction,
+  provider parity release gate, and current package versions.

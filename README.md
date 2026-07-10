@@ -26,6 +26,12 @@ The release also tightens the architecture around Route Decision, Route Table
 control, consumer execution, and triage state so agents can see where authority
 lives instead of guessing from prose.
 
+This branch also moves provider support from "GitHub Actions as the default
+automation surface" toward explicit **GitHub/GitLab provider adapters**. GitLab
+projects can install generated GitLab CI fragments, produce Route Decision
+artifacts, and use provider-aware GitLab issue/MR/pipeline evidence without
+being mistaken for GitHub repositories.
+
 ## What You Get
 
 | Need | Start with |
@@ -36,6 +42,7 @@ lives instead of guessing from prose.
 | Check whether a repo is loop-ready | `npx @jununfly/zj-loop-audit . --suggest` |
 | Scaffold loop state and skills | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok` |
 | Add GitHub provider smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
+| Add GitLab provider smoke/consumer jobs | `npx @jununfly/zj-loop-init . --add gitlab-ci` |
 | Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
@@ -61,6 +68,7 @@ The larger architecture docs are meant to answer different questions:
 | Where does routing policy live, and how does a signal become a route decision? | [Route Table Architecture](docs/designs/route-table-architecture.md) |
 | How should issue and daily triage divide discovery, recommendation, and side effects? | [Triage Architecture](docs/designs/triage-architecture.md) |
 | What separates a route being installed, dogfood-verified, execution-ready, or live? | [Route Consumer Execution Architecture](docs/designs/route-consumer-execution-architecture.md) |
+| How do GitHub and GitLab adapters share protocol while keeping platform semantics clear? | [Provider Adapter Parity Architecture](docs/designs/provider-adapter-parity-architecture.md) |
 
 The important boundary: **readiness is not authority**. Readiness says the repo
 has the structure and evidence to run a loop. Authority is granted by Route
@@ -91,6 +99,9 @@ npx @jununfly/zj-loop-audit . --suggest
 
 # Optional for GitHub-hosted repos: install the workflow-dispatch adapter
 npx @jununfly/zj-loop-init . --add github-actions
+
+# Optional for GitLab-hosted repos: install the GitLab CI adapter
+npx @jununfly/zj-loop-init . --add gitlab-ci
 
 # Optional: audit run-until-done goal readiness
 npx @jununfly/zj-goal-audit . --suggest
@@ -158,6 +169,32 @@ a **GitHub provider adapter**, not the universal automation substrate.
 `zj-loop-init --add github-actions` refuses detected GitLab projects by
 default. Use `--force` only when the repository intentionally mirrors GitHub
 Actions despite GitLab evidence.
+
+Install the GitLab CI adapter in GitLab-hosted repositories:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci
+```
+
+If `.gitlab-ci.yml` is absent, init creates a root include file. If your project
+already has root GitLab CI, init leaves it in place and prints the include next
+steps. Generated fragments live under `zj-loop/gitlab-ci/`, call pinned
+`@jununfly/zj-loop-core` package commands, and upload JSON artifacts. Report
+routes can run with normal CI context; issue notes, labels, branches, MRs, or
+cleanup need `GITLAB_TOKEN` and route-specific guards.
+
+Current GitLab parity is provider-aware and intentionally explicit:
+
+- `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,
+  MR Steward, dependency sweeper, changelog drafter, roadmap activation, and
+  post-merge cleanup all have generated GitLab CI route surfaces.
+- GitLab issue, MR, and pipeline URLs are carried as provider evidence in core
+  runners instead of falling back to GitHub URL shapes.
+- Live GitLab MR-creation side effects for PR/MR Steward, Dependency Sweeper,
+  and Changelog Drafter are refused with provider-layer evidence until their
+  GitLab API runners are explicitly promoted. This avoids quietly running
+  GitHub CLI actions against GitLab work.
 
 ## GitHub Actions Bundle
 
@@ -245,6 +282,7 @@ Before release, the generated-bundle gate checks workflow/template drift,
 
 ```bash
 npm run test:generated-bundle-release-gate
+npm run test:provider-parity-gate
 ```
 
 Run the `ZJ Loop Smoke` workflow manually first, then audit:
