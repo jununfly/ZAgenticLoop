@@ -70,6 +70,7 @@ export type PostMergeCloseoutPlan = {
     }>;
     confirmation: {
         required: boolean;
+        authorization_source: 'merged-pr-contract' | 'fixed-phrase';
         confirmation_location: string[];
         required_phrase: typeof LIVE_CLEANUP_CONFIRMATION_PHRASE;
         side_effects: string[];
@@ -203,6 +204,7 @@ export declare function executePostMergeRoadmapCloseout(plan: PostMergeCloseoutP
     }>;
     confirmation: {
         required: boolean;
+        authorization_source: "merged-pr-contract" | "fixed-phrase";
         confirmation_location: string[];
         required_phrase: typeof LIVE_CLEANUP_CONFIRMATION_PHRASE;
         side_effects: string[];

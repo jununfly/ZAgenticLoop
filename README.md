@@ -273,7 +273,7 @@ Current dogfood automation boundaries:
 |----------------|--------------|----------------------|
 | `ci-sweeper` | `live` | Create verifier-backed repair PRs or escalation evidence for narrow validate/audit failures. |
 | `roadmap-sliced-development` | `live` | Consume authorized activation comments and bootstrap a bounded roadmap branch/PR lifecycle. |
-| `post-merge-roadmap-closeout` | `dry-run` | Plan branch/issue cleanup after merged Roadmap-Sliced PRs; live cleanup needs explicit operator confirmation. |
+| `post-merge-roadmap-closeout` | `dry-run` + contract-authorized live cleanup | Plan branch/issue cleanup after merged Roadmap-Sliced PRs; live cleanup can run automatically when the merged PR carries a valid closeout contract and all executor guards pass. Fixed-phrase confirmation remains as fallback. |
 | `dependency-sweeper` | `claim-only` with replayed runner | Claim eligible dependency fix requests and replay repair/escalation evidence; no live manifest edits or PRs yet. |
 | `pr-steward-fix-request` | `claim-only` with replayed runner | Claim eligible failed-PR-check requests and replay repair/escalation evidence; no source PR mutation. |
 | `changelog-drafter-draft-request` | `report-only` with replayed runner | Record draft request evidence and replay draft evidence/PR outcomes; no live changelog edits yet. |

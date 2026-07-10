@@ -66,9 +66,9 @@ test('post-merge closeout dry-run plan requires contract and executor guards', (
   assert.equal(plan.kind, 'zj-loop.post-merge-roadmap-closeout-executor');
   assert.equal(plan.status, 'dry-run');
   assert.equal(plan.side_effects_executed, false);
-  assert.equal(plan.confirmation.required, true);
+  assert.equal(plan.confirmation.required, false);
+  assert.equal(plan.confirmation.authorization_source, 'merged-pr-contract');
   assert.equal(plan.confirmation.required_phrase, LIVE_CLEANUP_CONFIRMATION_PHRASE);
-  assert.ok(plan.confirmation.confirmation_location.some((item) => item.includes('Codex chat reply')));
   assert.deepEqual(plan.refusals, []);
   assert.deepEqual(
     plan.actions.map((action) => action.name),
@@ -150,9 +150,10 @@ test('post-merge dry-run evidence comment uses packaged command names', () => {
   assert.match(comment, /side_effects_executed: false/);
   assert.match(comment, /artifact: post-merge-roadmap-closeout-plan-41/);
   assert.match(comment, /zj-loop-post-merge-closeout live-closeout --pr 41 --repo jununfly\/ZAgenticLoop --carrier-issue 39/);
-  assert.match(comment, /Confirmation required for live cleanup/);
-  assert.match(comment, /Reply\/input location:/);
-  assert.match(comment, new RegExp(LIVE_CLEANUP_CONFIRMATION_PHRASE));
+  assert.doesNotMatch(comment, /--confirm-live-cleanup/);
+  assert.match(comment, /Live cleanup authorization/);
+  assert.match(comment, /Authorization source: merged-pr-contract/);
+  assert.match(comment, /Confirmation required: false/);
 });
 
 test('post-merge GitHub input collection normalizes PR and repository evidence', async () => {

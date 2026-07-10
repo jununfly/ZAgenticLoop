@@ -30,7 +30,7 @@ The first route set is deliberately small:
 | `roadmap-sliced-development` | A maintainer comments `/zj-loop start roadmap-sliced-development` on a plan issue and gets a bounded roadmap branch/PR bootstrap. | Disabled until explicitly enabled. Generated workflow can produce activation, contract, and bounded-slice evidence. | Activation can create the roadmap lifecycle. Slice execution is bounded by `max_slices`, default `30`, and Roadmap-Sliced gates. |
 | `ci-sweeper` | A failing workflow can become a durable GitHub Issue Fix Request instead of disappearing in Actions history. | Disabled until explicitly enabled. Generated workflow records Route Decision and consumer plan evidence. | When allowed, it creates an independent Issue Fix Request carrier for bounded fix-runner consumption or escalation. |
 | `issue-backlog-triage` -> `issue-triage-transition` | Open issue backlog signals become recommended `zj-triage` transitions, then maintainer/collaborator confirmation creates request-only Issue Fix Request comments on the source issue for `ready-for-agent`. | Recommendation evidence is report-only. Confirmed transition requires an exact request id and fixed confirmation phrase. | No live tracker label/state mutation. The useful boundary is a replayable request comment on the user-visible source issue. |
-| `post-merge-roadmap-closeout` | After a Roadmap-Sliced PR is merged, cleanup can be planned and, with explicit confirmation, close only the activation carrier and delete only the merged roadmap branch. | Dry-run by default. | Live cleanup requires the fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` and valid post-merge contract guards. |
+| `post-merge-roadmap-closeout` | After a Roadmap-Sliced PR is merged, cleanup can be planned and, when the merged PR contract authorizes it, close only the activation carrier and delete only the merged roadmap branch. | Dry-run evidence first; live cleanup is contract-authorized only when all executor guards pass. | Fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` is a fallback for manual/operator-required cleanup, not the default happy path. |
 
 All other action-capable routes remain selectable future paths, but should not
 be described as user-project execution-ready unless their generated workflow and
@@ -137,13 +137,17 @@ Use this path after Roadmap-Sliced PRs carry a valid
 `zj-loop.post-merge-contract`.
 
 1. The workflow can always produce closeout-plan evidence.
-2. Live cleanup is optional and requires:
+2. Live cleanup may run without another human confirmation when the merged PR
+   itself carries the authorization contract and requires:
    - a merged PR
    - a valid post-merge contract
    - a matching carrier issue
    - a merged `zjal/` roadmap branch
-   - the fixed confirmation phrase
-3. The executor may delete only the contract-named merged roadmap branch and
+   - all executor guards passing
+3. The fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` remains a
+   fallback when contract authorization is unavailable or an operator explicitly
+   requires confirmation.
+4. The executor may delete only the contract-named merged roadmap branch and
    may close only the contract-named activation carrier issue.
 
 This is a narrow exception, not a general issue close or branch cleanup tool.

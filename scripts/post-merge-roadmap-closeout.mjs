@@ -100,8 +100,40 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
     },
     contractPlan,
     executorGuards,
+    confirmation: buildLiveCleanupConfirmation({
+      prNumber: pr.number ?? null,
+      carrierIssue,
+      contractAuthorized: executable,
+    }),
     refusals,
     actions: executable ? buildExecutableActions({ branch, carrierIssue }) : [],
+  };
+}
+
+function buildLiveCleanupConfirmation({ prNumber, carrierIssue, contractAuthorized }) {
+  return {
+    required: !contractAuthorized,
+    authorization_source: contractAuthorized ? 'merged-pr-contract' : 'fixed-phrase',
+    confirmation_location: [
+      'Codex chat reply when a local maintainer is operating the closeout CLI',
+      'workflow_dispatch input confirm_live_cleanup when using GitHub Actions',
+    ],
+    required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
+    side_effects: [
+      'switch local checkout to main and fast-forward from origin/main',
+      'delete the merged zjal/ roadmap branch locally when present and merged',
+      'delete the merged zjal/ roadmap branch on origin when present',
+      `append closeout evidence to carrier issue #${carrierIssue ?? 'unknown'}`,
+      `close carrier issue #${carrierIssue ?? 'unknown'}`,
+    ],
+    why_required: contractAuthorized
+      ? 'No extra confirmation is required: the merged PR contains a valid post-merge contract and all executor guards passed.'
+      : 'Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable when merged-PR contract authorization is unavailable.',
+    audit_target: [
+      `merged PR #${prNumber ?? 'unknown'}`,
+      `carrier issue #${carrierIssue ?? 'unknown'}`,
+      'post-merge closeout JSON plan',
+    ],
   };
 }
 
@@ -276,8 +308,23 @@ export function buildDryRunEvidenceComment(plan, {
     ...refusalLines,
     '',
     plan.status === 'dry-run'
-      ? `Live cleanup command after maintainer approval: \`${command}\``
+      ? `Live cleanup command: \`${command}\``
       : 'Live cleanup is not available until the refusals above are resolved.',
+    '',
+    plan.confirmation.required
+      ? '### Confirmation required for live cleanup'
+      : '### Live cleanup authorization',
+    '',
+    `- Authorization source: ${plan.confirmation.authorization_source}`,
+    `- Confirmation required: ${plan.confirmation.required}`,
+    ...(plan.confirmation.required
+      ? [
+          `- Reply/input location: ${plan.confirmation.confirmation_location.join('; ')}`,
+          `- Required phrase: \`${plan.confirmation.required_phrase}\``,
+        ]
+      : []),
+    `- Reason: ${plan.confirmation.why_required}`,
+    `- Audit target: ${plan.confirmation.audit_target.join('; ')}`,
   ].join('\n');
 }
 
@@ -324,6 +371,9 @@ export function buildLiveCommand(plan) {
     args.push(`--carrier-issue ${plan.carrier.issue}`);
   }
   args.push('--live');
+  if (plan.confirmation?.required) {
+    args.push(`--confirm-live-cleanup ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+  }
   return args.join(' ');
 }
 
@@ -497,13 +547,6 @@ function parseArgs(argv) {
   if (!args.prNumber) throw new Error('--pr is required');
   args.expectedRepo = args.expectedRepo ?? process.env.GITHUB_REPOSITORY;
   if (!args.expectedRepo) throw new Error('--repo is required');
-  if (
-    args.live &&
-    args.requireLiveConfirmation &&
-    args.confirmLiveCleanup !== LIVE_CLEANUP_CONFIRMATION_PHRASE
-  ) {
-    throw new Error(`--confirm-live-cleanup must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
-  }
   return args;
 }
 
@@ -515,6 +558,13 @@ async function main() {
     expectedCarrierIssue: args.expectedCarrierIssue,
     live: args.live,
   });
+  if (
+    args.live &&
+    (args.requireLiveConfirmation || plan.confirmation.required) &&
+    args.confirmLiveCleanup !== LIVE_CLEANUP_CONFIRMATION_PHRASE
+  ) {
+    throw new Error(`--confirm-live-cleanup must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+  }
   const result = args.live
     ? await executePostMergeRoadmapCloseout(plan)
     : plan;

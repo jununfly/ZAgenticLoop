@@ -60,13 +60,14 @@ else if (argv[0] === 'live-closeout') {
     process.exitCode = await runCli({
         name: 'zj-loop-post-merge-closeout',
         description: 'Execute guarded Post-Merge Roadmap Closeout live cleanup.',
-        usage: 'zj-loop-post-merge-closeout live-closeout --pr <number> --repo <owner/repo> [--carrier-issue <number>] --confirm-live-cleanup <fixed phrase> [--out <path>] [--json]',
+        usage: 'zj-loop-post-merge-closeout live-closeout --pr <number> --repo <owner/repo> [--carrier-issue <number>] [--confirm-live-cleanup <fixed phrase>] [--require-live-confirmation] [--out <path>] [--json]',
         options: [
             { name: 'command', type: 'positional', description: 'Command', default: 'live-closeout' },
             { name: 'pr', type: 'string', description: 'Merged PR number' },
             { name: 'repo', type: 'string', description: 'Expected owner/repo' },
             { name: 'carrier-issue', type: 'string', description: 'Expected activation carrier issue' },
-            { name: 'confirm-live-cleanup', type: 'string', description: `Must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}` },
+            { name: 'confirm-live-cleanup', type: 'string', description: `Fallback phrase: ${LIVE_CLEANUP_CONFIRMATION_PHRASE}` },
+            { name: 'require-live-confirmation', type: 'boolean', description: 'Require the fixed phrase even when merged-PR contract authorization passes' },
             { name: 'out', type: 'string', description: 'Write JSON result to this path' },
             { name: 'json', type: 'boolean', description: 'Print JSON output' },
         ],
@@ -77,9 +78,6 @@ else if (argv[0] === 'live-closeout') {
                 throw new Error('--pr is required');
             if (typeof repo !== 'string')
                 throw new Error('--repo is required');
-            if (options['confirm-live-cleanup'] !== LIVE_CLEANUP_CONFIRMATION_PHRASE) {
-                throw new Error(`--confirm-live-cleanup must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
-            }
             const input = await collectCloseoutInputFromGitHub({
                 prNumber: pr,
                 expectedRepo: repo,
@@ -91,6 +89,10 @@ else if (argv[0] === 'live-closeout') {
                     : undefined,
                 live: true,
             });
+            const confirmationRequired = options['require-live-confirmation'] === true || plan.confirmation.required === true;
+            if (confirmationRequired && options['confirm-live-cleanup'] !== LIVE_CLEANUP_CONFIRMATION_PHRASE) {
+                throw new Error(`--confirm-live-cleanup must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+            }
             const result = await executePostMergeRoadmapCloseout(plan);
             const text = `${JSON.stringify(result, null, 2)}\n`;
             if (typeof options.out === 'string')
