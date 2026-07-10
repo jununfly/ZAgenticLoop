@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `issue-89-gitlab-provider-hardening-roadmap.json` | 最后更新: 2026-07-10 18:40:20
+> 数据文件: `issue-89-gitlab-provider-hardening-roadmap.json` | 最后更新: 2026-07-10 18:44:14
 
 [~][X+] 1. Issue #89 GitLab provider hardening
 ├── [x][Y+] 1-1. 消费 #89 request 并建立 roadmap 分支
@@ -18,7 +18,7 @@
 │   ├── [x][Y+] 1-4-1. route-table maturity vocabulary 对齐
 │   └── [x][Y+] 1-4-2. ci-sweeper GitLab 路径建议 provider-aware
 ├── [ ][Y+] 1-5. GitLab consumer 合约与 closeout 兼容
-│   ├── [ ][Y+] 1-5-1. roadmap activation MR 到 post-merge closeout 合约桥接
+│   ├── [x][Y+] 1-5-1. roadmap activation MR 到 post-merge closeout 合约桥接
 │   └── [ ][Y+] 1-5-2. pr-steward report 与 fix-request 命令边界澄清
 └── [ ][Y+] 1-6. GitLab 全链路验证与 closeout
     ├── [ ][Y+] 1-6-1. GitLab provider dogfood 回放测试补强

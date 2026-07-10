@@ -18,6 +18,8 @@ import {
   classifyRoadmapActivationLifecycleTransition,
   dispatchRoadmapActivationCommand,
   hasRoadmapActivationLoopMarker,
+  buildRoadmapCloseoutContractPlan,
+  parsePostMergeContractFromPrBody,
   parseStructuredActivationComments,
   renderRoadmapActivationWorkflowSummary,
   verifyRoadmapBoundedSliceResult,
@@ -107,6 +109,7 @@ test('Roadmap Activation deterministic contract helpers produce stable ids and P
   assert.match(contract, /zj-loop\.roadmap_activation_pr_contract\.v1/);
   assert.match(contract, /"activation_request_id": "act-321-11-/);
   assert.match(contract, /branch_name: `zjal\/act-321-11-/);
+  assert.equal(parsePostMergeContractFromPrBody(contract).ok, true);
 });
 
 test('Roadmap Activation builds provider-neutral GitLab MR contracts', () => {
@@ -142,6 +145,30 @@ test('Roadmap Activation builds provider-neutral GitLab MR contracts', () => {
   assert.match(contract, /"review_kind": "merge-request"/);
   assert.match(contract, /### Roadmap Activation MR Contract/);
   assert.match(contract, /source_comment_url": "https:\/\/gitlab\.com\/group\/project\/-\/issues\/87#note_4932786315/);
+
+  const contractResult = parsePostMergeContractFromPrBody(contract);
+  assert.equal(contractResult.ok, true);
+  assert.equal(contractResult.contract.kind, 'zj-loop.post-merge-contract');
+  assert.equal(contractResult.contract.consumer, 'post-merge-cleanup');
+  assert.equal(contractResult.contract.roadmap.branch, branchName);
+  assert.equal(contractResult.contract.carrier.issue, 87);
+  const closeoutPlan = buildRoadmapCloseoutContractPlan({
+    pr: {
+      provider: 'gitlab',
+      reviewKind: 'merge-request',
+      number: 9,
+      url: 'https://gitlab.com/group/project/-/merge_requests/9',
+      body: contract,
+      merged: true,
+      headRefName: branchName,
+      baseRefName: 'main',
+      headRepositoryOwner: 'group',
+      baseRepositoryOwner: 'group',
+    },
+    contractResult,
+  });
+  assert.equal(closeoutPlan.status, 'dry-run');
+  assert.equal(closeoutPlan.validation.ok, true);
 });
 
 test('Roadmap Activation lifecycle helper separates red tests from blocked and failed states', () => {

@@ -8,12 +8,13 @@ Last run: 2026-07-10
 - Branch: zjal/issue-89-gitlab-provider-hardening
 - Status: in_progress
 - Current parent node: GitLab consumer 合约与 closeout 兼容
-- Current leaf: roadmap activation MR 到 post-merge closeout 合约桥接
+- Current leaf: pr-steward report 与 fix-request 命令边界澄清
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| roadmap-activation-post-merge-contract-bridge | completed | Roadmap Activation PR/MR contract output now embeds a parseable `zj-loop.post-merge-contract` YAML block, so merged GitHub PRs and GitLab MRs can be consumed by Post-Merge Closeout without a separate human-added closeout contract; GitLab MR tests prove the generated body parses through Post-Merge Closeout and reaches dry-run with valid guards; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | ci-sweeper-gitlab-provider-aware-paths | completed | CI Sweeper Issue Fix Request fix scope is now provider-aware: GitHub requests keep `.github/workflows/`, while GitLab pipeline requests use `.gitlab-ci.yml` and `zj-loop/gitlab-ci/` with shared `scripts/` and `zj-loop/`; regression tests assert GitLab request bodies do not point to `.github/workflows/`; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | route-table-maturity-vocabulary-alignment | completed | `zj-loop-audit` now accepts the same maturity values used by core/generated Route Tables: `install-ready` and `execution-ready` are no longer reported as unknown; live runner maturity wording now aligns with core; regression test covers install-ready route maturity; `npm run build` in `tools/zj-loop-audit`; `node --test tools/zj-loop-audit/test/auditor.test.mjs`; `node dist/cli.js ../..` in `tools/zj-loop-audit`; `git diff --check` | pending |
 | gitlab-core-tarball-offline-boundary | completed | Durable docs and user-facing docs now state that the standard GitLab adapter is online/cache-backed, not fully offline: vendored tarballs alone do not include transitive dependencies, so `npm exec` may still require registry access or a prepared npm cache; `docs/designs/provider-adapter-parity-architecture.md`; README/README.zh-CN/Quickstart; `git diff --check`; roadmap validate | pending |

@@ -204,12 +204,12 @@
     "1-5-1": {
       "id": "1-5-1",
       "label": "roadmap activation MR 到 post-merge closeout 合约桥接",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: bridge Roadmap Activation review contracts to Post-Merge Closeout. Roadmap Activation PR/MR contract output now embeds a parseable zj-loop.post-merge-contract YAML block, so merged GitHub PRs and GitLab MRs can be consumed by Post-Merge Closeout without a separate human-added closeout contract. GitLab MR tests prove the generated body parses through Post-Merge Closeout and reaches dry-run with valid guards. Verification: npm run build in tools/zj-loop-core; npm test in tools/zj-loop-core; git diff --check."
     },
     "1-5-2": {
       "id": "1-5-2",
@@ -244,7 +244,7 @@
   },
   "metadata": {
     "created": "2026-07-10 18:02:19",
-    "updated": "2026-07-10 18:40:20",
+    "updated": "2026-07-10 18:44:14",
     "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
   }
 }

@@ -2,6 +2,12 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 import { ROUTE_DECISION_SCHEMA } from './issue-fix-request-contract.js';
+import {
+  POST_MERGE_CONTRACT_CONSUMER,
+  POST_MERGE_CONTRACT_KIND,
+  POST_MERGE_CONTRACT_MODE,
+  POST_MERGE_CONTRACT_VERSION,
+} from './post-merge-closeout-runner.js';
 import { RouteStatus } from './route.js';
 
 export const ACTIVATION_SCHEMA_VERSION = 1;
@@ -514,6 +520,12 @@ export function buildRoadmapActivationReviewContract(input: {
     },
   };
   const label = input.provider === 'gitlab' ? 'MR' : 'PR';
+  const postMergeContract = buildPostMergeCloseoutContractBlock({
+    roadmapId: input.activationRequestId,
+    branchName: contract.closeout_contract.branch_name,
+    carrierIssue: contract.closeout_contract.activation_carrier_issue,
+    processRoadmapPath: contract.closeout_contract.process_roadmap_path,
+  });
   return [
     '<!-- zj-loop.roadmap-activation-review-contract',
     JSON.stringify(contract, null, 2),
@@ -527,6 +539,8 @@ export function buildRoadmapActivationReviewContract(input: {
     `- consumer_id: \`${contract.consumer_id}\``,
     `- branch_name: \`${contract.branch_name}\``,
     `- lifecycle_state: \`${contract.lifecycle_state}\``,
+    '',
+    postMergeContract,
     '',
   ].join('\n');
 }
@@ -560,6 +574,12 @@ export function buildRoadmapActivationPrContract(input: {
       process_roadmap_path: input.closeoutContract.processRoadmapPath ?? '',
     },
   };
+  const postMergeContract = buildPostMergeCloseoutContractBlock({
+    roadmapId: input.activationRequestId,
+    branchName: contract.closeout_contract.branch_name,
+    carrierIssue: contract.closeout_contract.activation_carrier_issue,
+    processRoadmapPath: contract.closeout_contract.process_roadmap_path,
+  });
   return [
     '<!-- zj-loop.roadmap-activation-pr-contract',
     JSON.stringify(contract, null, 2),
@@ -572,7 +592,50 @@ export function buildRoadmapActivationPrContract(input: {
     `- branch_name: \`${contract.branch_name}\``,
     `- lifecycle_state: \`${contract.lifecycle_state}\``,
     '',
+    postMergeContract,
+    '',
   ].join('\n');
+}
+
+function buildPostMergeCloseoutContractBlock(input: {
+  roadmapId: string;
+  branchName: string;
+  carrierIssue: string | number;
+  processRoadmapPath: string;
+}) {
+  return [
+    '## Post-Merge Contract',
+    '',
+    '```yaml',
+    `kind: ${POST_MERGE_CONTRACT_KIND}`,
+    `version: ${POST_MERGE_CONTRACT_VERSION}`,
+    `consumer: ${POST_MERGE_CONTRACT_CONSUMER}`,
+    `mode: ${POST_MERGE_CONTRACT_MODE}`,
+    'roadmap:',
+    `  id: ${yamlScalar(input.roadmapId)}`,
+    `  branch: ${yamlScalar(input.branchName)}`,
+    input.processRoadmapPath ? `  process_roadmap_path: ${yamlScalar(input.processRoadmapPath)}` : '',
+    'carrier:',
+    `  issue: ${carrierIssueYamlValue(input.carrierIssue)}`,
+    'cleanup:',
+    '  delete_merged_branch: true',
+    '  close_carrier_issue: true',
+    'safety:',
+    '  require_pr_merged: true',
+    '  require_branch_merged: true',
+    '  no_pending_followups: true',
+    '  missing_contract_behavior: report-only',
+    '```',
+  ].filter(Boolean).join('\n');
+}
+
+function yamlScalar(value: string) {
+  return JSON.stringify(String(value ?? ''));
+}
+
+function carrierIssueYamlValue(value: string | number) {
+  const issue = Number(value);
+  return Number.isInteger(issue) && issue > 0 ? String(issue) : 'null';
 }
 
 export function buildRoadmapBoundedSlicePack(input: {
