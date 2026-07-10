@@ -7,6 +7,7 @@ import {
   buildLiveRunnerEvidence,
   validateLiveRunnerEvidence,
 } from './live-runner-contract.js';
+import { parseGitRemoteRepository } from './providers.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -637,10 +638,8 @@ export function normalizePr(pr: PostMergePullRequest = {}) {
 
 export function parseRepositoryFromGitRemote(remoteUrl: string): string {
   const text = String(remoteUrl ?? '').trim().replace(/\.git$/, '');
-  const sshMatch = text.match(/^git@github\.com:(?<owner>[^/]+)\/(?<repo>.+)$/);
-  if (sshMatch?.groups) return `${sshMatch.groups.owner}/${sshMatch.groups.repo}`;
-  const httpsMatch = text.match(/^https:\/\/(?:[^@/]+@)?github\.com\/(?<owner>[^/]+)\/(?<repo>.+)$/);
-  if (httpsMatch?.groups) return `${httpsMatch.groups.owner}/${httpsMatch.groups.repo}`;
+  const parsed = parseGitRemoteRepository(remoteUrl);
+  if (parsed) return parsed.slug;
   return text;
 }
 

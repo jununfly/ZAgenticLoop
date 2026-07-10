@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import yaml from 'yaml';
 import { buildLiveRunnerEvidence, validateLiveRunnerEvidence, } from './live-runner-contract.js';
+import { parseGitRemoteRepository } from './providers.js';
 const execFileAsync = promisify(execFile);
 export const POST_MERGE_CONTRACT_KIND = 'zj-loop.post-merge-contract';
 export const POST_MERGE_CONTRACT_VERSION = 1;
@@ -511,12 +512,9 @@ export function normalizePr(pr = {}) {
 }
 export function parseRepositoryFromGitRemote(remoteUrl) {
     const text = String(remoteUrl ?? '').trim().replace(/\.git$/, '');
-    const sshMatch = text.match(/^git@github\.com:(?<owner>[^/]+)\/(?<repo>.+)$/);
-    if (sshMatch?.groups)
-        return `${sshMatch.groups.owner}/${sshMatch.groups.repo}`;
-    const httpsMatch = text.match(/^https:\/\/(?:[^@/]+@)?github\.com\/(?<owner>[^/]+)\/(?<repo>.+)$/);
-    if (httpsMatch?.groups)
-        return `${httpsMatch.groups.owner}/${httpsMatch.groups.repo}`;
+    const parsed = parseGitRemoteRepository(remoteUrl);
+    if (parsed)
+        return parsed.slug;
     return text;
 }
 function buildContractGuards({ pr, contract }) {

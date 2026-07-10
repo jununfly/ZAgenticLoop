@@ -202,4 +202,6 @@ test('post-merge repository URL parser handles common GitHub remotes', () => {
   assert.equal(parseRepositoryFromGitRemote('git@github.com:jununfly/ZAgenticLoop.git'), 'jununfly/ZAgenticLoop');
   assert.equal(parseRepositoryFromGitRemote('https://github.com/jununfly/ZAgenticLoop.git'), 'jununfly/ZAgenticLoop');
   assert.equal(parseRepositoryFromGitRemote('https://x-access-token:TOKEN@github.com/jununfly/ZAgenticLoop.git'), 'jununfly/ZAgenticLoop');
+  assert.equal(parseRepositoryFromGitRemote('https://gitlab.com/group/subgroup/project.git'), 'group/subgroup/project');
+  assert.equal(parseRepositoryFromGitRemote('ssh://git@gitlab.example.com/team/platform/project.git'), 'team/platform/project');
 });

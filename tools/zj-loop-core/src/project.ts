@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { detectProviderKind, type ProviderKind } from './providers.js';
 
 export type ProjectEntryKind = 'file' | 'directory' | 'other';
 
@@ -62,7 +63,7 @@ export const DEFAULT_MCP_FILES = [
   '.mcp/config.json',
 ] as const;
 
-export type ProjectProviderKind = 'github' | 'gitlab' | 'manual';
+export type ProjectProviderKind = ProviderKind;
 
 export const DEFAULT_LOOP_SKILL_NAMES = [
   'zj-loop-triage',
@@ -269,10 +270,7 @@ export function detectProjectProvider(input: {
   gitlabCi?: boolean;
   glabMentioned?: boolean;
 }): ProjectProviderKind {
-  const remote = String(input.remote ?? '').toLowerCase();
-  if (remote.includes('github.com') || input.githubActions === true) return 'github';
-  if (remote.includes('gitlab') || input.gitlabCi === true || input.glabMentioned === true) return 'gitlab';
-  return 'manual';
+  return detectProviderKind(input);
 }
 
 function extractOriginRemote(gitConfig: string): string {

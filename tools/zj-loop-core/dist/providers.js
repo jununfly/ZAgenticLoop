@@ -1,0 +1,107 @@
+export function detectProviderKind(input = {}) {
+    const remote = String(input.remote ?? '').toLowerCase();
+    if (remote.includes('github.com') || input.githubActions === true)
+        return 'github';
+    if (remote.includes('gitlab') || input.gitlabCi === true || input.glabMentioned === true)
+        return 'gitlab';
+    return 'manual';
+}
+export function parseGitRemoteRepository(remoteUrl, { providerHint } = {}) {
+    const original = String(remoteUrl ?? '').trim();
+    if (!original)
+        return null;
+    const normalized = original.replace(/\.git(?:[?#].*)?$/, '');
+    const sshMatch = normalized.match(/^git@(?<host>[^:]+):(?<path>.+)$/);
+    const sshUrlMatch = normalized.match(/^ssh:\/\/git@(?<host>[^/]+)\/(?<path>.+)$/);
+    const httpsMatch = normalized.match(/^https:\/\/(?:[^@/]+@)?(?<host>[^/]+)\/(?<path>.+)$/);
+    const match = sshMatch ?? sshUrlMatch ?? httpsMatch;
+    if (!match?.groups)
+        return null;
+    const host = match.groups.host.toLowerCase();
+    const projectPath = stripGitSuffix(match.groups.path);
+    const provider = providerHint && providerHint !== 'manual'
+        ? providerHint
+        : detectProviderKind({ remote: original });
+    if (provider === 'manual')
+        return null;
+    const parts = projectPath.split('/').filter(Boolean);
+    if (provider === 'github' && parts.length !== 2)
+        return null;
+    if (parts.length < 2)
+        return null;
+    const name = parts[parts.length - 1] ?? '';
+    const ownerPath = parts.slice(0, -1).join('/');
+    return {
+        provider,
+        host,
+        ownerPath,
+        name,
+        slug: `${ownerPath}/${name}`,
+        remoteUrl: original,
+    };
+}
+export function parseProviderIssueUrl(url) {
+    const parsed = parseProviderWebUrl(url);
+    if (!parsed)
+        return null;
+    const issueIndex = parsed.parts.indexOf('issues');
+    if (issueIndex < 1)
+        return null;
+    const issue = Number(parsed.parts[issueIndex + 1]);
+    if (!Number.isInteger(issue))
+        return null;
+    return {
+        provider: parsed.provider,
+        host: parsed.host,
+        projectPath: providerProjectPath(parsed.parts.slice(0, issueIndex)),
+        issue,
+        url: parsed.url,
+    };
+}
+export function parseProviderReviewUrl(url) {
+    const parsed = parseProviderWebUrl(url);
+    if (!parsed)
+        return null;
+    const reviewIndex = parsed.provider === 'github'
+        ? parsed.parts.indexOf('pull')
+        : parsed.parts.indexOf('merge_requests');
+    if (reviewIndex < 1)
+        return null;
+    const number = Number(parsed.parts[reviewIndex + 1]);
+    if (!Number.isInteger(number))
+        return null;
+    return {
+        provider: parsed.provider,
+        host: parsed.host,
+        projectPath: providerProjectPath(parsed.parts.slice(0, reviewIndex)),
+        number,
+        kind: parsed.provider === 'github' ? 'pull-request' : 'merge-request',
+        url: parsed.url,
+    };
+}
+function parseProviderWebUrl(url) {
+    const text = String(url ?? '').trim();
+    if (!text)
+        return null;
+    let parsed;
+    try {
+        parsed = new URL(text);
+    }
+    catch {
+        return null;
+    }
+    if (parsed.protocol !== 'https:')
+        return null;
+    const host = parsed.hostname.toLowerCase();
+    const provider = host === 'github.com' ? 'github' : host.includes('gitlab') ? 'gitlab' : null;
+    if (!provider)
+        return null;
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    return { provider, host, parts, url: text };
+}
+function stripGitSuffix(input) {
+    return String(input ?? '').replace(/\.git$/, '').replace(/^\/+|\/+$/g, '');
+}
+function providerProjectPath(parts) {
+    return parts.filter((part) => part !== '-').join('/');
+}

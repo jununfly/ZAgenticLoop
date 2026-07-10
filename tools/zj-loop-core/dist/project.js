@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { detectProviderKind } from './providers.js';
 export const DEFAULT_SKILL_DIRS = [
     '.grok/skills',
     '.claude/skills',
@@ -193,12 +194,7 @@ export async function collectProjectEvidenceFacts(fs) {
     };
 }
 export function detectProjectProvider(input) {
-    const remote = String(input.remote ?? '').toLowerCase();
-    if (remote.includes('github.com') || input.githubActions === true)
-        return 'github';
-    if (remote.includes('gitlab') || input.gitlabCi === true || input.glabMentioned === true)
-        return 'gitlab';
-    return 'manual';
+    return detectProviderKind(input);
 }
 function extractOriginRemote(gitConfig) {
     const lines = String(gitConfig ?? '').split(/\r?\n/);
