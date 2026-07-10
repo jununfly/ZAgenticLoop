@@ -210,6 +210,15 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
 ```
 
+If you vendor local package tarballs under `zj-loop/vendor/`, `zj-loop-init`
+warns when common ignore rules such as `**/*.tgz` would keep them out of Git.
+Commit the required tarballs explicitly or add narrow exceptions:
+
+```gitignore
+!zj-loop/vendor/
+!zj-loop/vendor/*.tgz
+```
+
 Current GitLab parity is provider-aware and intentionally explicit:
 
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,

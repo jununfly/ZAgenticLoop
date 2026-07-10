@@ -105,6 +105,15 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
 ```
 
+When using vendored tarballs under `zj-loop/vendor/`, watch for the install
+warning about `*.tgz` being ignored. Either commit the required files with
+`git add -f zj-loop/vendor/*.tgz` or add narrow `.gitignore` exceptions:
+
+```gitignore
+!zj-loop/vendor/
+!zj-loop/vendor/*.tgz
+```
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash

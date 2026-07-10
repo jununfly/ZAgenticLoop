@@ -8,12 +8,13 @@ Last run: 2026-07-10
 - Branch: zjal/issue-89-gitlab-provider-hardening
 - Status: in_progress
 - Current parent node: GitLab vendored 包与离线边界硬化
-- Current leaf: vendored tgz git 跟踪预检
+- Current leaf: GitLab smoke audit 离线边界显式化
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| gitlab-vendor-tgz-tracking-preflight | completed | Added a deterministic preflight warning to `zj-loop-init --add/--upgrade gitlab-ci` when `zj-loop/vendor/*.tgz` appears ignored by Git; the warning suggests narrow `.gitignore` exceptions or `git add -f zj-loop/vendor/*.tgz`; tests cover add and upgrade warnings for `**/*.tgz`; README/README.zh-CN/Quickstart document the warning and remediation; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |
 | gitlab-ci-image-and-node-precheck | completed | Added `--gitlab-image` to `zj-loop-init --add/--upgrade gitlab-ci`; generated GitLab jobs now render the configured image and run a clear Node >=18 precheck before package commands; README/README.zh-CN/Quickstart document private or dependency-proxy Node 18+ image usage; tests cover default and custom image rendering plus precheck text; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |
 | gitlab-runner-tags-configurable | completed | Added `--gitlab-runner-tags` to `zj-loop-init --add/--upgrade gitlab-ci`; GitLab templates now render an optional `tags:` list into every generated job and omit tags by default; README/README.zh-CN/Quickstart document using tags when GitLab jobs remain pending because project runners require tags; tests cover default omitted tags and custom tags; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |
 | gitlab-ci-stage-configurable | completed | Added `--gitlab-stage` to `zj-loop-init --add/--upgrade gitlab-ci`; GitLab CI templates now render `__ZJ_LOOP_GITLAB_STAGE__` into root `stages` and each job `stage`, with default `zj-loop` and documented `Fallback` example for fixed-stage GitLab projects; tests cover default and custom stages; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |

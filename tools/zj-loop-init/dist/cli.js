@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { cp, mkdir, readFile, writeFile, access, rename } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadPatternRegistry, runCli } from '@jununfly/zj-loop-core';
@@ -9,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 const MONOREPO_STARTERS = path.resolve(PACKAGE_ROOT, '../../starters');
 const MONOREPO_TEMPLATES = path.resolve(PACKAGE_ROOT, '../../templates');
+const execFileAsync = promisify(execFile);
 const VALID_TOOLS = ['grok', 'claude', 'codex'];
 const VALID_ADD_ARTIFACTS = ['safety', 'pattern-registry', 'route-table', 'github-actions', 'gitlab-ci'];
 const GITHUB_ACTIONS_WORKFLOW_TEMPLATES = [
@@ -35,6 +38,7 @@ const GITLAB_CI_TEMPLATE_FILES = [
 ];
 const DEFAULT_GITLAB_STAGE = 'zj-loop';
 const DEFAULT_GITLAB_IMAGE = 'node:22';
+const GITLAB_VENDOR_TARBALL_PROBE = 'zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz';
 async function loadRegistry() {
     return loadPatternRegistry({
         candidates: [
@@ -293,6 +297,7 @@ async function copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, g
     for (const file of GITLAB_CI_TEMPLATE_FILES) {
         await copyRenderedWorkflowTemplate(path.join(srcDir, file), path.join(targetDir, 'zj-loop', 'gitlab-ci', file), dryRun, force, io, `review zj-loop/gitlab-ci/${file} or rerun with --force to overwrite intentionally`, { gitlabStage, gitlabRunnerTags, gitlabImage });
     }
+    await warnIfGitLabVendorTarballsIgnored(targetDir, io);
 }
 async function copyRenderedWorkflowTemplate(src, dest, dryRun, force, io, nextStep, renderOptions = {}) {
     if (!(await exists(src))) {
@@ -398,6 +403,7 @@ async function upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io
     else {
         await copyRenderedWorkflowTemplate(path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'), rootDest, dryRun, force, io, 'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI', { gitlabStage, gitlabRunnerTags, gitlabImage });
     }
+    await warnIfGitLabVendorTarballsIgnored(targetDir, io);
     io.stdout(`
 === Next steps ===
   Review zj-loop/gitlab-ci/*.bak files if any were created.
@@ -471,6 +477,40 @@ function renderGitLabRunnerTags(tags) {
         ...tags.map((tag) => `    - ${yamlString(tag)}`),
         '',
     ].join('\n');
+}
+async function warnIfGitLabVendorTarballsIgnored(targetDir, io) {
+    if (!(await gitIgnoreLikelyIgnoresVendorTarballs(targetDir)))
+        return;
+    io.stdout('  warning: zj-loop/vendor/*.tgz appears to be ignored by Git.');
+    io.stdout('  next step: add .gitignore exceptions for !zj-loop/vendor/ and !zj-loop/vendor/*.tgz, or commit required tarballs explicitly with git add -f zj-loop/vendor/*.tgz.');
+}
+async function gitIgnoreLikelyIgnoresVendorTarballs(targetDir) {
+    try {
+        await execFileAsync('git', ['-C', targetDir, 'check-ignore', '--quiet', GITLAB_VENDOR_TARBALL_PROBE]);
+        return true;
+    }
+    catch (err) {
+        if (err?.code !== 1) {
+            // Fall through to a cheap static check when the target is not a git repo
+            // or git is unavailable in the install environment.
+        }
+        else {
+            return false;
+        }
+    }
+    const gitignore = await readTextIfExists(path.join(targetDir, '.gitignore'));
+    if (!gitignore)
+        return false;
+    return gitignore
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith('#'))
+        .some((line) => [
+        '*.tgz',
+        '**/*.tgz',
+        'zj-loop/vendor/*.tgz',
+        '/zj-loop/vendor/*.tgz',
+    ].includes(line));
 }
 async function nextBackupPath(dest) {
     let candidate = `${dest}.bak`;

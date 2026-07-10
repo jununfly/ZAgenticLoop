@@ -456,6 +456,34 @@ test('zj-loop-init --add gitlab-ci skips existing root CI by default', async () 
   }
 });
 
+test('zj-loop-init --add gitlab-ci warns when vendor tarballs are ignored', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-gitlab-ci-vendor-ignore-'));
+  try {
+    await writeFile(path.join(dir, '.gitignore'), '**/*.tgz\n');
+
+    const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+
+    assert.match(stdout, /warning: zj-loop\/vendor\/\*\.tgz appears to be ignored by Git/);
+    assert.match(stdout, /git add -f zj-loop\/vendor\/\*\.tgz/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade gitlab-ci warns when vendor tarballs are ignored', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-gitlab-ci-vendor-ignore-'));
+  try {
+    await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+    await writeFile(path.join(dir, '.gitignore'), '**/*.tgz\n');
+
+    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'gitlab-ci']);
+
+    assert.match(stdout, /warning: zj-loop\/vendor\/\*\.tgz appears to be ignored by Git/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing root CI alone', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-gitlab-ci-'));
   try {

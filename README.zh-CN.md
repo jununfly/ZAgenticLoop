@@ -150,6 +150,15 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
 ```
 
+如果你把本地 package tarball vendor 到 `zj-loop/vendor/`，`zj-loop-init`
+会检查常见的 `**/*.tgz` ignore 规则是否会导致 tarball 没有进入 Git。可以显式
+`git add -f zj-loop/vendor/*.tgz`，或加入窄例外：
+
+```gitignore
+!zj-loop/vendor/
+!zj-loop/vendor/*.tgz
+```
+
 生成的 `zj-loop-*.yml` workflows 会带上固定 package version 和 generated
 metadata。默认只有 `manual-smoke-report` 是安全主路径。把 Route Table status
 当成可选链路菜单使用；它会显示每条 route 的 mode、runner maturity、

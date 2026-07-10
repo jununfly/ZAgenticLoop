@@ -154,12 +154,12 @@
     "1-3-1": {
       "id": "1-3-1",
       "label": "vendored tgz git 跟踪预检",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: make ignored vendored tarballs visible during GitLab CI bundle install/upgrade. Implemented a deterministic vendor tarball tracking preflight for zj-loop-init --add/--upgrade gitlab-ci; it checks git ignore behavior or .gitignore patterns for zj-loop/vendor/*.tgz and prints explicit .gitignore exception / git add -f next steps; README/README.zh-CN/Quickstart document the warning. Verification: npm test in tools/zj-loop-init; npm run check:zj-loop-init; npm run test:generated-bundle-release-gate; git diff --check."
     },
     "1-3-2": {
       "id": "1-3-2",
@@ -244,7 +244,7 @@
   },
   "metadata": {
     "created": "2026-07-10 18:02:19",
-    "updated": "2026-07-10 18:23:28",
+    "updated": "2026-07-10 18:27:10",
     "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
   }
 }
