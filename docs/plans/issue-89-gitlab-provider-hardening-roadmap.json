@@ -1,0 +1,250 @@
+{
+  "title": "Issue #89 GitLab provider hardening",
+  "description": "Consume #89 Issue Fix Request with Roadmap-Sliced Development and align GitLab provider hardening gaps with the current GitHub baseline.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Issue #89 GitLab provider hardening",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6"
+      ],
+      "decisions": [
+        {
+          "q": "当前 roadmap 的发布边界是什么？",
+          "answer": "以 GitHub 侧当前实现为事实 baseline，对齐 GitLab provider 的全量可用链路；无法回避的平台差异记录为窄例外。",
+          "note": "目标不是第一版/第二版式切断，而是用有序 slice 分阶段实现同一个完整目标，避免后续 agent 误判为 job done。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "消费 #89 request 并建立 roadmap 分支",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-1-1"
+      ],
+      "decisions": [
+        {
+          "q": "如何消费 #89 的 Issue Fix Request？",
+          "answer": "复用 source issue #89 作为 carrier，在 dedicated roadmap branch 上执行 Roadmap-Sliced Development，不创建新的独立 Issue Fix Request。",
+          "note": "#89 已有 structured issue-fix-request comment ifr_triage_6b1bcf67fbf9；后续 PR closeout 和 source issue 生命周期都围绕 #89 回放。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "GitLab 安装可运行性硬化",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "GitLab vendored 包与离线边界硬化",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2",
+        "1-3-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Provider-aware 文案与路径协议对齐",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "GitLab consumer 合约与 closeout 兼容",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "GitLab 全链路验证与 closeout",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "记录 Issue Fix Request 消费证据",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Verification gate: Issue Fix Request carrier exists on #89, branch zjal/issue-89-gitlab-provider-hardening created, process roadmap initialized, #89 gaps mapped to executable leaf nodes, and Roadmap-Sliced consumption evidence appended to #89. Evidence: Issue Fix Request https://github.com/jununfly/ZAgenticLoop/issues/89#issuecomment-4934172412; start command https://github.com/jununfly/ZAgenticLoop/issues/89#issuecomment-4934184631; consumed comment https://github.com/jununfly/ZAgenticLoop/issues/89#issuecomment-4934232352; branch zjal/issue-89-gitlab-provider-hardening."
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "GitLab CI stage 配置化",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "GitLab runner tags 配置化",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "GitLab CI image 与 Node 版本前置检查",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "vendored tgz git 跟踪预检",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "GitLab smoke audit 离线边界显式化",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3": {
+      "id": "1-3-3",
+      "label": "core tarball transitive dependency 边界说明",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "route-table maturity vocabulary 对齐",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "ci-sweeper GitLab 路径建议 provider-aware",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "roadmap activation MR 到 post-merge closeout 合约桥接",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "pr-steward report 与 fix-request 命令边界澄清",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "GitLab provider dogfood 回放测试补强",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "durable docs 与 PR closeout 吸收 GitLab 决策",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-10 18:02:19",
+    "updated": "2026-07-10 18:06:52",
+    "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
+  }
+}

@@ -1,6 +1,6 @@
 # Issue Triage State
 
-Last run: 2026-07-09
+Last run: 2026-07-10
 
 ## Current Capability
 
@@ -104,6 +104,99 @@ issue_closed_or_reopened: false
 formal_lifecycle_transitioned: false
 issue_fix_request_created: false
 consumer_work_started: false
+```
+
+## Dogfood Run — 2026-07-10
+
+Scan window: `open-issues:2026-07-10`
+
+Source command:
+
+```bash
+gh issue list --state open --limit 50 --json number,title,body,labels,assignees,createdAt,updatedAt,url,author,comments
+```
+
+Observed open issues:
+
+| Issue | Signal kind | Recommended state | Decision | Request id | Notes |
+| --- | --- | --- | --- | --- | --- |
+| [#89](https://github.com/jununfly/ZAgenticLoop/issues/89) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_20f373a95e92` | `triage-transition-02d0ef43b214` | GitLab provider dogfood report with concrete hardening gaps across CI template portability, runner configuration, vendored package behavior, route vocabulary, request body wording, closeout contracts, and specialized route expectations. |
+
+Backlog summary: 1 open issue scanned; 1 `ready-for-agent` recommendation.
+
+Maintainer/collaborator confirmation command, if the transition should be
+promoted later:
+
+```text
+/zj-loop confirm-triage-transition triage-transition-02d0ef43b214
+```
+
+Replay and report-only evidence:
+
+- Local route replay gate passed: `npm run test:issue-backlog-triage`.
+- Local end-to-end replay passed:
+  `node scripts/issue-backlog-triage-e2e-replay.mjs`.
+- Dedupe key:
+  `issue-backlog-triage:jununfly/ZAgenticLoop:open-issues:2026-07-10:label-suggestion-observation:issue-89`.
+- Confirmation phrase remains fixed if promoted:
+  `CONFIRM_TRIAGE_TRANSITION`.
+- Stale-after timestamp: `2026-07-17T10:00:00.000Z`.
+
+Report-only side-effect audit for this run:
+
+```text
+public_issue_comment_created: false
+tracker_state_changed: false
+label_changed: false
+assignment_changed: false
+milestone_changed: false
+issue_closed_or_reopened: false
+formal_lifecycle_transitioned: false
+issue_fix_request_created: false
+consumer_work_started: false
+```
+
+## Confirmed Transition Dogfood — 2026-07-10
+
+Source issue: [#89](https://github.com/jununfly/ZAgenticLoop/issues/89)
+
+Confirmed request:
+
+```text
+/zj-loop confirm-triage-transition triage-transition-02d0ef43b214
+
+CONFIRM_TRIAGE_TRANSITION
+```
+
+Execution evidence:
+
+- Maintainer confirmation phrase was provided in the Codex session.
+- Local transition gate passed: `npm run test:issue-triage-transition-e2e`.
+- Confirmed transition status: `confirmed`.
+- Confirmed transition run id: `afa1027b2078`.
+- Planned and created Issue Fix Request id: `ifr_triage_6b1bcf67fbf9`.
+- Requested consumer: `roadmap-sliced-development`.
+- Source issue request carrier:
+  https://github.com/jununfly/ZAgenticLoop/issues/89#issuecomment-4934172412
+- Dedupe verification: `gh issue view 89 --json number,url,comments`
+  showed exactly one `<!-- zj-loop:issue-fix-request` carrier comment for
+  `ifr_triage_6b1bcf67fbf9`.
+
+Live side-effect audit:
+
+```text
+source_issue: https://github.com/jununfly/ZAgenticLoop/issues/89
+public_issue_comment_created_by_runner: true
+public_issue_comment_kind: source_issue_issue_fix_request
+tracker_state_changed: false
+label_changed: false
+assignment_changed: false
+milestone_changed: false
+issue_closed_or_reopened_by_runner: false
+formal_lifecycle_transitioned: false
+independent_issue_fix_request_created: false
+consumer_work_started: false
+dedupe_result: exactly_one_structured_issue_fix_request_comment
 ```
 
 ## Boundary

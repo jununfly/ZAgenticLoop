@@ -1,19 +1,20 @@
 # Roadmap-Sliced Development State — ZAgenticLoop
 
-Last run: 2026-07-09
+Last run: 2026-07-10
 
 ## Current Roadmap
 
-- Roadmap id: user-project-ready-route-consumers
-- Branch: zjal/act-65-4922393657-8c94c5b9-execution-ready-user-project-route-bundle
-- Status: completed
-- Current parent node: closeout
-- Current leaf: user-project-ready-route-consumers-closeout
+- Roadmap id: issue-89-gitlab-provider-hardening
+- Branch: zjal/issue-89-gitlab-provider-hardening
+- Status: in_progress
+- Current parent node: GitLab 安装可运行性硬化
+- Current leaf: GitLab CI stage 配置化
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| issue-89-request-consumption | completed | Consumed #89 Issue Fix Request `ifr_triage_6b1bcf67fbf9` into Roadmap-Sliced Development; created branch `zjal/issue-89-gitlab-provider-hardening`; initialized process roadmap `docs/plans/issue-89-gitlab-provider-hardening-roadmap.json` and rendered view `docs/plans/issue-89-gitlab-provider-hardening-roadmap.md`; mapped the GitLab dogfood report into executable leaf slices; appended source issue resume evidence at https://github.com/jununfly/ZAgenticLoop/issues/89#issuecomment-4934232352; `python /Users/bilibili/.codex/skills/zj-roadmap-driven/roadmap_cli.py validate docs/plans/issue-89-gitlab-provider-hardening-roadmap.json`; `git diff --check` | pending |
 | issue-triage-transition-request-carrier | completed | Promoted `issue-triage-transition` from dry-run planning to request-only carrier creation: Route Table/template use `execution.mode: request-only`, `side_effect_level: request`, and `side_effects_allowed: request-carrier-only`; source issue tracker mutation remains disabled; core runner accepts request-only evidence and exposes fixed Issue Fix Request title/body builders; `zj-loop-issue-triage-transition request-body` writes parseable carrier body/title; generated issue triage workflow/template now use `issues: write`, build the carrier body after fixed confirmation, dedupe by `request_id` in open issue body, and create an independent GitHub Issue Fix Request only for confirmed `ready-for-agent`; docs/pattern/state updated to distinguish request-only carrier from tracker mutation; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `npm run test:generated-bundle-release-gate`; `npm run check:zj-loop-init`; `npm run test:issue-triage-transition-e2e`; `npm run test:route-decision`; `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | `226e202` |
 | issue-triage-transition-e2e-replay | completed | Added deterministic `scripts/issue-triage-transition-e2e-replay.mjs` and tests proving `issue-backlog-triage -> issue-triage-transition -> Issue Fix Request plan` against the real dogfood Route Table; replay covers `ready-for-agent` Issue Fix Request planning, `needs-info` triage-only confirmation, and `wontfix` escalation without tracker operations; wired the test into `npm run test:route-decision` and `scripts/ci-validate-gates.sh`; added `docs/testing/issue-triage-transition-e2e.md`; updated README/README.zh-CN/Quickstart/User Project Execution-Ready Bundle/Dogfood Reference Case/Route Consumer Execution Architecture to describe the dry-run user-project boundary; `npm run test:issue-triage-transition-e2e`; `npm run test:route-decision`; `bash scripts/ci-validate-gates.sh`; `git diff --check` | `3ec2e48` |
 | issue-triage-transition-confirmed-dry-run | completed | Added `issue-triage-transition` as a separate dry-run confirmed-transition consumer; core runner/CLI consume `zj-loop.recommended_triage_transition.v1`, require maintainer/collaborator permission, exact `/zj-loop confirm-triage-transition <request-id>`, and fixed `CONFIRM_TRIAGE_TRANSITION`; runner plans `zj-triage` role/comment side effects and `ready-for-agent` Issue Fix Request evidence without live tracker mutation; `wontfix` defaults to escalation; Route Table/template/generated workflow expose `triage_transition_request_json` and `triage_transition_confirmation`; README/Quickstart/pattern/design/state docs updated; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `npm run test:issue-triage-transition`; `npm run test:generated-bundle-release-gate`; `npm run test:route-decision`; `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | `b9476be` |
