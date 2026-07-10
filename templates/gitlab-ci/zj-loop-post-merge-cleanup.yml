@@ -5,7 +5,7 @@
 
 zj_loop_post_merge_cleanup:
   stage: __ZJ_LOOP_GITLAB_STAGE__
-  image: node:22
+__ZJ_LOOP_GITLAB_TAGS__  image: node:22
   when: manual
   variables:
     ZJ_LOOP_MERGE_REQUEST_IID: ""

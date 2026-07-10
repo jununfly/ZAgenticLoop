@@ -5,7 +5,7 @@
 
 zj_loop_smoke:
   stage: __ZJ_LOOP_GITLAB_STAGE__
-  image: node:22
+__ZJ_LOOP_GITLAB_TAGS__  image: node:22
   when: manual
   allow_failure: false
   script:

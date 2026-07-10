@@ -135,6 +135,13 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
 ```
 
+如果 GitLab runner 必须带 tags，也在生成期写入：
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
+```
+
 生成的 `zj-loop-*.yml` workflows 会带上固定 package version 和 generated
 metadata。默认只有 `manual-smoke-report` 是安全主路径。把 Route Table status
 当成可选链路菜单使用；它会显示每条 route 的 mode、runner maturity、

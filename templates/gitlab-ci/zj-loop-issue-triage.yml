@@ -5,7 +5,7 @@
 
 zj_loop_issue_triage:
   stage: __ZJ_LOOP_GITLAB_STAGE__
-  image: node:22
+__ZJ_LOOP_GITLAB_TAGS__  image: node:22
   when: manual
   variables:
     ZJ_LOOP_ISSUE_IID: ""

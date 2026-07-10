@@ -102,6 +102,19 @@ function normalizeGitLabStage(value) {
         throw new Error('--gitlab-stage must be a single line');
     return stage;
 }
+function normalizeGitLabRunnerTags(value) {
+    if (value === undefined || value === false || value === '')
+        return [];
+    const tags = String(value)
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+    for (const tag of tags) {
+        if (/[\r\n]/.test(tag))
+            throw new Error('--gitlab-runner-tags entries must be single-line values');
+    }
+    return Array.from(new Set(tags));
+}
 async function copyIncrementalArtifact(src, dest, dryRun, force, io, nextStep) {
     if (!(await exists(src))) {
         io.stderr(`  missing template: ${src}`);
@@ -130,7 +143,7 @@ async function copyIncrementalArtifact(src, dest, dryRun, force, io, nextStep) {
     }
     return true;
 }
-async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns, dryRun, force, io, gitlabStage) {
+async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns, dryRun, force, io, gitlabStage, gitlabRunnerTags) {
     io.stdout(`\nzj-loop-init --add: ${artifacts.join(', ')} → ${targetDir}${dryRun ? ' [dry-run]' : ''}${force ? ' [force]' : ''}\n`);
     for (const artifact of artifacts) {
         if (artifact === 'safety') {
@@ -195,7 +208,7 @@ async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns,
             if (defaultPattern) {
                 await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io);
             }
-            await copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage);
+            await copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage, gitlabRunnerTags);
         }
     }
     io.stdout(`\n=== Next steps ===
@@ -261,15 +274,15 @@ async function copyGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, 
         await copyRenderedWorkflowTemplate(path.join(srcDir, file), path.join(targetDir, '.github', 'workflows', file), dryRun, force, io, `review .github/workflows/${file} or rerun with --force to overwrite intentionally`);
     }
 }
-async function copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage) {
+async function copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage, gitlabRunnerTags) {
     const srcDir = path.join(templatesRoot, 'gitlab-ci');
     if (!(await exists(srcDir))) {
         io.stderr(`  missing template directory: ${srcDir}`);
         return;
     }
-    await copyRenderedWorkflowTemplate(path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'), path.join(targetDir, '.gitlab-ci.yml'), dryRun, force, io, 'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI', { gitlabStage });
+    await copyRenderedWorkflowTemplate(path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'), path.join(targetDir, '.gitlab-ci.yml'), dryRun, force, io, 'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI', { gitlabStage, gitlabRunnerTags });
     for (const file of GITLAB_CI_TEMPLATE_FILES) {
-        await copyRenderedWorkflowTemplate(path.join(srcDir, file), path.join(targetDir, 'zj-loop', 'gitlab-ci', file), dryRun, force, io, `review zj-loop/gitlab-ci/${file} or rerun with --force to overwrite intentionally`, { gitlabStage });
+        await copyRenderedWorkflowTemplate(path.join(srcDir, file), path.join(targetDir, 'zj-loop', 'gitlab-ci', file), dryRun, force, io, `review zj-loop/gitlab-ci/${file} or rerun with --force to overwrite intentionally`, { gitlabStage, gitlabRunnerTags });
     }
 }
 async function copyRenderedWorkflowTemplate(src, dest, dryRun, force, io, nextStep, renderOptions = {}) {
@@ -361,11 +374,12 @@ async function upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, forc
   `);
     return 0;
 }
-async function upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage) {
+async function upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage, gitlabRunnerTags) {
     const srcDir = path.join(templatesRoot, 'gitlab-ci');
-    io.stdout(`\nzj-loop-init --upgrade gitlab-ci → ${targetDir}${dryRun ? ' [dry-run]' : ''} [stage=${gitlabStage}]\n`);
+    const tagsLabel = gitlabRunnerTags.length > 0 ? ` [runner-tags=${gitlabRunnerTags.join(',')}]` : '';
+    io.stdout(`\nzj-loop-init --upgrade gitlab-ci → ${targetDir}${dryRun ? ' [dry-run]' : ''} [stage=${gitlabStage}]${tagsLabel}\n`);
     for (const file of GITLAB_CI_TEMPLATE_FILES) {
-        await upgradeRenderedTemplateFile(path.join(srcDir, file), path.join(targetDir, 'zj-loop', 'gitlab-ci', file), dryRun, io, { gitlabStage });
+        await upgradeRenderedTemplateFile(path.join(srcDir, file), path.join(targetDir, 'zj-loop', 'gitlab-ci', file), dryRun, io, { gitlabStage, gitlabRunnerTags });
     }
     const rootDest = path.join(targetDir, '.gitlab-ci.yml');
     if (await exists(rootDest)) {
@@ -373,7 +387,7 @@ async function upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io
         io.stdout('  next step: review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if needed');
     }
     else {
-        await copyRenderedWorkflowTemplate(path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'), rootDest, dryRun, force, io, 'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI', { gitlabStage });
+        await copyRenderedWorkflowTemplate(path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'), rootDest, dryRun, force, io, 'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI', { gitlabStage, gitlabRunnerTags });
     }
     io.stdout(`
 === Next steps ===
@@ -423,7 +437,9 @@ async function upgradeRenderedTemplateFile(src, dest, dryRun, io, renderOptions 
     }
 }
 function renderWorkflowTemplate(template, options = {}) {
-    const rendered = template.replace(/__ZJ_LOOP_GITLAB_STAGE__/g, yamlString(options.gitlabStage ?? DEFAULT_GITLAB_STAGE));
+    const rendered = template
+        .replace(/__ZJ_LOOP_GITLAB_STAGE__/g, yamlString(options.gitlabStage ?? DEFAULT_GITLAB_STAGE))
+        .replace(/__ZJ_LOOP_GITLAB_TAGS__\n?/g, renderGitLabRunnerTags(options.gitlabRunnerTags ?? []));
     const hash = workflowTemplateHash(rendered);
     return rendered.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${hash}`);
 }
@@ -436,6 +452,15 @@ function extractWorkflowTemplateHash(text) {
 }
 function yamlString(value) {
     return JSON.stringify(value);
+}
+function renderGitLabRunnerTags(tags) {
+    if (tags.length === 0)
+        return '';
+    return [
+        '  tags:',
+        ...tags.map((tag) => `    - ${yamlString(tag)}`),
+        '',
+    ].join('\n');
 }
 async function nextBackupPath(dest) {
     let candidate = `${dest}.bak`;
@@ -662,8 +687,10 @@ async function handleInitCommand({ io, options }) {
         return 1;
     }
     let gitlabStage;
+    let gitlabRunnerTags;
     try {
         gitlabStage = normalizeGitLabStage(options.gitlabStage);
+        gitlabRunnerTags = normalizeGitLabRunnerTags(options.gitlabRunnerTags);
     }
     catch (err) {
         io.stderr(err instanceof Error ? err.message : String(err));
@@ -683,13 +710,13 @@ async function handleInitCommand({ io, options }) {
         }
         const templatesRoot = await resolveBundledOrMonorepo('templates');
         if (upgradeTarget === 'gitlab-ci') {
-            return upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage);
+            return upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage, gitlabRunnerTags);
         }
         return upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
     }
     if (addArtifacts.length > 0) {
         const templatesRoot = await resolveBundledOrMonorepo('templates');
-        return handleAddArtifacts(addArtifacts, targetDir, templatesRoot, patterns, dryRun, force, io, gitlabStage);
+        return handleAddArtifacts(addArtifacts, targetDir, templatesRoot, patterns, dryRun, force, io, gitlabStage, gitlabRunnerTags);
     }
     const pattern = String(options.pattern ?? 'daily-triage');
     const tool = String(options.tool ?? 'grok');
@@ -836,6 +863,8 @@ Options:
   --upgrade       Upgrade generated artifacts: github-actions, gitlab-ci
   --force         Overwrite existing --add targets or explicitly override provider-adapter guards
   --gitlab-stage  Stage name rendered into generated GitLab CI jobs (default: zj-loop)
+  --gitlab-runner-tags
+                  Comma-separated runner tags rendered into generated GitLab CI jobs
   --dry-run       Print actions without copying
   -h, --help      This help
 
@@ -844,6 +873,7 @@ Examples:
   npx @jununfly/zj-loop-init . --add safety,pattern-registry,route-table,github-actions
   npx @jununfly/zj-loop-init . --add gitlab-ci
   npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
+  npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
   npx @jununfly/zj-loop-init . --upgrade github-actions
   npx @jununfly/zj-loop-init . --upgrade gitlab-ci
   npx @jununfly/zj-loop-init . -p pr-steward -t claude
@@ -861,6 +891,7 @@ const SPEC = {
         { name: 'upgrade', type: 'string', description: 'Upgrade generated artifacts' },
         { name: 'force', type: 'boolean', description: 'Overwrite existing --add targets' },
         { name: 'gitlabStage', flag: 'gitlab-stage', type: 'string', description: 'GitLab CI stage name for generated GitLab jobs', default: DEFAULT_GITLAB_STAGE },
+        { name: 'gitlabRunnerTags', flag: 'gitlab-runner-tags', type: 'string', description: 'Comma-separated GitLab runner tags for generated GitLab jobs' },
         { name: 'dryRun', flag: 'dry-run', type: 'boolean', description: 'Print actions without copying' },
     ],
     handler: handleInitCommand,

@@ -5,7 +5,7 @@
 
 zj_loop_mr_steward:
   stage: __ZJ_LOOP_GITLAB_STAGE__
-  image: node:22
+__ZJ_LOOP_GITLAB_TAGS__  image: node:22
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "web"'

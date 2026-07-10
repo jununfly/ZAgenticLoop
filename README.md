@@ -194,6 +194,13 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
 ```
 
+If your GitLab runner requires tags, render them into every generated ZJ Loop job:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
+```
+
 Current GitLab parity is provider-aware and intentionally explicit:
 
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,

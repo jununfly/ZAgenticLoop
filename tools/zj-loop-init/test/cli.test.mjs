@@ -383,6 +383,7 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
       assert.match(body, /zj-loop-template-version: 1/);
       assert.match(body, /zj-loop-template-hash: [a-f0-9]{16}/);
       assert.match(body, /stage: "zj-loop"/);
+      assert.doesNotMatch(body, /\n  tags:\n/);
       assert.match(body, /artifacts:/);
     }
 
@@ -408,10 +409,19 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
   }
 });
 
-test('zj-loop-init --add gitlab-ci renders a configurable GitLab stage', async () => {
+test('zj-loop-init --add gitlab-ci renders configurable GitLab stage and runner tags', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-gitlab-ci-stage-'));
   try {
-    const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci', '--gitlab-stage', 'Fallback']);
+    const { stdout } = await exec('node', [
+      CLI,
+      dir,
+      '--add',
+      'gitlab-ci',
+      '--gitlab-stage',
+      'Fallback',
+      '--gitlab-runner-tags',
+      'k8s,node',
+    ]);
     assert.match(stdout, /zj-loop-init --add: gitlab-ci/);
 
     const root = await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8');
@@ -419,6 +429,7 @@ test('zj-loop-init --add gitlab-ci renders a configurable GitLab stage', async (
 
     const smoke = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'), 'utf8');
     assert.match(smoke, /stage: "Fallback"/);
+    assert.match(smoke, /tags:\n    - "k8s"\n    - "node"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -447,9 +458,19 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     await writeFile(smokePath, `${await readFile(smokePath, 'utf8')}\n# local edit\n`);
     await writeFile(path.join(dir, '.gitlab-ci.yml'), 'stages: [test]\n');
 
-    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'gitlab-ci', '--gitlab-stage', 'Fallback']);
+    const { stdout } = await exec('node', [
+      CLI,
+      dir,
+      '--upgrade',
+      'gitlab-ci',
+      '--gitlab-stage',
+      'Fallback',
+      '--gitlab-runner-tags',
+      'k8s',
+    ]);
     assert.match(stdout, /zj-loop-init --upgrade gitlab-ci/);
     assert.match(stdout, /\[stage=Fallback\]/);
+    assert.match(stdout, /\[runner-tags=k8s\]/);
     assert.match(stdout, /backed up modified generated file: .*zj-loop-smoke\.yml → .*zj-loop-smoke\.yml\.bak/);
     assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
     assert.match(stdout, /skipped: \.gitlab-ci\.yml already exists/);
@@ -458,6 +479,7 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(backup, /# local edit/);
     const upgraded = await readFile(smokePath, 'utf8');
     assert.match(upgraded, /stage: "Fallback"/);
+    assert.match(upgraded, /tags:\n    - "k8s"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

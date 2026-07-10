@@ -89,6 +89,14 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
 ```
 
+If jobs stay pending because the project runner requires tags, render those tags
+into the generated jobs:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
+```
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash

@@ -5,7 +5,7 @@
 
 zj_loop_changelog_drafter:
   stage: __ZJ_LOOP_GITLAB_STAGE__
-  image: node:22
+__ZJ_LOOP_GITLAB_TAGS__  image: node:22
   when: manual
   script:
     - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch changelog-drafter-report --source gitlab-release-window --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json

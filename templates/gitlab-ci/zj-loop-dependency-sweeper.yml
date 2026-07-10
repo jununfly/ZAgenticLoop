@@ -5,7 +5,7 @@
 
 zj_loop_dependency_sweeper:
   stage: __ZJ_LOOP_GITLAB_STAGE__
-  image: node:22
+__ZJ_LOOP_GITLAB_TAGS__  image: node:22
   when: manual
   script:
     - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch dependency-sweeper --source gitlab-dependency --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json

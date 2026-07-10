@@ -5,7 +5,7 @@
 
 zj_loop_ci_sweeper:
   stage: __ZJ_LOOP_GITLAB_STAGE__
-  image: node:22
+__ZJ_LOOP_GITLAB_TAGS__  image: node:22
   when: manual
   variables:
     ZJ_LOOP_SOURCE_URL: "$CI_PIPELINE_URL"

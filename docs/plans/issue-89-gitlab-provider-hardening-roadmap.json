@@ -134,12 +134,12 @@
     "1-2-2": {
       "id": "1-2-2",
       "label": "GitLab runner tags 配置化",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: make GitLab runner tags configurable at generation time. Implemented --gitlab-runner-tags for zj-loop-init --add/--upgrade gitlab-ci; GitLab templates now render an optional tags list into every generated job and omit tags by default; README/README.zh-CN/Quickstart document pending-job runner tag usage. Verification: npm test in tools/zj-loop-init; npm run check:zj-loop-init; npm run test:generated-bundle-release-gate; git diff --check."
     },
     "1-2-3": {
       "id": "1-2-3",
@@ -244,7 +244,7 @@
   },
   "metadata": {
     "created": "2026-07-10 18:02:19",
-    "updated": "2026-07-10 18:13:58",
+    "updated": "2026-07-10 18:18:45",
     "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
   }
 }

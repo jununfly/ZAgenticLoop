@@ -1,14 +1,14 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `issue-89-gitlab-provider-hardening-roadmap.json` | 最后更新: 2026-07-10 18:13:58
+> 数据文件: `issue-89-gitlab-provider-hardening-roadmap.json` | 最后更新: 2026-07-10 18:18:45
 
 [~][X+] 1. Issue #89 GitLab provider hardening
 ├── [x][Y+] 1-1. 消费 #89 request 并建立 roadmap 分支
 │   └── [x][Y+] 1-1-1. 记录 Issue Fix Request 消费证据
 ├── [ ][Y+] 1-2. GitLab 安装可运行性硬化
 │   ├── [x][Y+] 1-2-1. GitLab CI stage 配置化
-│   ├── [ ][Y+] 1-2-2. GitLab runner tags 配置化
+│   ├── [x][Y+] 1-2-2. GitLab runner tags 配置化
 │   └── [ ][Y+] 1-2-3. GitLab CI image 与 Node 版本前置检查
 ├── [ ][Y+] 1-3. GitLab vendored 包与离线边界硬化
 │   ├── [ ][Y+] 1-3-1. vendored tgz git 跟踪预检
