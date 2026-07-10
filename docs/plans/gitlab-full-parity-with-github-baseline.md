@@ -379,12 +379,39 @@ Evidence:
 
 ### 9. Provider Parity Release Gate And Dogfood
 
-Status: pending
+Status: completed
 
 Intent:
 
 - Add provider parity release gate.
 - Record GitLab target-project dogfood evidence.
+
+Allowed paths:
+
+- `scripts/validate-provider-parity-gate.mjs`
+- `scripts/validate-provider-parity-gate.test.mjs`
+- `scripts/ci-validate-gates.sh`
+- `package.json`
+- `docs/designs/dogfood-reference-case.md`
+- `docs/plans/gitlab-full-parity-with-github-baseline.md`
+
+Verification:
+
+- `npm run test:provider-parity-gate` — passed
+
+Evidence:
+
+- Added a deterministic provider parity release gate that checks GitHub/GitLab
+  generated route template pairs, generated sentinels, GitLab CI stage syntax,
+  absence of GitHub-specific syntax in GitLab templates, pinned
+  `@jununfly/zj-loop-core` versions, Route Table-backed dispatch route ids, and
+  durable provider/dogfood documentation evidence.
+- Added direct test coverage for the provider parity gate.
+- Added `test:provider-parity-gate` to package scripts and included it in
+  `test:tools`.
+- Wired the gate into `scripts/ci-validate-gates.sh`.
+- Updated the dogfood capability map so provider parity gate evidence is part
+  of the durable release validation story.
 
 ### 10. Docs, README, And Quickstart Provider Parity
 
