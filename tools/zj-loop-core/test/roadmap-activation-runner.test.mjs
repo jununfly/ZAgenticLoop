@@ -13,6 +13,8 @@ import {
   buildRoadmapActivationBranchName,
   buildRoadmapActivationPrContract,
   buildRoadmapActivationPrTitle,
+  buildRoadmapActivationReviewContract,
+  buildRoadmapActivationReviewTitle,
   classifyRoadmapActivationLifecycleTransition,
   dispatchRoadmapActivationCommand,
   hasRoadmapActivationLoopMarker,
@@ -105,6 +107,41 @@ test('Roadmap Activation deterministic contract helpers produce stable ids and P
   assert.match(contract, /zj-loop\.roadmap_activation_pr_contract\.v1/);
   assert.match(contract, /"activation_request_id": "act-321-11-/);
   assert.match(contract, /branch_name: `zjal\/act-321-11-/);
+});
+
+test('Roadmap Activation builds provider-neutral GitLab MR contracts', () => {
+  const requestId = buildActivationRequestId({
+    sourceIssue: 87,
+    commandCommentId: 4932786315,
+    commandText: '/zj-loop start roadmap-sliced-development',
+  });
+  const branchName = buildRoadmapActivationBranchName({
+    activationRequestId: requestId,
+    title: 'GitLab full parity',
+  });
+  const mrTitle = buildRoadmapActivationReviewTitle({
+    provider: 'gitlab',
+    title: 'GitLab full parity',
+  });
+  const contract = buildRoadmapActivationReviewContract({
+    provider: 'gitlab',
+    activationRequestId: requestId,
+    sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+    sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
+    branchName,
+    lifecycleState: 'requested',
+    closeoutContract: {
+      activationCarrierIssue: 87,
+      processRoadmapPath: 'docs/plans/gitlab-full-parity.md',
+    },
+  });
+
+  assert.equal(mrTitle, 'Roadmap Activation: GitLab full parity');
+  assert.match(contract, /zj-loop\.roadmap_activation_review_contract\.v1/);
+  assert.match(contract, /"provider": "gitlab"/);
+  assert.match(contract, /"review_kind": "merge-request"/);
+  assert.match(contract, /### Roadmap Activation MR Contract/);
+  assert.match(contract, /source_comment_url": "https:\/\/gitlab\.com\/group\/project\/-\/issues\/87#note_4932786315/);
 });
 
 test('Roadmap Activation lifecycle helper separates red tests from blocked and failed states', () => {
@@ -256,6 +293,37 @@ test('Roadmap Activation activation-plan CLI reads route table and writes commen
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('Roadmap Activation contract-plan CLI can target GitLab MR contracts', async () => {
+  const result = spawnSync(process.execPath, [
+    ROADMAP_ACTIVATION_CLI,
+    'contract-plan',
+    '--provider',
+    'gitlab',
+    '--activation-request-id',
+    'act-87-4932786315-8c94c5b9',
+    '--source-issue',
+    '87',
+    '--source-issue-url',
+    'https://gitlab.com/group/project/-/issues/87',
+    '--source-comment-url',
+    'https://gitlab.com/group/project/-/issues/87#note_4932786315',
+    '--title',
+    'GitLab full parity',
+    '--process-roadmap-path',
+    'docs/plans/gitlab-full-parity.md',
+    '--json',
+  ], { encoding: 'utf8' });
+
+  assert.equal(result.status, 0);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.provider, 'gitlab');
+  assert.equal(parsed.reviewKind, 'merge-request');
+  assert.equal(parsed.mrTitle, 'Roadmap Activation: GitLab full parity');
+  assert.match(parsed.branchName, /^zjal\/act-87-4932786315-8c94c5b9-gitlab-full-parity$/);
+  assert.match(parsed.mrContract, /zj-loop\.roadmap_activation_review_contract\.v1/);
+  assert.match(parsed.nextSteps.join('\n'), /MR with the contract block/);
 });
 
 test('Roadmap Activation contract-plan CLI renders deterministic PR contract evidence', () => {

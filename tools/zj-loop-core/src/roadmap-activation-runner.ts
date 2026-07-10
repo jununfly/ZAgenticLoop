@@ -469,6 +469,68 @@ export function buildRoadmapActivationPrTitle(input: { title?: string; sourceIss
   return `Roadmap Activation: ${title}`;
 }
 
+export type RoadmapActivationReviewProvider = 'github' | 'gitlab';
+
+export function buildRoadmapActivationReviewTitle(input: {
+  provider?: RoadmapActivationReviewProvider;
+  title?: string;
+  sourceIssue?: string | number;
+}) {
+  const title = String(input.title ?? `issue #${input.sourceIssue ?? 'unknown'}`).trim();
+  return `Roadmap Activation: ${title}`;
+}
+
+export function buildRoadmapActivationReviewContract(input: {
+  provider: RoadmapActivationReviewProvider;
+  activationRequestId: string;
+  sourceIssueUrl: string;
+  sourceCommentUrl: string;
+  routeId?: string;
+  consumerId?: string;
+  branchName: string;
+  lifecycleState: RoadmapActivationLifecycleState;
+  closeoutContract: {
+    activationCarrierIssue?: string | number;
+    branchName?: string;
+    processRoadmapPath?: string;
+  };
+}) {
+  const reviewKind = input.provider === 'gitlab' ? 'merge-request' : 'pull-request';
+  const contract = {
+    schema: 'zj-loop.roadmap_activation_review_contract.v1',
+    provider: input.provider,
+    review_kind: reviewKind,
+    activation_request_id: input.activationRequestId,
+    source_issue_url: input.sourceIssueUrl,
+    source_comment_url: input.sourceCommentUrl,
+    route_id: input.routeId ?? 'roadmap-sliced-development',
+    consumer_id: input.consumerId ?? 'roadmap-sliced-development',
+    branch_name: input.branchName,
+    lifecycle_state: input.lifecycleState,
+    closeout_contract: {
+      activation_carrier_issue: input.closeoutContract.activationCarrierIssue ?? '',
+      branch_name: input.closeoutContract.branchName ?? input.branchName,
+      process_roadmap_path: input.closeoutContract.processRoadmapPath ?? '',
+    },
+  };
+  const label = input.provider === 'gitlab' ? 'MR' : 'PR';
+  return [
+    '<!-- zj-loop.roadmap-activation-review-contract',
+    JSON.stringify(contract, null, 2),
+    '-->',
+    `### Roadmap Activation ${label} Contract`,
+    '',
+    `- provider: \`${contract.provider}\``,
+    `- review_kind: \`${contract.review_kind}\``,
+    `- activation_request_id: \`${contract.activation_request_id}\``,
+    `- route_id: \`${contract.route_id}\``,
+    `- consumer_id: \`${contract.consumer_id}\``,
+    `- branch_name: \`${contract.branch_name}\``,
+    `- lifecycle_state: \`${contract.lifecycle_state}\``,
+    '',
+  ].join('\n');
+}
+
 export function buildRoadmapActivationPrContract(input: {
   activationRequestId: string;
   sourceIssueUrl: string;

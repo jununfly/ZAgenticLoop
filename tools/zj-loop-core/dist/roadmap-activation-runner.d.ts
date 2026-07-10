@@ -311,6 +311,27 @@ export declare function buildRoadmapActivationPrTitle(input: {
     title?: string;
     sourceIssue?: string | number;
 }): string;
+export type RoadmapActivationReviewProvider = 'github' | 'gitlab';
+export declare function buildRoadmapActivationReviewTitle(input: {
+    provider?: RoadmapActivationReviewProvider;
+    title?: string;
+    sourceIssue?: string | number;
+}): string;
+export declare function buildRoadmapActivationReviewContract(input: {
+    provider: RoadmapActivationReviewProvider;
+    activationRequestId: string;
+    sourceIssueUrl: string;
+    sourceCommentUrl: string;
+    routeId?: string;
+    consumerId?: string;
+    branchName: string;
+    lifecycleState: RoadmapActivationLifecycleState;
+    closeoutContract: {
+        activationCarrierIssue?: string | number;
+        branchName?: string;
+        processRoadmapPath?: string;
+    };
+}): string;
 export declare function buildRoadmapActivationPrContract(input: {
     activationRequestId: string;
     sourceIssueUrl: string;

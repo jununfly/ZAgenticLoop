@@ -392,6 +392,8 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
     const roadmapActivation = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-roadmap-activation.yml'), 'utf8');
     assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
+    assert.match(roadmapActivation, /zj-loop-roadmap-activation contract-plan --provider gitlab/);
+    assert.match(roadmapActivation, /contract-plan\.json/);
     const postMerge = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
     assert.match(postMerge, /zj-loop-route dispatch post-merge-roadmap-closeout/);
 
