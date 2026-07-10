@@ -82,8 +82,8 @@ test('post-merge closeout dry-run plan requires contract and executor guards', (
     plan.actions.map((action) => action.name),
     [
       'fetch_origin',
-      'switch_main',
-      'fast_forward_main',
+      'switch_target_branch',
+      'fast_forward_target_branch',
       'delete_local_branch_if_present_and_merged',
       'delete_remote_branch_if_present',
       'comment_carrier_issue',
@@ -135,6 +135,41 @@ test('post-merge closeout normalizes GitLab MR metadata into closeout plans', ()
   assert.equal(plan.pr.reviewKind, 'merge-request');
   assert.deepEqual(plan.refusals, []);
 });
+
+for (const targetBranch of ['main', 'master', 'release/current']) {
+  test(`post-merge closeout accepts GitLab target branch ${targetBranch}`, () => {
+    const mr = normalizeGitLabMrView({
+      iid: 10,
+      web_url: 'https://gitlab.com/group/project/-/merge_requests/10',
+      description: VALID_BODY,
+      state: 'merged',
+      source_branch: 'zjal/post-merge-closeout-executor',
+      target_branch: targetBranch,
+      project_path: 'group/project',
+    }, { expectedRepo: 'group/project' });
+    const plan = buildPostMergeRoadmapCloseoutExecutionPlan({
+      pr: mr,
+      prBody: mr.body,
+      expectedRepo: 'group/project',
+      currentRepo: 'group/project',
+      gitStatus: '',
+      expectedCarrierIssue: 39,
+    });
+
+    assert.equal(plan.status, 'dry-run');
+    assert.equal(plan.review.targetRefName, targetBranch);
+    assert.equal(plan.roadmap.targetBranch, targetBranch);
+    assert.deepEqual(plan.refusals, []);
+    assert.deepEqual(
+      plan.actions.filter((action) => action.command).map((action) => action.command),
+      [
+        ['git', 'fetch', 'origin'],
+        ['git', 'switch', targetBranch],
+        ['git', 'merge', '--ff-only', `origin/${targetBranch}`],
+      ],
+    );
+  });
+}
 
 test('post-merge closeout live execution deletes only contract branch and closes only carrier issue', async () => {
   const calls = [];
@@ -296,8 +331,11 @@ test('post-merge GitLab dry-run comment uses MR and GitLab manual pipeline wordi
   });
 
   assert.match(comment, /Review: MR #9/);
-  assert.match(comment, /GitLab manual job zj_loop_post_merge_cleanup/);
-  assert.match(comment, /ZJ_LOOP_MERGE_REQUEST_IID=9/);
+  assert.match(comment, /Review GitLab artifact closeout-plan\.json/);
+  assert.match(comment, /dry-run\/live-plan evidence only/);
+  assert.doesNotMatch(comment, /ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION/);
+  assert.doesNotMatch(comment, /GitLab manual job zj_loop_post_merge_cleanup/);
+  assert.doesNotMatch(comment, /ZJ_LOOP_MERGE_REQUEST_IID=9/);
   assert.doesNotMatch(comment, /workflow_dispatch/);
   assert.doesNotMatch(comment, /GitHub Actions/);
   assert.doesNotMatch(comment, /PR #9/);
