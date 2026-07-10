@@ -118,6 +118,7 @@ test('CI Sweeper request body carries a parseable Issue Fix Request', () => {
   assert.equal(parsed.request.requested_consumer.consumer_id, 'ci-sweeper');
   assert.equal(parsed.request.subject.type, 'ci');
   assert.equal(parsed.request.failure_policy.retry, 'new_request_only');
+  assert.deepEqual(parsed.request.fix_scope.files_or_areas, ['scripts/', '.github/workflows/', 'zj-loop/']);
 });
 
 test('CI Sweeper request body preserves GitLab pipeline provider evidence', () => {
@@ -149,6 +150,13 @@ test('CI Sweeper request body preserves GitLab pipeline provider evidence', () =
   assert.equal(parsed.request.source_signal.provider, 'gitlab');
   assert.equal(parsed.request.subject.provider, 'gitlab');
   assert.equal(parsed.request.subject.source_url, 'https://gitlab.com/group/subgroup/project/-/pipelines/789');
+  assert.deepEqual(parsed.request.fix_scope.files_or_areas, [
+    'scripts/',
+    '.gitlab-ci.yml',
+    'zj-loop/gitlab-ci/',
+    'zj-loop/',
+  ]);
+  assert.equal(parsed.request.fix_scope.files_or_areas.includes('.github/workflows/'), false);
 });
 
 test('zj-loop-ci-sweeper request-body CLI writes issue body', async () => {

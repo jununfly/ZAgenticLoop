@@ -64,8 +64,8 @@ export async function validateProviderParityGate(root = ROOT) {
     if (!gitlabTemplate.includes('# zj-loop-generated: true')) {
       errors.push(`${gitlabPath} missing generated sentinel`);
     }
-    if (!gitlabTemplate.includes('stage: zj-loop')) {
-      errors.push(`${gitlabPath} missing GitLab zj-loop stage`);
+    if (!gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_STAGE__') && !gitlabTemplate.includes('stage: zj-loop')) {
+      errors.push(`${gitlabPath} missing configurable GitLab zj-loop stage`);
     }
     if (gitlabTemplate.includes('github.event') || gitlabTemplate.includes('GITHUB_TOKEN')) {
       errors.push(`${gitlabPath} contains GitHub-specific workflow syntax`);

@@ -4,13 +4,14 @@
 # zj-loop-template-hash: generated-by-zj-loop-init
 
 zj_loop_issue_triage:
-  stage: zj-loop
-  image: node:22
+  stage: __ZJ_LOOP_GITLAB_STAGE__
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   when: manual
   variables:
     ZJ_LOOP_ISSUE_IID: ""
     ZJ_LOOP_TRIAGE_REQUEST_JSON: ""
   script:
+    - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}" --json > route-decision.json
     - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-consumer plan issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}" --json > consumer-plan.json
     - cat route-decision.json

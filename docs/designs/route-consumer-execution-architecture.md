@@ -243,7 +243,7 @@ The dogfood Route Table is the operational truth. Current dogfood capability:
 | Issue Triage Transition | `triage-action-consumer` | `request-only` | `replayed` plus live workflow-dispatch evidence | Separate confirmed-transition route for fixed request ids, fixed confirmation phrase, and `ready-for-agent` source issue Issue Fix Request comments; E2E replay proves `issue-backlog-triage -> issue-triage-transition -> source issue request carrier`; live dogfood on #7 proved workflow-dispatch execution, marker-based dedupe, and source issue request comment creation; refuses source issue tracker label/state mutation until promotion. |
 | Issue Triage Action | `triage-action-consumer` | `dry-run` | `replayed` | Separate action-capable route for narrowly allowlisted labels and fixed comment templates; refuses live mutation until dogfood evidence exists. |
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
-| PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; not live until workflow-dispatch dogfood evidence exists. |
+| PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; GitLab MR requests use MR provider vocabulary in dry-run evidence, while live GitLab review side effects are explicitly refused until workflow-dispatch dogfood evidence exists. |
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
 | Dependency Sweeper | `fix-runner` | `claim-only` | `replayed` | Request/claim evidence plus replayed repair PR or escalation runner; not live until workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `draft-consumer` | `report-only` | `replayed` | Report/draft-request evidence plus replayed draft evidence or draft PR runner; not live until workflow-dispatch dogfood evidence exists. |
@@ -275,6 +275,11 @@ fixture, which validates issue-comment activation, Activation Request carrier
 creation, Route Decision, branch/PR contract evidence, duplicate handling,
 permission denial, disabled route denial, and loop marker detection without live
 GitHub writes.
+
+Provider parity is checked by `npm run test:provider-parity-gate`. The GitLab
+dogfood replay in that gate proves GitLab CI Sweeper fix scope, Roadmap
+Activation MR contract handoff into Post-Merge Closeout, and PR Steward MR
+dry-run/refusal boundaries against the current packaged core contract.
 
 The first user-project execution-ready bundle is documented in
 [User Project Execution-Ready Bundle](./user-project-execution-ready-bundle.md).

@@ -144,6 +144,15 @@ test('PR Steward accepts GitLab MR requests but refuses live MR side effects', (
   assert.equal(plan.source_review.number, 123);
   assert.equal(plan.source_pr, null);
   assert.ok(plan.refusals.some((item) => item.reason === 'gitlab-live-review-side-effects-not-enabled'));
+
+  const dryRun = buildPrStewardExecutionPlan({
+    request,
+    currentPrHeadSha: 'abc123def456',
+  });
+  assert.equal(dryRun.status, 'dry-run');
+  assert.deepEqual(dryRun.actions[0].args.slice(0, 4), ['issue', 'create', '--title', 'PR Steward escalation for MR #123']);
+  assert.match(dryRun.actions[0].args.at(-1), /source MR #123/);
+  assert.doesNotMatch(dryRun.actions[0].args.at(-1), /source PR #unknown/);
 });
 
 test('PR Steward live execution records independent repair PR and no source PR side effects', async () => {

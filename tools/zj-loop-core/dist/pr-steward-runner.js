@@ -230,6 +230,7 @@ export async function executePrStewardLiveRunner(plan, { runner = defaultPrStewa
     });
 }
 function buildActions(input) {
+    const sourceReview = sourceReviewDescriptor(input.request);
     if (input.planMode === 'escalation-issue') {
         return [{
                 name: 'create-escalation-issue',
@@ -238,7 +239,7 @@ function buildActions(input) {
                     'issue',
                     'create',
                     '--title',
-                    `PR Steward escalation for PR #${input.request?.subject?.pr_number ?? 'unknown'}`,
+                    `PR Steward escalation for ${sourceReview.shortLabel}`,
                     '--body',
                     buildEscalationIssueBody(input.request),
                 ],
@@ -261,7 +262,7 @@ function buildActions(input) {
         {
             name: 'commit-repair',
             command: 'git',
-            args: ['commit', '-m', `Create PR Steward repair for PR #${input.request?.subject?.pr_number ?? 'unknown'}`],
+            args: ['commit', '-m', `Create PR Steward repair for ${sourceReview.shortLabel}`],
         },
         { name: 'push-branch', command: 'git', args: ['push', '-u', 'origin', input.branch] },
         {
@@ -275,7 +276,7 @@ function buildActions(input) {
                 '--head',
                 input.branch,
                 '--title',
-                `PR Steward repair for PR #${input.request?.subject?.pr_number ?? 'unknown'}`,
+                `PR Steward repair for ${sourceReview.shortLabel}`,
                 '--body',
                 buildRepairPrBody({ request: input.request, repairFiles: input.repairFiles }),
             ],
@@ -342,10 +343,11 @@ function verifierEvidenceFromSteps(steps) {
     }));
 }
 function buildRepairPrBody(input) {
+    const sourceReview = sourceReviewDescriptor(input.request);
     return [
         '## Summary',
         '',
-        `- Create an independent repair PR for source PR #${input.request?.subject?.pr_number ?? 'unknown'}.`,
+        `- Create an independent repair PR for source ${sourceReview.longLabel}.`,
         `- Source head SHA verified before execution: ${input.request?.subject?.head_sha ?? ''}.`,
         `- Source Issue Fix Request: ${input.request?.request_id ?? 'unknown'}.`,
         '',
@@ -359,17 +361,18 @@ function buildRepairPrBody(input) {
         '',
         '## Safety',
         '',
-        '- This runner does not comment on, label, rebase, merge, or dispatch workflows for the source PR.',
+        `- This runner does not comment on, label, rebase, merge, or dispatch workflows for the source ${sourceReview.kindName}.`,
         '- Auto-merge is disabled.',
     ].join('\n');
 }
 function buildEscalationIssueBody(request) {
+    const sourceReview = sourceReviewDescriptor(request);
     return [
         '## Summary',
         '',
-        `PR Steward could not produce a deterministic repair PR for source PR #${request?.subject?.pr_number ?? 'unknown'}.`,
+        `PR Steward could not produce a deterministic repair PR for source ${sourceReview.longLabel}.`,
         '',
-        `Source PR: ${request?.source_signal?.source_url ?? ''}`,
+        `Source ${sourceReview.kindName}: ${request?.source_signal?.source_url ?? ''}`,
         `Source head SHA: ${request?.subject?.head_sha ?? ''}`,
         `Issue Fix Request: ${request?.request_id ?? 'unknown'}`,
         '',
@@ -403,4 +406,15 @@ function extractFirstUrl(text) {
 function providerForRequest(request) {
     const provider = request?.subject?.provider ?? request?.source_signal?.provider;
     return provider === 'gitlab' ? 'gitlab' : 'github';
+}
+function sourceReviewDescriptor(request) {
+    const provider = providerForRequest(request);
+    const number = provider === 'gitlab' ? request?.subject?.mr_iid : request?.subject?.pr_number;
+    const kindName = provider === 'gitlab' ? 'MR' : 'PR';
+    const shortLabel = `${kindName} #${number ?? 'unknown'}`;
+    return {
+        kindName,
+        shortLabel,
+        longLabel: shortLabel,
+    };
 }

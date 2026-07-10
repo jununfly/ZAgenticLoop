@@ -81,6 +81,47 @@ Table consumers you intend to run. Report-only jobs can run without mutation
 tokens; issue notes, labels, branches, MRs, and cleanup require `GITLAB_TOKEN`
 plus route-specific guards.
 
+If your GitLab project has a fixed stage list, render the generated jobs into an
+existing stage instead of the default `zj-loop` stage:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
+```
+
+If jobs stay pending because the project runner requires tags, render those tags
+into the generated jobs:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
+```
+
+If the runner cannot pull `node:22`, render a private or dependency-proxy
+Node 18+ image. Generated jobs fail fast when the runtime is below Node 18:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com/node:20
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
+```
+
+When using vendored tarballs under `zj-loop/vendor/`, watch for the install
+warning about `*.tgz` being ignored. Either commit the required files with
+`git add -f zj-loop/vendor/*.tgz` or add narrow `.gitignore` exceptions:
+
+```gitignore
+!zj-loop/vendor/
+!zj-loop/vendor/*.tgz
+```
+
+The smoke job runs `@jununfly/zj-loop-audit` by default. In CI environments
+without registry access, set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke output:
+`route-decision.json` and `consumer-plan.json`.
+
+Vendored package tarballs alone do not guarantee fully offline execution:
+`npm exec` may still require registry access or a prepared npm cache for
+transitive dependencies.
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash

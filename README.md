@@ -184,6 +184,50 @@ steps. Generated fragments live under `zj-loop/gitlab-ci/`, call pinned
 routes can run with normal CI context; issue notes, labels, branches, MRs, or
 cleanup need `GITLAB_TOKEN` and route-specific guards.
 
+GitLab stage names are rendered at install time because older self-managed
+GitLab versions validate stages before job variables exist. The default stage is
+`zj-loop`; if your project only exposes an existing stage such as `Fallback`,
+install or upgrade with:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
+```
+
+If your GitLab runner requires tags, render them into every generated ZJ Loop job:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
+```
+
+If your runner cannot pull `node:22` from Docker Hub, render an internally
+pullable Node 18+ image instead. Generated jobs fail fast with a clear Node
+version message when the runtime is below Node 18:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com/node:20
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
+```
+
+If you vendor local package tarballs under `zj-loop/vendor/`, `zj-loop-init`
+warns when common ignore rules such as `**/*.tgz` would keep them out of Git.
+Commit the required tarballs explicitly or add narrow exceptions:
+
+```gitignore
+!zj-loop/vendor/
+!zj-loop/vendor/*.tgz
+```
+
+The GitLab smoke job runs `@jununfly/zj-loop-audit` by default, so it still
+needs registry access unless the audit package is available in your environment.
+For a route-only smoke in restricted CI, set `ZJ_LOOP_RUN_AUDIT=0`; the job will
+still produce `route-decision.json` and `consumer-plan.json`.
+
+Vendored tarballs do not make the GitLab adapter fully offline by themselves:
+`npm exec` may still need registry access or a prepared npm cache for transitive
+dependencies. Treat full offline execution as a separate packaging decision.
+
 Current GitLab parity is provider-aware and intentionally explicit:
 
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,

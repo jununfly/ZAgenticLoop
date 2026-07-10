@@ -123,6 +123,14 @@ Generated GitLab jobs should:
 - use Route Table enablement for route side effects
 - require `GITLAB_TOKEN` before issue notes, labels, branches, MRs, or cleanup
 
+The generated GitLab adapter is not a fully offline bundle by default. Even when
+users vendor package tarballs under `zj-loop/vendor/`, `npm exec` may still need
+registry access or a prepared npm cache for transitive dependencies. The
+supported baseline is therefore "online or cache-backed package execution" with
+explicit warnings when vendored tarballs are ignored by Git. Fully offline
+execution requires a separate, intentional packaging strategy and must not be
+implied by the standard GitLab CI fragments.
+
 ## Evidence Mapping
 
 | Evidence role | GitHub carrier | GitLab carrier |
@@ -146,6 +154,19 @@ Provider parity should be releasable only when a deterministic gate can answer:
 - GitLab target-project dogfood evidence is linked or explicitly marked absent
 - gaps are visible as blockers or follow-ups, not hidden in prose
 
+`npm run test:provider-parity-gate` is the current deterministic guard. It
+validates paired GitHub/GitLab generated templates, package pins, Route Table
+route ids, durable provider docs, and the GitLab provider dogfood replay. The
+dogfood replay covers:
+
+- GitLab CI Sweeper Issue Fix Request scope using `.gitlab-ci.yml` and
+  `zj-loop/gitlab-ci/` instead of `.github/workflows/`
+- Roadmap Activation MR contract output embedding a parseable
+  `zj-loop.post-merge-contract` so Post-Merge Closeout can consume the merged MR
+  without a separate human-added closeout contract
+- PR Steward GitLab MR dry-run evidence using MR vocabulary while live GitLab
+  review side effects remain explicitly refused
+
 ## Current Narrow Exception
 
 The only accepted current narrow exception is the provider-aware adoption path
@@ -153,3 +174,10 @@ that refuses GitHub Actions installation in detected GitLab projects by default
 while allowing explicit `--force`. That exception is a safety guard, not GitLab
 full parity. It remains valid while full provider parity is implemented because
 it prevents users from installing an inert GitHub adapter into a GitLab project.
+
+There is one additional narrow runner exception: PR/MR Steward, Dependency
+Sweeper, and Changelog Drafter may carry GitLab provider evidence and produce
+provider-aware dry-run or request evidence before live GitLab MR creation is
+enabled. The route protocol must still use MR terminology and refuse live GitLab
+review side effects explicitly, rather than silently falling back to GitHub PR
+commands.
