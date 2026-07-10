@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `issue-89-gitlab-provider-hardening-roadmap.json` | 最后更新: 2026-07-10 18:36:34
+> 数据文件: `issue-89-gitlab-provider-hardening-roadmap.json` | 最后更新: 2026-07-10 18:40:20
 
 [~][X+] 1. Issue #89 GitLab provider hardening
 ├── [x][Y+] 1-1. 消费 #89 request 并建立 roadmap 分支
@@ -14,9 +14,9 @@
 │   ├── [x][Y+] 1-3-1. vendored tgz git 跟踪预检
 │   ├── [x][Y+] 1-3-2. GitLab smoke audit 离线边界显式化
 │   └── [x][Y+] 1-3-3. core tarball transitive dependency 边界说明
-├── [ ][Y+] 1-4. Provider-aware 文案与路径协议对齐
+├── [x][Y+] 1-4. Provider-aware 文案与路径协议对齐
 │   ├── [x][Y+] 1-4-1. route-table maturity vocabulary 对齐
-│   └── [ ][Y+] 1-4-2. ci-sweeper GitLab 路径建议 provider-aware
+│   └── [x][Y+] 1-4-2. ci-sweeper GitLab 路径建议 provider-aware
 ├── [ ][Y+] 1-5. GitLab consumer 合约与 closeout 兼容
 │   ├── [ ][Y+] 1-5-1. roadmap activation MR 到 post-merge closeout 合约桥接
 │   └── [ ][Y+] 1-5-2. pr-steward report 与 fix-request 命令边界澄清
@@ -36,7 +36,7 @@
 │   ... 3 more child nodes; run tree 1-2 --depth 2 for full view
 ├── [x][Y+] 1-3. GitLab vendored 包与离线边界硬化
 │   ... 3 more child nodes; run tree 1-3 --depth 2 for full view
-├── [ ][Y+] 1-4. Provider-aware 文案与路径协议对齐
+├── [x][Y+] 1-4. Provider-aware 文案与路径协议对齐
 │   ... 2 more child nodes; run tree 1-4 --depth 2 for full view
 ├── [ ][Y+] 1-5. GitLab consumer 合约与 closeout 兼容
 │   ... 2 more child nodes; run tree 1-5 --depth 2 for full view

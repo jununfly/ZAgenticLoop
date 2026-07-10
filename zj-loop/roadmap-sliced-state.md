@@ -7,13 +7,14 @@ Last run: 2026-07-10
 - Roadmap id: issue-89-gitlab-provider-hardening
 - Branch: zjal/issue-89-gitlab-provider-hardening
 - Status: in_progress
-- Current parent node: Provider-aware 文案与路径协议对齐
-- Current leaf: ci-sweeper GitLab 路径建议 provider-aware
+- Current parent node: GitLab consumer 合约与 closeout 兼容
+- Current leaf: roadmap activation MR 到 post-merge closeout 合约桥接
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| ci-sweeper-gitlab-provider-aware-paths | completed | CI Sweeper Issue Fix Request fix scope is now provider-aware: GitHub requests keep `.github/workflows/`, while GitLab pipeline requests use `.gitlab-ci.yml` and `zj-loop/gitlab-ci/` with shared `scripts/` and `zj-loop/`; regression tests assert GitLab request bodies do not point to `.github/workflows/`; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | route-table-maturity-vocabulary-alignment | completed | `zj-loop-audit` now accepts the same maturity values used by core/generated Route Tables: `install-ready` and `execution-ready` are no longer reported as unknown; live runner maturity wording now aligns with core; regression test covers install-ready route maturity; `npm run build` in `tools/zj-loop-audit`; `node --test tools/zj-loop-audit/test/auditor.test.mjs`; `node dist/cli.js ../..` in `tools/zj-loop-audit`; `git diff --check` | pending |
 | gitlab-core-tarball-offline-boundary | completed | Durable docs and user-facing docs now state that the standard GitLab adapter is online/cache-backed, not fully offline: vendored tarballs alone do not include transitive dependencies, so `npm exec` may still require registry access or a prepared npm cache; `docs/designs/provider-adapter-parity-architecture.md`; README/README.zh-CN/Quickstart; `git diff --check`; roadmap validate | pending |
 | gitlab-smoke-audit-network-boundary | completed | GitLab smoke job now declares `ZJ_LOOP_RUN_AUDIT: "1"` and runs `@jununfly/zj-loop-audit` conditionally; restricted CI can set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke while still producing `route-decision.json` and `consumer-plan.json`; README/README.zh-CN/Quickstart document the network boundary; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |

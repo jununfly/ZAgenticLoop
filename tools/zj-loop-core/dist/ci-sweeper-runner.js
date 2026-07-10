@@ -40,7 +40,7 @@ export function buildCiSweeperIssueFixRequestBody(input) {
         },
         fix_scope: {
             repo: input.repo,
-            files_or_areas: ['scripts/', '.github/workflows/', 'zj-loop/'],
+            files_or_areas: ciSweeperFilesOrAreasFor(provider),
             non_goals: ['auto-merge'],
         },
         acceptance_criteria: [
@@ -126,6 +126,12 @@ async function packageHasScript(root, directory, scriptName) {
 }
 function stableHash(value) {
     return createHash('sha256').update(value).digest('hex').slice(0, 12);
+}
+function ciSweeperFilesOrAreasFor(provider) {
+    if (provider === 'gitlab') {
+        return ['scripts/', '.gitlab-ci.yml', 'zj-loop/gitlab-ci/', 'zj-loop/'];
+    }
+    return ['scripts/', '.github/workflows/', 'zj-loop/'];
 }
 function providerFor(routeDecision, sourceUrl) {
     const explicit = routeDecision?.provider ?? routeDecision?.source_provider;

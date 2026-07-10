@@ -75,7 +75,7 @@
     "1-4": {
       "id": "1-4",
       "label": "Provider-aware 文案与路径协议对齐",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -194,12 +194,12 @@
     "1-4-2": {
       "id": "1-4-2",
       "label": "ci-sweeper GitLab 路径建议 provider-aware",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: make CI Sweeper Issue Fix Request fix scope provider-aware. Implemented deterministic provider-specific files_or_areas: GitHub keeps .github/workflows/, GitLab uses .gitlab-ci.yml and zj-loop/gitlab-ci/ while retaining scripts/ and zj-loop/. Regression tests assert GitLab request bodies do not point to .github/workflows/. Verification: npm run build in tools/zj-loop-core; npm test in tools/zj-loop-core; git diff --check."
     },
     "1-5-1": {
       "id": "1-5-1",
@@ -244,7 +244,7 @@
   },
   "metadata": {
     "created": "2026-07-10 18:02:19",
-    "updated": "2026-07-10 18:36:34",
+    "updated": "2026-07-10 18:40:20",
     "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
   }
 }
