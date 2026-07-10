@@ -1,13 +1,13 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `issue-92-gitlab-provider-adoption-polish-roadmap.json` | 最后更新: 2026-07-10 21:40:07
+> 数据文件: `issue-92-gitlab-provider-adoption-polish-roadmap.json` | 最后更新: 2026-07-10 21:47:22
 
 [~][X+] 1. Issue #92 GitLab provider adoption polish
 ├── [x][Y+] 1-1. Activation intake and roadmap handoff
 │   └── [x][Y+] 1-1-1. Consume #92 Issue Fix Request and record branch anchors
 ├── [ ][Y+] 1-2. GitLab generated bundle adoption polish
-│   ├── [ ][Y+] 1-2-1. Make GitLab init expose validation-friendly package and runner options
+│   ├── [x][Y+] 1-2-1. Make GitLab init expose validation-friendly package and runner options
 │   └── [ ][Y+] 1-2-2. Keep GitLab diagnostic artifacts observable when plans are blocked
 ├── [ ][Y+] 1-3. Provider-specific artifact clarity
 │   ├── [ ][Y+] 1-3-1. Remove GitHub-specific wording from GitLab provider outputs

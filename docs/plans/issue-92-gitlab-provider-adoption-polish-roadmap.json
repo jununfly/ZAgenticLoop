@@ -81,12 +81,12 @@
     "1-2-1": {
       "id": "1-2-1",
       "label": "Make GitLab init expose validation-friendly package and runner options",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: make GitLab generated CI bundle validation-friendly without manual search/replace. Implemented --gitlab-core-package for zj-loop-init --add/--upgrade gitlab-ci; GitLab templates render __ZJ_LOOP_CORE_PACKAGE__ into npx --package calls while default remains @jununfly/zj-loop-core@0.1.4; tests cover default pin, local tarball override, and upgrade output. Verification: npm test in tools/zj-loop-init."
     },
     "1-2-2": {
       "id": "1-2-2",
@@ -154,7 +154,7 @@
   },
   "metadata": {
     "created": "2026-07-10 21:31:10",
-    "updated": "2026-07-10 21:40:07",
+    "updated": "2026-07-10 21:47:22",
     "md_file": "docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.md"
   }
 }

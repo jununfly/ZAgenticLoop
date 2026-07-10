@@ -17,9 +17,9 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION: ""
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
-    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch post-merge-roadmap-closeout --source gitlab-merge-request --signal-id "${ZJ_LOOP_MERGE_REQUEST_IID:-$CI_PIPELINE_ID}" --json > route-decision.json
-    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-post-merge-closeout plan --root . --source gitlab-merge-request --signal-id "${ZJ_LOOP_MERGE_REQUEST_IID:-$CI_PIPELINE_ID}" --json > consumer-plan.json
-    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-post-merge-closeout closeout-plan --provider gitlab --repo "$CI_PROJECT_PATH" --merge-request "${ZJ_LOOP_MERGE_REQUEST_IID:-0}" --review-url "${ZJ_LOOP_REVIEW_URL:-$CI_PROJECT_URL/-/merge_requests/${ZJ_LOOP_MERGE_REQUEST_IID:-0}}" --review-body-file "${ZJ_LOOP_REVIEW_BODY_FILE:-/dev/null}" --source-branch "${ZJ_LOOP_SOURCE_BRANCH:-$CI_COMMIT_REF_NAME}" --target-branch "$ZJ_LOOP_TARGET_BRANCH" --merged --carrier-issue "${ZJ_LOOP_CARRIER_ISSUE:-0}" --json > closeout-plan.json || true
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch post-merge-roadmap-closeout --source gitlab-merge-request --signal-id "${ZJ_LOOP_MERGE_REQUEST_IID:-$CI_PIPELINE_ID}" --json > route-decision.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-post-merge-closeout plan --root . --source gitlab-merge-request --signal-id "${ZJ_LOOP_MERGE_REQUEST_IID:-$CI_PIPELINE_ID}" --json > consumer-plan.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-post-merge-closeout closeout-plan --provider gitlab --repo "$CI_PROJECT_PATH" --merge-request "${ZJ_LOOP_MERGE_REQUEST_IID:-0}" --review-url "${ZJ_LOOP_REVIEW_URL:-$CI_PROJECT_URL/-/merge_requests/${ZJ_LOOP_MERGE_REQUEST_IID:-0}}" --review-body-file "${ZJ_LOOP_REVIEW_BODY_FILE:-/dev/null}" --source-branch "${ZJ_LOOP_SOURCE_BRANCH:-$CI_COMMIT_REF_NAME}" --target-branch "$ZJ_LOOP_TARGET_BRANCH" --merged --carrier-issue "${ZJ_LOOP_CARRIER_ISSUE:-0}" --json > closeout-plan.json || true
     - cat route-decision.json
     - cat consumer-plan.json
     - cat closeout-plan.json
