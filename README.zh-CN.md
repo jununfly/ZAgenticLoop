@@ -159,6 +159,11 @@ npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example
 !zj-loop/vendor/*.tgz
 ```
 
+GitLab smoke job 默认会运行 `@jununfly/zj-loop-audit`，因此除非环境中能访问
+registry 或已有该包，否则它不是完全离线。受限 CI 里可以设置
+`ZJ_LOOP_RUN_AUDIT=0` 做 route-only smoke；job 仍会产出 `route-decision.json`
+和 `consumer-plan.json`。
+
 生成的 `zj-loop-*.yml` workflows 会带上固定 package version 和 generated
 metadata。默认只有 `manual-smoke-report` 是安全主路径。把 Route Table status
 当成可选链路菜单使用；它会显示每条 route 的 mode、runner maturity、

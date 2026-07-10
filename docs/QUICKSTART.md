@@ -114,6 +114,10 @@ warning about `*.tgz` being ignored. Either commit the required files with
 !zj-loop/vendor/*.tgz
 ```
 
+The smoke job runs `@jununfly/zj-loop-audit` by default. In CI environments
+without registry access, set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke output:
+`route-decision.json` and `consumer-plan.json`.
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash

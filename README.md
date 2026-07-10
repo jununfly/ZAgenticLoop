@@ -219,6 +219,11 @@ Commit the required tarballs explicitly or add narrow exceptions:
 !zj-loop/vendor/*.tgz
 ```
 
+The GitLab smoke job runs `@jununfly/zj-loop-audit` by default, so it still
+needs registry access unless the audit package is available in your environment.
+For a route-only smoke in restricted CI, set `ZJ_LOOP_RUN_AUDIT=0`; the job will
+still produce `route-decision.json` and `consumer-plan.json`.
+
 Current GitLab parity is provider-aware and intentionally explicit:
 
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,

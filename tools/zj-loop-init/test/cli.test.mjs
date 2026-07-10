@@ -393,6 +393,8 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(smoke, /zj-loop-template-id: gitlab-ci\/zj-loop-smoke/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /gitlab-manual-pipeline/);
+    assert.match(smoke, /ZJ_LOOP_RUN_AUDIT: "1"/);
+    assert.match(smoke, /Skipping zj-loop-audit because ZJ_LOOP_RUN_AUDIT=0/);
     const issueTriage = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-issue-triage.yml'), 'utf8');
     assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
     const roadmapActivation = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-roadmap-activation.yml'), 'utf8');
