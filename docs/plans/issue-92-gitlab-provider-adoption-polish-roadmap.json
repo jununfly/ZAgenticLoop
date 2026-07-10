@@ -1,0 +1,160 @@
+{
+  "title": "Issue #92 GitLab provider adoption polish",
+  "description": "Consume issue #92 Issue Fix Request via Roadmap-Sliced Development; remove first-time GitLab validation friction and tighten provider-specific artifacts.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Issue #92 GitLab provider adoption polish",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4"
+      ],
+      "decisions": [
+        {
+          "q": "Scope",
+          "answer": "Fix first-time GitLab adoption friction discovered by #92 dogfood validation, without broadening route consumers beyond the current GitHub-baseline parity target.",
+          "note": "Acceptance is replayable GitLab artifacts, provider-specific wording, and validation-friendly generated bundle behavior."
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Activation intake and roadmap handoff",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-1-1"
+      ],
+      "decisions": [
+        {
+          "q": "Branch naming exception",
+          "answer": "Use codex/issue-92-gitlab-provider-adoption-polish because local sandbox/ref constraints prevented creating zjal/issue-92-gitlab-provider-adoption-polish.",
+          "note": "The roadmap still follows the Roadmap-Sliced lifecycle and records the branch anchor explicitly."
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "GitLab generated bundle adoption polish",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Provider-specific artifact clarity",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "Consume #92 Issue Fix Request and record branch anchors",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Commit intent: initialize Roadmap-Sliced process state for #92 consumption. Evidence: branch codex/issue-92-gitlab-provider-adoption-polish created; source issue #92 contains Issue Fix Request ifr_triage_798811d9a6aa and start comment; process roadmap initialized at docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.json with markdown view; consumed lifecycle comment appended at https://github.com/jununfly/ZAgenticLoop/issues/92#issuecomment-4935927474. Verification: roadmap validate; git diff --check."
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "Make GitLab init expose validation-friendly package and runner options",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "Keep GitLab diagnostic artifacts observable when plans are blocked",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Remove GitHub-specific wording from GitLab provider outputs",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "Generate CI Sweeper dry-run Issue Fix Request artifacts for GitLab",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Documentation, verification, and closeout",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Update user-facing docs and durable architecture notes",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "Close process roadmap and prepare PR handoff",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-10 21:31:10",
+    "updated": "2026-07-10 21:40:07",
+    "md_file": "docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.md"
+  }
+}
