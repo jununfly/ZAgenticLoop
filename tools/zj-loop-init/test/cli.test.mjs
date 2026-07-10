@@ -383,6 +383,8 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
       assert.match(body, /zj-loop-template-version: 1/);
       assert.match(body, /zj-loop-template-hash: [a-f0-9]{16}/);
       assert.match(body, /stage: "zj-loop"/);
+      assert.match(body, /image: "node:22"/);
+      assert.match(body, /ZJ Loop GitLab CI requires Node >=18/);
       assert.doesNotMatch(body, /\n  tags:\n/);
       assert.match(body, /artifacts:/);
     }
@@ -421,6 +423,8 @@ test('zj-loop-init --add gitlab-ci renders configurable GitLab stage and runner 
       'Fallback',
       '--gitlab-runner-tags',
       'k8s,node',
+      '--gitlab-image',
+      'registry.example.com/node:20',
     ]);
     assert.match(stdout, /zj-loop-init --add: gitlab-ci/);
 
@@ -430,6 +434,8 @@ test('zj-loop-init --add gitlab-ci renders configurable GitLab stage and runner 
     const smoke = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'), 'utf8');
     assert.match(smoke, /stage: "Fallback"/);
     assert.match(smoke, /tags:\n    - "k8s"\n    - "node"/);
+    assert.match(smoke, /image: "registry\.example\.com\/node:20"/);
+    assert.match(smoke, /Configure --gitlab-image with a Node 18\+ image/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -467,9 +473,12 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
       'Fallback',
       '--gitlab-runner-tags',
       'k8s',
+      '--gitlab-image',
+      'registry.example.com/node:20',
     ]);
     assert.match(stdout, /zj-loop-init --upgrade gitlab-ci/);
     assert.match(stdout, /\[stage=Fallback\]/);
+    assert.match(stdout, /\[image=registry\.example\.com\/node:20\]/);
     assert.match(stdout, /\[runner-tags=k8s\]/);
     assert.match(stdout, /backed up modified generated file: .*zj-loop-smoke\.yml → .*zj-loop-smoke\.yml\.bak/);
     assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
@@ -480,6 +489,7 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     const upgraded = await readFile(smokePath, 'utf8');
     assert.match(upgraded, /stage: "Fallback"/);
     assert.match(upgraded, /tags:\n    - "k8s"/);
+    assert.match(upgraded, /image: "registry\.example\.com\/node:20"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

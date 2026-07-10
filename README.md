@@ -201,6 +201,15 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
 ```
 
+If your runner cannot pull `node:22` from Docker Hub, render an internally
+pullable Node 18+ image instead. Generated jobs fail fast with a clear Node
+version message when the runtime is below Node 18:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com/node:20
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
+```
+
 Current GitLab parity is provider-aware and intentionally explicit:
 
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,

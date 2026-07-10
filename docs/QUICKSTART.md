@@ -97,6 +97,14 @@ npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
 npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
 ```
 
+If the runner cannot pull `node:22`, render a private or dependency-proxy
+Node 18+ image. Generated jobs fail fast when the runtime is below Node 18:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com/node:20
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
+```
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash
