@@ -1,0 +1,22 @@
+# zj-loop-generated: true
+# zj-loop-template-id: gitlab-ci/zj-loop-smoke
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+zj_loop_smoke:
+  stage: zj-loop
+  image: node:22
+  when: manual
+  allow_failure: false
+  script:
+    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch manual-smoke-report --source gitlab-manual-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json
+    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-consumer plan manual-smoke-report --source gitlab-manual-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json
+    - npx @jununfly/zj-loop-audit@0.1.4 . --suggest
+    - cat route-decision.json
+    - cat consumer-plan.json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - route-decision.json
+      - consumer-plan.json

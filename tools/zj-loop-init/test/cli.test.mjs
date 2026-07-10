@@ -350,6 +350,68 @@ test('zj-loop-init --upgrade github-actions backs up modified workflows before w
   }
 });
 
+test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-gitlab-ci-'));
+  try {
+    const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+    assert.match(stdout, /zj-loop-init --add: gitlab-ci/);
+
+    const root = await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8');
+    assert.match(root, /zj-loop-generated: true/);
+    assert.match(root, /zj-loop-template-id: gitlab-ci\/zj-loop-root/);
+    assert.match(root, /zj-loop-template-hash: [a-f0-9]{16}/);
+    assert.match(root, /zj-loop\/gitlab-ci\/zj-loop-smoke\.yml/);
+
+    const smoke = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'), 'utf8');
+    assert.match(smoke, /zj-loop-generated: true/);
+    assert.match(smoke, /zj-loop-template-id: gitlab-ci\/zj-loop-smoke/);
+    assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
+    assert.match(smoke, /gitlab-manual-pipeline/);
+    assert.match(smoke, /artifacts:/);
+
+    const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(routeTable, /route_id: "manual-smoke-report"/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --add gitlab-ci skips existing root CI by default', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-gitlab-ci-root-skip-'));
+  try {
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'stages: [test]\n');
+
+    const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+    assert.match(stdout, /skipped: .*\.gitlab-ci\.yml already exists/);
+    assert.match(stdout, /next step: review \.gitlab-ci\.yml and include zj-loop\/gitlab-ci\/\*\.yml manually/);
+    assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
+    await access(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing root CI alone', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-gitlab-ci-'));
+  try {
+    await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+    const smokePath = path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml');
+    await writeFile(smokePath, `${await readFile(smokePath, 'utf8')}\n# local edit\n`);
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'stages: [test]\n');
+
+    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'gitlab-ci']);
+    assert.match(stdout, /zj-loop-init --upgrade gitlab-ci/);
+    assert.match(stdout, /backed up modified generated file: .*zj-loop-smoke\.yml → .*zj-loop-smoke\.yml\.bak/);
+    assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
+    assert.match(stdout, /skipped: \.gitlab-ci\.yml already exists/);
+    assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
+    const backup = await readFile(`${smokePath}.bak`, 'utf8');
+    assert.match(backup, /# local edit/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init --add skips existing files unless --force is explicit', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-skip-'));
   try {
