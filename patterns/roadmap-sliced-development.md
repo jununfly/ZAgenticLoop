@@ -245,8 +245,13 @@ Branch rule:
 Recommended branch naming:
 
 ```text
-zjal/<roadmap-id>
+zjal-<roadmap-id>
 ```
+
+Historical `zjal/<roadmap-id>` branches may still be consumed by closeout
+guards, but new automation must generate the single-segment `zjal-...` form.
+This avoids Git ref prefix conflicts when a repository already has a `zjal`
+branch or stale `refs/*/zjal` file.
 
 Recommended issue naming:
 
@@ -650,7 +655,7 @@ consumer: post-merge-cleanup
 mode: roadmap-closeout
 roadmap:
   id: <roadmap-id>
-  branch: zjal/<roadmap-id>
+  branch: zjal-<roadmap-id>
 carrier:
   issue: <activation-carrier-issue-number>
 cleanup:
@@ -689,7 +694,7 @@ consumer: post-merge-cleanup
 mode: roadmap-closeout
 roadmap:
   id:
-  branch: zjal/
+  branch: zjal-
 carrier:
   issue:
 cleanup:

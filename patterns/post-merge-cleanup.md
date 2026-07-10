@@ -67,7 +67,10 @@ Allowed actions:
 
 - Confirm the PR is merged.
 - Confirm the PR head branch equals `roadmap.branch`.
-- Confirm the branch is a current roadmap branch such as `zjal/<roadmap-id>`.
+- Confirm the branch is a current roadmap branch such as `zjal-<roadmap-id>`.
+  Historical `zjal/<roadmap-id>` branches may still be cleaned up for
+  compatibility, but new automation should not generate slash-namespaced
+  roadmap branches because they can conflict with Git ref prefixes.
 - Delete only that already-merged current roadmap branch when the contract says
   `cleanup.delete_merged_branch: true`.
 - Close only the activation carrier issue named by `carrier.issue` when the

@@ -12,6 +12,13 @@ export const CLOSEOUT_EXECUTOR_KIND = 'zj-loop.post-merge-roadmap-closeout-execu
 export const CLOSEOUT_EXECUTOR_VERSION = 1;
 export const LIVE_CLEANUP_CONFIRMATION_PHRASE = 'DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER';
 const YAML_FENCE_PATTERN = /```(?:yaml|yml)\s*\n(?<yaml>[\s\S]*?)```/g;
+function isRoadmapBranchName(branch) {
+    if (typeof branch !== 'string')
+        return false;
+    if (branch.includes('..'))
+        return false;
+    return branch.startsWith('zjal-') || branch.startsWith('zjal/');
+}
 export async function defaultPostMergeRunner(command, args = []) {
     try {
         const result = await execFileAsync(command, args, {
@@ -89,8 +96,8 @@ export function validatePostMergeContract(contract, { pr } = {}) {
     if (contract.roadmap?.branch && pr?.headRefName && contract.roadmap.branch !== pr.headRefName) {
         errors.push('roadmap.branch must match PR head branch');
     }
-    if (contract.roadmap?.branch && !String(contract.roadmap.branch).startsWith('zjal/')) {
-        errors.push('roadmap.branch must use zjal/<roadmap-id>');
+    if (contract.roadmap?.branch && !isRoadmapBranchName(contract.roadmap.branch)) {
+        errors.push('roadmap.branch must use zjal-<roadmap-id>');
     }
     if (contract.cleanup?.delete_merged_branch !== true && contract.cleanup?.close_carrier_issue !== true) {
         errors.push('cleanup must request at least one supported action');
@@ -237,8 +244,8 @@ function buildLiveCleanupConfirmation(input) {
         required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
         side_effects: [
             'switch local checkout to main and fast-forward from origin/main',
-            'delete the merged zjal/ roadmap branch locally when present and merged',
-            'delete the merged zjal/ roadmap branch on origin when present',
+            'delete the merged zjal- roadmap branch locally when present and merged',
+            'delete the merged zjal- roadmap branch on origin when present',
             `append closeout evidence to carrier issue #${input.carrierIssue ?? 'unknown'}`,
             `close carrier issue #${input.carrierIssue ?? 'unknown'}`,
         ],
@@ -589,7 +596,7 @@ function buildContractGuards({ pr, contract }) {
     return {
         pr_merged: pr?.merged === true,
         current_roadmap_branch: Boolean(branch && head && branch === head),
-        roadmap_branch_prefix: typeof branch === 'string' && branch.startsWith('zjal/'),
+        roadmap_branch_prefix: isRoadmapBranchName(branch),
         same_repository: Boolean(pr?.headRepositoryOwner &&
             pr?.baseRepositoryOwner &&
             normalizeOwner(pr.headRepositoryOwner) === normalizeOwner(pr.baseRepositoryOwner)),
@@ -640,8 +647,8 @@ function buildExecutorGuards(input) {
         },
         {
             name: 'single-roadmap-branch',
-            pass: typeof branch === 'string' && branch.startsWith('zjal/') && !branch.includes('..'),
-            reason: 'roadmap branch must be a single zjal/<roadmap-id> branch name',
+            pass: isRoadmapBranchName(branch),
+            reason: 'roadmap branch must be a single zjal-<roadmap-id> branch name',
         },
     ];
 }

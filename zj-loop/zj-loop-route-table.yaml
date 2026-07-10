@@ -540,7 +540,7 @@ routes:
       destructive_actions_enabled: false
       allowed_consumer: "post-merge-cleanup"
       allowed_mode: "roadmap-closeout"
-      branch_prefix_allowlist: ["zjal/"]
+      branch_prefix_allowlist: ["zjal-", "zjal/"]
       close_carrier_issue_only: true
       auto_merge: false
     dedupe_window: "pr_number"

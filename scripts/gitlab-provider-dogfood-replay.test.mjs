@@ -15,7 +15,7 @@ test('GitLab provider dogfood replay covers core route consumer contracts', () =
     'zj-loop/',
   ]);
 
-  assert.match(replay.roadmapActivation.branchName, /^zjal\/act-89-4934172412-8c94c5b9-gitlab-provider-dogfood$/);
+  assert.match(replay.roadmapActivation.branchName, /^zjal-act-89-4934172412-8c94c5b9-gitlab-provider-dogfood$/);
   assert.equal(replay.roadmapActivation.closeoutContractParsed, true);
   assert.equal(replay.roadmapActivation.closeoutStatus, 'dry-run');
   assert.equal(replay.roadmapActivation.closeoutProvider, 'gitlab');
