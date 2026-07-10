@@ -101,12 +101,12 @@
     "1-3-1": {
       "id": "1-3-1",
       "label": "Remove GitHub-specific wording from GitLab provider outputs",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: remove GitHub-specific wording from GitLab post-merge closeout output. Implemented provider-aware review labels and confirmation locations in post-merge closeout plans/comments; GitLab dry-run evidence now says MR/manual pipeline/ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION and avoids workflow_dispatch/GitHub Actions/PR # wording. Verification: npm test in tools/zj-loop-core."
     },
     "1-3-2": {
       "id": "1-3-2",
@@ -154,7 +154,7 @@
   },
   "metadata": {
     "created": "2026-07-10 21:31:10",
-    "updated": "2026-07-10 21:48:51",
+    "updated": "2026-07-10 21:52:28",
     "md_file": "docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.md"
   }
 }

@@ -157,7 +157,7 @@ test('post-merge closeout live execution deletes only contract branch and closes
   assert.equal(result.runner_evidence.completion_form, 'cleanup-done');
   assert.equal(calls.some((call) => call.join(' ') === 'git branch -d zjal/post-merge-closeout-executor'), true);
   assert.equal(calls.some((call) => call.join(' ') === 'git push origin --delete zjal/post-merge-closeout-executor'), true);
-  assert.equal(calls.some((call) => call.join(' ') === 'gh issue close 39 --comment Closing this Roadmap-Sliced Development activation carrier after post-merge closeout.\n\n- PR: #41\n- Roadmap branch: `zjal/post-merge-closeout-executor`\n- Contract guard: valid `zj-loop.post-merge-contract` with `no_pending_followups: true`.'), true);
+  assert.equal(calls.some((call) => call.join(' ') === 'gh issue close 39 --comment Closing this Roadmap-Sliced Development activation carrier after post-merge closeout.\n\n- Review: PR #41\n- Roadmap branch: `zjal/post-merge-closeout-executor`\n- Contract guard: valid `zj-loop.post-merge-contract` with `no_pending_followups: true`.'), true);
   assert.equal(calls.some((call) => call.includes('99')), false);
 });
 
@@ -271,6 +271,36 @@ test('post-merge closeout-plan CLI accepts explicit GitLab MR metadata', async (
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('post-merge GitLab dry-run comment uses MR and GitLab manual pipeline wording', () => {
+  const mr = normalizeGitLabMrView({
+    iid: 9,
+    web_url: 'https://gitlab.com/group/project/-/merge_requests/9',
+    description: VALID_BODY,
+    state: 'merged',
+    source_branch: 'zjal/post-merge-closeout-executor',
+    target_branch: 'main',
+    project_path: 'group/project',
+  }, { expectedRepo: 'group/project' });
+  const plan = buildPostMergeRoadmapCloseoutExecutionPlan({
+    pr: mr,
+    prBody: mr.body,
+    expectedRepo: 'group/project',
+    currentRepo: 'group/project',
+    gitStatus: '',
+    expectedCarrierIssue: 39,
+  });
+  const comment = buildDryRunEvidenceComment(plan, {
+    artifactName: 'post-merge-roadmap-closeout-plan-9',
+  });
+
+  assert.match(comment, /Review: MR #9/);
+  assert.match(comment, /GitLab manual job zj_loop_post_merge_cleanup/);
+  assert.match(comment, /ZJ_LOOP_MERGE_REQUEST_IID=9/);
+  assert.doesNotMatch(comment, /workflow_dispatch/);
+  assert.doesNotMatch(comment, /GitHub Actions/);
+  assert.doesNotMatch(comment, /PR #9/);
 });
 
 test('post-merge repository URL parser handles common GitHub remotes', () => {
