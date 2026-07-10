@@ -224,6 +224,10 @@ needs registry access unless the audit package is available in your environment.
 For a route-only smoke in restricted CI, set `ZJ_LOOP_RUN_AUDIT=0`; the job will
 still produce `route-decision.json` and `consumer-plan.json`.
 
+Vendored tarballs do not make the GitLab adapter fully offline by themselves:
+`npm exec` may still need registry access or a prepared npm cache for transitive
+dependencies. Treat full offline execution as a separate packaging decision.
+
 Current GitLab parity is provider-aware and intentionally explicit:
 
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,

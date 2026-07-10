@@ -61,7 +61,7 @@
     "1-3": {
       "id": "1-3",
       "label": "GitLab vendored 包与离线边界硬化",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -174,12 +174,12 @@
     "1-3-3": {
       "id": "1-3-3",
       "label": "core tarball transitive dependency 边界说明",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: clarify that the standard GitLab adapter is online/cache-backed, not fully offline. Added durable provider adapter architecture text explaining that vendored package tarballs alone do not include transitive dependencies; README/README.zh-CN/Quickstart now warn that npm exec may still need registry access or a prepared npm cache. Verification: git diff --check; roadmap_cli validate."
     },
     "1-4-1": {
       "id": "1-4-1",
@@ -244,7 +244,7 @@
   },
   "metadata": {
     "created": "2026-07-10 18:02:19",
-    "updated": "2026-07-10 18:30:18",
+    "updated": "2026-07-10 18:32:55",
     "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
   }
 }

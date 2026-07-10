@@ -7,13 +7,14 @@ Last run: 2026-07-10
 - Roadmap id: issue-89-gitlab-provider-hardening
 - Branch: zjal/issue-89-gitlab-provider-hardening
 - Status: in_progress
-- Current parent node: GitLab vendored 包与离线边界硬化
-- Current leaf: core tarball transitive dependency 边界说明
+- Current parent node: Provider-aware 文案与路径协议对齐
+- Current leaf: route-table maturity vocabulary 对齐
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| gitlab-core-tarball-offline-boundary | completed | Durable docs and user-facing docs now state that the standard GitLab adapter is online/cache-backed, not fully offline: vendored tarballs alone do not include transitive dependencies, so `npm exec` may still require registry access or a prepared npm cache; `docs/designs/provider-adapter-parity-architecture.md`; README/README.zh-CN/Quickstart; `git diff --check`; roadmap validate | pending |
 | gitlab-smoke-audit-network-boundary | completed | GitLab smoke job now declares `ZJ_LOOP_RUN_AUDIT: "1"` and runs `@jununfly/zj-loop-audit` conditionally; restricted CI can set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke while still producing `route-decision.json` and `consumer-plan.json`; README/README.zh-CN/Quickstart document the network boundary; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |
 | gitlab-vendor-tgz-tracking-preflight | completed | Added a deterministic preflight warning to `zj-loop-init --add/--upgrade gitlab-ci` when `zj-loop/vendor/*.tgz` appears ignored by Git; the warning suggests narrow `.gitignore` exceptions or `git add -f zj-loop/vendor/*.tgz`; tests cover add and upgrade warnings for `**/*.tgz`; README/README.zh-CN/Quickstart document the warning and remediation; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |
 | gitlab-ci-image-and-node-precheck | completed | Added `--gitlab-image` to `zj-loop-init --add/--upgrade gitlab-ci`; generated GitLab jobs now render the configured image and run a clear Node >=18 precheck before package commands; README/README.zh-CN/Quickstart document private or dependency-proxy Node 18+ image usage; tests cover default and custom image rendering plus precheck text; `npm test` in `tools/zj-loop-init`; `npm run check:zj-loop-init`; `npm run test:generated-bundle-release-gate`; `git diff --check` | pending |

@@ -118,6 +118,10 @@ The smoke job runs `@jununfly/zj-loop-audit` by default. In CI environments
 without registry access, set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke output:
 `route-decision.json` and `consumer-plan.json`.
 
+Vendored package tarballs alone do not guarantee fully offline execution:
+`npm exec` may still require registry access or a prepared npm cache for
+transitive dependencies.
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash

@@ -123,6 +123,14 @@ Generated GitLab jobs should:
 - use Route Table enablement for route side effects
 - require `GITLAB_TOKEN` before issue notes, labels, branches, MRs, or cleanup
 
+The generated GitLab adapter is not a fully offline bundle by default. Even when
+users vendor package tarballs under `zj-loop/vendor/`, `npm exec` may still need
+registry access or a prepared npm cache for transitive dependencies. The
+supported baseline is therefore "online or cache-backed package execution" with
+explicit warnings when vendored tarballs are ignored by Git. Fully offline
+execution requires a separate, intentional packaging strategy and must not be
+implied by the standard GitLab CI fragments.
+
 ## Evidence Mapping
 
 | Evidence role | GitHub carrier | GitLab carrier |
