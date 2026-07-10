@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-smoke
 # zj-loop-template-version: 1
-# zj-loop-template-hash: aee8e895d254bdeb
+# zj-loop-template-hash: 327109ccd8d7a0bc
 
 name: ZJ Loop Smoke
 
@@ -23,8 +23,8 @@ jobs:
 
       - name: Smoke route decision
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
-          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
 

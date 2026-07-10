@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-pr-steward
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 5ce4b44ff0b1e970
+# zj-loop-template-hash: f8229677ccfe6b14
 
 name: ZJ Loop PR Steward
 
@@ -35,11 +35,11 @@ jobs:
           ISSUE_FIX_REQUEST_JSON: ${{ inputs.issue_fix_request_json }}
           CURRENT_PR_HEAD_SHA: ${{ inputs.current_pr_head_sha }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch pr-steward-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-consumer plan pr-steward-report --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route dispatch pr-steward-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-consumer plan pr-steward-report --json > consumer-plan.json || true
           if [ -n "$ISSUE_FIX_REQUEST_JSON" ] && [ -n "$CURRENT_PR_HEAD_SHA" ]; then
             printf '%s\n' "$ISSUE_FIX_REQUEST_JSON" > issue-fix-request.json
-            npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-pr-steward fix-plan \
+            npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-pr-steward fix-plan \
               --request issue-fix-request.json \
               --current-pr-head-sha "$CURRENT_PR_HEAD_SHA" \
               --json > fix-plan.json || true

@@ -120,7 +120,7 @@ Generated GitLab jobs should:
 - pin package versions in generated snippets
 - allow the rendered core package source to be overridden for unpublished
   dogfood validation, for example with
-  `--gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz`
+  `--gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz`
 - emit concise job logs
 - upload canonical JSON evidence artifacts
 - keep blocked/refused consumer plans observable as JSON artifacts instead of
