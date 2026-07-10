@@ -8,12 +8,13 @@ Last run: 2026-07-10
 - Branch: zjal/issue-89-gitlab-provider-hardening
 - Status: in_progress
 - Current parent node: GitLab 全链路验证与 closeout
-- Current leaf: GitLab provider dogfood 回放测试补强
+- Current leaf: durable docs 与 PR closeout 吸收 GitLab 决策
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| gitlab-provider-dogfood-replay | completed | Added deterministic GitLab provider dogfood replay coverage for GitLab CI Sweeper fix scope, Roadmap Activation MR contract parsing into Post-Merge Closeout dry-run, and PR Steward MR dry-run/live-refusal boundaries; wired replay into `npm run test:provider-parity-gate`; provider parity gate now accepts configurable GitLab stage placeholders; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | pr-steward-provider-aware-review-labels | completed | PR Steward plans now describe source reviews as PR or MR based on provider metadata instead of hardcoding source PR/pr_number in escalation titles, repair commit titles, repair PR bodies, and escalation bodies; GitLab MR dry-run evidence is tested to say `MR #123` and avoid `source PR #unknown`; GitLab live review side effects remain refused; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | roadmap-activation-post-merge-contract-bridge | completed | Roadmap Activation PR/MR contract output now embeds a parseable `zj-loop.post-merge-contract` YAML block, so merged GitHub PRs and GitLab MRs can be consumed by Post-Merge Closeout without a separate human-added closeout contract; GitLab MR tests prove the generated body parses through Post-Merge Closeout and reaches dry-run with valid guards; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | ci-sweeper-gitlab-provider-aware-paths | completed | CI Sweeper Issue Fix Request fix scope is now provider-aware: GitHub requests keep `.github/workflows/`, while GitLab pipeline requests use `.gitlab-ci.yml` and `zj-loop/gitlab-ci/` with shared `scripts/` and `zj-loop/`; regression tests assert GitLab request bodies do not point to `.github/workflows/`; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |

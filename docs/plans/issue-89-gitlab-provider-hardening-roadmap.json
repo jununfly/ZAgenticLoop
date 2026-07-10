@@ -224,12 +224,12 @@
     "1-6-1": {
       "id": "1-6-1",
       "label": "GitLab provider dogfood 回放测试补强",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: add deterministic GitLab provider dogfood replay coverage. Added scripts/gitlab-provider-dogfood-replay.mjs and test coverage for GitLab CI Sweeper fix scope, Roadmap Activation MR contract parsing into Post-Merge Closeout dry-run, and PR Steward MR dry-run/live-refusal boundaries; wired the replay into npm run test:provider-parity-gate. Updated provider parity gate to accept configurable GitLab stage placeholders. Verification: npm run test:provider-parity-gate; git diff --check."
     },
     "1-6-2": {
       "id": "1-6-2",
@@ -244,7 +244,7 @@
   },
   "metadata": {
     "created": "2026-07-10 18:02:19",
-    "updated": "2026-07-10 18:47:10",
+    "updated": "2026-07-10 18:50:02",
     "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
   }
 }
