@@ -7,13 +7,14 @@ Last run: 2026-07-10
 - Roadmap id: issue-89-gitlab-provider-hardening
 - Branch: zjal/issue-89-gitlab-provider-hardening
 - Status: in_progress
-- Current parent node: GitLab consumer 合约与 closeout 兼容
-- Current leaf: pr-steward report 与 fix-request 命令边界澄清
+- Current parent node: GitLab 全链路验证与 closeout
+- Current leaf: GitLab provider dogfood 回放测试补强
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| pr-steward-provider-aware-review-labels | completed | PR Steward plans now describe source reviews as PR or MR based on provider metadata instead of hardcoding source PR/pr_number in escalation titles, repair commit titles, repair PR bodies, and escalation bodies; GitLab MR dry-run evidence is tested to say `MR #123` and avoid `source PR #unknown`; GitLab live review side effects remain refused; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | roadmap-activation-post-merge-contract-bridge | completed | Roadmap Activation PR/MR contract output now embeds a parseable `zj-loop.post-merge-contract` YAML block, so merged GitHub PRs and GitLab MRs can be consumed by Post-Merge Closeout without a separate human-added closeout contract; GitLab MR tests prove the generated body parses through Post-Merge Closeout and reaches dry-run with valid guards; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | ci-sweeper-gitlab-provider-aware-paths | completed | CI Sweeper Issue Fix Request fix scope is now provider-aware: GitHub requests keep `.github/workflows/`, while GitLab pipeline requests use `.gitlab-ci.yml` and `zj-loop/gitlab-ci/` with shared `scripts/` and `zj-loop/`; regression tests assert GitLab request bodies do not point to `.github/workflows/`; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | route-table-maturity-vocabulary-alignment | completed | `zj-loop-audit` now accepts the same maturity values used by core/generated Route Tables: `install-ready` and `execution-ready` are no longer reported as unknown; live runner maturity wording now aligns with core; regression test covers install-ready route maturity; `npm run build` in `tools/zj-loop-audit`; `node --test tools/zj-loop-audit/test/auditor.test.mjs`; `node dist/cli.js ../..` in `tools/zj-loop-audit`; `git diff --check` | pending |
