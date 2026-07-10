@@ -45,7 +45,7 @@
     "1-2": {
       "id": "1-2",
       "label": "GitLab generated bundle adoption polish",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -91,12 +91,12 @@
     "1-2-2": {
       "id": "1-2-2",
       "label": "Keep GitLab diagnostic artifacts observable when plans are blocked",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: keep GitLab dry-run/request-only diagnostic artifacts observable when consumer plans are blocked or refused. Implemented GitLab templates so consumer-plan commands write JSON and continue with || true; downstream cat/artifact steps still fail if JSON is missing. Tests assert all generated GitLab fragments preserve consumer-plan.json observability. Verification: npm test in tools/zj-loop-init."
     },
     "1-3-1": {
       "id": "1-3-1",
@@ -154,7 +154,7 @@
   },
   "metadata": {
     "created": "2026-07-10 21:31:10",
-    "updated": "2026-07-10 21:47:22",
+    "updated": "2026-07-10 21:48:51",
     "md_file": "docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.md"
   }
 }

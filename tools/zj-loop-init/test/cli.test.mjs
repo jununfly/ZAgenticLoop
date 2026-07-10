@@ -386,6 +386,7 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
       assert.match(body, /image: "node:22"/);
       assert.match(body, /ZJ Loop GitLab CI requires Node >=18/);
       assert.match(body, /--package @jununfly\/zj-loop-core@0\.1\.4/);
+      assert.match(body, /> consumer-plan\.json \|\| true/);
       assert.doesNotMatch(body, /\n  tags:\n/);
       assert.match(body, /artifacts:/);
     }

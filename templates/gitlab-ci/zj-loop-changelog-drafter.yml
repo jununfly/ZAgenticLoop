@@ -10,7 +10,7 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch changelog-drafter-report --source gitlab-release-window --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan changelog-drafter-report --root . --source gitlab-release-window --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan changelog-drafter-report --root . --source gitlab-release-window --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json || true
     - cat route-decision.json
     - cat consumer-plan.json
   artifacts:
