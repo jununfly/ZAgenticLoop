@@ -356,18 +356,44 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
     assert.match(stdout, /zj-loop-init --add: gitlab-ci/);
 
+    const fragments = [
+      'zj-loop-smoke.yml',
+      'zj-loop-daily-triage.yml',
+      'zj-loop-ci-sweeper.yml',
+      'zj-loop-pr-steward.yml',
+      'zj-loop-issue-triage.yml',
+      'zj-loop-dependency-sweeper.yml',
+      'zj-loop-changelog-drafter.yml',
+      'zj-loop-roadmap-activation.yml',
+      'zj-loop-post-merge-cleanup.yml',
+    ];
+
     const root = await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8');
     assert.match(root, /zj-loop-generated: true/);
     assert.match(root, /zj-loop-template-id: gitlab-ci\/zj-loop-root/);
     assert.match(root, /zj-loop-template-hash: [a-f0-9]{16}/);
-    assert.match(root, /zj-loop\/gitlab-ci\/zj-loop-smoke\.yml/);
+    for (const fragment of fragments) {
+      assert.match(root, new RegExp(`zj-loop/gitlab-ci/${fragment.replace('.', '\\.')}`));
+    }
+
+    for (const fragment of fragments) {
+      const body = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', fragment), 'utf8');
+      assert.match(body, /zj-loop-generated: true/);
+      assert.match(body, /zj-loop-template-version: 1/);
+      assert.match(body, /zj-loop-template-hash: [a-f0-9]{16}/);
+      assert.match(body, /artifacts:/);
+    }
 
     const smoke = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'), 'utf8');
-    assert.match(smoke, /zj-loop-generated: true/);
     assert.match(smoke, /zj-loop-template-id: gitlab-ci\/zj-loop-smoke/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /gitlab-manual-pipeline/);
-    assert.match(smoke, /artifacts:/);
+    const issueTriage = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-issue-triage.yml'), 'utf8');
+    assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
+    const roadmapActivation = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-roadmap-activation.yml'), 'utf8');
+    assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
+    const postMerge = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
+    assert.match(postMerge, /zj-loop-route dispatch post-merge-roadmap-closeout/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);

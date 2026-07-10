@@ -1,0 +1,23 @@
+# zj-loop-generated: true
+# zj-loop-template-id: gitlab-ci/zj-loop-daily-triage
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+zj_loop_daily_triage:
+  stage: zj-loop
+  image: node:22
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+  script:
+    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch daily-triage-report --source gitlab-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json
+    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-consumer plan daily-triage-report --source gitlab-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json
+    - cat route-decision.json
+    - cat consumer-plan.json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - route-decision.json
+      - consumer-plan.json

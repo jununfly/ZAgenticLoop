@@ -24,6 +24,14 @@ const GITHUB_ACTIONS_WORKFLOW_TEMPLATES = [
 ];
 const GITLAB_CI_TEMPLATE_FILES = [
     'zj-loop-smoke.yml',
+    'zj-loop-daily-triage.yml',
+    'zj-loop-ci-sweeper.yml',
+    'zj-loop-pr-steward.yml',
+    'zj-loop-issue-triage.yml',
+    'zj-loop-dependency-sweeper.yml',
+    'zj-loop-changelog-drafter.yml',
+    'zj-loop-roadmap-activation.yml',
+    'zj-loop-post-merge-cleanup.yml',
 ];
 async function loadRegistry() {
     return loadPatternRegistry({
