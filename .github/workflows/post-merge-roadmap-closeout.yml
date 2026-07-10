@@ -14,8 +14,8 @@ on:
         required: true
         type: string
       confirm_live_cleanup:
-        description: "Type DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER to run live cleanup"
-        required: true
+        description: "Optional fallback phrase: DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER"
+        required: false
         type: string
 
 permissions:
@@ -71,6 +71,21 @@ jobs:
           path: /tmp/post-merge-roadmap-closeout/plan.json
           if-no-files-found: error
 
+      - name: Execute contract-authorized live cleanup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if node -e "const fs=require('fs'); const plan=JSON.parse(fs.readFileSync('/tmp/post-merge-roadmap-closeout/plan.json','utf8')); if (plan.status !== 'dry-run' || plan.confirmation?.required !== false) process.exit(1);"; then
+            npm run post-merge-closeout -- \
+              --pr "$PR_NUMBER" \
+              --repo "$GITHUB_REPOSITORY" \
+              --live \
+              --out /tmp/post-merge-roadmap-closeout/live-result.json
+          else
+            echo "Merged PR contract did not authorize automatic live cleanup; dry-run evidence was recorded."
+          fi
+
   live-cleanup:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -95,14 +110,17 @@ jobs:
           CONFIRM_LIVE_CLEANUP: ${{ inputs.confirm_live_cleanup }}
         run: |
           mkdir -p /tmp/post-merge-roadmap-closeout
-          npm run post-merge-closeout -- \
+          args=(
             --pr "$PR_NUMBER" \
             --repo "$GITHUB_REPOSITORY" \
             --carrier-issue "$CARRIER_ISSUE" \
-            --live \
-            --require-live-confirmation \
-            --confirm-live-cleanup "$CONFIRM_LIVE_CLEANUP" \
+            --live
             --out /tmp/post-merge-roadmap-closeout/live-result.json
+          )
+          if [ -n "$CONFIRM_LIVE_CLEANUP" ]; then
+            args+=(--require-live-confirmation --confirm-live-cleanup "$CONFIRM_LIVE_CLEANUP")
+          fi
+          npm run post-merge-closeout -- "${args[@]}"
 
       - name: Upload live cleanup result artifact
         uses: actions/upload-artifact@v4

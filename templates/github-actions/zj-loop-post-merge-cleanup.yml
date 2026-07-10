@@ -19,7 +19,7 @@ on:
         required: false
         default: ''
       live_cleanup_confirmation:
-        description: 'Fixed phrase required for live branch/issue cleanup'
+        description: 'Optional fallback phrase for live branch/issue cleanup'
         required: false
         default: ''
 
@@ -54,15 +54,17 @@ jobs:
             npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-post-merge-closeout closeout-plan "${args[@]}" --json > closeout-plan.json || true
             printf '### Closeout Plan\n\n' >> "$GITHUB_STEP_SUMMARY"
             cat closeout-plan.json >> "$GITHUB_STEP_SUMMARY"
+            live_args=("${args[@]}")
             if [ -n "$LIVE_CLEANUP_CONFIRMATION" ]; then
-              npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-post-merge-closeout live-closeout \
-                "${args[@]}" \
-                --confirm-live-cleanup "$LIVE_CLEANUP_CONFIRMATION" \
-                --json > live-closeout-result.json || true
+              live_args+=(--require-live-confirmation --confirm-live-cleanup "$LIVE_CLEANUP_CONFIRMATION")
+            fi
+            if npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-post-merge-closeout live-closeout \
+              "${live_args[@]}" \
+              --json > live-closeout-result.json; then
               printf '\n\n### Live Closeout Result\n\n' >> "$GITHUB_STEP_SUMMARY"
               cat live-closeout-result.json >> "$GITHUB_STEP_SUMMARY"
             else
-              printf '\n\nLive cleanup was not requested. Provide the fixed confirmation phrase only after reviewing the closeout plan.\n\n' >> "$GITHUB_STEP_SUMMARY"
+              printf '\n\nLive cleanup did not execute. A valid merged-PR contract can authorize cleanup automatically; otherwise provide the fixed confirmation phrase after reviewing the closeout plan.\n\n' >> "$GITHUB_STEP_SUMMARY"
             fi
           else
             printf 'No PR number was provided. This run records route and consumer evidence only.\n\n' >> "$GITHUB_STEP_SUMMARY"

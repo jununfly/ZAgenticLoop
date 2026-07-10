@@ -47,7 +47,7 @@ are guarded live operations that require explicit operator intent.
 | Issue Triage action route | `scripts/issue-triage-action-runner.mjs`, route table `issue-triage-action` row, `zj-loop/issue-triage-state.md` | Dry-run action consumer with replayed runner | Separate `triage-action-consumer` route for allowlisted labels and fixed comment templates. Route Table truth is `execution.mode: dry-run`, `maturity.runner: replayed`; live issue mutation is refused until workflow-dispatch dogfood evidence supports explicit promotion. |
 | Dependency Sweeper routes | Dependency route/claim replay scripts, replayed live runner, `zj-loop/dependency-sweeper-state.md` | Claim-only route with replayed repair/escalation runner | Supports bounded request and claim lifecycle evidence plus replayed `repair-pr` / `escalation-issue` live-runner evidence. Route Table truth remains `consumer_kind: fix-runner`, `execution.mode: claim-only`, and `maturity.runner: replayed`; automatic routing does not edit manifests, update lockfiles, create branches, open Fix PRs, dispatch workflows, or auto-merge until real workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `.github/workflows/changelog-drafter.yml`, report/draft-request replay scripts, replayed live runner, `zj-loop/changelog-drafter-state.md` | Report-only route with replayed draft evidence/PR runner | Records release-window evidence and draft request candidates. Route Table truth is `consumer_kind: draft-consumer`, `execution.mode: report-only`, and `maturity.runner: replayed`; the replayed runner can produce `draft-evidence` or an independent `draft-pr`, but automatic routing does not generate release notes, edit changelogs, create PRs, tag, release, publish, dispatch workflows, or start consumer work until workflow-dispatch dogfood evidence exists. |
-| Post-Merge Roadmap Closeout | `.github/workflows/post-merge-roadmap-closeout.yml`, `scripts/post-merge-roadmap-closeout.mjs`, `zj-loop/post-merge-state.md` | Automatic dry-run plus guarded live cleanup | Merged Roadmap-Sliced PRs get dry-run evidence and artifacts. Route Table truth is `consumer_kind: cleanup-consumer`, `execution.mode: dry-run`, and `maturity.runner: replayed`; live branch deletion and carrier issue closure require explicit operator invocation and fixed confirmation phrase. |
+| Post-Merge Roadmap Closeout | `.github/workflows/post-merge-roadmap-closeout.yml`, `scripts/post-merge-roadmap-closeout.mjs`, `zj-loop/post-merge-state.md` | Automatic dry-run plus contract-authorized live cleanup | Merged Roadmap-Sliced PRs get dry-run evidence and artifacts. Route Table truth is `consumer_kind: cleanup-consumer`, `execution.mode: dry-run`, and `maturity.runner: replayed`; live branch deletion and carrier issue closure may run automatically only when the merged PR contains a valid closeout contract and executor guards pass. Fixed confirmation remains a fallback path. |
 | Release Workflow Validation | `scripts/validate-release-workflows.mjs` | Validate gate | Ensures every release-managed package has matching workflow, tag pattern, and pack output. |
 | Drift Check | `tools/zj-loop-sync` | Tool package test and optional manual check | Detects mismatch between loop state, loop config, route table, and required files. |
 | Runtime Constraints | `zj-loop/zj-loop-constraints.md`, `skills/zj-loop-constraints/SKILL.md` | Skill-level guardrail | Makes repo-specific operating rules loadable at run start. |
@@ -272,14 +272,16 @@ dogfooded`. The live evidence is recorded in `zj-loop/ci-sweeper-state.md`.
 
 ## Post-Merge Roadmap Closeout
 
-Post-Merge Roadmap Closeout is active, but not automatic live cleanup.
+Post-Merge Roadmap Closeout is active with contract-authorized live cleanup.
 
 - Route Decision layer: `post-merge-roadmap-closeout` remains report-only.
 - Automatic workflow layer: merged Roadmap-Sliced PRs run a dry-run plan,
   comment evidence on the PR, and upload a JSON artifact.
-- Live cleanup layer: an operator may invoke the workflow or script with the
-  fixed confirmation phrase
-  `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+- Live cleanup layer: when the merged PR carries a valid
+  `zj-loop.post-merge-contract` and all executor guards pass, the workflow or
+  script may run live cleanup without another human confirmation. The fixed
+  phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` remains a manual
+  fallback when contract authorization is unavailable or explicitly required.
 - Safety layer: the executor may delete only the merged `zjal/` roadmap branch
   named in the valid `zj-loop.post-merge-contract` and may close only the
   contract carrier issue after writing closeout evidence.

@@ -81,6 +81,7 @@ export type PostMergeCloseoutPlan = {
   executorGuards: Array<{ name: string; pass: boolean; reason: string }>;
   confirmation: {
     required: boolean;
+    authorization_source: 'merged-pr-contract' | 'fixed-phrase';
     confirmation_location: string[];
     required_phrase: typeof LIVE_CLEANUP_CONFIRMATION_PHRASE;
     side_effects: string[];
@@ -296,17 +297,22 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
     },
     contractPlan,
     executorGuards,
-    confirmation: buildLiveCleanupConfirmation({ prNumber: pr.number ?? null, carrierIssue }),
+    confirmation: buildLiveCleanupConfirmation({
+      prNumber: pr.number ?? null,
+      carrierIssue,
+      contractAuthorized: executable,
+    }),
     refusals,
     actions: executable ? buildExecutableActions({ branch, carrierIssue }) : [],
   };
 }
 
 function buildLiveCleanupConfirmation(
-  input: { prNumber: number | null; carrierIssue: number | null },
+  input: { prNumber: number | null; carrierIssue: number | null; contractAuthorized: boolean },
 ): PostMergeCloseoutPlan['confirmation'] {
   return {
-    required: true,
+    required: !input.contractAuthorized,
+    authorization_source: input.contractAuthorized ? 'merged-pr-contract' : 'fixed-phrase',
     confirmation_location: [
       'Codex chat reply when a local maintainer is operating the closeout CLI',
       'workflow_dispatch input confirm_live_cleanup when using GitHub Actions',
@@ -319,7 +325,9 @@ function buildLiveCleanupConfirmation(
       `append closeout evidence to carrier issue #${input.carrierIssue ?? 'unknown'}`,
       `close carrier issue #${input.carrierIssue ?? 'unknown'}`,
     ],
-    why_required: 'Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable.',
+    why_required: input.contractAuthorized
+      ? 'No extra confirmation is required: the merged PR contains a valid post-merge contract and all executor guards passed.'
+      : 'Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable when merged-PR contract authorization is unavailable.',
     audit_target: [
       `merged PR #${input.prNumber ?? 'unknown'}`,
       `carrier issue #${input.carrierIssue ?? 'unknown'}`,
@@ -540,14 +548,22 @@ export function buildDryRunEvidenceComment(
     ...refusalLines,
     '',
     plan.status === 'dry-run'
-      ? `Live cleanup command after maintainer approval: \`${command}\``
+      ? `Live cleanup command: \`${command}\``
       : 'Live cleanup is not available until the refusals above are resolved.',
     '',
-    '### Confirmation required for live cleanup',
+    plan.confirmation.required
+      ? '### Confirmation required for live cleanup'
+      : '### Live cleanup authorization',
     '',
-    `- Reply/input location: ${plan.confirmation.confirmation_location.join('; ')}`,
-    `- Required phrase: \`${plan.confirmation.required_phrase}\``,
-    `- Why required: ${plan.confirmation.why_required}`,
+    `- Authorization source: ${plan.confirmation.authorization_source}`,
+    `- Confirmation required: ${plan.confirmation.required}`,
+    ...(plan.confirmation.required
+      ? [
+          `- Reply/input location: ${plan.confirmation.confirmation_location.join('; ')}`,
+          `- Required phrase: \`${plan.confirmation.required_phrase}\``,
+        ]
+      : []),
+    `- Reason: ${plan.confirmation.why_required}`,
     `- Audit target: ${plan.confirmation.audit_target.join('; ')}`,
   ].join('\n');
 }
@@ -559,7 +575,9 @@ export function buildLiveCommand(plan: PostMergeCloseoutPlan): string {
     `--repo ${plan.repository.expected}`,
   ];
   if (plan.carrier.issue) args.push(`--carrier-issue ${plan.carrier.issue}`);
-  args.push(`--confirm-live-cleanup ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+  if (plan.confirmation.required) {
+    args.push(`--confirm-live-cleanup ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+  }
   return args.join(' ');
 }
 

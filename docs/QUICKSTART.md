@@ -176,10 +176,13 @@ The first execution-ready user-project choices are:
   Default `report-only` mode prints the `gh issue comment ...` command but does
   not write to GitHub. Use `--mode comment-enabled` only when the route/workflow
   explicitly allows PRD issue comments.
-- **Close out merged roadmap work:** use `post-merge-roadmap-closeout` in
-  dry-run first. Live branch deletion and carrier issue closure require the
-  fixed phrase
-  `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+- **Close out merged roadmap work:** use `post-merge-roadmap-closeout` after a
+  merged Roadmap-Sliced PR. A valid merged-PR closeout contract plus passing
+  executor guards can authorize live branch deletion and carrier issue closure
+  without another human confirmation. The fixed phrase
+  `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` remains the fallback when
+  contract authorization is unavailable or a manual operator chooses to require
+  it.
 
 Pick the first route deliberately:
 

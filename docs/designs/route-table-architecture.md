@@ -303,7 +303,7 @@ core package references as workflow health failures.
 | `dependency-sweeper` | `issue-fix-request` | Dependency Sweeper | Create verifier-backed dependency requests and allow claim-only lifecycle evidence for patch/minor dependency signals; a replayed runner can produce repair PR or escalation evidence after claim, but the dogfood route is not live until workflow-dispatch evidence exists. |
 | `changelog-drafter-report` / `changelog-drafter-draft-request` | `report-only` | Changelog Drafter | Record release-window evidence, then record draft request candidate evidence from an existing report; a replayed runner can produce draft evidence or an independent draft PR after candidate evidence, but Route Decision itself never drafts, edits changelogs, creates PRs, tags, releases, publishes, or dispatches workflows. |
 | `roadmap-sliced-development` | `activation-comment` | Roadmap-Sliced Development | Create or consume authorized activation requests only; implementation stays with roadmap lifecycle. |
-| `post-merge-roadmap-closeout` | `report-only` | Post-Merge Cleanup | Validate merged Roadmap-Sliced PR closeout contracts and plan guarded cleanup; live branch deletion and carrier issue closure require explicit operator invocation. |
+| `post-merge-roadmap-closeout` | `report-only` | Post-Merge Cleanup | Validate merged Roadmap-Sliced PR closeout contracts and plan guarded cleanup; live branch deletion and carrier issue closure are allowed only through a valid merged-PR contract plus executor guards, or an explicit fixed-phrase fallback. |
 | `human` | `report-only` | Maintainer | Security, auth, billing, infra, ambiguous, high-risk, or policy decisions. |
 | `ignore` | `report-only` | Producing loop | Record noise with reason and avoid rediscovery. |
 
