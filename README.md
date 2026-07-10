@@ -183,6 +183,7 @@ steps. Generated fragments live under `zj-loop/gitlab-ci/`, call pinned
 `@jununfly/zj-loop-core` package commands, and upload JSON artifacts. Report
 routes can run with normal CI context; issue notes, labels, branches, MRs, or
 cleanup need `GITLAB_TOKEN` and route-specific guards.
+Post-merge cleanup resolves target branches as `ZJ_LOOP_TARGET_BRANCH` -> `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` -> `main`; set `ZJ_LOOP_TARGET_BRANCH` only for manual replay or non-standard MR metadata.
 
 For unpublished dogfood or internal validation, render the core package source
 directly into generated GitLab fragments instead of editing CI YAML by hand:
