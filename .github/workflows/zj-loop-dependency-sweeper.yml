@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: c289a3c77ae444b6
+# zj-loop-template-hash: 5d46a55b8488336e
 
 name: ZJ Loop Dependency Sweeper
 
@@ -30,11 +30,11 @@ jobs:
         env:
           ISSUE_FIX_REQUEST_JSON: ${{ inputs.issue_fix_request_json }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-dependency-sweeper plan --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-dependency-sweeper plan --json > consumer-plan.json || true
           if [ -n "$ISSUE_FIX_REQUEST_JSON" ]; then
             printf '%s\n' "$ISSUE_FIX_REQUEST_JSON" > issue-fix-request.json
-            npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-dependency-sweeper repair-plan --request issue-fix-request.json --json > repair-plan.json || true
+            npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-dependency-sweeper repair-plan --request issue-fix-request.json --json > repair-plan.json || true
             cat repair-plan.json >> "$GITHUB_STEP_SUMMARY"
           fi
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"

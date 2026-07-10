@@ -171,7 +171,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
     assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.4/);
-    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.4/);
+    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.5/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /zj-loop-consumer plan manual-smoke-report/);
     const ciSweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-ci-sweeper.yml'), 'utf8');
@@ -385,7 +385,7 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
       assert.match(body, /stage: "zj-loop"/);
       assert.match(body, /image: "node:22"/);
       assert.match(body, /ZJ Loop GitLab CI requires Node >=18/);
-      assert.match(body, /--package @jununfly\/zj-loop-core@0\.1\.4/);
+      assert.match(body, /--package @jununfly\/zj-loop-core@0\.1\.5/);
       assert.match(body, /> consumer-plan\.json \|\| true/);
       assert.doesNotMatch(body, /\n  tags:\n/);
       assert.match(body, /artifacts:/);
@@ -439,7 +439,7 @@ test('zj-loop-init --add gitlab-ci renders configurable GitLab stage and runner 
       '--gitlab-image',
       'registry.example.com/node:20',
       '--gitlab-core-package',
-      './zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz',
+      './zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz',
     ]);
     assert.match(stdout, /zj-loop-init --add: gitlab-ci/);
 
@@ -451,8 +451,8 @@ test('zj-loop-init --add gitlab-ci renders configurable GitLab stage and runner 
     assert.match(smoke, /tags:\n    - "k8s"\n    - "node"/);
     assert.match(smoke, /image: "registry\.example\.com\/node:20"/);
     assert.match(smoke, /Configure --gitlab-image with a Node 18\+ image/);
-    assert.match(smoke, /--package \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.4\.tgz/);
-    assert.doesNotMatch(smoke, /--package @jununfly\/zj-loop-core@0\.1\.4/);
+    assert.match(smoke, /--package \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.5\.tgz/);
+    assert.doesNotMatch(smoke, /--package @jununfly\/zj-loop-core@0\.1\.5/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -521,12 +521,12 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
       '--gitlab-image',
       'registry.example.com/node:20',
       '--gitlab-core-package',
-      './zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz',
+      './zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz',
     ]);
     assert.match(stdout, /zj-loop-init --upgrade gitlab-ci/);
     assert.match(stdout, /\[stage=Fallback\]/);
     assert.match(stdout, /\[image=registry\.example\.com\/node:20\]/);
-    assert.match(stdout, /\[core-package=\.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.4\.tgz\]/);
+    assert.match(stdout, /\[core-package=\.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.5\.tgz\]/);
     assert.match(stdout, /\[runner-tags=k8s\]/);
     assert.match(stdout, /backed up modified generated file: .*zj-loop-smoke\.yml → .*zj-loop-smoke\.yml\.bak/);
     assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
@@ -538,7 +538,7 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(upgraded, /stage: "Fallback"/);
     assert.match(upgraded, /tags:\n    - "k8s"/);
     assert.match(upgraded, /image: "registry\.example\.com\/node:20"/);
-    assert.match(upgraded, /--package \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.4\.tgz/);
+    assert.match(upgraded, /--package \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.5\.tgz/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

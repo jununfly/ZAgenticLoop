@@ -189,8 +189,8 @@ For unpublished dogfood or internal validation, render the core package source
 directly into generated GitLab fragments instead of editing CI YAML by hand:
 
 ```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz
 ```
 
 GitLab stage names are rendered at install time because older self-managed
@@ -275,9 +275,9 @@ bounded consumer outcomes. Side-effecting consumers still need explicit Route
 Table enablement:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route disable ci-sweeper
 ```
 
 Choose the first enabled path by route readiness, not by installation order.
@@ -418,8 +418,8 @@ See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patte
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
-| `@jununfly/zj-loop-core` | library + route CLIs | Shared registry, route decisions, consumer runners, project evidence, semantic queries, and CLI harness | `0.1.4` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, local runtime state, generated workflow bundle, budget, and run logs | `0.1.7` |
+| `@jununfly/zj-loop-core` | library + route CLIs | Shared registry, route decisions, consumer runners, project evidence, semantic queries, and CLI harness | `0.1.5` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, local runtime state, generated workflow bundle, budget, and run logs | `0.1.8` |
 | `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score, policy suggestions, and generated artifact checks | `0.1.4` |
 | `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by local/project registry, pattern, level, and cadence | `0.1.5` |
 | `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state, route table, generated workflows, and config | `0.1.3` |

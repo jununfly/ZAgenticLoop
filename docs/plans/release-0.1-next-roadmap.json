@@ -1,0 +1,179 @@
+{
+  "title": "ZAgenticLoop 0.1 next release",
+  "description": "Prepare and publish the next npm release after GitLab provider and closeout fixes.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "ZAgenticLoop 0.1 next release",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "发布范围与版本号确认",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "候选发布范围是什么？",
+          "answer": "优先候选为 @jununfly/zj-loop-core 与 @jununfly/zj-loop-init。",
+          "note": "原因：PR #96 改 core closeout/consumer runner；PR #98 改 GitLab init template 与 README/Quickstart。其他包 package version 与近期代码变更暂无直接发布必要。"
+        },
+        {
+          "q": "候选版本号是什么？",
+          "answer": "建议 core 从 0.1.4 升到 0.1.5，init 从 0.1.7 升到 0.1.8。",
+          "note": "需要先用 npm registry 确认目标版本未发布；发布前还需同步 README 版本表和 generated workflow/template pins。"
+        },
+        {
+          "q": "npm registry 当前版本确认结果是什么？",
+          "answer": "@jununfly/zj-loop-core 最新为 0.1.4，0.1.5 未发布；@jununfly/zj-loop-init 最新为 0.1.7，0.1.8 未发布。",
+          "note": "查询时间：2026-07-11 Asia/Shanghai；registry=https://registry.npmjs.org。"
+        },
+        {
+          "q": "发布范围是否限定为 core 0.1.5 与 init 0.1.8？",
+          "answer": "是。",
+          "note": "只发布 @jununfly/zj-loop-core@0.1.5 与 @jununfly/zj-loop-init@0.1.8；其他 release-managed packages 本轮不发布。"
+        }
+      ],
+      "notes": "Scope fixed: core 0.1.5 + init 0.1.8."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "发布准备修改与版本元数据",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3"
+      ],
+      "decisions": [
+        {
+          "q": "release-prep 是否同步更新 generated templates/workflows 与文档中的 core pin？",
+          "answer": "是。",
+          "note": "当 core bump 到 0.1.5，generated GitHub/GitLab templates、repo dogfood workflows、README/Quickstart 中的 core pin 必须同步到 0.1.5；否则 generated bundle release gate 会失败。"
+        },
+        {
+          "q": "release-prep PR合并后到core发布前是否接受生成workflow短暂pin到未发布0.1.5的窗口",
+          "answer": "接受",
+          "note": "gate要求生成模板/workflow pin与core package version一致；缓解方式是PR合并后立即发布core 0.1.5，并避免窗口期手动触发dogfood workflow。"
+        }
+      ],
+      "notes": "release-prep修改完成：版本号、生成模板/文档pin、release notes已更新；进入发布前验证。"
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "发布前本地与CI验证",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1"
+      ],
+      "decisions": [],
+      "notes": "发布前本地与CI等价验证完成，未发现阻塞。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "npm tag发布与工作流观察",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "发布后registry与文档状态验证",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "core与init版本号更新",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "core package/lockfile更新到0.1.5；init package/lockfile更新到0.1.8；core/init包级测试已通过并重新生成dist。"
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "生成模板与文档版本pin同步",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "README、Quickstart、GitHub workflow templates、repo dogfood workflows、init CLI默认GitLab core package、相关测试中的core pin已同步到0.1.5。"
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "变更日志与发布说明更新",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "新增RELEASE_NOTES_0.1.5_0.1.8.md，记录本轮只发布core/init、主要功能与发布顺序。"
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "release-ready与package级验证",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "验证通过：tools/zj-loop-core npm test；tools/zj-loop-init npm test；npm run test:release-workflows；npm run test:generated-bundle-release-gate；npm run test:provider-parity-gate；bash scripts/ci-validate-gates.sh；bash scripts/ci-audit-gates.sh；npm run test:release-ready；core/init npm pack --dry-run --json；git diff --check。"
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "core优先tag与发布工作流",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "init随后tag与发布工作流",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-11 01:20:13",
+    "updated": "2026-07-11 01:37:33",
+    "md_file": "docs/plans/release-0.1-next-roadmap.md"
+  }
+}
