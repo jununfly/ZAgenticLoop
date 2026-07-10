@@ -58,7 +58,7 @@
     "1-3": {
       "id": "1-3",
       "label": "Provider-specific artifact clarity",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -111,12 +111,12 @@
     "1-3-2": {
       "id": "1-3-2",
       "label": "Generate CI Sweeper dry-run Issue Fix Request artifacts for GitLab",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: make GitLab CI Sweeper dry-run validation expose a concrete Issue Fix Request artifact. Added request-body generation to generated GitLab CI Sweeper fragment with provider gitlab, CI project metadata, issue-fix-request.md, and issue-fix-request-result.json artifacts; tests assert the artifact paths and that the template avoids .github/workflows/. Verification: npm test in tools/zj-loop-init."
     },
     "1-4": {
       "id": "1-4",
@@ -154,7 +154,7 @@
   },
   "metadata": {
     "created": "2026-07-10 21:31:10",
-    "updated": "2026-07-10 21:52:28",
+    "updated": "2026-07-10 21:54:17",
     "md_file": "docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.md"
   }
 }
