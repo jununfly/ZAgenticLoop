@@ -1,0 +1,202 @@
+# GitLab Full Parity With GitHub Provider Baseline
+
+Source issue: https://github.com/jununfly/ZAgenticLoop/issues/87
+
+Activation:
+
+- Issue Fix Request: https://github.com/jununfly/ZAgenticLoop/issues/87#issuecomment-4932784285
+- Roadmap command: https://github.com/jununfly/ZAgenticLoop/issues/87#issuecomment-4932786315
+- Activation request: https://github.com/jununfly/ZAgenticLoop/issues/87#issuecomment-4932795218
+- Activation id: `act-87-4932786315-8c94c5b9`
+- Branch: `zjal/act-87-4932786315-8c94c5b9-gitlab-full-parity-with-github-baseline`
+
+## Contract
+
+```json
+{
+  "schema": "zj-loop.roadmap_activation_pr_contract.v1",
+  "activation_request_id": "act-87-4932786315-8c94c5b9",
+  "source_issue_url": "https://github.com/jununfly/ZAgenticLoop/issues/87",
+  "source_comment_url": "https://github.com/jununfly/ZAgenticLoop/issues/87#issuecomment-4932786315",
+  "route_id": "roadmap-sliced-development",
+  "consumer_id": "roadmap-sliced-development",
+  "branch_name": "zjal/act-87-4932786315-8c94c5b9-gitlab-full-parity-with-github-baseline",
+  "lifecycle_state": "requested",
+  "closeout_contract": {
+    "activation_carrier_issue": "87",
+    "branch_name": "zjal/act-87-4932786315-8c94c5b9-gitlab-full-parity-with-github-baseline",
+    "process_roadmap_path": "docs/plans/gitlab-full-parity-with-github-baseline.md"
+  }
+}
+```
+
+## Roadmap Goal
+
+Align GitLab support to the current GitHub provider baseline. The route chain is
+platform-neutral protocol; provider-specific implementations should be used only
+where platform behavior would otherwise mislead agents or users.
+
+Do not frame this as partial support. Work can be sliced and staged, but the
+target is GitLab full parity with the current GitHub-side capabilities.
+
+## Decisions
+
+- GitHub current implementation is the validate baseline.
+- Route protocol is platform-neutral.
+- Reuse shared abstract components where they do not obscure platform
+  semantics.
+- Provider-specific adapters are allowed where platform differences are
+  unavoidable.
+- Provider API contracts live first in `@jununfly/zj-loop-core`, with
+  split-friendly boundaries.
+- GitLab API calls use Node `fetch`; do not require `glab`.
+- Report-only routes may use low-permission CI context; side effects require
+  `GITLAB_TOKEN`.
+- Job logs carry concise summaries; canonical evidence lives in JSON artifacts.
+- Issue/MR notes carry request and live side-effect evidence only.
+- GitLab CI generated fragments live under `zj-loop/gitlab-ci/`.
+- Root `.gitlab-ci.yml` is created when absent; if present, default to next
+  steps instead of auto patching.
+- Route enablement changes only Route Table policy. Provider wiring is separate.
+- GitHub `workflow_dispatch` maps to GitLab manual pipeline job variables.
+- Roadmap activation parity includes GitLab issue note slash command,
+  provider adapter consumption, Activation Request note, branch/MR bootstrap,
+  and MR post-merge contract.
+- Post-merge closeout parity may do contract-authorized cleanup when guards
+  pass; the fixed phrase remains the fallback.
+- Add a provider parity gate.
+- Durable architecture goes to
+  `docs/designs/provider-adapter-parity-architecture.md`.
+
+## Completion Conditions
+
+- Durable provider parity architecture documents protocol versus provider
+  implementation boundaries.
+- GitHub baseline routes have an explicit GitLab parity row and target
+  capability.
+- `zj-loop-init` can install and upgrade GitLab provider wiring without
+  treating GitHub Actions as universal automation.
+- Generated GitLab CI templates cover the same route families as the GitHub
+  provider baseline.
+- GitLab Roadmap Activation, post-merge closeout, triage transition, CI
+  Sweeper, PR/MR steward, dependency sweeper, and changelog drafter paths have
+  deterministic scripts or adapters where suitable.
+- Provider parity gate prevents release when docs/templates/scripts drift.
+- README, Quickstart, durable docs, and dogfood reference explain provider
+  selection and full-parity expectations.
+
+## Slices
+
+### 1. Provider Parity Architecture And Matrix
+
+Status: completed
+
+Intent:
+
+- Add durable provider adapter parity architecture.
+- Separate platform-neutral route protocol from GitHub/GitLab adapter
+  implementations.
+- Add the full GitHub/GitLab route capability matrix.
+
+Allowed paths:
+
+- `docs/designs/provider-adapter-parity-architecture.md`
+- `docs/designs/dogfood-reference-case.md`
+- `docs/plans/gitlab-full-parity-with-github-baseline.md`
+
+Verification:
+
+- `git diff --check` — passed
+
+Evidence:
+
+- Added `docs/designs/provider-adapter-parity-architecture.md`.
+- Captured protocol/provider boundary rules, provider contract placement,
+  GitHub/GitLab capability matrix, GitLab CI scaffold contract, evidence
+  mapping, release gate expectations, and the current narrow GitHub Actions
+  refusal exception.
+- Preserved the current GitLab target-project pre-release evidence in
+  `docs/designs/dogfood-reference-case.md`.
+
+### 2. Provider Abstraction Core
+
+Status: pending
+
+Intent:
+
+- Add provider contracts and shared adapter boundaries in
+  `@jununfly/zj-loop-core`.
+- Keep route-specific lifecycle ownership outside a generic mega-dispatcher.
+
+### 3. GitLab CI Init And Upgrade
+
+Status: pending
+
+Intent:
+
+- Add `zj-loop-init` GitLab CI install and upgrade provider wiring.
+- Preserve default safety for existing `.gitlab-ci.yml`.
+
+### 4. GitLab CI Template Parity
+
+Status: pending
+
+Intent:
+
+- Add generated GitLab CI templates for every GitHub baseline route family.
+- Keep generated templates calling published package APIs and deterministic
+  scripts.
+
+### 5. GitLab Roadmap Activation Parity
+
+Status: pending
+
+Intent:
+
+- Implement GitLab issue note slash command parsing, Activation Request note
+  creation, branch/MR bootstrap, and MR handoff contract.
+
+### 6. GitLab Post-Merge Closeout Parity
+
+Status: pending
+
+Intent:
+
+- Implement GitLab MR post-merge closeout with contract-authorized branch
+  cleanup and carrier issue lifecycle notes.
+
+### 7. GitLab Issue Triage And CI Sweeper Parity
+
+Status: pending
+
+Intent:
+
+- Align issue backlog triage, confirmed triage transition, Issue Fix Request
+  carrier reuse, and CI Sweeper repair/escalation paths for GitLab.
+
+### 8. GitLab Review, Dependency, And Changelog Parity
+
+Status: pending
+
+Intent:
+
+- Align PR/MR steward, dependency sweeper, and changelog drafter route families
+  with GitLab provider semantics.
+
+### 9. Provider Parity Release Gate And Dogfood
+
+Status: pending
+
+Intent:
+
+- Add provider parity release gate.
+- Record GitLab target-project dogfood evidence.
+
+### 10. Docs, README, And Quickstart Provider Parity
+
+Status: pending
+
+Intent:
+
+- Update README, Quickstart, and durable docs for GitHub/GitLab provider
+  parity, install commands, and current route capability boundaries.

@@ -146,6 +146,37 @@ fixture, simulates an issue-comment slash command, verifies Activation Request
 creation, branch/PR contract evidence, duplicate handling, permission denial,
 disabled route denial, and loop marker detection.
 
+## GitLab Target-Project Pre-Release Evidence
+
+The provider-aware adoption path was verified before publishing by installing
+local packed tarballs into an external GitLab target project:
+
+- `jununfly-zj-loop-init-0.1.7.tgz`
+- `jununfly-zj-loop-core-0.1.4.tgz`
+
+The maintainer ran the target-project dogfood sequence from the GitLab project
+root:
+
+1. `zj-loop-init . --add github-actions`
+2. `zj-loop-init . --pattern daily-triage --tool codex`
+3. `zj-loop-init . --add route-table`
+4. `zj-loop-route status`
+5. `zj-loop-init . --upgrade github-actions`
+6. Optional `zj-loop-init . --add github-actions --force`
+
+Observed result:
+
+- detected GitLab projects refuse `--add github-actions` by default
+- detected GitLab projects refuse `--upgrade github-actions` by default
+- `daily-triage` local loop substrate initializes successfully
+- `zj-loop/zj-loop-route-table.yaml` is created or skipped deterministically
+- `zj-loop-route status` reads the generated Route Table successfully
+- `--force` remains an explicit provider-adapter override with warning output
+
+This is intentionally pre-release cross-repo dogfood evidence. It proves the
+GitLab-safe path without publishing an npm version first and without treating
+GitHub Actions as a universal provider adapter.
+
 ## Daily Triage Flow
 
 Daily Triage is the clearest self-running dogfood loop:
