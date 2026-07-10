@@ -4,7 +4,7 @@
 # zj-loop-template-hash: generated-by-zj-loop-init
 
 zj_loop_smoke:
-  stage: zj-loop
+  stage: __ZJ_LOOP_GITLAB_STAGE__
   image: node:22
   when: manual
   allow_failure: false

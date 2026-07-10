@@ -184,6 +184,16 @@ steps. Generated fragments live under `zj-loop/gitlab-ci/`, call pinned
 routes can run with normal CI context; issue notes, labels, branches, MRs, or
 cleanup need `GITLAB_TOKEN` and route-specific guards.
 
+GitLab stage names are rendered at install time because older self-managed
+GitLab versions validate stages before job variables exist. The default stage is
+`zj-loop`; if your project only exposes an existing stage such as `Fallback`,
+install or upgrade with:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
+```
+
 Current GitLab parity is provider-aware and intentionally explicit:
 
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,

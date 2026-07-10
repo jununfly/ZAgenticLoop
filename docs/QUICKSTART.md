@@ -81,6 +81,14 @@ Table consumers you intend to run. Report-only jobs can run without mutation
 tokens; issue notes, labels, branches, MRs, and cleanup require `GITLAB_TOKEN`
 plus route-specific guards.
 
+If your GitLab project has a fixed stage list, render the generated jobs into an
+existing stage instead of the default `zj-loop` stage:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
+```
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash

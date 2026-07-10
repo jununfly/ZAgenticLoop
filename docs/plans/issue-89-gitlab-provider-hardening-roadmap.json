@@ -124,12 +124,12 @@
     "1-2-1": {
       "id": "1-2-1",
       "label": "GitLab CI stage 配置化",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: make GitLab CI stage configurable at generation time. Implemented --gitlab-stage for zj-loop-init --add/--upgrade gitlab-ci; GitLab templates now render __ZJ_LOOP_GITLAB_STAGE__ into root stages and job stage fields; README/README.zh-CN/Quickstart document using --gitlab-stage Fallback for fixed-stage GitLab projects. Verification: npm test in tools/zj-loop-init; npm run check:zj-loop-init; npm run test:generated-bundle-release-gate; git diff --check."
     },
     "1-2-2": {
       "id": "1-2-2",
@@ -244,7 +244,7 @@
   },
   "metadata": {
     "created": "2026-07-10 18:02:19",
-    "updated": "2026-07-10 18:06:52",
+    "updated": "2026-07-10 18:13:58",
     "md_file": "docs/plans/issue-89-gitlab-provider-hardening-roadmap.md"
   }
 }

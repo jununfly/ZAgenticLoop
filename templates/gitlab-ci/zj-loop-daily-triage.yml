@@ -4,7 +4,7 @@
 # zj-loop-template-hash: generated-by-zj-loop-init
 
 zj_loop_daily_triage:
-  stage: zj-loop
+  stage: __ZJ_LOOP_GITLAB_STAGE__
   image: node:22
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
