@@ -6,14 +6,15 @@ Last run: 2026-07-10
 
 - Roadmap id: issue-89-gitlab-provider-hardening
 - Branch: zjal/issue-89-gitlab-provider-hardening
-- Status: in_progress
-- Current parent node: GitLab 全链路验证与 closeout
-- Current leaf: durable docs 与 PR closeout 吸收 GitLab 决策
+- Status: completed
+- Current parent node: closeout completed
+- Current leaf: none
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| issue-89-gitlab-provider-hardening-closeout | completed | Durable docs absorbed the provider parity gate, GitLab provider dogfood replay scope, Roadmap Activation MR to Post-Merge Closeout contract bridge, CI Sweeper GitLab path scope, and PR Steward MR evidence/refusal boundary; process roadmap files under `docs/plans/issue-89-gitlab-provider-hardening-roadmap.*` were deleted after closeout; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | gitlab-provider-dogfood-replay | completed | Added deterministic GitLab provider dogfood replay coverage for GitLab CI Sweeper fix scope, Roadmap Activation MR contract parsing into Post-Merge Closeout dry-run, and PR Steward MR dry-run/live-refusal boundaries; wired replay into `npm run test:provider-parity-gate`; provider parity gate now accepts configurable GitLab stage placeholders; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | pr-steward-provider-aware-review-labels | completed | PR Steward plans now describe source reviews as PR or MR based on provider metadata instead of hardcoding source PR/pr_number in escalation titles, repair commit titles, repair PR bodies, and escalation bodies; GitLab MR dry-run evidence is tested to say `MR #123` and avoid `source PR #unknown`; GitLab live review side effects remain refused; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
 | roadmap-activation-post-merge-contract-bridge | completed | Roadmap Activation PR/MR contract output now embeds a parseable `zj-loop.post-merge-contract` YAML block, so merged GitHub PRs and GitLab MRs can be consumed by Post-Merge Closeout without a separate human-added closeout contract; GitLab MR tests prove the generated body parses through Post-Merge Closeout and reaches dry-run with valid guards; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
@@ -87,6 +88,15 @@ Last run: 2026-07-10
 
 ## Closeout Notes
 
+- Issue #89 GitLab provider hardening completed on branch
+  `zjal/issue-89-gitlab-provider-hardening`. Durable decisions were absorbed
+  into `docs/designs/provider-adapter-parity-architecture.md`,
+  `docs/designs/dogfood-reference-case.md`, and
+  `docs/designs/route-consumer-execution-architecture.md`. Process roadmap
+  files `docs/plans/issue-89-gitlab-provider-hardening-roadmap.json` and
+  `docs/plans/issue-89-gitlab-provider-hardening-roadmap.md` were deleted.
+  Branch cleanup plan: delete `zjal/issue-89-gitlab-provider-hardening` after
+  human-reviewed PR merge.
 - Process roadmap `docs/plans/live-runner-upgrades-roadmap.md` was deleted
   after durable docs and consumer-owned state files absorbed the live/non-live
   capability matrix, runner evidence boundaries, and verification commands.
