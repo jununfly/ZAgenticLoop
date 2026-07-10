@@ -79,6 +79,19 @@ export function parseProviderReviewUrl(url) {
         url: parsed.url,
     };
 }
+export function buildProviderIssueUrl(input) {
+    const provider = input.provider === 'gitlab' ? 'gitlab' : input.provider === 'github' ? 'github' : null;
+    const projectPath = stripProjectPath(input.projectPath ?? input.repo ?? '');
+    const issue = Number(input.issue);
+    if (!provider || !projectPath || !Number.isInteger(issue))
+        return '';
+    const host = String(input.host ?? defaultProviderHost(provider)).trim().toLowerCase();
+    if (!host)
+        return '';
+    if (provider === 'github')
+        return `https://${host}/${projectPath}/issues/${issue}`;
+    return `https://${host}/${projectPath}/-/issues/${issue}`;
+}
 function parseProviderWebUrl(url) {
     const text = String(url ?? '').trim();
     if (!text)
@@ -104,4 +117,10 @@ function stripGitSuffix(input) {
 }
 function providerProjectPath(parts) {
     return parts.filter((part) => part !== '-').join('/');
+}
+function stripProjectPath(input) {
+    return String(input ?? '').replace(/^\/+|\/+$/g, '');
+}
+function defaultProviderHost(provider) {
+    return provider === 'github' ? 'github.com' : 'gitlab.com';
 }

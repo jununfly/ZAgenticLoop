@@ -6,6 +6,7 @@ import {
   validateLiveRunnerEvidence,
 } from './live-runner-contract.js';
 import { buildIssueFixRequestComment } from './issue-fix-request-contract.js';
+import { buildProviderIssueUrl } from './providers.js';
 import { RouteStatus } from './route.js';
 
 export const RECOMMENDED_TRIAGE_TRANSITION_SCHEMA = 'zj-loop.recommended_triage_transition.v1';
@@ -227,7 +228,7 @@ function commentFor(request: any, decisionResult: { status: string }) {
 
 function issueFixRequestFor(request: any, decisionResult: { status: string }, createdAt: string) {
   if (decisionResult.status !== 'confirmed' || request.recommended_state !== 'ready-for-agent') return null;
-  const sourceIssueUrl = request.source.issue_url || `https://github.com/${request.source.repo}/issues/${request.source.issue}`;
+  const sourceIssueUrl = sourceIssueUrlFor(request);
   return {
     schema: 'zj-loop.issue_fix_request.v1',
     request_id: `ifr_triage_${stableHash(request.dedupe_key)}`,
@@ -235,6 +236,7 @@ function issueFixRequestFor(request: any, decisionResult: { status: string }, cr
     created_at: createdAt,
     source_signal: {
       source: 'issue-backlog-triage',
+      provider: request.source.tracker ?? request.source.provider ?? 'github',
       repo: request.source.repo,
       issue: request.source.issue,
       url: sourceIssueUrl,
@@ -249,6 +251,7 @@ function issueFixRequestFor(request: any, decisionResult: { status: string }, cr
     carrier: {
       kind: 'source-issue-comment',
       reason: 'source issue already exists; keep lifecycle evidence and closeout on the user-visible issue',
+      provider: request.source.tracker ?? request.source.provider ?? 'github',
       repo: request.source.repo,
       issue: request.source.issue,
       url: sourceIssueUrl,
@@ -293,7 +296,7 @@ function buildEvidence(input: {
     source: {
       kind: 'recommended-triage-transition',
       id: input.request.request_id,
-      url: input.request.source?.issue_url,
+      url: sourceIssueUrlFor(input.request),
     },
     verifier_evidence: [
       { kind: 'route-table', route_id: ROUTE_ID, status: 'matched' },
@@ -308,6 +311,15 @@ function buildEvidence(input: {
       triage_comment_planned: input.confirmedTransition.triage_comment !== null,
       issue_fix_request_planned: input.confirmedTransition.issue_fix_request !== null,
     },
+  });
+}
+
+function sourceIssueUrlFor(request: any) {
+  return request.source?.issue_url || buildProviderIssueUrl({
+    provider: request.source?.tracker ?? request.source?.provider ?? 'github',
+    host: request.source?.host,
+    repo: request.source?.repo,
+    issue: request.source?.issue,
   });
 }
 

@@ -28,9 +28,17 @@ export interface ProviderReviewRef {
     kind: 'pull-request' | 'merge-request';
     url: string;
 }
+export interface BuildProviderIssueUrlInput {
+    provider?: ProviderKind | 'github' | 'gitlab';
+    host?: string;
+    projectPath?: string;
+    repo?: string;
+    issue?: number | string;
+}
 export declare function detectProviderKind(input?: ProviderDetectionInput): ProviderKind;
 export declare function parseGitRemoteRepository(remoteUrl: string, { providerHint }?: {
     providerHint?: ProviderKind;
 }): GitRemoteRepositoryRef | null;
 export declare function parseProviderIssueUrl(url: string): ProviderIssueRef | null;
 export declare function parseProviderReviewUrl(url: string): ProviderReviewRef | null;
+export declare function buildProviderIssueUrl(input: BuildProviderIssueUrlInput): string;

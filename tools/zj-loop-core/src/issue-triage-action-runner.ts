@@ -5,6 +5,7 @@ import {
   buildLiveRunnerEvidence,
   validateLiveRunnerEvidence,
 } from './live-runner-contract.js';
+import { buildProviderIssueUrl } from './providers.js';
 import { RouteStatus } from './route.js';
 
 const ROUTE_ID = 'issue-triage-action';
@@ -45,6 +46,7 @@ export function buildIssueTriageActionRequest(overrides: Record<string, unknown>
     schema: ISSUE_TRIAGE_ACTION_REQUEST_SCHEMA,
     request_id: 'itar_issue_123_needs_info',
     source_report_id: 'issue-backlog-triage:jununfly/ZAgenticLoop:open-issues:last-24h:missing-info-observation:issue-123',
+    tracker: 'github',
     repo: 'jununfly/ZAgenticLoop',
     issue: 123,
     source: 'issue-backlog-triage',
@@ -191,7 +193,13 @@ function missingVerifier(route: RouteStatus | undefined, request: any) {
 }
 
 function issueUrl(request: any) {
-  return request?.repo && request?.issue ? `https://github.com/${request.repo}/issues/${request.issue}` : '';
+  if (request?.issue_url) return request.issue_url;
+  return buildProviderIssueUrl({
+    provider: request?.tracker ?? request?.provider ?? 'github',
+    host: request?.host,
+    repo: request?.repo,
+    issue: request?.issue,
+  });
 }
 
 function buildIssueTriageActionDedupeKey(request: any) {

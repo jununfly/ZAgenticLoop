@@ -4,6 +4,7 @@ import path from 'node:path';
 import { buildIssueFixRequestComment, ISSUE_FIX_REQUEST_SCHEMA, } from './issue-fix-request-contract.js';
 export function buildCiSweeperIssueFixRequestBody(input) {
     const routeDecision = input.routeDecision ?? {};
+    const provider = input.provider ?? providerFor(routeDecision, input.sourceUrl);
     const signalId = String(routeDecision.signal_id ?? routeDecision.source_signal_id ?? `ci:${input.runId ?? 'unknown-run'}`);
     const dedupeKey = String(routeDecision.dedupe_key ?? `${input.repo}:ci-sweeper:${signalId}:generated-workflow`);
     const request = {
@@ -14,11 +15,13 @@ export function buildCiSweeperIssueFixRequestBody(input) {
         source_signal: {
             signal_id: signalId,
             source: 'ci',
+            provider,
             summary: String(routeDecision.subject ?? input.workflowName ?? 'CI workflow failure'),
             source_url: input.sourceUrl ?? routeDecision.source_url ?? '',
         },
         subject: {
             type: 'ci',
+            provider,
             repo: input.repo,
             workflow: input.workflowName ?? '',
             run_id: input.runId ?? routeDecision.source_run_id ?? '',
@@ -123,4 +126,16 @@ async function packageHasScript(root, directory, scriptName) {
 }
 function stableHash(value) {
     return createHash('sha256').update(value).digest('hex').slice(0, 12);
+}
+function providerFor(routeDecision, sourceUrl) {
+    const explicit = routeDecision?.provider ?? routeDecision?.source_provider;
+    if (explicit === 'gitlab')
+        return 'gitlab';
+    if (explicit === 'github')
+        return 'github';
+    const source = String(routeDecision?.source ?? '').toLowerCase();
+    const url = String(sourceUrl ?? routeDecision?.source_url ?? '').toLowerCase();
+    if (source.includes('gitlab') || url.includes('gitlab'))
+        return 'gitlab';
+    return 'github';
 }

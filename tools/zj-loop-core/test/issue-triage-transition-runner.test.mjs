@@ -55,6 +55,32 @@ test('Issue Triage Transition confirms ready-for-agent into Issue Fix Request ca
   assert.equal(result.confirmed_transition.issue_fix_request.carrier.independent_issue_allowed, false);
 });
 
+test('Issue Triage Transition preserves GitLab source issue carrier URLs', () => {
+  const request = buildRecommendedTriageTransitionFixture({
+    source: {
+      tracker: 'gitlab',
+      repo: 'group/subgroup/project',
+      issue: 126,
+      scan_window: 'open-issues:last-24h',
+    },
+    dedupe_key: 'issue-backlog-triage:group/subgroup/project:126:ready-for-agent:gitlab',
+  });
+  const result = runIssueTriageTransitionRunner({ route: ROUTE, request });
+
+  assert.equal(result.decision.status, 'confirmed');
+  assert.equal(result.evidence.source.url, 'https://gitlab.com/group/subgroup/project/-/issues/126');
+  assert.equal(result.confirmed_transition.issue_fix_request.source_signal.provider, 'gitlab');
+  assert.equal(
+    result.confirmed_transition.issue_fix_request.source_signal.url,
+    'https://gitlab.com/group/subgroup/project/-/issues/126',
+  );
+  assert.equal(result.confirmed_transition.issue_fix_request.carrier.provider, 'gitlab');
+  assert.equal(
+    result.confirmed_transition.issue_fix_request.carrier.url,
+    'https://gitlab.com/group/subgroup/project/-/issues/126',
+  );
+});
+
 test('Issue Triage Transition Issue Fix Request body carries a parseable request comment', () => {
   const result = runIssueTriageTransitionRunner({ route: ROUTE });
   const title = buildIssueTriageTransitionIssueFixRequestTitle(result.confirmed_transition.issue_fix_request);

@@ -120,6 +120,37 @@ test('CI Sweeper request body carries a parseable Issue Fix Request', () => {
   assert.equal(parsed.request.failure_policy.retry, 'new_request_only');
 });
 
+test('CI Sweeper request body preserves GitLab pipeline provider evidence', () => {
+  const body = buildCiSweeperIssueFixRequestBody({
+    repo: 'group/subgroup/project',
+    workflowName: 'zj_loop_ci_sweeper',
+    runId: '789',
+    sourceUrl: 'https://gitlab.com/group/subgroup/project/-/pipelines/789',
+    routeDecision: {
+      schema: 'zj-loop.route_decision.v1',
+      decision_id: 'rd_gitlab_pipeline_789',
+      signal_id: 'gitlab-pipeline:789',
+      source: 'gitlab-pipeline',
+      route: 'ci-sweeper',
+      request_kind: 'issue-fix-request',
+      requested_action: 'dispatch',
+      target_consumer: 'ci-sweeper',
+      allowed: true,
+      status: 'pending',
+      reason: 'route matched',
+      evidence: ['gitlab_pipeline:789'],
+      dedupe_key: 'group/subgroup/project:ci-sweeper:gitlab-pipeline:789:generated-workflow',
+      created_at: '2026-07-09T00:00:00Z',
+    },
+  });
+  const parsed = parseIssueFixRequestComments([{ id: 1, body }])[0];
+
+  assert.equal(parsed.validation.ok, true);
+  assert.equal(parsed.request.source_signal.provider, 'gitlab');
+  assert.equal(parsed.request.subject.provider, 'gitlab');
+  assert.equal(parsed.request.subject.source_url, 'https://gitlab.com/group/subgroup/project/-/pipelines/789');
+});
+
 test('zj-loop-ci-sweeper request-body CLI writes issue body', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-ci-sweeper-request-body-'));
   const routeDecisionPath = path.join(dir, 'route-decision.json');
@@ -159,6 +190,53 @@ test('zj-loop-ci-sweeper request-body CLI writes issue body', async () => {
     assert.equal(JSON.parse(result.stdout).written, true);
     const body = await readFile(outPath, 'utf8');
     assert.equal(parseIssueFixRequestComments([{ id: 1, body }])[0].validation.ok, true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-ci-sweeper request-body CLI accepts explicit GitLab provider', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-ci-sweeper-gitlab-request-body-'));
+  const routeDecisionPath = path.join(dir, 'route-decision.json');
+  const outPath = path.join(dir, 'issue-body.md');
+  await writeFile(routeDecisionPath, JSON.stringify({
+    schema: 'zj-loop.route_decision.v1',
+    decision_id: 'rd_gitlab_456',
+    signal_id: 'gitlab-pipeline:456',
+    source: 'pipeline',
+    route: 'ci-sweeper',
+    request_kind: 'issue-fix-request',
+    requested_action: 'dispatch',
+    target_consumer: 'ci-sweeper',
+    allowed: true,
+    status: 'pending',
+    reason: 'route matched',
+    evidence: ['pipeline:456'],
+    dedupe_key: 'group/project:ci-sweeper:gitlab-pipeline:456:generated-workflow',
+  }));
+  try {
+    const result = spawnSync(process.execPath, [
+      CI_SWEEPER_CLI,
+      'request-body',
+      '--route-decision',
+      routeDecisionPath,
+      '--repo',
+      'group/project',
+      '--provider',
+      'gitlab',
+      '--workflow',
+      'validate',
+      '--run-id',
+      '456',
+      '--out',
+      outPath,
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    const body = await readFile(outPath, 'utf8');
+    const parsed = parseIssueFixRequestComments([{ id: 1, body }])[0];
+    assert.equal(parsed.validation.ok, true);
+    assert.equal(parsed.request.subject.provider, 'gitlab');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildProviderIssueUrl,
   detectProviderKind,
   parseGitRemoteRepository,
   parseProviderIssueUrl,
@@ -70,6 +71,22 @@ test('parseProviderIssueUrl normalizes provider issue carriers', () => {
     issue: 42,
     url: 'https://gitlab.com/group/subgroup/project/-/issues/42',
   });
+});
+
+test('buildProviderIssueUrl formats GitHub, GitLab, and self-managed GitLab issue URLs', () => {
+  assert.equal(
+    buildProviderIssueUrl({ provider: 'github', repo: 'jununfly/ZAgenticLoop', issue: 87 }),
+    'https://github.com/jununfly/ZAgenticLoop/issues/87',
+  );
+  assert.equal(
+    buildProviderIssueUrl({ provider: 'gitlab', repo: 'group/subgroup/project', issue: 42 }),
+    'https://gitlab.com/group/subgroup/project/-/issues/42',
+  );
+  assert.equal(
+    buildProviderIssueUrl({ provider: 'gitlab', host: 'git.example.test', projectPath: 'team/project', issue: '9' }),
+    'https://git.example.test/team/project/-/issues/9',
+  );
+  assert.equal(buildProviderIssueUrl({ provider: 'manual', repo: 'team/project', issue: 9 }), '');
 });
 
 test('parseProviderReviewUrl distinguishes GitHub PRs and GitLab MRs', () => {

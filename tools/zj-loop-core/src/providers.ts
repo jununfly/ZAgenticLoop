@@ -33,6 +33,14 @@ export interface ProviderReviewRef {
   url: string;
 }
 
+export interface BuildProviderIssueUrlInput {
+  provider?: ProviderKind | 'github' | 'gitlab';
+  host?: string;
+  projectPath?: string;
+  repo?: string;
+  issue?: number | string;
+}
+
 export function detectProviderKind(input: ProviderDetectionInput = {}): ProviderKind {
   const remote = String(input.remote ?? '').toLowerCase();
   if (remote.includes('github.com') || input.githubActions === true) return 'github';
@@ -116,6 +124,19 @@ export function parseProviderReviewUrl(url: string): ProviderReviewRef | null {
   };
 }
 
+export function buildProviderIssueUrl(input: BuildProviderIssueUrlInput): string {
+  const provider = input.provider === 'gitlab' ? 'gitlab' : input.provider === 'github' ? 'github' : null;
+  const projectPath = stripProjectPath(input.projectPath ?? input.repo ?? '');
+  const issue = Number(input.issue);
+  if (!provider || !projectPath || !Number.isInteger(issue)) return '';
+
+  const host = String(input.host ?? defaultProviderHost(provider)).trim().toLowerCase();
+  if (!host) return '';
+
+  if (provider === 'github') return `https://${host}/${projectPath}/issues/${issue}`;
+  return `https://${host}/${projectPath}/-/issues/${issue}`;
+}
+
 function parseProviderWebUrl(url: string): {
   provider: 'github' | 'gitlab';
   host: string;
@@ -146,4 +167,12 @@ function stripGitSuffix(input: string): string {
 
 function providerProjectPath(parts: string[]): string {
   return parts.filter((part) => part !== '-').join('/');
+}
+
+function stripProjectPath(input: string): string {
+  return String(input ?? '').replace(/^\/+|\/+$/g, '');
+}
+
+function defaultProviderHost(provider: 'github' | 'gitlab'): string {
+  return provider === 'github' ? 'github.com' : 'gitlab.com';
 }

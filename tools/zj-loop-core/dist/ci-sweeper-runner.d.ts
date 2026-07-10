@@ -11,6 +11,7 @@ export type CiSweeperRepairPlan = {
 export declare function buildCiSweeperIssueFixRequestBody(input: {
     routeDecision: any;
     repo: string;
+    provider?: 'github' | 'gitlab';
     workflowName?: string;
     runId?: string;
     sourceUrl?: string;

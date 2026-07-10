@@ -39,11 +39,12 @@ else if (argv[0] === 'request-body') {
     process.exitCode = await runCli({
         name: 'zj-loop-ci-sweeper',
         description: 'Build CI Sweeper Issue Fix Request issue body from a Route Decision.',
-        usage: 'zj-loop-ci-sweeper request-body --route-decision <path> --repo <owner/repo> [--workflow <name>] [--run-id <id>] [--source-url <url>] [--out <path>] [--json]',
+        usage: 'zj-loop-ci-sweeper request-body --route-decision <path> --repo <owner/repo> [--provider github|gitlab] [--workflow <name>] [--run-id <id>] [--source-url <url>] [--out <path>] [--json]',
         options: [
             { name: 'command', type: 'positional', description: 'Command', default: 'request-body' },
             { name: 'route-decision', type: 'string', description: 'Route Decision JSON path' },
             { name: 'repo', type: 'string', description: 'Repository owner/name' },
+            { name: 'provider', type: 'string', description: 'Source provider: github or gitlab' },
             { name: 'workflow', type: 'string', description: 'Source workflow name' },
             { name: 'run-id', type: 'string', description: 'Source workflow run id' },
             { name: 'source-url', type: 'string', description: 'Source workflow run URL' },
@@ -59,6 +60,7 @@ else if (argv[0] === 'request-body') {
             const body = buildCiSweeperIssueFixRequestBody({
                 routeDecision,
                 repo: String(options.repo),
+                provider: options.provider === 'gitlab' ? 'gitlab' : options.provider === 'github' ? 'github' : undefined,
                 workflowName: typeof options.workflow === 'string' ? options.workflow : undefined,
                 runId: typeof options['run-id'] === 'string' ? options['run-id'] : undefined,
                 sourceUrl: typeof options['source-url'] === 'string' ? options['source-url'] : undefined,
