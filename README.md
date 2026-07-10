@@ -110,10 +110,8 @@ npx @jununfly/zj-goal-audit . --suggest
 When contributing from source, run the same tools from this monorepo:
 
 ```bash
-cd tools/zj-loop-init && npm ci && npm test && node dist/cli.js /path/to/project --pattern daily-triage --tool grok
-cd tools/zj-loop-cost && npm ci && npm test && node dist/cli.js /path/to/project --pattern daily-triage --level L1 --cadence 1d
-cd tools/zj-loop-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
-cd tools/zj-goal-audit && npm ci && npm test && node dist/cli.js /path/to/project --suggest
+cd tools/zj-loop-init && npm ci && npm test
+node dist/cli.js /path/to/project --pattern daily-triage --tool grok
 ```
 
 If `npx` stalls on package resolution, use an already installed binary
@@ -160,119 +158,60 @@ npx @jununfly/zj-loop-init . --add route-table
 npx @jununfly/zj-loop-audit . --suggest
 ```
 
-For GitLab, self-managed GitLab, or local/manual repositories, keep the first
-mile local and request-only: scaffold `zj-loop/`, review
-`zj-loop/zj-loop-route-table.yaml`, run audit, and enable only the consumers
-whose provider adapter is actually present. The GitHub Actions bundle below is
-a **GitHub provider adapter**, not the universal automation substrate.
-
-`zj-loop-init --add github-actions` refuses detected GitLab projects by
-default. Use `--force` only when the repository intentionally mirrors GitHub
-Actions despite GitLab evidence.
-
-Install the GitLab CI adapter in GitLab-hosted repositories:
+Then install the provider adapter that matches the repository:
 
 ```bash
+# GitHub-hosted repositories
+npx @jununfly/zj-loop-init . --add github-actions
+
+# GitLab-hosted or self-managed GitLab repositories
 npx @jununfly/zj-loop-init . --add gitlab-ci
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci
 ```
 
-If `.gitlab-ci.yml` is absent, init creates a root include file. If your project
-already has root GitLab CI, init leaves it in place and prints the include next
-steps. Generated fragments live under `zj-loop/gitlab-ci/`, call pinned
-`@jununfly/zj-loop-core` package commands, and upload JSON artifacts. Report
-routes can run with normal CI context; issue notes, labels, branches, MRs, or
-cleanup need `GITLAB_TOKEN` and route-specific guards.
-Post-merge cleanup resolves target branches as `ZJ_LOOP_TARGET_BRANCH` -> `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` -> `main`; set `ZJ_LOOP_TARGET_BRANCH` only for manual replay or non-standard MR metadata.
+The GitHub bundle is a GitHub provider adapter, not a universal automation
+substrate. `zj-loop-init --add github-actions` refuses detected GitLab projects
+by default; use `--force` only for intentional GitHub adapter mirroring.
 
-For unpublished dogfood or internal validation, render the core package source
-directly into generated GitLab fragments instead of editing CI YAML by hand:
+GitLab installation creates includeable fragments under `zj-loop/gitlab-ci/`;
+root `.gitlab-ci.yml` is created only when absent. Stage, runner tag, image,
+local tarball, and restricted-CI details are covered in
+[Quickstart](docs/QUICKSTART.md#gitlab-ci).
 
-```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz
-```
+### GitHub And GitLab Compared
 
-GitLab stage names are rendered at install time because older self-managed
-GitLab versions validate stages before job variables exist. The default stage is
-`zj-loop`; if your project only exposes an existing stage such as `Fallback`,
-install or upgrade with:
+GitHub and GitLab share the ZAgenticLoop route protocol. The same Route Table
+decides whether a signal is report-only, request-backed, activation-backed, or
+allowed to reach a consumer. Provider adapters only decide how that protocol is
+carried through each platform.
 
-```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-stage Fallback
-```
+| Area | Shared contract | GitHub adapter | GitLab adapter |
+|------|-----------------|----------------|----------------|
+| Automation surface | Generated jobs call published `@jununfly/zj-loop-*` commands and preserve JSON evidence. | Generated workflows live in `.github/workflows/zj-loop-*.yml` and run through GitHub Actions. | Generated fragments live in `zj-loop/gitlab-ci/`; init creates root `.gitlab-ci.yml` only when absent. |
+| Routing policy | `zj-loop/zj-loop-route-table.yaml` owns route enablement, mode, maturity, and confirmation phrases. | Workflow inputs and event context feed Route Decision evidence. | Pipeline variables, job context, and GitLab CI artifacts feed Route Decision evidence. |
+| Evidence carriers | Route Decision, request, claim, plan, runner, and closeout evidence stay replayable. | Issue/PR comments, workflow summaries, artifacts, branches, and PRs. | Issue/MR notes, job logs, artifacts, branches, and MRs. |
+| Review boundary | Fix and roadmap work must cross a review boundary before merge. | Pull Requests. | Merge Requests. |
+| Issue work | Existing source issues can carry request evidence instead of spawning duplicate carriers. | GitHub Issues and comments. | GitLab Issues and notes. |
+| Smoke path | Manual smoke should be the first provider check. | `ZJ Loop Smoke` workflow writes route and consumer evidence to the workflow summary. | Manual smoke job writes route and consumer evidence to job artifacts/logs. |
+| Configuration knobs | Package pins and Route Table state should be deterministic. | GitHub templates are rendered directly from `templates/github-actions/`. | GitLab templates additionally render stage, runner tags, image, and optional core package source. |
+| Current side-effect boundary | Report-only routes never mutate trackers; live routes require Route Table enablement and consumer guards. | The currently validated live paths are strongest on GitHub, including request creation, roadmap branch/PR bootstrap, and guarded post-merge cleanup. | GitLab carries provider-aware evidence and dry-run/request plans; live MR creation for several consumers is still explicitly refused until promoted. |
 
-If your GitLab runner requires tags, render them into every generated ZJ Loop job:
-
-```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-runner-tags k8s,node
-```
-
-If your runner cannot pull `node:22` from Docker Hub, render an internally
-pullable Node 18+ image instead. Generated jobs fail fast with a clear Node
-version message when the runtime is below Node 18:
-
-```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com/node:20
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-image registry.example.com/node:20
-```
-
-If you vendor local package tarballs under `zj-loop/vendor/`, `zj-loop-init`
-warns when common ignore rules such as `**/*.tgz` would keep them out of Git.
-Commit the required tarballs explicitly or add narrow exceptions:
-
-```gitignore
-!zj-loop/vendor/
-!zj-loop/vendor/*.tgz
-```
-
-The GitLab smoke job runs `@jununfly/zj-loop-audit` by default, so it still
-needs registry access unless the audit package is available in your environment.
-For a route-only smoke in restricted CI, set `ZJ_LOOP_RUN_AUDIT=0`; the job will
-still produce `route-decision.json` and `consumer-plan.json`.
-
-Vendored tarballs do not make the GitLab adapter fully offline by themselves:
-`npm exec` may still need registry access or a prepared npm cache for transitive
-dependencies. Treat full offline execution as a separate packaging decision.
-
-Current GitLab parity is provider-aware and intentionally explicit:
-
-- `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,
-  MR Steward, dependency sweeper, changelog drafter, roadmap activation, and
-  post-merge cleanup all have generated GitLab CI route surfaces.
-- GitLab jobs keep blocked/refused consumer plans observable by still uploading
-  replayable JSON artifacts. CI Sweeper also writes `issue-fix-request.md` and
-  `issue-fix-request-result.json` in dry-run validation so GitLab fix scope can
-  be inspected without creating a tracker item.
-- GitLab issue, MR, and pipeline URLs are carried as provider evidence in core
-  runners instead of falling back to GitHub URL shapes.
-- Live GitLab MR-creation side effects for PR/MR Steward, Dependency Sweeper,
-  and Changelog Drafter are refused with provider-layer evidence until their
-  GitLab API runners are explicitly promoted. This avoids quietly running
-  GitHub CLI actions against GitLab work.
+Use GitHub Actions when the repository is GitHub-hosted and you want the most
+complete live automation path today. Use GitLab CI when the repository is
+GitLab-hosted or self-managed GitLab and you want the same route protocol with
+GitLab-native evidence carriers. Do not install the GitHub adapter into a
+GitLab project unless the repository intentionally mirrors GitHub Actions.
 
 ## GitHub Actions Bundle
 
-Install the generated workflow-dispatch bundle in GitHub-hosted repositories
-when you want a repo-local smoke path and Route Table-controlled consumer
-workflows:
+Install the generated workflow-dispatch bundle in GitHub-hosted repositories:
 
 ```bash
 npx @jununfly/zj-loop-init . --add github-actions
 ```
 
 This creates `zj-loop-*.yml` workflows with pinned package versions and
-generated metadata. Only `manual-smoke-report` is intended to run safely by
-default. Use Route Table status as the selection menu; it shows each route's
-mode, runner maturity, readiness, and required confirmation phrase.
-`dogfood-verified` means the route has reference-repo evidence.
-`install-ready` means the generated bundle can scaffold route policy,
-workflows, package commands, and plan/report evidence in a user project.
-`execution-ready` means real signals can become durable request carriers and
-bounded consumer outcomes. Side-effecting consumers still need explicit Route
-Table enablement:
+generated metadata. Run `ZJ Loop Smoke` first, then inspect Route Table status
+before enabling side-effecting routes:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route status
@@ -280,8 +219,7 @@ npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route enable ci-sweeper
 npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route disable ci-sweeper
 ```
 
-Choose the first enabled path by route readiness, not by installation order.
-The first execution-ready route set now has two practical user-facing paths:
+The first execution-ready route set is request-backed:
 
 - `roadmap-sliced-development`: issue slash command to Activation Request to
   bounded roadmap branch/PR bootstrap.
@@ -294,64 +232,12 @@ The first execution-ready route set now has two practical user-facing paths:
 - `post-merge-roadmap-closeout`: merged Roadmap-Sliced PR to guarded dry-run
   closeout, with optional fixed-phrase live cleanup.
 
-Those paths are deliberately request-backed: report-only scanners recommend,
-confirmed transitions create durable request evidence, and execution consumers
-produce branches, PRs, repair plans, or closeout evidence inside their own
-authority boundary.
+Report-only scanners recommend; confirmed transitions create durable request
+evidence; execution consumers produce branches, PRs, repair plans, or closeout
+evidence inside their own authority boundary. For the complete route menu and
+safety boundaries, see [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md).
 
-Report-only routes are intentionally evidence-only; other action-capable routes
-such as `pr-steward-fix-request`, `dependency-sweeper`,
-`changelog-drafter-draft-request` and `issue-triage-action` become
-user-project live paths only after their generated workflow and packaged runner
-are marked `execution-ready`.
-
-Generated bundle route menu:
-
-| Route | Workflow | First use |
-|-------|----------|-----------|
-| `manual-smoke-report` | `zj-loop-smoke.yml` | Run first; confirms checkout, package pin, Route Decision, and audit surface. |
-| `ci-sweeper` | `zj-loop-ci-sweeper.yml` | Enable when you want CI failures converted into deterministic repair-plan evidence. |
-| `roadmap-sliced-development` | `zj-loop-roadmap-activation.yml` | Enable when issue comments should create Roadmap-Sliced activation requests. |
-| `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | Enable when PR check failures should create/consume independent fix requests. |
-| `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | Enable when dependency signals should become bounded fix-request repair plans. |
-| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | Enable when release-window evidence should produce draft evidence or draft PR plans. |
-| `issue-backlog-triage` | `zj-loop-issue-triage.yml` | Enable when open issues should produce recommended `zj-triage` transition requests without tracker mutation. |
-| `issue-triage-transition` | `zj-loop-issue-triage.yml` | Enable when maintainers should confirm recommended triage transitions and create request-only source issue request comments. |
-| `issue-triage-action` | `zj-loop-issue-triage.yml` | Enable for dry-run allowlisted label/comment action plans. |
-| `post-merge-roadmap-closeout` | `zj-loop-post-merge-cleanup.yml` | Enable after Roadmap-Sliced PRs carry closeout contracts. |
-
-Generated workflows should call the packaged consumer gate before any runner
-side effects. Action-capable routes should prefer their narrow command, while
-report-only routes may use the generic planner:
-
-```bash
-npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
-npx --yes --package @jununfly/zj-loop-core zj-loop-ci-sweeper plan --json
-npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --json
-npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
-```
-
-The plan blocks disabled routes, invalid execution contracts, and routes that
-are dogfood-verified or install-ready but not yet `execution-ready`.
-
-Before release, the generated-bundle gate checks workflow/template drift,
-`@jununfly/zj-loop-core` package pins, and Route Table readiness contracts:
-
-```bash
-npm run test:generated-bundle-release-gate
-npm run test:provider-parity-gate
-```
-
-Run the `ZJ Loop Smoke` workflow manually first, then audit:
-
-```bash
-npx @jununfly/zj-loop-audit . --suggest
-```
-
-For the complete user-project story and safety boundaries, see
-[User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md).
-
-Upgrade generated workflows intentionally:
+Upgrade generated workflows intentionally when package pins or templates change:
 
 ```bash
 npx @jununfly/zj-loop-init . --upgrade github-actions
@@ -361,21 +247,6 @@ If a generated workflow was edited locally, upgrade renames the old file with a
 `.bak` suffix and writes the new canonical file in place. Review both files
 before committing; deep project-specific workflow migration remains a maintainer
 decision.
-
-Current dogfood automation boundaries:
-
-| Consumer route | Current mode | What it can do today |
-|----------------|--------------|----------------------|
-| `ci-sweeper` | `live` | Create verifier-backed repair PRs or escalation evidence for narrow validate/audit failures. |
-| `roadmap-sliced-development` | `live` | Consume authorized activation comments and bootstrap a bounded roadmap branch/PR lifecycle. |
-| `post-merge-roadmap-closeout` | `dry-run` + contract-authorized live cleanup | Plan branch/issue cleanup after merged Roadmap-Sliced PRs; live cleanup can run automatically when the merged PR carries a valid closeout contract and all executor guards pass. Fixed-phrase confirmation remains as fallback. |
-| `dependency-sweeper` | `claim-only` with replayed runner | Claim eligible dependency fix requests and replay repair/escalation evidence; no live manifest edits or PRs yet. |
-| `pr-steward-fix-request` | `claim-only` with replayed runner | Claim eligible failed-PR-check requests and replay repair/escalation evidence; no source PR mutation. |
-| `changelog-drafter-draft-request` | `report-only` with replayed runner | Record draft request evidence and replay draft evidence/PR outcomes; no live changelog edits yet. |
-| `issue-backlog-triage` | `report-only` | Record recommended triage transition evidence and confirmation commands; no comments, labels, closes, or Issue Fix Requests until confirmed side effects are enabled. |
-| `issue-triage-transition` | `request-only` with replayed runner | Validate maintainer/collaborator confirmation and create/dedupe source issue Issue Fix Request comments for `ready-for-agent`; covered by `issue-backlog-triage -> issue-triage-transition` E2E replay; no live tracker label/state mutation yet. |
-| `issue-triage-action` | `dry-run` with replayed runner | Plan allowlisted labels or fixed comment templates; no live issue mutation yet. |
-| Report routes | `report-only` | Record evidence only. |
 
 ## From Plan Intake To Roadmap
 
