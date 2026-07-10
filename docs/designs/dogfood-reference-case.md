@@ -179,6 +179,19 @@ This is intentionally pre-release cross-repo dogfood evidence. It proves the
 GitLab-safe path without publishing an npm version first and without treating
 GitHub Actions as a universal provider adapter.
 
+Issue #92 extended the GitLab provider dogfood baseline after a downstream
+GitLab validation run. The follow-up hardening added:
+
+- `zj-loop-init --add/--upgrade gitlab-ci --gitlab-core-package <package>`
+  for local tarball or internal package-source validation without manual CI
+  search/replace
+- GitLab consumer-plan commands that keep blocked/refused plans observable as
+  `consumer-plan.json` artifacts
+- GitLab CI Sweeper dry-run request artifacts:
+  `issue-fix-request.md` and `issue-fix-request-result.json`
+- Post-Merge Closeout GitLab dry-run wording that uses MR/manual pipeline
+  language rather than GitHub Actions or PR-only wording
+
 ## Daily Triage Flow
 
 Daily Triage is the clearest self-running dogfood loop:

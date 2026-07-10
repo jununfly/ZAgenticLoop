@@ -118,8 +118,13 @@ Generated GitLab jobs should:
 
 - call published `@jununfly/zj-loop-*` package commands or APIs
 - pin package versions in generated snippets
+- allow the rendered core package source to be overridden for unpublished
+  dogfood validation, for example with
+  `--gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz`
 - emit concise job logs
 - upload canonical JSON evidence artifacts
+- keep blocked/refused consumer plans observable as JSON artifacts instead of
+  aborting before route-specific diagnostic artifacts are produced
 - use Route Table enablement for route side effects
 - require `GITLAB_TOKEN` before issue notes, labels, branches, MRs, or cleanup
 
@@ -161,9 +166,13 @@ dogfood replay covers:
 
 - GitLab CI Sweeper Issue Fix Request scope using `.gitlab-ci.yml` and
   `zj-loop/gitlab-ci/` instead of `.github/workflows/`
+- generated GitLab CI Sweeper dry-run artifacts including
+  `issue-fix-request.md` and `issue-fix-request-result.json`
 - Roadmap Activation MR contract output embedding a parseable
   `zj-loop.post-merge-contract` so Post-Merge Closeout can consume the merged MR
   without a separate human-added closeout contract
+- Post-Merge Closeout GitLab dry-run wording using MR/manual pipeline language
+  instead of GitHub Actions or PR-only wording
 - PR Steward GitLab MR dry-run evidence using MR vocabulary while live GitLab
   review side effects remain explicitly refused
 

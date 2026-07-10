@@ -134,12 +134,12 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "Update user-facing docs and durable architecture notes",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Commit intent: document GitLab adoption polish as durable user and architecture guidance. README, README.zh-CN, Quickstart, Provider Adapter Parity Architecture, and Dogfood Reference Case now cover --gitlab-core-package, blocked/refused consumer-plan artifact observability, GitLab CI Sweeper dry-run Issue Fix Request artifacts, and GitLab MR/manual pipeline closeout wording. Verification: npm run test:provider-parity-gate; git diff --check."
     },
     "1-4-2": {
       "id": "1-4-2",
@@ -154,7 +154,7 @@
   },
   "metadata": {
     "created": "2026-07-10 21:31:10",
-    "updated": "2026-07-10 21:54:17",
+    "updated": "2026-07-10 21:57:07",
     "md_file": "docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.md"
   }
 }
