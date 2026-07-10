@@ -4,8 +4,8 @@ Last run: 2026-07-10
 
 ## Current Roadmap
 
-- Roadmap id: issue-89-gitlab-provider-hardening
-- Branch: zjal/issue-89-gitlab-provider-hardening
+- Roadmap id: issue-92-gitlab-provider-adoption-polish
+- Branch: codex/issue-92-gitlab-provider-adoption-polish
 - Status: completed
 - Current parent node: closeout completed
 - Current leaf: none
@@ -14,6 +14,11 @@ Last run: 2026-07-10
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| issue-92-gitlab-provider-adoption-polish-closeout | completed | Durable docs absorbed the GitLab validation-friendly bundle decisions: configurable GitLab core package override for local tarball validation, preserved consumer-plan artifacts for blocked/refused GitLab plans, provider-specific GitLab/MR wording in closeout evidence, CI Sweeper GitLab Issue Fix Request dry-run artifacts, and README/Quickstart guidance for validating unpublished packages in GitLab projects. Process roadmap files under `docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.*` were deleted after closeout. Verification: `npm test` in `tools/zj-loop-init`; `npm test` in `tools/zj-loop-core`; `npm run test:provider-parity-gate`; `bash scripts/ci-audit-gates.sh`; `bash scripts/ci-validate-gates.sh`; `git diff --check` | pending |
+| gitlab-validation-friendly-bundle | completed | `zj-loop-init --add/--upgrade gitlab-ci` accepts `--gitlab-core-package` so target GitLab projects can validate unpublished local or vendored `@jununfly/zj-loop-core` packages; generated GitLab CI templates render the package override consistently; docs show the `npm pack` plus local tarball install path; `npm test` in `tools/zj-loop-init`; `git diff --check` | `e928e89`, `6bec9c6` |
+| gitlab-consumer-artifact-observability | completed | GitLab generated consumer jobs now preserve `consumer-plan.json` artifacts even when route plans are blocked/refused, and GitLab CI Sweeper dry-run writes `issue-fix-request.md` plus `issue-fix-request-result.json`; provider parity tests cover the observable artifact contract; `npm test` in `tools/zj-loop-init`; `npm run test:provider-parity-gate`; `git diff --check` | `78c895d`, `8999a33` |
+| gitlab-provider-wording-closeout | completed | Post-Merge Closeout dry-run evidence now uses GitLab MR/manual pipeline wording when the provider is GitLab, avoiding GitHub Actions, workflow_dispatch, and PR-only phrasing in GitLab validation output; `npm test` in `tools/zj-loop-core`; `git diff --check` | `040ecbe` |
+| issue-92-request-consumption | completed | Consumed #92 Issue Fix Request `ifr_triage_798811d9a6aa` into Roadmap-Sliced Development on branch `codex/issue-92-gitlab-provider-adoption-polish`; initialized and executed process roadmap `docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.json`; branch prefix exception recorded because sandbox prevented creating `zjal/issue-92-gitlab-provider-adoption-polish`; lifecycle comment: https://github.com/jununfly/ZAgenticLoop/issues/92#issuecomment-4935927474; `python /Users/bilibili/.codex/skills/zj-roadmap-driven/roadmap_cli.py validate docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.json`; `git diff --check` | `a3cc85f` |
 | issue-89-gitlab-provider-hardening-closeout | completed | Durable docs absorbed the provider parity gate, GitLab provider dogfood replay scope, Roadmap Activation MR to Post-Merge Closeout contract bridge, CI Sweeper GitLab path scope, and PR Steward MR evidence/refusal boundary; process roadmap files under `docs/plans/issue-89-gitlab-provider-hardening-roadmap.*` were deleted after closeout; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | gitlab-provider-dogfood-replay | completed | Added deterministic GitLab provider dogfood replay coverage for GitLab CI Sweeper fix scope, Roadmap Activation MR contract parsing into Post-Merge Closeout dry-run, and PR Steward MR dry-run/live-refusal boundaries; wired replay into `npm run test:provider-parity-gate`; provider parity gate now accepts configurable GitLab stage placeholders; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | pr-steward-provider-aware-review-labels | completed | PR Steward plans now describe source reviews as PR or MR based on provider metadata instead of hardcoding source PR/pr_number in escalation titles, repair commit titles, repair PR bodies, and escalation bodies; GitLab MR dry-run evidence is tested to say `MR #123` and avoid `source PR #unknown`; GitLab live review side effects remain refused; `npm run build` in `tools/zj-loop-core`; `npm test` in `tools/zj-loop-core`; `git diff --check` | pending |
@@ -88,6 +93,16 @@ Last run: 2026-07-10
 
 ## Closeout Notes
 
+- Issue #92 GitLab provider adoption polish completed on branch
+  `codex/issue-92-gitlab-provider-adoption-polish`. Durable decisions were
+  absorbed into `README.md`, `README.zh-CN.md`, `docs/QUICKSTART.md`,
+  `docs/designs/provider-adapter-parity-architecture.md`, and
+  `docs/designs/dogfood-reference-case.md`. Process roadmap files
+  `docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.json` and
+  `docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.md` were
+  deleted. Branch cleanup plan: delete
+  `codex/issue-92-gitlab-provider-adoption-polish` after human-reviewed PR
+  merge.
 - Issue #89 GitLab provider hardening completed on branch
   `zjal/issue-89-gitlab-provider-hardening`. Durable decisions were absorbed
   into `docs/designs/provider-adapter-parity-architecture.md`,

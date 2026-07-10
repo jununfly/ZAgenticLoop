@@ -11,13 +11,17 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     ZJ_LOOP_SOURCE_URL: "$CI_PIPELINE_URL"
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
-    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch ci-sweeper --source gitlab-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json
-    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-ci-sweeper plan --root . --source gitlab-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch ci-sweeper --source gitlab-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-ci-sweeper plan --root . --source gitlab-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json || true
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-ci-sweeper request-body --route-decision route-decision.json --repo "$CI_PROJECT_PATH" --provider gitlab --workflow "zj_loop_ci_sweeper" --run-id "${CI_PIPELINE_ID:-manual}" --source-url "${ZJ_LOOP_SOURCE_URL:-$CI_PIPELINE_URL}" --out issue-fix-request.md --json > issue-fix-request-result.json || true
     - cat route-decision.json
     - cat consumer-plan.json
+    - cat issue-fix-request-result.json
   artifacts:
     when: always
     expire_in: 7 days
     paths:
       - route-decision.json
       - consumer-plan.json
+      - issue-fix-request.md
+      - issue-fix-request-result.json

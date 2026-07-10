@@ -184,6 +184,14 @@ steps. Generated fragments live under `zj-loop/gitlab-ci/`, call pinned
 routes can run with normal CI context; issue notes, labels, branches, MRs, or
 cleanup need `GITLAB_TOKEN` and route-specific guards.
 
+For unpublished dogfood or internal validation, render the core package source
+directly into generated GitLab fragments instead of editing CI YAML by hand:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz
+```
+
 GitLab stage names are rendered at install time because older self-managed
 GitLab versions validate stages before job variables exist. The default stage is
 `zj-loop`; if your project only exposes an existing stage such as `Fallback`,
@@ -233,6 +241,10 @@ Current GitLab parity is provider-aware and intentionally explicit:
 - `manual-smoke-report`, `daily-triage-report`, issue triage, CI Sweeper,
   MR Steward, dependency sweeper, changelog drafter, roadmap activation, and
   post-merge cleanup all have generated GitLab CI route surfaces.
+- GitLab jobs keep blocked/refused consumer plans observable by still uploading
+  replayable JSON artifacts. CI Sweeper also writes `issue-fix-request.md` and
+  `issue-fix-request-result.json` in dry-run validation so GitLab fix scope can
+  be inspected without creating a tracker item.
 - GitLab issue, MR, and pipeline URLs are carried as provider evidence in core
   runners instead of falling back to GitHub URL shapes.
 - Live GitLab MR-creation side effects for PR/MR Steward, Dependency Sweeper,

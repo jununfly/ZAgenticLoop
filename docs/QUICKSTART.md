@@ -81,6 +81,14 @@ Table consumers you intend to run. Report-only jobs can run without mutation
 tokens; issue notes, labels, branches, MRs, and cleanup require `GITLAB_TOKEN`
 plus route-specific guards.
 
+For unpublished dogfood or internal validation, render a local package tarball
+as the GitLab core package source:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.4.tgz
+```
+
 If your GitLab project has a fixed stage list, render the generated jobs into an
 existing stage instead of the default `zj-loop` stage:
 
@@ -318,6 +326,12 @@ first choices are still `manual-smoke-report`, `issue-backlog-triage`, and
 GitLab URLs in evidence; live GitLab MR creation for PR/MR Steward, Dependency
 Sweeper, and Changelog Drafter is explicitly refused until those GitLab API
 runners are promoted.
+
+For dry-run validation, blocked/refused consumer plans are still uploaded as
+`consumer-plan.json` so the failure is replayable. The GitLab CI Sweeper job
+also emits `issue-fix-request.md` and `issue-fix-request-result.json`, allowing
+you to inspect GitLab-specific fix scope such as `.gitlab-ci.yml` and
+`zj-loop/gitlab-ci/` without creating a tracker item.
 
 Upgrade generated GitLab CI fragments when package pins or templates change:
 

@@ -323,7 +323,9 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
     contractPlan,
     executorGuards,
     confirmation: buildLiveCleanupConfirmation({
-      prNumber: pr.number ?? null,
+      provider: pr.provider ?? 'github',
+      reviewKind: pr.reviewKind ?? 'pull-request',
+      reviewNumber: pr.number ?? null,
       carrierIssue,
       contractAuthorized: executable,
     }),
@@ -333,15 +335,19 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
 }
 
 function buildLiveCleanupConfirmation(
-  input: { prNumber: number | null; carrierIssue: number | null; contractAuthorized: boolean },
+  input: {
+    provider: 'github' | 'gitlab';
+    reviewKind: 'pull-request' | 'merge-request';
+    reviewNumber: number | null;
+    carrierIssue: number | null;
+    contractAuthorized: boolean;
+  },
 ): PostMergeCloseoutPlan['confirmation'] {
+  const review = reviewLabel(input.provider, input.reviewKind, input.reviewNumber);
   return {
     required: !input.contractAuthorized,
     authorization_source: input.contractAuthorized ? 'merged-pr-contract' : 'fixed-phrase',
-    confirmation_location: [
-      'Codex chat reply when a local maintainer is operating the closeout CLI',
-      'workflow_dispatch input confirm_live_cleanup when using GitHub Actions',
-    ],
+    confirmation_location: confirmationLocationsFor(input.provider),
     required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
     side_effects: [
       'switch local checkout to main and fast-forward from origin/main',
@@ -351,14 +357,36 @@ function buildLiveCleanupConfirmation(
       `close carrier issue #${input.carrierIssue ?? 'unknown'}`,
     ],
     why_required: input.contractAuthorized
-      ? 'No extra confirmation is required: the merged PR contains a valid post-merge contract and all executor guards passed.'
-      : 'Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable when merged-PR contract authorization is unavailable.',
+      ? `No extra confirmation is required: the merged ${review} contains a valid post-merge contract and all executor guards passed.`
+      : `Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable when merged ${review} contract authorization is unavailable.`,
     audit_target: [
-      `merged PR #${input.prNumber ?? 'unknown'}`,
+      `merged ${review}`,
       `carrier issue #${input.carrierIssue ?? 'unknown'}`,
       'post-merge closeout JSON plan',
     ],
   };
+}
+
+function confirmationLocationsFor(provider: 'github' | 'gitlab'): string[] {
+  if (provider === 'gitlab') {
+    return [
+      'Codex chat reply when a local maintainer is operating the closeout CLI',
+      'GitLab manual pipeline variable ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION',
+    ];
+  }
+  return [
+    'Codex chat reply when a local maintainer is operating the closeout CLI',
+    'workflow_dispatch input confirm_live_cleanup when using GitHub Actions',
+  ];
+}
+
+function reviewLabel(
+  provider: 'github' | 'gitlab',
+  reviewKind: 'pull-request' | 'merge-request',
+  number: number | null | undefined,
+): string {
+  const prefix = provider === 'gitlab' || reviewKind === 'merge-request' ? 'MR' : 'PR';
+  return `${prefix} #${number ?? 'unknown'}`;
 }
 
 export function buildPostMergeLiveRunnerEvidence(
@@ -497,6 +525,7 @@ export async function executePostMergeRoadmapCloseout(
 }
 
 export function buildCloseoutEvidenceComment(plan: PostMergeCloseoutPlan) {
+  const review = reviewLabel(plan.review.provider, plan.review.kind, plan.review.number);
   const fields = [
     ['kind', 'zj-loop.post-merge-closeout-executed'],
     ['version', CLOSEOUT_EXECUTOR_VERSION],
@@ -512,7 +541,7 @@ export function buildCloseoutEvidenceComment(plan: PostMergeCloseoutPlan) {
     ...fields.map(([key, value]) => `${key}: ${value}`),
     '-->',
     '',
-    `- PR: #${plan.pr.number}`,
+    `- Review: ${review}`,
     `- Roadmap branch: \`${plan.roadmap.branch}\``,
     `- Carrier issue: #${plan.carrier.issue}`,
     '- Cleanup: merged roadmap branch deleted when present; carrier issue closing follows this evidence comment.',
@@ -520,10 +549,11 @@ export function buildCloseoutEvidenceComment(plan: PostMergeCloseoutPlan) {
 }
 
 export function buildCarrierCloseComment(plan: PostMergeCloseoutPlan) {
+  const review = reviewLabel(plan.review.provider, plan.review.kind, plan.review.number);
   return [
     'Closing this Roadmap-Sliced Development activation carrier after post-merge closeout.',
     '',
-    `- PR: #${plan.pr.number}`,
+    `- Review: ${review}`,
     `- Roadmap branch: \`${plan.roadmap.branch}\``,
     '- Contract guard: valid `zj-loop.post-merge-contract` with `no_pending_followups: true`.',
   ].join('\n');
@@ -537,6 +567,7 @@ export function buildDryRunEvidenceComment(
   }: { artifactName?: string; liveCommand?: string } = {},
 ): string {
   const command = liveCommand ?? buildLiveCommand(plan);
+  const review = reviewLabel(plan.review.provider, plan.review.kind, plan.review.number);
   const passedGuards = plan.executorGuards.filter((guard) => guard.pass).length;
   const totalGuards = plan.executorGuards.length;
   const fields = [
@@ -563,7 +594,7 @@ export function buildDryRunEvidenceComment(
     ...fields.map(([key, value]) => `${key}: ${value}`),
     '-->',
     '',
-    `- PR: #${plan.pr.number}`,
+    `- Review: ${review}`,
     `- Status: \`${plan.status}\``,
     `- Roadmap branch: ${plan.roadmap.branch ? `\`${plan.roadmap.branch}\`` : 'not available'}`,
     `- Carrier issue: ${plan.carrier.issue ? `#${plan.carrier.issue}` : 'not available'}`,
@@ -594,6 +625,17 @@ export function buildDryRunEvidenceComment(
 }
 
 export function buildLiveCommand(plan: PostMergeCloseoutPlan): string {
+  if (plan.review.provider === 'gitlab') {
+    const args = [
+      'Run GitLab manual job zj_loop_post_merge_cleanup',
+      `ZJ_LOOP_MERGE_REQUEST_IID=${plan.review.number ?? 'unknown'}`,
+      `ZJ_LOOP_CARRIER_ISSUE=${plan.carrier.issue ?? 'unknown'}`,
+    ];
+    if (plan.confirmation.required) {
+      args.push(`ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION=${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+    }
+    return args.join(' ');
+  }
   const args = [
     'zj-loop-post-merge-closeout live-closeout',
     `--pr ${plan.pr.number}`,
