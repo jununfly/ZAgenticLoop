@@ -102,6 +102,7 @@ export function buildDependencySweeperExecutionPlan(input: {
 } = {}) {
   const validation = validateDependencySweeperLiveRequest(input.request);
   const subject = input.request?.subject ?? {};
+  const provider = providerForRequest(input.request);
   const safePackage = slug(subject.package_name || 'unknown-package');
   const safeVersion = slug(subject.target_version || 'unknown-version');
   const branch = `automated/dependency-sweeper-${safePackage}-${safeVersion}-${shortHash(input.request?.dedupe_key ?? '')}`;
@@ -117,6 +118,9 @@ export function buildDependencySweeperExecutionPlan(input: {
   if (input.live && input.confirmationPhrase !== DEPENDENCY_SWEEPER_CONFIRMATION_PHRASE) {
     refusals.push({ layer: 'operator', reason: 'fixed confirmation phrase is required for live repair' });
   }
+  if (input.live && provider === 'gitlab') {
+    refusals.push({ layer: 'provider', reason: 'gitlab-live-repair-mr-side-effects-not-enabled' });
+  }
 
   const executable = refusals.length === 0;
 
@@ -130,7 +134,9 @@ export function buildDependencySweeperExecutionPlan(input: {
     created_at: input.createdAt ?? new Date().toISOString(),
     request_id: input.request?.request_id ?? '',
     dedupe_key: input.request?.dedupe_key ?? '',
+    provider,
     subject: {
+      provider,
       ecosystem: subject.ecosystem ?? '',
       package_name: subject.package_name ?? '',
       current_version: subject.current_version ?? '',
@@ -365,4 +371,9 @@ function shortHash(value: string) {
 
 function extractFirstUrl(text: string) {
   return String(text ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
+}
+
+function providerForRequest(request: any): 'github' | 'gitlab' {
+  const provider = request?.subject?.provider ?? request?.source_signal?.provider;
+  return provider === 'gitlab' ? 'gitlab' : 'github';
 }

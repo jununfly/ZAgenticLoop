@@ -30,7 +30,9 @@ export declare function buildDependencySweeperExecutionPlan(input?: {
     created_at: string;
     request_id: any;
     dedupe_key: any;
+    provider: "github" | "gitlab";
     subject: {
+        provider: "github" | "gitlab";
         ecosystem: any;
         package_name: any;
         current_version: any;

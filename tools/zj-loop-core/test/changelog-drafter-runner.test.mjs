@@ -77,6 +77,30 @@ test('Changelog Drafter builds evidence and PR draft plans', () => {
   assert.ok(pr.actions.some((action) => action.name === 'require-draft-diff'));
 });
 
+test('Changelog Drafter carries GitLab release window and refuses live draft MR side effects', () => {
+  const request = draftRequest({
+    release_window: {
+      provider: 'gitlab',
+      repo: 'group/project',
+    },
+  });
+  const evidence = buildChangelogDrafterExecutionPlan({
+    draftRequest: request,
+    draftMode: 'evidence',
+  });
+  const pr = buildChangelogDrafterExecutionPlan({
+    draftRequest: request,
+    draftMode: 'pr',
+    live: true,
+    confirmationPhrase: CHANGELOG_DRAFTER_CONFIRMATION_PHRASE,
+  });
+
+  assert.equal(validateChangelogDrafterLiveRequest(request).ok, true);
+  assert.equal(evidence.release_window.provider, 'gitlab');
+  assert.equal(pr.status, 'refused');
+  assert.ok(pr.refusals.some((item) => item.reason === 'gitlab-live-draft-mr-side-effects-not-enabled'));
+});
+
 test('Changelog Drafter live execution records draft PR without release side effects', async () => {
   const plan = buildChangelogDrafterExecutionPlan({
     draftRequest: draftRequest(),
