@@ -62,7 +62,7 @@ maintaining starter-specific copies:
 npx @jununfly/zj-loop-init . --add route-table
 ```
 
-Install the portable GitHub Actions workflow-dispatch bundle with:
+Install the GitHub provider workflow-dispatch adapter with:
 
 ```bash
 npx @jununfly/zj-loop-init . --add github-actions
@@ -72,6 +72,18 @@ This writes the full known workflow bundle to `.github/workflows/`. The bundle
 includes a manual smoke/report-only workflow plus allowlisted consumer workflow
 templates. Side-effecting consumers still require explicit Route Table
 enablement; generated workflow files alone do not authorize side effects.
+
+For GitLab, self-managed GitLab, and local/manual projects, start with the
+portable local substrate and route table instead:
+
+```bash
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+npx @jununfly/zj-loop-init . --add route-table
+```
+
+`--add github-actions` and `--upgrade github-actions` refuse detected GitLab
+projects by default. Use `--force` only when the project intentionally mirrors
+GitHub Actions despite GitLab evidence.
 
 Existing generated files are skipped by default. Use `--force` only when you
 intend to overwrite an existing workflow:

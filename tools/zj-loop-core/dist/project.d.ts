@@ -18,6 +18,7 @@ export declare const LOOP_CONFIG_FILE_CANDIDATES: readonly ["zj-loop/ZJ-LOOP.md"
 export declare const DEFAULT_SAFETY_FILES: readonly ["zj-loop/zj-loop-safety.md"];
 export declare const DEFAULT_ROUTE_TABLE_FILES: readonly ["zj-loop/zj-loop-route-table.yaml"];
 export declare const DEFAULT_MCP_FILES: readonly [".mcp.json", "mcp.json", ".mcp/config.json"];
+export type ProjectProviderKind = 'github' | 'gitlab' | 'manual';
 export declare const DEFAULT_LOOP_SKILL_NAMES: readonly ["zj-loop-triage", "zj-minimal-fix", "zj-loop-verifier", "zj-pr-review-triage", "zj-ci-triage", "zj-post-merge-scan", "zj-dependency-triage", "zj-rebase-and-clean", "zj-changelog-scan", "zj-loop-constraints", "zj-loop-budget", "zj-draft-release-notes", "zj-issue-triage"];
 export interface ProjectEvidenceFacts {
     statePaths: string[];
@@ -33,6 +34,13 @@ export interface ProjectEvidenceFacts {
     github: {
         present: boolean;
         workflows: boolean;
+    };
+    provider: {
+        kind: ProjectProviderKind;
+        remote: string;
+        githubActions: boolean;
+        gitlabCi: boolean;
+        glabMentioned: boolean;
     };
     skillNames: string[];
     loopSkillNames: string[];
@@ -58,3 +66,9 @@ export declare function listProjectSkillNames(fs: ProjectFileSystem, options?: {
     agentDirs?: readonly string[];
 }): Promise<string[]>;
 export declare function collectProjectEvidenceFacts(fs: ProjectFileSystem): Promise<ProjectEvidenceFacts>;
+export declare function detectProjectProvider(input: {
+    remote?: string;
+    githubActions?: boolean;
+    gitlabCi?: boolean;
+    glabMentioned?: boolean;
+}): ProjectProviderKind;

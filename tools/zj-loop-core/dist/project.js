@@ -145,6 +145,18 @@ export async function collectProjectEvidenceFacts(fs) {
     const missingRequiredLoopFiles = DEFAULT_REQUIRED_LOOP_FILES.filter((requiredFile) => !requiredLoopFiles.includes(requiredFile));
     const loopConfig = await readFirstProjectText(fs, LOOP_CONFIG_FILE_CANDIDATES);
     const skillNames = await listProjectSkillNames(fs);
+    const githubPresent = await fs.exists('.github');
+    const githubWorkflows = await fs.exists('.github/workflows');
+    const gitlabCi = await fs.exists('.gitlab-ci.yml');
+    const gitConfig = await fs.readTextIfExists('.git/config');
+    const remote = extractOriginRemote(gitConfig ?? '');
+    const glabMentioned = await hasGlabMention(fs, loopConfig?.content ?? '');
+    const provider = detectProjectProvider({
+        remote,
+        githubActions: githubWorkflows,
+        gitlabCi,
+        glabMentioned,
+    });
     return {
         statePaths,
         requiredLoopFiles,
@@ -157,8 +169,15 @@ export async function collectProjectEvidenceFacts(fs) {
             present: await hasAnyProjectPath(fs, ['AGENTS.md', 'CLAUDE.md']),
         },
         github: {
-            present: await fs.exists('.github'),
-            workflows: await fs.exists('.github/workflows'),
+            present: githubPresent,
+            workflows: githubWorkflows,
+        },
+        provider: {
+            kind: provider,
+            remote,
+            githubActions: githubWorkflows,
+            gitlabCi,
+            glabMentioned,
         },
         skillNames,
         loopSkillNames: skillNames.filter((skillName) => DEFAULT_LOOP_SKILL_NAMES.includes(skillName)),
@@ -172,4 +191,41 @@ export async function collectProjectEvidenceFacts(fs) {
             filePresent: await hasAnyProjectPath(fs, DEFAULT_MCP_FILES),
         },
     };
+}
+export function detectProjectProvider(input) {
+    const remote = String(input.remote ?? '').toLowerCase();
+    if (remote.includes('github.com') || input.githubActions === true)
+        return 'github';
+    if (remote.includes('gitlab') || input.gitlabCi === true || input.glabMentioned === true)
+        return 'gitlab';
+    return 'manual';
+}
+function extractOriginRemote(gitConfig) {
+    const lines = String(gitConfig ?? '').split(/\r?\n/);
+    let inOrigin = false;
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (/^\[remote\s+"origin"\]$/.test(trimmed)) {
+            inOrigin = true;
+            continue;
+        }
+        if (/^\[.+\]$/.test(trimmed)) {
+            inOrigin = false;
+            continue;
+        }
+        if (inOrigin && trimmed.startsWith('url =')) {
+            return trimmed.slice('url ='.length).trim();
+        }
+    }
+    return '';
+}
+async function hasGlabMention(fs, loopConfigContent) {
+    if (/\bglab\b/i.test(loopConfigContent))
+        return true;
+    for (const candidate of ['README.md', 'AGENTS.md', 'CLAUDE.md']) {
+        const content = await fs.readTextIfExists(candidate);
+        if (content && /\bglab\b/i.test(content))
+            return true;
+    }
+    return false;
 }
