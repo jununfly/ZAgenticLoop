@@ -186,11 +186,22 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
         status: executable ? (input.live ? 'ready-for-live-execution' : 'dry-run') : 'refused',
         side_effects_executed: false,
         pr: {
+            provider: pr.provider ?? 'github',
+            reviewKind: pr.reviewKind ?? 'pull-request',
             number: pr.number ?? null,
             url: pr.url ?? '',
             merged: pr.merged === true,
             baseRefName: pr.baseRefName ?? '',
             headRefName: pr.headRefName ?? '',
+        },
+        review: {
+            provider: pr.provider ?? 'github',
+            kind: pr.reviewKind ?? 'pull-request',
+            number: pr.number ?? null,
+            url: pr.url ?? '',
+            merged: pr.merged === true,
+            targetRefName: pr.baseRefName ?? '',
+            sourceRefName: pr.headRefName ?? '',
         },
         repository: {
             expected: expectedRepo,
@@ -498,13 +509,38 @@ export function normalizeGhPrView(pr, { expectedRepo }) {
     const headOwner = normalizeOwner(pr.headRepositoryOwner);
     return {
         ...pr,
+        provider: 'github',
+        reviewKind: 'pull-request',
         merged: Boolean(pr.mergedAt),
         headRepositoryOwner: headOwner,
         baseRepositoryOwner: pr.isCrossRepository ? expectedOwner : headOwner,
     };
 }
+export function normalizeGitLabMrView(mr, { expectedRepo }) {
+    const number = Number(mr.iid ?? mr.number);
+    const sourceProject = mr.source_project_path ?? mr.project_path ?? expectedRepo;
+    const targetProject = mr.target_project_path ?? mr.project_path ?? expectedRepo;
+    return {
+        provider: 'gitlab',
+        reviewKind: 'merge-request',
+        number: Number.isInteger(number) ? number : undefined,
+        url: mr.web_url ?? mr.url ?? '',
+        body: mr.description ?? mr.body ?? '',
+        merged: mr.merged === true || Boolean(mr.merged_at) || mr.state === 'merged',
+        mergedAt: mr.merged_at ?? null,
+        baseRefName: mr.target_branch ?? '',
+        headRefName: mr.source_branch ?? '',
+        baseRepositoryOwner: targetProject,
+        headRepositoryOwner: sourceProject,
+        baseRepository: targetProject,
+        repository: targetProject,
+        isCrossRepository: sourceProject !== targetProject,
+    };
+}
 export function normalizePr(pr = {}) {
     return {
+        provider: pr.provider ?? 'github',
+        reviewKind: pr.reviewKind ?? 'pull-request',
         ...pr,
         headRepositoryOwner: normalizeOwner(pr.headRepositoryOwner),
         baseRepositoryOwner: normalizeOwner(pr.baseRepositoryOwner),

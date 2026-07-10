@@ -1,13 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   buildDryRunEvidenceComment,
   buildPostMergeRoadmapCloseoutExecutionPlan,
   collectCloseoutInputFromGitHub,
   executePostMergeRoadmapCloseout,
   LIVE_CLEANUP_CONFIRMATION_PHRASE,
+  normalizeGitLabMrView,
   parseRepositoryFromGitRemote,
 } from '../dist/index.js';
+
+const POST_MERGE_CLOSEOUT_CLI = fileURLToPath(new URL('../dist/post-merge-closeout-cli.js', import.meta.url));
 
 const VALID_BODY = [
   '## Summary',
@@ -98,6 +106,34 @@ test('post-merge closeout plan refuses unsafe executor contexts', () => {
   assert.ok(wrongRepo.refusals.some((refusal) => refusal.guard === 'current-repository'));
   assert.equal(wrongCarrier.status, 'refused');
   assert.ok(wrongCarrier.refusals.some((refusal) => refusal.guard === 'expected-carrier-issue'));
+});
+
+test('post-merge closeout normalizes GitLab MR metadata into closeout plans', () => {
+  const mr = normalizeGitLabMrView({
+    iid: 9,
+    web_url: 'https://gitlab.com/group/project/-/merge_requests/9',
+    description: VALID_BODY,
+    state: 'merged',
+    source_branch: 'zjal/post-merge-closeout-executor',
+    target_branch: 'main',
+    project_path: 'group/project',
+  }, { expectedRepo: 'group/project' });
+  const plan = buildPostMergeRoadmapCloseoutExecutionPlan({
+    pr: mr,
+    prBody: mr.body,
+    expectedRepo: 'group/project',
+    currentRepo: 'group/project',
+    gitStatus: '',
+    expectedCarrierIssue: 39,
+  });
+
+  assert.equal(plan.status, 'dry-run');
+  assert.equal(plan.review.provider, 'gitlab');
+  assert.equal(plan.review.kind, 'merge-request');
+  assert.equal(plan.review.number, 9);
+  assert.equal(plan.pr.provider, 'gitlab');
+  assert.equal(plan.pr.reviewKind, 'merge-request');
+  assert.deepEqual(plan.refusals, []);
 });
 
 test('post-merge closeout live execution deletes only contract branch and closes only carrier issue', async () => {
@@ -196,6 +232,45 @@ test('post-merge GitHub input collection normalizes PR and repository evidence',
   assert.equal(input.pr.headRepositoryOwner, 'jununfly');
   assert.equal(input.pr.baseRepositoryOwner, 'jununfly');
   assert.equal(input.currentRepo, 'jununfly/ZAgenticLoop');
+});
+
+test('post-merge closeout-plan CLI accepts explicit GitLab MR metadata', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-post-merge-gitlab-'));
+  const bodyPath = path.join(dir, 'mr-body.md');
+  await writeFile(bodyPath, VALID_BODY);
+  try {
+    const result = spawnSync(process.execPath, [
+      POST_MERGE_CLOSEOUT_CLI,
+      'closeout-plan',
+      '--provider',
+      'gitlab',
+      '--repo',
+      'group/project',
+      '--merge-request',
+      '9',
+      '--review-url',
+      'https://gitlab.com/group/project/-/merge_requests/9',
+      '--review-body-file',
+      bodyPath,
+      '--source-branch',
+      'zjal/post-merge-closeout-executor',
+      '--target-branch',
+      'main',
+      '--merged',
+      '--carrier-issue',
+      '39',
+      '--json',
+    ], { encoding: 'utf8' });
+
+    assert.equal(result.status, 0);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.status, 'dry-run');
+    assert.equal(parsed.review.provider, 'gitlab');
+    assert.equal(parsed.review.kind, 'merge-request');
+    assert.equal(parsed.repository.expected, 'group/project');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('post-merge repository URL parser handles common GitHub remotes', () => {
