@@ -75,7 +75,7 @@ export async function validateRoadmapActivationUserProjectFixture(root = ROOT) {
         processRoadmapPath: 'docs/plans/roadmap-activation-321.md',
       },
     });
-    assertFixture(branchName.startsWith(`zjal/${activationRequestId}-`), 'branch name should include activation id');
+    assertFixture(branchName.startsWith(`zjal-${activationRequestId}-`), 'branch name should include activation id');
     assertFixture(prTitle.startsWith('Roadmap Activation:'), 'PR title should use fixed prefix');
     assertFixture(prContract.includes('zj-loop.roadmap_activation_pr_contract.v1'), 'PR contract should include schema');
     const boundedSlicePack = buildRoadmapBoundedSlicePack({

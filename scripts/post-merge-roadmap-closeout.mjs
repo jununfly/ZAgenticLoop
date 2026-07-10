@@ -19,6 +19,12 @@ export const CLOSEOUT_EXECUTOR_KIND = 'zj-loop.post-merge-roadmap-closeout-execu
 export const CLOSEOUT_EXECUTOR_VERSION = 1;
 export const LIVE_CLEANUP_CONFIRMATION_PHRASE = 'DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER';
 
+function isRoadmapBranchName(branch) {
+  if (typeof branch !== 'string') return false;
+  if (branch.includes('..')) return false;
+  return branch.startsWith('zjal-') || branch.startsWith('zjal/');
+}
+
 export async function defaultRunner(command, args = [], options = {}) {
   try {
     const result = await execFileAsync(command, args, {
@@ -121,8 +127,8 @@ function buildLiveCleanupConfirmation({ prNumber, carrierIssue, contractAuthoriz
     required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
     side_effects: [
       'switch local checkout to main and fast-forward from origin/main',
-      'delete the merged zjal/ roadmap branch locally when present and merged',
-      'delete the merged zjal/ roadmap branch on origin when present',
+      'delete the merged zjal- roadmap branch locally when present and merged',
+      'delete the merged zjal- roadmap branch on origin when present',
       `append closeout evidence to carrier issue #${carrierIssue ?? 'unknown'}`,
       `close carrier issue #${carrierIssue ?? 'unknown'}`,
     ],
@@ -465,8 +471,8 @@ function buildExecutorGuards({ pr, contract, currentRepo, expectedRepo, gitStatu
     },
     {
       name: 'single-roadmap-branch',
-      pass: typeof branch === 'string' && branch.startsWith('zjal/') && !branch.includes('..'),
-      reason: 'roadmap branch must be a single zjal/<roadmap-id> branch name',
+      pass: isRoadmapBranchName(branch),
+      reason: 'roadmap branch must be a single zjal-<roadmap-id> branch name',
     },
   ];
 }

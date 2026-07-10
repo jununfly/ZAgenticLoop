@@ -26,8 +26,10 @@ These constraints are binding for loops operating on this repository. Load them 
 - Narrow exception: Post-Merge Cleanup `roadmap-closeout` may close only the
   Roadmap activation carrier issue named in a valid merged-PR
   `zj-loop.post-merge-contract`. It must not close ordinary linked issues.
-  Its executor may delete only the merged `zjal/` roadmap branch named in that
-  same contract after all executor guards pass.
+  Its executor may delete only the merged `zjal-` roadmap branch named in that
+  same contract after all executor guards pass. Historical `zjal/` roadmap
+  branches remain accepted for closeout compatibility, but new automation must
+  generate `zjal-...` branch names to avoid Git ref prefix conflicts.
 - Use one isolated worktree per unattended code-change experiment.
 
 ## Push & Merge

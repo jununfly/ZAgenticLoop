@@ -467,7 +467,7 @@ export function buildRoadmapActivationBranchName(input: {
   sourceIssue?: string | number;
 }) {
   const slug = slugify(input.title ?? `issue-${input.sourceIssue ?? 'activation'}`);
-  return `zjal/${slugify(input.activationRequestId)}-${slug}`;
+  return `zjal-${slugify(input.activationRequestId)}-${slug}`;
 }
 
 export function buildRoadmapActivationPrTitle(input: { title?: string; sourceIssue?: string | number }) {

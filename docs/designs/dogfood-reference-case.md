@@ -328,9 +328,11 @@ Post-Merge Roadmap Closeout is active with contract-authorized live cleanup.
   script may run live cleanup without another human confirmation. The fixed
   phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` remains a manual
   fallback when contract authorization is unavailable or explicitly required.
-- Safety layer: the executor may delete only the merged `zjal/` roadmap branch
+- Safety layer: the executor may delete only the merged `zjal-` roadmap branch
   named in the valid `zj-loop.post-merge-contract` and may close only the
-  contract carrier issue after writing closeout evidence.
+  contract carrier issue after writing closeout evidence. Historical `zjal/`
+  branches remain accepted for closeout compatibility, but new automation
+  generates `zjal-...` branch names to avoid Git ref prefix conflicts.
 
 It is not a generic merged-PR cleanup agent.
 

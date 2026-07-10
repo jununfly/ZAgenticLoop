@@ -206,9 +206,10 @@ Current dogfood status:
   `npm run post-merge-closeout -- --pr <number> --repo jununfly/ZAgenticLoop --carrier-issue <issue> --live`.
 - Optional live workflow dispatch requires the fixed confirmation phrase
   `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
-- Boundary: the executor may delete only the merged `zjal/` roadmap branch named
+- Boundary: the executor may delete only the merged `zjal-` roadmap branch named
   in the valid contract and close only the contract carrier issue after writing
-  closeout evidence. It is not a generic PR cleanup agent.
+  closeout evidence. Historical `zjal/` branches remain accepted for closeout
+  compatibility. It is not a generic PR cleanup agent.
 
 ### Changelog Drafter (L1 — draft only, high value)
 - Cadence: 1d or on release prep (manual or tag-triggered)

@@ -11,6 +11,12 @@ export const POST_MERGE_CONTRACT_MODE = 'roadmap-closeout';
 
 const YAML_FENCE_PATTERN = /```(?:yaml|yml)\s*\n(?<yaml>[\s\S]*?)```/g;
 
+function isRoadmapBranchName(branch) {
+  if (typeof branch !== 'string') return false;
+  if (branch.includes('..')) return false;
+  return branch.startsWith('zjal-') || branch.startsWith('zjal/');
+}
+
 export function parsePostMergeContractFromPrBody(body) {
   const text = String(body ?? '');
 
@@ -69,8 +75,8 @@ export function validatePostMergeContract(contract, { pr } = {}) {
   if (contract.roadmap?.branch && pr?.headRefName && contract.roadmap.branch !== pr.headRefName) {
     errors.push('roadmap.branch must match PR head branch');
   }
-  if (contract.roadmap?.branch && !String(contract.roadmap.branch).startsWith('zjal/')) {
-    errors.push('roadmap.branch must use zjal/<roadmap-id>');
+  if (contract.roadmap?.branch && !isRoadmapBranchName(contract.roadmap.branch)) {
+    errors.push('roadmap.branch must use zjal-<roadmap-id>');
   }
   if (contract.cleanup?.delete_merged_branch !== true && contract.cleanup?.close_carrier_issue !== true) {
     errors.push('cleanup must request at least one supported action');
@@ -170,7 +176,7 @@ function buildGuards({ pr, contract }) {
   return {
     pr_merged: pr?.merged === true,
     current_roadmap_branch: Boolean(branch && head && branch === head),
-    roadmap_branch_prefix: typeof branch === 'string' && branch.startsWith('zjal/'),
+    roadmap_branch_prefix: isRoadmapBranchName(branch),
     same_repository: Boolean(
       pr?.headRepositoryOwner &&
       pr?.baseRepositoryOwner &&

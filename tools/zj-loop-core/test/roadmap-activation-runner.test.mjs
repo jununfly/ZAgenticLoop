@@ -104,12 +104,32 @@ test('Roadmap Activation deterministic contract helpers produce stable ids and P
     commandText: '/zj-loop start roadmap-sliced-development',
   }));
   assert.match(requestId, /^act-321-11-[a-f0-9]{8}$/);
-  assert.equal(branchName, `zjal/${requestId}-implement-execution-ready-activation`);
+  assert.equal(branchName, `zjal-${requestId}-implement-execution-ready-activation`);
   assert.equal(prTitle, 'Roadmap Activation: Implement execution ready activation');
   assert.match(contract, /zj-loop\.roadmap_activation_pr_contract\.v1/);
   assert.match(contract, /"activation_request_id": "act-321-11-/);
-  assert.match(contract, /branch_name: `zjal\/act-321-11-/);
+  assert.match(contract, /branch_name: `zjal-act-321-11-/);
   assert.equal(parsePostMergeContractFromPrBody(contract).ok, true);
+});
+
+test('Roadmap Activation branch names avoid Git ref prefix conflicts', async () => {
+  const branchName = buildRoadmapActivationBranchName({
+    activationRequestId: 'act-321-11-abcdef12',
+    title: 'Implement execution ready activation',
+  });
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-ref-prefix-'));
+
+  try {
+    assert.equal(branchName, 'zjal-act-321-11-abcdef12-implement-execution-ready-activation');
+    assert.equal(branchName.includes('/'), false);
+
+    assert.equal(spawnSync('git', ['init'], { cwd: dir, encoding: 'utf8' }).status, 0);
+    assert.equal(spawnSync('git', ['-c', 'user.email=zj-loop@example.com', '-c', 'user.name=ZJ Loop', 'commit', '--allow-empty', '-m', 'init'], { cwd: dir, encoding: 'utf8' }).status, 0);
+    assert.equal(spawnSync('git', ['branch', 'zjal'], { cwd: dir, encoding: 'utf8' }).status, 0);
+    assert.equal(spawnSync('git', ['branch', branchName], { cwd: dir, encoding: 'utf8' }).status, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('Roadmap Activation builds provider-neutral GitLab MR contracts', () => {
@@ -210,7 +230,7 @@ test('Roadmap Activation loop marker and workflow summary are deterministic', ()
     action: 'create-request',
     routeDecision: { route: 'roadmap-sliced-development', allowed: true, reason: 'activation route matched' },
     activationRequestId: 'act-321-11-abcdef12',
-    branchName: 'zjal/act-321-11-abcdef12-example',
+    branchName: 'zjal-act-321-11-abcdef12-example',
   });
   assert.match(summary, /## ZJ Loop Roadmap Activation/);
   assert.match(summary, /activation_request_id: `act-321-11-abcdef12`/);
@@ -348,7 +368,7 @@ test('Roadmap Activation contract-plan CLI can target GitLab MR contracts', asyn
   assert.equal(parsed.provider, 'gitlab');
   assert.equal(parsed.reviewKind, 'merge-request');
   assert.equal(parsed.mrTitle, 'Roadmap Activation: GitLab full parity');
-  assert.match(parsed.branchName, /^zjal\/act-87-4932786315-8c94c5b9-gitlab-full-parity$/);
+  assert.match(parsed.branchName, /^zjal-act-87-4932786315-8c94c5b9-gitlab-full-parity$/);
   assert.match(parsed.mrContract, /zj-loop\.roadmap_activation_review_contract\.v1/);
   assert.match(parsed.nextSteps.join('\n'), /MR with the contract block/);
 });
@@ -375,7 +395,7 @@ test('Roadmap Activation contract-plan CLI renders deterministic PR contract evi
   assert.equal(result.status, 0);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.schema, 'zj-loop.roadmap_activation_contract_plan.v1');
-  assert.equal(parsed.branchName, 'zjal/act-321-11-abcdef12-implement-execution-ready-activation');
+  assert.equal(parsed.branchName, 'zjal-act-321-11-abcdef12-implement-execution-ready-activation');
   assert.equal(parsed.prTitle, 'Roadmap Activation: Implement execution ready activation');
   assert.match(parsed.prContract, /zj-loop\.roadmap_activation_pr_contract\.v1/);
   assert.deepEqual(parsed.nextSteps, [
@@ -389,7 +409,7 @@ test('Roadmap Activation bounded slice pack defaults to 30 and selects eligible 
   const pack = buildRoadmapBoundedSlicePack({
     activationRequestId: 'act-321-11-abcdef12',
     roadmapPath: 'docs/plans/example.md',
-    branchName: 'zjal/act-321-11-abcdef12-example',
+    branchName: 'zjal-act-321-11-abcdef12-example',
     leafSlices: [
       { id: '1-1', title: 'Add contract', status: 'pending', verification_commands: ['npm test'] },
       { id: '1-2', title: 'Already done', status: 'completed' },
@@ -411,7 +431,7 @@ test('Roadmap Activation bounded slice result verification requires gate-backed 
   const pack = buildRoadmapBoundedSlicePack({
     activationRequestId: 'act-321-11-abcdef12',
     roadmapPath: 'docs/plans/example.md',
-    branchName: 'zjal/act-321-11-abcdef12-example',
+    branchName: 'zjal-act-321-11-abcdef12-example',
     maxSlices: 1,
     leafSlices: [{ id: '1-1', title: 'Add contract', status: 'pending' }],
   });
@@ -420,7 +440,7 @@ test('Roadmap Activation bounded slice result verification requires gate-backed 
     result: {
       schema: 'zj-loop.roadmap_bounded_slice_result.v1',
       activation_request_id: 'act-321-11-abcdef12',
-      branch_name: 'zjal/act-321-11-abcdef12-example',
+      branch_name: 'zjal-act-321-11-abcdef12-example',
       slice_results: [{
         slice_id: '1-1',
         status: 'completed',
@@ -437,7 +457,7 @@ test('Roadmap Activation bounded slice result verification requires gate-backed 
     result: {
       schema: 'zj-loop.roadmap_bounded_slice_result.v1',
       activation_request_id: 'act-321-11-abcdef12',
-      branch_name: 'zjal/act-321-11-abcdef12-example',
+      branch_name: 'zjal-act-321-11-abcdef12-example',
       slice_results: [{
         slice_id: '1-1',
         status: 'completed',
@@ -473,7 +493,7 @@ test('Roadmap Activation bounded-slices CLI packs and verifies deterministic res
       '--roadmap-path',
       'docs/plans/example.md',
       '--branch-name',
-      'zjal/act-321-11-abcdef12-example',
+      'zjal-act-321-11-abcdef12-example',
       '--slices',
       slicesPath,
       '--out',

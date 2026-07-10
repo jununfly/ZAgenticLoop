@@ -142,7 +142,7 @@ Use this path after Roadmap-Sliced PRs carry a valid
    - a merged PR
    - a valid post-merge contract
    - a matching carrier issue
-   - a merged `zjal/` roadmap branch
+   - a merged `zjal-` roadmap branch
    - all executor guards passing
 3. The fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` remains a
    fallback when contract authorization is unavailable or an operator explicitly

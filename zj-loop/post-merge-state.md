@@ -37,11 +37,15 @@ Last run: 2026-07-08
 Post-Merge Cleanup is not generic merged-PR automation. Route Decision stays
 `report-only` and automatic workflow behavior stays dry-run.
 
-Live cleanup may delete only the merged `zjal/*` roadmap branch named in a valid
+Live cleanup may delete only the merged `zjal-*` roadmap branch named in a valid
 `zj-loop.post-merge-contract` and may close only the activation carrier issue
 named in that same contract. Live execution requires explicit operator
 invocation plus the fixed confirmation phrase
 `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+
+Historical `zjal/*` roadmap branches remain accepted for compatibility, but new
+automation must generate `zjal-*` branch names to avoid Git ref prefix
+conflicts.
 
 The Route Table remains `execution.mode: dry-run` until a real
 `workflow_dispatch` live cleanup run records recent successful evidence. The

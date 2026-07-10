@@ -89,7 +89,7 @@ export function evaluateRoadmapHandoffGate(input = {}) {
 
   if (!input.roadmapId) errors.push('roadmapId is required');
   if (!branch) errors.push('branchName is required');
-  if (branch && !branch.startsWith('zjal/')) errors.push('branchName must use zjal/<roadmap-id>');
+  if (branch && !isRoadmapBranchName(branch)) errors.push('branchName must use zjal-<roadmap-id>');
   if (branch && ['main', 'master', 'develop', 'dev'].includes(branch)) {
     errors.push('branchName must not be a protected or long-lived branch');
   }
@@ -150,6 +150,12 @@ export function evaluateRoadmapHandoffGate(input = {}) {
         ? 'Roadmap handoff gate passed: branch pushed, PR handoff exists, and closeout evidence is reviewable.'
         : 'Roadmap handoff gate blocked: closeout commit is not sufficient for roadmap loop completion.',
   };
+}
+
+function isRoadmapBranchName(branch) {
+  if (typeof branch !== 'string') return false;
+  if (branch.includes('..')) return false;
+  return branch.startsWith('zjal-') || branch.startsWith('zjal/');
 }
 
 async function main() {
