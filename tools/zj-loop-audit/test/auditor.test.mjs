@@ -628,6 +628,45 @@ test('auditProject: empty directory scores low', async () => {
   }
 });
 
+test('auditProject accepts install-ready route maturity vocabulary', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-install-ready-maturity-'));
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(
+      path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'),
+      `schemaVersion: 1
+kind: zj-loop-route-table
+routes:
+  - route_id: manual-smoke-report
+    enabled: true
+    request_kind: report-only
+    consumer: manual-smoke
+    consumer_kind: report-consumer
+    execution:
+      mode: report-only
+      side_effect_level: evidence
+      completion_forms: [report-evidence]
+    maturity:
+      protocol: install-ready
+      runner: install-ready
+    capabilities:
+      scopes: [manual-smoke]
+      verifiers: [route-replay]
+      max_side_effect_level: evidence
+`,
+    );
+
+    const result = await auditProject(dir);
+
+    assert.ok(!result.findings.some((finding) =>
+      finding.message.includes('unknown maturity.protocol: install-ready') ||
+      finding.message.includes('unknown maturity.runner: install-ready'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('auditProject: minimal L1 layout', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-l1-'));
   try {

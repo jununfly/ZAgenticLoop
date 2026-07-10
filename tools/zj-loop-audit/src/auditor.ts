@@ -83,7 +83,15 @@ const ROUTE_TABLE_FILES = ['zj-loop/zj-loop-route-table.yaml'] as const;
 const GENERATED_WORKFLOW_PATTERN = /^zj-loop-.+\.yml$/;
 const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
 const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
-const MATURITY_LEVELS = new Set(['missing', 'designed', 'replayed', 'dogfooded', 'user-project-ready']);
+const MATURITY_LEVELS = new Set([
+  'missing',
+  'designed',
+  'replayed',
+  'dogfooded',
+  'install-ready',
+  'execution-ready',
+  'user-project-ready',
+]);
 const CONSUMER_KIND_LIMITS: Record<string, { modes: string[]; maxSideEffect: string }> = {
   'producer-router': { modes: ['report-only', 'request-only'], maxSideEffect: 'request' },
   'report-consumer': { modes: ['report-only'], maxSideEffect: 'evidence' },
@@ -500,9 +508,9 @@ function validateRawRouteExecutionContract(route: Record<string, unknown>): {
     errors.push(`${consumerKind} cannot claim max_side_effect_level=${maxSideEffectLevel}`);
   }
   if (mode === 'live') {
-    const runnerReady = maturityRunner === 'dogfooded' || maturityRunner === 'user-project-ready';
+    const runnerReady = maturityRunner === 'dogfooded' || maturityRunner === 'execution-ready';
     if (!runnerReady || !sideEffectLevel || sideEffectRank(sideEffectLevel) <= sideEffectRank('evidence') || recentSuccessEvidence.length === 0) {
-      errors.push('live execution requires runner maturity dogfooded or user-project-ready and recent success evidence');
+      errors.push('live execution requires runner maturity dogfooded or execution-ready and recent success evidence');
     }
   }
   if (requestKind === 'report-only' && mode && mode !== 'report-only' && mode !== 'dry-run') {
