@@ -57,6 +57,7 @@ function emptySignals() {
     routeTable: { present: false },
     starters: { used: false },
     github: { present: false, workflows: false },
+    provider: { kind: 'manual', remote: '', githubActions: false, gitlabCi: false, glabMentioned: false },
     mcp: { present: false },
     worktreeEvidence: { present: false },
     registry: { present: false },
@@ -235,6 +236,66 @@ jobs:
     assert.ok(result.findings.some((finding) =>
       finding.level === 'fail' &&
       finding.message.includes('Route manual-smoke-report is missing execution transparency fields'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject gives GitLab provider guidance without recommending GitHub workflows', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-gitlab-provider-'));
+  try {
+    await mkdir(path.join(dir, '.git'), { recursive: true });
+    await writeFile(
+      path.join(dir, '.git', 'config'),
+      '[remote "origin"]\n\turl = https://gitlab.com/group/project.git\n',
+    );
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'stages: []\n');
+
+    const result = await auditProject(dir);
+    assert.equal(result.signals.provider.kind, 'gitlab');
+    assert.ok(result.findings.some((finding) =>
+      finding.message.includes('GitLab provider detected'),
+    ));
+    assert.ok(!result.findings.some((finding) =>
+      finding.message.includes('No .github/workflows automation bundle yet'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject detects self-managed GitLab from GitLab CI evidence', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-self-managed-gitlab-'));
+  try {
+    await mkdir(path.join(dir, '.git'), { recursive: true });
+    await writeFile(
+      path.join(dir, '.git', 'config'),
+      '[remote "origin"]\n\turl = ssh://git@git.example.internal/team/project.git\n',
+    );
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'test:\n  script: npm test\n');
+
+    const result = await auditProject(dir);
+    assert.equal(result.signals.provider.kind, 'gitlab');
+    assert.equal(result.signals.provider.gitlabCi, true);
+    assert.ok(result.findings.some((finding) =>
+      finding.message.includes('GitLab provider detected'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject gives manual provider guidance before automation adapter advice', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-manual-provider-'));
+  try {
+    const result = await auditProject(dir);
+    assert.equal(result.signals.provider.kind, 'manual');
+    assert.ok(result.findings.some((finding) =>
+      finding.message.includes('No GitHub/GitLab provider detected'),
+    ));
+    assert.ok(!result.findings.some((finding) =>
+      finding.message.includes('No .github/workflows automation bundle yet'),
     ));
   } finally {
     await rm(dir, { recursive: true, force: true });

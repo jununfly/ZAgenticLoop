@@ -9,6 +9,7 @@ import {
   findExistingProjectPaths,
   hasAnyProjectPath,
   listProjectSkillNames,
+  detectProjectProvider,
 } from '../dist/index.js';
 
 async function withProject(fn) {
@@ -79,4 +80,32 @@ test('collectProjectEvidenceFacts returns shared loop evidence without policy in
     assert.equal(facts.routeTable.present, true);
     assert.deepEqual(facts.loopSkillNames, ['zj-issue-triage']);
   });
+});
+
+test('collectProjectEvidenceFacts detects GitLab provider facts without GitHub workflows', async () => {
+  await withProject(async (root) => {
+    await mkdir(path.join(root, '.git'), { recursive: true });
+    await writeFile(
+      path.join(root, '.git', 'config'),
+      '[remote "origin"]\n\turl = git@git.bilibili.co:team/project.git\n',
+    );
+    await writeFile(path.join(root, '.gitlab-ci.yml'), 'stages: []\n');
+    await writeFile(path.join(root, 'README.md'), 'Use glab issue note for issue notes.\n');
+
+    const fs = createNodeProjectFileSystem(root);
+    const facts = await collectProjectEvidenceFacts(fs);
+
+    assert.equal(facts.provider.kind, 'gitlab');
+    assert.equal(facts.provider.gitlabCi, true);
+    assert.equal(facts.provider.glabMentioned, true);
+    assert.equal(facts.github.workflows, false);
+  });
+});
+
+test('detectProjectProvider keeps GitHub Actions as the GitHub adapter signal', () => {
+  assert.equal(detectProjectProvider({ remote: 'git@github.com:jununfly/ZAgenticLoop.git' }), 'github');
+  assert.equal(detectProjectProvider({ githubActions: true }), 'github');
+  assert.equal(detectProjectProvider({ remote: 'https://gitlab.com/group/project.git' }), 'gitlab');
+  assert.equal(detectProjectProvider({ gitlabCi: true }), 'gitlab');
+  assert.equal(detectProjectProvider({}), 'manual');
 });

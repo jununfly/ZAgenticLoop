@@ -295,11 +295,14 @@ guidance:
     recommendations:
       - Add zj-loop-constraints skill via zj-loop-init or templates/SKILL.md.zj-loop-constraints
   - when:
-      not: github.present
+      all:
+        - path: provider.kind
+          eq: github
+        - not: github.present
     finding:
       level: warn
       category: hardening
-      message: No .github/ directory (templates, workflows for dogfooding).
+      message: GitHub provider detected but no .github/ directory found.
       affectsScore: true
       nextSteps:
         - kind: manual-review
@@ -308,6 +311,8 @@ guidance:
       - Add .github/ISSUE_TEMPLATE, PULL_REQUEST_TEMPLATE, and workflows (see this repo for examples)
   - when:
       all:
+        - path: provider.kind
+          eq: github
         - github.present
         - not: github.workflows
     finding:
@@ -327,6 +332,37 @@ guidance:
       message: .github/ with workflows present (strong dogfooding signal).
       affectsScore: false
       nextSteps: []
+  - when:
+      path: provider.kind
+      eq: gitlab
+    finding:
+      level: warn
+      category: hardening
+      message: GitLab provider detected — start with local loop substrate and request-only issue routes; GitHub Actions bundle is not the default adapter.
+      affectsScore: false
+      nextSteps:
+        - kind: command
+          label: Scaffold local loop substrate without GitHub Actions.
+          command: npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+        - kind: command
+          label: Add provider-neutral route table only.
+          command: npx @jununfly/zj-loop-init . --add route-table
+    recommendations:
+      - Use local loop substrate first; do not add github-actions in GitLab repositories unless intentionally forced.
+  - when:
+      path: provider.kind
+      eq: manual
+    finding:
+      level: warn
+      category: hardening
+      message: No GitHub/GitLab provider detected — use local/manual loop substrate before choosing an automation adapter.
+      affectsScore: false
+      nextSteps:
+        - kind: command
+          label: Scaffold local loop substrate.
+          command: npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+    recommendations:
+      - Choose an automation adapter later; local loop substrate can run without GitHub Actions.
   - when:
       not: mcp.present
     finding:

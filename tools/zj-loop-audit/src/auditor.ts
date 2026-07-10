@@ -23,6 +23,13 @@ export interface LoopSignals {
   routeTable: { present: boolean };
   starters: { used: boolean };
   github: { present: boolean; workflows: boolean };
+  provider: {
+    kind: 'github' | 'gitlab' | 'manual';
+    remote: string;
+    githubActions: boolean;
+    gitlabCi: boolean;
+    glabMentioned: boolean;
+  };
   mcp: { present: boolean };
   worktreeEvidence: { present: boolean };
   registry: { present: boolean };
@@ -34,6 +41,14 @@ export interface LoopSignals {
   };
   constraints: { present: boolean; hasConstraintsSkill: boolean };
   loopActivity: { present: boolean; evidence: string[] };
+}
+
+interface ProjectProviderFacts {
+  kind: 'github' | 'gitlab' | 'manual';
+  remote: string;
+  githubActions: boolean;
+  gitlabCi: boolean;
+  glabMentioned: boolean;
 }
 
 export interface Finding {
@@ -100,6 +115,61 @@ async function findExistingProjectPaths(
     if (await fs.exists(candidate)) found.push(candidate);
   }
   return found;
+}
+
+async function detectProviderFacts(
+  fs: ProjectFileSystem,
+  evidence: {
+    github: { workflows: boolean };
+    loopConfig: { content: string };
+    provider?: ProjectProviderFacts;
+  },
+): Promise<ProjectProviderFacts> {
+  if (evidence.provider) return evidence.provider;
+
+  const gitConfig = await fs.readTextIfExists('.git/config');
+  const remote = extractOriginRemote(gitConfig ?? '');
+  const gitlabCi = await fs.exists('.gitlab-ci.yml');
+  const glabMentioned = await hasGlabMention(fs, evidence.loopConfig.content);
+  const githubActions = evidence.github.workflows;
+  const remoteLower = remote.toLowerCase();
+
+  if (remoteLower.includes('github.com') || githubActions) {
+    return { kind: 'github', remote, githubActions, gitlabCi, glabMentioned };
+  }
+  if (remoteLower.includes('gitlab') || gitlabCi || glabMentioned) {
+    return { kind: 'gitlab', remote, githubActions, gitlabCi, glabMentioned };
+  }
+  return { kind: 'manual', remote, githubActions, gitlabCi, glabMentioned };
+}
+
+function extractOriginRemote(gitConfig: string): string {
+  const lines = String(gitConfig ?? '').split(/\r?\n/);
+  let inOrigin = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^\[remote\s+"origin"\]$/.test(trimmed)) {
+      inOrigin = true;
+      continue;
+    }
+    if (/^\[.+\]$/.test(trimmed)) {
+      inOrigin = false;
+      continue;
+    }
+    if (inOrigin && trimmed.startsWith('url =')) {
+      return trimmed.slice('url ='.length).trim();
+    }
+  }
+  return '';
+}
+
+async function hasGlabMention(fs: ProjectFileSystem, loopConfigContent: string): Promise<boolean> {
+  if (/\bglab\b/i.test(loopConfigContent)) return true;
+  for (const candidate of ['README.md', 'AGENTS.md', 'CLAUDE.md']) {
+    const content = await fs.readTextIfExists(candidate);
+    if (content && /\bglab\b/i.test(content)) return true;
+  }
+  return false;
 }
 
 async function detectLoopActivity(
@@ -475,6 +545,7 @@ export async function auditProject(target: string): Promise<AuditResult> {
   const root = path.resolve(target);
   const fs = createNodeProjectFileSystem(root);
   const evidence = await collectProjectEvidenceFacts(fs);
+  const provider = await detectProviderFacts(fs, evidence);
 
   const statePaths = Array.from(new Set([
     ...evidence.statePaths,
@@ -561,6 +632,7 @@ export async function auditProject(target: string): Promise<AuditResult> {
     routeTable: { present: routeTablePresent },
     starters: { used: loopSkills.includes('zj-loop-triage') },
     github: { present: githubDir, workflows: hasWorkflows },
+    provider,
     mcp: { present: mcpPresent },
     constraints: { present: constraintsFile, hasConstraintsSkill: constraintsSkill },
     worktreeEvidence: { present: worktreeEvidence },

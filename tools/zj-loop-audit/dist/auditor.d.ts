@@ -37,6 +37,13 @@ export interface LoopSignals {
         present: boolean;
         workflows: boolean;
     };
+    provider: {
+        kind: 'github' | 'gitlab' | 'manual';
+        remote: string;
+        githubActions: boolean;
+        gitlabCi: boolean;
+        glabMentioned: boolean;
+    };
     mcp: {
         present: boolean;
     };

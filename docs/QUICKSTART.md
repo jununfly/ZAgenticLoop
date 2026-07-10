@@ -44,7 +44,7 @@ Swap `--tool grok` for `claude` or `codex` if needed. Swap `--pattern` for any p
 
 `zj-loop/zj-loop-route-table.yaml` is the routing control plane. It records which loop signals should stay human-readable, be ignored, remain report-only, or later dispatch to another pattern. It is policy, not a runtime queue.
 
-Optional GitHub Actions bundle:
+Optional GitHub provider adapter:
 
 ```bash
 npx @jununfly/zj-loop-init . --add github-actions
@@ -54,6 +54,18 @@ This adds generated `zj-loop-*.yml` workflows. Start with the manual `ZJ Loop
 Smoke` workflow; it produces Route Decision evidence and runs audit without
 creating issues, PRs, branches, or comments. Side-effecting consumers stay under
 Route Table control.
+
+For GitLab, self-managed GitLab, or local/manual projects, do not start by
+installing `.github/workflows`. Keep the portable substrate local first:
+
+```bash
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+npx @jununfly/zj-loop-init . --add route-table
+npx @jununfly/zj-loop-audit . --suggest
+```
+
+`zj-loop-init --add github-actions` is guarded in detected GitLab projects and
+requires `--force` only for intentional GitHub adapter mirroring.
 
 ## 3. Check cost before you schedule (30 seconds)
 
@@ -109,7 +121,7 @@ No `zj-loop-init --tool cursor` yet — copy skills and state from any starter, 
 
 ### GitHub Actions
 
-Install the workflow-dispatch bundle:
+Install the GitHub workflow-dispatch adapter in a GitHub-hosted repository:
 
 ```bash
 npx @jununfly/zj-loop-init . --add github-actions

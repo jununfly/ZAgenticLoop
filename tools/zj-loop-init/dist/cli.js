@@ -155,6 +155,15 @@ async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns,
             }
         }
         if (artifact === 'github-actions') {
+            const provider = await detectProjectProvider(targetDir);
+            if (provider === 'gitlab' && !force) {
+                io.stderr('Refusing to install the GitHub Actions adapter in a detected GitLab project. ' +
+                    'Start with local loop files and zj-loop/zj-loop-route-table.yaml, or rerun with --force if this repository intentionally mirrors GitHub Actions.');
+                return 1;
+            }
+            if (provider === 'gitlab' && force) {
+                io.stdout('  WARNING: detected GitLab project; --force will install GitHub Actions workflows as an explicit provider-adapter override.');
+            }
             const defaultPattern = patterns.find((pattern) => pattern.id === 'daily-triage') ?? patterns[0];
             if (defaultPattern) {
                 await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io);
@@ -167,6 +176,53 @@ async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns,
   Review any created or overwritten policy/catalog files before committing.
 `);
     return 0;
+}
+async function detectProjectProvider(targetDir) {
+    const gitConfig = (await readTextIfExists(path.join(targetDir, '.git', 'config'))) ?? '';
+    const remote = extractOriginRemote(gitConfig).toLowerCase();
+    const githubActions = await exists(path.join(targetDir, '.github', 'workflows'));
+    const gitlabCi = await exists(path.join(targetDir, '.gitlab-ci.yml'));
+    const glabMentioned = await hasGlabMention(targetDir);
+    if (remote.includes('github.com') || githubActions)
+        return 'github';
+    if (remote.includes('gitlab') || gitlabCi || glabMentioned)
+        return 'gitlab';
+    return 'manual';
+}
+async function readTextIfExists(filePath) {
+    try {
+        return await readFile(filePath, 'utf8');
+    }
+    catch {
+        return null;
+    }
+}
+function extractOriginRemote(gitConfig) {
+    const lines = String(gitConfig ?? '').split(/\r?\n/);
+    let inOrigin = false;
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (/^\[remote\s+"origin"\]$/.test(trimmed)) {
+            inOrigin = true;
+            continue;
+        }
+        if (/^\[.+\]$/.test(trimmed)) {
+            inOrigin = false;
+            continue;
+        }
+        if (inOrigin && trimmed.startsWith('url =')) {
+            return trimmed.slice('url ='.length).trim();
+        }
+    }
+    return '';
+}
+async function hasGlabMention(targetDir) {
+    for (const candidate of ['zj-loop/ZJ-LOOP.md', 'README.md', 'AGENTS.md', 'CLAUDE.md']) {
+        const content = await readTextIfExists(path.join(targetDir, candidate));
+        if (content && /\bglab\b/i.test(content))
+            return true;
+    }
+    return false;
 }
 async function copyGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io) {
     const srcDir = path.join(templatesRoot, 'github-actions');
@@ -207,7 +263,16 @@ async function copyRenderedWorkflowTemplate(src, dest, dryRun, force, io, nextSt
     }
     return true;
 }
-async function upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, io) {
+async function upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io) {
+    const provider = await detectProjectProvider(targetDir);
+    if (provider === 'gitlab' && !force) {
+        io.stderr('Refusing to upgrade/install the GitHub Actions adapter in a detected GitLab project. ' +
+            'Rerun with --force only if this repository intentionally mirrors GitHub Actions.');
+        return 1;
+    }
+    if (provider === 'gitlab' && force) {
+        io.stdout('  WARNING: detected GitLab project; --force will upgrade GitHub Actions workflows as an explicit provider-adapter override.');
+    }
     const srcDir = path.join(templatesRoot, 'github-actions');
     io.stdout(`\nzj-loop-init --upgrade github-actions → ${targetDir}${dryRun ? ' [dry-run]' : ''}\n`);
     for (const file of GITHUB_ACTIONS_WORKFLOW_TEMPLATES) {
@@ -506,7 +571,7 @@ async function handleInitCommand({ io, options }) {
             return 1;
         }
         const templatesRoot = await resolveBundledOrMonorepo('templates');
-        return upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, io);
+        return upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
     }
     if (addArtifacts.length > 0) {
         const templatesRoot = await resolveBundledOrMonorepo('templates');
@@ -655,7 +720,7 @@ Options:
   -t, --tool      Tool target (default: grok)
   --add           Add explicit optional artifacts: safety, pattern-registry, route-table, github-actions
   --upgrade       Upgrade generated artifacts: github-actions
-  --force         Overwrite existing --add targets instead of skipping
+  --force         Overwrite existing --add targets or explicitly override provider-adapter guards
   --dry-run       Print actions without copying
   -h, --help      This help
 

@@ -62,6 +62,8 @@ export const DEFAULT_MCP_FILES = [
   '.mcp/config.json',
 ] as const;
 
+export type ProjectProviderKind = 'github' | 'gitlab' | 'manual';
+
 export const DEFAULT_LOOP_SKILL_NAMES = [
   'zj-loop-triage',
   'zj-minimal-fix',
@@ -85,6 +87,13 @@ export interface ProjectEvidenceFacts {
   loopConfig: { present: boolean; content: string };
   agentsMd: { present: boolean };
   github: { present: boolean; workflows: boolean };
+  provider: {
+    kind: ProjectProviderKind;
+    remote: string;
+    githubActions: boolean;
+    gitlabCi: boolean;
+    glabMentioned: boolean;
+  };
   skillNames: string[];
   loopSkillNames: string[];
   safety: { docPresent: boolean };
@@ -203,6 +212,18 @@ export async function collectProjectEvidenceFacts(fs: ProjectFileSystem): Promis
   );
   const loopConfig = await readFirstProjectText(fs, LOOP_CONFIG_FILE_CANDIDATES);
   const skillNames = await listProjectSkillNames(fs);
+  const githubPresent = await fs.exists('.github');
+  const githubWorkflows = await fs.exists('.github/workflows');
+  const gitlabCi = await fs.exists('.gitlab-ci.yml');
+  const gitConfig = await fs.readTextIfExists('.git/config');
+  const remote = extractOriginRemote(gitConfig ?? '');
+  const glabMentioned = await hasGlabMention(fs, loopConfig?.content ?? '');
+  const provider = detectProjectProvider({
+    remote,
+    githubActions: githubWorkflows,
+    gitlabCi,
+    glabMentioned,
+  });
 
   return {
     statePaths,
@@ -216,8 +237,15 @@ export async function collectProjectEvidenceFacts(fs: ProjectFileSystem): Promis
       present: await hasAnyProjectPath(fs, ['AGENTS.md', 'CLAUDE.md']),
     },
     github: {
-      present: await fs.exists('.github'),
-      workflows: await fs.exists('.github/workflows'),
+      present: githubPresent,
+      workflows: githubWorkflows,
+    },
+    provider: {
+      kind: provider,
+      remote,
+      githubActions: githubWorkflows,
+      gitlabCi,
+      glabMentioned,
     },
     skillNames,
     loopSkillNames: skillNames.filter((skillName) =>
@@ -233,4 +261,45 @@ export async function collectProjectEvidenceFacts(fs: ProjectFileSystem): Promis
       filePresent: await hasAnyProjectPath(fs, DEFAULT_MCP_FILES),
     },
   };
+}
+
+export function detectProjectProvider(input: {
+  remote?: string;
+  githubActions?: boolean;
+  gitlabCi?: boolean;
+  glabMentioned?: boolean;
+}): ProjectProviderKind {
+  const remote = String(input.remote ?? '').toLowerCase();
+  if (remote.includes('github.com') || input.githubActions === true) return 'github';
+  if (remote.includes('gitlab') || input.gitlabCi === true || input.glabMentioned === true) return 'gitlab';
+  return 'manual';
+}
+
+function extractOriginRemote(gitConfig: string): string {
+  const lines = String(gitConfig ?? '').split(/\r?\n/);
+  let inOrigin = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^\[remote\s+"origin"\]$/.test(trimmed)) {
+      inOrigin = true;
+      continue;
+    }
+    if (/^\[.+\]$/.test(trimmed)) {
+      inOrigin = false;
+      continue;
+    }
+    if (inOrigin && trimmed.startsWith('url =')) {
+      return trimmed.slice('url ='.length).trim();
+    }
+  }
+  return '';
+}
+
+async function hasGlabMention(fs: ProjectFileSystem, loopConfigContent: string): Promise<boolean> {
+  if (/\bglab\b/i.test(loopConfigContent)) return true;
+  for (const candidate of ['README.md', 'AGENTS.md', 'CLAUDE.md']) {
+    const content = await fs.readTextIfExists(candidate);
+    if (content && /\bglab\b/i.test(content)) return true;
+  }
+  return false;
 }

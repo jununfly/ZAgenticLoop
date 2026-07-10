@@ -35,7 +35,7 @@ lives instead of guessing from prose.
 | Map loops across tools | [Primitives matrix](docs/primitives-matrix.md) |
 | Check whether a repo is loop-ready | `npx @jununfly/zj-loop-audit . --suggest` |
 | Scaffold loop state and skills | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok` |
-| Add GitHub Actions smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
+| Add GitHub provider smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
 | Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
@@ -89,7 +89,7 @@ npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
 # Audit loop readiness and get concrete next steps
 npx @jununfly/zj-loop-audit . --suggest
 
-# Optional: install the workflow-dispatch bundle
+# Optional for GitHub-hosted repos: install the workflow-dispatch adapter
 npx @jununfly/zj-loop-init . --add github-actions
 
 # Optional: audit run-until-done goal readiness
@@ -139,10 +139,31 @@ npx @jununfly/zj-loop-audit . --suggest
 
 Phased rollout separates two axes: **readiness level** says how prepared the repo is; **execution authority** says what the loop may actually do. Start with report-only authority even when audit readiness is high. Do not skip the human-read step just because the loop is automated.
 
+## Provider-Aware Adoption
+
+Every project starts with the same portable loop substrate:
+
+```bash
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+npx @jununfly/zj-loop-init . --add route-table
+npx @jununfly/zj-loop-audit . --suggest
+```
+
+For GitLab, self-managed GitLab, or local/manual repositories, keep the first
+mile local and request-only: scaffold `zj-loop/`, review
+`zj-loop/zj-loop-route-table.yaml`, run audit, and enable only the consumers
+whose provider adapter is actually present. The GitHub Actions bundle below is
+a **GitHub provider adapter**, not the universal automation substrate.
+
+`zj-loop-init --add github-actions` refuses detected GitLab projects by
+default. Use `--force` only when the repository intentionally mirrors GitHub
+Actions despite GitLab evidence.
+
 ## GitHub Actions Bundle
 
-Install the generated workflow-dispatch bundle when you want a repo-local smoke
-path and Route Table-controlled consumer workflows:
+Install the generated workflow-dispatch bundle in GitHub-hosted repositories
+when you want a repo-local smoke path and Route Table-controlled consumer
+workflows:
 
 ```bash
 npx @jununfly/zj-loop-init . --add github-actions

@@ -240,6 +240,58 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
   }
 });
 
+test('zj-loop-init --add github-actions refuses detected GitLab projects unless forced', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-github-actions-gitlab-'));
+  try {
+    await mkdir(path.join(dir, '.git'), { recursive: true });
+    await writeFile(
+      path.join(dir, '.git', 'config'),
+      '[remote "origin"]\n\turl = https://gitlab.com/group/project.git\n',
+    );
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'stages: []\n');
+
+    await assert.rejects(
+      () => exec('node', [CLI, dir, '--add', 'github-actions']),
+      (err) =>
+        err.stderr?.includes('Refusing to install the GitHub Actions adapter in a detected GitLab project') ||
+        err.message?.includes('Refusing to install the GitHub Actions adapter in a detected GitLab project'),
+    );
+    await assert.rejects(() => access(path.join(dir, '.github', 'workflows')));
+
+    const forced = await exec('node', [CLI, dir, '--add', 'github-actions', '--force']);
+    assert.match(forced.stdout, /WARNING: detected GitLab project; --force will install GitHub Actions workflows/);
+    await access(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade github-actions refuses detected GitLab projects unless forced', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-github-actions-gitlab-'));
+  try {
+    await mkdir(path.join(dir, '.git'), { recursive: true });
+    await writeFile(
+      path.join(dir, '.git', 'config'),
+      '[remote "origin"]\n\turl = ssh://git@git.example.internal/team/project.git\n',
+    );
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'test:\n  script: npm test\n');
+
+    await assert.rejects(
+      () => exec('node', [CLI, dir, '--upgrade', 'github-actions']),
+      (err) =>
+        err.stderr?.includes('Refusing to upgrade/install the GitHub Actions adapter in a detected GitLab project') ||
+        err.message?.includes('Refusing to upgrade/install the GitHub Actions adapter in a detected GitLab project'),
+    );
+    await assert.rejects(() => access(path.join(dir, '.github', 'workflows')));
+
+    const forced = await exec('node', [CLI, dir, '--upgrade', 'github-actions', '--force']);
+    assert.match(forced.stdout, /WARNING: detected GitLab project; --force will upgrade GitHub Actions workflows/);
+    await access(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init --add github-actions skips existing workflows unless --force is explicit', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-github-actions-skip-'));
   try {

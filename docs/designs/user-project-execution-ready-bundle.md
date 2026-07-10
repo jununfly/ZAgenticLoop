@@ -4,16 +4,22 @@ This document explains the first ZAgenticLoop workflow-dispatch bundle that is
 intended to be useful in ordinary user projects, not only in this repository's
 dogfood environment.
 
-The bundle is installed with:
+The GitHub provider adapter is installed with:
 
 ```bash
 npx @jununfly/zj-loop-init . --add github-actions
 ```
 
 It creates generated `zj-loop-*.yml` workflows and relies on the project Route
-Table at `zj-loop/zj-loop-route-table.yaml`. The Route Table is the control
-plane: it decides which routes are enabled, what side effects are allowed, and
-which fixed confirmation phrase is required before a route can act.
+Table at `zj-loop/zj-loop-route-table.yaml`. The GitHub Actions bundle is a
+provider adapter, not the universal substrate. GitLab, self-managed GitLab, and
+local/manual projects should start with the portable `zj-loop/` substrate and
+Route Table, then add a provider adapter only when that provider's execution
+surface exists.
+
+The Route Table is the control plane: it decides which routes are enabled, what
+side effects are allowed, and which fixed confirmation phrase is required
+before a route can act.
 
 ## First Execution-Ready Route Set
 
