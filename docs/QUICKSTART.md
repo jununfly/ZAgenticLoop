@@ -67,6 +67,20 @@ npx @jununfly/zj-loop-audit . --suggest
 `zj-loop-init --add github-actions` is guarded in detected GitLab projects and
 requires `--force` only for intentional GitHub adapter mirroring.
 
+Optional GitLab provider adapter:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci
+```
+
+This creates generated GitLab CI fragments under `zj-loop/gitlab-ci/`. If root
+`.gitlab-ci.yml` is absent, init also creates an include file. If root GitLab CI
+already exists, init skips patching it and prints the include next step. Start
+with the manual smoke job, inspect JSON artifacts, then enable only the Route
+Table consumers you intend to run. Report-only jobs can run without mutation
+tokens; issue notes, labels, branches, MRs, and cleanup require `GITLAB_TOKEN`
+plus route-specific guards.
+
 ## 3. Check cost before you schedule (30 seconds)
 
 ```bash
@@ -239,6 +253,42 @@ npm run test:generated-bundle-release-gate
 
 The longer reference is
 [User-project execution-ready bundle](./designs/user-project-execution-ready-bundle.md).
+
+### GitLab CI
+
+Install the GitLab provider adapter in a GitLab-hosted repository:
+
+```bash
+npx @jununfly/zj-loop-init . --add gitlab-ci
+```
+
+Run the manual smoke job first. It should produce `route-decision.json` and
+`consumer-plan.json` artifacts without creating issues, notes, branches, or
+MRs. Then inspect Route Table status:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route status
+```
+
+GitLab generated jobs mirror the GitHub route families but use GitLab carrier
+language: issue notes, merge requests, pipelines, and job artifacts. The safest
+first choices are still `manual-smoke-report`, `issue-backlog-triage`, and
+`roadmap-sliced-development` activation. Provider-aware core runners preserve
+GitLab URLs in evidence; live GitLab MR creation for PR/MR Steward, Dependency
+Sweeper, and Changelog Drafter is explicitly refused until those GitLab API
+runners are promoted.
+
+Upgrade generated GitLab CI fragments when package pins or templates change:
+
+```bash
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci
+```
+
+For release checks, maintainers should run:
+
+```bash
+npm run test:provider-parity-gate
+```
 
 ## 6. Read the output, commit state (1 minute)
 

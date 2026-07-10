@@ -42,6 +42,7 @@ export declare function runIssueTriageTransitionRunner(input: {
             created_at: string;
             source_signal: {
                 source: string;
+                provider: any;
                 repo: any;
                 issue: any;
                 url: any;
@@ -56,6 +57,7 @@ export declare function runIssueTriageTransitionRunner(input: {
             carrier: {
                 kind: string;
                 reason: string;
+                provider: any;
                 repo: any;
                 issue: any;
                 url: any;

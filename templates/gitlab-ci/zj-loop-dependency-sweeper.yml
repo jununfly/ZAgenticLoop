@@ -1,0 +1,20 @@
+# zj-loop-generated: true
+# zj-loop-template-id: gitlab-ci/zj-loop-dependency-sweeper
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+zj_loop_dependency_sweeper:
+  stage: zj-loop
+  image: node:22
+  when: manual
+  script:
+    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-route dispatch dependency-sweeper --source gitlab-dependency --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json
+    - npx --yes --package @jununfly/zj-loop-core@0.1.4 zj-loop-dependency-sweeper plan --root . --source gitlab-dependency --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json
+    - cat route-decision.json
+    - cat consumer-plan.json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - route-decision.json
+      - consumer-plan.json

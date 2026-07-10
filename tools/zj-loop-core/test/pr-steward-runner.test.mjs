@@ -107,6 +107,45 @@ test('PR Steward fix plan separates escalation and repair PR completion modes', 
   assert.ok(repair.actions.some((action) => action.name === 'require-repair-diff'));
 });
 
+test('PR Steward accepts GitLab MR requests but refuses live MR side effects', () => {
+  const request = consumedPrStewardRequest({
+    source_signal: {
+      source: 'merge_request',
+      provider: 'gitlab',
+      source_url: 'https://gitlab.com/group/project/-/merge_requests/123',
+    },
+    subject: {
+      type: 'merge_request',
+      provider: 'gitlab',
+      repo: 'group/project',
+      mr_iid: 123,
+      pr_number: undefined,
+      head_sha: 'abc123def456',
+      base_branch: 'main',
+    },
+  });
+  const validation = validatePrStewardLiveRequest({
+    request,
+    currentPrHeadSha: 'abc123def456',
+  });
+  const plan = buildPrStewardExecutionPlan({
+    request,
+    currentPrHeadSha: 'abc123def456',
+    repairCommands: ['node scripts/pr-steward-deterministic-repair.mjs'],
+    repairFiles: ['scripts/pr-steward-deterministic-repair.mjs'],
+    live: true,
+    confirmationPhrase: PR_STEWARD_CONFIRMATION_PHRASE,
+  });
+
+  assert.equal(validation.ok, true);
+  assert.equal(plan.status, 'refused');
+  assert.equal(plan.source_review.provider, 'gitlab');
+  assert.equal(plan.source_review.kind, 'merge-request');
+  assert.equal(plan.source_review.number, 123);
+  assert.equal(plan.source_pr, null);
+  assert.ok(plan.refusals.some((item) => item.reason === 'gitlab-live-review-side-effects-not-enabled'));
+});
+
 test('PR Steward live execution records independent repair PR and no source PR side effects', async () => {
   const plan = buildPrStewardExecutionPlan({
     request: consumedPrStewardRequest(),

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
-import { buildRoadmapBoundedSlicePack, buildActivationRequestId, buildRoadmapActivationBranchName, buildRoadmapActivationPrContract, buildRoadmapActivationPrTitle, dispatchRoadmapActivationCommand, readActivationComments, renderRoadmapActivationWorkflowSummary, verifyRoadmapBoundedSliceResult, } from './roadmap-activation-runner.js';
+import { buildRoadmapBoundedSlicePack, buildActivationRequestId, buildRoadmapActivationBranchName, buildRoadmapActivationPrContract, buildRoadmapActivationPrTitle, buildRoadmapActivationReviewContract, buildRoadmapActivationReviewTitle, dispatchRoadmapActivationCommand, readActivationComments, renderRoadmapActivationWorkflowSummary, verifyRoadmapBoundedSliceResult, } from './roadmap-activation-runner.js';
 import { runCli } from './cli.js';
 import { findRoute, loadRouteTable } from './route.js';
 import { runRouteConsumerCli } from './route-consumer-cli.js';
@@ -146,15 +146,16 @@ else if (argv[0] === 'bounded-slices-verify') {
 else if (argv[0] === 'contract-plan') {
     process.exitCode = await runCli({
         name: 'zj-loop-roadmap-activation',
-        description: 'Build deterministic Roadmap Activation branch, PR title, and PR contract evidence.',
-        usage: 'zj-loop-roadmap-activation contract-plan --activation-request-id <id> --source-issue-url <url> --source-comment-url <url> [--title <title>] [--source-issue <n>] [--process-roadmap-path <path>] [--out <path>] [--json]',
+        description: 'Build deterministic Roadmap Activation branch, review title, and review contract evidence.',
+        usage: 'zj-loop-roadmap-activation contract-plan --activation-request-id <id> --source-issue-url <url> --source-comment-url <url> [--provider github|gitlab] [--title <title>] [--source-issue <n>] [--process-roadmap-path <path>] [--out <path>] [--json]',
         options: [
             { name: 'command', type: 'positional', description: 'Command', default: 'contract-plan' },
             { name: 'activation-request-id', type: 'string', description: 'Stable activation request id' },
+            { name: 'provider', type: 'enum', description: 'Provider review surface', values: ['github', 'gitlab'], default: 'github' },
             { name: 'title', type: 'string', description: 'Roadmap PR short title' },
             { name: 'source-issue', type: 'string', description: 'Source issue number' },
-            { name: 'source-issue-url', type: 'string', description: 'Source GitHub issue URL' },
-            { name: 'source-comment-url', type: 'string', description: 'Source GitHub issue comment URL' },
+            { name: 'source-issue-url', type: 'string', description: 'Source provider issue URL' },
+            { name: 'source-comment-url', type: 'string', description: 'Source provider issue comment/note URL' },
             { name: 'process-roadmap-path', type: 'string', description: 'Process roadmap path for closeout evidence' },
             { name: 'out', type: 'string', description: 'Write JSON result to this path' },
             { name: 'json', type: 'boolean', description: 'Print JSON output' },
@@ -165,11 +166,23 @@ else if (argv[0] === 'contract-plan') {
                     throw new Error(`--${key} is required`);
             }
             const activationRequestId = String(options['activation-request-id']);
+            const provider = String(options.provider ?? 'github');
             const title = typeof options.title === 'string' ? options.title : undefined;
             const sourceIssue = typeof options['source-issue'] === 'string' ? options['source-issue'] : undefined;
             const branchName = buildRoadmapActivationBranchName({ activationRequestId, title, sourceIssue });
-            const prTitle = buildRoadmapActivationPrTitle({ title, sourceIssue });
-            const prContract = buildRoadmapActivationPrContract({
+            const reviewTitle = buildRoadmapActivationReviewTitle({ provider, title, sourceIssue });
+            const reviewContract = provider === 'github' ? buildRoadmapActivationPrContract({
+                activationRequestId,
+                sourceIssueUrl: String(options['source-issue-url']),
+                sourceCommentUrl: String(options['source-comment-url']),
+                branchName,
+                lifecycleState: 'requested',
+                closeoutContract: {
+                    activationCarrierIssue: sourceIssue,
+                    processRoadmapPath: typeof options['process-roadmap-path'] === 'string' ? options['process-roadmap-path'] : '',
+                },
+            }) : buildRoadmapActivationReviewContract({
+                provider,
                 activationRequestId,
                 sourceIssueUrl: String(options['source-issue-url']),
                 sourceCommentUrl: String(options['source-comment-url']),
@@ -182,14 +195,22 @@ else if (argv[0] === 'contract-plan') {
             });
             const result = {
                 schema: 'zj-loop.roadmap_activation_contract_plan.v1',
+                provider,
+                reviewKind: provider === 'gitlab' ? 'merge-request' : 'pull-request',
                 activationRequestId,
                 branchName,
-                prTitle,
+                reviewTitle,
+                prTitle: provider === 'github' ? buildRoadmapActivationPrTitle({ title, sourceIssue }) : undefined,
                 lifecycleState: 'requested',
-                prContract,
+                reviewContract,
+                prContract: provider === 'github' ? reviewContract : undefined,
+                mrTitle: provider === 'gitlab' ? reviewTitle : undefined,
+                mrContract: provider === 'gitlab' ? reviewContract : undefined,
                 nextSteps: [
                     'Create or update the roadmap branch from the current base branch.',
-                    'Open or update the Roadmap Activation PR with the contract block.',
+                    provider === 'gitlab'
+                        ? 'Open or update the Roadmap Activation MR with the contract block.'
+                        : 'Open or update the Roadmap Activation PR with the contract block.',
                     'Start Roadmap-Sliced Consumer execution from the Activation Request scope.',
                 ],
             };

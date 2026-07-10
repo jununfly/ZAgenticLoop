@@ -38,6 +38,16 @@ export declare function buildPrStewardExecutionPlan(input?: {
     created_at: string;
     request_id: any;
     dedupe_key: any;
+    source_review: {
+        provider: "github" | "gitlab";
+        kind: string;
+        repo: any;
+        number: any;
+        head_sha: any;
+        current_head_sha: string;
+        base_branch: any;
+        source_url: any;
+    };
     source_pr: {
         repo: any;
         pr_number: any;
@@ -45,7 +55,7 @@ export declare function buildPrStewardExecutionPlan(input?: {
         current_head_sha: string;
         base_branch: any;
         source_url: any;
-    };
+    } | null;
     branch: string;
     repair_files: string[];
     refusals: {

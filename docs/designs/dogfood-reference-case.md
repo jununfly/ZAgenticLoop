@@ -48,7 +48,7 @@ are guarded live operations that require explicit operator intent.
 | Dependency Sweeper routes | Dependency route/claim replay scripts, replayed live runner, `zj-loop/dependency-sweeper-state.md` | Claim-only route with replayed repair/escalation runner | Supports bounded request and claim lifecycle evidence plus replayed `repair-pr` / `escalation-issue` live-runner evidence. Route Table truth remains `consumer_kind: fix-runner`, `execution.mode: claim-only`, and `maturity.runner: replayed`; automatic routing does not edit manifests, update lockfiles, create branches, open Fix PRs, dispatch workflows, or auto-merge until real workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `.github/workflows/changelog-drafter.yml`, report/draft-request replay scripts, replayed live runner, `zj-loop/changelog-drafter-state.md` | Report-only route with replayed draft evidence/PR runner | Records release-window evidence and draft request candidates. Route Table truth is `consumer_kind: draft-consumer`, `execution.mode: report-only`, and `maturity.runner: replayed`; the replayed runner can produce `draft-evidence` or an independent `draft-pr`, but automatic routing does not generate release notes, edit changelogs, create PRs, tag, release, publish, dispatch workflows, or start consumer work until workflow-dispatch dogfood evidence exists. |
 | Post-Merge Roadmap Closeout | `.github/workflows/post-merge-roadmap-closeout.yml`, `scripts/post-merge-roadmap-closeout.mjs`, `zj-loop/post-merge-state.md` | Automatic dry-run plus contract-authorized live cleanup | Merged Roadmap-Sliced PRs get dry-run evidence and artifacts. Route Table truth is `consumer_kind: cleanup-consumer`, `execution.mode: dry-run`, and `maturity.runner: replayed`; live branch deletion and carrier issue closure may run automatically only when the merged PR contains a valid closeout contract and executor guards pass. Fixed confirmation remains a fallback path. |
-| Release Workflow Validation | `scripts/validate-release-workflows.mjs` | Validate gate | Ensures every release-managed package has matching workflow, tag pattern, and pack output. |
+| Release Workflow Validation | `scripts/validate-release-workflows.mjs`, `scripts/validate-generated-bundle-release-gate.mjs`, `scripts/validate-provider-parity-gate.mjs` | Validate gate | Ensures every release-managed package has matching workflow, tag pattern, and pack output; generated GitHub bundle workflows stay synced; GitHub/GitLab provider route templates stay paired, version-pinned, Route Table-backed, and documented with dogfood evidence. |
 | Drift Check | `tools/zj-loop-sync` | Tool package test and optional manual check | Detects mismatch between loop state, loop config, route table, and required files. |
 | Runtime Constraints | `zj-loop/zj-loop-constraints.md`, `skills/zj-loop-constraints/SKILL.md` | Skill-level guardrail | Makes repo-specific operating rules loadable at run start. |
 | Route Table | `zj-loop/zj-loop-route-table.yaml`, MCP `loop://route-table` | Control-plane policy | Defines routing policy, not a runtime queue or hidden worker. |
@@ -145,6 +145,37 @@ generates a temporary bundle, enables the Roadmap Activation route in that
 fixture, simulates an issue-comment slash command, verifies Activation Request
 creation, branch/PR contract evidence, duplicate handling, permission denial,
 disabled route denial, and loop marker detection.
+
+## GitLab Target-Project Pre-Release Evidence
+
+The provider-aware adoption path was verified before publishing by installing
+local packed tarballs into an external GitLab target project:
+
+- `jununfly-zj-loop-init-0.1.7.tgz`
+- `jununfly-zj-loop-core-0.1.4.tgz`
+
+The maintainer ran the target-project dogfood sequence from the GitLab project
+root:
+
+1. `zj-loop-init . --add github-actions`
+2. `zj-loop-init . --pattern daily-triage --tool codex`
+3. `zj-loop-init . --add route-table`
+4. `zj-loop-route status`
+5. `zj-loop-init . --upgrade github-actions`
+6. Optional `zj-loop-init . --add github-actions --force`
+
+Observed result:
+
+- detected GitLab projects refuse `--add github-actions` by default
+- detected GitLab projects refuse `--upgrade github-actions` by default
+- `daily-triage` local loop substrate initializes successfully
+- `zj-loop/zj-loop-route-table.yaml` is created or skipped deterministically
+- `zj-loop-route status` reads the generated Route Table successfully
+- `--force` remains an explicit provider-adapter override with warning output
+
+This is intentionally pre-release cross-repo dogfood evidence. It proves the
+GitLab-safe path without publishing an npm version first and without treating
+GitHub Actions as a universal provider adapter.
 
 ## Daily Triage Flow
 

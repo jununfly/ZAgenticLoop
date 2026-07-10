@@ -12,7 +12,7 @@ const MONOREPO_STARTERS = path.resolve(PACKAGE_ROOT, '../../starters');
 const MONOREPO_TEMPLATES = path.resolve(PACKAGE_ROOT, '../../templates');
 
 type Tool = 'grok' | 'claude' | 'codex';
-type AddArtifact = 'safety' | 'pattern-registry' | 'route-table' | 'github-actions';
+type AddArtifact = 'safety' | 'pattern-registry' | 'route-table' | 'github-actions' | 'gitlab-ci';
 type ProjectProviderKind = 'github' | 'gitlab' | 'manual';
 
 type InitPattern = RegistryPattern & {
@@ -22,8 +22,19 @@ type InitPattern = RegistryPattern & {
 };
 
 const VALID_TOOLS: Tool[] = ['grok', 'claude', 'codex'];
-const VALID_ADD_ARTIFACTS: AddArtifact[] = ['safety', 'pattern-registry', 'route-table', 'github-actions'];
+const VALID_ADD_ARTIFACTS: AddArtifact[] = ['safety', 'pattern-registry', 'route-table', 'github-actions', 'gitlab-ci'];
 const GITHUB_ACTIONS_WORKFLOW_TEMPLATES = [
+  'zj-loop-smoke.yml',
+  'zj-loop-daily-triage.yml',
+  'zj-loop-ci-sweeper.yml',
+  'zj-loop-pr-steward.yml',
+  'zj-loop-issue-triage.yml',
+  'zj-loop-dependency-sweeper.yml',
+  'zj-loop-changelog-drafter.yml',
+  'zj-loop-roadmap-activation.yml',
+  'zj-loop-post-merge-cleanup.yml',
+] as const;
+const GITLAB_CI_TEMPLATE_FILES = [
   'zj-loop-smoke.yml',
   'zj-loop-daily-triage.yml',
   'zj-loop-ci-sweeper.yml',
@@ -221,6 +232,14 @@ async function handleAddArtifacts(
       }
       await copyGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
     }
+
+    if (artifact === 'gitlab-ci') {
+      const defaultPattern = patterns.find((pattern) => pattern.id === 'daily-triage') ?? patterns[0];
+      if (defaultPattern) {
+        await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io);
+      }
+      await copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io);
+    }
   }
 
   io.stdout(`\n=== Next steps ===
@@ -300,6 +319,40 @@ async function copyGitHubActionsBundle(
       force,
       io,
       `review .github/workflows/${file} or rerun with --force to overwrite intentionally`,
+    );
+  }
+}
+
+async function copyGitLabCiBundle(
+  targetDir: string,
+  templatesRoot: string,
+  dryRun: boolean,
+  force: boolean,
+  io: CliIo,
+) {
+  const srcDir = path.join(templatesRoot, 'gitlab-ci');
+  if (!(await exists(srcDir))) {
+    io.stderr(`  missing template directory: ${srcDir}`);
+    return;
+  }
+
+  await copyRenderedWorkflowTemplate(
+    path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'),
+    path.join(targetDir, '.gitlab-ci.yml'),
+    dryRun,
+    force,
+    io,
+    'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI',
+  );
+
+  for (const file of GITLAB_CI_TEMPLATE_FILES) {
+    await copyRenderedWorkflowTemplate(
+      path.join(srcDir, file),
+      path.join(targetDir, 'zj-loop', 'gitlab-ci', file),
+      dryRun,
+      force,
+      io,
+      `review zj-loop/gitlab-ci/${file} or rerun with --force to overwrite intentionally`,
     );
   }
 }
@@ -411,8 +464,96 @@ async function upgradeGitHubActionsBundle(
   io.stdout(`\n=== Next steps ===
   Review .github/workflows/*.bak files if any were created.
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
+  `);
+  return 0;
+}
+
+async function upgradeGitLabCiBundle(
+  targetDir: string,
+  templatesRoot: string,
+  dryRun: boolean,
+  force: boolean,
+  io: CliIo,
+) {
+  const srcDir = path.join(templatesRoot, 'gitlab-ci');
+  io.stdout(`\nzj-loop-init --upgrade gitlab-ci → ${targetDir}${dryRun ? ' [dry-run]' : ''}\n`);
+
+  for (const file of GITLAB_CI_TEMPLATE_FILES) {
+    await upgradeRenderedTemplateFile(
+      path.join(srcDir, file),
+      path.join(targetDir, 'zj-loop', 'gitlab-ci', file),
+      dryRun,
+      io,
+    );
+  }
+
+  const rootDest = path.join(targetDir, '.gitlab-ci.yml');
+  if (await exists(rootDest)) {
+    io.stdout('  skipped: .gitlab-ci.yml already exists');
+    io.stdout('  next step: review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if needed');
+  } else {
+    await copyRenderedWorkflowTemplate(
+      path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'),
+      rootDest,
+      dryRun,
+      force,
+      io,
+      'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI',
+    );
+  }
+
+  io.stdout(`
+=== Next steps ===
+  Review zj-loop/gitlab-ci/*.bak files if any were created.
+  npx @jununfly/zj-loop-audit ${targetDir} --suggest
 `);
   return 0;
+}
+
+async function upgradeRenderedTemplateFile(
+  src: string,
+  dest: string,
+  dryRun: boolean,
+  io: CliIo,
+) {
+  if (!(await exists(src))) {
+    io.stderr(`  missing template: ${src}`);
+    return;
+  }
+  const nextBody = renderWorkflowTemplate(await readFile(src, 'utf8'));
+  const nextHash = extractWorkflowTemplateHash(nextBody);
+  if (!(await exists(dest))) {
+    if (dryRun) {
+      io.stdout(`  would create: ${dest}`);
+    } else {
+      await mkdir(path.dirname(dest), { recursive: true });
+      await writeFile(dest, nextBody);
+      io.stdout(`  created: ${dest}`);
+    }
+    return;
+  }
+
+  const currentBody = await readFile(dest, 'utf8');
+  const currentHash = extractWorkflowTemplateHash(currentBody);
+  const currentContentHash = workflowTemplateHash(currentBody);
+  const cleanGenerated = currentHash === nextHash && currentContentHash === currentHash;
+  if (!cleanGenerated) {
+    const backupPath = await nextBackupPath(dest);
+    if (dryRun) {
+      io.stdout(`  would backup modified generated file: ${dest} → ${backupPath}`);
+      io.stdout(`  would write upgraded generated file: ${dest}`);
+      return;
+    }
+    await rename(dest, backupPath);
+    io.stdout(`  backed up modified generated file: ${dest} → ${backupPath}`);
+  }
+
+  if (dryRun) {
+    io.stdout(`  would write upgraded generated file: ${dest}`);
+  } else {
+    await writeFile(dest, nextBody);
+    io.stdout(`  upgraded: ${dest}`);
+  }
 }
 
 function renderWorkflowTemplate(template: string): string {
@@ -735,11 +876,14 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
 
   if (options.upgrade !== undefined && options.upgrade !== false) {
     const upgradeTarget = String(options.upgrade);
-    if (upgradeTarget !== 'github-actions') {
-      io.stderr('Unknown --upgrade target: ' + upgradeTarget + '. Valid: github-actions');
+    if (upgradeTarget !== 'github-actions' && upgradeTarget !== 'gitlab-ci') {
+      io.stderr('Unknown --upgrade target: ' + upgradeTarget + '. Valid: github-actions, gitlab-ci');
       return 1;
     }
     const templatesRoot = await resolveBundledOrMonorepo('templates');
+    if (upgradeTarget === 'gitlab-ci') {
+      return upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io);
+    }
     return upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
   }
 
@@ -897,8 +1041,8 @@ async function helpText() {
 
 Usage:
   zj-loop-init [target-dir] --pattern <name> --tool <grok|claude|codex>
-  zj-loop-init [target-dir] --add <safety|pattern-registry|route-table|github-actions>[,...] [--force]
-  zj-loop-init [target-dir] --upgrade github-actions
+  zj-loop-init [target-dir] --add <safety|pattern-registry|route-table|github-actions|gitlab-ci>[,...] [--force]
+  zj-loop-init [target-dir] --upgrade <github-actions|gitlab-ci>
 
 Patterns:
 ${patternList}
@@ -906,8 +1050,8 @@ ${patternList}
 Options:
   -p, --pattern   Pattern to scaffold
   -t, --tool      Tool target (default: grok)
-  --add           Add explicit optional artifacts: safety, pattern-registry, route-table, github-actions
-  --upgrade       Upgrade generated artifacts: github-actions
+  --add           Add explicit optional artifacts: safety, pattern-registry, route-table, github-actions, gitlab-ci
+  --upgrade       Upgrade generated artifacts: github-actions, gitlab-ci
   --force         Overwrite existing --add targets or explicitly override provider-adapter guards
   --dry-run       Print actions without copying
   -h, --help      This help
@@ -915,7 +1059,9 @@ Options:
 Examples:
   npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
   npx @jununfly/zj-loop-init . --add safety,pattern-registry,route-table,github-actions
+  npx @jununfly/zj-loop-init . --add gitlab-ci
   npx @jununfly/zj-loop-init . --upgrade github-actions
+  npx @jununfly/zj-loop-init . --upgrade gitlab-ci
   npx @jununfly/zj-loop-init . -p pr-steward -t claude
 `;
 }

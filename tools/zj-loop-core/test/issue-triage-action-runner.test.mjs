@@ -61,6 +61,20 @@ test('Issue Triage Action dry-runs allowlisted label and fixed comment actions',
   ]);
 });
 
+test('Issue Triage Action evidence source URL supports GitLab issues', () => {
+  const result = runIssueTriageActionRunner({
+    route: ROUTE,
+    request: buildIssueTriageActionRequest({
+      tracker: 'gitlab',
+      repo: 'group/subgroup/project',
+      issue: 123,
+    }),
+  });
+
+  assert.equal(result.decision.status, 'dry-run-completed');
+  assert.equal(result.evidence.source.url, 'https://gitlab.com/group/subgroup/project/-/issues/123');
+});
+
 test('Issue Triage Action uses fixed allowlists and rejects freeform actions', () => {
   const badLabel = runIssueTriageActionRunner({
     route: ROUTE,

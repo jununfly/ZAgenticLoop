@@ -1,0 +1,18 @@
+# zj-loop-generated: true
+# zj-loop-template-id: gitlab-ci/zj-loop-root
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+stages:
+  - zj-loop
+
+include:
+  - local: "zj-loop/gitlab-ci/zj-loop-smoke.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-daily-triage.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-ci-sweeper.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-pr-steward.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-issue-triage.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-dependency-sweeper.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-changelog-drafter.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-roadmap-activation.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-post-merge-cleanup.yml"

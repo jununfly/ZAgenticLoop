@@ -107,6 +107,32 @@ test('dependency sweeper builds deterministic dry-run and live repair plans', ()
   assert.deepEqual(live.actions[1].args, ['install', 'yaml@2.7.1', '--save-exact', '--save-prod']);
 });
 
+test('dependency sweeper carries GitLab provider metadata and refuses live MR side effects', () => {
+  const request = consumedDependencyRequest({
+    source_signal: {
+      kind: 'dependency-alert',
+      provider: 'gitlab',
+      id: 'gitlab-dependency:npm:yaml:patch',
+    },
+    subject: {
+      provider: 'gitlab',
+      repo: 'group/project',
+    },
+  });
+  const dryRun = buildDependencySweeperExecutionPlan({ request });
+  const live = buildDependencySweeperExecutionPlan({
+    request,
+    live: true,
+    confirmationPhrase: DEPENDENCY_SWEEPER_CONFIRMATION_PHRASE,
+  });
+
+  assert.equal(validateDependencySweeperLiveRequest(request).ok, true);
+  assert.equal(dryRun.provider, 'gitlab');
+  assert.equal(dryRun.subject.provider, 'gitlab');
+  assert.equal(live.status, 'refused');
+  assert.ok(live.refusals.some((item) => item.reason === 'gitlab-live-repair-mr-side-effects-not-enabled'));
+});
+
 test('dependency sweeper live execution returns repair PR evidence after verifier pass', async () => {
   const plan = buildDependencySweeperExecutionPlan({
     request: consumedDependencyRequest(),

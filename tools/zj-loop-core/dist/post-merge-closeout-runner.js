@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import yaml from 'yaml';
 import { buildLiveRunnerEvidence, validateLiveRunnerEvidence, } from './live-runner-contract.js';
+import { parseGitRemoteRepository } from './providers.js';
 const execFileAsync = promisify(execFile);
 export const POST_MERGE_CONTRACT_KIND = 'zj-loop.post-merge-contract';
 export const POST_MERGE_CONTRACT_VERSION = 1;
@@ -185,11 +186,22 @@ export function buildPostMergeRoadmapCloseoutExecutionPlan(input) {
         status: executable ? (input.live ? 'ready-for-live-execution' : 'dry-run') : 'refused',
         side_effects_executed: false,
         pr: {
+            provider: pr.provider ?? 'github',
+            reviewKind: pr.reviewKind ?? 'pull-request',
             number: pr.number ?? null,
             url: pr.url ?? '',
             merged: pr.merged === true,
             baseRefName: pr.baseRefName ?? '',
             headRefName: pr.headRefName ?? '',
+        },
+        review: {
+            provider: pr.provider ?? 'github',
+            kind: pr.reviewKind ?? 'pull-request',
+            number: pr.number ?? null,
+            url: pr.url ?? '',
+            merged: pr.merged === true,
+            targetRefName: pr.baseRefName ?? '',
+            sourceRefName: pr.headRefName ?? '',
         },
         repository: {
             expected: expectedRepo,
@@ -497,13 +509,38 @@ export function normalizeGhPrView(pr, { expectedRepo }) {
     const headOwner = normalizeOwner(pr.headRepositoryOwner);
     return {
         ...pr,
+        provider: 'github',
+        reviewKind: 'pull-request',
         merged: Boolean(pr.mergedAt),
         headRepositoryOwner: headOwner,
         baseRepositoryOwner: pr.isCrossRepository ? expectedOwner : headOwner,
     };
 }
+export function normalizeGitLabMrView(mr, { expectedRepo }) {
+    const number = Number(mr.iid ?? mr.number);
+    const sourceProject = mr.source_project_path ?? mr.project_path ?? expectedRepo;
+    const targetProject = mr.target_project_path ?? mr.project_path ?? expectedRepo;
+    return {
+        provider: 'gitlab',
+        reviewKind: 'merge-request',
+        number: Number.isInteger(number) ? number : undefined,
+        url: mr.web_url ?? mr.url ?? '',
+        body: mr.description ?? mr.body ?? '',
+        merged: mr.merged === true || Boolean(mr.merged_at) || mr.state === 'merged',
+        mergedAt: mr.merged_at ?? null,
+        baseRefName: mr.target_branch ?? '',
+        headRefName: mr.source_branch ?? '',
+        baseRepositoryOwner: targetProject,
+        headRepositoryOwner: sourceProject,
+        baseRepository: targetProject,
+        repository: targetProject,
+        isCrossRepository: sourceProject !== targetProject,
+    };
+}
 export function normalizePr(pr = {}) {
     return {
+        provider: pr.provider ?? 'github',
+        reviewKind: pr.reviewKind ?? 'pull-request',
         ...pr,
         headRepositoryOwner: normalizeOwner(pr.headRepositoryOwner),
         baseRepositoryOwner: normalizeOwner(pr.baseRepositoryOwner),
@@ -511,12 +548,9 @@ export function normalizePr(pr = {}) {
 }
 export function parseRepositoryFromGitRemote(remoteUrl) {
     const text = String(remoteUrl ?? '').trim().replace(/\.git$/, '');
-    const sshMatch = text.match(/^git@github\.com:(?<owner>[^/]+)\/(?<repo>.+)$/);
-    if (sshMatch?.groups)
-        return `${sshMatch.groups.owner}/${sshMatch.groups.repo}`;
-    const httpsMatch = text.match(/^https:\/\/(?:[^@/]+@)?github\.com\/(?<owner>[^/]+)\/(?<repo>.+)$/);
-    if (httpsMatch?.groups)
-        return `${httpsMatch.groups.owner}/${httpsMatch.groups.repo}`;
+    const parsed = parseGitRemoteRepository(remoteUrl);
+    if (parsed)
+        return parsed.slug;
     return text;
 }
 function buildContractGuards({ pr, contract }) {

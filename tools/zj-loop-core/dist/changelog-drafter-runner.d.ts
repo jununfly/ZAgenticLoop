@@ -35,6 +35,7 @@ export declare function buildChangelogDrafterExecutionPlan(input?: {
     request_id: any;
     dedupe_key: any;
     release_window: {
+        provider: "github" | "gitlab";
         repo: any;
         base_branch: any;
         since_ref: any;

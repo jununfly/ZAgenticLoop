@@ -73,6 +73,7 @@ export function buildChangelogDrafterExecutionPlan(input = {}) {
     const normalizedDraftMode = input.draftMode === 'pr' ? 'pr' : 'evidence';
     const normalizedDraftFile = normalizeDraftFile(input.draftFile ?? 'docs/release-notes-draft.md');
     const window = input.draftRequest?.release_window ?? {};
+    const provider = providerForDraftRequest(input.draftRequest);
     const branch = `automated/changelog-drafter-${slug(window.since_ref || 'since')}-${slug(window.until_ref || 'until')}-${shortHash(input.draftRequest?.dedupe_key ?? '')}`;
     const refusals = [
         ...validation.errors.map((reason) => ({ layer: 'draft-request', reason })),
@@ -85,6 +86,9 @@ export function buildChangelogDrafterExecutionPlan(input = {}) {
     }
     if (!normalizedDraftFile) {
         refusals.push({ layer: 'draft-plan', reason: 'draftFile must be a safe repository-relative markdown path' });
+    }
+    if (input.live && normalizedDraftMode === 'pr' && provider === 'gitlab') {
+        refusals.push({ layer: 'provider', reason: 'gitlab-live-draft-mr-side-effects-not-enabled' });
     }
     const executable = refusals.length === 0;
     return {
@@ -99,6 +103,7 @@ export function buildChangelogDrafterExecutionPlan(input = {}) {
         request_id: input.draftRequest?.dedupe_key ?? '',
         dedupe_key: input.draftRequest?.dedupe_key ?? '',
         release_window: {
+            provider,
             repo: window.repo ?? '',
             base_branch: window.base_branch ?? '',
             since_ref: window.since_ref ?? '',
@@ -309,4 +314,8 @@ function shortHash(value) {
 }
 function extractFirstUrl(text) {
     return String(text ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
+}
+function providerForDraftRequest(draftRequest) {
+    const provider = draftRequest?.release_window?.provider ?? draftRequest?.provider;
+    return provider === 'gitlab' ? 'gitlab' : 'github';
 }

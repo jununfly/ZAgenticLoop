@@ -14,6 +14,8 @@ export type CommandResult = {
 };
 export type CommandRunner = (command: string, args: string[]) => Promise<CommandResult>;
 export type PostMergePullRequest = {
+    provider?: 'github' | 'gitlab';
+    reviewKind?: 'pull-request' | 'merge-request';
     number?: number;
     url?: string;
     body?: string;
@@ -44,11 +46,22 @@ export type PostMergeCloseoutPlan = {
     status: 'dry-run' | 'ready-for-live-execution' | 'refused';
     side_effects_executed: false;
     pr: {
+        provider: 'github' | 'gitlab';
+        reviewKind: 'pull-request' | 'merge-request';
         number: number | null;
         url: string;
         merged: boolean;
         baseRefName: string;
         headRefName: string;
+    };
+    review: {
+        provider: 'github' | 'gitlab';
+        kind: 'pull-request' | 'merge-request';
+        number: number | null;
+        url: string;
+        merged: boolean;
+        targetRefName: string;
+        sourceRefName: string;
     };
     repository: {
         expected: string;
@@ -178,11 +191,22 @@ export declare function executePostMergeRoadmapCloseout(plan: PostMergeCloseoutP
     kind: typeof CLOSEOUT_EXECUTOR_KIND;
     mode: "dry-run" | "live";
     pr: {
+        provider: "github" | "gitlab";
+        reviewKind: "pull-request" | "merge-request";
         number: number | null;
         url: string;
         merged: boolean;
         baseRefName: string;
         headRefName: string;
+    };
+    review: {
+        provider: "github" | "gitlab";
+        kind: "pull-request" | "merge-request";
+        number: number | null;
+        url: string;
+        merged: boolean;
+        targetRefName: string;
+        sourceRefName: string;
     };
     repository: {
         expected: string;
@@ -231,6 +255,8 @@ export declare function collectCloseoutInputFromGitHub(input: {
     runner?: CommandRunner;
 }): Promise<{
     pr: {
+        provider: "github";
+        reviewKind: "pull-request";
         merged: boolean;
         headRepositoryOwner: string | {
             login?: string;
@@ -256,6 +282,8 @@ export declare function collectCloseoutInputFromGitHub(input: {
 export declare function normalizeGhPrView(pr: PostMergePullRequest, { expectedRepo }: {
     expectedRepo: string;
 }): {
+    provider: "github";
+    reviewKind: "pull-request";
     merged: boolean;
     headRepositoryOwner: string | {
         login?: string;
@@ -273,6 +301,39 @@ export declare function normalizeGhPrView(pr: PostMergePullRequest, { expectedRe
     repository?: string;
     isCrossRepository?: boolean;
 };
+export declare function normalizeGitLabMrView(mr: {
+    iid?: number | string;
+    number?: number | string;
+    web_url?: string;
+    url?: string;
+    description?: string;
+    body?: string;
+    state?: string;
+    merged?: boolean;
+    merged_at?: string | null;
+    source_branch?: string;
+    target_branch?: string;
+    source_project_path?: string;
+    target_project_path?: string;
+    project_path?: string;
+}, { expectedRepo }: {
+    expectedRepo: string;
+}): {
+    provider: "gitlab";
+    reviewKind: "merge-request";
+    number: number | undefined;
+    url: string;
+    body: string;
+    merged: boolean;
+    mergedAt: string | null;
+    baseRefName: string;
+    headRefName: string;
+    baseRepositoryOwner: string;
+    headRepositoryOwner: string;
+    baseRepository: string;
+    repository: string;
+    isCrossRepository: boolean;
+};
 export declare function normalizePr(pr?: PostMergePullRequest): {
     headRepositoryOwner: string | {
         login?: string;
@@ -280,6 +341,8 @@ export declare function normalizePr(pr?: PostMergePullRequest): {
     baseRepositoryOwner: string | {
         login?: string;
     } | undefined;
+    provider: "github" | "gitlab";
+    reviewKind: "pull-request" | "merge-request";
     number?: number;
     url?: string;
     body?: string;

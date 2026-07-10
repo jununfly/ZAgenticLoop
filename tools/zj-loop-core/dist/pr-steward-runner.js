@@ -48,13 +48,21 @@ export function validatePrStewardLiveRequest(input = {}) {
     if (request?.lifecycle?.consumed_by !== PR_STEWARD_RUNNER_ID) {
         errors.push(`lifecycle.consumed_by must be ${PR_STEWARD_RUNNER_ID}`);
     }
-    if (request?.subject?.type !== 'pull_request')
-        errors.push('subject.type must be pull_request');
+    const provider = providerForRequest(request);
+    const expectedSubjectType = provider === 'gitlab' ? 'merge_request' : 'pull_request';
+    const expectedSource = provider === 'gitlab' ? 'merge_request' : 'pull_request';
+    if (request?.subject?.type !== expectedSubjectType)
+        errors.push(`subject.type must be ${expectedSubjectType}`);
     if (request?.subject?.base_branch !== 'main') {
         errors.push(`subject.base_branch must be main, got ${request?.subject?.base_branch ?? 'missing'}`);
     }
-    if (!request?.subject?.pr_number)
+    if (provider === 'gitlab') {
+        if (!request?.subject?.mr_iid)
+            errors.push('subject.mr_iid is required');
+    }
+    else if (!request?.subject?.pr_number) {
         errors.push('subject.pr_number is required');
+    }
     if (!request?.subject?.head_sha)
         errors.push('subject.head_sha is required');
     if (!input.currentPrHeadSha)
@@ -62,8 +70,8 @@ export function validatePrStewardLiveRequest(input = {}) {
     if (input.currentPrHeadSha && request?.subject?.head_sha !== input.currentPrHeadSha) {
         errors.push('current_pr_head_sha must match request subject head_sha');
     }
-    if (request?.source_signal?.source !== 'pull_request')
-        errors.push('source_signal.source must be pull_request');
+    if (request?.source_signal?.source !== expectedSource)
+        errors.push(`source_signal.source must be ${expectedSource}`);
     if (request?.route_decision?.route_id !== PR_STEWARD_ROUTE_ID) {
         errors.push(`route_id must be ${PR_STEWARD_ROUTE_ID}`);
     }
@@ -87,7 +95,10 @@ export function buildPrStewardExecutionPlan(input = {}) {
         currentPrHeadSha: input.currentPrHeadSha,
     });
     const subject = input.request?.subject ?? {};
-    const branch = `automated/pr-steward-pr-${subject.pr_number ?? 'unknown'}-${shortHash(input.request?.dedupe_key ?? '')}`;
+    const provider = providerForRequest(input.request);
+    const reviewNumber = provider === 'gitlab' ? subject.mr_iid : subject.pr_number;
+    const reviewKind = provider === 'gitlab' ? 'merge-request' : 'pull-request';
+    const branch = `automated/pr-steward-${provider === 'gitlab' ? 'mr' : 'pr'}-${reviewNumber ?? 'unknown'}-${shortHash(input.request?.dedupe_key ?? '')}`;
     const parsedRepairCommands = (input.repairCommands ?? []).map(parseCommand);
     const parsedVerificationCommands = (input.request?.verification_gate?.commands ?? []).map(parseCommand);
     const normalizedRepairFiles = normalizeRepairFiles(input.repairFiles ?? []);
@@ -103,6 +114,9 @@ export function buildPrStewardExecutionPlan(input = {}) {
     if (parsedRepairCommands.length > 0 && normalizedRepairFiles.length === 0) {
         refusals.push({ layer: 'repair-plan', reason: 'repair_files are required when repair_commands are provided' });
     }
+    if (input.live && provider === 'gitlab') {
+        refusals.push({ layer: 'provider', reason: 'gitlab-live-review-side-effects-not-enabled' });
+    }
     const executable = refusals.length === 0;
     const completionMode = parsedRepairCommands.length > 0 ? 'repair-pr' : 'escalation-issue';
     return {
@@ -116,14 +130,26 @@ export function buildPrStewardExecutionPlan(input = {}) {
         created_at: input.createdAt ?? new Date().toISOString(),
         request_id: input.request?.request_id ?? '',
         dedupe_key: input.request?.dedupe_key ?? '',
-        source_pr: {
+        source_review: {
+            provider,
+            kind: reviewKind,
             repo: subject.repo ?? '',
-            pr_number: subject.pr_number ?? null,
+            number: reviewNumber ?? null,
             head_sha: subject.head_sha ?? '',
             current_head_sha: input.currentPrHeadSha ?? '',
             base_branch: subject.base_branch ?? '',
             source_url: input.request?.source_signal?.source_url ?? '',
         },
+        source_pr: provider === 'github'
+            ? {
+                repo: subject.repo ?? '',
+                pr_number: subject.pr_number ?? null,
+                head_sha: subject.head_sha ?? '',
+                current_head_sha: input.currentPrHeadSha ?? '',
+                base_branch: subject.base_branch ?? '',
+                source_url: input.request?.source_signal?.source_url ?? '',
+            }
+            : null,
         branch,
         repair_files: normalizedRepairFiles,
         refusals,
@@ -373,4 +399,8 @@ function shortHash(value) {
 }
 function extractFirstUrl(text) {
     return String(text ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
+}
+function providerForRequest(request) {
+    const provider = request?.subject?.provider ?? request?.source_signal?.provider;
+    return provider === 'gitlab' ? 'gitlab' : 'github';
 }
