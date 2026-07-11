@@ -23,6 +23,7 @@ type InitPattern = RegistryPattern & {
   starter: string;
   init: NonNullable<RegistryPattern['init']>;
 };
+type ScaffoldStatus = 'created' | 'exists' | 'would-create' | 'missing-template';
 
 const VALID_TOOLS: Tool[] = ['grok', 'claude', 'codex'];
 const VALID_ADD_ARTIFACTS: AddArtifact[] = ['safety', 'pattern-registry', 'route-table', 'github-actions', 'gitlab-ci'];
@@ -279,10 +280,11 @@ async function handleAddArtifacts(
 
     if (artifact === 'gitlab-ci') {
       const defaultPattern = patterns.find((pattern) => pattern.id === 'daily-triage') ?? patterns[0];
+      let routeTableStatus: ScaffoldStatus = 'missing-template';
       if (defaultPattern) {
-        await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io);
+        routeTableStatus = await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io);
       }
-      await copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage);
+      await copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage, routeTableStatus);
     }
   }
 
@@ -377,6 +379,7 @@ async function copyGitLabCiBundle(
   gitlabRunnerTags: string[],
   gitlabImage: string,
   gitlabCorePackage: string,
+  routeTableStatus: ScaffoldStatus,
 ) {
   const srcDir = path.join(templatesRoot, 'gitlab-ci');
   if (!(await exists(srcDir))) {
@@ -384,9 +387,11 @@ async function copyGitLabCiBundle(
     return;
   }
 
+  const rootDest = path.join(targetDir, '.gitlab-ci.yml');
+  const rootCiExistsBefore = await exists(rootDest);
   await copyRenderedWorkflowTemplate(
     path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'),
-    path.join(targetDir, '.gitlab-ci.yml'),
+    rootDest,
     dryRun,
     force,
     io,
@@ -407,6 +412,12 @@ async function copyGitLabCiBundle(
   }
 
   await warnIfGitLabVendorTarballsIgnored(targetDir, io);
+  printGitLabCiReadinessSummary(io, {
+    mode: 'add',
+    rootCiExistsBefore,
+    rootCiWillBePatched: !rootCiExistsBefore || force,
+    routeTableStatus,
+  });
 }
 
 async function copyRenderedWorkflowTemplate(
@@ -524,6 +535,7 @@ async function upgradeGitHubActionsBundle(
 async function upgradeGitLabCiBundle(
   targetDir: string,
   templatesRoot: string,
+  defaultPattern: InitPattern | undefined,
   dryRun: boolean,
   force: boolean,
   io: CliIo,
@@ -536,6 +548,10 @@ async function upgradeGitLabCiBundle(
   const tagsLabel = gitlabRunnerTags.length > 0 ? ` [runner-tags=${gitlabRunnerTags.join(',')}]` : '';
   io.stdout(`\nzj-loop-init --upgrade gitlab-ci → ${targetDir}${dryRun ? ' [dry-run]' : ''} [stage=${gitlabStage}] [image=${gitlabImage}] [core-package=${gitlabCorePackage}]${tagsLabel}\n`);
 
+  const routeTableStatus = defaultPattern
+    ? await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io)
+    : 'missing-template';
+
   for (const file of GITLAB_CI_TEMPLATE_FILES) {
     await upgradeRenderedTemplateFile(
       path.join(srcDir, file),
@@ -547,7 +563,8 @@ async function upgradeGitLabCiBundle(
   }
 
   const rootDest = path.join(targetDir, '.gitlab-ci.yml');
-  if (await exists(rootDest)) {
+  const rootCiExistsBefore = await exists(rootDest);
+  if (rootCiExistsBefore) {
     io.stdout('  skipped: .gitlab-ci.yml already exists');
     io.stdout('  next step: review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if needed');
   } else {
@@ -563,6 +580,12 @@ async function upgradeGitLabCiBundle(
   }
 
   await warnIfGitLabVendorTarballsIgnored(targetDir, io);
+  printGitLabCiReadinessSummary(io, {
+    mode: 'upgrade',
+    rootCiExistsBefore,
+    rootCiWillBePatched: !rootCiExistsBefore,
+    routeTableStatus,
+  });
 
   io.stdout(`
 === Next steps ===
@@ -570,6 +593,42 @@ async function upgradeGitLabCiBundle(
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
 `);
   return 0;
+}
+
+function printGitLabCiReadinessSummary(
+  io: CliIo,
+  summary: {
+    mode: 'add' | 'upgrade';
+    rootCiExistsBefore: boolean;
+    rootCiWillBePatched: boolean;
+    routeTableStatus: ScaffoldStatus;
+  },
+) {
+  const fragmentVerb = summary.mode === 'add' ? 'generated' : 'upgraded';
+  const rootStatus = summary.rootCiWillBePatched
+    ? '.gitlab-ci.yml includes generated ZJ Loop fragments'
+    : '.gitlab-ci.yml was not changed; add the include block below if it is missing';
+  const routeTableStatus = formatRouteTableStatus(summary.routeTableStatus);
+  io.stdout(`
+=== GitLab CI readiness ===
+  fragments: zj-loop/gitlab-ci/*.yml ${fragmentVerb}
+  root_ci: ${rootStatus}
+  route_table: ${routeTableStatus}
+`);
+  if (!summary.rootCiWillBePatched) printGitLabCiIncludeBlock(io);
+}
+
+function formatRouteTableStatus(status: ScaffoldStatus): string {
+  if (status === 'created') return 'zj-loop/zj-loop-route-table.yaml created';
+  if (status === 'would-create') return 'zj-loop/zj-loop-route-table.yaml would be created';
+  if (status === 'exists') return 'zj-loop/zj-loop-route-table.yaml present';
+  return 'zj-loop/zj-loop-route-table.yaml missing; route table template was not found';
+}
+
+function printGitLabCiIncludeBlock(io: CliIo) {
+  io.stdout(`  include block:
+include:
+${GITLAB_CI_TEMPLATE_FILES.map((file) => `  - local: "zj-loop/gitlab-ci/${file}"`).join('\n')}`);
 }
 
 async function upgradeRenderedTemplateFile(
@@ -888,24 +947,25 @@ async function scaffoldRouteTable(
   templatesRoot: string,
   dryRun: boolean,
   io: CliIo,
-) {
+): Promise<ScaffoldStatus> {
   const routeTablePath = path.join(targetDir, LOOP_ARTIFACTS.routeTable.primary);
   if (await exists(routeTablePath)) {
     io.stdout(`  skipped: ${LOOP_ARTIFACTS.routeTable.primary} already exists`);
-    return;
+    return 'exists';
   }
 
   const templatePath = path.join(templatesRoot, LOOP_ARTIFACTS.routeTable.template);
-  if (!(await exists(templatePath))) return;
+  if (!(await exists(templatePath))) return 'missing-template';
   if (dryRun) {
     io.stdout(`  would write: ${routeTablePath}`);
-    return;
+    return 'would-create';
   }
 
   const template = await readFile(templatePath, 'utf8');
   await mkdir(path.dirname(routeTablePath), { recursive: true });
   await writeFile(routeTablePath, buildRouteTableYaml(template, pattern));
   io.stdout(`  created: ${LOOP_ARTIFACTS.routeTable.primary}`);
+  return 'created';
 }
 
 async function copyFile(src: string, dest: string, dryRun: boolean, io: CliIo) {
@@ -1016,7 +1076,8 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
     }
     const templatesRoot = await resolveBundledOrMonorepo('templates');
     if (upgradeTarget === 'gitlab-ci') {
-      return upgradeGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage);
+      const defaultPattern = patterns.find((pattern) => pattern.id === 'daily-triage') ?? patterns[0];
+      return upgradeGitLabCiBundle(targetDir, templatesRoot, defaultPattern, dryRun, force, io, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage);
     }
     return upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
   }

@@ -1,31 +1,144 @@
 # Issue Triage State
 
-Last run: 2026-07-10
+Last run: 2026-07-11
+
+This file records the current issue triage route state for this repository.
+Detailed historical dogfood transcripts are intentionally not kept here once
+their source issues, carriers, PRs, or durable docs have absorbed the evidence.
 
 ## Current Capability
 
 - Route: `issue-backlog-triage`
+  - Consumer: `issue-triage`
   - Consumer kind: `report-consumer`
   - Execution mode: `report-only`
   - Completion form: `report-evidence`
   - Protocol maturity: `replayed`
   - Runner maturity: `missing`
+  - Side effects: forbidden
+- Route: `issue-triage-transition`
+  - Consumer: `issue-triage-transition`
+  - Consumer kind: `triage-action-consumer`
+  - Execution mode: `request-only`
+  - Completion forms: `triage-transition-confirmed`,
+    `issue-fix-request-created`, `triage-action-skipped`,
+    `escalation-issue`
+  - Protocol maturity: `designed`
+  - Runner maturity: `replayed`
+  - Side effects: source issue Issue Fix Request comment only, after fixed
+    maintainer/collaborator confirmation
 - Route: `issue-triage-action`
+  - Consumer: `issue-triage-action`
   - Consumer kind: `triage-action-consumer`
   - Execution mode: `dry-run`
   - Completion forms: `triage-label-applied`, `triage-comment-posted`,
     `triage-action-skipped`, `escalation-issue`
   - Protocol maturity: `designed`
   - Runner maturity: `replayed`
-- Route: `issue-triage-transition`
-  - Consumer kind: `triage-action-consumer`
-  - Execution mode: `request-only`
-  - Completion forms: `triage-transition-confirmed`,
-    `issue-fix-request-created`, `triage-action-skipped`, `escalation-issue`
-  - Protocol maturity: `designed`
-  - Runner maturity: `replayed` plus live workflow-dispatch dogfood evidence
+  - Side effects: planned only; live issue mutation remains disabled
+
+## Current Open Triage Work
+
+- Active report-only scan:
+  - Scan window: `all-issues:2026-07-11`
+  - Total issues scanned: 43
+  - Open issues: 2
+  - Closed issues: 41
+  - Side effects executed: none
+- Promoted transition:
+  - Source issue: `#101`
+  - Transition request: `triage-transition-af8f4278cf7b`
+  - Issue Fix Request: `ifr_triage_c3dc6d47a53b`
+  - Requested consumer: `roadmap-sliced-development`
+  - Carrier comment:
+    https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943180683
+  - Consumer status: consumed by Roadmap-Sliced Development
+  - Consumed evidence:
+    https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943236762
+- Open issue recommendations:
+  - `#101`: `label-suggestion-observation`, recommended
+    `ready-for-agent`; promoted to a source issue Issue Fix Request carrier
+    for `roadmap-sliced-development`.
+  - `#100`: `human-attention-candidate`, recommended `ready-for-human`;
+    this issue is already an Issue Fix Request carrier for CI Sweeper, so
+    triage must not create a nested Issue Fix Request.
+- Previously tracked dogfood source issues and carriers have been closed or
+  absorbed into durable documentation:
+  - `#7` closed 2026-07-09
+  - `#70` closed 2026-07-09
+  - `#89` closed 2026-07-10
+  - `#92` closed 2026-07-10
+
+## Dogfood Run - 2026-07-11
+
+Scan window: `all-issues:2026-07-11`
+
+Source command:
+
+```bash
+gh issue list --repo jununfly/ZAgenticLoop --state all --limit 300 --json number,title,state,labels,assignees,createdAt,updatedAt,closedAt,url,author,body,comments
+```
+
+Backlog summary:
+
+- Total issues scanned: 43
+- Open issues: 2
+- Closed issues: 41
+- Open issue observations:
+  - 1 `label-suggestion-observation`
+  - 1 `human-attention-candidate`
+- All tracker side effects remained disabled.
+
+Observed open issues:
+
+| Issue | Signal kind | Recommended state | Decision | Request id | Notes |
+| --- | --- | --- | --- | --- | --- |
+| [#101](https://github.com/jununfly/ZAgenticLoop/issues/101) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_4e946fd3c5ef` | `triage-transition-af8f4278cf7b` | GitLab provider bundle feedback is detailed enough for roadmap-sliced implementation: CI fragment image/tag inheritance, private runner Node path, GitLab MR metadata fetch, dispatch/execution readiness split, provider metadata, manual replay support, production-safe profiles, audit substrate checks, YAML-preserving route enablement, and branch slug trimming. |
+| [#100](https://github.com/jununfly/ZAgenticLoop/issues/100) | `human-attention-candidate` | `ready-for-human` | `rd_issue_triage_612e31c5b0c4` | `triage-transition-e6cda7db8a7e` | Existing CI Sweeper Issue Fix Request for failed run [29135923254](https://github.com/jununfly/ZAgenticLoop/actions/runs/29135923254). It should be consumed or closed through the existing `ci-sweeper` lifecycle, not converted into a nested Issue Fix Request. |
+
+Maintainer/collaborator confirmation command if `#101` should be promoted:
+
+```text
+/zj-loop confirm-triage-transition triage-transition-af8f4278cf7b
+```
+
+Fixed confirmation phrase:
+
+```text
+CONFIRM_TRIAGE_TRANSITION
+```
+
+Confirmed transition evidence:
+
+- Transition request: `triage-transition-af8f4278cf7b`
+- Confirmed transition status: `confirmed`
+- Issue Fix Request id: `ifr_triage_c3dc6d47a53b`
+- Requested consumer: `roadmap-sliced-development`
+- Source issue request carrier:
+  https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943180683
+- Consumer lifecycle evidence:
+  https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943236762
+- Dedupe verification: `gh issue view 101 --json number,title,state,url,comments`
+  showed exactly one `<!-- zj-loop:issue-fix-request` carrier comment for
+  `ifr_triage_c3dc6d47a53b`.
+
+Report-only side-effect audit for this run:
+
+```text
+public_issue_comment_created: false
+tracker_state_changed: false
+label_changed: false
+assignment_changed: false
+milestone_changed: false
+issue_closed_or_reopened: false
+formal_lifecycle_transitioned: false
+issue_fix_request_created: false
+consumer_work_started: false
+```
 
 ## Allowed Observations
+
+`issue-backlog-triage` may record these observation kinds only:
 
 - `missing-info-observation`
 - `possible-duplicate-observation`
@@ -33,393 +146,69 @@ Last run: 2026-07-10
 - `human-attention-candidate`
 - `issue-backlog-summary`
 
-## Evidence
-
-- 2026-07-09 dogfood run applied `issue-backlog-triage` to the live
-  `jununfly/ZAgenticLoop` open issue backlog. The route remained report-only:
-  no public issue comments, labels, assignments, milestones, close/reopen
-  actions, formal lifecycle transitions, Issue Fix Requests, or consumer work
-  were created.
-- Issue Backlog Triage replay verifies allowed observations, recommended
-  triage transition contracts, fixed status enum, already-recorded dedupe,
-  unsupported signal rejection, hard human guard routing, forbidden protocol
-  fields, `ready-for-agent` Issue Fix Request side-effect planning, and
-  `wontfix` default confirmation blocking:
-  `scripts/issue-backlog-triage-e2e-replay.test.mjs`.
-- Report-only dispatcher replay verifies `human`, `ignore`, and
-  `daily-triage-report` create evidence without Issue Fix Requests, activation
-  requests, workflow dispatch, or consumer work:
-  `scripts/report-only-route-dispatcher.test.mjs`.
-- Issue Triage Action runner replay verifies allowlisted label dry-run, fixed
-  comment dry-run, unsupported label rejection, freeform comment rejection,
-  human-guard escalation, and live refusal until dogfood enables it:
-  `scripts/issue-triage-action-runner.test.mjs`.
-- Issue Triage Transition runner verifies maintainer/collaborator confirmation,
-  exact slash command matching, fixed confirmation phrase, `ready-for-agent`
-  Issue Fix Request carrier body generation, `needs-info` triage notes
-  planning, and default `wontfix` escalation:
-  `tools/zj-loop-core/test/issue-triage-transition-runner.test.mjs`.
-
-## Dogfood Run — 2026-07-09
-
-Scan window: `open-issues:2026-07-09`
-
-Source command:
-
-```bash
-gh issue list --state open --limit 50 --json number,title,body,labels,assignees,createdAt,updatedAt,url,author,comments
-```
-
-Observed open issues:
-
-| Issue | Signal kind | Recommended state | Decision | Request id | Notes |
-| --- | --- | --- | --- | --- | --- |
-| [#7](https://github.com/jununfly/ZAgenticLoop/issues/7) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_54138473c258` | `triage-transition-ea7301f8e65a` | Concrete product gap and acceptance criteria for surfacing PRD next-command handoff comments while preserving report-only defaults. |
-| [#52](https://github.com/jununfly/ZAgenticLoop/issues/52) | `human-attention-candidate` | `ready-for-human` | `rd_issue_triage_3f36a2a58044` | `triage-transition-eda47c28b2cd` | Plan activation carrier appears consumed/merged; maintainer should decide whether to close or retain it as durable plan context. |
-| [#6](https://github.com/jununfly/ZAgenticLoop/issues/6) | `human-attention-candidate` | `ready-for-human` | `rd_issue_triage_896b7bfa27cb` | `triage-transition-2d17fd72d00f` | Multi-part product design scope should be split or prioritized before agent delegation. |
-| [#4](https://github.com/jununfly/ZAgenticLoop/issues/4) | `possible-duplicate-observation` | `ready-for-human` | `rd_issue_triage_525a3ce971db` | `triage-transition-a6d5a168d79d` | Possible overlap with #6 around audit warning categories and exact remediation commands. |
-
-Backlog summary: 4 open issues scanned; 1 `ready-for-agent` recommendation,
-2 human-attention candidates, and 1 possible-overlap observation.
-
-Maintainer/collaborator confirmation commands, if a transition should be
-promoted later:
-
-```text
-/zj-loop confirm-triage-transition triage-transition-ea7301f8e65a
-/zj-loop confirm-triage-transition triage-transition-eda47c28b2cd
-/zj-loop confirm-triage-transition triage-transition-2d17fd72d00f
-/zj-loop confirm-triage-transition triage-transition-a6d5a168d79d
-```
-
-Report-only side-effect audit for this run:
-
-```text
-public_issue_comment_created: false
-tracker_state_changed: false
-label_changed: false
-assignment_changed: false
-milestone_changed: false
-issue_closed_or_reopened: false
-formal_lifecycle_transitioned: false
-issue_fix_request_created: false
-consumer_work_started: false
-```
-
-## Dogfood Run — 2026-07-10
-
-Scan window: `open-issues:2026-07-10`
-
-Source command:
-
-```bash
-gh issue list --state open --limit 50 --json number,title,body,labels,assignees,createdAt,updatedAt,url,author,comments
-```
-
-Observed open issues:
-
-| Issue | Signal kind | Recommended state | Decision | Request id | Notes |
-| --- | --- | --- | --- | --- | --- |
-| [#89](https://github.com/jununfly/ZAgenticLoop/issues/89) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_20f373a95e92` | `triage-transition-02d0ef43b214` | GitLab provider dogfood report with concrete hardening gaps across CI template portability, runner configuration, vendored package behavior, route vocabulary, request body wording, closeout contracts, and specialized route expectations. |
-
-Backlog summary: 1 open issue scanned; 1 `ready-for-agent` recommendation.
-
-Maintainer/collaborator confirmation command, if the transition should be
-promoted later:
-
-```text
-/zj-loop confirm-triage-transition triage-transition-02d0ef43b214
-```
-
-Replay and report-only evidence:
-
-- Local route replay gate passed: `npm run test:issue-backlog-triage`.
-- Local end-to-end replay passed:
-  `node scripts/issue-backlog-triage-e2e-replay.mjs`.
-- Dedupe key:
-  `issue-backlog-triage:jununfly/ZAgenticLoop:open-issues:2026-07-10:label-suggestion-observation:issue-89`.
-- Confirmation phrase remains fixed if promoted:
-  `CONFIRM_TRIAGE_TRANSITION`.
-- Stale-after timestamp: `2026-07-17T10:00:00.000Z`.
-
-Report-only side-effect audit for this run:
-
-```text
-public_issue_comment_created: false
-tracker_state_changed: false
-label_changed: false
-assignment_changed: false
-milestone_changed: false
-issue_closed_or_reopened: false
-formal_lifecycle_transitioned: false
-issue_fix_request_created: false
-consumer_work_started: false
-```
-
-## Confirmed Transition Dogfood — 2026-07-10
-
-Source issue: [#89](https://github.com/jununfly/ZAgenticLoop/issues/89)
-
-Confirmed request:
-
-```text
-/zj-loop confirm-triage-transition triage-transition-02d0ef43b214
-
-CONFIRM_TRIAGE_TRANSITION
-```
-
-Execution evidence:
-
-- Maintainer confirmation phrase was provided in the Codex session.
-- Local transition gate passed: `npm run test:issue-triage-transition-e2e`.
-- Confirmed transition status: `confirmed`.
-- Confirmed transition run id: `afa1027b2078`.
-- Planned and created Issue Fix Request id: `ifr_triage_6b1bcf67fbf9`.
-- Requested consumer: `roadmap-sliced-development`.
-- Source issue request carrier:
-  https://github.com/jununfly/ZAgenticLoop/issues/89#issuecomment-4934172412
-- Dedupe verification: `gh issue view 89 --json number,url,comments`
-  showed exactly one `<!-- zj-loop:issue-fix-request` carrier comment for
-  `ifr_triage_6b1bcf67fbf9`.
-
-Live side-effect audit:
-
-```text
-source_issue: https://github.com/jununfly/ZAgenticLoop/issues/89
-public_issue_comment_created_by_runner: true
-public_issue_comment_kind: source_issue_issue_fix_request
-tracker_state_changed: false
-label_changed: false
-assignment_changed: false
-milestone_changed: false
-issue_closed_or_reopened_by_runner: false
-formal_lifecycle_transitioned: false
-independent_issue_fix_request_created: false
-consumer_work_started: false
-dedupe_result: exactly_one_structured_issue_fix_request_comment
-```
-
-## Dogfood Run — 2026-07-10T13:17:53Z
-
-Scan window: `open-issues:2026-07-10T13:17:53Z`
-
-Source commands:
-
-```bash
-node tools/zj-loop-core/dist/route-cli.js dispatch issue-backlog-triage --json
-node tools/zj-loop-core/dist/consumer-cli.js plan issue-backlog-triage --json
-gh issue list --repo jununfly/ZAgenticLoop --state open --limit 30 --json number,title,labels,assignees,updatedAt,createdAt,url,author
-gh issue view 92 --repo jununfly/ZAgenticLoop --json number,title,state,labels,body,comments,url,author,createdAt,updatedAt
-```
-
-Observed open issues:
-
-| Issue | Signal kind | Recommended state | Decision | Request id | Notes |
-| --- | --- | --- | --- | --- | --- |
-| [#92](https://github.com/jununfly/ZAgenticLoop/issues/92) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_ab00f289f564` | `triage-transition-7308be36acdf` | GitLab provider dogfood validation with concrete acceptance criteria for runner image configuration, Node compatibility, full validation enablement, blocked-plan observability, vendored package validation, provider-specific wording, and CI Sweeper dry-run Issue Fix Request artifacts. |
-
-Backlog summary: 1 open issue scanned; 1 `ready-for-agent` recommendation.
-
-Maintainer/collaborator confirmation command, if the transition should be
-promoted later:
-
-```text
-/zj-loop confirm-triage-transition triage-transition-7308be36acdf
-```
-
-Replay and report-only evidence:
-
-- Route dispatch allowed `issue-backlog-triage` as report-only.
-- Consumer plan stayed report-only with no worker side effects.
-- Dedupe key:
-  `issue-backlog-triage:jununfly/ZAgenticLoop:open-issues:2026-07-10T13:17:53Z:label-suggestion-observation:issue-92`.
-- Confirmation phrase remains fixed if promoted:
-  `CONFIRM_TRIAGE_TRANSITION`.
-- Stale-after timestamp: `2026-07-17T13:17:53.000Z`.
-
-Report-only side-effect audit for this run:
-
-```text
-public_issue_comment_created: false
-tracker_state_changed: false
-label_changed: false
-assignment_changed: false
-milestone_changed: false
-issue_closed_or_reopened: false
-formal_lifecycle_transitioned: false
-issue_fix_request_created: false
-consumer_work_started: false
-```
-
-## Confirmed Transition Dogfood — 2026-07-10T13:24:20Z
-
-Source issue: [#92](https://github.com/jununfly/ZAgenticLoop/issues/92)
-
-Confirmed request:
-
-```text
-/zj-loop confirm-triage-transition triage-transition-7308be36acdf
-
-CONFIRM_TRIAGE_TRANSITION
-```
-
-Execution evidence:
-
-- Maintainer confirmation phrase was provided in the Codex session.
-- Confirmed transition status: `confirmed`.
-- Confirmed transition run id: `dc8bea38ad1b`.
-- Planned and created Issue Fix Request id: `ifr_triage_798811d9a6aa`.
-- Requested consumer: `roadmap-sliced-development`.
-- Source issue request carrier:
-  https://github.com/jununfly/ZAgenticLoop/issues/92#issuecomment-4935790899
-- Dedupe verification: `gh issue view 92 --json number,url,comments`
-  showed exactly one `<!-- zj-loop:issue-fix-request` carrier comment for
-  `ifr_triage_798811d9a6aa`.
-
-Live side-effect audit:
-
-```text
-source_issue: https://github.com/jununfly/ZAgenticLoop/issues/92
-public_issue_comment_created_by_runner: true
-public_issue_comment_kind: source_issue_issue_fix_request
-tracker_state_changed: false
-label_changed: false
-assignment_changed: false
-milestone_changed: false
-issue_closed_or_reopened_by_runner: false
-formal_lifecycle_transitioned: false
-independent_issue_fix_request_created: false
-consumer_work_started: false
-dedupe_result: exactly_one_structured_issue_fix_request_comment
-```
-
 ## Boundary
 
-Issue Backlog Triage is report-only in this repository. It may record
-recommended triage transition evidence and fixed confirmation commands, but it
-must not write public issue comments, mutate labels, assign issues, set
-milestones, close/reopen issues, perform formal lifecycle transitions,
+`issue-backlog-triage` is report-only in this repository. It may record issue
+or discussion backlog observations and recommended triage transition evidence,
+but it must not write public issue comments, mutate labels, assign issues, set
+milestones, close or reopen issues, perform formal lifecycle transitions,
 batch-mutate an issue tracker, create Issue Fix Requests, or start consumer
 work.
 
-Issue side effects are separated into `issue-triage-transition` and
-`issue-triage-action`. `issue-triage-transition` is a request-only, replayed
-consumer that creates or dedupes Issue Fix Request comments on the source issue
-for `ready-for-agent` after fixed confirmation. Independent Issue Fix Request
-issues are narrow exceptions for missing source issues, cross-repository
-permission limits, source issues unsuitable for automation evidence, or explicit
-human-requested isolation.
-`issue-triage-action` handles narrowly allowlisted labels or fixed comment
-templates and remains dry-run. Neither route may perform source issue mutation
-until workflow-dispatch dogfood evidence exists and the Route Table is explicitly promoted to
-`execution.mode: live`.
+Issue side effects are separated into dedicated consumers:
 
-## Confirmed Transition Dogfood — 2026-07-09
+- `issue-triage-transition` consumes fixed confirmed transition requests. For
+  `ready-for-agent`, it creates or dedupes an Issue Fix Request comment on the
+  source issue after maintainer/collaborator confirmation with the exact
+  `/zj-loop confirm-triage-transition <request-id>` command and fixed
+  `CONFIRM_TRIAGE_TRANSITION` phrase.
+- `issue-triage-action` handles narrowly allowlisted labels or fixed comment
+  templates and remains dry-run. It must not perform live issue mutation until
+  the Route Table explicitly promotes it.
 
-Source issue: [#7](https://github.com/jununfly/ZAgenticLoop/issues/7)
+Independent Issue Fix Request issues are narrow exceptions for missing source
+issues, cross-repository permission limits, source issues unsuitable for
+automation evidence, or explicit human-requested isolation.
 
-Confirmed request:
+## Verification Evidence
 
-```text
-/zj-loop confirm-triage-transition triage-transition-ea7301f8e65a
+Current replay and contract coverage:
 
-CONFIRM_TRIAGE_TRANSITION
+- Issue backlog triage replay:
+  `scripts/issue-backlog-triage-e2e-replay.test.mjs`
+- Report-only dispatcher replay:
+  `scripts/report-only-route-dispatcher.test.mjs`
+- Issue triage transition runner tests:
+  `tools/zj-loop-core/test/issue-triage-transition-runner.test.mjs`
+- Issue triage action runner replay:
+  `scripts/issue-triage-action-runner.test.mjs`
+
+Useful verification commands:
+
+```bash
+npm run test:issue-backlog-triage
+npm run test:issue-triage-transition-e2e
+npm run test:route-decision
+bash scripts/ci-validate-gates.sh
+git diff --check
 ```
 
-Historical execution evidence:
+## Historical Evidence Index
 
-- Maintainer confirmation comment was present on source issue #7:
-  https://github.com/jununfly/ZAgenticLoop/issues/7#issuecomment-4924123652
-- Published package path verified with
-  `@jununfly/zj-loop-core@0.1.3 zj-loop-issue-triage-transition confirm-plan`.
-- Confirmed transition status: `confirmed`.
-- Planned Issue Fix Request id: `ifr_triage_c57037197eb2`.
-- Historical dogfood created an independent Issue Fix Request carrier:
-  [#70](https://github.com/jununfly/ZAgenticLoop/issues/70).
-- Follow-up simplification work found this split carrier created status drift
-  risk because source issue #7 was not the lifecycle home. New confirmed
-  transitions default to source issue Issue Fix Request comments instead.
+Resolved dogfood details are preserved in durable docs instead of this runtime
+state file:
 
-Source issue side-effect audit after confirmed transition:
+- `docs/designs/dogfood-reference-case.md`
+- `docs/designs/route-consumer-execution-architecture.md`
+- `docs/designs/route-table-architecture.md`
+- `docs/designs/triage-architecture.md`
+- `docs/designs/user-project-execution-ready-bundle.md`
 
-```text
-source_issue: https://github.com/jununfly/ZAgenticLoop/issues/7
-public_issue_comment_created_by_runner: false
-tracker_state_changed: false
-label_changed: false
-assignment_changed: false
-milestone_changed: false
-issue_closed_or_reopened: false
-formal_lifecycle_transitioned: false
-issue_fix_request_created_on_independent_carrier: true
-consumer_work_started: false
-```
+Historical findings already absorbed:
 
-Carrier contract audit:
-
-```text
-carrier_issue: https://github.com/jununfly/ZAgenticLoop/issues/70
-schema: zj-loop.issue_fix_request.v1
-request_id: ifr_triage_c57037197eb2
-requested_consumer: roadmap-sliced-development
-status: requested
-failure_policy.retry: new_request_only
-verification_gate.commands: git diff --check
-```
-
-## Source Issue Carrier Live Dogfood — 2026-07-09
-
-Live chain:
-
-```text
-Issue Backlog
--> Route Decision
--> Recommended Triage Transition
--> Confirmed Triage Transition
--> Source Issue Fix Request Comment
-```
-
-Replay and live evidence:
-
-- Local replay gate: `npm run test:issue-backlog-triage`.
-- Local transition gate: `npm run test:issue-triage-transition-e2e`.
-- Live workflow-dispatch run:
-  https://github.com/jununfly/ZAgenticLoop/actions/runs/29018974110
-- Source issue request carrier:
-  https://github.com/jununfly/ZAgenticLoop/issues/7#issuecomment-4925192831
-- Source issue: https://github.com/jununfly/ZAgenticLoop/issues/7
-- Confirmed transition request id: `triage-transition-ea7301f8e65a`.
-- Issue Fix Request id: `ifr_triage_10ad5374e8d7`.
-- Requested consumer: `roadmap-sliced-development`.
-
-Live side-effect audit:
-
-```text
-source_issue: https://github.com/jununfly/ZAgenticLoop/issues/7
-public_issue_comment_created_by_runner: true
-public_issue_comment_kind: source_issue_issue_fix_request
-tracker_state_changed: false
-label_changed: false
-assignment_changed: false
-milestone_changed: false
-issue_closed_or_reopened_by_runner: false
-formal_lifecycle_transitioned: false
-independent_issue_fix_request_created: false
-consumer_work_started: false
-dedupe_result: exactly_one_structured_issue_fix_request_comment
-```
-
-Live dogfood failures found before success:
-
-| Failure | Repair PR | Result |
-| --- | --- | --- |
-| Maintainer confirmation comments containing the transition request id could be mistaken for an existing Issue Fix Request carrier. | [#75](https://github.com/jununfly/ZAgenticLoop/pull/75) | Dedupe now requires `<!-- zj-loop:issue-fix-request` plus the request id. |
-| GitHub Actions step used `gh issue view/comment` without `GH_TOKEN`. | [#77](https://github.com/jununfly/ZAgenticLoop/pull/77) | Workflow step now sets `GH_TOKEN: ${{ github.token }}`. |
-
-Closeout gap:
-
-- Directly related issues/PRs were not closed by the loop after success.
-- #7 and #77 were closed manually by the maintainer.
-- Future closeout planning should make the next close action explicit and
-  auditable: close target, close reason, evidence links, guard, and whether the
-  action is only recommended or can be executed by a narrow closeout consumer.
+- Source issue Issue Fix Request comments replaced independent carrier issues
+  as the default when a source issue exists.
+- Marker-based dedupe is required for Issue Fix Request comments.
+- GitHub Actions issue comment/write steps require `GH_TOKEN`.
+- Successful roadmap consumption needs explicit post-merge closeout planning so
+  source issues, carrier comments, and branches do not remain ambiguous.

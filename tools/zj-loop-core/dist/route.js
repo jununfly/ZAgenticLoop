@@ -177,12 +177,24 @@ export async function setRouteEnabled(input) {
     }
     const target = findMutableRoute(table, route.route_id);
     const changed = target.enabled !== input.enabled || (input.reason !== undefined && target.enabled_reason !== input.reason);
-    target.enabled = input.enabled;
-    if (input.reason)
-        target.enabled_reason = input.reason;
-    if (!input.enabled && target.enabled_reason)
-        delete target.enabled_reason;
-    await writeFile(filePath, YAML.stringify(table));
+    if (changed) {
+        const updatedText = patchRouteEnabledText(text, {
+            routeId: route.route_id,
+            enabled: input.enabled,
+            reason: input.reason,
+        });
+        if (updatedText !== null) {
+            await writeFile(filePath, updatedText);
+        }
+        else {
+            target.enabled = input.enabled;
+            if (input.reason)
+                target.enabled_reason = input.reason;
+            if (!input.enabled && target.enabled_reason)
+                delete target.enabled_reason;
+            await writeFile(filePath, YAML.stringify(table));
+        }
+    }
     return {
         route_id: route.route_id,
         consumer: route.consumer,
@@ -195,6 +207,85 @@ export async function setRouteEnabled(input) {
             ? [`Run zj-loop-route status ${route.consumer}`, 'Run the matching workflow smoke path and inspect evidence.']
             : [`Run zj-loop-route status ${route.consumer}`, 'Re-run audit or workflow smoke path if rollback was due to failure.'],
     };
+}
+function patchRouteEnabledText(text, input) {
+    const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
+    const trailingNewline = text.endsWith('\n');
+    const lines = text.split(/\r?\n/);
+    if (trailingNewline)
+        lines.pop();
+    const routeLineIndex = lines.findIndex((line) => yamlLineScalarEquals(line, 'route_id', input.routeId));
+    if (routeLineIndex === -1)
+        return null;
+    const blockStart = findRouteBlockStart(lines, routeLineIndex);
+    if (blockStart === -1)
+        return null;
+    const itemIndent = lines[blockStart].match(/^(\s*)-\s+/)?.[1];
+    if (itemIndent === undefined)
+        return null;
+    let blockEnd = lines.length;
+    const nextItem = new RegExp(`^${escapeRegExp(itemIndent)}-\\s+`);
+    for (let index = blockStart + 1; index < lines.length; index += 1) {
+        if (nextItem.test(lines[index])) {
+            blockEnd = index;
+            break;
+        }
+    }
+    const enabledIndex = findKeyLineInBlock(lines, blockStart, blockEnd, 'enabled');
+    if (enabledIndex === -1)
+        return null;
+    const enabledIndent = lines[enabledIndex].match(/^(\s*)/)?.[1] ?? `${itemIndent}  `;
+    lines[enabledIndex] = `${enabledIndent}enabled: ${input.enabled ? 'true' : 'false'}`;
+    const reasonIndex = findKeyLineInBlock(lines, blockStart, blockEnd, 'enabled_reason');
+    if (!input.enabled) {
+        if (reasonIndex !== -1)
+            lines.splice(reasonIndex, 1);
+    }
+    else if (input.reason !== undefined) {
+        const reasonLine = `${enabledIndent}enabled_reason: ${formatYamlScalar(input.reason)}`;
+        if (reasonIndex === -1) {
+            lines.splice(enabledIndex + 1, 0, reasonLine);
+        }
+        else {
+            lines[reasonIndex] = reasonLine;
+        }
+    }
+    return `${lines.join(lineEnding)}${trailingNewline ? lineEnding : ''}`;
+}
+function findRouteBlockStart(lines, routeLineIndex) {
+    for (let index = routeLineIndex; index >= 0; index -= 1) {
+        if (/^\s*-\s+/.test(lines[index]))
+            return index;
+    }
+    return -1;
+}
+function findKeyLineInBlock(lines, start, end, key) {
+    const pattern = new RegExp(`^\\s*${escapeRegExp(key)}\\s*:`);
+    for (let index = start; index < end; index += 1) {
+        if (pattern.test(lines[index]))
+            return index;
+    }
+    return -1;
+}
+function yamlLineScalarEquals(line, key, expected) {
+    const match = line.match(new RegExp(`^\\s*(?:-\\s*)?${escapeRegExp(key)}\\s*:\\s*(.*?)\\s*(?:#.*)?$`));
+    if (!match)
+        return false;
+    return unquoteYamlScalar(match[1]) === expected;
+}
+function unquoteYamlScalar(value) {
+    const trimmed = value.trim();
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+        return trimmed.slice(1, -1);
+    }
+    return trimmed;
+}
+function formatYamlScalar(value) {
+    return YAML.stringify(value).trim();
+}
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 function normalizeRouteSection(routes, section) {
     return (routes ?? []).map((route) => {

@@ -108,6 +108,7 @@ export function buildPrStewardExecutionPlan(input: {
   const provider = providerForRequest(input.request);
   const reviewNumber = provider === 'gitlab' ? subject.mr_iid : subject.pr_number;
   const reviewKind = provider === 'gitlab' ? 'merge-request' : 'pull-request';
+  const sourceUrl = input.request?.source_signal?.source_url ?? '';
   const branch = `automated/pr-steward-${provider === 'gitlab' ? 'mr' : 'pr'}-${reviewNumber ?? 'unknown'}-${shortHash(input.request?.dedupe_key ?? '')}`;
   const parsedRepairCommands = (input.repairCommands ?? []).map(parseCommand);
   const parsedVerificationCommands = (input.request?.verification_gate?.commands ?? []).map(parseCommand);
@@ -151,7 +152,8 @@ export function buildPrStewardExecutionPlan(input: {
       head_sha: subject.head_sha ?? '',
       current_head_sha: input.currentPrHeadSha ?? '',
       base_branch: subject.base_branch ?? '',
-      source_url: input.request?.source_signal?.source_url ?? '',
+      source_url: sourceUrl,
+      provider_metadata: reviewProviderMetadata({ provider, number: reviewNumber, sourceUrl }),
     },
     source_pr: provider === 'github'
       ? {
@@ -453,6 +455,14 @@ function extractFirstUrl(text: string) {
 function providerForRequest(request: any): 'github' | 'gitlab' {
   const provider = request?.subject?.provider ?? request?.source_signal?.provider;
   return provider === 'gitlab' ? 'gitlab' : 'github';
+}
+
+function reviewProviderMetadata(input: { provider: 'github' | 'gitlab'; number: unknown; sourceUrl: string }) {
+  if (input.provider !== 'gitlab') return undefined;
+  return {
+    mr_iid: input.number ?? null,
+    mr_url: input.sourceUrl || null,
+  };
 }
 
 function sourceReviewDescriptor(request: any) {

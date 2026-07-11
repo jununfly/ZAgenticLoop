@@ -44,6 +44,22 @@ routes:
   );
 }
 
+function initGitRepo(dir) {
+  execSync('git init', { cwd: dir, stdio: 'ignore' });
+  execSync('git config user.email test@example.com', { cwd: dir, stdio: 'ignore' });
+  execSync('git config user.name "Test User"', { cwd: dir, stdio: 'ignore' });
+}
+
+async function writeMinimalGitLabSubstrate(dir) {
+  await mkdir(path.join(dir, 'zj-loop', 'gitlab-ci'), { recursive: true });
+  await writeFile(path.join(dir, '.gitlab-ci.yml'), 'include:\n  - local: "zj-loop/gitlab-ci/zj-loop-smoke.yml"\n');
+  await writeFile(
+    path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'),
+    '# zj-loop-generated: true\nsmoke:\n  script: echo smoke\n',
+  );
+  await writeMinimalRouteTable(dir);
+}
+
 function emptySignals() {
   return {
     stateFile: { present: false, paths: [] },
@@ -280,6 +296,77 @@ test('auditProject detects self-managed GitLab from GitLab CI evidence', async (
     assert.equal(result.signals.provider.gitlabCi, true);
     assert.ok(result.findings.some((finding) =>
       finding.message.includes('GitLab provider detected'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject warns when generated GitLab substrate is ignored by Git', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-gitlab-substrate-ignored-'));
+  try {
+    initGitRepo(dir);
+    await writeFile(path.join(dir, '.gitignore'), 'zj-loop/\n');
+    await writeMinimalGitLabSubstrate(dir);
+
+    const result = await auditProject(dir);
+    const finding = result.findings.find((candidate) =>
+      candidate.level === 'warn' &&
+      candidate.message.includes('GitLab generated substrate exists but is not fully tracked by Git'),
+    );
+    assert.ok(finding);
+    assert.equal(finding.affectsScore, false);
+    assert.ok(finding.nextSteps.some((step) =>
+      step.kind === 'command' &&
+      step.command.includes('git add -f') &&
+      step.command.includes('zj-loop/gitlab-ci/zj-loop-smoke.yml') &&
+      step.command.includes('zj-loop/zj-loop-route-table.yaml'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject warns when generated GitLab substrate is untracked', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-gitlab-substrate-untracked-'));
+  try {
+    initGitRepo(dir);
+    await writeMinimalGitLabSubstrate(dir);
+
+    const result = await auditProject(dir);
+    const finding = result.findings.find((candidate) =>
+      candidate.level === 'warn' &&
+      candidate.message.includes('GitLab generated substrate exists but is not fully tracked by Git'),
+    );
+    assert.ok(finding);
+    assert.ok(finding.nextSteps.some((step) =>
+      step.kind === 'command' &&
+      step.command.includes('git add ') &&
+      !step.command.includes('git add -f') &&
+      step.command.includes('.gitlab-ci.yml') &&
+      step.command.includes('zj-loop/gitlab-ci/zj-loop-smoke.yml'),
+    ));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('auditProject passes generated GitLab substrate tracking when committed', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-audit-gitlab-substrate-tracked-'));
+  try {
+    initGitRepo(dir);
+    await writeMinimalGitLabSubstrate(dir);
+    execSync('git add .', { cwd: dir, stdio: 'ignore' });
+    execSync('git commit -m "track gitlab substrate"', { cwd: dir, stdio: 'ignore' });
+
+    const result = await auditProject(dir);
+    assert.ok(result.findings.some((finding) =>
+      finding.level === 'ok' &&
+      finding.message.includes('GitLab generated substrate is tracked by Git'),
+    ));
+    assert.ok(!result.findings.some((finding) =>
+      finding.level === 'warn' &&
+      finding.message.includes('GitLab generated substrate exists but is not fully tracked by Git'),
     ));
   } finally {
     await rm(dir, { recursive: true, force: true });

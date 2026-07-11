@@ -92,6 +92,11 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /primary_pattern: "issue-triage"/);
+    assert.match(routeTable, /route_profiles:/);
+    assert.match(routeTable, /production_safe_default:/);
+    assert.match(routeTable, /dogfood_validation:/);
+    assert.match(routeTable, /side_effect_routes_enabled: false/);
+    assert.match(routeTable, /side_effect_routes_enabled: "route-by-route"/);
     assert.match(routeTable, /route_id: "issue-backlog-triage"/);
     assert.match(routeTable, /consumer_kind: "report-consumer"/);
     assert.match(routeTable, /mode: "report-only"/);
@@ -170,7 +175,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     }
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
-    assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.4/);
+    assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.5/);
     assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.5/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /zj-loop-consumer plan manual-smoke-report/);
@@ -395,30 +400,47 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(smoke, /zj-loop-template-id: gitlab-ci\/zj-loop-smoke/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /gitlab-manual-pipeline/);
+    assert.match(smoke, /ZJ_LOOP_SIGNAL_ID: ""/);
+    assert.match(smoke, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{CI_PIPELINE_ID:-manual\}\}/);
     assert.match(smoke, /ZJ_LOOP_RUN_AUDIT: "1"/);
     assert.match(smoke, /Skipping zj-loop-audit because ZJ_LOOP_RUN_AUDIT=0/);
     const ciSweeper = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-ci-sweeper.yml'), 'utf8');
     assert.match(ciSweeper, /zj-loop-ci-sweeper request-body/);
     assert.match(ciSweeper, /--provider gitlab/);
+    assert.match(ciSweeper, /ZJ_LOOP_SIGNAL_ID: ""/);
+    assert.match(ciSweeper, /--run-id "\$\{ZJ_LOOP_SIGNAL_ID:-\$\{CI_PIPELINE_ID:-manual\}\}"/);
     assert.match(ciSweeper, /issue-fix-request\.md/);
     assert.match(ciSweeper, /issue-fix-request-result\.json/);
     assert.doesNotMatch(ciSweeper, /\.github\/workflows/);
     const issueTriage = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-issue-triage.yml'), 'utf8');
     assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
+    assert.match(issueTriage, /ZJ_LOOP_ISSUE_IID: ""/);
+    assert.match(issueTriage, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_ISSUE_IID:-\$CI_PIPELINE_ID\}\}/);
+    const prSteward = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-pr-steward.yml'), 'utf8');
+    assert.match(prSteward, /ZJ_LOOP_MERGE_REQUEST_IID: ""/);
+    assert.match(prSteward, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}\}/);
     const roadmapActivation = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-roadmap-activation.yml'), 'utf8');
     assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
     assert.match(roadmapActivation, /zj-loop-roadmap-activation contract-plan --provider gitlab/);
+    assert.match(roadmapActivation, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_COMMENT_ID:-\$CI_PIPELINE_ID\}\}/);
     assert.match(roadmapActivation, /contract-plan\.json/);
     const postMerge = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
     assert.match(postMerge, /zj-loop-route dispatch post-merge-roadmap-closeout/);
     assert.match(postMerge, /zj-loop-post-merge-closeout closeout-plan --provider gitlab/);
     assert.match(postMerge, /closeout-plan\.json/);
     assert.match(postMerge, /ZJ_LOOP_TARGET_BRANCH: ""/);
-    assert.match(postMerge, /--target-branch "\$\{ZJ_LOOP_TARGET_BRANCH:-\$\{CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-main\}\}"/);
+    assert.match(postMerge, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}/);
+    assert.match(postMerge, /--merge-request "\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-0\}\}"/);
+    assert.match(postMerge, /--gitlab-api-url "\$\{CI_API_V4_URL:-https:\/\/gitlab\.com\/api\/v4\}"/);
+    assert.match(postMerge, /--gitlab-job-token "\$\{CI_JOB_TOKEN:-\}"/);
+    assert.doesNotMatch(postMerge, /--review-body-file/);
+    assert.doesNotMatch(postMerge, /--target-branch/);
     assert.doesNotMatch(postMerge, /ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);
+    assert.match(routeTable, /production_safe_default:/);
+    assert.match(routeTable, /dogfood_validation:/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -466,6 +488,12 @@ test('zj-loop-init --add gitlab-ci skips existing root CI by default', async () 
     const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
     assert.match(stdout, /skipped: .*\.gitlab-ci\.yml already exists/);
     assert.match(stdout, /next step: review \.gitlab-ci\.yml and include zj-loop\/gitlab-ci\/\*\.yml manually/);
+    assert.match(stdout, /=== GitLab CI readiness ===/);
+    assert.match(stdout, /fragments: zj-loop\/gitlab-ci\/\*\.yml generated/);
+    assert.match(stdout, /root_ci: \.gitlab-ci\.yml was not changed; add the include block below if it is missing/);
+    assert.match(stdout, /route_table: zj-loop\/zj-loop-route-table\.yaml created/);
+    assert.match(stdout, /include:\n  - local: "zj-loop\/gitlab-ci\/zj-loop-smoke\.yml"/);
+    assert.match(stdout, /  - local: "zj-loop\/gitlab-ci\/zj-loop-post-merge-cleanup\.yml"/);
     assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
     await access(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'));
   } finally {
@@ -531,6 +559,11 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(stdout, /backed up modified generated file: .*zj-loop-smoke\.yml → .*zj-loop-smoke\.yml\.bak/);
     assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
     assert.match(stdout, /skipped: \.gitlab-ci\.yml already exists/);
+    assert.match(stdout, /=== GitLab CI readiness ===/);
+    assert.match(stdout, /fragments: zj-loop\/gitlab-ci\/\*\.yml upgraded/);
+    assert.match(stdout, /root_ci: \.gitlab-ci\.yml was not changed; add the include block below if it is missing/);
+    assert.match(stdout, /route_table: zj-loop\/zj-loop-route-table\.yaml present/);
+    assert.match(stdout, /include:\n  - local: "zj-loop\/gitlab-ci\/zj-loop-smoke\.yml"/);
     assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
     const backup = await readFile(`${smokePath}.bak`, 'utf8');
     assert.match(backup, /# local edit/);
@@ -539,6 +572,23 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(upgraded, /tags:\n    - "k8s"/);
     assert.match(upgraded, /image: "registry\.example\.com\/node:20"/);
     assert.match(upgraded, /--package \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.5\.tgz/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade gitlab-ci creates missing route table readiness substrate', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-gitlab-ci-route-table-'));
+  try {
+    await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+    await rm(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), { force: true });
+
+    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'gitlab-ci']);
+
+    assert.match(stdout, /created: zj-loop\/zj-loop-route-table\.yaml/);
+    assert.match(stdout, /route_table: zj-loop\/zj-loop-route-table\.yaml created/);
+    const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(routeTable, /route_id: "manual-smoke-report"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

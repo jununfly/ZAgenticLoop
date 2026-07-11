@@ -538,6 +538,42 @@ export async function collectCloseoutInputFromGitHub(input) {
         gitStatus: gitStatusResult.stdout,
     };
 }
+export async function collectCloseoutInputFromGitLab(input) {
+    const fetchImpl = input.fetchImpl ?? globalThis.fetch;
+    if (typeof fetchImpl !== 'function') {
+        throw new Error('GitLab MR metadata fetch requires global fetch or an injected fetch implementation');
+    }
+    const apiUrl = buildGitLabMergeRequestApiUrl({
+        apiBaseUrl: input.apiBaseUrl,
+        projectPath: input.expectedRepo,
+        iid: input.iid,
+    });
+    const headers = {};
+    if (input.token) {
+        headers['PRIVATE-TOKEN'] = input.token;
+    }
+    else if (input.jobToken) {
+        headers['JOB-TOKEN'] = input.jobToken;
+    }
+    const response = await fetchImpl(apiUrl, { headers });
+    if (!response.ok) {
+        const body = response.text ? await response.text() : '';
+        throw new Error(`GitLab MR metadata fetch failed: ${response.status} ${response.statusText ?? ''}${body ? ` - ${body}` : ''}`.trim());
+    }
+    const mr = normalizeGitLabMrView(await response.json(), { expectedRepo: input.expectedRepo });
+    return {
+        pr: mr,
+        prBody: mr.body,
+        expectedRepo: input.expectedRepo,
+        currentRepo: input.expectedRepo,
+        gitStatus: '',
+    };
+}
+export function buildGitLabMergeRequestApiUrl(input) {
+    const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+    const projectPath = encodeURIComponent(input.projectPath);
+    return `${base}/projects/${projectPath}/merge_requests/${encodeURIComponent(String(input.iid))}`;
+}
 export function normalizeGhPrView(pr, { expectedRepo }) {
     const expectedOwner = String(expectedRepo ?? '').split('/')[0];
     const headOwner = normalizeOwner(pr.headRepositoryOwner);

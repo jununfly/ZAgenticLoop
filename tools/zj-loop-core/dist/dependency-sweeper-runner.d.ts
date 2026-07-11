@@ -31,6 +31,15 @@ export declare function buildDependencySweeperExecutionPlan(input?: {
     request_id: any;
     dedupe_key: any;
     provider: "github" | "gitlab";
+    source_signal: {
+        provider: "github" | "gitlab";
+        id: any;
+        source_url: any;
+        provider_metadata: {
+            dependency_alert_id: any;
+            dependency_alert_url: any;
+        } | undefined;
+    };
     subject: {
         provider: "github" | "gitlab";
         ecosystem: any;

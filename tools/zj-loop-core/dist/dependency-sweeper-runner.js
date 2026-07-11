@@ -120,6 +120,12 @@ export function buildDependencySweeperExecutionPlan(input = {}) {
         request_id: input.request?.request_id ?? '',
         dedupe_key: input.request?.dedupe_key ?? '',
         provider,
+        source_signal: {
+            provider,
+            id: input.request?.source_signal?.id ?? input.request?.source_signal?.signal_id ?? '',
+            source_url: input.request?.source_signal?.source_url ?? '',
+            provider_metadata: dependencyProviderMetadata({ provider, sourceSignal: input.request?.source_signal }),
+        },
         subject: {
             provider,
             ecosystem: subject.ecosystem ?? '',
@@ -332,6 +338,14 @@ function shortHash(value) {
 }
 function extractFirstUrl(text) {
     return String(text ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
+}
+function dependencyProviderMetadata(input) {
+    if (input.provider !== 'gitlab')
+        return undefined;
+    return {
+        dependency_alert_id: input.sourceSignal?.id ?? input.sourceSignal?.signal_id ?? null,
+        dependency_alert_url: input.sourceSignal?.source_url ?? null,
+    };
 }
 function providerForRequest(request) {
     const provider = request?.subject?.provider ?? request?.source_signal?.provider;

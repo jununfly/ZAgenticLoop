@@ -8,6 +8,7 @@ zj_loop_roadmap_activation:
 __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   when: manual
   variables:
+    ZJ_LOOP_SIGNAL_ID: ""
     ZJ_LOOP_ISSUE_IID: ""
     ZJ_LOOP_COMMENT_ID: ""
     ZJ_LOOP_ISSUE_URL: ""
@@ -17,8 +18,8 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     ZJ_LOOP_MAX_SLICES: "30"
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch roadmap-sliced-development --source gitlab-issue-note --signal-id "${ZJ_LOOP_COMMENT_ID:-$CI_PIPELINE_ID}" --json > route-decision.json
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-roadmap-activation plan --root . --source gitlab-issue-note --signal-id "${ZJ_LOOP_COMMENT_ID:-$CI_PIPELINE_ID}" --json > consumer-plan.json || true
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch roadmap-sliced-development --source gitlab-issue-note --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_COMMENT_ID:-$CI_PIPELINE_ID}}" --json > route-decision.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-roadmap-activation plan --root . --source gitlab-issue-note --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_COMMENT_ID:-$CI_PIPELINE_ID}}" --json > consumer-plan.json || true
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-roadmap-activation contract-plan --provider gitlab --activation-request-id "act-${ZJ_LOOP_ISSUE_IID:-issue}-${ZJ_LOOP_COMMENT_ID:-comment}" --source-issue "${ZJ_LOOP_ISSUE_IID:-0}" --source-issue-url "${ZJ_LOOP_ISSUE_URL:-$CI_PROJECT_URL/-/issues/${ZJ_LOOP_ISSUE_IID:-0}}" --source-comment-url "${ZJ_LOOP_COMMENT_URL:-$CI_PROJECT_URL/-/issues/${ZJ_LOOP_ISSUE_IID:-0}#note_${ZJ_LOOP_COMMENT_ID:-0}}" --title "${ZJ_LOOP_ROADMAP_TITLE:-gitlab-roadmap-activation}" --process-roadmap-path "$ZJ_LOOP_PROCESS_ROADMAP_PATH" --json > contract-plan.json
     - cat route-decision.json
     - cat consumer-plan.json

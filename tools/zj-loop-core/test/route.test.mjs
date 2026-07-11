@@ -126,6 +126,71 @@ test('enable requires predictable confirmation phrase for side-effecting routes'
   }
 });
 
+test('enable preserves Route Table formatting outside the target route', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-route-preserve-'));
+  const routeTable = `schemaVersion: 1
+kind: zj-loop-route-table
+
+# keep this top comment
+routes:
+  - route_id: manual-smoke-report # inline comment survives
+    enabled: true
+    request_kind: report-only
+    consumer: manual-smoke
+    consumer_kind: report-consumer
+    execution:
+      mode: report-only
+      side_effect_level: evidence
+      completion_forms:
+        - report-evidence
+    maturity:
+      protocol: designed
+      runner: missing
+    capabilities:
+      scopes: [manual-smoke]
+      verifiers: [workflow-summary]
+      max_side_effect_level: evidence
+
+disabled_dispatch_routes:
+  - route_id: ci-sweeper
+    enabled: false
+    request_kind: workflow-dispatch
+    consumer: ci-sweeper
+    consumer_kind: fix-runner
+    execution:
+      mode: live
+      side_effect_level: pr
+      completion_forms: [repair-pr, escalation-issue]
+      recent_success_evidence: ["https://example.test/run/1"]
+    maturity:
+      protocol: dogfooded
+      runner: dogfooded
+    capabilities:
+      scopes: [ci]
+      verifiers: [ci-validate-gates, diff-check]
+      max_side_effect_level: pr
+`;
+  try {
+    await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+    await writeFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), routeTable);
+    await setRouteEnabled({
+      root: dir,
+      selector: 'ci-sweeper',
+      enabled: true,
+      confirm: 'enable ci-sweeper side effects',
+      reason: 'dogfood smoke',
+    });
+
+    const updated = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(updated, /# keep this top comment/);
+    assert.match(updated, /route_id: manual-smoke-report # inline comment survives/);
+    assert.match(updated, /completion_forms: \[repair-pr, escalation-issue\]/);
+    assert.match(updated, /enabled: true\n    enabled_reason: dogfood smoke\n    request_kind: workflow-dispatch/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('disable is low-friction and removes enabled_reason', async () => {
   const dir = await setupRouteTable();
   try {

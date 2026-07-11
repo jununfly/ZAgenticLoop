@@ -80,7 +80,12 @@ with the manual smoke job, inspect JSON artifacts, then enable only the Route
 Table consumers you intend to run. Report-only jobs can run without mutation
 tokens; issue notes, labels, branches, MRs, and cleanup require `GITLAB_TOKEN`
 plus route-specific guards.
-Post-merge cleanup resolves target branches as `ZJ_LOOP_TARGET_BRANCH` -> `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` -> `main`; set `ZJ_LOOP_TARGET_BRANCH` only for manual replay or non-standard MR metadata.
+Generated Route Tables use the `production_safe_default` profile: side-effect
+routes stay disabled until a maintainer explicitly enables each route. The
+`dogfood_validation` profile is route-by-route evidence, not a blanket switch.
+Post-merge cleanup fetches MR metadata from GitLab by MR IID; keep
+`ZJ_LOOP_TARGET_BRANCH` only for explicit manual replay or non-standard
+metadata fallback.
 
 For unpublished dogfood or internal validation, render a local package tarball
 as the GitLab core package source:
@@ -122,6 +127,11 @@ warning about `*.tgz` being ignored. Either commit the required files with
 !zj-loop/vendor/
 !zj-loop/vendor/*.tgz
 ```
+
+`zj-loop-audit` also warns when generated GitLab substrate exists locally but
+is ignored or untracked by Git. Commit `.gitlab-ci.yml`,
+`zj-loop/gitlab-ci/zj-loop-*.yml`, and `zj-loop/zj-loop-route-table.yaml` before
+expecting GitLab CI to run the generated bundle.
 
 The smoke job runs `@jununfly/zj-loop-audit` by default. In CI environments
 without registry access, set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke output:
@@ -333,6 +343,12 @@ For dry-run validation, blocked/refused consumer plans are still uploaded as
 also emits `issue-fix-request.md` and `issue-fix-request-result.json`, allowing
 you to inspect GitLab-specific fix scope such as `.gitlab-ci.yml` and
 `zj-loop/gitlab-ci/` without creating a tracker item.
+
+Manual and API-triggered GitLab pipelines can replay route decisions by setting
+`ZJ_LOOP_SIGNAL_ID`. Route-specific variables remain more expressive when they
+are available: use `ZJ_LOOP_ISSUE_IID` for issue triage,
+`ZJ_LOOP_MERGE_REQUEST_IID` for MR Steward or post-merge cleanup, and
+`ZJ_LOOP_COMMENT_ID` plus `ZJ_LOOP_ISSUE_IID` for Roadmap Activation.
 
 Upgrade generated GitLab CI fragments when package pins or templates change:
 

@@ -398,8 +398,10 @@ export function buildActivationRequestId(input) {
     return `act-${sourceIssue}-${commentId}-${commandHash}`;
 }
 export function buildRoadmapActivationBranchName(input) {
-    const slug = slugify(input.title ?? `issue-${input.sourceIssue ?? 'activation'}`);
-    return `zjal-${slugify(input.activationRequestId)}-${slug}`;
+    const requestSlug = slugPart(input.activationRequestId, 'activation');
+    const fallbackTitle = input.sourceIssue === undefined ? 'activation' : `issue-${input.sourceIssue}`;
+    const titleSlug = slugWithFallback(input.title, fallbackTitle);
+    return ['zjal', requestSlug, titleSlug].filter(Boolean).join('-').replace(/-+$/g, '');
 }
 export function buildRoadmapActivationPrTitle(input) {
     const title = String(input.title ?? `issue #${input.sourceIssue ?? 'unknown'}`).trim();
@@ -915,6 +917,12 @@ function stableHash(value) {
 }
 function slugPart(value, fallback) {
     return slugify(String(value ?? fallback)) || fallback;
+}
+function slugWithFallback(value, fallback) {
+    const primary = slugify(String(value ?? '').trim());
+    if (primary)
+        return primary;
+    return slugPart(fallback, 'activation');
 }
 function slugify(value) {
     return String(value ?? '')

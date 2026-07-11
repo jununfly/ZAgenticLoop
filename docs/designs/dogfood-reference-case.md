@@ -36,7 +36,7 @@ are guarded live operations that require explicit operator intent.
 | Loop Readiness Audit | `.github/workflows/audit.yml`, `scripts/ci-audit-gates.sh`, `tools/zj-loop-audit` | Push, PR, and scheduled gate | Proves this repo and starters meet readiness gates; does not change product code. |
 | Validate Patterns & Registry | `.github/workflows/validate-patterns.yml`, `scripts/ci-validate-gates.sh` | Push and PR gate | Keeps pattern docs, registry, starters, release workflows, route replays, and tool package tests aligned. |
 | Workflow-Dispatch User Bundle | `.github/workflows/zj-loop-*.yml`, `templates/github-actions/`, `zj-loop-init --add/--upgrade github-actions` | Generated bundle smoke plus Route Table-controlled consumers | Proves user-project generated workflows install cleanly, carry metadata/hash evidence, pin package versions, and run through Route Decision instead of embedding local dogfood scripts. Manual smoke is the default safe path; side-effecting consumers require explicit Route Table enablement. |
-| GitLab Provider Bundle | `templates/gitlab-ci/`, `zj-loop-init --add/--upgrade gitlab-ci`, `scripts/gitlab-provider-dogfood-replay.mjs`, `scripts/validate-provider-parity-gate.mjs` | Generated GitLab bundle plus deterministic provider dogfood replay | Proves GitLab route templates stay paired with GitHub templates, use configurable stage/tags/image settings, pin package versions, avoid GitHub-only syntax, and preserve provider-aware contracts for CI Sweeper, Roadmap Activation MR closeout, and PR Steward MR evidence. Live GitLab MR side effects remain refused where the runner is not yet live. |
+| GitLab Provider Bundle | `templates/gitlab-ci/`, `zj-loop-init --add/--upgrade gitlab-ci`, `scripts/gitlab-provider-dogfood-replay.mjs`, `scripts/validate-provider-parity-gate.mjs`, `tools/zj-loop-audit` | Generated GitLab bundle plus deterministic provider dogfood replay | Proves GitLab route templates stay paired with GitHub templates, use configurable stage/tags/image settings, expose manual replay variables, pin package versions, avoid GitHub-only syntax, warn on untracked/ignored local GitLab substrate, and preserve provider-aware contracts for CI Sweeper, Roadmap Activation MR closeout, and PR Steward MR evidence. Live GitLab MR side effects remain refused where the runner is not yet live. |
 | Daily Triage | `.github/workflows/daily-triage.yml`, `zj-loop/STATE.md`, `zj-loop/zj-loop-run-log.md` | Scheduled producer plus generated state PR | Updates operational memory, emits route candidates, and may dispatch allowlisted consumers. Its generated state PR auto-merge is a narrow exception limited to loop state/run-log files. |
 | PRD Handoff Planner | `zj-loop-prd-handoff handoff-plan`, `tools/zj-loop-core/src/prd-handoff-runner.ts` | Deterministic report-only handoff planner | Converts a ready PRD/plan issue plus exact next command into a stable handoff comment body and manual `gh issue comment ...` command. Default mode performs no GitHub writes; `comment-enabled` is explicit opt-in planning and callers must enforce marker-based idempotency. |
 | CI Sweeper | `.github/workflows/ci-sweeper.yml`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/ci-sweeper-state.md` | Live dogfooded `fix-runner` | Handles validate/audit failures only. Completion forms are `repair-pr` when deterministic repair creates non-state diffs and repair/validate/audit gates pass, or `escalation-issue` otherwise. |
@@ -191,6 +191,25 @@ GitLab validation run. The follow-up hardening added:
   `issue-fix-request.md` and `issue-fix-request-result.json`
 - Post-Merge Closeout GitLab dry-run wording that uses MR/manual pipeline
   language rather than GitHub Actions or PR-only wording
+
+Issue #101 tightened the GitLab provider bundle after repeated target-project
+validation gaps. The follow-up hardening added:
+
+- GitLab install/upgrade readiness output that separates fragment generation,
+  root `.gitlab-ci.yml` include reachability, and Route Table presence
+- uniform `ZJ_LOOP_SIGNAL_ID` manual/API replay input across generated GitLab
+  fragments, while preserving issue/MR/comment route variables
+- GitLab MR metadata fetch for post-merge closeout by MR IID
+- GitLab-native route metadata for pipeline, MR, dependency alert, and release
+  window artifacts
+- separate `dispatch_allowed` and `execution_allowed` plan fields so report
+  routes, blocked routes, and execution-ready routes are not conflated
+- generated Route Table route profiles for `production_safe_default` and
+  `dogfood_validation`
+- audit warnings when generated/local GitLab CI substrate exists but is ignored
+  or untracked by Git
+- minimal-diff Route Table enable/disable updates and safer Roadmap Activation
+  branch slugs
 
 ## Daily Triage Flow
 

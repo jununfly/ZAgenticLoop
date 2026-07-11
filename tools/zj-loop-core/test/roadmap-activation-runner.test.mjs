@@ -132,6 +132,46 @@ test('Roadmap Activation branch names avoid Git ref prefix conflicts', async () 
   }
 });
 
+test('Roadmap Activation branch names trim empty and non-slug title suffixes', () => {
+  assert.equal(
+    buildRoadmapActivationBranchName({
+      activationRequestId: 'act-321-11-abcdef12',
+      title: 'Fix GitLab route!!!',
+    }),
+    'zjal-act-321-11-abcdef12-fix-gitlab-route',
+  );
+  assert.equal(
+    buildRoadmapActivationBranchName({
+      activationRequestId: 'act-321-11-abcdef12',
+      title: '',
+      sourceIssue: 321,
+    }),
+    'zjal-act-321-11-abcdef12-issue-321',
+  );
+  assert.equal(
+    buildRoadmapActivationBranchName({
+      activationRequestId: 'act-321-11-abcdef12',
+      sourceIssue: 321,
+    }),
+    'zjal-act-321-11-abcdef12-issue-321',
+  );
+  assert.equal(
+    buildRoadmapActivationBranchName({
+      activationRequestId: 'act-321-11-abcdef12',
+      title: '修复路线',
+      sourceIssue: 321,
+    }),
+    'zjal-act-321-11-abcdef12-issue-321',
+  );
+  assert.equal(
+    buildRoadmapActivationBranchName({
+      activationRequestId: 'act-321-11-abcdef12',
+      title: '---',
+    }),
+    'zjal-act-321-11-abcdef12-activation',
+  );
+});
+
 test('Roadmap Activation builds provider-neutral GitLab MR contracts', () => {
   const requestId = buildActivationRequestId({
     sourceIssue: 87,

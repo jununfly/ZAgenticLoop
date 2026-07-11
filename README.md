@@ -193,6 +193,7 @@ carried through each platform.
 | Issue work | Existing source issues can carry request evidence instead of spawning duplicate carriers. | GitHub Issues and comments. | GitLab Issues and notes. |
 | Smoke path | Manual smoke should be the first provider check. | `ZJ Loop Smoke` workflow writes route and consumer evidence to the workflow summary. | Manual smoke job writes route and consumer evidence to job artifacts/logs. |
 | Configuration knobs | Package pins and Route Table state should be deterministic. | GitHub templates are rendered directly from `templates/github-actions/`. | GitLab templates additionally render stage, runner tags, image, and optional core package source. |
+| Install health | Generated substrate should be committed and auditable. | Audit checks generated workflow metadata, Route Table presence, manual smoke defaults, and package pins. | Audit warns when `.gitlab-ci.yml`, `zj-loop/gitlab-ci/zj-loop-*.yml`, or `zj-loop/zj-loop-route-table.yaml` are ignored or untracked. |
 | Current side-effect boundary | Report-only routes never mutate trackers; live routes require Route Table enablement and consumer guards. | The currently validated live paths are strongest on GitHub, including request creation, roadmap branch/PR bootstrap, and guarded post-merge cleanup. | GitLab carries provider-aware evidence and dry-run/request plans; live MR creation for several consumers is still explicitly refused until promoted. |
 
 Use GitHub Actions when the repository is GitHub-hosted and you want the most

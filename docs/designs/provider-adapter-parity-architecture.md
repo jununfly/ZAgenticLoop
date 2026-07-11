@@ -118,15 +118,32 @@ Generated GitLab jobs should:
 
 - call published `@jununfly/zj-loop-*` package commands or APIs
 - pin package versions in generated snippets
+- expose `ZJ_LOOP_SIGNAL_ID` for manual/API replay, while keeping
+  route-specific variables such as issue IID, MR IID, and comment/note id where
+  those fields carry provider-native meaning
 - allow the rendered core package source to be overridden for unpublished
   dogfood validation, for example with
   `--gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz`
+- inherit configurable stage, runner tags, Node image, and Node >=18 preflight
+  behavior across every generated fragment
 - emit concise job logs
 - upload canonical JSON evidence artifacts
 - keep blocked/refused consumer plans observable as JSON artifacts instead of
   aborting before route-specific diagnostic artifacts are produced
 - use Route Table enablement for route side effects
 - require `GITLAB_TOKEN` before issue notes, labels, branches, MRs, or cleanup
+
+`zj-loop-init --add/--upgrade gitlab-ci` must print a readiness summary that
+separates generated fragment status, root `.gitlab-ci.yml` include reachability,
+and Route Table presence. Existing root GitLab CI remains maintainer-owned:
+init should show the exact include block rather than silently patching it.
+
+`zj-loop-audit` should warn when local GitLab substrate exists but is not
+committed into the project that CI will actually see. The tracked substrate is
+`.gitlab-ci.yml`, `zj-loop/gitlab-ci/zj-loop-*.yml`, and
+`zj-loop/zj-loop-route-table.yaml`. Ignored files should get `git add -f` or
+narrow `.gitignore` exception guidance; untracked files should get ordinary
+`git add` guidance.
 
 The generated GitLab adapter is not a fully offline bundle by default. Even when
 users vendor package tarballs under `zj-loop/vendor/`, `npm exec` may still need
@@ -171,6 +188,8 @@ dogfood replay covers:
 - Roadmap Activation MR contract output embedding a parseable
   `zj-loop.post-merge-contract` so Post-Merge Closeout can consume the merged MR
   without a separate human-added closeout contract
+- Post-Merge Closeout fetching GitLab MR metadata by MR IID when the CI job
+  provides provider API context instead of a manually supplied MR body
 - Post-Merge Closeout GitLab dry-run wording using MR/manual pipeline language
   instead of GitHub Actions or PR-only wording
 - PR Steward GitLab MR dry-run evidence using MR vocabulary while live GitLab

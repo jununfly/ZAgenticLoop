@@ -129,6 +129,10 @@ test('dependency sweeper carries GitLab provider metadata and refuses live MR si
   assert.equal(validateDependencySweeperLiveRequest(request).ok, true);
   assert.equal(dryRun.provider, 'gitlab');
   assert.equal(dryRun.subject.provider, 'gitlab');
+  assert.deepEqual(dryRun.source_signal.provider_metadata, {
+    dependency_alert_id: 'gitlab-dependency:npm:yaml:patch',
+    dependency_alert_url: null,
+  });
   assert.equal(live.status, 'refused');
   assert.ok(live.refusals.some((item) => item.reason === 'gitlab-live-repair-mr-side-effects-not-enabled'));
 });

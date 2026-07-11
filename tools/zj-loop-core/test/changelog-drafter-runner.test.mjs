@@ -82,6 +82,8 @@ test('Changelog Drafter carries GitLab release window and refuses live draft MR 
     release_window: {
       provider: 'gitlab',
       repo: 'group/project',
+      pipeline_id: '456',
+      pipeline_url: 'https://gitlab.com/group/project/-/pipelines/456',
     },
   });
   const evidence = buildChangelogDrafterExecutionPlan({
@@ -97,6 +99,10 @@ test('Changelog Drafter carries GitLab release window and refuses live draft MR 
 
   assert.equal(validateChangelogDrafterLiveRequest(request).ok, true);
   assert.equal(evidence.release_window.provider, 'gitlab');
+  assert.deepEqual(evidence.release_window.provider_metadata, {
+    pipeline_id: '456',
+    pipeline_url: 'https://gitlab.com/group/project/-/pipelines/456',
+  });
   assert.equal(pr.status, 'refused');
   assert.ok(pr.refusals.some((item) => item.reason === 'gitlab-live-draft-mr-side-effects-not-enabled'));
 });

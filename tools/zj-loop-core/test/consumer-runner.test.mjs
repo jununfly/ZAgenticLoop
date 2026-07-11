@@ -140,7 +140,10 @@ test('buildConsumerRunPlan blocks disabled routes before runner execution', asyn
     const plan = await buildConsumerRunPlan({ root: dir, selector: 'dependency-sweeper' });
     assert.equal(plan.status, 'blocked');
     assert.equal(plan.allowed, false);
+    assert.equal(plan.dispatch_allowed, false);
+    assert.equal(plan.execution_allowed, false);
     assert.equal(plan.reason, 'route disabled by Route Table');
+    assert.equal(plan.route_specific_artifacts[0].path, 'repair-plan.json');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -152,6 +155,8 @@ test('buildConsumerRunPlan allows report-only routes as evidence plans', async (
     const plan = await buildConsumerRunPlan({ root: dir, selector: 'manual-smoke-report' });
     assert.equal(plan.status, 'report-only');
     assert.equal(plan.allowed, true);
+    assert.equal(plan.dispatch_allowed, true);
+    assert.equal(plan.execution_allowed, false);
     assert.match(plan.reason, /report-only route/);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -164,8 +169,11 @@ test('buildConsumerRunPlan blocks dogfood-verified live routes until execution-r
     const plan = await buildConsumerRunPlan({ root: dir, selector: 'ci-sweeper' });
     assert.equal(plan.status, 'blocked');
     assert.equal(plan.allowed, false);
+    assert.equal(plan.dispatch_allowed, true);
+    assert.equal(plan.execution_allowed, false);
     assert.equal(plan.readiness, 'dogfood-verified');
     assert.match(plan.reason, /not execution-ready/);
+    assert.equal(plan.route_specific_artifacts[0].path, 'issue-fix-request-result.json');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -200,6 +208,8 @@ test('buildConsumerRunPlan allows enabled execution-ready action routes', async 
   });
   assert.equal(plan.status, 'ready');
   assert.equal(plan.allowed, true);
+  assert.equal(plan.dispatch_allowed, true);
+  assert.equal(plan.execution_allowed, true);
   assert.equal(plan.install_ready, true);
   assert.equal(plan.execution_ready, true);
   assert.equal(plan.user_project_ready, true);

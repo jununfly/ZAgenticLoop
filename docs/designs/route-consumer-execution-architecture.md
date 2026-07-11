@@ -75,6 +75,19 @@ row, allowlist, runner evidence, and live promotion.
 `zj-loop-route enable` only makes a route visible and eligible for dispatch
 consideration. It does not authorize live side effects.
 
+Consumer plans should expose dispatch and execution readiness separately:
+
+- `dispatch_allowed` answers whether Route Decision matched and may hand the
+  signal to the route's consumer boundary.
+- `execution_allowed` answers whether the consumer is currently allowed to run
+  bounded side effects.
+- Legacy `allowed` may remain as a compatibility field, but new evidence should
+  avoid using one boolean to mean both dispatch and execution.
+
+Report-only routes may be dispatch-allowed while execution remains false.
+Blocked action routes should still point to their primary dry-run JSON artifact
+so users can inspect why execution did not continue.
+
 Live execution must be enabled through a separate command shape that requires a
 fixed confirmation phrase, for example:
 

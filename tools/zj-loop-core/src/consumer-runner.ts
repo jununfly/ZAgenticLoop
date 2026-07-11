@@ -21,6 +21,8 @@ export type ConsumerRunPlan = {
   execution_ready: boolean;
   user_project_ready: boolean;
   allowed: boolean;
+  dispatch_allowed: boolean;
+  execution_allowed: boolean;
   status: ConsumerRunPlanStatus;
   reason: string;
   next_steps: string[];
@@ -72,6 +74,8 @@ export function buildConsumerRunPlanFromRoute(input: {
     execution_ready: input.route.execution_ready,
     user_project_ready: input.route.user_project_ready,
     allowed: false,
+    dispatch_allowed: input.routeDecision.allowed,
+    execution_allowed: false,
     status: 'blocked',
     reason,
     next_steps: [
@@ -107,6 +111,8 @@ export function buildConsumerRunPlanFromRoute(input: {
       execution_ready: input.route.execution_ready,
       user_project_ready: input.route.user_project_ready,
       allowed: true,
+      dispatch_allowed: true,
+      execution_allowed: false,
       status: 'report-only',
       reason: 'report-only route records evidence and does not run worker side effects',
       next_steps: ['Write report evidence to the workflow summary or configured evidence store.'],
@@ -135,6 +141,8 @@ export function buildConsumerRunPlanFromRoute(input: {
     execution_ready: input.route.execution_ready,
     user_project_ready: input.route.user_project_ready,
     allowed: true,
+    dispatch_allowed: true,
+    execution_allowed: true,
     status: 'ready',
     reason: 'route is enabled and execution-ready',
     next_steps: [`Run packaged ${input.route.consumer} runner.`],
@@ -160,6 +168,56 @@ function routeSpecificArtifactsFor(routeId: string): ConsumerRunPlan['route_spec
         path: 'closeout-plan.json',
         role: 'primary-result',
         description: 'Post-Merge Roadmap Closeout dry-run/refusal/live-readiness plan.',
+      },
+    ];
+  }
+  if (routeId === 'ci-sweeper') {
+    return [
+      {
+        path: 'issue-fix-request-result.json',
+        role: 'primary-result',
+        description: 'CI Sweeper Issue Fix Request creation/refusal result.',
+      },
+      {
+        path: 'issue-fix-request.md',
+        role: 'supporting-evidence',
+        description: 'Human-readable Issue Fix Request body when request creation is allowed.',
+      },
+    ];
+  }
+  if (routeId === 'dependency-sweeper') {
+    return [
+      {
+        path: 'repair-plan.json',
+        role: 'primary-result',
+        description: 'Dependency Sweeper repair/refusal/escalation plan.',
+      },
+    ];
+  }
+  if (routeId === 'pr-steward-fix-request') {
+    return [
+      {
+        path: 'fix-plan.json',
+        role: 'primary-result',
+        description: 'PR Steward repair/refusal/escalation plan.',
+      },
+    ];
+  }
+  if (routeId === 'changelog-drafter-draft-request') {
+    return [
+      {
+        path: 'draft-plan.json',
+        role: 'primary-result',
+        description: 'Changelog Drafter draft/refusal/escalation plan.',
+      },
+    ];
+  }
+  if (routeId === 'issue-triage-action') {
+    return [
+      {
+        path: 'action-plan.json',
+        role: 'primary-result',
+        description: 'Issue Triage Action dry-run/refusal/escalation plan.',
       },
     ];
   }

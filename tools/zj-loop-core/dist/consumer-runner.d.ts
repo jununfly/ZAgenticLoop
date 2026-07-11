@@ -12,6 +12,8 @@ export type ConsumerRunPlan = {
     execution_ready: boolean;
     user_project_ready: boolean;
     allowed: boolean;
+    dispatch_allowed: boolean;
+    execution_allowed: boolean;
     status: ConsumerRunPlanStatus;
     reason: string;
     next_steps: string[];

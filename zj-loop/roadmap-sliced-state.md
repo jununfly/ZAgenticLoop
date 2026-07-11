@@ -1,19 +1,31 @@
 # Roadmap-Sliced Development State — ZAgenticLoop
 
-Last run: 2026-07-10
+Last run: 2026-07-11
 
 ## Current Roadmap
 
-- Roadmap id: issue-92-gitlab-provider-adoption-polish
-- Branch: codex/issue-92-gitlab-provider-adoption-polish
+- Roadmap id: issue-101-gitlab-provider-bundle-gaps
+- Branch: zjal-issue-101-gitlab-provider-bundle-gaps
 - Status: completed
-- Current parent node: closeout completed
+- Current parent node: 5-closeout
 - Current leaf: none
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 5-1-durable-docs-and-process-cleanup | completed | Durable docs absorbed the GitLab provider bundle hardening decisions: GitLab CI readiness output, manual replay variables, MR metadata fetch, provider-native metadata, dispatch-vs-execution readiness split, production-safe versus dogfood-validation profiles, GitLab substrate audit tracking, minimal-diff Route Table enablement, and Roadmap Activation branch slug fallback. Process roadmap files under `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.*` were deleted. Verification passed: `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | pending |
+| 4-3-roadmap-activation-branch-slug-trimming | completed | Roadmap Activation branch generation uses a title fallback chain: slugged title, then `issue-<sourceIssue>`, then `activation`; branch parts are joined only when non-empty and trimmed to avoid trailing separators; tests cover normal punctuation trimming, empty title, missing title, Unicode-only title, and non-slug symbol-only title; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
+| 4-2-yaml-preserving-route-enable | completed | `setRouteEnabled()` preserves Route Table YAML formatting by patching only the target route's `enabled` and `enabled_reason` lines when the generated Route Table shape is recognizable; parse/stringify remains as fallback for unexpected YAML shapes; regression coverage proves comments, inline comments, blank lines, and flow-style arrays outside the target route survive enable operations; `cd tools/zj-loop-core && npm test`; `git diff --check` | pending |
+| 4-1-audit-local-substrate-tracking | completed | `zj-loop-audit` detects GitLab CI substrate files in git worktrees (`.gitlab-ci.yml`, `zj-loop/gitlab-ci/zj-loop-*.yml`, and `zj-loop/zj-loop-route-table.yaml`) and warns when any existing substrate file is ignored or untracked; warning next steps separate `git add -f` for ignored files from `git add` for untracked files and include a GitLab CI regeneration hint; non-git directories remain quiet; tests cover ignored, untracked, and tracked substrate cases; `cd tools/zj-loop-audit && npm test`; `cd tools/zj-loop-audit && npm run build && node dist/cli.js ../..`; `git diff --check` | pending |
+| 3-2-production-safe-route-profiles | completed | Generated Route Tables explicitly describe `production_safe_default` and `dogfood_validation` under `policy.route_profiles`; production-safe default keeps side-effect routes disabled and safe evidence/report routes enabled; dogfood validation is route-by-route enablement in the same Route Table, not a blanket switch; Quickstart explains the profile split; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
+| 3-1-dispatch-vs-execution-readiness | completed | Consumer run plans expose `dispatch_allowed` separately from `execution_allowed` while keeping legacy `allowed`; report-only plans are dispatch-allowed but not execution-allowed; blocked plans preserve route-decision dispatch result while setting execution allowance false; route-specific artifact hints cover CI Sweeper, Dependency Sweeper, PR Steward, Changelog Drafter, Issue Triage Action, Roadmap Activation, and Post-Merge Closeout primary JSON artifacts; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
+| 2-2-provider-native-route-artifacts | completed | CI Sweeper Issue Fix Requests carry GitLab pipeline id/url in `provider_metadata`; PR Steward plans carry MR IID/url in `source_review.provider_metadata`; Dependency Sweeper plans preserve GitLab dependency alert id/url in `source_signal.provider_metadata`; Changelog Drafter plans preserve GitLab release-window pipeline id/url in `release_window.provider_metadata`; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
+| 2-1-gitlab-mr-metadata-fetch | completed | `zj-loop-post-merge-closeout closeout-plan --provider gitlab` now fetches MR metadata by IID from GitLab API when explicit metadata is not supplied; fetch normalizes MR description/body, state/merged timestamp, source branch, target branch, URL, and project path; generated GitLab post-merge cleanup job uses `CI_API_V4_URL` and `CI_JOB_TOKEN` instead of `/dev/null` review body and synthetic branch metadata; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
+| 1-3-gitlab-manual-replay-surface | completed | All generated GitLab CI route fragments now expose `ZJ_LOOP_SIGNAL_ID` as a uniform manual/API replay signal id; route-specific variables remain available for issue/MR/comment replay (`ZJ_LOOP_ISSUE_IID`, `ZJ_LOOP_MERGE_REQUEST_IID`, `ZJ_LOOP_COMMENT_ID`); Quickstart documents the replay variables; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
+| 1-2-gitlab-route-table-and-include-readiness | completed | `zj-loop-init --add gitlab-ci` and `--upgrade gitlab-ci` now print a GitLab CI readiness summary separating fragment generation/upgrade, root `.gitlab-ci.yml` include reachability, and route table readiness; existing root CI files get the exact generated include block; `--upgrade gitlab-ci` creates missing `zj-loop/zj-loop-route-table.yaml`; `cd tools/zj-loop-init && npm test`; `npm run check:zj-loop-init`; `git diff --check` | pending |
+| 1-1-shared-gitlab-image-tags-and-node-preflight | completed | All nine generated GitLab fragments already render configurable image, runner tags, and Node >=18 preflight; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
+| issue-101-request-consumption | completed | Consumed #101 Issue Fix Request `ifr_triage_c3dc6d47a53b` into Roadmap-Sliced Development on branch `zjal-issue-101-gitlab-provider-bundle-gaps`; initialized process roadmap `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.json` and rendered view `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.md`; mapped the GitLab provider bundle feedback into executable parent/leaf slices covering CI substrate, provider metadata/closeout, readiness/profile clarity, audit/route enablement/slug hardening, and closeout; lifecycle comment: https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943236762; `node -e "JSON.parse(require('fs').readFileSync('docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.json','utf8'))"`; `git diff --check` | pending |
 | issue-92-gitlab-provider-adoption-polish-closeout | completed | Durable docs absorbed the GitLab validation-friendly bundle decisions: configurable GitLab core package override for local tarball validation, preserved consumer-plan artifacts for blocked/refused GitLab plans, provider-specific GitLab/MR wording in closeout evidence, CI Sweeper GitLab Issue Fix Request dry-run artifacts, and README/Quickstart guidance for validating unpublished packages in GitLab projects. Process roadmap files under `docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.*` were deleted after closeout. Verification: `npm test` in `tools/zj-loop-init`; `npm test` in `tools/zj-loop-core`; `npm run test:provider-parity-gate`; `bash scripts/ci-audit-gates.sh`; `bash scripts/ci-validate-gates.sh`; `git diff --check` | pending |
 | gitlab-validation-friendly-bundle | completed | `zj-loop-init --add/--upgrade gitlab-ci` accepts `--gitlab-core-package` so target GitLab projects can validate unpublished local or vendored `@jununfly/zj-loop-core` packages; generated GitLab CI templates render the package override consistently; docs show the `npm pack` plus local tarball install path; `npm test` in `tools/zj-loop-init`; `git diff --check` | `e928e89`, `6bec9c6` |
 | gitlab-consumer-artifact-observability | completed | GitLab generated consumer jobs now preserve `consumer-plan.json` artifacts even when route plans are blocked/refused, and GitLab CI Sweeper dry-run writes `issue-fix-request.md` plus `issue-fix-request-result.json`; provider parity tests cover the observable artifact contract; `npm test` in `tools/zj-loop-init`; `npm run test:provider-parity-gate`; `git diff --check` | `78c895d`, `8999a33` |
@@ -143,4 +155,15 @@ Last run: 2026-07-10
   human-reviewed PR merge.
 - Branch cleanup plan: delete
   `zjal/act-65-4922393657-8c94c5b9-execution-ready-user-project-route-bundle`
+  after human-reviewed PR merge.
+- Issue #101 GitLab provider bundle gaps completed on branch
+  `zjal-issue-101-gitlab-provider-bundle-gaps`. Durable decisions were absorbed
+  into `README.md`, `docs/QUICKSTART.md`,
+  `docs/designs/provider-adapter-parity-architecture.md`,
+  `docs/designs/route-consumer-execution-architecture.md`,
+  `docs/designs/route-table-architecture.md`, and
+  `docs/designs/dogfood-reference-case.md`. Process roadmap files
+  `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.json` and
+  `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.md` were deleted.
+  Branch cleanup plan: delete `zjal-issue-101-gitlab-provider-bundle-gaps`
   after human-reviewed PR merge.
