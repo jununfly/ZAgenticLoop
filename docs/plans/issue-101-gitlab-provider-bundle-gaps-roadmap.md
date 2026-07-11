@@ -265,16 +265,25 @@ git diff --check # passed
 
 ### Leaf 4-2: YAML Preserving Route Enable
 
-Status: pending
+Status: completed
 
 Intent: Keep route enable/disable operations minimal-diff and avoid rewriting
 the whole Route Table when possible.
 
+Evidence:
+
+- `setRouteEnabled()` now patches only the target route's `enabled` and
+  `enabled_reason` lines when the generated Route Table shape is recognizable.
+- The previous parse/stringify behavior remains as a fallback for unexpected
+  YAML shapes.
+- Regression coverage proves comments, inline comments, blank lines, and
+  flow-style arrays outside the target route survive enable operations.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-core && npm test
-git diff --check
+cd tools/zj-loop-core && npm test # passed
+git diff --check # passed
 ```
 
 ### Leaf 4-3: Roadmap Activation Branch Slug Trimming

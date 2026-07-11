@@ -10,7 +10,7 @@
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
   "current_parent": "4-audit-route-enable-and-slug-hardening",
-  "current_leaf": "4-2-yaml-preserving-route-enable",
+  "current_leaf": "4-3-roadmap-activation-branch-slug-trimming",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -152,8 +152,9 @@
         {
           "id": "4-2-yaml-preserving-route-enable",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Keep route enable/disable operations minimal-diff and avoid rewriting the whole Route Table when possible.",
+          "evidence": "`setRouteEnabled()` now preserves Route Table YAML formatting by patching only the target route's `enabled` and `enabled_reason` lines when the generated Route Table shape is recognizable, with the previous parse/stringify behavior retained as fallback. Regression coverage proves comments, inline comments, blank lines, and flow-style arrays outside the target route survive enable operations.",
           "verification": [
             "cd tools/zj-loop-core && npm test",
             "git diff --check"
@@ -199,5 +200,5 @@
     "Merge to main"
   ],
   "created_at": "2026-07-11T06:55:00.000Z",
-  "updated_at": "2026-07-11T07:45:00.000Z"
+  "updated_at": "2026-07-11T08:05:00.000Z"
 }

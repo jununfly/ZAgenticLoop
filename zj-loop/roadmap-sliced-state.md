@@ -8,12 +8,13 @@ Last run: 2026-07-11
 - Branch: zjal-issue-101-gitlab-provider-bundle-gaps
 - Status: active
 - Current parent node: 4-audit-route-enable-and-slug-hardening
-- Current leaf: 4-2-yaml-preserving-route-enable
+- Current leaf: 4-3-roadmap-activation-branch-slug-trimming
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 4-2-yaml-preserving-route-enable | completed | `setRouteEnabled()` preserves Route Table YAML formatting by patching only the target route's `enabled` and `enabled_reason` lines when the generated Route Table shape is recognizable; parse/stringify remains as fallback for unexpected YAML shapes; regression coverage proves comments, inline comments, blank lines, and flow-style arrays outside the target route survive enable operations; `cd tools/zj-loop-core && npm test`; `git diff --check` | pending |
 | 4-1-audit-local-substrate-tracking | completed | `zj-loop-audit` detects GitLab CI substrate files in git worktrees (`.gitlab-ci.yml`, `zj-loop/gitlab-ci/zj-loop-*.yml`, and `zj-loop/zj-loop-route-table.yaml`) and warns when any existing substrate file is ignored or untracked; warning next steps separate `git add -f` for ignored files from `git add` for untracked files and include a GitLab CI regeneration hint; non-git directories remain quiet; tests cover ignored, untracked, and tracked substrate cases; `cd tools/zj-loop-audit && npm test`; `cd tools/zj-loop-audit && npm run build && node dist/cli.js ../..`; `git diff --check` | pending |
 | 3-2-production-safe-route-profiles | completed | Generated Route Tables explicitly describe `production_safe_default` and `dogfood_validation` under `policy.route_profiles`; production-safe default keeps side-effect routes disabled and safe evidence/report routes enabled; dogfood validation is route-by-route enablement in the same Route Table, not a blanket switch; Quickstart explains the profile split; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | 3-1-dispatch-vs-execution-readiness | completed | Consumer run plans expose `dispatch_allowed` separately from `execution_allowed` while keeping legacy `allowed`; report-only plans are dispatch-allowed but not execution-allowed; blocked plans preserve route-decision dispatch result while setting execution allowance false; route-specific artifact hints cover CI Sweeper, Dependency Sweeper, PR Steward, Changelog Drafter, Issue Triage Action, Roadmap Activation, and Post-Merge Closeout primary JSON artifacts; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
