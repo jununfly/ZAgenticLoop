@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { parse as parseYaml } from 'yaml';
 import { collectProjectEvidenceFacts, createNodeProjectFileSystem, hasAnyProjectPath, } from '@jununfly/zj-loop-core';
 import { LOOP_ARTIFACTS, artifactCandidates, skillPathCandidates } from './artifacts.js';
@@ -9,6 +9,7 @@ const WORKTREE_HINTS = ['worktree', 'worktrees', 'git worktree'];
 const BUDGET_HINTS = [/budget/i, /max tokens/i, /token cap/i, /kill switch/i, /loop-pause-all/i];
 const ROUTE_TABLE_FILES = ['zj-loop/zj-loop-route-table.yaml'];
 const GENERATED_WORKFLOW_PATTERN = /^zj-loop-.+\.yml$/;
+const GENERATED_GITLAB_CI_PATTERN = /^zj-loop-.+\.yml$/;
 const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
 const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
 const MATURITY_LEVELS = new Set([
@@ -240,6 +241,122 @@ async function auditGeneratedWorkflowBundle(fs) {
         });
     }
     return findings;
+}
+async function auditGeneratedGitLabSubstrateTracking(root, fs) {
+    if (!isGitWorktree(root))
+        return [];
+    const substratePaths = await collectGitLabSubstratePaths(fs);
+    if (!substratePaths.length)
+        return [];
+    const statuses = substratePaths.map((projectPath) => ({
+        path: projectPath,
+        ignored: gitPathIsIgnored(root, projectPath),
+        tracked: gitPathIsTracked(root, projectPath),
+    }));
+    const atRisk = statuses.filter((status) => !status.tracked);
+    if (!atRisk.length) {
+        return [
+            {
+                level: 'ok',
+                category: 'pass',
+                message: `GitLab generated substrate is tracked by Git (${substratePaths.length} files)`,
+                affectsScore: false,
+                nextSteps: [],
+            },
+        ];
+    }
+    const ignored = atRisk.filter((status) => status.ignored).map((status) => status.path);
+    const untracked = atRisk.filter((status) => !status.ignored).map((status) => status.path);
+    const samplePaths = atRisk.map((status) => status.path).slice(0, 6).join(', ');
+    const suffix = atRisk.length > 6 ? `, and ${atRisk.length - 6} more` : '';
+    const nextSteps = [];
+    if (ignored.length) {
+        nextSteps.push({
+            kind: 'command',
+            label: 'Track ignored GitLab substrate explicitly or add narrow .gitignore exceptions',
+            command: `git add -f ${shellJoinProjectPaths(ignored)}`,
+        });
+    }
+    if (untracked.length) {
+        nextSteps.push({
+            kind: 'command',
+            label: 'Commit generated GitLab substrate so CI can see it',
+            command: `git add ${shellJoinProjectPaths(untracked)}`,
+        });
+    }
+    nextSteps.push({
+        kind: 'command',
+        label: 'Regenerate missing or stale GitLab CI substrate if needed',
+        command: 'npx @jununfly/zj-loop-init . --upgrade gitlab-ci',
+    });
+    return [
+        {
+            level: 'warn',
+            category: 'hardening',
+            message: `GitLab generated substrate exists but is not fully tracked by Git: ${samplePaths}${suffix}`,
+            affectsScore: false,
+            nextSteps,
+        },
+    ];
+}
+async function collectGitLabSubstratePaths(fs) {
+    const paths = [];
+    if (await fs.exists('.gitlab-ci.yml'))
+        paths.push('.gitlab-ci.yml');
+    if (await fs.exists('zj-loop/zj-loop-route-table.yaml'))
+        paths.push('zj-loop/zj-loop-route-table.yaml');
+    const entries = await fs.listEntries('zj-loop/gitlab-ci');
+    for (const entry of entries) {
+        if (entry.kind === 'file' && GENERATED_GITLAB_CI_PATTERN.test(entry.name)) {
+            paths.push(`zj-loop/gitlab-ci/${entry.name}`);
+        }
+    }
+    return Array.from(new Set(paths)).sort();
+}
+function isGitWorktree(root) {
+    try {
+        const out = execFileSync('git', ['-C', root, 'rev-parse', '--is-inside-work-tree'], {
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            timeout: 1500,
+        }).trim();
+        return out === 'true';
+    }
+    catch {
+        return false;
+    }
+}
+function gitPathIsTracked(root, projectPath) {
+    try {
+        execFileSync('git', ['-C', root, 'ls-files', '--error-unmatch', '--', projectPath], {
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            timeout: 1500,
+        });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function gitPathIsIgnored(root, projectPath) {
+    try {
+        execFileSync('git', ['-C', root, 'check-ignore', '--quiet', '--', projectPath], {
+            encoding: 'utf8',
+            stdio: ['ignore', 'ignore', 'ignore'],
+            timeout: 1500,
+        });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function shellJoinProjectPaths(projectPaths) {
+    return projectPaths.map(shellQuote).join(' ');
+}
+function shellQuote(value) {
+    return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 async function auditWorkflowBundleRouteTable(fs) {
     const routeTable = await fs.readTextIfExists('zj-loop/zj-loop-route-table.yaml');
@@ -522,6 +639,7 @@ export async function auditProject(target) {
     const { score, level, assessment } = computeScore(signals);
     const { findings, recommendations } = evaluateReadinessGuidance(signals, score);
     const workflowBundleFindings = await auditGeneratedWorkflowBundle(fs);
+    const gitLabSubstrateFindings = await auditGeneratedGitLabSubstrateTracking(root, fs);
     const routeExecutionFindings = await auditRouteExecutionContractWarnings(fs);
     return {
         target: root,
@@ -529,7 +647,7 @@ export async function auditProject(target) {
         level,
         assessment,
         signals,
-        findings: [...workflowBundleFindings, ...routeExecutionFindings, ...findings],
+        findings: [...workflowBundleFindings, ...gitLabSubstrateFindings, ...routeExecutionFindings, ...findings],
         recommendations,
     };
 }

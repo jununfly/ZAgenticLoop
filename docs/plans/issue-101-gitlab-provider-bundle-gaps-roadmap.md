@@ -240,17 +240,27 @@ validation footguns without causing noisy diffs or malformed branch names.
 
 ### Leaf 4-1: Audit Local Substrate Tracking
 
-Status: pending
+Status: completed
 
 Intent: Warn when generated/local GitLab substrate exists but is ignored or
 untracked and would disappear in CI.
 
+Evidence:
+
+- `zj-loop-audit` now detects GitLab CI substrate files in git worktrees:
+  `.gitlab-ci.yml`, `zj-loop/gitlab-ci/zj-loop-*.yml`, and
+  `zj-loop/zj-loop-route-table.yaml`.
+- Existing substrate files that are ignored or untracked produce a warning with
+  separate `git add -f` and `git add` next steps, plus a regeneration hint.
+- Non-git directories remain quiet to avoid noisy audit output.
+- Tests cover ignored, untracked, and tracked GitLab substrate cases.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-audit && npm test
-cd tools/zj-loop-audit && npm run build && node dist/cli.js ../..
-git diff --check
+cd tools/zj-loop-audit && npm test # passed
+cd tools/zj-loop-audit && npm run build && node dist/cli.js ../.. # passed
+git diff --check # passed
 ```
 
 ### Leaf 4-2: YAML Preserving Route Enable

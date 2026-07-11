@@ -10,7 +10,7 @@
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
   "current_parent": "4-audit-route-enable-and-slug-hardening",
-  "current_leaf": "4-1-audit-local-substrate-tracking",
+  "current_leaf": "4-2-yaml-preserving-route-enable",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -140,8 +140,9 @@
         {
           "id": "4-1-audit-local-substrate-tracking",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Warn when generated/local GitLab substrate exists but is ignored or untracked and would disappear in CI.",
+          "evidence": "`zj-loop-audit` now detects GitLab CI substrate files (`.gitlab-ci.yml`, `zj-loop/gitlab-ci/zj-loop-*.yml`, and `zj-loop/zj-loop-route-table.yaml`) in git worktrees and warns when any existing substrate file is ignored or untracked, with separate `git add -f` and `git add` next steps plus a regeneration hint. Non-git directories remain quiet. Tests cover ignored, untracked, and tracked GitLab substrate cases.",
           "verification": [
             "cd tools/zj-loop-audit && npm test",
             "cd tools/zj-loop-audit && npm run build && node dist/cli.js ../..",
@@ -198,5 +199,5 @@
     "Merge to main"
   ],
   "created_at": "2026-07-11T06:55:00.000Z",
-  "updated_at": "2026-07-11T07:05:00.000Z"
+  "updated_at": "2026-07-11T07:45:00.000Z"
 }
