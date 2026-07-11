@@ -41,17 +41,26 @@ include/install status.
 
 ### Leaf 1-1: Shared GitLab Image Tags And Node Preflight
 
-Status: pending
+Status: completed
 
 Intent: Ensure every generated GitLab fragment inherits configured image,
 runner tags, and Node >=18 preflight behavior.
 
+Evidence:
+
+- All nine generated GitLab fragments already render
+  `__ZJ_LOOP_GITLAB_IMAGE__`, `__ZJ_LOOP_GITLAB_TAGS__`, and Node >=18
+  preflight checks.
+- `zj-loop-init` tests cover custom image/tag rendering.
+- Provider parity confirms all GitHub/GitLab route template pairs remain
+  aligned.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-init && npm test
-npm run test:provider-parity-gate
-git diff --check
+cd tools/zj-loop-init && npm test # passed
+npm run test:provider-parity-gate # passed
+git diff --check # passed
 ```
 
 ### Leaf 1-2: GitLab Route Table And Include Readiness

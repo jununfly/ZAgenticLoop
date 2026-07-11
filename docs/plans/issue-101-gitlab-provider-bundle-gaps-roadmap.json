@@ -10,7 +10,7 @@
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
   "current_parent": "1-gitlab-ci-install-substrate",
-  "current_leaf": "1-1-shared-gitlab-image-tags-and-node-preflight",
+  "current_leaf": "1-2-gitlab-route-table-and-include-readiness",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -32,8 +32,9 @@
         {
           "id": "1-1-shared-gitlab-image-tags-and-node-preflight",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Ensure every generated GitLab fragment inherits configured image, runner tags, and Node >=18 preflight behavior.",
+          "evidence": "All nine generated GitLab fragments already render `__ZJ_LOOP_GITLAB_IMAGE__`, `__ZJ_LOOP_GITLAB_TAGS__`, and Node >=18 preflight checks. `zj-loop-init` tests cover custom image/tag rendering and provider parity confirms all GitHub/GitLab route template pairs remain aligned.",
           "verification": [
             "cd tools/zj-loop-init && npm test",
             "npm run test:provider-parity-gate",
@@ -191,5 +192,5 @@
     "Merge to main"
   ],
   "created_at": "2026-07-11T06:55:00.000Z",
-  "updated_at": "2026-07-11T06:55:00.000Z"
+  "updated_at": "2026-07-11T07:05:00.000Z"
 }
