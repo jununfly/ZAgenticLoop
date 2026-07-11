@@ -1,19 +1,20 @@
 # Roadmap-Sliced Development State — ZAgenticLoop
 
-Last run: 2026-07-10
+Last run: 2026-07-11
 
 ## Current Roadmap
 
-- Roadmap id: issue-92-gitlab-provider-adoption-polish
-- Branch: codex/issue-92-gitlab-provider-adoption-polish
-- Status: completed
-- Current parent node: closeout completed
-- Current leaf: none
+- Roadmap id: issue-101-gitlab-provider-bundle-gaps
+- Branch: zjal-issue-101-gitlab-provider-bundle-gaps
+- Status: active
+- Current parent node: 1-gitlab-ci-install-substrate
+- Current leaf: 1-1-shared-gitlab-image-tags-and-node-preflight
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| issue-101-request-consumption | completed | Consumed #101 Issue Fix Request `ifr_triage_c3dc6d47a53b` into Roadmap-Sliced Development on branch `zjal-issue-101-gitlab-provider-bundle-gaps`; initialized process roadmap `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.json` and rendered view `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.md`; mapped the GitLab provider bundle feedback into executable parent/leaf slices covering CI substrate, provider metadata/closeout, readiness/profile clarity, audit/route enablement/slug hardening, and closeout; lifecycle comment: https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943236762; `node -e "JSON.parse(require('fs').readFileSync('docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.json','utf8'))"`; `git diff --check` | pending |
 | issue-92-gitlab-provider-adoption-polish-closeout | completed | Durable docs absorbed the GitLab validation-friendly bundle decisions: configurable GitLab core package override for local tarball validation, preserved consumer-plan artifacts for blocked/refused GitLab plans, provider-specific GitLab/MR wording in closeout evidence, CI Sweeper GitLab Issue Fix Request dry-run artifacts, and README/Quickstart guidance for validating unpublished packages in GitLab projects. Process roadmap files under `docs/plans/issue-92-gitlab-provider-adoption-polish-roadmap.*` were deleted after closeout. Verification: `npm test` in `tools/zj-loop-init`; `npm test` in `tools/zj-loop-core`; `npm run test:provider-parity-gate`; `bash scripts/ci-audit-gates.sh`; `bash scripts/ci-validate-gates.sh`; `git diff --check` | pending |
 | gitlab-validation-friendly-bundle | completed | `zj-loop-init --add/--upgrade gitlab-ci` accepts `--gitlab-core-package` so target GitLab projects can validate unpublished local or vendored `@jununfly/zj-loop-core` packages; generated GitLab CI templates render the package override consistently; docs show the `npm pack` plus local tarball install path; `npm test` in `tools/zj-loop-init`; `git diff --check` | `e928e89`, `6bec9c6` |
 | gitlab-consumer-artifact-observability | completed | GitLab generated consumer jobs now preserve `consumer-plan.json` artifacts even when route plans are blocked/refused, and GitLab CI Sweeper dry-run writes `issue-fix-request.md` plus `issue-fix-request-result.json`; provider parity tests cover the observable artifact contract; `npm test` in `tools/zj-loop-init`; `npm run test:provider-parity-gate`; `git diff --check` | `78c895d`, `8999a33` |

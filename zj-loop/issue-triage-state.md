@@ -45,10 +45,20 @@ their source issues, carriers, PRs, or durable docs have absorbed the evidence.
   - Open issues: 2
   - Closed issues: 41
   - Side effects executed: none
+- Promoted transition:
+  - Source issue: `#101`
+  - Transition request: `triage-transition-af8f4278cf7b`
+  - Issue Fix Request: `ifr_triage_c3dc6d47a53b`
+  - Requested consumer: `roadmap-sliced-development`
+  - Carrier comment:
+    https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943180683
+  - Consumer status: consumed by Roadmap-Sliced Development
+  - Consumed evidence:
+    https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943236762
 - Open issue recommendations:
   - `#101`: `label-suggestion-observation`, recommended
-    `ready-for-agent`; concrete GitLab provider bundle gaps and acceptance
-    criteria are present.
+    `ready-for-agent`; promoted to a source issue Issue Fix Request carrier
+    for `roadmap-sliced-development`.
   - `#100`: `human-attention-candidate`, recommended `ready-for-human`;
     this issue is already an Issue Fix Request carrier for CI Sweeper, so
     triage must not create a nested Issue Fix Request.
@@ -97,6 +107,20 @@ Fixed confirmation phrase:
 ```text
 CONFIRM_TRIAGE_TRANSITION
 ```
+
+Confirmed transition evidence:
+
+- Transition request: `triage-transition-af8f4278cf7b`
+- Confirmed transition status: `confirmed`
+- Issue Fix Request id: `ifr_triage_c3dc6d47a53b`
+- Requested consumer: `roadmap-sliced-development`
+- Source issue request carrier:
+  https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943180683
+- Consumer lifecycle evidence:
+  https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943236762
+- Dedupe verification: `gh issue view 101 --json number,title,state,url,comments`
+  showed exactly one `<!-- zj-loop:issue-fix-request` carrier comment for
+  `ifr_triage_c3dc6d47a53b`.
 
 Report-only side-effect audit for this run:
 
