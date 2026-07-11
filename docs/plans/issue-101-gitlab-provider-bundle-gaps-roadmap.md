@@ -65,18 +65,29 @@ git diff --check # passed
 
 ### Leaf 1-2: GitLab Route Table And Include Readiness
 
-Status: pending
+Status: completed
 
 Intent: Make GitLab upgrade/install output distinguish fragments generated,
 root CI includes reachable, route table present, and exact next steps when user
 CI is not patched.
 
+Evidence:
+
+- `zj-loop-init --add gitlab-ci` and `--upgrade gitlab-ci` now print a GitLab
+  CI readiness summary that separates fragment generation/upgrade, root
+  `.gitlab-ci.yml` include reachability, and route table readiness.
+- Existing root CI files get the exact `include:` block for generated
+  `zj-loop/gitlab-ci/*.yml` fragments instead of a wildcard instruction.
+- `--upgrade gitlab-ci` now creates a missing
+  `zj-loop/zj-loop-route-table.yaml` readiness substrate instead of leaving a
+  runtime `ENOENT` for route dispatch.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-init && npm test
-npm run check:zj-loop-init
-git diff --check
+cd tools/zj-loop-init && npm test # passed
+npm run check:zj-loop-init # passed
+git diff --check # passed
 ```
 
 ### Leaf 1-3: GitLab Manual Replay Surface

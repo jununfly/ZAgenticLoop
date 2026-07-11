@@ -466,6 +466,12 @@ test('zj-loop-init --add gitlab-ci skips existing root CI by default', async () 
     const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
     assert.match(stdout, /skipped: .*\.gitlab-ci\.yml already exists/);
     assert.match(stdout, /next step: review \.gitlab-ci\.yml and include zj-loop\/gitlab-ci\/\*\.yml manually/);
+    assert.match(stdout, /=== GitLab CI readiness ===/);
+    assert.match(stdout, /fragments: zj-loop\/gitlab-ci\/\*\.yml generated/);
+    assert.match(stdout, /root_ci: \.gitlab-ci\.yml was not changed; add the include block below if it is missing/);
+    assert.match(stdout, /route_table: zj-loop\/zj-loop-route-table\.yaml created/);
+    assert.match(stdout, /include:\n  - local: "zj-loop\/gitlab-ci\/zj-loop-smoke\.yml"/);
+    assert.match(stdout, /  - local: "zj-loop\/gitlab-ci\/zj-loop-post-merge-cleanup\.yml"/);
     assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
     await access(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'));
   } finally {
@@ -531,6 +537,11 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(stdout, /backed up modified generated file: .*zj-loop-smoke\.yml → .*zj-loop-smoke\.yml\.bak/);
     assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
     assert.match(stdout, /skipped: \.gitlab-ci\.yml already exists/);
+    assert.match(stdout, /=== GitLab CI readiness ===/);
+    assert.match(stdout, /fragments: zj-loop\/gitlab-ci\/\*\.yml upgraded/);
+    assert.match(stdout, /root_ci: \.gitlab-ci\.yml was not changed; add the include block below if it is missing/);
+    assert.match(stdout, /route_table: zj-loop\/zj-loop-route-table\.yaml present/);
+    assert.match(stdout, /include:\n  - local: "zj-loop\/gitlab-ci\/zj-loop-smoke\.yml"/);
     assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
     const backup = await readFile(`${smokePath}.bak`, 'utf8');
     assert.match(backup, /# local edit/);
@@ -539,6 +550,23 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(upgraded, /tags:\n    - "k8s"/);
     assert.match(upgraded, /image: "registry\.example\.com\/node:20"/);
     assert.match(upgraded, /--package \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.5\.tgz/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade gitlab-ci creates missing route table readiness substrate', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-gitlab-ci-route-table-'));
+  try {
+    await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+    await rm(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), { force: true });
+
+    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'gitlab-ci']);
+
+    assert.match(stdout, /created: zj-loop\/zj-loop-route-table\.yaml/);
+    assert.match(stdout, /route_table: zj-loop\/zj-loop-route-table\.yaml created/);
+    const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(routeTable, /route_id: "manual-smoke-report"/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

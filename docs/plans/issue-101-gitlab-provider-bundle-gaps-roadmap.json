@@ -10,7 +10,7 @@
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
   "current_parent": "1-gitlab-ci-install-substrate",
-  "current_leaf": "1-2-gitlab-route-table-and-include-readiness",
+  "current_leaf": "1-3-gitlab-manual-replay-surface",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -44,8 +44,9 @@
         {
           "id": "1-2-gitlab-route-table-and-include-readiness",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Make GitLab upgrade/install output distinguish fragments generated, root CI includes reachable, route table present, and exact next steps when user CI is not patched.",
+          "evidence": "`zj-loop-init --add gitlab-ci` and `--upgrade gitlab-ci` now print a GitLab CI readiness summary that separates fragment generation/upgrade, root `.gitlab-ci.yml` include reachability, and route table readiness. Existing root CI files get the exact include block for `zj-loop/gitlab-ci/*.yml`. `--upgrade gitlab-ci` now also creates a missing `zj-loop/zj-loop-route-table.yaml` readiness substrate instead of leaving runtime ENOENT for route dispatch.",
           "verification": [
             "cd tools/zj-loop-init && npm test",
             "npm run check:zj-loop-init",
