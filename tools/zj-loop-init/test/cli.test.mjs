@@ -425,7 +425,11 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(postMerge, /closeout-plan\.json/);
     assert.match(postMerge, /ZJ_LOOP_TARGET_BRANCH: ""/);
     assert.match(postMerge, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}/);
-    assert.match(postMerge, /--target-branch "\$\{ZJ_LOOP_TARGET_BRANCH:-\$\{CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-main\}\}"/);
+    assert.match(postMerge, /--merge-request "\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-0\}\}"/);
+    assert.match(postMerge, /--gitlab-api-url "\$\{CI_API_V4_URL:-https:\/\/gitlab\.com\/api\/v4\}"/);
+    assert.match(postMerge, /--gitlab-job-token "\$\{CI_JOB_TOKEN:-\}"/);
+    assert.doesNotMatch(postMerge, /--review-body-file/);
+    assert.doesNotMatch(postMerge, /--target-branch/);
     assert.doesNotMatch(postMerge, /ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');

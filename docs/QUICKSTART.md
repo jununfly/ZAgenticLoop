@@ -80,7 +80,9 @@ with the manual smoke job, inspect JSON artifacts, then enable only the Route
 Table consumers you intend to run. Report-only jobs can run without mutation
 tokens; issue notes, labels, branches, MRs, and cleanup require `GITLAB_TOKEN`
 plus route-specific guards.
-Post-merge cleanup resolves target branches as `ZJ_LOOP_TARGET_BRANCH` -> `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` -> `main`; set `ZJ_LOOP_TARGET_BRANCH` only for manual replay or non-standard MR metadata.
+Post-merge cleanup fetches MR metadata from GitLab by MR IID; keep
+`ZJ_LOOP_TARGET_BRANCH` only for explicit manual replay or non-standard
+metadata fallback.
 
 For unpublished dogfood or internal validation, render a local package tarball
 as the GitLab core package source:

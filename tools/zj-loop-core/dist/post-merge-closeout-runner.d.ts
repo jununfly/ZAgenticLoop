@@ -13,6 +13,16 @@ export type CommandResult = {
     stderr: string;
 };
 export type CommandRunner = (command: string, args: string[]) => Promise<CommandResult>;
+type FetchResponseLike = {
+    ok: boolean;
+    status: number;
+    statusText?: string;
+    json: () => Promise<any>;
+    text?: () => Promise<string>;
+};
+type FetchLike = (url: string, init?: {
+    headers?: Record<string, string>;
+}) => Promise<FetchResponseLike>;
 export type PostMergePullRequest = {
     provider?: 'github' | 'gitlab';
     reviewKind?: 'pull-request' | 'merge-request';
@@ -281,6 +291,40 @@ export declare function collectCloseoutInputFromGitHub(input: {
     currentRepo: string;
     gitStatus: string;
 }>;
+export declare function collectCloseoutInputFromGitLab(input: {
+    iid: string | number;
+    expectedRepo: string;
+    apiBaseUrl?: string;
+    token?: string;
+    jobToken?: string;
+    fetchImpl?: FetchLike;
+}): Promise<{
+    pr: {
+        provider: "gitlab";
+        reviewKind: "merge-request";
+        number: number | undefined;
+        url: string;
+        body: string;
+        merged: boolean;
+        mergedAt: string | null;
+        baseRefName: string;
+        headRefName: string;
+        baseRepositoryOwner: string;
+        headRepositoryOwner: string;
+        baseRepository: string;
+        repository: string;
+        isCrossRepository: boolean;
+    };
+    prBody: string;
+    expectedRepo: string;
+    currentRepo: string;
+    gitStatus: string;
+}>;
+export declare function buildGitLabMergeRequestApiUrl(input: {
+    apiBaseUrl?: string;
+    projectPath: string;
+    iid: string | number;
+}): string;
 export declare function normalizeGhPrView(pr: PostMergePullRequest, { expectedRepo }: {
     expectedRepo: string;
 }): {
@@ -357,3 +401,4 @@ export declare function normalizePr(pr?: PostMergePullRequest): {
     isCrossRepository?: boolean;
 };
 export declare function parseRepositoryFromGitRemote(remoteUrl: string): string;
+export {};

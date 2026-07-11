@@ -5,6 +5,7 @@ import {
   buildDryRunEvidenceComment,
   buildPostMergeRoadmapCloseoutExecutionPlan,
   collectCloseoutInputFromGitHub,
+  collectCloseoutInputFromGitLab,
   executePostMergeRoadmapCloseout,
   LIVE_CLEANUP_CONFIRMATION_PHRASE,
   normalizeGitLabMrView,
@@ -28,8 +29,11 @@ if (argv[0] === 'closeout-plan') {
       { name: 'review-body', type: 'string', description: 'Provider review body containing the closeout contract' },
       { name: 'review-body-file', type: 'string', description: 'File containing provider review body' },
       { name: 'source-branch', type: 'string', description: 'Provider review source branch' },
-      { name: 'target-branch', type: 'string', description: 'Provider review target branch', default: 'main' },
+      { name: 'target-branch', type: 'string', description: 'Provider review target branch' },
       { name: 'merged', type: 'boolean', description: 'Mark explicit provider review metadata as merged' },
+      { name: 'gitlab-api-url', type: 'string', description: 'GitLab API v4 base URL for MR metadata fetch' },
+      { name: 'gitlab-token', type: 'string', description: 'GitLab PRIVATE-TOKEN for MR metadata fetch' },
+      { name: 'gitlab-job-token', type: 'string', description: 'GitLab JOB-TOKEN for MR metadata fetch' },
       { name: 'carrier-issue', type: 'string', description: 'Expected activation carrier issue' },
       { name: 'out', type: 'string', description: 'Write JSON plan to this path' },
       { name: 'comment-out', type: 'string', description: 'Write dry-run evidence comment to this path' },
@@ -48,26 +52,7 @@ if (argv[0] === 'closeout-plan') {
       if (typeof repo !== 'string') throw new Error('--repo is required');
 
       const input = provider === 'gitlab'
-        ? {
-            pr: normalizeGitLabMrView({
-              iid: typeof options['merge-request'] === 'string'
-                ? options['merge-request']
-                : typeof options.pr === 'string'
-                  ? options.pr
-                  : undefined,
-              web_url: typeof options['review-url'] === 'string' ? options['review-url'] : undefined,
-              description: await readReviewBody(options),
-              state: options.merged === true ? 'merged' : undefined,
-              merged: options.merged === true,
-              source_branch: typeof options['source-branch'] === 'string' ? options['source-branch'] : undefined,
-              target_branch: typeof options['target-branch'] === 'string' ? options['target-branch'] : 'main',
-              project_path: repo,
-            }, { expectedRepo: repo }),
-            prBody: await readReviewBody(options),
-            expectedRepo: repo,
-            currentRepo: repo,
-            gitStatus: '',
-          }
+        ? await collectGitLabCloseoutInput(options, repo)
         : await collectCloseoutInputFromGitHub({
             prNumber: requireString(pr, '--pr is required'),
             expectedRepo: repo,
@@ -141,7 +126,54 @@ if (argv[0] === 'closeout-plan') {
   }, argv);
 }
 
-async function readReviewBody(options: Record<string, string | boolean | undefined>) {
+async function collectGitLabCloseoutInput(options: Record<string, unknown>, repo: string) {
+  const mergeRequest = typeof options['merge-request'] === 'string'
+    ? options['merge-request']
+    : typeof options.pr === 'string'
+      ? options.pr
+      : undefined;
+  if (!mergeRequest) throw new Error('--merge-request is required for --provider gitlab');
+
+  const hasExplicitMetadata = stringOption(options['review-body']) !== undefined ||
+    stringOption(options['review-body-file']) !== undefined ||
+    stringOption(options['source-branch']) !== undefined ||
+    stringOption(options['target-branch']) !== undefined ||
+    options.merged === true;
+
+  if (!hasExplicitMetadata) {
+    return collectCloseoutInputFromGitLab({
+      iid: mergeRequest,
+      expectedRepo: repo,
+      apiBaseUrl: stringOption(options['gitlab-api-url']) ?? process.env.CI_API_V4_URL,
+      token: stringOption(options['gitlab-token']) ?? process.env.GITLAB_TOKEN ?? process.env.GL_TOKEN,
+      jobToken: stringOption(options['gitlab-job-token']) ?? process.env.CI_JOB_TOKEN,
+    });
+  }
+
+  const body = await readReviewBody(options);
+  return {
+    pr: normalizeGitLabMrView({
+      iid: mergeRequest,
+      web_url: typeof options['review-url'] === 'string' ? options['review-url'] : undefined,
+      description: body,
+      state: options.merged === true ? 'merged' : undefined,
+      merged: options.merged === true,
+      source_branch: typeof options['source-branch'] === 'string' ? options['source-branch'] : undefined,
+      target_branch: typeof options['target-branch'] === 'string' ? options['target-branch'] : 'main',
+      project_path: repo,
+    }, { expectedRepo: repo }),
+    prBody: body,
+    expectedRepo: repo,
+    currentRepo: repo,
+    gitStatus: '',
+  };
+}
+
+function stringOption(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+async function readReviewBody(options: Record<string, unknown>) {
   if (typeof options['review-body-file'] === 'string') return readFile(options['review-body-file'], 'utf8');
   if (typeof options['review-body'] === 'string') return options['review-body'];
   return '';

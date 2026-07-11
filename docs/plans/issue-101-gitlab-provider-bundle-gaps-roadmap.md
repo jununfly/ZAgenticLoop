@@ -123,17 +123,29 @@ supplied MR body/state.
 
 ### Leaf 2-1: GitLab MR Metadata Fetch
 
-Status: pending
+Status: completed
 
 Intent: Fetch GitLab MR state, target branch, source branch, merged timestamp,
 and description/body by MR IID for post-merge closeout planning.
 
+Evidence:
+
+- `zj-loop-post-merge-closeout closeout-plan --provider gitlab` now fetches MR
+  metadata by IID from the GitLab API when explicit review metadata is not
+  supplied.
+- The fetch normalizes MR description/body, state/merged timestamp, source
+  branch, target branch, URL, and project path into the shared post-merge
+  closeout plan.
+- Generated GitLab post-merge cleanup jobs now call the packaged closeout CLI
+  with `CI_API_V4_URL` and `CI_JOB_TOKEN` instead of passing `/dev/null` review
+  body and synthetic branch/merged metadata.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-core && npm test
-npm run test:provider-parity-gate
-git diff --check
+cd tools/zj-loop-core && npm test # passed
+npm run test:provider-parity-gate # passed
+git diff --check # passed
 ```
 
 ### Leaf 2-2: Provider Native Route Artifacts

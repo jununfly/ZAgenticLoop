@@ -7,8 +7,10 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   buildDryRunEvidenceComment,
+  buildGitLabMergeRequestApiUrl,
   buildPostMergeRoadmapCloseoutExecutionPlan,
   collectCloseoutInputFromGitHub,
+  collectCloseoutInputFromGitLab,
   executePostMergeRoadmapCloseout,
   LIVE_CLEANUP_CONFIRMATION_PHRASE,
   normalizeGitLabMrView,
@@ -134,6 +136,57 @@ test('post-merge closeout normalizes GitLab MR metadata into closeout plans', ()
   assert.equal(plan.pr.provider, 'gitlab');
   assert.equal(plan.pr.reviewKind, 'merge-request');
   assert.deepEqual(plan.refusals, []);
+});
+
+test('post-merge closeout fetches GitLab MR metadata by IID', async () => {
+  const calls = [];
+  const input = await collectCloseoutInputFromGitLab({
+    iid: 9,
+    expectedRepo: 'group/subgroup/project',
+    apiBaseUrl: 'https://gitlab.example.test/api/v4/',
+    jobToken: 'job-token-1',
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return {
+            iid: 9,
+            web_url: 'https://gitlab.example.test/group/subgroup/project/-/merge_requests/9',
+            description: VALID_BODY,
+            state: 'merged',
+            merged_at: '2026-07-11T01:02:03Z',
+            source_branch: 'zjal/post-merge-closeout-executor',
+            target_branch: 'release/current',
+            source_project_path: 'group/subgroup/project',
+            target_project_path: 'group/subgroup/project',
+          };
+        },
+      };
+    },
+  });
+
+  assert.equal(calls[0].url, 'https://gitlab.example.test/api/v4/projects/group%2Fsubgroup%2Fproject/merge_requests/9');
+  assert.equal(calls[0].init.headers['JOB-TOKEN'], 'job-token-1');
+  assert.equal(input.pr.provider, 'gitlab');
+  assert.equal(input.pr.reviewKind, 'merge-request');
+  assert.equal(input.pr.number, 9);
+  assert.equal(input.pr.merged, true);
+  assert.equal(input.pr.baseRefName, 'release/current');
+  assert.equal(input.pr.headRefName, 'zjal/post-merge-closeout-executor');
+  assert.equal(input.prBody, VALID_BODY);
+});
+
+test('post-merge closeout builds encoded GitLab MR API URLs', () => {
+  assert.equal(
+    buildGitLabMergeRequestApiUrl({
+      apiBaseUrl: 'https://gitlab.com/api/v4',
+      projectPath: 'group/subgroup/project',
+      iid: 12,
+    }),
+    'https://gitlab.com/api/v4/projects/group%2Fsubgroup%2Fproject/merge_requests/12',
+  );
 });
 
 for (const targetBranch of ['main', 'master', 'release/current']) {

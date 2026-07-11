@@ -36,6 +36,14 @@ export type CommandResult = {
 };
 
 export type CommandRunner = (command: string, args: string[]) => Promise<CommandResult>;
+type FetchResponseLike = {
+  ok: boolean;
+  status: number;
+  statusText?: string;
+  json: () => Promise<any>;
+  text?: () => Promise<string>;
+};
+type FetchLike = (url: string, init?: { headers?: Record<string, string> }) => Promise<FetchResponseLike>;
 
 export type PostMergePullRequest = {
   provider?: 'github' | 'gitlab';
@@ -685,6 +693,54 @@ export async function collectCloseoutInputFromGitHub(input: {
     currentRepo: parseRepositoryFromGitRemote(currentRepoResult.stdout.trim()),
     gitStatus: gitStatusResult.stdout,
   };
+}
+
+export async function collectCloseoutInputFromGitLab(input: {
+  iid: string | number;
+  expectedRepo: string;
+  apiBaseUrl?: string;
+  token?: string;
+  jobToken?: string;
+  fetchImpl?: FetchLike;
+}) {
+  const fetchImpl = input.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('GitLab MR metadata fetch requires global fetch or an injected fetch implementation');
+  }
+  const apiUrl = buildGitLabMergeRequestApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath: input.expectedRepo,
+    iid: input.iid,
+  });
+  const headers: Record<string, string> = {};
+  if (input.token) {
+    headers['PRIVATE-TOKEN'] = input.token;
+  } else if (input.jobToken) {
+    headers['JOB-TOKEN'] = input.jobToken;
+  }
+  const response = await fetchImpl(apiUrl, { headers });
+  if (!response.ok) {
+    const body = response.text ? await response.text() : '';
+    throw new Error(`GitLab MR metadata fetch failed: ${response.status} ${response.statusText ?? ''}${body ? ` - ${body}` : ''}`.trim());
+  }
+  const mr = normalizeGitLabMrView(await response.json(), { expectedRepo: input.expectedRepo });
+  return {
+    pr: mr,
+    prBody: mr.body,
+    expectedRepo: input.expectedRepo,
+    currentRepo: input.expectedRepo,
+    gitStatus: '',
+  };
+}
+
+export function buildGitLabMergeRequestApiUrl(input: {
+  apiBaseUrl?: string;
+  projectPath: string;
+  iid: string | number;
+}) {
+  const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+  const projectPath = encodeURIComponent(input.projectPath);
+  return `${base}/projects/${projectPath}/merge_requests/${encodeURIComponent(String(input.iid))}`;
 }
 
 export function normalizeGhPrView(pr: PostMergePullRequest, { expectedRepo }: { expectedRepo: string }) {

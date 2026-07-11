@@ -10,7 +10,7 @@
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
   "current_parent": "2-provider-metadata-and-closeout",
-  "current_leaf": "2-1-gitlab-mr-metadata-fetch",
+  "current_leaf": "2-2-provider-native-route-artifacts",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -76,8 +76,9 @@
         {
           "id": "2-1-gitlab-mr-metadata-fetch",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Fetch GitLab MR state, target branch, source branch, merged timestamp, and description/body by MR IID for post-merge closeout planning.",
+          "evidence": "`zj-loop-post-merge-closeout closeout-plan --provider gitlab` now fetches MR metadata by IID from the GitLab API when explicit review metadata is not supplied. The fetch normalizes MR description/body, state/merged timestamp, source branch, target branch, URL, and project path into the shared post-merge closeout plan. Generated GitLab post-merge cleanup jobs now call the packaged closeout CLI with `CI_API_V4_URL` and `CI_JOB_TOKEN` instead of passing `/dev/null` review body and synthetic branch/merged metadata.",
           "verification": [
             "cd tools/zj-loop-core && npm test",
             "npm run test:provider-parity-gate",
