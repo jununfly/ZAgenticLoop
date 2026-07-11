@@ -10,7 +10,7 @@
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
   "current_parent": "3-readiness-and-profile-clarity",
-  "current_leaf": "3-1-dispatch-vs-execution-readiness",
+  "current_leaf": "3-2-production-safe-route-profiles",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -108,8 +108,9 @@
         {
           "id": "3-1-dispatch-vs-execution-readiness",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Split consumer plan fields so dispatch allowance and execution readiness are explicit, while blocked plans still point to primary dry-run artifacts.",
+          "evidence": "Consumer run plans now expose `dispatch_allowed` separately from `execution_allowed`, while keeping the legacy `allowed` field for compatibility. Report-only plans are dispatch-allowed but not execution-allowed; execution-ready action routes are both dispatch-allowed and execution-allowed; blocked plans preserve the route-decision dispatch result while setting execution allowance false. Route-specific artifact hints now cover CI Sweeper, Dependency Sweeper, PR Steward, Changelog Drafter, Issue Triage Action, Roadmap Activation, and Post-Merge Closeout primary JSON artifacts.",
           "verification": [
             "cd tools/zj-loop-core && npm test",
             "npm run test:route-decision",

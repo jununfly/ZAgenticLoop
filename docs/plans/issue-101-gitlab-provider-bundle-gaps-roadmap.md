@@ -181,18 +181,31 @@ without guessing.
 
 ### Leaf 3-1: Dispatch Vs Execution Readiness
 
-Status: pending
+Status: completed
 
 Intent: Split consumer plan fields so dispatch allowance and execution
 readiness are explicit, while blocked plans still point to primary dry-run
 artifacts.
 
+Evidence:
+
+- Consumer run plans now expose `dispatch_allowed` separately from
+  `execution_allowed`, while keeping the legacy `allowed` field for
+  compatibility.
+- Report-only plans are dispatch-allowed but not execution-allowed;
+  execution-ready action routes are both dispatch-allowed and
+  execution-allowed; blocked plans preserve the route-decision dispatch result
+  while setting execution allowance false.
+- Route-specific artifact hints now cover CI Sweeper, Dependency Sweeper, PR
+  Steward, Changelog Drafter, Issue Triage Action, Roadmap Activation, and
+  Post-Merge Closeout primary JSON artifacts.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-core && npm test
-npm run test:route-decision
-git diff --check
+cd tools/zj-loop-core && npm test # passed
+npm run test:route-decision # passed
+git diff --check # passed
 ```
 
 ### Leaf 3-2: Production Safe Route Profiles

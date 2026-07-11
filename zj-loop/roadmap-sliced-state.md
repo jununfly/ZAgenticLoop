@@ -8,12 +8,13 @@ Last run: 2026-07-11
 - Branch: zjal-issue-101-gitlab-provider-bundle-gaps
 - Status: active
 - Current parent node: 3-readiness-and-profile-clarity
-- Current leaf: 3-1-dispatch-vs-execution-readiness
+- Current leaf: 3-2-production-safe-route-profiles
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 3-1-dispatch-vs-execution-readiness | completed | Consumer run plans expose `dispatch_allowed` separately from `execution_allowed` while keeping legacy `allowed`; report-only plans are dispatch-allowed but not execution-allowed; blocked plans preserve route-decision dispatch result while setting execution allowance false; route-specific artifact hints cover CI Sweeper, Dependency Sweeper, PR Steward, Changelog Drafter, Issue Triage Action, Roadmap Activation, and Post-Merge Closeout primary JSON artifacts; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
 | 2-2-provider-native-route-artifacts | completed | CI Sweeper Issue Fix Requests carry GitLab pipeline id/url in `provider_metadata`; PR Steward plans carry MR IID/url in `source_review.provider_metadata`; Dependency Sweeper plans preserve GitLab dependency alert id/url in `source_signal.provider_metadata`; Changelog Drafter plans preserve GitLab release-window pipeline id/url in `release_window.provider_metadata`; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
 | 2-1-gitlab-mr-metadata-fetch | completed | `zj-loop-post-merge-closeout closeout-plan --provider gitlab` now fetches MR metadata by IID from GitLab API when explicit metadata is not supplied; fetch normalizes MR description/body, state/merged timestamp, source branch, target branch, URL, and project path; generated GitLab post-merge cleanup job uses `CI_API_V4_URL` and `CI_JOB_TOKEN` instead of `/dev/null` review body and synthetic branch metadata; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | 1-3-gitlab-manual-replay-surface | completed | All generated GitLab CI route fragments now expose `ZJ_LOOP_SIGNAL_ID` as a uniform manual/API replay signal id; route-specific variables remain available for issue/MR/comment replay (`ZJ_LOOP_ISSUE_IID`, `ZJ_LOOP_MERGE_REQUEST_IID`, `ZJ_LOOP_COMMENT_ID`); Quickstart documents the replay variables; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
