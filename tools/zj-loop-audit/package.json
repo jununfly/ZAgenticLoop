@@ -1,6 +1,6 @@
 {
   "name": "@jununfly/zj-loop-audit",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Agentic Loop Working readiness auditor. Compute Loop Readiness Score (L0-L3), detect activity, and get actionable suggestions. npx @jununfly/zj-loop-audit . --suggest",
   "type": "module",
   "bin": {

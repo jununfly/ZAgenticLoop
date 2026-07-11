@@ -1,6 +1,6 @@
 {
   "name": "@jununfly/zj-loop-core",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Shared Agentic Loop Working domain models and registry loading utilities.",
   "type": "module",
   "main": "dist/index.js",

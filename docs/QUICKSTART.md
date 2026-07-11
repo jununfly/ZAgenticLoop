@@ -91,8 +91,8 @@ For unpublished dogfood or internal validation, render a local package tarball
 as the GitLab core package source:
 
 ```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz
 ```
 
 If your GitLab project has a fixed stage list, render the generated jobs into an
@@ -211,7 +211,7 @@ npx @jununfly/zj-loop-audit . --suggest
 Then inspect Route Table status before enabling any consumer route:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
 ```
 
 Treat this output as the route selection menu. The `readiness` column separates
@@ -287,13 +287,13 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --js
 Enable side-effecting routes with a fixed confirmation phrase:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
 ```
 
 Disable is intentionally low friction:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable ci-sweeper
 ```
 
 Upgrade generated workflows intentionally when package pins or templates change:
@@ -327,7 +327,7 @@ Run the manual smoke job first. It should produce `route-decision.json` and
 MRs. Then inspect Route Table status:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
 ```
 
 GitLab generated jobs mirror the GitHub route families but use GitLab carrier
