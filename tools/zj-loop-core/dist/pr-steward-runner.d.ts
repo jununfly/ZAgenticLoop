@@ -47,6 +47,10 @@ export declare function buildPrStewardExecutionPlan(input?: {
         current_head_sha: string;
         base_branch: any;
         source_url: any;
+        provider_metadata: {
+            mr_iid: {} | null;
+            mr_url: string | null;
+        } | undefined;
     };
     source_pr: {
         repo: any;

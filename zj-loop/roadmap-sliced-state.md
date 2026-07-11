@@ -7,13 +7,14 @@ Last run: 2026-07-11
 - Roadmap id: issue-101-gitlab-provider-bundle-gaps
 - Branch: zjal-issue-101-gitlab-provider-bundle-gaps
 - Status: active
-- Current parent node: 2-provider-metadata-and-closeout
-- Current leaf: 2-2-provider-native-route-artifacts
+- Current parent node: 3-readiness-and-profile-clarity
+- Current leaf: 3-1-dispatch-vs-execution-readiness
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 2-2-provider-native-route-artifacts | completed | CI Sweeper Issue Fix Requests carry GitLab pipeline id/url in `provider_metadata`; PR Steward plans carry MR IID/url in `source_review.provider_metadata`; Dependency Sweeper plans preserve GitLab dependency alert id/url in `source_signal.provider_metadata`; Changelog Drafter plans preserve GitLab release-window pipeline id/url in `release_window.provider_metadata`; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
 | 2-1-gitlab-mr-metadata-fetch | completed | `zj-loop-post-merge-closeout closeout-plan --provider gitlab` now fetches MR metadata by IID from GitLab API when explicit metadata is not supplied; fetch normalizes MR description/body, state/merged timestamp, source branch, target branch, URL, and project path; generated GitLab post-merge cleanup job uses `CI_API_V4_URL` and `CI_JOB_TOKEN` instead of `/dev/null` review body and synthetic branch metadata; `cd tools/zj-loop-core && npm test`; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | 1-3-gitlab-manual-replay-surface | completed | All generated GitLab CI route fragments now expose `ZJ_LOOP_SIGNAL_ID` as a uniform manual/API replay signal id; route-specific variables remain available for issue/MR/comment replay (`ZJ_LOOP_ISSUE_IID`, `ZJ_LOOP_MERGE_REQUEST_IID`, `ZJ_LOOP_COMMENT_ID`); Quickstart documents the replay variables; `cd tools/zj-loop-init && npm test`; `npm run test:provider-parity-gate`; `git diff --check` | pending |
 | 1-2-gitlab-route-table-and-include-readiness | completed | `zj-loop-init --add gitlab-ci` and `--upgrade gitlab-ci` now print a GitLab CI readiness summary separating fragment generation/upgrade, root `.gitlab-ci.yml` include reachability, and route table readiness; existing root CI files get the exact generated include block; `--upgrade gitlab-ci` creates missing `zj-loop/zj-loop-route-table.yaml`; `cd tools/zj-loop-init && npm test`; `npm run check:zj-loop-init`; `git diff --check` | pending |

@@ -150,6 +150,11 @@ test('CI Sweeper request body preserves GitLab pipeline provider evidence', () =
   assert.equal(parsed.request.source_signal.provider, 'gitlab');
   assert.equal(parsed.request.subject.provider, 'gitlab');
   assert.equal(parsed.request.subject.source_url, 'https://gitlab.com/group/subgroup/project/-/pipelines/789');
+  assert.deepEqual(parsed.request.subject.provider_metadata, {
+    pipeline_id: '789',
+    pipeline_url: 'https://gitlab.com/group/subgroup/project/-/pipelines/789',
+  });
+  assert.deepEqual(parsed.request.source_signal.provider_metadata, parsed.request.subject.provider_metadata);
   assert.deepEqual(parsed.request.fix_scope.files_or_areas, [
     'scripts/',
     '.gitlab-ci.yml',

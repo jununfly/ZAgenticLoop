@@ -41,6 +41,10 @@ export declare function buildChangelogDrafterExecutionPlan(input?: {
         since_ref: any;
         until_ref: any;
         item_count: any;
+        provider_metadata: {
+            pipeline_id: any;
+            pipeline_url: any;
+        } | undefined;
     };
     branch: string;
     draft_file: string;

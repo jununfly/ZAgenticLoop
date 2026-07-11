@@ -127,6 +127,7 @@ export function buildChangelogDrafterExecutionPlan(input: {
       since_ref: window.since_ref ?? '',
       until_ref: window.until_ref ?? '',
       item_count: window.item_count ?? null,
+      provider_metadata: changelogProviderMetadata({ provider, window }),
     },
     branch,
     draft_file: normalizedDraftFile,
@@ -355,6 +356,14 @@ function shortHash(value: string) {
 
 function extractFirstUrl(text: string) {
   return String(text ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
+}
+
+function changelogProviderMetadata(input: { provider: 'github' | 'gitlab'; window: any }) {
+  if (input.provider !== 'gitlab') return undefined;
+  return {
+    pipeline_id: input.window.pipeline_id ?? null,
+    pipeline_url: input.window.pipeline_url ?? input.window.source_url ?? null,
+  };
 }
 
 function providerForDraftRequest(draftRequest: any): 'github' | 'gitlab' {

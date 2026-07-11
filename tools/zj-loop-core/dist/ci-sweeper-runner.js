@@ -6,6 +6,9 @@ export function buildCiSweeperIssueFixRequestBody(input) {
     const routeDecision = input.routeDecision ?? {};
     const provider = input.provider ?? providerFor(routeDecision, input.sourceUrl);
     const signalId = String(routeDecision.signal_id ?? routeDecision.source_signal_id ?? `ci:${input.runId ?? 'unknown-run'}`);
+    const runId = String(input.runId ?? routeDecision.source_run_id ?? '');
+    const sourceUrl = input.sourceUrl ?? routeDecision.source_url ?? '';
+    const providerMetadata = ciProviderMetadata({ provider, runId, sourceUrl });
     const dedupeKey = String(routeDecision.dedupe_key ?? `${input.repo}:ci-sweeper:${signalId}:generated-workflow`);
     const request = {
         schema: ISSUE_FIX_REQUEST_SCHEMA,
@@ -17,15 +20,17 @@ export function buildCiSweeperIssueFixRequestBody(input) {
             source: 'ci',
             provider,
             summary: String(routeDecision.subject ?? input.workflowName ?? 'CI workflow failure'),
-            source_url: input.sourceUrl ?? routeDecision.source_url ?? '',
+            source_url: sourceUrl,
+            provider_metadata: providerMetadata,
         },
         subject: {
             type: 'ci',
             provider,
             repo: input.repo,
             workflow: input.workflowName ?? '',
-            run_id: input.runId ?? routeDecision.source_run_id ?? '',
-            source_url: input.sourceUrl ?? routeDecision.source_url ?? '',
+            run_id: runId,
+            source_url: sourceUrl,
+            provider_metadata: providerMetadata,
         },
         route_decision: {
             ...routeDecision,
@@ -132,6 +137,14 @@ function ciSweeperFilesOrAreasFor(provider) {
         return ['scripts/', '.gitlab-ci.yml', 'zj-loop/gitlab-ci/', 'zj-loop/'];
     }
     return ['scripts/', '.github/workflows/', 'zj-loop/'];
+}
+function ciProviderMetadata(input) {
+    if (input.provider !== 'gitlab')
+        return undefined;
+    return {
+        pipeline_id: input.runId || null,
+        pipeline_url: input.sourceUrl || null,
+    };
 }
 function providerFor(routeDecision, sourceUrl) {
     const explicit = routeDecision?.provider ?? routeDecision?.source_provider;

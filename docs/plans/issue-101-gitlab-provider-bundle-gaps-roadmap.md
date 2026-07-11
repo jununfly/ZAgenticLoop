@@ -150,17 +150,27 @@ git diff --check # passed
 
 ### Leaf 2-2: Provider Native Route Artifacts
 
-Status: pending
+Status: completed
 
 Intent: Add or normalize GitLab-native metadata in MR Steward, Dependency
 Sweeper, CI Sweeper, and Changelog Drafter plans/artifacts.
 
+Evidence:
+
+- CI Sweeper Issue Fix Requests now carry GitLab pipeline id/url in
+  `provider_metadata` on both `source_signal` and `subject`.
+- PR Steward plans carry MR IID/url in `source_review.provider_metadata`.
+- Dependency Sweeper plans preserve GitLab dependency alert id/url in
+  `source_signal.provider_metadata`.
+- Changelog Drafter plans preserve GitLab release-window pipeline id/url in
+  `release_window.provider_metadata`.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-core && npm test
-npm run test:route-decision
-git diff --check
+cd tools/zj-loop-core && npm test # passed
+npm run test:route-decision # passed
+git diff --check # passed
 ```
 
 ## Parent 3: Readiness And Profile Clarity

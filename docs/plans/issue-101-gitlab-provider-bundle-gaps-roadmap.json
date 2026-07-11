@@ -9,8 +9,8 @@
   },
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
-  "current_parent": "2-provider-metadata-and-closeout",
-  "current_leaf": "2-2-provider-native-route-artifacts",
+  "current_parent": "3-readiness-and-profile-clarity",
+  "current_leaf": "3-1-dispatch-vs-execution-readiness",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -70,7 +70,7 @@
     {
       "id": "2-provider-metadata-and-closeout",
       "type": "parent",
-      "status": "active",
+      "status": "completed",
       "completion_condition": "GitLab route artifacts carry provider-native metadata and post-merge closeout can fetch GitLab MR data instead of requiring manually supplied MR body/state.",
       "children": [
         {
@@ -88,8 +88,9 @@
         {
           "id": "2-2-provider-native-route-artifacts",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Add or normalize GitLab-native metadata in MR Steward, Dependency Sweeper, CI Sweeper, and Changelog Drafter plans/artifacts.",
+          "evidence": "CI Sweeper Issue Fix Requests now carry GitLab pipeline id/url in `provider_metadata` on both `source_signal` and `subject`. PR Steward plans carry MR IID/url in `source_review.provider_metadata`. Dependency Sweeper plans preserve GitLab dependency alert id/url in `source_signal.provider_metadata`. Changelog Drafter plans preserve GitLab release-window pipeline id/url in `release_window.provider_metadata`.",
           "verification": [
             "cd tools/zj-loop-core && npm test",
             "npm run test:route-decision",
@@ -101,7 +102,7 @@
     {
       "id": "3-readiness-and-profile-clarity",
       "type": "parent",
-      "status": "pending",
+      "status": "active",
       "completion_condition": "Users and agents can distinguish route authorization, execution readiness, production-safe defaults, and dogfood-validation enablement without guessing.",
       "children": [
         {

@@ -142,6 +142,10 @@ test('PR Steward accepts GitLab MR requests but refuses live MR side effects', (
   assert.equal(plan.source_review.provider, 'gitlab');
   assert.equal(plan.source_review.kind, 'merge-request');
   assert.equal(plan.source_review.number, 123);
+  assert.deepEqual(plan.source_review.provider_metadata, {
+    mr_iid: 123,
+    mr_url: 'https://gitlab.com/group/project/-/merge_requests/123',
+  });
   assert.equal(plan.source_pr, null);
   assert.ok(plan.refusals.some((item) => item.reason === 'gitlab-live-review-side-effects-not-enabled'));
 
