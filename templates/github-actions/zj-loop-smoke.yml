@@ -29,4 +29,4 @@ jobs:
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Audit installed loop readiness
-        run: npx @jununfly/zj-loop-audit@0.1.4 . --suggest
+        run: npx @jununfly/zj-loop-audit@0.1.5 . --suggest

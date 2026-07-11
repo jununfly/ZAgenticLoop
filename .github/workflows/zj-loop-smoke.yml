@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-smoke
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 327109ccd8d7a0bc
+# zj-loop-template-hash: 3c7f1d5336ece3fa
 
 name: ZJ Loop Smoke
 
@@ -29,4 +29,4 @@ jobs:
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Audit installed loop readiness
-        run: npx @jununfly/zj-loop-audit@0.1.4 . --suggest
+        run: npx @jununfly/zj-loop-audit@0.1.5 . --suggest

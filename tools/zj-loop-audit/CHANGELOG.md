@@ -2,6 +2,12 @@
 
 All notable changes to `@jununfly/zj-loop-audit` are documented here.
 
+## [0.1.5] - 2026-07-11
+
+### Changed
+- Publish the auditor with the current Route Table maturity vocabulary, including `install-ready`.
+- Keep generated smoke workflow audit pins aligned with the published auditor version.
+
 ## [0.1.4] - 2026-07-09
 
 ### Changed
