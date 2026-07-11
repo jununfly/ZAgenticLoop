@@ -6,14 +6,15 @@ Last run: 2026-07-11
 
 - Roadmap id: issue-101-gitlab-provider-bundle-gaps
 - Branch: zjal-issue-101-gitlab-provider-bundle-gaps
-- Status: active
+- Status: completed
 - Current parent node: 5-closeout
-- Current leaf: 5-1-durable-docs-and-process-cleanup
+- Current leaf: none
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| 5-1-durable-docs-and-process-cleanup | completed | Durable docs absorbed the GitLab provider bundle hardening decisions: GitLab CI readiness output, manual replay variables, MR metadata fetch, provider-native metadata, dispatch-vs-execution readiness split, production-safe versus dogfood-validation profiles, GitLab substrate audit tracking, minimal-diff Route Table enablement, and Roadmap Activation branch slug fallback. Process roadmap files under `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.*` were deleted. Verification passed: `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | pending |
 | 4-3-roadmap-activation-branch-slug-trimming | completed | Roadmap Activation branch generation uses a title fallback chain: slugged title, then `issue-<sourceIssue>`, then `activation`; branch parts are joined only when non-empty and trimmed to avoid trailing separators; tests cover normal punctuation trimming, empty title, missing title, Unicode-only title, and non-slug symbol-only title; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
 | 4-2-yaml-preserving-route-enable | completed | `setRouteEnabled()` preserves Route Table YAML formatting by patching only the target route's `enabled` and `enabled_reason` lines when the generated Route Table shape is recognizable; parse/stringify remains as fallback for unexpected YAML shapes; regression coverage proves comments, inline comments, blank lines, and flow-style arrays outside the target route survive enable operations; `cd tools/zj-loop-core && npm test`; `git diff --check` | pending |
 | 4-1-audit-local-substrate-tracking | completed | `zj-loop-audit` detects GitLab CI substrate files in git worktrees (`.gitlab-ci.yml`, `zj-loop/gitlab-ci/zj-loop-*.yml`, and `zj-loop/zj-loop-route-table.yaml`) and warns when any existing substrate file is ignored or untracked; warning next steps separate `git add -f` for ignored files from `git add` for untracked files and include a GitLab CI regeneration hint; non-git directories remain quiet; tests cover ignored, untracked, and tracked substrate cases; `cd tools/zj-loop-audit && npm test`; `cd tools/zj-loop-audit && npm run build && node dist/cli.js ../..`; `git diff --check` | pending |
@@ -154,4 +155,15 @@ Last run: 2026-07-11
   human-reviewed PR merge.
 - Branch cleanup plan: delete
   `zjal/act-65-4922393657-8c94c5b9-execution-ready-user-project-route-bundle`
+  after human-reviewed PR merge.
+- Issue #101 GitLab provider bundle gaps completed on branch
+  `zjal-issue-101-gitlab-provider-bundle-gaps`. Durable decisions were absorbed
+  into `README.md`, `docs/QUICKSTART.md`,
+  `docs/designs/provider-adapter-parity-architecture.md`,
+  `docs/designs/route-consumer-execution-architecture.md`,
+  `docs/designs/route-table-architecture.md`, and
+  `docs/designs/dogfood-reference-case.md`. Process roadmap files
+  `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.json` and
+  `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.md` were deleted.
+  Branch cleanup plan: delete `zjal-issue-101-gitlab-provider-bundle-gaps`
   after human-reviewed PR merge.

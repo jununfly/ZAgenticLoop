@@ -128,6 +128,11 @@ warning about `*.tgz` being ignored. Either commit the required files with
 !zj-loop/vendor/*.tgz
 ```
 
+`zj-loop-audit` also warns when generated GitLab substrate exists locally but
+is ignored or untracked by Git. Commit `.gitlab-ci.yml`,
+`zj-loop/gitlab-ci/zj-loop-*.yml`, and `zj-loop/zj-loop-route-table.yaml` before
+expecting GitLab CI to run the generated bundle.
+
 The smoke job runs `@jununfly/zj-loop-audit` by default. In CI environments
 without registry access, set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke output:
 `route-decision.json` and `consumer-plan.json`.

@@ -291,6 +291,17 @@ promise to migrate arbitrary local workflow customizations.
 for generated workflows, a disabled/non-report manual smoke route, and unpinned
 core package references as workflow health failures.
 
+Route Table enablement should be low-noise. `zj-loop-route enable/disable`
+should preserve comments, ordering, and unrelated formatting when it only needs
+to update a target route's `enabled` and `enabled_reason` fields. Whole-file
+YAML rewrites are acceptable only as fallback for unexpected YAML shapes.
+
+Generated Route Tables may describe route profiles under `policy`, such as
+`production_safe_default` and `dogfood_validation`. These profiles are
+documentation and policy guidance inside the Route Table; they are not blanket
+switches. Production-safe defaults keep side-effect routes disabled, while
+dogfood validation enables routes one by one with evidence.
+
 ## First Route Set
 
 | Route | Request kind | Consumer | First behavior |
