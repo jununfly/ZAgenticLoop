@@ -170,7 +170,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     }
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
-    assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.4/);
+    assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.5/);
     assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.5/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /zj-loop-consumer plan manual-smoke-report/);
