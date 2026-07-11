@@ -9,11 +9,12 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   when: manual
   allow_failure: false
   variables:
+    ZJ_LOOP_SIGNAL_ID: ""
     ZJ_LOOP_RUN_AUDIT: "1"
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch manual-smoke-report --source gitlab-manual-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > route-decision.json
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan manual-smoke-report --source gitlab-manual-pipeline --signal-id "${CI_PIPELINE_ID:-manual}" --json > consumer-plan.json || true
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch manual-smoke-report --source gitlab-manual-pipeline --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > route-decision.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan manual-smoke-report --source gitlab-manual-pipeline --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > consumer-plan.json || true
     - if [ "${ZJ_LOOP_RUN_AUDIT:-1}" = "1" ]; then npx @jununfly/zj-loop-audit@0.1.5 . --suggest; else echo "Skipping zj-loop-audit because ZJ_LOOP_RUN_AUDIT=0"; fi
     - cat route-decision.json
     - cat consumer-plan.json

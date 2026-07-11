@@ -8,12 +8,13 @@ zj_loop_issue_triage:
 __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   when: manual
   variables:
+    ZJ_LOOP_SIGNAL_ID: ""
     ZJ_LOOP_ISSUE_IID: ""
     ZJ_LOOP_TRIAGE_REQUEST_JSON: ""
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}" --json > route-decision.json
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}" --json > consumer-plan.json || true
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > route-decision.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > consumer-plan.json || true
     - cat route-decision.json
     - cat consumer-plan.json
   artifacts:

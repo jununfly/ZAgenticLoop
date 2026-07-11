@@ -334,6 +334,12 @@ also emits `issue-fix-request.md` and `issue-fix-request-result.json`, allowing
 you to inspect GitLab-specific fix scope such as `.gitlab-ci.yml` and
 `zj-loop/gitlab-ci/` without creating a tracker item.
 
+Manual and API-triggered GitLab pipelines can replay route decisions by setting
+`ZJ_LOOP_SIGNAL_ID`. Route-specific variables remain more expressive when they
+are available: use `ZJ_LOOP_ISSUE_IID` for issue triage,
+`ZJ_LOOP_MERGE_REQUEST_IID` for MR Steward or post-merge cleanup, and
+`ZJ_LOOP_COMMENT_ID` plus `ZJ_LOOP_ISSUE_IID` for Roadmap Activation.
+
 Upgrade generated GitLab CI fragments when package pins or templates change:
 
 ```bash

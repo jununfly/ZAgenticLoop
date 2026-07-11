@@ -92,17 +92,27 @@ git diff --check # passed
 
 ### Leaf 1-3: GitLab Manual Replay Surface
 
-Status: pending
+Status: completed
 
 Intent: Add documented manual/API replay variables so MR, pipeline, and issue
 routes can be exercised without requiring a live GitLab event.
 
+Evidence:
+
+- All generated GitLab CI route fragments now expose `ZJ_LOOP_SIGNAL_ID` as a
+  uniform manual/API replay signal id.
+- Route-specific variables remain available where they carry domain meaning:
+  `ZJ_LOOP_ISSUE_IID`, `ZJ_LOOP_MERGE_REQUEST_IID`, and
+  `ZJ_LOOP_COMMENT_ID`.
+- Quickstart documents how to use the common replay variable and the
+  route-specific variables.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-init && npm test
-npm run test:provider-parity-gate
-git diff --check
+cd tools/zj-loop-init && npm test # passed
+npm run test:provider-parity-gate # passed
+git diff --check # passed
 ```
 
 ## Parent 2: Provider Metadata And Closeout
