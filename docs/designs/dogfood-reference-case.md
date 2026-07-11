@@ -153,8 +153,8 @@ disabled route denial, and loop marker detection.
 The provider-aware adoption path was verified before publishing by installing
 local packed tarballs into an external GitLab target project:
 
-- `jununfly-zj-loop-init-0.1.8.tgz`
-- `jununfly-zj-loop-core-0.1.5.tgz`
+- `jununfly-zj-loop-init-0.1.9.tgz`
+- `jununfly-zj-loop-core-0.1.6.tgz`
 
 The maintainer ran the target-project dogfood sequence from the GitLab project
 root:

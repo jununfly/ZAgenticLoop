@@ -215,9 +215,9 @@ generated metadata. Run `ZJ Loop Smoke` first, then inspect Route Table status
 before enabling side-effecting routes:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable ci-sweeper
 ```
 
 The first execution-ready route set is request-backed:
@@ -290,9 +290,9 @@ See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patte
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
-| `@jununfly/zj-loop-core` | library + route CLIs | Shared registry, route decisions, consumer runners, project evidence, semantic queries, and CLI harness | `0.1.5` |
-| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, local runtime state, generated workflow bundle, budget, and run logs | `0.1.8` |
-| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score, policy suggestions, and generated artifact checks | `0.1.5` |
+| `@jununfly/zj-loop-core` | library + route CLIs | Shared registry, route decisions, consumer runners, project evidence, semantic queries, and CLI harness | `0.1.6` |
+| `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, local runtime state, generated workflow bundle, budget, and run logs | `0.1.9` |
+| `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score, policy suggestions, and generated artifact checks | `0.1.6` |
 | `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by local/project registry, pattern, level, and cadence | `0.1.5` |
 | `@jununfly/zj-loop-sync` | `zj-loop-sync` | Drift check between loop state, route table, generated workflows, and config | `0.1.3` |
 | `@jununfly/zj-loop-mcp-server` | `zj-loop-mcp-server` | Read-only MCP access to patterns, skills, route table, triage state, state, and safety docs | `0.1.4` |

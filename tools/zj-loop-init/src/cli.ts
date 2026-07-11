@@ -51,8 +51,8 @@ const GITLAB_CI_TEMPLATE_FILES = [
 ] as const;
 const DEFAULT_GITLAB_STAGE = 'zj-loop';
 const DEFAULT_GITLAB_IMAGE = 'node:22';
-const DEFAULT_GITLAB_CORE_PACKAGE = '@jununfly/zj-loop-core@0.1.5';
-const GITLAB_VENDOR_TARBALL_PROBE = 'zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz';
+const DEFAULT_GITLAB_CORE_PACKAGE = '@jununfly/zj-loop-core@0.1.6';
+const GITLAB_VENDOR_TARBALL_PROBE = 'zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz';
 
 async function loadRegistry() {
   return loadPatternRegistry({
@@ -1253,7 +1253,7 @@ Options:
                   Comma-separated runner tags rendered into generated GitLab CI jobs
   --gitlab-image  Image rendered into generated GitLab CI jobs (default: node:22)
   --gitlab-core-package
-                  Package source rendered into generated GitLab npx --package calls (default: @jununfly/zj-loop-core@0.1.5)
+                  Package source rendered into generated GitLab npx --package calls (default: @jununfly/zj-loop-core@0.1.6)
   --dry-run       Print actions without copying
   -h, --help      This help
 
@@ -1264,7 +1264,7 @@ Examples:
   npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-stage Fallback
   npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-runner-tags k8s,node
   npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-image registry.example.com/node:20
-  npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.5.tgz
+  npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz
   npx @jununfly/zj-loop-init . --upgrade github-actions
   npx @jununfly/zj-loop-init . --upgrade gitlab-ci
   npx @jununfly/zj-loop-init . -p pr-steward -t claude

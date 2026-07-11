@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-post-merge-cleanup
 # zj-loop-template-version: 1
-# zj-loop-template-hash: d7e73dad5241bc96
+# zj-loop-template-hash: 4168ef2dee50dae1
 
 name: ZJ Loop Post-Merge Cleanup
 
@@ -44,21 +44,21 @@ jobs:
         run: |
           printf '## ZJ Loop Post-Merge Cleanup\n\n' >> "$GITHUB_STEP_SUMMARY"
           printf 'Signal: merged Roadmap-Sliced PR closeout check.\n\n' >> "$GITHUB_STEP_SUMMARY"
-          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-route dispatch post-merge-roadmap-closeout --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-post-merge-closeout plan --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route dispatch post-merge-roadmap-closeout --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-post-merge-closeout plan --json > consumer-plan.json || true
           if [ -n "$PR_NUMBER" ]; then
             args=(--pr "$PR_NUMBER" --repo "${{ github.repository }}")
             if [ -n "$CARRIER_ISSUE" ]; then
               args+=(--carrier-issue "$CARRIER_ISSUE")
             fi
-            npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-post-merge-closeout closeout-plan "${args[@]}" --json > closeout-plan.json || true
+            npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-post-merge-closeout closeout-plan "${args[@]}" --json > closeout-plan.json || true
             printf '### Closeout Plan\n\n' >> "$GITHUB_STEP_SUMMARY"
             cat closeout-plan.json >> "$GITHUB_STEP_SUMMARY"
             live_args=("${args[@]}")
             if [ -n "$LIVE_CLEANUP_CONFIRMATION" ]; then
               live_args+=(--require-live-confirmation --confirm-live-cleanup "$LIVE_CLEANUP_CONFIRMATION")
             fi
-            if npx --yes --package @jununfly/zj-loop-core@0.1.5 zj-loop-post-merge-closeout live-closeout \
+            if npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-post-merge-closeout live-closeout \
               "${live_args[@]}" \
               --json > live-closeout-result.json; then
               printf '\n\n### Live Closeout Result\n\n' >> "$GITHUB_STEP_SUMMARY"
