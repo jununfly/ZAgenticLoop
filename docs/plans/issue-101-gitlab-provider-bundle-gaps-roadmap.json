@@ -9,8 +9,8 @@
   },
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
-  "current_parent": "4-audit-route-enable-and-slug-hardening",
-  "current_leaf": "4-3-roadmap-activation-branch-slug-trimming",
+  "current_parent": "5-closeout",
+  "current_leaf": "5-1-durable-docs-and-process-cleanup",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -134,7 +134,7 @@
     {
       "id": "4-audit-route-enable-and-slug-hardening",
       "type": "parent",
-      "status": "active",
+      "status": "completed",
       "completion_condition": "Audit and deterministic helpers prevent common GitLab validation footguns without causing noisy diffs or malformed branch names.",
       "children": [
         {
@@ -163,8 +163,9 @@
         {
           "id": "4-3-roadmap-activation-branch-slug-trimming",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Trim trailing separators from generated roadmap activation branches and cover empty, missing, Unicode, and non-slug title cases.",
+          "evidence": "Roadmap Activation branch generation now uses a title fallback chain: slugged title, then `issue-<sourceIssue>`, then `activation`, and joins non-empty parts before trimming trailing separators. Tests cover normal punctuation trimming, empty title, missing title, Unicode-only title, and non-slug symbol-only title.",
           "verification": [
             "cd tools/zj-loop-core && npm test",
             "npm run test:route-decision",
@@ -200,5 +201,5 @@
     "Merge to main"
   ],
   "created_at": "2026-07-11T06:55:00.000Z",
-  "updated_at": "2026-07-11T08:05:00.000Z"
+  "updated_at": "2026-07-11T08:20:00.000Z"
 }

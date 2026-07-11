@@ -288,17 +288,26 @@ git diff --check # passed
 
 ### Leaf 4-3: Roadmap Activation Branch Slug Trimming
 
-Status: pending
+Status: completed
 
 Intent: Trim trailing separators from generated roadmap activation branches and
 cover empty, missing, Unicode, and non-slug title cases.
 
+Evidence:
+
+- Roadmap Activation branch generation now uses a title fallback chain:
+  slugged title, then `issue-<sourceIssue>`, then `activation`.
+- Branch parts are joined only when non-empty and trimmed to avoid trailing
+  separators.
+- Tests cover normal punctuation trimming, empty title, missing title,
+  Unicode-only title, and non-slug symbol-only title.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-core && npm test
-npm run test:route-decision
-git diff --check
+cd tools/zj-loop-core && npm test # passed
+npm run test:route-decision # passed
+git diff --check # passed
 ```
 
 ## Parent 5: Closeout
