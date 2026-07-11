@@ -92,6 +92,11 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /primary_pattern: "issue-triage"/);
+    assert.match(routeTable, /route_profiles:/);
+    assert.match(routeTable, /production_safe_default:/);
+    assert.match(routeTable, /dogfood_validation:/);
+    assert.match(routeTable, /side_effect_routes_enabled: false/);
+    assert.match(routeTable, /side_effect_routes_enabled: "route-by-route"/);
     assert.match(routeTable, /route_id: "issue-backlog-triage"/);
     assert.match(routeTable, /consumer_kind: "report-consumer"/);
     assert.match(routeTable, /mode: "report-only"/);
@@ -434,6 +439,8 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);
+    assert.match(routeTable, /production_safe_default:/);
+    assert.match(routeTable, /dogfood_validation:/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

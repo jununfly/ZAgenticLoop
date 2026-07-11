@@ -19,6 +19,15 @@ policy:
     selected_pattern_report_only: true
     cross_component_dispatch: false
     side_effect_routes: false
+  route_profiles:
+    production_safe_default:
+      description: "Default user-project install profile. Enables only human, ignore, selected pattern report-only, and manual smoke evidence routes."
+      side_effect_routes_enabled: false
+      route_enablement_source: "this Route Table"
+    dogfood_validation:
+      description: "Maintainer validation profile. Enable individual side-effecting consumers only after runner, token, budget, and failure-owner evidence is configured."
+      side_effect_routes_enabled: "route-by-route"
+      route_enablement_source: "this Route Table"
 
 routes:
   - route_id: "human"

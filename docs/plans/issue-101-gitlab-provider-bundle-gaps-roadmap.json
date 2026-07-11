@@ -9,8 +9,8 @@
   },
   "branch": "zjal-issue-101-gitlab-provider-bundle-gaps",
   "status": "active",
-  "current_parent": "3-readiness-and-profile-clarity",
-  "current_leaf": "3-2-production-safe-route-profiles",
+  "current_parent": "4-audit-route-enable-and-slug-hardening",
+  "current_leaf": "4-1-audit-local-substrate-tracking",
   "goal": "Turn the GitLab provider bundle feedback from #101 into execution-ready, user-project-useful GitLab support without weakening the shared route protocol.",
   "completion_conditions": [
     "GitLab generated fragments consistently inherit configured image, runner tags, and Node preflight behavior.",
@@ -102,7 +102,7 @@
     {
       "id": "3-readiness-and-profile-clarity",
       "type": "parent",
-      "status": "active",
+      "status": "completed",
       "completion_condition": "Users and agents can distinguish route authorization, execution readiness, production-safe defaults, and dogfood-validation enablement without guessing.",
       "children": [
         {
@@ -120,8 +120,9 @@
         {
           "id": "3-2-production-safe-route-profiles",
           "type": "leaf",
-          "status": "pending",
+          "status": "completed",
           "intent": "Separate production-safe route defaults from dogfood-validation enablement, keeping route enablement in Route Table policy.",
+          "evidence": "Generated Route Tables now explicitly describe `production_safe_default` and `dogfood_validation` under `policy.route_profiles`. The production-safe default keeps side-effect routes disabled and enables only safe report/evidence routes. Dogfood validation is documented as route-by-route enablement in the same Route Table, not a blanket switch. Quickstart explains the profile split for GitLab installs.",
           "verification": [
             "cd tools/zj-loop-init && npm test",
             "npm run test:provider-parity-gate",
@@ -133,7 +134,7 @@
     {
       "id": "4-audit-route-enable-and-slug-hardening",
       "type": "parent",
-      "status": "pending",
+      "status": "active",
       "completion_condition": "Audit and deterministic helpers prevent common GitLab validation footguns without causing noisy diffs or malformed branch names.",
       "children": [
         {

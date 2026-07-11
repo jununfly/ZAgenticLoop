@@ -80,6 +80,9 @@ with the manual smoke job, inspect JSON artifacts, then enable only the Route
 Table consumers you intend to run. Report-only jobs can run without mutation
 tokens; issue notes, labels, branches, MRs, and cleanup require `GITLAB_TOKEN`
 plus route-specific guards.
+Generated Route Tables use the `production_safe_default` profile: side-effect
+routes stay disabled until a maintainer explicitly enables each route. The
+`dogfood_validation` profile is route-by-route evidence, not a blanket switch.
 Post-merge cleanup fetches MR metadata from GitLab by MR IID; keep
 `ZJ_LOOP_TARGET_BRANCH` only for explicit manual replay or non-standard
 metadata fallback.

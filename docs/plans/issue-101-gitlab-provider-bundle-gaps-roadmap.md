@@ -210,17 +210,27 @@ git diff --check # passed
 
 ### Leaf 3-2: Production Safe Route Profiles
 
-Status: pending
+Status: completed
 
 Intent: Separate production-safe route defaults from dogfood-validation
 enablement, keeping route enablement in Route Table policy.
 
+Evidence:
+
+- Generated Route Tables now explicitly describe `production_safe_default` and
+  `dogfood_validation` under `policy.route_profiles`.
+- The production-safe default keeps side-effect routes disabled and enables
+  only safe report/evidence routes.
+- Dogfood validation is documented as route-by-route enablement in the same
+  Route Table, not a blanket switch.
+- Quickstart explains the profile split for GitLab installs.
+
 Verification:
 
 ```bash
-cd tools/zj-loop-init && npm test
-npm run test:provider-parity-gate
-git diff --check
+cd tools/zj-loop-init && npm test # passed
+npm run test:provider-parity-gate # passed
+git diff --check # passed
 ```
 
 ## Parent 4: Audit Route Enable And Slug Hardening
