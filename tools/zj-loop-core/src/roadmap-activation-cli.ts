@@ -10,6 +10,7 @@ import {
   buildRoadmapActivationReviewContract,
   buildRoadmapActivationReviewTitle,
   dispatchRoadmapActivationCommand,
+  executeGitLabRoadmapActivation,
   readActivationComments,
   renderRoadmapActivationWorkflowSummary,
   verifyRoadmapBoundedSliceResult,
@@ -216,6 +217,42 @@ if (argv[0] === 'activation-plan') {
       const text = `${JSON.stringify(result, null, 2)}\n`;
       if (typeof options.out === 'string') await writeFile(options.out, text);
       if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());
+    },
+  }, argv);
+} else if (argv[0] === 'execute') {
+  process.exitCode = await runCli({
+    name: 'zj-loop-roadmap-activation',
+    description: 'Execute a guarded Roadmap Activation contract for provider-native branch/MR creation.',
+    usage: 'zj-loop-roadmap-activation execute --provider gitlab --contract-plan <path> --project-path <group/project> [--target-branch <branch>] [--gitlab-api-url <url>] [--gitlab-token <token>] [--gitlab-job-token <token>] [--live] [--out <path>] [--json]',
+    options: [
+      { name: 'command', type: 'positional', description: 'Command', default: 'execute' },
+      { name: 'provider', type: 'enum', description: 'Provider execution surface', values: ['gitlab'], default: 'gitlab' },
+      { name: 'contract-plan', type: 'string', description: 'Roadmap Activation contract-plan JSON path' },
+      { name: 'project-path', type: 'string', description: 'GitLab project path such as group/project' },
+      { name: 'target-branch', type: 'string', description: 'Target branch', default: 'main' },
+      { name: 'gitlab-api-url', type: 'string', description: 'GitLab API v4 base URL' },
+      { name: 'gitlab-token', type: 'string', description: 'GitLab PRIVATE-TOKEN for live branch/MR execution' },
+      { name: 'gitlab-job-token', type: 'string', description: 'GitLab JOB-TOKEN for live branch/MR execution' },
+      { name: 'live', type: 'boolean', description: 'Perform live GitLab branch/MR side effects' },
+      { name: 'out', type: 'string', description: 'Write JSON result to this path' },
+      { name: 'json', type: 'boolean', description: 'Print JSON output' },
+    ],
+    async handler({ io, options }) {
+      if (typeof options['contract-plan'] !== 'string') throw new Error('--contract-plan is required');
+      const contractPlan = JSON.parse(await readFile(String(options['contract-plan']), 'utf8'));
+      const result = await executeGitLabRoadmapActivation({
+        contractPlan,
+        projectPath: typeof options['project-path'] === 'string' ? options['project-path'] : process.env.CI_PROJECT_PATH,
+        targetBranch: typeof options['target-branch'] === 'string' ? options['target-branch'] : process.env.CI_DEFAULT_BRANCH,
+        apiBaseUrl: typeof options['gitlab-api-url'] === 'string' ? options['gitlab-api-url'] : process.env.CI_API_V4_URL,
+        token: typeof options['gitlab-token'] === 'string' ? options['gitlab-token'] : process.env.GITLAB_TOKEN,
+        jobToken: typeof options['gitlab-job-token'] === 'string' ? options['gitlab-job-token'] : process.env.CI_JOB_TOKEN,
+        live: options.live === true,
+      });
+      const text = `${JSON.stringify(result, null, 2)}\n`;
+      if (typeof options.out === 'string') await writeFile(options.out, text);
+      if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());
+      if (result.status === 'failed') return 1;
     },
   }, argv);
 } else {

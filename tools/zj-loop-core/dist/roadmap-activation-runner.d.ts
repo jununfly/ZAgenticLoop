@@ -346,6 +346,123 @@ export declare function buildRoadmapActivationPrContract(input: {
         processRoadmapPath?: string;
     };
 }): string;
+export declare function executeGitLabRoadmapActivation(input: {
+    contractPlan: any;
+    projectPath?: string;
+    apiBaseUrl?: string;
+    token?: string;
+    jobToken?: string;
+    targetBranch?: string;
+    draft?: boolean;
+    live?: boolean;
+    fetchImpl?: typeof fetch;
+}): Promise<{
+    status: string;
+    execution_allowed: boolean;
+    schema: string;
+    provider: string;
+    dry_run: boolean;
+    activation_request_id: string;
+    project_path: string;
+    branch_name: string;
+    target_branch: string;
+    review_kind: string;
+    draft: boolean;
+    mr_title: string;
+    mr_description: string;
+    refusals: any[];
+    operations: ({
+        kind: string;
+        branch: string;
+        target: string;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        target_branch: string;
+        branch?: undefined;
+        target?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        branch?: undefined;
+        target?: undefined;
+        target_branch?: undefined;
+    })[];
+} | {
+    status: string;
+    execution_allowed: boolean;
+    live_operations: any[];
+    schema: string;
+    provider: string;
+    dry_run: boolean;
+    activation_request_id: string;
+    project_path: string;
+    branch_name: string;
+    target_branch: string;
+    review_kind: string;
+    draft: boolean;
+    mr_title: string;
+    mr_description: string;
+    refusals: any[];
+    operations: ({
+        kind: string;
+        branch: string;
+        target: string;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        target_branch: string;
+        branch?: undefined;
+        target?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        branch?: undefined;
+        target?: undefined;
+        target_branch?: undefined;
+    })[];
+} | {
+    status: string;
+    execution_allowed: boolean;
+    merge_request_iid: any;
+    merge_request_url: any;
+    live_operations: any[];
+    schema: string;
+    provider: string;
+    dry_run: boolean;
+    activation_request_id: string;
+    project_path: string;
+    branch_name: string;
+    target_branch: string;
+    review_kind: string;
+    draft: boolean;
+    mr_title: string;
+    mr_description: string;
+    refusals: any[];
+    operations: ({
+        kind: string;
+        branch: string;
+        target: string;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        target_branch: string;
+        branch?: undefined;
+        target?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        branch?: undefined;
+        target?: undefined;
+        target_branch?: undefined;
+    })[];
+}>;
 export declare function buildRoadmapBoundedSlicePack(input: {
     activationRequestId: string;
     roadmapPath: string;

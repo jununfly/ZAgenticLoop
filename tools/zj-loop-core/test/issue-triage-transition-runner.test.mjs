@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 import {
   buildIssueTriageTransitionIssueFixRequestBody,
   buildIssueTriageTransitionIssueFixRequestTitle,
+  buildIssueRecommendationsArtifact,
   buildRecommendedTriageTransitionFixture,
+  buildTransitionRequestsArtifact,
   parseIssueFixRequestComments,
   runIssueTriageTransitionRunner,
   TRIAGE_AI_DISCLAIMER,
@@ -79,6 +81,53 @@ test('Issue Triage Transition preserves GitLab source issue carrier URLs', () =>
     result.confirmed_transition.issue_fix_request.carrier.url,
     'https://gitlab.com/group/subgroup/project/-/issues/126',
   );
+});
+
+test('Issue Triage Transition builds stable GitLab issue recommendation and transition request artifacts', () => {
+  const request = buildRecommendedTriageTransitionFixture({
+    source: {
+      tracker: 'gitlab',
+      repo: 'group/subgroup/project',
+      issue: 126,
+      issue_url: 'https://gitlab.com/group/subgroup/project/-/issues/126',
+      scan_window: 'open-issues:last-24h',
+    },
+    dedupe_key: 'issue-backlog-triage:group/subgroup/project:126:ready-for-agent:gitlab',
+  });
+  const plan = runIssueTriageTransitionRunner({ route: ROUTE, request });
+  const recommendations = buildIssueRecommendationsArtifact({
+    provider: 'gitlab',
+    projectPath: 'group/subgroup/project',
+    pipelineUrl: 'https://gitlab.com/group/subgroup/project/-/pipelines/456',
+    recommendations: [
+      {
+        issue_iid: 126,
+        issue_url: 'https://gitlab.com/group/subgroup/project/-/issues/126',
+        labels: ['bug'],
+        assignees: [],
+        recommendation: 'ready-for-agent',
+        reason: 'bounded enough for an agent',
+        request,
+      },
+    ],
+  });
+  const transitions = buildTransitionRequestsArtifact({
+    provider: 'gitlab',
+    transitions: [{ plan, consumer_plan: { status: 'request-only' }, command_exit_codes: { confirm_plan: 0 } }],
+  });
+
+  assert.equal(recommendations.schema, 'zj-loop.issue_recommendations.v1');
+  assert.equal(recommendations.provider, 'gitlab');
+  assert.equal(recommendations.project_path, 'group/subgroup/project');
+  assert.equal(recommendations.issue_count, 1);
+  assert.equal(recommendations.recommendations[0].issue_url, 'https://gitlab.com/group/subgroup/project/-/issues/126');
+  assert.equal(transitions.schema, 'zj-loop.transition_requests.v1');
+  assert.equal(transitions.provider, 'gitlab');
+  assert.equal(transitions.candidate_count, 1);
+  assert.equal(transitions.transitions[0].issue_url, 'https://gitlab.com/group/subgroup/project/-/issues/126');
+  assert.equal(transitions.transitions[0].side_effect_policy, 'request-only');
+  assert.equal(transitions.transitions[0].live_issue_mutation, false);
+  assert.equal(transitions.transitions[0].issue_fix_request.source_signal.provider, 'gitlab');
 });
 
 test('Issue Triage Transition Issue Fix Request body carries a parseable request comment', () => {

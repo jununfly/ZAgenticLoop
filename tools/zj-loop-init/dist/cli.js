@@ -315,6 +315,10 @@ async function copyGitLabCiBundle(targetDir, templatesRoot, dryRun, force, io, g
         rootCiExistsBefore,
         rootCiWillBePatched: !rootCiExistsBefore || force,
         routeTableStatus,
+        gitlabStage,
+        gitlabRunnerTags,
+        gitlabImage,
+        gitlabCorePackage,
     });
 }
 async function copyRenderedWorkflowTemplate(src, dest, dryRun, force, io, nextStep, renderOptions = {}) {
@@ -431,6 +435,10 @@ async function upgradeGitLabCiBundle(targetDir, templatesRoot, defaultPattern, d
         rootCiExistsBefore,
         rootCiWillBePatched: !rootCiExistsBefore,
         routeTableStatus,
+        gitlabStage,
+        gitlabRunnerTags,
+        gitlabImage,
+        gitlabCorePackage,
     });
     io.stdout(`
 === Next steps ===
@@ -450,9 +458,22 @@ function printGitLabCiReadinessSummary(io, summary) {
   fragments: zj-loop/gitlab-ci/*.yml ${fragmentVerb}
   root_ci: ${rootStatus}
   route_table: ${routeTableStatus}
+  stage: ${summary.gitlabStage}
+  runner_tags: ${summary.gitlabRunnerTags.length > 0 ? summary.gitlabRunnerTags.join(',') : '(none configured)'}
+  image: ${summary.gitlabImage}
+  core_package: ${summary.gitlabCorePackage}
+  smoke: manual job uses needs: [] and writes route-decision.json, consumer-plan.json, environment-diagnostics.json
 `);
-    if (!summary.rootCiWillBePatched)
+    if (!summary.rootCiWillBePatched) {
+        io.stdout('  action_required: ensure root stages include the configured stage before blocking/fallback stages.');
         printGitLabCiIncludeBlock(io);
+    }
+    if (summary.gitlabRunnerTags.length === 0) {
+        io.stdout('  runner_tags_hint: if project runners require tags, rerun with --gitlab-runner-tags tag1,tag2.');
+    }
+    if (summary.gitlabImage === DEFAULT_GITLAB_IMAGE) {
+        io.stdout('  image_hint: private runners may require --gitlab-image registry.example.com/node:20.');
+    }
 }
 function formatRouteTableStatus(status) {
     if (status === 'created')

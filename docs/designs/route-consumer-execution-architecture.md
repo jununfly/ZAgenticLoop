@@ -294,6 +294,13 @@ dogfood replay in that gate proves GitLab CI Sweeper fix scope, Roadmap
 Activation MR contract handoff into Post-Merge Closeout, and PR Steward MR
 dry-run/refusal boundaries against the current packaged core contract.
 
+GitLab Roadmap Activation has a narrow live execution path. It can consume a
+GitLab `contract-plan.json` into `execution-result.json`, refuse missing-token
+or non-`zjal-*` branch cases with structured evidence, and create/update a draft
+MR when live mode, token, project path, and Route Table guards are present.
+Other GitLab MR-producing consumers remain refused until their own runner
+evidence is promoted.
+
 The first user-project execution-ready bundle is documented in
 [User Project Execution-Ready Bundle](./user-project-execution-ready-bundle.md).
 It currently centers on `roadmap-sliced-development`, `ci-sweeper`, and

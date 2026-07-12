@@ -130,6 +130,12 @@ Generated GitLab jobs should:
 - upload canonical JSON evidence artifacts
 - keep blocked/refused consumer plans observable as JSON artifacts instead of
   aborting before route-specific diagnostic artifacts are produced
+- make manual smoke replay independently playable where possible with `needs: []`
+  and `environment-diagnostics.json`
+- use stable issue triage artifacts: `issue-recommendations.json` and
+  `transition-requests.json`
+- write Roadmap Activation `execution-result.json` so dry-run, refusal, and
+  live branch/MR execution evidence are replayable
 - use Route Table enablement for route side effects
 - require `GITLAB_TOKEN` before issue notes, labels, branches, MRs, or cleanup
 
@@ -209,3 +215,9 @@ provider-aware dry-run or request evidence before live GitLab MR creation is
 enabled. The route protocol must still use MR terminology and refuse live GitLab
 review side effects explicitly, rather than silently falling back to GitHub PR
 commands.
+
+Roadmap Activation is the narrow GitLab live execution path: it can create or
+update `zjal-*` branches and draft MRs when the contract plan targets GitLab,
+the project path and token are present, and live mode is explicitly requested.
+It is idempotent by source branch and updates an existing MR description rather
+than creating duplicates.
