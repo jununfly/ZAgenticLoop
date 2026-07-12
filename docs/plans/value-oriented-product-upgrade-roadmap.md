@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-12 23:32:39
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 00:15:08
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -14,12 +14,14 @@
 │   ├── [x][Y+] 1-2-2. Route Table 自动化意图与执行授权拆分
 │   ├── [x][Y+] 1-2-3. Route 状态菜单、评分与推荐算法
 │   └── [x][Y+] 1-2-4. 启用、禁用、提升成熟度的确定性命令
-├── [ ][X+] 1-3. Signal 到 Review Artifact 的自动编排
-│   ├── [ ][X+] 1-3-1. Signal Producer 统一接入面
-│   ├── [ ][X+] 1-3-2. Route Decision 持久化与去重
-│   ├── [ ][X+] 1-3-3. Request Carrier 创建、复用与生命周期
-│   ├── [ ][X+] 1-3-4. Consumer 自动消费与 Review Artifact Handoff
-│   └── [ ][X+] 1-3-5. Post-Merge Closeout 自动闭环
+├── [x][Y+] 1-3. Signal 到 Review Artifact 的自动编排
+│   ├── [x][Y+] 1-3-1. Signal Envelope Schema 与 Validator
+│   ├── [x][Y+] 1-3-2. Orchestration Envelope 持久化与 Duplicate Resume
+│   ├── [x][Y+] 1-3-3. zj-loop-dispatch CLI 与 auto plan execute resume 模式
+│   ├── [x][Y+] 1-3-4. Source Carrier 复用与 Request Comment Plan
+│   ├── [x][Y+] 1-3-5. Issue Backlog Triage 到 Issue Triage Transition Tracer
+│   ├── [x][Y+] 1-3-6. Roadmap Sliced Development Activation Tracer
+│   └── [x][Y+] 1-3-7. Review Artifact 与 Hard Stop 输出文档
 ├── [ ][X+] 1-4. Consumer Runner 全链路执行能力
 │   ├── [ ][X+] 1-4-1. Roadmap-Sliced 多 slice 自动执行器
 │   ├── [ ][X+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
@@ -78,8 +80,8 @@
 │   ... 4 more child nodes; run tree 1-1 --depth 2 for full view
 ├── [x][Y+] 1-2. Route Readiness 与自动化授权模型
 │   ... 4 more child nodes; run tree 1-2 --depth 2 for full view
-├── [ ][X+] 1-3. Signal 到 Review Artifact 的自动编排
-│   ... 5 more child nodes; run tree 1-3 --depth 2 for full view
+├── [x][Y+] 1-3. Signal 到 Review Artifact 的自动编排
+│   ... 7 more child nodes; run tree 1-3 --depth 2 for full view
 ├── [ ][X+] 1-4. Consumer Runner 全链路执行能力
 │   ... 5 more child nodes; run tree 1-4 --depth 2 for full view
 ├── [ ][X+] 1-5. 前提条件、安全与成本包络

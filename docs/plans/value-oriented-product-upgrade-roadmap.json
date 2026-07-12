@@ -175,18 +175,66 @@
     "1-3": {
       "id": "1-3",
       "label": "Signal 到 Review Artifact 的自动编排",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-3-1",
         "1-3-2",
         "1-3-3",
         "1-3-4",
-        "1-3-5"
+        "1-3-5",
+        "1-3-6",
+        "1-3-7"
       ],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "1-3 的主产物应该是什么？",
+          "answer": "在 @jununfly/zj-loop-core 中提供确定性编排入口，输入固定结构化 Signal，输出并持久化完整 orchestration envelope：Signal -> Route Decision -> Request Carrier Plan/Reuse -> Consumer Run Plan -> Review Artifact Handoff -> Closeout Hint。",
+          "note": "默认先做到编排与证据计划层；实际 side effects 仍交给已有 consumer runner 和 route-level authorization，避免形成不可审计的大黑箱。"
+        },
+        {
+          "q": "编排入口应该接受什么作为最小输入？",
+          "answer": "只接受结构化 Signal Envelope，不接受自然语言自由文本作为 canonical 协议输入。最小字段包含 schema、signal_id、source、provider、subject、intent、payload。",
+          "note": "自然语言可以由 Codex/Harness 转成 candidate signal，但不能直接作为 dispatcher 输入；这样避免 human 普通指令与自动 route 协议混淆。"
+        },
+        {
+          "q": "Route Decision 之后是否默认复用已有 source issue/PR/MR 载体？",
+          "answer": "默认复用已有载体，并把结构化 request comment 追加到原 issue/PR/MR；只有 signal 没有可复用 tracker item，或目标 consumer 明确需要独立 carrier，才创建新 carrier。",
+          "note": "subject.kind=issue/pr/mr 时默认复用；ci_run/dependency_alert/local_goal/plan 等无天然 tracker item 时才创建 carrier。新 carrier 必须记录 source_subject，closeout 必须能联动 source 状态。"
+        },
+        {
+          "q": "编排入口在 route execution_allowed=true 时是否可以自动调用 consumer runner？",
+          "answer": "可以，但固定边界为执行到当前 route 的第一个 review artifact 或 hard stop signal。必须同时满足 Route Table execution_allowed、request-level verifier requirements 与 consumer capability match、runtime 预算/权限/provider token/工作区安全检查。",
+          "note": "输出状态必须区分 planned、executed_to_review_artifact、hard_stopped，避免一步一停，也避免无边界自动循环。"
+        },
+        {
+          "q": "orchestration envelope 是否必须持久化？",
+          "answer": "必须持久化，stdout/workflow summary 只是同一份 envelope 的展示副本。默认路径为 zj-loop/orchestrations/<orchestration_id>.json。",
+          "note": "最小内容包含 input signal、route_decision、carrier plan/reused carrier、consumer run plan/execution result、review artifact、closeout hint、stop signal、timestamps、duplicate key/replay key，以保证问题可回放。"
+        },
+        {
+          "q": "重复 signal/request 如何处理，避免自动 loop 反复消费同一个东西？",
+          "answer": "必须有确定性 duplicate key，默认返回 duplicate/resume/superseded，不自动重新执行。duplicate_key = provider + subject.kind + subject.id + intent + route_id。",
+          "note": "同输入再次进入返回 duplicate 并引用已有 orchestration_id；用户明确 resume 时从已有 envelope 继续；source subject 更新导致内容变更时创建新 orchestration 并将旧的标记 superseded；失败后 retry 产生新的 attempt 并链接原 orchestration_id。"
+        },
+        {
+          "q": "1-3 是否新增独立 CLI，还是挂到 zj-loop-run？",
+          "answer": "新增 zj-loop-dispatch，不塞进 zj-loop-run。zj-loop-run 保持 goal-oriented loop entry；zj-loop-dispatch 作为 structured signal orchestration entry。",
+          "note": "两者共享 core API，但用户心智分开：zj-loop-run 面向自然目标/Codex harness；zj-loop-dispatch 面向 automation/workflow/issue comment 的结构化 Signal。"
+        },
+        {
+          "q": "zj-loop-dispatch 的默认执行模式是什么？",
+          "answer": "默认 --mode auto。auto 会在 route 只允许 planning/report 时输出 planned；在 execution_allowed=true 且 runtime gates 通过时执行到第一个 review artifact；在缺权限/预算/token/能力不匹配/风险过高时输出 hard_stopped。",
+          "note": "支持显式覆盖 --mode plan-only、--mode execute、--mode resume；auto 追求默认自动化，但不是无限 live execution。"
+        },
+        {
+          "q": "1-3 是否先把所有真实 consumer 都接进 zj-loop-dispatch？",
+          "answer": "不一次接完所有 consumer。1-3 做通用编排框架 + 2 条 tracer route：issue-backlog-triage -> issue-triage-transition，以及 roadmap-sliced-development activation。",
+          "note": "1-3 的目标是打通 Signal -> Review Artifact 骨架；全量 consumer 执行能力属于 1-4，避免 orchestrator 变成大泥球。"
+        }
+      ],
+      "notes": "Completed 1-3: added zj-loop-dispatch structured Signal orchestration, persisted replay envelopes, duplicate/resume handling, source carrier reuse plans, issue triage tracer, roadmap activation tracer, and durable docs. Verification: cd tools/zj-loop-core && npm test passed 153 tests."
     },
     "1-4": {
       "id": "1-4",
@@ -359,53 +407,53 @@
     },
     "1-3-1": {
       "id": "1-3-1",
-      "label": "Signal Producer 统一接入面",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Signal Envelope Schema 与 Validator",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: zj-loop.signal.v1 validator rejects non-envelope/natural-language input and accepts structured provider/source/subject/intent/payload signals. Covered by dispatch-runner tests."
     },
     "1-3-2": {
       "id": "1-3-2",
-      "label": "Route Decision 持久化与去重",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Orchestration Envelope 持久化与 Duplicate Resume",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: dispatch writes zj-loop/orchestrations/<orchestration_id>.json and returns duplicate/resume envelopes for repeated or explicit resumed signals."
     },
     "1-3-3": {
       "id": "1-3-3",
-      "label": "Request Carrier 创建、复用与生命周期",
-      "status": "pending",
-      "mode": "explore",
+      "label": "zj-loop-dispatch CLI 与 auto plan execute resume 模式",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: added independent zj-loop-dispatch CLI with --mode auto|plan-only|execute|resume; package bin and npm test include the new dispatch path."
     },
     "1-3-4": {
       "id": "1-3-4",
-      "label": "Consumer 自动消费与 Review Artifact Handoff",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Source Carrier 复用与 Request Comment Plan",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: dispatch carrier_plan reuses issue/PR/MR source carriers by default and marks non-tracker subjects for new carrier creation."
     },
     "1-3-5": {
       "id": "1-3-5",
-      "label": "Post-Merge Closeout 自动闭环",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Issue Backlog Triage 到 Issue Triage Transition Tracer",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: issue triage tracer maps triage issue signals to issue-backlog-triage, returns planned/report-evidence envelope, and persists the replay artifact."
     },
     "1-4-1": {
       "id": "1-4-1",
@@ -965,11 +1013,31 @@
       "children": [],
       "decisions": [],
       "notes": "Release gates completed. Verification: roadmap render/validate passed; git diff --check passed; docs harness examples validate-input/validate-output/record-metrics passed; npm test in tools/zj-loop-core passed 135/135; npm run build in tools/zj-loop-audit passed; bash scripts/before-after-demo.sh passed; node tools/zj-loop-audit/dist/cli.js ../.. reported Score 100/100 Level L3. Remaining unsupported claim: provider-backed dogfood post-merge closeout is pending PR merge and tracked in 1-10-4/#109."
+    },
+    "1-3-6": {
+      "id": "1-3-6",
+      "label": "Roadmap Sliced Development Activation Tracer",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed: roadmap activation tracer maps activate_roadmap issue signals to roadmap-sliced-development and reaches executed_to_review_artifact with contract-plan.json as the review artifact."
+    },
+    "1-3-7": {
+      "id": "1-3-7",
+      "label": "Review Artifact 与 Hard Stop 输出文档",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed: documented structured dispatch statuses, orchestration storage path, source-carrier reuse, and zj-loop-run vs zj-loop-dispatch boundary in durable docs."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-12 23:32:39",
+    "updated": "2026-07-13 00:15:08",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

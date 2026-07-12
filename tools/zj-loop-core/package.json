@@ -20,7 +20,8 @@
     "zj-loop-prd-handoff": "./dist/prd-handoff-cli.js",
     "zj-loop-harness-protocol": "./dist/harness-protocol-cli.js",
     "zj-loop-run": "./dist/run-cli.js",
-    "zj-loop-doctor": "./dist/doctor-cli.js"
+    "zj-loop-doctor": "./dist/doctor-cli.js",
+    "zj-loop-dispatch": "./dist/dispatch-cli.js"
   },
   "exports": {
     ".": {
@@ -34,7 +35,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/provider.test.mjs test/semantic.test.mjs test/cli.test.mjs test/route.test.mjs test/consumer-runner.test.mjs test/first-run-runner.test.mjs test/live-runner-contract.test.mjs test/harness-protocol-contract.test.mjs test/run-runner.test.mjs test/doctor-runner.test.mjs test/ci-sweeper-runner.test.mjs test/post-merge-closeout-runner.test.mjs test/dependency-sweeper-runner.test.mjs test/pr-steward-runner.test.mjs test/changelog-drafter-runner.test.mjs test/issue-triage-action-runner.test.mjs test/issue-triage-transition-runner.test.mjs test/roadmap-activation-runner.test.mjs test/prd-handoff-runner.test.mjs",
+    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/provider.test.mjs test/semantic.test.mjs test/cli.test.mjs test/route.test.mjs test/consumer-runner.test.mjs test/first-run-runner.test.mjs test/live-runner-contract.test.mjs test/harness-protocol-contract.test.mjs test/run-runner.test.mjs test/doctor-runner.test.mjs test/dispatch-runner.test.mjs test/ci-sweeper-runner.test.mjs test/post-merge-closeout-runner.test.mjs test/dependency-sweeper-runner.test.mjs test/pr-steward-runner.test.mjs test/changelog-drafter-runner.test.mjs test/issue-triage-action-runner.test.mjs test/issue-triage-transition-runner.test.mjs test/roadmap-activation-runner.test.mjs test/prd-handoff-runner.test.mjs",
     "prepublishOnly": "npm test"
   },
   "engines": {

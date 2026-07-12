@@ -112,6 +112,38 @@ Promotion updates `maturity.runner`; it does not enable the route and does not
 run the consumer. Route enablement still uses `zj-loop-route enable`, and
 side-effecting routes still require their own fixed confirmation phrase.
 
+## Structured Dispatch
+
+`zj-loop-dispatch` is the structured Signal orchestration entry. It is separate
+from `zj-loop-run`:
+
+- `zj-loop-run` accepts a user goal and resolves candidate routes for a Codex or
+  local harness experience.
+- `zj-loop-dispatch` accepts only a `zj-loop.signal.v1` JSON envelope and runs
+  deterministic orchestration through the Route Table.
+
+The dispatch path writes a replayable envelope to
+`zj-loop/orchestrations/<orchestration_id>.json`. The envelope contains the
+input signal, route decision, source-carrier plan, consumer run plan, review
+artifact, closeout hint, stop signal, and duplicate key.
+
+Dispatch status is fixed:
+
+- `planned`: orchestration was produced without running a side-effecting
+  consumer.
+- `executed_to_review_artifact`: the route was execution-authorized and the
+  orchestration reached the first review artifact boundary.
+- `hard_stopped`: route/runtime gates blocked execution with structured next
+  steps.
+- `duplicate`: the same signal/route duplicate key already has an orchestration.
+- `resume`: an existing orchestration was explicitly resumed.
+- `superseded`: a later signal version replaces the previous orchestration.
+
+Source issues, PRs, and MRs are reusable carriers by default. Dispatch should
+append structured request comments to the source carrier unless the signal has
+no tracker carrier or the target route explicitly requires an independent
+carrier.
+
 ## Side Effect Levels
 
 `execution.side_effect_level` is a fixed enum:
