@@ -5,8 +5,20 @@ import { listRoutes, loadRouteTable, RouteStatus } from './route.js';
 export type FirstRunGoal = 'auto' | 'smoke' | 'roadmap' | 'issue-backlog' | 'ci' | 'closeout';
 
 export type FirstRunStopSignal = {
+  stop_code:
+    | 'route-disabled'
+    | 'route-contract-invalid'
+    | 'runner-not-execution-ready'
+    | 'precondition-failed'
+    | 'execution-blocked';
+  severity: 'warning' | 'blocked';
   stop_reason: string;
-  responsible_layer: string;
+  responsible_layer:
+    | 'route-table'
+    | 'route-contract'
+    | 'consumer-runner-maturity'
+    | 'consumer-runner'
+    | 'first-run-precondition';
   evidence: string[];
   next_steps: string[];
   retry_policy: 'same-request' | 'new-request' | 'after-configuration-change';
@@ -159,6 +171,8 @@ function stopSignalsFor(plan: ConsumerRunPlan): FirstRunStopSignal[] {
   const humanRequired = /human|confirm|enable explicitly|permission/i.test(plan.next_steps.join('\n'));
   return [
     {
+      stop_code: stopCodeFor(plan),
+      severity: 'blocked',
       stop_reason: plan.reason,
       responsible_layer: responsibleLayerFor(plan),
       evidence: [
@@ -295,6 +309,8 @@ function stopSignalsForPreconditions(preconditions: FirstRunPrecondition[]): Fir
   return preconditions
     .filter((item) => item.status === 'fail' && item.stop_if_failed)
     .map((item) => ({
+      stop_code: 'precondition-failed',
+      severity: 'blocked',
       stop_reason: item.summary,
       responsible_layer: 'first-run-precondition',
       evidence: item.evidence,
@@ -305,11 +321,18 @@ function stopSignalsForPreconditions(preconditions: FirstRunPrecondition[]): Fir
     }));
 }
 
-function responsibleLayerFor(plan: ConsumerRunPlan): string {
+function responsibleLayerFor(plan: ConsumerRunPlan): FirstRunStopSignal['responsible_layer'] {
   if (!plan.dispatch_allowed) return 'route-table';
   if (!plan.validation.valid) return 'route-contract';
   if (!plan.execution_ready) return 'consumer-runner-maturity';
   return 'consumer-runner';
+}
+
+function stopCodeFor(plan: ConsumerRunPlan): FirstRunStopSignal['stop_code'] {
+  if (!plan.dispatch_allowed) return 'route-disabled';
+  if (!plan.validation.valid) return 'route-contract-invalid';
+  if (!plan.execution_ready) return 'runner-not-execution-ready';
+  return 'execution-blocked';
 }
 
 function retryPolicyFor(plan: ConsumerRunPlan): FirstRunStopSignal['retry_policy'] {

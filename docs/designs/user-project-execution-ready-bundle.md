@@ -55,8 +55,9 @@ For automation wiring, run with `--json`. The output includes:
 - `preconditions`: route enablement, consumer capability, provider support,
   credentials/authority, cost budget, workspace safety, and verification gates.
 - `automatic_next_steps`: what the loop may do without more user input.
-- `stop_signals`: the hard reasons the loop must pause, with responsible layer,
-  evidence, retry policy, and next steps.
+- `stop_signals`: fixed `stop_code` values plus the human-readable reason,
+  responsible layer, evidence, retry policy, confirmation location, and next
+  steps.
 
 2. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
    or target a known route when the intent is already clear:

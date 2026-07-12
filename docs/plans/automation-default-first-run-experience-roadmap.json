@@ -69,7 +69,7 @@
     "1-3": {
       "id": "1-3",
       "label": "结构化 Stop Signal 体系",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -211,42 +211,42 @@
     "1-3-1": {
       "id": "1-3-1",
       "label": "Stop Signal 固定协议字段",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：FirstRunStopSignal 固定输出 stop_code、severity、stop_reason、responsible_layer、evidence、next_steps、retry_policy、human_required、confirmation_location；TypeScript 类型约束已落地。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-3-2": {
       "id": "1-3-2",
       "label": "停机原因分类与责任层归属",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：stop_code 区分 route-disabled、route-contract-invalid、runner-not-execution-ready、precondition-failed、execution-blocked；responsible_layer 区分 route-table、route-contract、consumer-runner-maturity、consumer-runner、first-run-precondition，避免 agent 把停机责任混淆。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-3-3": {
       "id": "1-3-3",
       "label": "下一步动作与确认位置输出",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：stop signal 保留 next_steps，并在 human_required 时输出 confirmation_location；测试断言 terminal command 位置存在，文档说明包含 confirmation location。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-3-4": {
       "id": "1-3-4",
       "label": "可重试策略与新请求边界",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：stop signal 按类型输出 retry_policy；配置/契约/启用类问题要求 after-configuration-change，普通执行阻塞保留 same-request，Activation Request 重建边界可由上游 consumer 根据该字段判断。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-4-1": {
       "id": "1-4-1",
@@ -381,7 +381,7 @@
   },
   "metadata": {
     "created": "2026-07-12 13:09:18",
-    "updated": "2026-07-12 13:40:21",
+    "updated": "2026-07-12 13:45:06",
     "md_file": "docs/plans/automation-default-first-run-experience-roadmap.md"
   }
 }

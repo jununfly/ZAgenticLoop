@@ -100,6 +100,8 @@ function stopSignalsFor(plan) {
     const humanRequired = /human|confirm|enable explicitly|permission/i.test(plan.next_steps.join('\n'));
     return [
         {
+            stop_code: stopCodeFor(plan),
+            severity: 'blocked',
             stop_reason: plan.reason,
             responsible_layer: responsibleLayerFor(plan),
             evidence: [
@@ -209,6 +211,8 @@ function stopSignalsForPreconditions(preconditions) {
     return preconditions
         .filter((item) => item.status === 'fail' && item.stop_if_failed)
         .map((item) => ({
+        stop_code: 'precondition-failed',
+        severity: 'blocked',
         stop_reason: item.summary,
         responsible_layer: 'first-run-precondition',
         evidence: item.evidence,
@@ -226,6 +230,15 @@ function responsibleLayerFor(plan) {
     if (!plan.execution_ready)
         return 'consumer-runner-maturity';
     return 'consumer-runner';
+}
+function stopCodeFor(plan) {
+    if (!plan.dispatch_allowed)
+        return 'route-disabled';
+    if (!plan.validation.valid)
+        return 'route-contract-invalid';
+    if (!plan.execution_ready)
+        return 'runner-not-execution-ready';
+    return 'execution-blocked';
 }
 function retryPolicyFor(plan) {
     if (!plan.dispatch_allowed || !plan.execution_ready || !plan.validation.valid)

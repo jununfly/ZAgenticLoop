@@ -115,11 +115,14 @@ test('buildFirstRunPlan turns blocked automation into structured stop signal', a
     assert.equal(plan.automation_allowed, false);
     assert.equal(plan.consumer_plan.status, 'blocked');
     assert.equal(plan.preconditions.find((item) => item.id === 'route-enabled')?.status, 'fail');
+    assert.equal(plan.stop_signals[0].stop_code, 'precondition-failed');
+    assert.equal(plan.stop_signals[0].severity, 'blocked');
     assert.equal(plan.stop_signals[0].stop_reason, 'Route ci-sweeper is disabled');
     assert.equal(plan.stop_signals[0].responsible_layer, 'first-run-precondition');
-    assert.ok(plan.stop_signals.some((item) => item.stop_reason === 'route disabled by Route Table'));
+    assert.ok(plan.stop_signals.some((item) => item.stop_code === 'route-disabled'));
     assert.equal(plan.stop_signals[0].retry_policy, 'after-configuration-change');
     assert.equal(plan.stop_signals[0].human_required, true);
+    assert.ok(plan.stop_signals[0].confirmation_location.includes('terminal command'));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

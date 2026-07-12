@@ -1,8 +1,10 @@
 import { ConsumerRunPlan } from './consumer-runner.js';
 export type FirstRunGoal = 'auto' | 'smoke' | 'roadmap' | 'issue-backlog' | 'ci' | 'closeout';
 export type FirstRunStopSignal = {
+    stop_code: 'route-disabled' | 'route-contract-invalid' | 'runner-not-execution-ready' | 'precondition-failed' | 'execution-blocked';
+    severity: 'warning' | 'blocked';
     stop_reason: string;
-    responsible_layer: string;
+    responsible_layer: 'route-table' | 'route-contract' | 'consumer-runner-maturity' | 'consumer-runner' | 'first-run-precondition';
     evidence: string[];
     next_steps: string[];
     retry_policy: 'same-request' | 'new-request' | 'after-configuration-change';

@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:40:21
+> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:45:06
 
 [~][X+] 1. Automation-Default First Run Experience
 ├── [x][X+] 1-1. 用户目标导向的 First Run 入口
@@ -13,11 +13,11 @@
 │   ├── [x][X+] 1-2-2. 权限凭证与 Provider 能力检查
 │   ├── [x][X+] 1-2-3. 预算与 max_slices 成本控制
 │   └── [x][X+] 1-2-4. 工作区安全与验证门槛检查
-├── [ ][X+] 1-3. 结构化 Stop Signal 体系
-│   ├── [ ][X+] 1-3-1. Stop Signal 固定协议字段
-│   ├── [ ][X+] 1-3-2. 停机原因分类与责任层归属
-│   ├── [ ][X+] 1-3-3. 下一步动作与确认位置输出
-│   └── [ ][X+] 1-3-4. 可重试策略与新请求边界
+├── [x][X+] 1-3. 结构化 Stop Signal 体系
+│   ├── [x][X+] 1-3-1. Stop Signal 固定协议字段
+│   ├── [x][X+] 1-3-2. 停机原因分类与责任层归属
+│   ├── [x][X+] 1-3-3. 下一步动作与确认位置输出
+│   └── [x][X+] 1-3-4. 可重试策略与新请求边界
 ├── [ ][X+] 1-4. Route 到 Consumer 的自动推进编排
 │   ├── [ ][X+] 1-4-1. Route Decision 到 Request Carrier 自动衔接
 │   ├── [ ][X+] 1-4-2. Request Carrier 到 Consumer 自动消费
@@ -48,7 +48,7 @@
 │   ... 3 more child nodes; run tree 1-1 --depth 2 for full view
 ├── [x][X+] 1-2. 自动化前提条件审查与成本包络
 │   ... 4 more child nodes; run tree 1-2 --depth 2 for full view
-├── [ ][X+] 1-3. 结构化 Stop Signal 体系
+├── [x][X+] 1-3. 结构化 Stop Signal 体系
 │   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
 ├── [ ][X+] 1-4. Route 到 Consumer 的自动推进编排
 │   ... 4 more child nodes; run tree 1-4 --depth 2 for full view
