@@ -4,77 +4,91 @@
     {
       "schema": "zj-loop.harness_output.v1",
       "schema_version": 1,
-      "status": "continued",
-      "summary": "Created the GitHub dogfood carrier issue and continued on the Roadmap-Sliced product-upgrade branch.",
-      "next_actions": [
-        {
+      "human_summary": "Created the GitHub dogfood carrier issue and continued on the Roadmap-Sliced product-upgrade branch.",
+      "machine_envelope": {
+        "status": "in_progress",
+        "run_id": "codex-harness-provider-backed-dogfood-2026-07-12",
+        "route_id": "roadmap-sliced-development",
+        "consumer": "roadmap-sliced-development",
+        "completed_steps": [
+          "created-carrier-issue",
+          "created-roadmap-branch"
+        ],
+        "next_action": {
           "type": "continue_loop",
           "target": "git-branch:zjal-value-oriented-product-upgrade-map",
           "label": "Continue executing the Codex Harness product-upgrade roadmap"
         },
-        {
-          "type": "create_review_artifact",
-          "target": "github-issue:109",
-          "label": "Create a reviewable PR that links the dogfood carrier"
-        }
-      ],
-      "evidence": [
-        {
-          "kind": "github-issue",
-          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109"
-        },
-        {
-          "kind": "github-comment",
-          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405"
-        }
-      ],
-      "artifacts": [
-        {
-          "kind": "local-artifact",
-          "path": "git:branch:zjal-value-oriented-product-upgrade-map"
-        },
-        {
-          "kind": "local-artifact",
-          "path": "docs/plans/value-oriented-product-upgrade-roadmap.json"
-        }
-      ]
+        "evidence": [
+          {
+            "kind": "github-issue",
+            "url": "https://github.com/jununfly/ZAgenticLoop/issues/109"
+          },
+          {
+            "kind": "github-comment",
+            "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405"
+          }
+        ],
+        "artifacts": [
+          {
+            "kind": "local-artifact",
+            "path": "git:branch:zjal-value-oriented-product-upgrade-map"
+          },
+          {
+            "kind": "local-artifact",
+            "path": "docs/plans/value-oriented-product-upgrade-roadmap.json"
+          }
+        ]
+      }
     },
     {
       "schema": "zj-loop.harness_output.v1",
       "schema_version": 1,
-      "status": "completed",
-      "summary": "PR #110 merged and post-merge closeout wrote evidence before closing carrier issue #109.",
-      "next_actions": [
-        {
+      "human_summary": "PR #110 merged and post-merge closeout wrote evidence before closing carrier issue #109.",
+      "machine_envelope": {
+        "status": "completed",
+        "run_id": "codex-harness-provider-backed-dogfood-2026-07-12",
+        "route_id": "roadmap-sliced-development",
+        "consumer": "roadmap-sliced-development",
+        "completed_steps": [
+          "opened-review-pr",
+          "merged-review-pr",
+          "completed-post-merge-closeout"
+        ],
+        "next_action": {
           "type": "perform_closeout",
           "target": "github-issue:109",
           "label": "Post-merge roadmap closeout completed for carrier issue #109"
-        }
-      ],
-      "evidence": [
-        {
-          "kind": "github-issue",
-          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109"
         },
-        {
-          "kind": "github-comment",
-          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405"
-        },
-        {
-          "kind": "post-merge-closeout",
-          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105306"
-        },
-        {
-          "kind": "github-comment",
-          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105657"
+        "evidence": [
+          {
+            "kind": "github-issue",
+            "url": "https://github.com/jununfly/ZAgenticLoop/issues/109"
+          },
+          {
+            "kind": "github-comment",
+            "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405"
+          },
+          {
+            "kind": "post-merge-closeout",
+            "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105306"
+          },
+          {
+            "kind": "github-comment",
+            "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105657"
+          }
+        ],
+        "artifacts": [
+          {
+            "kind": "github-pr",
+            "url": "https://github.com/jununfly/ZAgenticLoop/pull/110"
+          }
+        ],
+        "closeout": {
+          "completed": true,
+          "carrier": "github-issue:109"
         }
-      ],
-      "artifacts": [
-        {
-          "kind": "github-pr",
-          "url": "https://github.com/jununfly/ZAgenticLoop/pull/110"
-        }
-      ]
+      }
     }
   ]
 }

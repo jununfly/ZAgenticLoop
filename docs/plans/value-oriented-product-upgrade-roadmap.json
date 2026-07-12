@@ -528,8 +528,8 @@
     "1-9": {
       "id": "1-9",
       "label": "Codex + ZAgenticLoop Harness 首条完整产品体验路径",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-9-1",
@@ -580,75 +580,105 @@
           "q": "run metrics recorder 应该放在哪？",
           "answer": "放在 @jununfly/zj-loop-core。",
           "note": "recorder 消费结构化协议输出、next_actions、confirmation、artifact links、stop signals 和 closeout evidence；它不是 Codex 专属逻辑，应作为 core 能力被 Codex Harness、provider-backed routes、no-provider path 和 dogfood/replay 共同复用。"
+        },
+        {
+          "q": "Codex Harness 的首个用户入口是自然语言目标还是显式协议命令？",
+          "answer": "主入口是用户自然语言目标，但 side effect 启动必须转成显式协议输入；自然语言是 UX 入口，结构化 protocol input 才是执行入口。",
+          "note": "Codex 可以从自然语言生成 candidate input envelope，但不能直接把自然语言当执行授权。执行前必须明确 source、route、authority envelope、budget/max work units、stop conditions、review artifact target 和 closeout strategy。"
+        },
+        {
+          "q": "结构化 protocol input 自动生成后是否默认执行？",
+          "answer": "默认自动生成并执行；确认不是默认门槛，确认只在 hard blocker、高风险副作用、授权缺失、无 reviewable artifact path、route disabled、consumer capability 不匹配等情况下触发。",
+          "note": "这条决策修正了过度谨慎风险：Codex Harness 不应因为缺少完美确定性而频繁停下。可自动补全的信息自动补全；多个合理选项时选择推荐路径并记录 decision；只有不可逆/外部可见高风险副作用或无法形成最小闭环时才 stopped/needs_confirmation。"
+        },
+        {
+          "q": "Codex Harness 自动补全 protocol input 时补全到什么深度？",
+          "answer": "Harness 只补执行包络和体验默认值，不补 route/consumer 的业务判断。",
+          "note": "可补 source、route_id、max_slices、review_artifact_target、stop_conditions、closeout_strategy、evidence_store、budget 等让 loop 跑起来的包络；不补 leaf slice 拆分、修复方案、triage state、CI repair、dependency safety、PR Steward 策略、changelog 内容等 consumer 专业判断。"
+        },
+        {
+          "q": "Codex Harness 自动继续时停止条件如何设计？",
+          "answer": "采用两层停止条件：Harness 固定硬停机清单 + route/consumer 声明的 domain stop signals。",
+          "note": "Harness 固定清单覆盖 authorization missing、route disabled、consumer capability mismatch、no reviewable artifact path、verifier unavailable/failed、budget exceeded、dirty workspace conflict、高风险副作用、loop prevention、protocol invalid。Consumer stop signals 只负责领域正确性，例如 roadmap slice verification failed、triage state ambiguous、repair outside allowlist、dependency major/security-sensitive upgrade、PR head changed、release boundary ambiguous。"
+        },
+        {
+          "q": "Codex Harness 停下后如何恢复？",
+          "answer": "每次 stop 都必须输出可机器消费的 resume envelope；resume 是协议动作，不是自然语言动作。",
+          "note": "Stop output 至少携带 resume_id、original_input、current_route、consumer_state、last_completed_step、next_safe_step、required_resolution、resume_preconditions、evidence_index、artifact_links、budget_remaining、stop_reason、can_resume_without_new_authorization。自然语言“继续”只能触发 Harness 查找 active resume envelope，再按协议判断能否继续。"
+        },
+        {
+          "q": "Resume envelope / harness run state 应该存在哪里？",
+          "answer": "采用两层存储：provider-backed 路径把 append-only resume/evidence 记录保存在对应 provider carrier comment/artifact 附近；no-provider 路径保存在本地 zj-loop/harness/ 或 zj-loop/evidence/ 下。核心协议 schema 放在 @jununfly/zj-loop-core，提供 deterministic lookup by resume_id/source/route/active_run。",
+          "note": "避免中心化全局队列；证据和状态贴近 carrier/run context，减少跨项目、跨平台语义混淆。"
         }
       ],
-      "notes": ""
+      "notes": "Completed Codex + ZAgenticLoop Harness first product path implementation slice. Delivered fixed structured input/output protocol, normalizer, protocol repair request, run-state/resume primitives, metrics compatibility, provider-backed dogfood evidence migration, no-provider protocol example, and durable docs."
     },
     "1-9-1": {
       "id": "1-9-1",
       "label": "Codex Harness 边界与职责定义",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-9",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Codex Harness boundary is documented in docs/codex-harness.md and docs/designs/codex-harness-zagenticloop-alignment-checklist.md: harness is product orchestration, not a replacement for Route Table, Activation Request, Consumer Runner, evidence protocol, stop signal protocol, or provider adapters."
     },
     "1-9-2": {
       "id": "1-9-2",
       "label": "Codex 会话到 Loop Runtime 的入口编排",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-9",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented Codex session to Loop Runtime input bridge as deterministic protocol normalization: natural language remains UX entry, explicit structured envelopes are execution entry, normalizeLoopProtocolInput autofills low-risk fields, and normalize-input CLI emits normalized input or protocol_repair_request."
     },
     "1-9-3": {
       "id": "1-9-3",
       "label": "Codex 中的自动继续、暂停与恢复体验",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-9",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented deterministic harness run-state primitives in @jununfly/zj-loop-core: buildHarnessRunStateRecord, getHarnessRunStatePath, findHarnessResumeEnvelope. Stopped outputs must carry resume envelopes; no-provider storage path is zj-loop/harness/runs/<run_id>.json."
     },
     "1-9-4": {
       "id": "1-9-4",
       "label": "Codex 可读的 Evidence、Stop Signal 与 Next Action 输出",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-9",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented and documented Codex-readable harness evidence/stop/next-action output: human_summary is display-only, machine_envelope is automation truth, fixed statuses are enforced, stopped requires stop_signal+resume, and protocol repair requests are structured."
     },
     "1-9-5": {
       "id": "1-9-5",
       "label": "Codex Dogfood 到用户项目复制路径",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-9",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Updated provider-backed dogfood evidence and docs to the new harness protocol. docs/testing/codex-harness-provider-backed-dogfood-run.json is consumable by record-metrics; docs/codex-harness.md documents validate/normalize/render/metrics flows for user-project copying."
     },
     "1-9-6": {
       "id": "1-9-6",
       "label": "无 GitHub/GitLab 依赖的 Codex-Centered Loop 路径",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-9",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Aligned no-provider Codex-centered protocol example and storage semantics: local protocol input/output validates through core CLI, no-provider output uses machine_envelope, and local run-state storage path is zj-loop/harness/runs/<run_id>.json."
     },
     "1-9-7": {
       "id": "1-9-7",
       "label": "Codex Harness 全局结构化 Input/Output 协议",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-9",
       "children": [],
       "decisions": [
@@ -706,9 +736,39 @@
           "q": "协议 canonical serialization / schema version 是否必须固定？",
           "answer": "必须固定。canonical internal format 使用 JSON，schema 放在 @jununfly/zj-loop-core，每个协议对象必须带 schema_version。",
           "note": "Fenced protocol block 可以支持人类友好写法，但执行前必须由 validator 规范化为 canonical JSON；renderer 可以输出 Markdown 给 human，但 Markdown 不是真相源。"
+        },
+        {
+          "q": "Codex Harness 的执行输入是否必须是固定结构化 envelope？",
+          "answer": "必须固定结构化 envelope。自然语言只能作为 UX 入口，由 Codex 生成候选 envelope；真正执行必须进入结构化协议，避免普通对话、确认短语、route command、resume action 混在一起。",
+          "note": "执行 envelope 应包含 intent/source/route_id/consumer/authority/budget/stop_conditions/evidence_target/resume_policy 等必要字段；结构化协议是执行入口，自然语言不是执行授权。"
+        },
+        {
+          "q": "结构化 envelope 由谁生成、谁校验、谁执行？",
+          "answer": "三段分离：Codex Harness 可以从自然语言生成 candidate envelope；@jununfly/zj-loop-core 提供确定性 schema 校验和 normalizer；校验通过后才交给 Route Dispatcher / Consumer Runner 执行。",
+          "note": "Codex 负责体验编排，core 负责协议真相，consumer 负责领域执行；candidate envelope 不是执行事实，validated envelope 才是执行入口。"
+        },
+        {
+          "q": "当 envelope 校验失败或缺少字段时，Harness 应该怎么处理？",
+          "answer": "默认自动补齐低风险字段；不能补齐时输出结构化 protocol_repair_request，而不是普通自然语言求助。",
+          "note": "protocol_repair_request 至少包含 missing_fields/invalid_fields/autofill_attempted/safe_defaults_available/required_human_input/resume_envelope/next_command_hint，使缺字段成为可恢复协议状态。"
+        },
+        {
+          "q": "哪些 envelope 字段允许 Harness 自动补齐，哪些必须明确给出？",
+          "answer": "允许自动补齐低风险运行字段：run_id、created_at、tool=codex、max_slices 默认值、默认 evidence_target、默认 closeout_strategy、默认 resume_policy，以及从当前 repo 推导出的 provider/repo/branch。必须明确给出或由 route deterministic resolver 产出：intent、source、route_id、consumer、authority、review_artifact_target、任何会产生外部 side effect 的 enable/live flag。",
+          "note": "保持默认自动化顺滑，但不让 Harness 替用户、route 或 consumer 做关键授权与领域判断。"
+        },
+        {
+          "q": "Harness 输出是否也必须固定结构化 envelope，并与人类可读摘要分离？",
+          "answer": "必须。每次 run 输出 human_summary 与 machine_envelope 两层；human_summary 给人看，machine_envelope 给 loop/agent/CI 继续消费。",
+          "note": "machine_envelope 固定 schema，至少包含 status/run_id/route_id/consumer/completed_steps/next_action/evidence/artifacts/stop_signal/resume/closeout。后续自动化只能消费 machine_envelope，不能解析 human_summary。"
+        },
+        {
+          "q": "machine_envelope.status 是否必须使用固定枚举？",
+          "answer": "必须固定。最小状态枚举包括 completed、in_progress、stopped、failed、skipped、needs_protocol_repair。Agent/CI 只能根据枚举做分支，不能根据 human_summary 文案判断状态。",
+          "note": "stopped 必须带 stop_signal 与 resume；failed 必须带 failure、evidence、retry_policy；needs_protocol_repair 必须带 protocol_repair_request。"
         }
       ],
-      "notes": ""
+      "notes": "Implemented core harness protocol executable slice: fixed structured output envelope, fixed output status enum, protocol repair request validation, input normalizer low-risk autofill, normalize-input CLI, and updated run metrics semantics."
     },
     "1-10": {
       "id": "1-10",
@@ -807,7 +867,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-12 20:10:59",
+    "updated": "2026-07-12 21:25:38",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

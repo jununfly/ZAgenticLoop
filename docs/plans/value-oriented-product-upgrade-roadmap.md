@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-12 20:10:59
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-12 21:25:38
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [ ][X+] 1-1. 用户目标导向的自动 Loop 入口
@@ -47,14 +47,14 @@
 │   ├── [ ][X+] 1-8-2. 每条 Route 的 E2E Replay 与 Live Evidence
 │   ├── [ ][X+] 1-8-3. 发布前 Gate、版本策略与回归套件
 │   └── [ ][X+] 1-8-4. 能力分级晋升到 execution-ready 的证据审计
-├── [ ][X+] 1-9. Codex + ZAgenticLoop Harness 首条完整产品体验路径
-│   ├── [ ][X+] 1-9-1. Codex Harness 边界与职责定义
-│   ├── [ ][X+] 1-9-2. Codex 会话到 Loop Runtime 的入口编排
-│   ├── [ ][X+] 1-9-3. Codex 中的自动继续、暂停与恢复体验
-│   ├── [ ][X+] 1-9-4. Codex 可读的 Evidence、Stop Signal 与 Next Action 输出
-│   ├── [ ][X+] 1-9-5. Codex Dogfood 到用户项目复制路径
-│   ├── [ ][X+] 1-9-6. 无 GitHub/GitLab 依赖的 Codex-Centered Loop 路径
-│   └── [ ][X+] 1-9-7. Codex Harness 全局结构化 Input/Output 协议
+├── [x][Y+] 1-9. Codex + ZAgenticLoop Harness 首条完整产品体验路径
+│   ├── [x][Y+] 1-9-1. Codex Harness 边界与职责定义
+│   ├── [x][Y+] 1-9-2. Codex 会话到 Loop Runtime 的入口编排
+│   ├── [x][Y+] 1-9-3. Codex 中的自动继续、暂停与恢复体验
+│   ├── [x][Y+] 1-9-4. Codex 可读的 Evidence、Stop Signal 与 Next Action 输出
+│   ├── [x][Y+] 1-9-5. Codex Dogfood 到用户项目复制路径
+│   ├── [x][Y+] 1-9-6. 无 GitHub/GitLab 依赖的 Codex-Centered Loop 路径
+│   └── [x][Y+] 1-9-7. Codex Harness 全局结构化 Input/Output 协议
 └── [x][Y+] 1-10. Codex Harness 执行切片与交付顺序
     ├── [x][Y+] 1-10-1. Core 协议 Schema 与 Validator
     ├── [x][Y+] 1-10-2. Core 协议 Renderer 与 CLI/API 入口
@@ -90,7 +90,7 @@
 │   ... 4 more child nodes; run tree 1-7 --depth 2 for full view
 ├── [ ][X+] 1-8. Dogfood 验证、发布门槛与能力分级
 │   ... 4 more child nodes; run tree 1-8 --depth 2 for full view
-├── [ ][X+] 1-9. Codex + ZAgenticLoop Harness 首条完整产品体验路径
+├── [x][Y+] 1-9. Codex + ZAgenticLoop Harness 首条完整产品体验路径
 │   ... 7 more child nodes; run tree 1-9 --depth 2 for full view
 └── [x][Y+] 1-10. Codex Harness 执行切片与交付顺序
     ... 7 more child nodes; run tree 1-10 --depth 2 for full view

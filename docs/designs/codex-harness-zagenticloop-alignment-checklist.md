@@ -97,18 +97,27 @@ Recommended decision: define the full-chain Input/Output protocol first, then de
 
 Confirmed output minimum fields:
 
-- `status`: one of `continued`, `stopped`, `completed`, `failed`, or `needs_confirmation`;
-- `summary`: short human-readable summary;
-- `next_actions`: structured array, not a single prose string;
+- `human_summary`: short human-readable summary for display only;
+- `machine_envelope`: fixed structured object consumed by agents, deterministic scripts, replay, and recovery.
+
+Confirmed `machine_envelope` minimum fields:
+
+- `status`: one of `completed`, `in_progress`, `stopped`, `failed`, `skipped`, or `needs_protocol_repair`;
+- `run_id`;
+- `route_id`;
+- `consumer`;
+- `completed_steps`;
+- `next_action`: one structured action, not prose;
 - `evidence`: links, provider references, or local paths;
 - `artifacts`: PR/MR, issue, branch, patch, docs, run summary, or local output;
-- `stop_signal`: present when status is `stopped`, `failed`, or `needs_confirmation`;
-- `confirmation`: present only when human confirmation is required;
-- `resume`: present when the run can be resumed.
+- `stop_signal` and `resume`: required when status is `stopped`;
+- `failure` and `retry_policy`: required when status is `failed`;
+- `protocol_repair_request`: required when status is `needs_protocol_repair`;
+- `closeout`: present when post-completion closeout is required.
 
-Codex may render this output in natural language for the human, but the structured output is the source of truth for agents, deterministic scripts, replay, and recovery.
+Codex may render the same output in natural language for the human, but automation must consume `machine_envelope`, not `human_summary`.
 
-Confirmed `next_actions` action types:
+Confirmed `next_action` action types:
 
 - `continue_loop`;
 - `resume_loop`;
@@ -120,21 +129,29 @@ Confirmed `next_actions` action types:
 - `write_local_evidence`;
 - `stop`.
 
-Each `next_actions[]` item should include an action `type`, a machine-readable `target`, and a short human-readable `label`. Agents must not invent new action types without updating the protocol and deterministic validation.
+Each `next_action` should include an action `type`, a machine-readable `target`, and a short human-readable `label`. Agents must not invent new action types without updating the protocol and deterministic validation.
 
 Confirmed status-machine requirement:
 
 | Status | Meaning | Side effects after output | Resume | Required fields |
 | --- | --- | --- | --- | --- |
-| `continued` | The loop performed bounded work and may continue under the same authorization/budget/risk envelope. | Allowed only if the next action is explicitly structured and still inside the current envelope. | Usually yes | `next_actions`, `evidence` |
-| `stopped` | The loop intentionally stopped on a real stop signal before completing the goal. | Not allowed until the stop signal is resolved. | Yes, when `resume` is present | `stop_signal`, `next_actions`, `resume` when resumable |
+| `in_progress` | The loop performed bounded work and may continue under the same authorization/budget/risk envelope. | Allowed only if the next action is explicitly structured and still inside the current envelope. | Usually yes | `next_action`, `evidence` |
+| `stopped` | The loop intentionally stopped on a real stop signal before completing the goal. | Not allowed until the stop signal is resolved. | Yes | `stop_signal`, `next_action`, `resume` |
 | `completed` | The bounded loop goal is complete and reviewable artifacts/evidence exist. | Only closeout or post-completion actions are allowed. | No, except new request or closeout flow | `artifacts`, `evidence` |
-| `failed` | The loop encountered an error or unrecoverable condition for the current run. | Not allowed without a new run or explicit recovery action. | Sometimes, only if `resume` is present | `stop_signal`, `evidence`, `next_actions` |
-| `needs_confirmation` | The loop reached a human gate requiring a fixed confirmation phrase or explicit protocol input. | Not allowed until confirmation is supplied in the specified location. | Yes, after confirmation | `confirmation`, `stop_signal`, `next_actions` |
+| `failed` | The loop encountered an error or unrecoverable condition for the current run. | Not allowed without a new run or explicit recovery action. | Governed by `retry_policy` | `failure`, `retry_policy`, `evidence`, `next_action` |
+| `skipped` | The loop intentionally skipped work because a route is disabled, duplicate, mismatched, or otherwise out of scope. | Not allowed for the skipped request. | Usually no | `next_action`, `evidence` |
+| `needs_protocol_repair` | The input envelope cannot be validated but can be repaired and resumed. | Not allowed until a repaired protocol input is supplied. | Yes | `protocol_repair_request`, `next_action` |
 
 Agents must not infer status transitions from prose. Status transitions must be driven by structured output fields.
 
-`needs_confirmation` must only be satisfied by a fixed confirmation envelope. Ordinary natural language such as "confirm", "agree", "continue", or "go ahead" must not trigger confirmation side effects by itself. This keeps protocol input auditable and prevents casual conversation from being interpreted as an execution authorization.
+Human confirmation is represented as a `stopped` output with a structured `stop_signal`, `resume`, and a `request_confirmation` `next_action`. Ordinary natural language such as "confirm", "agree", "continue", or "go ahead" must not trigger confirmation side effects by itself. This keeps protocol input auditable and prevents casual conversation from being interpreted as an execution authorization.
+
+Resume and run-state storage:
+
+- provider-backed adapters should store append-only resume/evidence records near the provider carrier comment, workflow artifact, or equivalent provider-backed evidence surface;
+- no-provider adapters should store run-state records under `zj-loop/harness/runs/<run_id>.json`;
+- `@jununfly/zj-loop-core` owns deterministic helpers for run-state record creation, local path derivation, and resume lookup by `resume_id`, source, route, and active run;
+- natural language may trigger lookup of an active resume envelope, but the resume action itself must be a structured protocol action.
 
 Confirmed confirmation envelope minimum fields:
 
@@ -155,7 +172,7 @@ Deterministic implementation requirement:
 - required-field validation;
 - status transition validation;
 - confirmation envelope validation;
-- `next_actions` type validation;
+- `next_action` type validation;
 - structured output template rendering;
 - replay/evidence index validation.
 
@@ -163,7 +180,7 @@ These pieces should be implemented as deterministic scripts or APIs where practi
 
 First implementation target:
 
-1. Protocol validator for input envelopes, output fields, status transitions, confirmation envelopes, and `next_actions` types.
+1. Protocol validator for input envelopes, output fields, status transitions, confirmation envelopes, protocol repair requests, and `next_action` types.
 2. Protocol renderer for structured output blocks and human-readable summaries generated from the same structured data.
 3. Integration points for provider-backed and no-provider consumers after the validator/renderer exists.
 
@@ -208,7 +225,7 @@ Recommended fields:
 - `verification`;
 - `artifacts`;
 - `stop_signal`;
-- `next_actions`;
+- `next_action`;
 - `cost_or_budget`.
 
 Recommended decision: ZAgenticLoop owns the evidence protocol; Codex Harness may render a human-friendly summary from that evidence.
@@ -262,7 +279,7 @@ Dogfood metrics should be collected by a deterministic run metrics recorder, not
 The first recorder should be lightweight and derive metrics from:
 
 - structured output status;
-- `next_actions`;
+- `next_action`;
 - confirmation envelopes;
 - artifact links;
 - stop signals;

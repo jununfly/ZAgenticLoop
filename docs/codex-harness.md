@@ -70,20 +70,36 @@ Validate an input file:
 node tools/zj-loop-core/dist/harness-protocol-cli.js validate-input docs/testing/codex-harness-no-provider-input.json
 ```
 
+Normalize a candidate input and auto-fill low-risk defaults:
+
+```bash
+node tools/zj-loop-core/dist/harness-protocol-cli.js normalize-input docs/testing/codex-harness-no-provider-input.json --default-run-id local-run-1
+```
+
 ## Protocol Outputs
 
 Harness outputs are JSON first. Markdown is only a rendering for humans.
 
 Required output fields:
 
-- `status`
-- `summary`
-- `next_actions`
-- `evidence`
-- `artifacts`
-- `stop_signal` when stopped, failed, or waiting for confirmation
-- `confirmation` when a fixed phrase is required
-- `resume` when the run can resume
+- `human_summary`: short text for humans only;
+- `machine_envelope`: the only object agents, scripts, and CI may consume.
+
+Required `machine_envelope` fields:
+
+- `status`: one of `completed`, `in_progress`, `stopped`, `failed`, `skipped`, or `needs_protocol_repair`;
+- `run_id`;
+- `route_id`;
+- `consumer`;
+- `completed_steps`;
+- `next_action`;
+- `evidence`;
+- `artifacts`;
+- `stop_signal` and `resume` when `status` is `stopped`;
+- `failure` and `retry_policy` when `status` is `failed`;
+- `protocol_repair_request` when `status` is `needs_protocol_repair`.
+
+Automation must consume `machine_envelope`, not `human_summary`.
 
 Validate and render an output file:
 
@@ -110,6 +126,26 @@ Generate metrics from the current provider-backed dogfood run:
 ```bash
 node tools/zj-loop-core/dist/harness-protocol-cli.js record-metrics docs/testing/codex-harness-provider-backed-dogfood-run.json
 ```
+
+## Resume And Run State
+
+Every `stopped` output must include `machine_envelope.stop_signal` and
+`machine_envelope.resume`. Provider-backed adapters should store the resulting
+run-state record near the provider carrier or workflow artifact. No-provider
+adapters should store it under:
+
+```text
+zj-loop/harness/runs/<run_id>.json
+```
+
+The shared core API exposes deterministic helpers for this contract:
+
+- `buildHarnessRunStateRecord(...)`;
+- `getHarnessRunStatePath(run_id)`;
+- `findHarnessResumeEnvelope(...)`.
+
+Natural language such as "continue" may ask Codex to look up an active resume
+envelope, but it is not itself the resume protocol action.
 
 ## When The Harness Stops
 
