@@ -289,6 +289,8 @@ async function handleAddArtifacts(
   }
 
   io.stdout(`\n=== Next steps ===
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
   Review any created or overwritten policy/catalog files before committing.
 `);
@@ -531,6 +533,9 @@ async function upgradeGitHubActionsBundle(
 
   io.stdout(`\n=== Next steps ===
   Review .github/workflows/*.bak files if any were created.
+  Route Table enablement is preserved; rerun first-run planning to review current automation intent.
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
   `);
   return 0;
@@ -598,6 +603,9 @@ async function upgradeGitLabCiBundle(
   io.stdout(`
 === Next steps ===
   Review zj-loop/gitlab-ci/*.bak files if any were created.
+  Route Table enablement is preserved; rerun first-run planning to review current automation intent.
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
 `);
   return 0;
@@ -1239,6 +1247,8 @@ npm run lint
   }
 
   io.stdout(`\n=== Next steps ===
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${target === '.' ? '.' : target}
+  npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${target === '.' ? '.' : target} --json
   npx @jununfly/zj-loop-audit ${target === '.' ? '.' : target} --suggest
   npx @jununfly/zj-loop-cost --pattern ${pattern}
   First loop command (${tool}):

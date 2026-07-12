@@ -7,6 +7,7 @@
   "types": "dist/index.d.ts",
   "bin": {
     "zj-loop-route": "./dist/route-cli.js",
+    "zj-loop-first-run": "./dist/first-run-cli.js",
     "zj-loop-consumer": "./dist/consumer-cli.js",
     "zj-loop-ci-sweeper": "./dist/ci-sweeper-cli.js",
     "zj-loop-roadmap-activation": "./dist/roadmap-activation-cli.js",
@@ -30,7 +31,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/provider.test.mjs test/semantic.test.mjs test/cli.test.mjs test/route.test.mjs test/consumer-runner.test.mjs test/live-runner-contract.test.mjs test/ci-sweeper-runner.test.mjs test/post-merge-closeout-runner.test.mjs test/dependency-sweeper-runner.test.mjs test/pr-steward-runner.test.mjs test/changelog-drafter-runner.test.mjs test/issue-triage-action-runner.test.mjs test/issue-triage-transition-runner.test.mjs test/roadmap-activation-runner.test.mjs test/prd-handoff-runner.test.mjs",
+    "test": "npm run build && node --test test/registry.test.mjs test/project.test.mjs test/provider.test.mjs test/semantic.test.mjs test/cli.test.mjs test/route.test.mjs test/consumer-runner.test.mjs test/first-run-runner.test.mjs test/live-runner-contract.test.mjs test/ci-sweeper-runner.test.mjs test/post-merge-closeout-runner.test.mjs test/dependency-sweeper-runner.test.mjs test/pr-steward-runner.test.mjs test/changelog-drafter-runner.test.mjs test/issue-triage-action-runner.test.mjs test/issue-triage-transition-runner.test.mjs test/roadmap-activation-runner.test.mjs test/prd-handoff-runner.test.mjs",
     "prepublishOnly": "npm test"
   },
   "engines": {

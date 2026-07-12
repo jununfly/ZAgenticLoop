@@ -40,9 +40,47 @@ published package runner have equivalent evidence.
 
 After installing the bundle:
 
-1. Run `ZJ Loop Smoke` manually.
-2. Inspect the workflow summary.
-3. Run:
+1. Ask for the automation-default first-run plan:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan
+```
+
+The plan recommends a route, explains why that route is safest or most useful
+for the current project, lists automatic next steps, and emits structured stop
+signals when the loop should pause instead of guessing.
+
+`zj-loop-init` prints first-run planning commands after install and upgrade.
+Upgrade preserves Route Table enablement as the user's automation intent source,
+then asks the user to rerun the planner so current route choices are visible
+before any live route executes.
+
+For automation wiring, run with `--json`. The output includes:
+
+- `preconditions`: route enablement, consumer capability, provider support,
+  credentials/authority, cost budget, workspace safety, and verification gates.
+- `automatic_next_steps`: what the loop may do without more user input.
+- `stop_signals`: fixed `stop_code` values plus the human-readable reason,
+  responsible layer, evidence, retry policy, confirmation location, and next
+  steps.
+- `dispatch_handoff`: the deterministic next hop from Route Decision to the
+  packaged consumer command, including whether a request carrier is required,
+  the input contract, review handoff, closeout handoff, and route-specific
+  artifacts.
+- `execution_summary`, `evidence_index`, `state_explanation`, and
+  `failure_replay`: the compact replay surface for understanding what happened,
+  why it was allowed or blocked, and where to inspect the supporting evidence.
+
+2. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
+   or target a known route when the intent is already clear:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal roadmap
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
+```
+
+3. Inspect the workflow summary or generated JSON evidence.
+4. Run:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
@@ -50,6 +88,44 @@ npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
 
 The status output is the route menu. Use it to choose the first route instead of
 assuming every generated workflow should run live.
+
+## Automation-Default First-Run Contract
+
+The first-run planner is the user-facing bridge from installation to a safe
+automatic loop. It should answer four questions in one deterministic artifact:
+
+- Which route should run first?
+- What must be true before automation may continue?
+- If the loop stops, which layer owns the stop and what should happen next?
+- If the route is ready, which packaged consumer command and request carrier
+  handoff should run next?
+
+The first-run JSON schema is `zj-loop.first_run_plan.v1`. Its durable contract
+is:
+
+- `preconditions`: hard and warning checks for route enablement, consumer
+  capability, provider support, credentials and authority, cost budget,
+  workspace safety, and verification gates.
+- `stop_signals`: fixed stop codes, severity, responsible layer, evidence,
+  retry policy, human requirement, confirmation location, and next steps.
+- `dispatch_handoff`: the deterministic bridge from Route Decision to request
+  carrier, packaged consumer command, review artifact, and closeout handoff.
+- `execution_summary`, `evidence_index`, `state_explanation`, and
+  `failure_replay`: compact replay fields for users and automation.
+
+Dogfood evidence from this repository established two important boundaries:
+
+- Auto first-run recommends `manual-smoke-report` and can continue in
+  report-only mode with no stop signal.
+- Targeting `roadmap-sliced-development` may still stop with
+  `runner-not-execution-ready` when the Route Table says the route is
+  dogfood-verified but not execution-ready. That stop is intentional: it keeps
+  automation-default from becoming over-claiming.
+
+Generated GitLab installs were also checked by scaffolding `--add gitlab-ci`
+into a temporary project and running first-run planning there. The planner
+detected `provider=gitlab`, selected the install-ready `manual-smoke-report`
+route, and produced report-only evidence without hard stop signals.
 
 ## Enablement Commands
 

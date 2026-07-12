@@ -44,6 +44,7 @@ being mistaken for GitHub repositories.
 | Add GitHub provider smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
 | Add GitLab provider smoke/consumer jobs | `npx @jununfly/zj-loop-init . --add gitlab-ci` |
 | Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
+| Plan the first automation-default run | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan` |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Integrate loop knowledge through MCP | [zj-loop-mcp-server](tools/zj-loop-mcp-server/) |
@@ -131,20 +132,48 @@ More fallback paths are in [Quickstart](docs/QUICKSTART.md#if-npx-stalls-or-you-
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 ```
 
-2. Check cost and readiness:
+`zj-loop-init` also prints the first-run planning commands after install and
+upgrade, so the next move is visible before enabling side-effecting routes.
+
+2. Ask ZAgenticLoop what should run first:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan
+```
+
+The first-run plan recommends a route, explains why, lists what can happen
+automatically, and emits structured stop signals when the loop should not
+continue. Use targeted goals when you already know the desired path:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal roadmap
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
+```
+
+Use `--json` when wiring automation. The JSON output includes a `preconditions`
+matrix for route enablement, consumer capability, provider support,
+credentials/authority, budget, workspace safety, and verification gates. Failed
+hard preconditions become `stop_signals` instead of letting the loop guess. Each
+stop signal carries a fixed `stop_code`, responsible layer, evidence, retry
+policy, and next steps. Ready plans also include a `dispatch_handoff` with the
+packaged command, input contract, request-carrier requirement, review handoff,
+and closeout handoff. For replay, the same JSON includes `execution_summary`,
+`evidence_index`, `state_explanation`, and `failure_replay`.
+
+3. Check cost and readiness:
 
 ```bash
 npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
 npx @jununfly/zj-loop-audit . --suggest
 ```
 
-3. Run report-only for week one:
+4. Run report-only for week one:
 
 ```text
 /loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
-4. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold. For Daily Triage, `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md` are local runtime files by default; commit the `.example` templates and policy files, not the cursor-bearing local state.
+5. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold. For Daily Triage, `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md` are local runtime files by default; commit the `.example` templates and policy files, not the cursor-bearing local state.
 
 Phased rollout separates two axes: **readiness level** says how prepared the repo is; **execution authority** says what the loop may actually do. Start with report-only authority even when audit readiness is high. Do not skip the human-read step just because the loop is automated.
 
