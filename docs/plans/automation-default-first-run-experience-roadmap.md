@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:53:07
+> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:58:32
 
 [~][X+] 1. Automation-Default First Run Experience
 ├── [x][X+] 1-1. 用户目标导向的 First Run 入口
@@ -27,10 +27,10 @@
 │   ├── [x][X+] 1-5-1. 统一执行摘要与证据索引
 │   ├── [x][X+] 1-5-2. Route 状态解释与能力等级展示
 │   └── [x][X+] 1-5-3. 失败回放与定位报告
-├── [ ][X+] 1-6. 用户项目安装与升级体验
-│   ├── [ ][X+] 1-6-1. 安装后推荐路径生成
-│   ├── [ ][X+] 1-6-2. Provider 适配后的 Smoke 到 Auto Run
-│   └── [ ][X+] 1-6-3. 升级时保留自动化意图
+├── [x][X+] 1-6. 用户项目安装与升级体验
+│   ├── [x][X+] 1-6-1. 安装后推荐路径生成
+│   ├── [x][X+] 1-6-2. Provider 适配后的 Smoke 到 Auto Run
+│   └── [x][X+] 1-6-3. 升级时保留自动化意图
 └── [ ][X+] 1-7. Dogfood 验证与发布门槛
     ├── [ ][X+] 1-7-1. 本仓自动化 First Run Dogfood
     ├── [ ][X+] 1-7-2. GitHub 与 GitLab 双 Provider 验证
@@ -54,7 +54,7 @@
 │   ... 4 more child nodes; run tree 1-4 --depth 2 for full view
 ├── [x][X+] 1-5. 证据回放与状态可解释性
 │   ... 3 more child nodes; run tree 1-5 --depth 2 for full view
-├── [ ][X+] 1-6. 用户项目安装与升级体验
+├── [x][X+] 1-6. 用户项目安装与升级体验
 │   ... 3 more child nodes; run tree 1-6 --depth 2 for full view
 └── [ ][X+] 1-7. Dogfood 验证与发布门槛
     ... 3 more child nodes; run tree 1-7 --depth 2 for full view

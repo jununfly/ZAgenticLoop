@@ -39,6 +39,8 @@ test('zj-loop-init dry-run scaffolds daily-triage', async () => {
     assert.match(stdout, /zj-loop-init: daily-triage/);
     assert.match(stdout, /would copy|copied/);
     assert.match(stdout, /would write: .*zj-loop-route-table\.yaml/);
+    assert.match(stdout, /zj-loop-first-run plan --root/);
+    assert.match(stdout, /zj-loop-first-run plan --root .* --json/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -328,6 +330,8 @@ test('zj-loop-init --upgrade github-actions upgrades clean workflows', async () 
     const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'github-actions']);
     assert.match(stdout, /zj-loop-init --upgrade github-actions/);
     assert.match(stdout, /upgraded: .*zj-loop-smoke\.yml/);
+    assert.match(stdout, /Route Table enablement is preserved/);
+    assert.match(stdout, /zj-loop-first-run plan --root/);
     assert.equal(await readFile(workflowPath, 'utf8'), before);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -360,6 +364,8 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
   try {
     const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
     assert.match(stdout, /zj-loop-init --add: gitlab-ci/);
+    assert.match(stdout, /zj-loop-first-run plan --root/);
+    assert.match(stdout, /zj-loop-first-run plan --root .* --json/);
 
     const fragments = [
       'zj-loop-smoke.yml',
@@ -583,6 +589,8 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(stdout, /image: registry\.example\.com\/node:20/);
     assert.match(stdout, /core_package: \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.6\.tgz/);
     assert.match(stdout, /include:\n  - local: "zj-loop\/gitlab-ci\/zj-loop-smoke\.yml"/);
+    assert.match(stdout, /Route Table enablement is preserved/);
+    assert.match(stdout, /zj-loop-first-run plan --root/);
     assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
     const backup = await readFile(`${smokePath}.bak`, 'utf8');
     assert.match(backup, /# local edit/);

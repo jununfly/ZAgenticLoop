@@ -50,6 +50,11 @@ The plan recommends a route, explains why that route is safest or most useful
 for the current project, lists automatic next steps, and emits structured stop
 signals when the loop should pause instead of guessing.
 
+`zj-loop-init` prints first-run planning commands after install and upgrade.
+Upgrade preserves Route Table enablement as the user's automation intent source,
+then asks the user to rerun the planner so current route choices are visible
+before any live route executes.
+
 For automation wiring, run with `--json`. The output includes:
 
 - `preconditions`: route enablement, consumer capability, provider support,

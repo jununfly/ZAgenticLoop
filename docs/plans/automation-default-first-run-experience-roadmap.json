@@ -113,7 +113,7 @@
     "1-6": {
       "id": "1-6",
       "label": "用户项目安装与升级体验",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -321,32 +321,32 @@
     "1-6-1": {
       "id": "1-6-1",
       "label": "安装后推荐路径生成",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：zj-loop-init 安装/--add 输出 first-run plan 与 --json 命令，README 和 user-project-execution-ready-bundle 说明安装后推荐路径；用户无需先读完整 Route Table。验证：tools/zj-loop-init npm test 29 passed；git diff --check passed。"
     },
     "1-6-2": {
       "id": "1-6-2",
       "label": "Provider 适配后的 Smoke 到 Auto Run",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：安装输出引导用户先跑 zj-loop-first-run plan，结合 manual-smoke-report 与 dispatch_handoff/preconditions，从 smoke/report-only 逐步看到何时可进入 auto-run；GitHub/GitLab add 路径均被测试覆盖。验证：tools/zj-loop-init npm test 29 passed；git diff --check passed。"
     },
     "1-6-3": {
       "id": "1-6-3",
       "label": "升级时保留自动化意图",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：github-actions/gitlab-ci upgrade 输出 Route Table enablement is preserved，并提示重跑 first-run planner；upgrade 默认刷新生成 workflow/fragments，不覆盖 Route Table 的启用意图。验证：tools/zj-loop-init npm test 29 passed；git diff --check passed。"
     },
     "1-7-1": {
       "id": "1-7-1",
@@ -381,7 +381,7 @@
   },
   "metadata": {
     "created": "2026-07-12 13:09:18",
-    "updated": "2026-07-12 13:53:07",
+    "updated": "2026-07-12 13:58:32",
     "md_file": "docs/plans/automation-default-first-run-experience-roadmap.md"
   }
 }

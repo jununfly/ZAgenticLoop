@@ -132,6 +132,9 @@ More fallback paths are in [Quickstart](docs/QUICKSTART.md#if-npx-stalls-or-you-
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 ```
 
+`zj-loop-init` also prints the first-run planning commands after install and
+upgrade, so the next move is visible before enabling side-effecting routes.
+
 2. Ask ZAgenticLoop what should run first:
 
 ```bash
