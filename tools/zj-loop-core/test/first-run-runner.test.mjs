@@ -83,6 +83,10 @@ test('buildFirstRunPlan recommends manual smoke for automatic first run', async 
     assert.equal(plan.automation_allowed, true);
     assert.equal(plan.consumer_plan.status, 'report-only');
     assert.deepEqual(plan.stop_signals, []);
+    assert.equal(plan.execution_summary.status, 'report-only');
+    assert.equal(plan.failure_replay.available, false);
+    assert.equal(plan.state_explanation.consumer_status, 'report-only');
+    assert.ok(plan.evidence_index.some((item) => item.source === 'route-table' && item.key === 'manual-smoke-report'));
     assert.equal(plan.dispatch_handoff.dispatch_status, 'report-only');
     assert.equal(plan.dispatch_handoff.dispatch_mode, 'report-evidence');
     assert.equal(plan.dispatch_handoff.request_carrier_required, false);
@@ -109,6 +113,8 @@ test('buildFirstRunPlan can target execution-ready roadmap automation', async ()
     assert.ok(plan.dispatch_handoff.input_contract.includes('activation_request_comment'));
     assert.ok(plan.dispatch_handoff.review_handoff.join('\n').includes('roadmap branch PR'));
     assert.ok(plan.dispatch_handoff.closeout_handoff.join('\n').includes('post-merge-roadmap-closeout'));
+    assert.equal(plan.execution_summary.status, 'automation-ready');
+    assert.equal(plan.state_explanation.capability_level.execution_ready, true);
     assert.equal(plan.consumer_plan.execution_allowed, true);
     assert.match(plan.automation_intent, /bounded review artifact/);
     assert.match(plan.automatic_next_steps.join('\n'), /Run packaged roadmap-sliced-development consumer/);
@@ -127,6 +133,10 @@ test('buildFirstRunPlan turns blocked automation into structured stop signal', a
     assert.equal(plan.dispatch_handoff.dispatch_status, 'blocked');
     assert.equal(plan.dispatch_handoff.dispatch_mode, 'none');
     assert.equal(plan.dispatch_handoff.request_carrier_required, true);
+    assert.equal(plan.execution_summary.status, 'blocked');
+    assert.equal(plan.failure_replay.available, true);
+    assert.ok(plan.failure_replay.failed_layers.includes('first-run-precondition'));
+    assert.ok(plan.evidence_index.some((item) => item.source === 'stop-signal' && item.key === 'route-disabled'));
     assert.equal(plan.preconditions.find((item) => item.id === 'route-enabled')?.status, 'fail');
     assert.equal(plan.stop_signals[0].stop_code, 'precondition-failed');
     assert.equal(plan.stop_signals[0].severity, 'blocked');

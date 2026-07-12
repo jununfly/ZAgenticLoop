@@ -1,4 +1,4 @@
-import { ConsumerRunPlan } from './consumer-runner.js';
+import { ConsumerRunPlan, ConsumerRunPlanStatus } from './consumer-runner.js';
 export type FirstRunGoal = 'auto' | 'smoke' | 'roadmap' | 'issue-backlog' | 'ci' | 'closeout';
 export type FirstRunStopSignal = {
     stop_code: 'route-disabled' | 'route-contract-invalid' | 'runner-not-execution-ready' | 'precondition-failed' | 'execution-blocked';
@@ -36,6 +36,35 @@ export type FirstRunDispatchHandoff = {
     closeout_handoff: string[];
     next_steps: string[];
 };
+export type FirstRunExecutionSummary = {
+    status: 'automation-ready' | 'report-only' | 'blocked';
+    one_line: string;
+    recommended_next_action: string;
+};
+export type FirstRunEvidenceIndexItem = {
+    source: 'route-table' | 'consumer-plan' | 'precondition' | 'stop-signal' | 'dispatch-handoff';
+    key: string;
+    status: string;
+    evidence: string[];
+};
+export type FirstRunStateExplanation = {
+    route_enabled: boolean;
+    route_readiness: string;
+    consumer_status: ConsumerRunPlanStatus;
+    automation_allowed_reason: string;
+    capability_level: {
+        install_ready: boolean;
+        execution_ready: boolean;
+        user_project_ready: boolean;
+    };
+};
+export type FirstRunFailureReplay = {
+    available: boolean;
+    failed_layers: string[];
+    stop_codes: string[];
+    replay_steps: string[];
+    evidence: string[];
+};
 export type FirstRunPlan = {
     schema: 'zj-loop.first_run_plan.v1';
     goal: FirstRunGoal;
@@ -48,6 +77,10 @@ export type FirstRunPlan = {
     automatic_next_steps: string[];
     stop_signals: FirstRunStopSignal[];
     dispatch_handoff: FirstRunDispatchHandoff;
+    execution_summary: FirstRunExecutionSummary;
+    evidence_index: FirstRunEvidenceIndexItem[];
+    state_explanation: FirstRunStateExplanation;
+    failure_replay: FirstRunFailureReplay;
     route_menu: Array<{
         route_id: string;
         consumer: string;

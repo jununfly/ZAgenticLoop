@@ -154,7 +154,8 @@ hard preconditions become `stop_signals` instead of letting the loop guess. Each
 stop signal carries a fixed `stop_code`, responsible layer, evidence, retry
 policy, and next steps. Ready plans also include a `dispatch_handoff` with the
 packaged command, input contract, request-carrier requirement, review handoff,
-and closeout handoff.
+and closeout handoff. For replay, the same JSON includes `execution_summary`,
+`evidence_index`, `state_explanation`, and `failure_replay`.
 
 3. Check cost and readiness:
 

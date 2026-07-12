@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:48:38
+> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:53:07
 
 [~][X+] 1. Automation-Default First Run Experience
 ├── [x][X+] 1-1. 用户目标导向的 First Run 入口
@@ -23,10 +23,10 @@
 │   ├── [x][X+] 1-4-2. Request Carrier 到 Consumer 自动消费
 │   ├── [x][X+] 1-4-3. Roadmap-Sliced 多 slice 自动执行
 │   └── [x][X+] 1-4-4. Review Artifact 与 Closeout 自动衔接
-├── [ ][X+] 1-5. 证据回放与状态可解释性
-│   ├── [ ][X+] 1-5-1. 统一执行摘要与证据索引
-│   ├── [ ][X+] 1-5-2. Route 状态解释与能力等级展示
-│   └── [ ][X+] 1-5-3. 失败回放与定位报告
+├── [x][X+] 1-5. 证据回放与状态可解释性
+│   ├── [x][X+] 1-5-1. 统一执行摘要与证据索引
+│   ├── [x][X+] 1-5-2. Route 状态解释与能力等级展示
+│   └── [x][X+] 1-5-3. 失败回放与定位报告
 ├── [ ][X+] 1-6. 用户项目安装与升级体验
 │   ├── [ ][X+] 1-6-1. 安装后推荐路径生成
 │   ├── [ ][X+] 1-6-2. Provider 适配后的 Smoke 到 Auto Run
@@ -52,7 +52,7 @@
 │   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
 ├── [x][X+] 1-4. Route 到 Consumer 的自动推进编排
 │   ... 4 more child nodes; run tree 1-4 --depth 2 for full view
-├── [ ][X+] 1-5. 证据回放与状态可解释性
+├── [x][X+] 1-5. 证据回放与状态可解释性
 │   ... 3 more child nodes; run tree 1-5 --depth 2 for full view
 ├── [ ][X+] 1-6. 用户项目安装与升级体验
 │   ... 3 more child nodes; run tree 1-6 --depth 2 for full view

@@ -1,4 +1,4 @@
-import { buildConsumerRunPlan, ConsumerRunPlan } from './consumer-runner.js';
+import { buildConsumerRunPlan, ConsumerRunPlan, ConsumerRunPlanStatus } from './consumer-runner.js';
 import { collectProjectEvidenceFacts, createNodeProjectFileSystem } from './project.js';
 import { listRoutes, loadRouteTable, RouteStatus } from './route.js';
 
@@ -60,6 +60,39 @@ export type FirstRunDispatchHandoff = {
   next_steps: string[];
 };
 
+export type FirstRunExecutionSummary = {
+  status: 'automation-ready' | 'report-only' | 'blocked';
+  one_line: string;
+  recommended_next_action: string;
+};
+
+export type FirstRunEvidenceIndexItem = {
+  source: 'route-table' | 'consumer-plan' | 'precondition' | 'stop-signal' | 'dispatch-handoff';
+  key: string;
+  status: string;
+  evidence: string[];
+};
+
+export type FirstRunStateExplanation = {
+  route_enabled: boolean;
+  route_readiness: string;
+  consumer_status: ConsumerRunPlanStatus;
+  automation_allowed_reason: string;
+  capability_level: {
+    install_ready: boolean;
+    execution_ready: boolean;
+    user_project_ready: boolean;
+  };
+};
+
+export type FirstRunFailureReplay = {
+  available: boolean;
+  failed_layers: string[];
+  stop_codes: string[];
+  replay_steps: string[];
+  evidence: string[];
+};
+
 export type FirstRunPlan = {
   schema: 'zj-loop.first_run_plan.v1';
   goal: FirstRunGoal;
@@ -72,6 +105,10 @@ export type FirstRunPlan = {
   automatic_next_steps: string[];
   stop_signals: FirstRunStopSignal[];
   dispatch_handoff: FirstRunDispatchHandoff;
+  execution_summary: FirstRunExecutionSummary;
+  evidence_index: FirstRunEvidenceIndexItem[];
+  state_explanation: FirstRunStateExplanation;
+  failure_replay: FirstRunFailureReplay;
   route_menu: Array<{
     route_id: string;
     consumer: string;
@@ -118,6 +155,12 @@ export async function buildFirstRunPlan(input: {
     source: input.source ?? 'first-run',
     signalId: input.signalId,
   });
+  const stopSignals = [
+    ...stopSignalsForPreconditions(preconditions),
+    ...stopSignalsFor(consumerPlan),
+  ];
+  const dispatchHandoff = dispatchHandoffFor(consumerPlan);
+  const automationAllowed = consumerPlan.status !== 'blocked' && !preconditions.some((item) => item.status === 'fail');
 
   return {
     schema: 'zj-loop.first_run_plan.v1',
@@ -126,14 +169,15 @@ export async function buildFirstRunPlan(input: {
     recommended_consumer: route.consumer,
     recommendation_reason: recommendationReason(route, goal),
     automation_intent: automationIntent(route),
-    automation_allowed: consumerPlan.status !== 'blocked' && !preconditions.some((item) => item.status === 'fail'),
+    automation_allowed: automationAllowed,
     preconditions,
     automatic_next_steps: automaticNextStepsFor(consumerPlan),
-    stop_signals: [
-      ...stopSignalsForPreconditions(preconditions),
-      ...stopSignalsFor(consumerPlan),
-    ],
-    dispatch_handoff: dispatchHandoffFor(consumerPlan),
+    stop_signals: stopSignals,
+    dispatch_handoff: dispatchHandoff,
+    execution_summary: executionSummaryFor({ route, consumerPlan, automationAllowed, stopSignals }),
+    evidence_index: evidenceIndexFor({ route, preconditions, consumerPlan, stopSignals, dispatchHandoff }),
+    state_explanation: stateExplanationFor({ route, consumerPlan, automationAllowed, stopSignals }),
+    failure_replay: failureReplayFor(stopSignals),
     route_menu: routes.map((item) => routeMenuItem(item, route.route_id)),
     consumer_plan: consumerPlan,
   };
@@ -257,6 +301,133 @@ function dispatchHandoffFor(plan: ConsumerRunPlan): FirstRunDispatchHandoff {
     review_handoff: reviewHandoffFor(plan),
     closeout_handoff: closeoutHandoffFor(plan),
     next_steps: plan.next_steps,
+  };
+}
+
+function executionSummaryFor(input: {
+  route: RouteStatus;
+  consumerPlan: ConsumerRunPlan;
+  automationAllowed: boolean;
+  stopSignals: FirstRunStopSignal[];
+}): FirstRunExecutionSummary {
+  if (!input.automationAllowed) {
+    const firstStop = input.stopSignals[0];
+    return {
+      status: 'blocked',
+      one_line: `Automation is blocked for ${input.route.route_id}: ${firstStop?.stop_reason ?? input.consumerPlan.reason}.`,
+      recommended_next_action: firstStop?.next_steps[0] ?? 'Inspect stop_signals before retrying.',
+    };
+  }
+  if (input.consumerPlan.status === 'report-only') {
+    return {
+      status: 'report-only',
+      one_line: `First run can record report evidence for ${input.route.route_id}.`,
+      recommended_next_action: input.consumerPlan.next_steps[0] ?? 'Write report evidence.',
+    };
+  }
+  return {
+    status: 'automation-ready',
+    one_line: `Automation can dispatch ${input.route.route_id} to ${input.route.consumer}.`,
+    recommended_next_action: input.consumerPlan.next_steps[0] ?? `Run packaged ${input.route.consumer} consumer.`,
+  };
+}
+
+function evidenceIndexFor(input: {
+  route: RouteStatus;
+  preconditions: FirstRunPrecondition[];
+  consumerPlan: ConsumerRunPlan;
+  stopSignals: FirstRunStopSignal[];
+  dispatchHandoff: FirstRunDispatchHandoff;
+}): FirstRunEvidenceIndexItem[] {
+  return [
+    {
+      source: 'route-table',
+      key: input.route.route_id,
+      status: input.route.enabled ? 'enabled' : 'disabled',
+      evidence: [
+        `consumer=${input.route.consumer}`,
+        `readiness=${input.route.readiness}`,
+        `execution_mode=${input.route.execution_mode}`,
+        `side_effect_level=${input.route.side_effect_level}`,
+      ],
+    },
+    {
+      source: 'consumer-plan',
+      key: input.consumerPlan.consumer,
+      status: input.consumerPlan.status,
+      evidence: [
+        `dispatch_allowed=${input.consumerPlan.dispatch_allowed}`,
+        `execution_allowed=${input.consumerPlan.execution_allowed}`,
+        `reason=${input.consumerPlan.reason}`,
+      ],
+    },
+    ...input.preconditions.map((item) => ({
+      source: 'precondition' as const,
+      key: item.id,
+      status: item.status,
+      evidence: item.evidence,
+    })),
+    ...input.stopSignals.map((item) => ({
+      source: 'stop-signal' as const,
+      key: item.stop_code,
+      status: item.severity,
+      evidence: item.evidence,
+    })),
+    {
+      source: 'dispatch-handoff',
+      key: input.dispatchHandoff.dispatch_mode,
+      status: input.dispatchHandoff.dispatch_status,
+      evidence: [
+        `packaged_command=${input.dispatchHandoff.packaged_command ?? 'none'}`,
+        `request_carrier_required=${input.dispatchHandoff.request_carrier_required}`,
+      ],
+    },
+  ];
+}
+
+function stateExplanationFor(input: {
+  route: RouteStatus;
+  consumerPlan: ConsumerRunPlan;
+  automationAllowed: boolean;
+  stopSignals: FirstRunStopSignal[];
+}): FirstRunStateExplanation {
+  return {
+    route_enabled: input.route.enabled,
+    route_readiness: input.route.readiness,
+    consumer_status: input.consumerPlan.status,
+    automation_allowed_reason: input.automationAllowed
+      ? input.consumerPlan.reason
+      : input.stopSignals[0]?.stop_reason ?? input.consumerPlan.reason,
+    capability_level: {
+      install_ready: input.route.install_ready,
+      execution_ready: input.route.execution_ready,
+      user_project_ready: input.route.user_project_ready,
+    },
+  };
+}
+
+function failureReplayFor(stopSignals: FirstRunStopSignal[]): FirstRunFailureReplay {
+  if (stopSignals.length === 0) {
+    return {
+      available: false,
+      failed_layers: [],
+      stop_codes: [],
+      replay_steps: ['No failure replay is needed because no stop signals were emitted.'],
+      evidence: [],
+    };
+  }
+
+  return {
+    available: true,
+    failed_layers: [...new Set(stopSignals.map((item) => item.responsible_layer))],
+    stop_codes: [...new Set(stopSignals.map((item) => item.stop_code))],
+    replay_steps: [
+      'Read execution_summary for the user-facing outcome.',
+      'Inspect stop_signals in order; the first signal is the primary blocker.',
+      'Use evidence_index to locate the route table, precondition, or consumer evidence behind the blocker.',
+      'Apply next_steps for the primary stop signal, then rerun zj-loop-first-run plan with the same goal.',
+    ],
+    evidence: stopSignals.flatMap((item) => item.evidence),
   };
 }
 

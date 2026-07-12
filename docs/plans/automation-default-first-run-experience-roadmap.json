@@ -99,7 +99,7 @@
     "1-5": {
       "id": "1-5",
       "label": "证据回放与状态可解释性",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -291,32 +291,32 @@
     "1-5-1": {
       "id": "1-5-1",
       "label": "统一执行摘要与证据索引",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：FirstRunPlan 增加 execution_summary 与 evidence_index；每次 first-run JSON 都包含用户可读摘要和按 source/key/status 组织的证据索引。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-5-2": {
       "id": "1-5-2",
       "label": "Route 状态解释与能力等级展示",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：FirstRunPlan 增加 state_explanation，显式解释 route_enabled、route_readiness、consumer_status、automation_allowed_reason、install/execution/user-project ready 能力等级。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-5-3": {
       "id": "1-5-3",
       "label": "失败回放与定位报告",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：FirstRunPlan 增加 failure_replay；有 stop signal 时输出 failed_layers、stop_codes、replay_steps 与聚合 evidence，无 stop signal 时显式标记 available=false。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-6-1": {
       "id": "1-6-1",
@@ -381,7 +381,7 @@
   },
   "metadata": {
     "created": "2026-07-12 13:09:18",
-    "updated": "2026-07-12 13:48:38",
+    "updated": "2026-07-12 13:53:07",
     "md_file": "docs/plans/automation-default-first-run-experience-roadmap.md"
   }
 }

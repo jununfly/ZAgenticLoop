@@ -62,6 +62,9 @@ For automation wiring, run with `--json`. The output includes:
   packaged consumer command, including whether a request carrier is required,
   the input contract, review handoff, closeout handoff, and route-specific
   artifacts.
+- `execution_summary`, `evidence_index`, `state_explanation`, and
+  `failure_replay`: the compact replay surface for understanding what happened,
+  why it was allowed or blocked, and where to inspect the supporting evidence.
 
 2. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
    or target a known route when the intent is already clear:
