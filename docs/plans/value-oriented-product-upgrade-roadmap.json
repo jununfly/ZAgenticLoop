@@ -1,0 +1,813 @@
+{
+  "title": "Value-Oriented Product Upgrade Full Map",
+  "description": "Full roadmap for making ZAgenticLoop default toward automated loops when safe, bounded, authorized, and verifiable.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Value-Oriented Product Upgrade Full Map",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6",
+        "1-7",
+        "1-8",
+        "1-9",
+        "1-10"
+      ],
+      "decisions": [
+        {
+          "q": "全地图的终局体验是什么？",
+          "answer": "默认自动 loop，而不是默认等待 human 推动；不适合自动化的因素必须变成结构化 stop signal。",
+          "note": "来自 docs/prds/value-oriented-product-design-principles.md 的 Principle 1。"
+        },
+        {
+          "q": "实现顺序应该先做什么？",
+          "answer": "先收敛 readiness、授权、证据和编排底座，再逐条 route 晋升到 execution-ready；否则容易把单条 route 的小修误认为整体体验完成。",
+          "note": "来自 route-consumer-execution-architecture.md 的 maturity/readiness 约束和近期 dogfood 经验。"
+        },
+        {
+          "q": "这次产品升级的 2nd 目标是什么？",
+          "answer": "给 Codex + ZAgenticLoop 做一层 harness，并把 Codex + ZAgenticLoop 作为首条完整产品体验路径。",
+          "note": "Harness 是首条完整体验路径的产品承载层：让 Codex 会话能自然发起、继续、暂停、恢复、解释 ZAgenticLoop 的自动 loop，而不是只暴露底层 route/consumer/protocol。"
+        }
+      ],
+      "notes": "目标：把 docs/prds/value-oriented-product-design-principles.md 中的 automation-default 产品体验落实为完整产品升级地图。终局体验是：用户给出目标或信号后，ZAgenticLoop 在安全、授权、预算、验证满足时自动推进 Signal -> Route Decision -> Request Carrier -> Consumer -> bounded work -> review artifact -> closeout；只有真实 stop signal 才停下来。"
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "用户目标导向的自动 Loop 入口",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-1-1",
+        "1-1-2",
+        "1-1-3",
+        "1-1-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Route Readiness 与自动化授权模型",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3",
+        "1-2-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Signal 到 Review Artifact 的自动编排",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2",
+        "1-3-3",
+        "1-3-4",
+        "1-3-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Consumer Runner 全链路执行能力",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3",
+        "1-4-4",
+        "1-4-5"
+      ],
+      "decisions": [
+        {
+          "q": "Consumer Runner 的边界是什么？",
+          "answer": "每个 consumer 都要到自己的 bounded completion form；不把所有 consumer 简化成 fix runner，也不允许 producer/report route 直接做 worker side effects。",
+          "note": "来自 route-consumer-execution-architecture.md 的 Consumer Kinds 和 Completion Forms。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "前提条件、安全与成本包络",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3",
+        "1-5-4",
+        "1-5-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "证据回放、状态解释与故障定位",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3",
+        "1-6-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "用户项目安装、升级与启用体验",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-7-1",
+        "1-7-2",
+        "1-7-3",
+        "1-7-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8": {
+      "id": "1-8",
+      "label": "Dogfood 验证、发布门槛与能力分级",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-8-1",
+        "1-8-2",
+        "1-8-3",
+        "1-8-4"
+      ],
+      "decisions": [
+        {
+          "q": "能力晋升的证据标准是什么？",
+          "answer": "dogfood/replay 只是晋升材料；宣称 execution-ready 必须有生成 bundle 或用户项目路径上的 live evidence、失败路径、去重证据和可回放结果。",
+          "note": "来自 route-consumer-execution-architecture.md 的 user-project-ready gate。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "目标型命令与用户故事入口",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "首次运行到下一次运行的连续体验",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-3": {
+      "id": "1-1-3",
+      "label": "自动继续与停止提示的用户界面",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-4": {
+      "id": "1-1-4",
+      "label": "用户故事式帮助文档与示例项目",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "Readiness 语义收敛与升级路径",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "Route Table 自动化意图与执行授权拆分",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "Route 状态菜单、评分与推荐算法",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-4": {
+      "id": "1-2-4",
+      "label": "启用、禁用、提升成熟度的确定性命令",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Signal Producer 统一接入面",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "Route Decision 持久化与去重",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3": {
+      "id": "1-3-3",
+      "label": "Request Carrier 创建、复用与生命周期",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-4": {
+      "id": "1-3-4",
+      "label": "Consumer 自动消费与 Review Artifact Handoff",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-5": {
+      "id": "1-3-5",
+      "label": "Post-Merge Closeout 自动闭环",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Roadmap-Sliced 多 slice 自动执行器",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "Issue Backlog Triage 到 Transition 的自动链路",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "CI、Dependency、PR Steward Fix Runner 提升",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-4": {
+      "id": "1-4-4",
+      "label": "Changelog Drafter 与 Release Draft Consumer 提升",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-5": {
+      "id": "1-4-5",
+      "label": "GitHub 与 GitLab Provider Parity",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "权限、凭证与 Actor 能力探测",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "低摩擦预算模型与 max work units",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "工作区安全、风险分级与硬停机",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4": {
+      "id": "1-5-4",
+      "label": "Loop Prevention 与重复请求治理",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5": {
+      "id": "1-5-5",
+      "label": "高风险 Human Gate 最小化策略",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "统一 Run Summary 与 Evidence Index",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "Stop Signal 分类、定位与恢复建议",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "跨 Provider 回放与 Debug CLI",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-4": {
+      "id": "1-6-4",
+      "label": "运行历史、状态看板与用户心智",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-1": {
+      "id": "1-7-1",
+      "label": "Install Wizard 与 First-Run Guided Setup",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-2": {
+      "id": "1-7-2",
+      "label": "Upgrade 保留用户意图与配置漂移治理",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-3": {
+      "id": "1-7-3",
+      "label": "Route Bundle 选择、启用与回滚命令",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-4": {
+      "id": "1-7-4",
+      "label": "README、Quickstart 与场景化教程重构",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-1": {
+      "id": "1-8-1",
+      "label": "本仓 Dogfood Matrix 与 Route 能力台账",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-2": {
+      "id": "1-8-2",
+      "label": "每条 Route 的 E2E Replay 与 Live Evidence",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-3": {
+      "id": "1-8-3",
+      "label": "发布前 Gate、版本策略与回归套件",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-4": {
+      "id": "1-8-4",
+      "label": "能力分级晋升到 execution-ready 的证据审计",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9": {
+      "id": "1-9",
+      "label": "Codex + ZAgenticLoop Harness 首条完整产品体验路径",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-9-1",
+        "1-9-2",
+        "1-9-3",
+        "1-9-4",
+        "1-9-5",
+        "1-9-6",
+        "1-9-7"
+      ],
+      "decisions": [
+        {
+          "q": "Codex Harness 与底层 Route/Consumer 的关系是什么？",
+          "answer": "Codex Harness 是体验编排层，不替代 Route Table、Activation Request、Consumer Runner 和 Evidence 协议；它负责把这些能力组合成 Codex 用户能直接使用的一条完整体验路径。",
+          "note": "这避免其他 Agent 误解为要为 Codex 复制一套平行协议；底层协议仍保持平台/工具无关，Codex 是首个完整 harness 实现。"
+        },
+        {
+          "q": "Codex Harness 是否只服务 GitHub/GitLab provider-backed 路径？",
+          "answer": "不是。Codex Harness 应同时支持 provider-backed 路径和 no-provider 的 Codex-centered 路径；后者不依赖 GitHub/GitLab，以 Codex 会话、本地 zj-loop 状态、过程证据和 reviewable artifacts 为中心完成 loop。",
+          "note": "这让 ZAgenticLoop 的核心体验不被 GitHub/GitLab 绑定：GitHub/GitLab 是强 provider 路径，Codex-centered 是无外部 issue tracker/PR provider 时的首选体验路径。"
+        },
+        {
+          "q": "开始实现 Codex Harness 前还需要哪些设计对齐？",
+          "answer": "需要先对齐 7 类内容：Harness 边界、两条体验路径主次、自动化默认策略、Review Artifact 标准、Evidence/Run Summary 格式、roadmap 阶段顺序、dogfood 验证标准。",
+          "note": "Durable 记录已保存到 docs/designs/codex-harness-zagenticloop-alignment-checklist.md。"
+        },
+        {
+          "q": "Codex-centered no-provider 路径是否进入第一轮协议闭环设计？",
+          "answer": "确认进入第一轮协议闭环设计，但实现优先级排在 provider-backed baseline 之后。",
+          "note": "需要先定义 local activation、local review artifact、local evidence、local closeout、local resume 等等价物，避免底层协议天然绑定 GitHub/GitLab；provider-backed 先实现是因为证据链最完整、最适合 dogfood。"
+        },
+        {
+          "q": "第一条可 dogfood 的 Codex Harness 路径选哪条？",
+          "answer": "选择 provider-backed GitHub issue -> Roadmap-Sliced -> PR -> closeout 作为第一条 dogfood 路径。",
+          "note": "这条路径已有最多既有能力和真实外部证据链，适合验证 Codex Harness 是否降低 human 在 issue、PR、确认、closeout 之间切换的摩擦；no-provider 先完成协议闭环设计，随后作为第二条 dogfood 路径。"
+        },
+        {
+          "q": "第一条 dogfood 的成功标准是否要量化？",
+          "answer": "要。第一条 dogfood 必须显式量化 human handoff 次数、位置切换次数、非必要确认次数，以及从 signal 到 review artifact/closeout 的完整链路证据。",
+          "note": "Codex Harness 的产品价值不能只靠感觉顺滑；需要用可回放指标证明它减少了 human 在 Codex、issue、PR、workflow、closeout 之间来回切换和重复确认的负担。"
+        },
+        {
+          "q": "dogfood 成功指标是否要由确定性 recorder 采集？",
+          "answer": "要。第一版需要轻量 run metrics recorder，由结构化 output、next_actions、confirmation、artifact links、stop signals 和 closeout evidence 自动汇总指标。",
+          "note": "dogfood 指标不能在结束后靠 Agent 主观总结；recorder 应生成可回放 metrics，支持比较 baseline/harness-assisted run，并暴露 human handoff、location switch、unnecessary confirmation、ambiguous next step 等核心指标。"
+        },
+        {
+          "q": "run metrics recorder 应该放在哪？",
+          "answer": "放在 @jununfly/zj-loop-core。",
+          "note": "recorder 消费结构化协议输出、next_actions、confirmation、artifact links、stop signals 和 closeout evidence；它不是 Codex 专属逻辑，应作为 core 能力被 Codex Harness、provider-backed routes、no-provider path 和 dogfood/replay 共同复用。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-9-1": {
+      "id": "1-9-1",
+      "label": "Codex Harness 边界与职责定义",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-2": {
+      "id": "1-9-2",
+      "label": "Codex 会话到 Loop Runtime 的入口编排",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-3": {
+      "id": "1-9-3",
+      "label": "Codex 中的自动继续、暂停与恢复体验",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-4": {
+      "id": "1-9-4",
+      "label": "Codex 可读的 Evidence、Stop Signal 与 Next Action 输出",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-5": {
+      "id": "1-9-5",
+      "label": "Codex Dogfood 到用户项目复制路径",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-6": {
+      "id": "1-9-6",
+      "label": "无 GitHub/GitLab 依赖的 Codex-Centered Loop 路径",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-9-7": {
+      "id": "1-9-7",
+      "label": "Codex Harness 全局结构化 Input/Output 协议",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-9",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Codex Harness 的 next action/output 是否必须结构化？",
+          "answer": "必须结构化，但不能先孤立设计 output；需要先做整个链路的全局 Input/Output 协议设计，再在总分结构下细化 output。",
+          "note": "Input/output 的整体设计必须一致；协议输入要避免其他 Agent 误解，也要避免与 human 的普通自然语言指令混淆，防止把用户随口说的其他事情误当成 loop protocol command。"
+        },
+        {
+          "q": "Codex Harness 协议输入用什么形态区分普通自然语言？",
+          "answer": "确认主路径只允许三类明确 envelope：slash command、fenced protocol block、deterministic CLI output。普通自然语言只能触发解释、建议或生成候选协议输入，不能直接触发带 side effect 的 loop。",
+          "note": "这样可以防止用户随口说的继续、开始、修一下等自然语言被误识别为自动执行指令；side effect 必须来自可审计、可回放、足够显式的协议输入。"
+        },
+        {
+          "q": "Codex Harness 的结构化 output 是否必须固定最小字段集？",
+          "answer": "必须固定最小字段集。Codex 可以渲染自然语言摘要，但协议输出必须包含稳定字段，供 Agent、脚本和后续恢复流程读取。",
+          "note": "建议最小字段包括 status、summary、next_actions、evidence、stop_signal、confirmation、artifacts、resume；next_actions 必须是结构化数组，不是单个自然语言字符串。"
+        },
+        {
+          "q": "Codex Harness output 的 status 状态机语义是否必须固定？",
+          "answer": "必须固定。每个 status 的含义、允许的 next_actions、是否可 resume、是否允许继续 side effect 都必须明确。",
+          "note": "避免 stopped、failed、needs_confirmation 被不同 Agent 混用；恢复流程、自动继续、human confirmation 和 replay 都应依赖固定状态机，而不是自然语言解释。"
+        },
+        {
+          "q": "needs_confirmation 是否只能由固定 confirmation envelope 满足？",
+          "answer": "必须。needs_confirmation 只能由固定 confirmation envelope 满足，不能由普通自然语言中的确认、同意、继续等词触发。",
+          "note": "这保持 input envelope 规则闭合：human 可以用自然语言讨论或请求解释，但会产生 side effect 的 confirmation 必须是可审计、可回放、位置明确的协议输入。"
+        },
+        {
+          "q": "confirmation envelope 是否必须有固定最小字段？",
+          "answer": "必须。confirmation envelope 必须固定最小字段，明确确认对象、作用域、固定短语、确认位置、允许 actor、有效期或有效状态，以及确认会触发的 side effects。",
+          "note": "否则确认会退回自然语言解释，无法审计确认了什么、在哪里确认、谁能确认、确认后会触发什么操作。"
+        },
+        {
+          "q": "next_actions 是否要固定 action 类型枚举？",
+          "answer": "要。next_actions 必须使用固定 action type 枚举；不能只是结构化数组里放自由文本。",
+          "note": "适合稳固确定性的部分，包括 envelope 解析、字段校验、status transition 校验、confirmation 校验、next_action type 校验和模板化输出，都应优先用确定性脚本实现，避免 Agent 运行时猜测。"
+        },
+        {
+          "q": "Codex Harness 的 first implementation target 是否先做协议 validator + renderer？",
+          "answer": "是。第一实现目标应先做协议 validator + renderer，再接 route consumer。",
+          "note": "先把 I/O envelope、required fields、status machine、confirmation envelope、next_actions action types 和结构化输出渲染做成确定性底座；provider-backed、no-provider、route consumer 后续都消费这套底座，避免继续依赖 Agent 猜测。"
+        },
+        {
+          "q": "protocol validator + renderer 应该放在哪个 package？",
+          "answer": "放在 @jununfly/zj-loop-core。",
+          "note": "这是跨 Codex Harness、GitHub/GitLab provider、no-provider、本地脚本和 route consumers 复用的协议底座；Codex 相关包只放 harness adapter，不拥有协议本身。"
+        },
+        {
+          "q": "Codex Harness adapter 是否现在独立成包？",
+          "answer": "先不要新包。先在 @jununfly/zj-loop-core 暴露协议 validator/renderer，再由现有 CLI、examples 或 harness adapter 消费。",
+          "note": "等 Codex Harness 的运行边界、输入输出协议和真实 dogfood 路径稳定后，再评估是否拆独立包；避免过早形成半成品产品面或平行协议。"
+        },
+        {
+          "q": "协议 canonical serialization / schema version 是否必须固定？",
+          "answer": "必须固定。canonical internal format 使用 JSON，schema 放在 @jununfly/zj-loop-core，每个协议对象必须带 schema_version。",
+          "note": "Fenced protocol block 可以支持人类友好写法，但执行前必须由 validator 规范化为 canonical JSON；renderer 可以输出 Markdown 给 human，但 Markdown 不是真相源。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-10": {
+      "id": "1-10",
+      "label": "Codex Harness 执行切片与交付顺序",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-10-1",
+        "1-10-2",
+        "1-10-3",
+        "1-10-4",
+        "1-10-5",
+        "1-10-6",
+        "1-10-7"
+      ],
+      "decisions": [
+        {
+          "q": "Codex Harness 产品升级如何切成可执行 slices？",
+          "answer": "按 7 个顺序 slices 执行：Core Schema/Validator -> Core Renderer/CLI/API -> Core Metrics Recorder -> GitHub Issue-to-PR Closeout Dogfood -> No-Provider Protocol Equivalents -> User Story/Help Examples -> Release Gates/Evidence.",
+          "note": "这个顺序先固化可判定协议底座，再接首条真实 dogfood，再补 no-provider 等价物和用户文档，最后以 gate/evidence 收口；避免从 route consumer 局部改动开始导致协议漂移。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-10-1": {
+      "id": "1-10-1",
+      "label": "Core 协议 Schema 与 Validator",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-10",
+      "children": [],
+      "decisions": [],
+      "notes": "Delivered in @jununfly/zj-loop-core: harness protocol constants, validateLoopProtocolInput, validateLoopProtocolOutput, canonical JSON schema/schema_version checks, input envelope types, output statuses, next_actions enum, status-specific required fields, confirmation envelope validation, and natural-language input/output rejection. Verification: npm test in tools/zj-loop-core passed 130 tests."
+    },
+    "1-10-2": {
+      "id": "1-10-2",
+      "label": "Core 协议 Renderer 与 CLI/API 入口",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-10",
+      "children": [],
+      "decisions": [],
+      "notes": "Delivered in @jununfly/zj-loop-core: renderLoopProtocolOutputMarkdown, runHarnessProtocolCli, zj-loop-harness-protocol bin, validate-output/render-output commands, deterministic Markdown rendering that states JSON is source of truth, and stable validation error output. Verification: npm test in tools/zj-loop-core passed 132 tests."
+    },
+    "1-10-3": {
+      "id": "1-10-3",
+      "label": "Core Run Metrics Recorder",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-10",
+      "children": [],
+      "decisions": [],
+      "notes": "Delivered core run metrics recorder for structured harness outputs: human handoff count, location switch count, structured stop signals, review artifact completion, closeout evidence count, and surfaces. Verification: npm test in tools/zj-loop-core passed 133/133."
+    },
+    "1-10-4": {
+      "id": "1-10-4",
+      "label": "GitHub Issue 到 PR Closeout 的 Harness Dogfood",
+      "status": "blocked",
+      "mode": "exploit",
+      "parent": "1-10",
+      "children": [],
+      "decisions": [],
+      "notes": "Provider-backed dogfood started with real carrier issue https://github.com/jununfly/ZAgenticLoop/issues/109 and pre-merge evidence comment https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405 on branch zjal-value-oriented-product-upgrade-map. Added structured run evidence in docs/testing/codex-harness-provider-backed-dogfood-run.json and durable test doc docs/testing/codex-harness-provider-backed-dogfood.md. Metrics recorder output verified via node tools/zj-loop-core/dist/harness-protocol-cli.js record-metrics docs/testing/codex-harness-provider-backed-dogfood-run.json. Current metrics: human_handoff_count=0, location_switch_count=1, structured_stop_signal_count=1, post_merge_closeout_evidence_count=0. Blocked until review PR exists, is merged, and post-merge closeout evidence can be written to #109."
+    },
+    "1-10-5": {
+      "id": "1-10-5",
+      "label": "No-Provider Codex-Centered 协议等价物",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-10",
+      "children": [],
+      "decisions": [],
+      "notes": "Delivered no-provider Codex-centered protocol equivalents. Added validate-input CLI support in zj-loop-harness-protocol, no-provider local input/output examples, and docs/testing/codex-harness-no-provider-e2e.md. Verified validate-input, validate-output, render-output, and npm test in tools/zj-loop-core passed 135/135."
+    },
+    "1-10-6": {
+      "id": "1-10-6",
+      "label": "Codex Harness 用户故事与帮助示例",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-10",
+      "children": [],
+      "decisions": [],
+      "notes": "Added docs/codex-harness.md as user-story help for provider-backed and no-provider paths; README now links Codex Harness from Start Here and What You Get. Verified documented validate-input, validate-output, render-output, record-metrics commands and npm test in tools/zj-loop-core passed 135/135."
+    },
+    "1-10-7": {
+      "id": "1-10-7",
+      "label": "发布前 Gate 与回归证据",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-10",
+      "children": [],
+      "decisions": [],
+      "notes": "Release gates completed. Verification: roadmap render/validate passed; git diff --check passed; docs harness examples validate-input/validate-output/record-metrics passed; npm test in tools/zj-loop-core passed 135/135; npm run build in tools/zj-loop-audit passed; bash scripts/before-after-demo.sh passed; node tools/zj-loop-audit/dist/cli.js ../.. reported Score 100/100 Level L3. Remaining unsupported claim: provider-backed dogfood post-merge closeout is pending PR merge and tracked in 1-10-4/#109."
+    }
+  },
+  "metadata": {
+    "created": "2026-07-12 14:26:23",
+    "updated": "2026-07-12 19:56:35",
+    "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
+  }
+}

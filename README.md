@@ -4,7 +4,7 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Quickstart](docs/QUICKSTART.md) · [Pattern picker](docs/pattern-picker.md) · [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Architecture](docs/designs/architecture.md) · [Route Table Architecture](docs/designs/route-table-architecture.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Quickstart](docs/QUICKSTART.md) · [Codex Harness](docs/codex-harness.md) · [Pattern picker](docs/pattern-picker.md) · [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Architecture](docs/designs/architecture.md) · [Route Table Architecture](docs/designs/route-table-architecture.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Release playbook](docs/RELEASE.md)
 
 ## What's New In This Release
 
@@ -44,6 +44,7 @@ being mistaken for GitHub repositories.
 | Add GitHub provider smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
 | Add GitLab provider smoke/consumer jobs | `npx @jununfly/zj-loop-init . --add gitlab-ci` |
 | Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
+| Run Codex with structured loop handoff, evidence, and stop signals | [Codex Harness](docs/codex-harness.md) |
 | Plan the first automation-default run | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan` |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |

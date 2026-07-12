@@ -1,0 +1,33 @@
+{
+  "schema": "zj-loop.harness_output.v1",
+  "schema_version": 1,
+  "status": "completed",
+  "summary": "Completed a no-provider local roadmap slice with reviewable local artifacts and evidence.",
+  "next_actions": [
+    {
+      "type": "perform_closeout",
+      "target": "local-file:zj-loop/requests/local-roadmap-activation.json",
+      "label": "Archive the local activation request after review evidence is accepted"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "local-artifact",
+      "path": "zj-loop/evidence/local-roadmap-run-summary.json"
+    },
+    {
+      "kind": "local-artifact",
+      "path": "zj-loop/evidence/local-verification.log"
+    }
+  ],
+  "artifacts": [
+    {
+      "kind": "local-artifact",
+      "path": "zj-loop/reviews/local-roadmap-change.patch"
+    },
+    {
+      "kind": "local-artifact",
+      "path": "docs/plans/local-roadmap.json"
+    }
+  ]
+}

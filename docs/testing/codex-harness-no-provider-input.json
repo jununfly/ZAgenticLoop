@@ -1,0 +1,25 @@
+{
+  "schema": "zj-loop.harness_input.v1",
+  "schema_version": 1,
+  "envelope_type": "fenced_protocol_block",
+  "intent": "run_route",
+  "source": {
+    "kind": "local-codex-session",
+    "id": "codex-thread-local-1"
+  },
+  "payload": {
+    "route_id": "roadmap-sliced-development",
+    "carrier": {
+      "kind": "local-file",
+      "path": "zj-loop/requests/local-roadmap-activation.json"
+    },
+    "review_artifact": {
+      "kind": "local-branch-or-patch",
+      "path": "zj-loop/reviews/local-roadmap-change.patch"
+    },
+    "evidence_store": {
+      "kind": "local-directory",
+      "path": "zj-loop/evidence/"
+    }
+  }
+}
