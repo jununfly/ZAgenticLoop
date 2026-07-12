@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buildConsumerRunPlan } from './consumer-runner.js';
+import { runConsumerLiveSideEffects, runConsumerToReviewArtifact } from './consumer-adapter.js';
 export async function readSignalEnvelope(input) {
     return validateSignalEnvelope(JSON.parse(await readFile(input.path, 'utf8')));
 }
@@ -45,6 +46,88 @@ export async function dispatchSignal(input) {
             updated_at: now,
         };
     }
+    if (existing && mode === 'execute') {
+        const consumerAdapterResult = await runConsumerLiveSideEffects({
+            root,
+            signal: input.signal,
+            envelope: existing,
+            env: input.env ?? process.env,
+            fetchImpl: input.fetchImpl,
+        });
+        const status = consumerAdapterResult.adapter_status === 'hard_stopped'
+            ? 'hard_stopped'
+            : 'executed_to_review_artifact';
+        const updated = {
+            ...existing,
+            status,
+            mode,
+            updated_at: now,
+            consumer_adapter_result: consumerAdapterResult,
+            review_artifact: buildReviewArtifact(existing.consumer_run_plan, consumerAdapterResult),
+            closeout_hint: {
+                required: status === 'executed_to_review_artifact',
+                reason: status === 'executed_to_review_artifact'
+                    ? 'review artifact should be closed out after merge or explicit completion'
+                    : 'no closeout required before a review artifact exists',
+            },
+            stop_signal: status === 'hard_stopped'
+                ? buildStopSignal({ consumerRunPlan: existing.consumer_run_plan, consumerAdapterResult })
+                : null,
+        };
+        await writeOrchestrationEnvelope({ root, envelope: updated });
+        return updated;
+    }
+    if (!existing && mode === 'execute') {
+        const consumerRunPlan = await buildConsumerRunPlan({
+            root,
+            selector: routeId,
+            source: input.signal.source,
+            signalId: input.signal.signal_id,
+        });
+        const consumerAdapterResult = {
+            schema: 'zj-loop.consumer_adapter_result.v1',
+            route_id: routeId,
+            consumer: consumerRunPlan.consumer,
+            consumer_kind: consumerRunPlan.consumer_kind,
+            adapter_status: 'hard_stopped',
+            review_artifacts: [],
+            repairs_applied: [],
+            live_side_effects: {
+                attempted: false,
+                reason: 'missing-existing-orchestration-for-execute',
+            },
+            next_steps: ['Run auto mode first so the orchestration contains a replayable contract-plan review artifact.'],
+            stop_signal: {
+                reason: 'missing-existing-orchestration-for-execute',
+                next_steps: ['Run auto mode first so the orchestration contains a replayable contract-plan review artifact.'],
+            },
+        };
+        const envelope = {
+            schema: 'zj-loop.orchestration.v1',
+            orchestration_id: orchestrationId,
+            duplicate_key: duplicateKey,
+            status: 'hard_stopped',
+            mode,
+            created_at: now,
+            updated_at: now,
+            signal: input.signal,
+            route_decision: consumerRunPlan.route_decision,
+            carrier_plan: buildCarrierPlan(input.signal),
+            consumer_run_plan: consumerRunPlan,
+            review_artifact: buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
+            consumer_adapter_result: consumerAdapterResult,
+            closeout_hint: {
+                required: false,
+                reason: 'no closeout required before a review artifact exists',
+            },
+            stop_signal: buildStopSignal({ consumerRunPlan, consumerAdapterResult }),
+            storage: {
+                path: storagePath,
+            },
+        };
+        await writeOrchestrationEnvelope({ root, envelope });
+        return envelope;
+    }
     if (existing && mode !== 'resume') {
         return {
             ...existing,
@@ -59,7 +142,18 @@ export async function dispatchSignal(input) {
         source: input.signal.source,
         signalId: input.signal.signal_id,
     });
-    const status = statusForPlan({ mode, consumerRunPlan });
+    let status = statusForPlan({ mode, consumerRunPlan });
+    const consumerAdapterResult = status === 'executed_to_review_artifact'
+        ? await runConsumerToReviewArtifact({
+            root,
+            signal: input.signal,
+            orchestrationId,
+            consumerRunPlan,
+        })
+        : undefined;
+    if (consumerAdapterResult?.adapter_status === 'hard_stopped') {
+        status = 'hard_stopped';
+    }
     const envelope = {
         schema: 'zj-loop.orchestration.v1',
         orchestration_id: orchestrationId,
@@ -72,7 +166,8 @@ export async function dispatchSignal(input) {
         route_decision: consumerRunPlan.route_decision,
         carrier_plan: buildCarrierPlan(input.signal),
         consumer_run_plan: consumerRunPlan,
-        review_artifact: buildReviewArtifact(consumerRunPlan),
+        review_artifact: buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
+        ...(consumerAdapterResult === undefined ? {} : { consumer_adapter_result: consumerAdapterResult }),
         closeout_hint: {
             required: status === 'executed_to_review_artifact',
             reason: status === 'executed_to_review_artifact'
@@ -80,10 +175,7 @@ export async function dispatchSignal(input) {
                 : 'no closeout required before a review artifact exists',
         },
         stop_signal: status === 'hard_stopped'
-            ? {
-                reason: consumerRunPlan.reason,
-                next_steps: consumerRunPlan.next_steps,
-            }
+            ? buildStopSignal({ consumerRunPlan, consumerAdapterResult })
             : null,
         storage: {
             path: storagePath,
@@ -165,7 +257,21 @@ function statusForPlan(input) {
     }
     return 'planned';
 }
-function buildReviewArtifact(plan) {
+function buildReviewArtifact(plan, consumerAdapterResult) {
+    const adapterArtifact = consumerAdapterResult?.review_artifacts[0];
+    if (consumerAdapterResult?.adapter_status === 'hard_stopped') {
+        return {
+            kind: 'hard-stop',
+            description: consumerAdapterResult.stop_signal?.reason ?? consumerAdapterResult.live_side_effects.reason ?? 'consumer adapter hard stopped',
+        };
+    }
+    if (adapterArtifact) {
+        return {
+            kind: 'structured-evidence',
+            path: adapterArtifact.path,
+            description: `${adapterArtifact.kind} review artifact generated by ConsumerAdapter.`,
+        };
+    }
     const primaryArtifact = plan.route_specific_artifacts.find((artifact) => artifact.role === 'primary-result');
     if (primaryArtifact) {
         return {
@@ -183,6 +289,18 @@ function buildReviewArtifact(plan) {
     return {
         kind: 'hard-stop',
         description: plan.reason,
+    };
+}
+function buildStopSignal(input) {
+    if (input.consumerAdapterResult?.stop_signal) {
+        return {
+            reason: input.consumerAdapterResult.stop_signal.reason,
+            next_steps: input.consumerAdapterResult.stop_signal.next_steps,
+        };
+    }
+    return {
+        reason: input.consumerRunPlan.reason,
+        next_steps: input.consumerRunPlan.next_steps,
     };
 }
 function requireSubject(value) {

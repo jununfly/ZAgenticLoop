@@ -23,3 +23,4 @@ export * from './harness-protocol-cli.js';
 export * from './run-runner.js';
 export * from './doctor-runner.js';
 export * from './dispatch-runner.js';
+export * from './consumer-adapter.js';

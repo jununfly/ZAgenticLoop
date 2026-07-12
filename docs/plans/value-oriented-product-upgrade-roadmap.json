@@ -239,7 +239,7 @@
     "1-4": {
       "id": "1-4",
       "label": "Consumer Runner 全链路执行能力",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -254,9 +254,34 @@
           "q": "Consumer Runner 的边界是什么？",
           "answer": "每个 consumer 都要到自己的 bounded completion form；不把所有 consumer 简化成 fix runner，也不允许 producer/report route 直接做 worker side effects。",
           "note": "来自 route-consumer-execution-architecture.md 的 Consumer Kinds 和 Completion Forms。"
+        },
+        {
+          "q": "zj-loop-dispatch 在 execution_allowed=true 时如何调用各个 consumer runner？",
+          "answer": "新增 core 内部 ConsumerAdapter/runConsumerToReviewArtifact 层，而不是让 dispatch-runner 直接 import 每个具体 runner 的 live 函数。适配层接收 root、signal、orchestration、route、consumerRunPlan、mode，返回统一的 executed_to_review_artifact 或 hard_stopped 结果。",
+          "note": "内部可按 route.consumer_kind/route_id 分发到具体 runner，但每个 runner 保留自己的 bounded completion form；zj-loop-dispatch 只懂编排，不懂具体 consumer 业务细节。"
+        },
+        {
+          "q": "zj-loop-dispatch --mode auto 是否直接执行所有 route 的 live side effects？",
+          "answer": "分两层执行能力：review-artifact runner 默认可被 auto 调用，目标是生成 PR/MR/draft/comment/evidence/plan 等可审查产物；live-side-effect runner 只在 route execution_allowed、request verifier、provider permission、预算和 safety gates 全过时运行。",
+          "note": "每个 consumer 必须显式实现 live adapter，不能靠通用 fallback 猜测真实 side effects；这样保持默认自动化，同时避免误触发外部副作用。"
+        },
+        {
+          "q": "1-4 的优先实现顺序先做哪类 consumer？",
+          "answer": "先做 activation-consumer，也就是 roadmap-sliced-development。第一阶段聚焦 ConsumerAdapter 基座 + Roadmap Activation review-artifact runner，而不是先做 CI/Dependency/PR Steward。",
+          "note": "这是默认自动 loop 的核心体验：Signal/Issue -> Activation -> Roadmap Branch/PR；它也最能检验 adapter 是否能保持非 fix-runner 的 bounded lifecycle 边界。"
+        },
+        {
+          "q": "分阶段实现是否会导致其他 agent 误以为 Roadmap Activation 已经完成？",
+          "answer": "会。按倒推逻辑，父节点必须表达完整目标，阶段性工作必须拆成子节点；第一个子节点只承接 review-artifact runner，不把它误标为 live branch/PR runner 完成。",
+          "note": "这样 roadmap 状态可以显示第一阶段完成但 1-4-1 父节点仍未完成，避免后续 agent 产生 job-is-done 错觉。"
+        },
+        {
+          "q": "Phased Consumer Runner work may mislead future agents into treating a partial phase as complete. How should the roadmap prevent that?",
+          "answer": "Model the complete target as the parent node, put the first phase in an explicit child node, and keep parent completion blocked until all required child capabilities and evidence gates are complete.",
+          "note": ""
         }
       ],
-      "notes": ""
+      "notes": "Starting grill for Consumer Runner full-chain execution. Existing consumers have route-specific plan/live functions; the main design question is how zj-loop-dispatch invokes them through a stable bounded consumer adapter without flattening all consumers into fix runners."
     },
     "1-5": {
       "id": "1-5",
@@ -457,13 +482,19 @@
     },
     "1-4-1": {
       "id": "1-4-1",
-      "label": "Roadmap-Sliced 多 slice 自动执行器",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Roadmap Activation ConsumerAdapter 全链路执行能力",
+      "status": "in_progress",
+      "mode": "exploit",
       "parent": "1-4",
-      "children": [],
+      "children": [
+        "1-4-1-1",
+        "1-4-1-2",
+        "1-4-1-3",
+        "1-4-1-4",
+        "1-4-1-5"
+      ],
       "decisions": [],
-      "notes": ""
+      "notes": "Parent node tracks the complete Roadmap Activation adapter path. It is not complete when only the review-artifact runner exists."
     },
     "1-4-2": {
       "id": "1-4-2",
@@ -1033,11 +1064,113 @@
       "children": [],
       "decisions": [],
       "notes": "Completed: documented structured dispatch statuses, orchestration storage path, source-carrier reuse, and zj-loop-run vs zj-loop-dispatch boundary in durable docs."
+    },
+    "1-4-1-1": {
+      "id": "1-4-1-1",
+      "label": "ConsumerAdapter 基座与 Contract Plan Review Artifact Runner",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Roadmap Activation review-artifact runner 第一阶段是否复用现有 deterministic contract-plan 逻辑？",
+          "answer": "是。第一阶段直接复用现有 Roadmap Activation contract-plan 逻辑生成 contract-plan.json，并把 adapter result 写入 orchestration envelope；该子节点不得创建 git branch、PR/MR 或执行其他 live side effects。",
+          "note": "This keeps the first child slice useful and deterministic while preserving the parent node as the full live Roadmap Activation target."
+        },
+        {
+          "q": "Roadmap Activation contract-plan 输入字段缺失时，ConsumerAdapter 应该自动补齐还是停下？",
+          "answer": "默认自动补齐低风险字段：activation_request_id 优先取 payload.activation_request_id，否则由 signal_id 或 deterministic hash 派生；source_issue_url 优先取 subject.url，缺失但 provider/subject id 足够时可构造；source_comment_url 优先取 payload.source_comment_url 或 payload.activation_request_comment_url，缺失时不得伪造，必须 hard stop 并输出需要 activation request comment URL 的结构化 next steps。",
+          "note": "This preserves automation-default behavior while keeping activation evidence replayable and non-fabricated."
+        },
+        {
+          "q": "consumer_adapter_result 应该采用什么固定结构，才能支持回放、doctor 和 closeout？",
+          "answer": "采用固定 schema: zj-loop.consumer_adapter_result.v1。结果必须包含 route_id、consumer、consumer_kind、adapter_status、review_artifacts[]、repairs_applied[]、live_side_effects、next_steps；hard stop 时同字段写 adapter_status=hard_stopped 和结构化 stop_signal。review_artifacts 必须是数组；repairs_applied 固定记录自动补齐；live_side_effects.attempted=false 必须明确写出，防止其他 Agent 误以为已经创建 PR/MR 或执行 live side effects。",
+          "note": "This creates a stable adapter boundary for replay, diagnostics, and post-merge closeout handoff."
+        },
+        {
+          "q": "Roadmap Activation review artifact contract-plan.json 应该写到哪里？",
+          "answer": "写到 orchestration 专属目录：zj-loop/orchestrations/<orchestration_id>/contract-plan.json；envelope 本体继续保留在 zj-loop/orchestrations/<orchestration_id>.json。consumer_adapter_result.review_artifacts[].path 写相对路径。",
+          "note": "This keeps the main orchestration envelope and its review artifacts in one replayable namespace without polluting the project root."
+        }
+      ],
+      "notes": "Completed: added ConsumerAdapter/runConsumerToReviewArtifact base for roadmap-sliced-development review-artifact execution. Dispatch now writes contract-plan.json under zj-loop/orchestrations/<orchestration_id>/, records consumer_adapter_result, applies low-risk input repairs, hard-stops missing activation request comment URL, and never performs live branch/PR side effects in this child slice."
+    },
+    "1-4-1-2": {
+      "id": "1-4-1-2",
+      "label": "Roadmap Branch PR Live Side Effect Runner",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Roadmap Branch PR Live Side Effect Runner 是否要一次性覆盖 GitHub + GitLab？",
+          "answer": "要。一次性补齐 GitHub PR 和 GitLab MR 两个平台的 live adapter，但必须保持 provider-specific adapter，而不是做泛 Git provider。协议统一，provider 实现分开：executeRoadmapActivationLiveSideEffects 内部分发到 executeGitHubRoadmapActivation / executeGitLabRoadmapActivation；不支持的平台 hard stop；所有 live side effect 都必须写入 consumer_adapter_result.live_side_effects。",
+          "note": "contract-plan 已经 provider-neutral；live side effects 的 API、权限、token、target branch、draft/review 字段都是 provider-specific。"
+        },
+        {
+          "q": "zj-loop-dispatch --mode auto 的默认行为应如何与 ZAgenticLoop + Codex Harness scope 对齐？",
+          "answer": "auto 的默认行为与 ZAgenticLoop + Codex Harness 的 scope 对齐：自动推进到当前 loop/harness 能独立承担的 bounded review artifact 或 hard stop。GitHub/GitLab 属于 (ZAgenticLoop + Codex Harness) + External Tool 中的 External Tool；其 branch/PR/MR live writes 必须通过 --mode execute 和 provider-specific adapter 显式进入，不作为 auto 默认行为。",
+          "note": "This resolves the tension between automation-default product experience and external provider side effects: default automation continues inside the harness scope; provider writes require explicit external-tool execution scope."
+        },
+        {
+          "q": "execute mode 是否还需要 human 固定确认短语？",
+          "answer": "不再额外要求 human 固定确认短语；route enable 阶段已经承担 side-effect authorization。execute mode 可以进入 external-tool execution scope，但必须通过机器可审计 gates：execution_scope=external_tool、external_tool=github|gitlab、side_effect_level=branch_pr、route enabled + execution-ready、provider token/permission present、contract-plan schema valid、branch prefix zjal-、target branch explicit、idempotency key / existing PR/MR lookup、no auto-merge。",
+          "note": "This avoids step-by-step human friction while keeping external provider writes explicit, auditable, and bounded."
+        },
+        {
+          "q": "execute mode 的 contract-plan 输入应从哪里获取？",
+          "answer": "优先复用当前 orchestration 的 review artifact，不要求用户再传路径。auto mode 先生成 zj-loop/orchestrations/<id>.json 和 zj-loop/orchestrations/<id>/contract-plan.json；execute mode 对同一个 signal 命中 existing orchestration，读取 consumer_adapter_result.review_artifacts 中的 contract-plan，执行 provider-specific live adapter，并更新同一个 envelope 的 consumer_adapter_result.live_side_effects。没有 existing orchestration 或没有 contract-plan 时 hard stop，提示先跑 auto 或提供可回放 orchestration。",
+          "note": "This keeps the loop smooth and replayable without asking humans to shuttle artifact paths between steps."
+        },
+        {
+          "q": "live_side_effects 的成功与失败结果是否需要统一 provider-neutral 外壳？",
+          "answer": "需要。不是做泛 Git provider，而是统一外层 envelope + provider-specific details。live_side_effects 必须包含 attempted、execution_scope=external_tool、external_tool、side_effect_level=branch_pr、status、idempotency_key、review(kind/number/url)、branch(name/target)、operations[]、provider_result；失败或拒绝时写 status=failed|refused 和 refusals[]。doctor/replay/closeout 读取统一字段，GitHub/GitLab adapter 在 provider_result 中保留各自细节。",
+          "note": "Closeout should not need to know provider API details; it should consume review, branch, status, and operation evidence."
+        },
+        {
+          "q": "GitHub live adapter 应该用 gh CLI 还是 GitHub REST API？",
+          "answer": "使用 GitHub REST API + fetchImpl，不依赖 gh CLI。GitLab 现有 live executor 已经是 REST API + fetchImpl，GitHub 也对齐这个模式。GitHub adapter 需要检查 repository、target_branch、GITHUB_TOKEN 或显式 token；通过 API 查 target branch ref、find/create branch ref、find existing open PR by head branch、create/update PR body/title；不得 merge、approve 或改 label。",
+          "note": "Provider-specific adapter remains: GitHub uses GitHub REST API, GitLab uses GitLab REST API; tests can mock fetchImpl without shelling out."
+        }
+      ],
+      "notes": "Completed: dispatch execute mode now reuses existing orchestration contract-plan artifacts, runs provider-specific Roadmap Activation live side effects for GitHub and GitLab, writes normalized live_side_effects evidence, hard-stops missing replayable orchestration, and refuses missing provider token before API calls. auto mode remains review-artifact-only."
+    },
+    "1-4-1-3": {
+      "id": "1-4-1-3",
+      "label": "Roadmap Activation Resume Failure Recovery Runner",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Later phase: resume existing activation lifecycle and recover failed activation attempts without creating duplicate activation requests or branches."
+    },
+    "1-4-1-4": {
+      "id": "1-4-1-4",
+      "label": "Roadmap Activation Post Merge Closeout Handoff",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Later phase: carry Roadmap Activation outputs into post-merge closeout handoff so merged roadmap branch/PR cleanup and carrier status are not left to memory."
+    },
+    "1-4-1-5": {
+      "id": "1-4-1-5",
+      "label": "Roadmap Activation Evidence Promotion Gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Later phase: require replay/live evidence before promoting Roadmap Activation adapter maturity; parent 1-4-1 is complete only when evidence proves review artifact, live side effect, resume/failure recovery, and closeout handoff paths."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 00:15:08",
+    "updated": "2026-07-13 01:23:47",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

@@ -31,9 +31,9 @@ declare const patternSchema: z.ZodObject<{
     }, z.core.$strict>;
     init: z.ZodOptional<z.ZodObject<{
         tool_starters: z.ZodOptional<z.ZodRecord<z.ZodEnum<{
+            codex: "codex";
             grok: "grok";
             claude: "claude";
-            codex: "codex";
         }>, z.ZodString>>;
         templates: z.ZodDefault<z.ZodObject<{
             minimal_fix: z.ZodDefault<z.ZodBoolean>;
@@ -45,9 +45,9 @@ declare const patternSchema: z.ZodObject<{
             max_spawns_l2: z.ZodNumber;
         }, z.core.$strict>;
         first_loop_command: z.ZodRecord<z.ZodEnum<{
+            codex: "codex";
             grok: "grok";
             claude: "claude";
-            codex: "codex";
         }>, z.ZodString>;
     }, z.core.$strict>>;
 }, z.core.$strict>;
@@ -77,9 +77,9 @@ declare const registrySchema: z.ZodObject<{
         }, z.core.$strict>;
         init: z.ZodOptional<z.ZodObject<{
             tool_starters: z.ZodOptional<z.ZodRecord<z.ZodEnum<{
+                codex: "codex";
                 grok: "grok";
                 claude: "claude";
-                codex: "codex";
             }>, z.ZodString>>;
             templates: z.ZodDefault<z.ZodObject<{
                 minimal_fix: z.ZodDefault<z.ZodBoolean>;
@@ -91,9 +91,9 @@ declare const registrySchema: z.ZodObject<{
                 max_spawns_l2: z.ZodNumber;
             }, z.core.$strict>;
             first_loop_command: z.ZodRecord<z.ZodEnum<{
+                codex: "codex";
                 grok: "grok";
                 claude: "claude";
-                codex: "codex";
             }>, z.ZodString>;
         }, z.core.$strict>>;
     }, z.core.$strict>>;

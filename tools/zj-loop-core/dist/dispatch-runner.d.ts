@@ -1,4 +1,5 @@
 import { ConsumerRunPlan } from './consumer-runner.js';
+import { ConsumerAdapterResult } from './consumer-adapter.js';
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 export type SignalEnvelope = {
     schema: 'zj-loop.signal.v1';
@@ -39,6 +40,7 @@ export type OrchestrationEnvelope = {
         path?: string;
         description: string;
     };
+    consumer_adapter_result?: ConsumerAdapterResult;
     closeout_hint: {
         required: boolean;
         reason: string;
@@ -60,6 +62,8 @@ export declare function dispatchSignal(input: {
     signal: SignalEnvelope;
     mode?: DispatchMode;
     now?: string;
+    env?: Record<string, string | undefined>;
+    fetchImpl?: typeof fetch;
 }): Promise<OrchestrationEnvelope>;
 export declare function getOrchestrationPath(orchestrationId: string): string;
 export declare function writeOrchestrationEnvelope(input: {

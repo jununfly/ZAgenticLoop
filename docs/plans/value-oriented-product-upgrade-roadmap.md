@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 00:15:08
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 01:23:47
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -22,8 +22,8 @@
 │   ├── [x][Y+] 1-3-5. Issue Backlog Triage 到 Issue Triage Transition Tracer
 │   ├── [x][Y+] 1-3-6. Roadmap Sliced Development Activation Tracer
 │   └── [x][Y+] 1-3-7. Review Artifact 与 Hard Stop 输出文档
-├── [ ][X+] 1-4. Consumer Runner 全链路执行能力
-│   ├── [ ][X+] 1-4-1. Roadmap-Sliced 多 slice 自动执行器
+├── [~][X+] 1-4. Consumer Runner 全链路执行能力
+│   ├── [~][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
 │   ├── [ ][X+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
 │   ├── [ ][X+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
 │   ├── [ ][X+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
@@ -66,34 +66,14 @@
     ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
     └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
 
-### 当前施工：1. Value-Oriented Product Upgrade Full Map
+### 当前施工：1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
 
-目标：把 docs/prds/value-oriented-product-design-principles.md 中的 automation-default 产品体验落实为完整产品升级地图。终局体验是：用户给出目标或信号后，ZAgenticLoop 在安全、授权、预算、验证满足时自动推进 Signal -> Route Decision -> Request Carrier -> Consumer -> bounded work -> review artifact -> closeout；只有真实 stop signal 才停下来。
-
-**决策：**
-- Q: 全地图的终局体验是什么？ → 默认自动 loop，而不是默认等待 human 推动；不适合自动化的因素必须变成结构化 stop signal。 (来自 docs/prds/value-oriented-product-design-principles.md 的 Principle 1。)
-- Q: 实现顺序应该先做什么？ → 先收敛 readiness、授权、证据和编排底座，再逐条 route 晋升到 execution-ready；否则容易把单条 route 的小修误认为整体体验完成。 (来自 route-consumer-execution-architecture.md 的 maturity/readiness 约束和近期 dogfood 经验。)
-- Q: 这次产品升级的 2nd 目标是什么？ → 给 Codex + ZAgenticLoop 做一层 harness，并把 Codex + ZAgenticLoop 作为首条完整产品体验路径。 (Harness 是首条完整体验路径的产品承载层：让 Codex 会话能自然发起、继续、暂停、恢复、解释 ZAgenticLoop 的自动 loop，而不是只暴露底层 route/consumer/protocol。)
+Parent node tracks the complete Roadmap Activation adapter path. It is not complete when only the review-artifact runner exists.
 
 **当前子树：**
-├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
-│   ... 4 more child nodes; run tree 1-1 --depth 2 for full view
-├── [x][Y+] 1-2. Route Readiness 与自动化授权模型
-│   ... 4 more child nodes; run tree 1-2 --depth 2 for full view
-├── [x][Y+] 1-3. Signal 到 Review Artifact 的自动编排
-│   ... 7 more child nodes; run tree 1-3 --depth 2 for full view
-├── [ ][X+] 1-4. Consumer Runner 全链路执行能力
-│   ... 5 more child nodes; run tree 1-4 --depth 2 for full view
-├── [ ][X+] 1-5. 前提条件、安全与成本包络
-│   ... 5 more child nodes; run tree 1-5 --depth 2 for full view
-├── [ ][X+] 1-6. 证据回放、状态解释与故障定位
-│   ... 4 more child nodes; run tree 1-6 --depth 2 for full view
-├── [ ][X+] 1-7. 用户项目安装、升级与启用体验
-│   ... 4 more child nodes; run tree 1-7 --depth 2 for full view
-├── [ ][X+] 1-8. Dogfood 验证、发布门槛与能力分级
-│   ... 4 more child nodes; run tree 1-8 --depth 2 for full view
-├── [x][Y+] 1-9. Codex + ZAgenticLoop Harness 首条完整产品体验路径
-│   ... 7 more child nodes; run tree 1-9 --depth 2 for full view
-└── [x][Y+] 1-10. Codex Harness 执行切片与交付顺序
-    ... 7 more child nodes; run tree 1-10 --depth 2 for full view
+├── [x][Y+] 1-4-1-1. ConsumerAdapter 基座与 Contract Plan Review Artifact Runner
+├── [x][Y+] 1-4-1-2. Roadmap Branch PR Live Side Effect Runner
+├── [ ][Y+] 1-4-1-3. Roadmap Activation Resume Failure Recovery Runner
+├── [ ][Y+] 1-4-1-4. Roadmap Activation Post Merge Closeout Handoff
+└── [ ][Y+] 1-4-1-5. Roadmap Activation Evidence Promotion Gate
 <!-- ROADMAP_SECTION_END -->
