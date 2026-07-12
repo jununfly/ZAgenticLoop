@@ -211,6 +211,19 @@ validation gaps. The follow-up hardening added:
 - minimal-diff Route Table enable/disable updates and safer Roadmap Activation
   branch slugs
 
+Issues #104, #105, and #106 extended that GitLab dogfood line into route
+readiness:
+
+- manual smoke jobs now emit `environment-diagnostics.json` and use `needs: []`
+  to reduce friction in existing pipelines
+- GitLab init readiness output calls out root include/stage requirements,
+  runner tags, private Node images, and package source
+- issue backlog triage now has stable `issue-recommendations.json` and
+  `transition-requests.json` artifact contracts
+- Roadmap Activation emits `execution-result.json` and has guarded GitLab
+  branch/MR execution with missing-token refusal, `zjal-*` branch guard, draft
+  MR default, and idempotent MR update behavior
+
 ## Daily Triage Flow
 
 Daily Triage is the clearest self-running dogfood loop:

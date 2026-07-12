@@ -1,19 +1,32 @@
 # Roadmap-Sliced Development State — ZAgenticLoop
 
-Last run: 2026-07-11
+Last run: 2026-07-12
 
 ## Current Roadmap
 
-- Roadmap id: issue-101-gitlab-provider-bundle-gaps
-- Branch: zjal-issue-101-gitlab-provider-bundle-gaps
-- Status: completed
-- Current parent node: 5-closeout
+- Roadmap id: issues-104-105-106-gitlab-route-readiness
+- Branch: zjal-issues-104-105-106-gitlab-route-readiness
+- Status: closeout-ready
+- Current parent node: closeout
 - Current leaf: none
 
 ## Slice Status
 
 | Leaf | Status | Evidence | Commit / PR |
 |------|--------|----------|-------------|
+| issue-104-request-consumption | completed | Consumed #104 Issue Fix Request `ifr_triage_a064f4b67c1c` into Roadmap-Sliced Development on branch `zjal-issues-104-105-106-gitlab-route-readiness`; initialized process roadmap `docs/plans/issue-104-105-106-gitlab-route-readiness-roadmap.md`; mapped GitLab smoke bootstrap feedback into ordered leaf slices covering CI readiness diagnostics, smoke job playability, and durable docs. | pending |
+| issue-105-request-consumption | completed | Queued #105 Issue Fix Request `ifr_triage_ec14f0deb2c5` for ordered Roadmap-Sliced consumption after #104 on branch `zjal-issues-104-105-106-gitlab-route-readiness`; mapped GitLab issue triage artifact feedback into leaf slices covering recommendation artifact contract, transition request artifact contract, and durable docs. | pending |
+| issue-106-request-consumption | completed | Queued #106 Issue Fix Request `ifr_triage_2b661c2e8360` for ordered Roadmap-Sliced consumption after #105 on branch `zjal-issues-104-105-106-gitlab-route-readiness`; mapped GitLab roadmap runner readiness feedback into leaf slices covering provider primitives, activation execute command, GitLab CI bundle execution job, and durable docs. | pending |
+| 1-1-gitlab-ci-readiness-diagnostics | completed | `zj-loop-init --add/--upgrade gitlab-ci` readiness output now prints configured stage, runner tags, image, package source, smoke artifact contract, root CI action requirement, runner tag hint, and private image hint; `npm test` in `tools/zj-loop-init` | pending |
+| 1-2-smoke-job-playability | completed | GitLab smoke template uses `needs: []` and writes `environment-diagnostics.json` alongside `route-decision.json` and `consumer-plan.json`; generated bundle tests assert the artifacts; `npm test` in `tools/zj-loop-init` | pending |
+| 1-3-issue-104-durable-docs | completed | README, Quickstart, Provider Adapter Parity Architecture, and Dogfood Reference Case document smoke diagnostics, root include/stage requirements, runner tags, private image, and replay artifacts. | pending |
+| 2-1-recommendation-artifact-contract | completed | `buildIssueRecommendationsArtifact()` exports stable `zj-loop.issue_recommendations.v1` shape preserving GitLab provider/project/pipeline/issue evidence; core transition runner tests cover GitLab artifact shape. | pending |
+| 2-2-transition-request-artifact-contract | completed | `buildTransitionRequestsArtifact()` exports stable `zj-loop.transition_requests.v1`; GitLab issue triage fragment writes `issue-recommendations.json` and `transition-requests.json`; core and init tests cover artifact presence. | pending |
+| 2-3-issue-105-durable-docs | completed | Quickstart and Provider Adapter Parity Architecture document stable GitLab triage artifacts and request-only/no-mutation boundary. | pending |
+| 3-1-gitlab-provider-primitives | completed | `executeGitLabRoadmapActivation()` plans/refuses/executes guarded GitLab branch and MR operations; mocked fetch tests cover missing-token/unsafe-branch refusal and existing MR update idempotency. | pending |
+| 3-2-roadmap-activation-execute-command | completed | `zj-loop-roadmap-activation execute --provider gitlab --contract-plan ...` emits `zj-loop.gitlab_roadmap_activation_execution_result.v1`; dry-run CLI test passes. | pending |
+| 3-3-gitlab-ci-bundle-execution-job | completed | GitLab roadmap activation fragment runs `zj-loop-roadmap-activation execute --provider gitlab` and uploads `execution-result.json`; init tests assert generated command/artifact. | pending |
+| 3-4-issue-106-durable-docs | completed | Quickstart, Provider Adapter Parity Architecture, Route Consumer Execution Architecture, Dogfood Reference Case, and README document the narrow guarded GitLab Roadmap Activation live path. | pending |
 | 5-1-durable-docs-and-process-cleanup | completed | Durable docs absorbed the GitLab provider bundle hardening decisions: GitLab CI readiness output, manual replay variables, MR metadata fetch, provider-native metadata, dispatch-vs-execution readiness split, production-safe versus dogfood-validation profiles, GitLab substrate audit tracking, minimal-diff Route Table enablement, and Roadmap Activation branch slug fallback. Process roadmap files under `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.*` were deleted. Verification passed: `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | pending |
 | 4-3-roadmap-activation-branch-slug-trimming | completed | Roadmap Activation branch generation uses a title fallback chain: slugged title, then `issue-<sourceIssue>`, then `activation`; branch parts are joined only when non-empty and trimmed to avoid trailing separators; tests cover normal punctuation trimming, empty title, missing title, Unicode-only title, and non-slug symbol-only title; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
 | 4-2-yaml-preserving-route-enable | completed | `setRouteEnabled()` preserves Route Table YAML formatting by patching only the target route's `enabled` and `enabled_reason` lines when the generated Route Table shape is recognizable; parse/stringify remains as fallback for unexpected YAML shapes; regression coverage proves comments, inline comments, blank lines, and flow-style arrays outside the target route survive enable operations; `cd tools/zj-loop-core && npm test`; `git diff --check` | pending |

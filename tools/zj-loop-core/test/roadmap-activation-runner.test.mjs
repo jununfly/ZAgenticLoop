@@ -17,6 +17,7 @@ import {
   buildRoadmapActivationReviewTitle,
   classifyRoadmapActivationLifecycleTransition,
   dispatchRoadmapActivationCommand,
+  executeGitLabRoadmapActivation,
   hasRoadmapActivationLoopMarker,
   buildRoadmapCloseoutContractPlan,
   parsePostMergeContractFromPrBody,
@@ -231,6 +232,82 @@ test('Roadmap Activation builds provider-neutral GitLab MR contracts', () => {
   assert.equal(closeoutPlan.validation.ok, true);
 });
 
+test('Roadmap Activation GitLab execute refuses missing live token and unsafe branch prefix', async () => {
+  const refused = await executeGitLabRoadmapActivation({
+    live: true,
+    contractPlan: {
+      provider: 'gitlab',
+      activationRequestId: 'act-87-note',
+      branchName: 'feature/not-zjal',
+      mrTitle: 'Roadmap Activation: GitLab full parity',
+      mrContract: 'contract',
+    },
+    projectPath: 'group/project',
+  });
+
+  assert.equal(refused.status, 'refused');
+  assert.equal(refused.execution_allowed, false);
+  assert.deepEqual(refused.refusals.map((item) => item.reason), [
+    'branch-prefix-must-be-zjal-',
+    'gitlab-token-required-for-live-execution',
+  ]);
+});
+
+test('Roadmap Activation GitLab execute dry-run plans branch and MR operations', async () => {
+  const result = await executeGitLabRoadmapActivation({
+    contractPlan: {
+      provider: 'gitlab',
+      activationRequestId: 'act-87-note',
+      branchName: 'zjal-act-87-note-gitlab',
+      mrTitle: 'Roadmap Activation: GitLab full parity',
+      mrContract: 'contract',
+    },
+    projectPath: 'group/project',
+    targetBranch: 'main',
+  });
+
+  assert.equal(result.schema, 'zj-loop.gitlab_roadmap_activation_execution_result.v1');
+  assert.equal(result.status, 'dry-run');
+  assert.equal(result.execution_allowed, false);
+  assert.deepEqual(result.operations.map((item) => item.kind), [
+    'find-or-create-branch',
+    'find-or-create-merge-request',
+    'update-merge-request-description',
+  ]);
+});
+
+test('Roadmap Activation GitLab execute is idempotent by branch and updates existing MR', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).includes('/repository/branches/')) return { ok: true, status: 200, json: async () => ({}) };
+    if (String(url).includes('/merge_requests?')) {
+      return { ok: true, status: 200, json: async () => [{ iid: 9, web_url: 'https://gitlab.com/group/project/-/merge_requests/9' }] };
+    }
+    if (String(url).endsWith('/merge_requests/9')) return { ok: true, status: 200, json: async () => ({}) };
+    return { ok: false, status: 500, json: async () => ({}) };
+  };
+  const result = await executeGitLabRoadmapActivation({
+    live: true,
+    token: 'test-token',
+    fetchImpl,
+    contractPlan: {
+      provider: 'gitlab',
+      activationRequestId: 'act-87-note',
+      branchName: 'zjal-act-87-note-gitlab',
+      mrTitle: 'Roadmap Activation: GitLab full parity',
+      mrContract: 'contract',
+    },
+    projectPath: 'group/project',
+    targetBranch: 'main',
+  });
+
+  assert.equal(result.status, 'completed');
+  assert.equal(result.merge_request_iid, 9);
+  assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/repository/branches')), false);
+  assert.equal(calls.some((call) => call.options.method === 'PUT' && call.url.endsWith('/merge_requests/9')), true);
+});
+
 test('Roadmap Activation lifecycle helper separates red tests from blocked and failed states', () => {
   assert.deepEqual(
     classifyRoadmapActivationLifecycleTransition({
@@ -411,6 +488,38 @@ test('Roadmap Activation contract-plan CLI can target GitLab MR contracts', asyn
   assert.match(parsed.branchName, /^zjal-act-87-4932786315-8c94c5b9-gitlab-full-parity$/);
   assert.match(parsed.mrContract, /zj-loop\.roadmap_activation_review_contract\.v1/);
   assert.match(parsed.nextSteps.join('\n'), /MR with the contract block/);
+});
+
+test('Roadmap Activation execute CLI emits GitLab execution dry-run artifact', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-roadmap-execute-'));
+  const contractPlanPath = path.join(dir, 'contract-plan.json');
+  await writeFile(contractPlanPath, JSON.stringify({
+    schema: 'zj-loop.roadmap_activation_contract_plan.v1',
+    provider: 'gitlab',
+    activationRequestId: 'act-87-note',
+    branchName: 'zjal-act-87-note-gitlab',
+    mrTitle: 'Roadmap Activation: GitLab full parity',
+    mrContract: 'contract',
+  }));
+  try {
+    const result = spawnSync(process.execPath, [
+      ROADMAP_ACTIVATION_CLI,
+      'execute',
+      '--provider',
+      'gitlab',
+      '--contract-plan',
+      contractPlanPath,
+      '--project-path',
+      'group/project',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.status, 'dry-run');
+    assert.equal(parsed.branch_name, 'zjal-act-87-note-gitlab');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('Roadmap Activation contract-plan CLI renders deterministic PR contract evidence', () => {

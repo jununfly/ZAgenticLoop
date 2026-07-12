@@ -21,9 +21,11 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch roadmap-sliced-development --source gitlab-issue-note --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_COMMENT_ID:-$CI_PIPELINE_ID}}" --json > route-decision.json
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-roadmap-activation plan --root . --source gitlab-issue-note --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_COMMENT_ID:-$CI_PIPELINE_ID}}" --json > consumer-plan.json || true
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-roadmap-activation contract-plan --provider gitlab --activation-request-id "act-${ZJ_LOOP_ISSUE_IID:-issue}-${ZJ_LOOP_COMMENT_ID:-comment}" --source-issue "${ZJ_LOOP_ISSUE_IID:-0}" --source-issue-url "${ZJ_LOOP_ISSUE_URL:-$CI_PROJECT_URL/-/issues/${ZJ_LOOP_ISSUE_IID:-0}}" --source-comment-url "${ZJ_LOOP_COMMENT_URL:-$CI_PROJECT_URL/-/issues/${ZJ_LOOP_ISSUE_IID:-0}#note_${ZJ_LOOP_COMMENT_ID:-0}}" --title "${ZJ_LOOP_ROADMAP_TITLE:-gitlab-roadmap-activation}" --process-roadmap-path "$ZJ_LOOP_PROCESS_ROADMAP_PATH" --json > contract-plan.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-roadmap-activation execute --provider gitlab --contract-plan contract-plan.json --project-path "${CI_PROJECT_PATH:-}" --target-branch "${CI_DEFAULT_BRANCH:-main}" --gitlab-api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --gitlab-job-token "${CI_JOB_TOKEN:-}" --json > execution-result.json || true
     - cat route-decision.json
     - cat consumer-plan.json
     - cat contract-plan.json
+    - cat execution-result.json
   artifacts:
     when: always
     expire_in: 7 days
@@ -31,3 +33,4 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
       - route-decision.json
       - consumer-plan.json
       - contract-plan.json
+      - execution-result.json

@@ -599,6 +599,138 @@ export function buildRoadmapActivationPrContract(input: {
   ].join('\n');
 }
 
+export async function executeGitLabRoadmapActivation(input: {
+  contractPlan: any;
+  projectPath?: string;
+  apiBaseUrl?: string;
+  token?: string;
+  jobToken?: string;
+  targetBranch?: string;
+  draft?: boolean;
+  live?: boolean;
+  fetchImpl?: typeof fetch;
+}) {
+  const plan = input.contractPlan ?? {};
+  const provider = plan.provider;
+  const branchName = String(plan.branchName ?? '');
+  const projectPath = String(input.projectPath ?? plan.projectPath ?? plan.project_path ?? '');
+  const targetBranch = String(input.targetBranch ?? plan.targetBranch ?? plan.target_branch ?? 'main');
+  const draft = input.draft !== false;
+  const live = input.live === true;
+  const token = String(input.token ?? '');
+  const jobToken = String(input.jobToken ?? '');
+  const apiBaseUrl = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+  const refusals: any[] = [];
+
+  if (provider !== 'gitlab') refusals.push({ layer: 'provider', reason: 'contract-plan-provider-is-not-gitlab' });
+  if (!branchName.startsWith('zjal-')) refusals.push({ layer: 'branch', reason: 'branch-prefix-must-be-zjal-' });
+  if (!projectPath) refusals.push({ layer: 'project', reason: 'gitlab-project-path-required' });
+  if (live && !token && !jobToken) refusals.push({ layer: 'credential', reason: 'gitlab-token-required-for-live-execution' });
+
+  const baseResult = {
+    schema: 'zj-loop.gitlab_roadmap_activation_execution_result.v1',
+    provider: 'gitlab',
+    dry_run: !live,
+    activation_request_id: String(plan.activationRequestId ?? plan.activation_request_id ?? ''),
+    project_path: projectPath,
+    branch_name: branchName,
+    target_branch: targetBranch,
+    review_kind: 'merge-request',
+    draft,
+    mr_title: String(plan.mrTitle ?? plan.reviewTitle ?? `Roadmap Activation: ${branchName}`),
+    mr_description: String(plan.mrContract ?? plan.reviewContract ?? ''),
+    refusals,
+    operations: [
+      { kind: 'find-or-create-branch', branch: branchName, target: targetBranch },
+      { kind: 'find-or-create-merge-request', source_branch: branchName, target_branch: targetBranch },
+      { kind: 'update-merge-request-description', source_branch: branchName },
+    ],
+  };
+
+  if (refusals.length > 0) {
+    return { ...baseResult, status: 'refused', execution_allowed: false };
+  }
+  if (!live) {
+    return { ...baseResult, status: 'dry-run', execution_allowed: false };
+  }
+
+  const fetcher = input.fetchImpl ?? fetch;
+  const project = encodeURIComponent(projectPath);
+  const headers = gitLabAuthHeaders({ token, jobToken });
+  const branchUrl = `${apiBaseUrl}/projects/${project}/repository/branches/${encodeURIComponent(branchName)}`;
+  const branchFound = await fetcher(branchUrl, { headers });
+  const liveOperations: any[] = [];
+  if (branchFound.status === 404) {
+    const createBranch = await fetcher(`${apiBaseUrl}/projects/${project}/repository/branches`, {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify({ branch: branchName, ref: targetBranch }),
+    });
+    liveOperations.push({ kind: 'create-branch', status: createBranch.status });
+    if (!createBranch.ok) {
+      return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: liveOperations };
+    }
+  } else {
+    liveOperations.push({ kind: 'find-branch', status: branchFound.status });
+    if (!branchFound.ok) {
+      return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: liveOperations };
+    }
+  }
+
+  const mrQuery = new URLSearchParams({ state: 'opened', source_branch: branchName }).toString();
+  const existingMrs = await fetcher(`${apiBaseUrl}/projects/${project}/merge_requests?${mrQuery}`, { headers });
+  const mrs = existingMrs.ok ? await existingMrs.json() : [];
+  liveOperations.push({ kind: 'find-merge-request', status: existingMrs.status, count: Array.isArray(mrs) ? mrs.length : 0 });
+  if (!existingMrs.ok) {
+    return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: liveOperations };
+  }
+
+  const title = draft && !baseResult.mr_title.startsWith('Draft:') ? `Draft: ${baseResult.mr_title}` : baseResult.mr_title;
+  if (Array.isArray(mrs) && mrs[0]?.iid) {
+    const update = await fetcher(`${apiBaseUrl}/projects/${project}/merge_requests/${mrs[0].iid}`, {
+      method: 'PUT',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify({ title, description: baseResult.mr_description }),
+    });
+    liveOperations.push({ kind: 'update-merge-request', status: update.status, iid: mrs[0].iid });
+    return {
+      ...baseResult,
+      status: update.ok ? 'completed' : 'failed',
+      execution_allowed: true,
+      merge_request_iid: mrs[0].iid,
+      merge_request_url: mrs[0].web_url ?? '',
+      live_operations: liveOperations,
+    };
+  }
+
+  const createMr = await fetcher(`${apiBaseUrl}/projects/${project}/merge_requests`, {
+    method: 'POST',
+    headers: { ...headers, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      source_branch: branchName,
+      target_branch: targetBranch,
+      title,
+      description: baseResult.mr_description,
+    }),
+  });
+  const created = createMr.ok ? await createMr.json() : {};
+  liveOperations.push({ kind: 'create-merge-request', status: createMr.status, iid: created.iid ?? null });
+  return {
+    ...baseResult,
+    status: createMr.ok ? 'completed' : 'failed',
+    execution_allowed: true,
+    merge_request_iid: created.iid ?? null,
+    merge_request_url: created.web_url ?? '',
+    live_operations: liveOperations,
+  };
+}
+
+function gitLabAuthHeaders(input: { token?: string; jobToken?: string }): Record<string, string> {
+  if (input.token) return { 'PRIVATE-TOKEN': input.token };
+  if (input.jobToken) return { 'JOB-TOKEN': input.jobToken };
+  return {};
+}
+
 function buildPostMergeCloseoutContractBlock(input: {
   roadmapId: string;
   branchName: string;

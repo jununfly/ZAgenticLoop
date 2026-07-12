@@ -135,7 +135,11 @@ expecting GitLab CI to run the generated bundle.
 
 The smoke job runs `@jununfly/zj-loop-audit` by default. In CI environments
 without registry access, set `ZJ_LOOP_RUN_AUDIT=0` for route-only smoke output:
-`route-decision.json` and `consumer-plan.json`.
+`route-decision.json`, `consumer-plan.json`, and
+`environment-diagnostics.json`. The generated smoke job uses `needs: []` so it
+is easier to play manually in existing pipelines; root `.gitlab-ci.yml` still
+must include the generated fragments and expose the configured stage before
+blocking or fallback stages.
 
 Vendored package tarballs alone do not guarantee fully offline execution:
 `npm exec` may still require registry access or a prepared npm cache for
@@ -322,9 +326,9 @@ Install the GitLab provider adapter in a GitLab-hosted repository:
 npx @jununfly/zj-loop-init . --add gitlab-ci
 ```
 
-Run the manual smoke job first. It should produce `route-decision.json` and
-`consumer-plan.json` artifacts without creating issues, notes, branches, or
-MRs. Then inspect Route Table status:
+Run the manual smoke job first. It should produce `route-decision.json`,
+`consumer-plan.json`, and `environment-diagnostics.json` artifacts without
+creating issues, notes, branches, or MRs. Then inspect Route Table status:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
@@ -344,11 +348,22 @@ also emits `issue-fix-request.md` and `issue-fix-request-result.json`, allowing
 you to inspect GitLab-specific fix scope such as `.gitlab-ci.yml` and
 `zj-loop/gitlab-ci/` without creating a tracker item.
 
+The GitLab issue triage job also emits stable `issue-recommendations.json` and
+`transition-requests.json` artifacts. They are request-only evidence by default:
+the job can preserve GitLab issue URLs and candidate transition data without
+mutating labels, state, comments, or assignments.
+
 Manual and API-triggered GitLab pipelines can replay route decisions by setting
 `ZJ_LOOP_SIGNAL_ID`. Route-specific variables remain more expressive when they
 are available: use `ZJ_LOOP_ISSUE_IID` for issue triage,
 `ZJ_LOOP_MERGE_REQUEST_IID` for MR Steward or post-merge cleanup, and
 `ZJ_LOOP_COMMENT_ID` plus `ZJ_LOOP_ISSUE_IID` for Roadmap Activation.
+
+Roadmap Activation now writes `contract-plan.json` and `execution-result.json`.
+Without `--live`, execution is a dry-run plan. With live mode and a valid
+GitLab token, the runner is guarded by `zjal-*` branch naming, creates draft MRs
+by default, and updates an existing MR for the same branch instead of creating
+duplicates.
 
 Upgrade generated GitLab CI fragments when package pins or templates change:
 
