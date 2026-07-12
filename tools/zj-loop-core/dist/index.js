@@ -18,3 +18,5 @@ export * from './issue-triage-action-runner.js';
 export * from './issue-triage-transition-runner.js';
 export * from './roadmap-activation-runner.js';
 export * from './prd-handoff-runner.js';
+export * from './harness-protocol-contract.js';
+export * from './harness-protocol-cli.js';

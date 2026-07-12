@@ -1,0 +1,76 @@
+{
+  "run_id": "codex-harness-provider-backed-dogfood-2026-07-12",
+  "outputs": [
+    {
+      "schema": "zj-loop.harness_output.v1",
+      "schema_version": 1,
+      "status": "continued",
+      "summary": "Created the GitHub dogfood carrier issue and continued on the Roadmap-Sliced product-upgrade branch.",
+      "next_actions": [
+        {
+          "type": "continue_loop",
+          "target": "git-branch:zjal-value-oriented-product-upgrade-map",
+          "label": "Continue executing the Codex Harness product-upgrade roadmap"
+        },
+        {
+          "type": "create_review_artifact",
+          "target": "github-issue:109",
+          "label": "Create a reviewable PR that links the dogfood carrier"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "github-issue",
+          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109"
+        },
+        {
+          "kind": "github-comment",
+          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405"
+        }
+      ],
+      "artifacts": [
+        {
+          "kind": "local-artifact",
+          "path": "git:branch:zjal-value-oriented-product-upgrade-map"
+        },
+        {
+          "kind": "local-artifact",
+          "path": "docs/plans/value-oriented-product-upgrade-roadmap.json"
+        }
+      ]
+    },
+    {
+      "schema": "zj-loop.harness_output.v1",
+      "schema_version": 1,
+      "status": "stopped",
+      "summary": "Post-merge closeout evidence is intentionally pending until the review PR is merged.",
+      "next_actions": [
+        {
+          "type": "perform_closeout",
+          "target": "github-issue:109",
+          "label": "After PR merge, run post-merge roadmap closeout and close the dogfood carrier"
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "github-issue",
+          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109"
+        },
+        {
+          "kind": "github-comment",
+          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405"
+        }
+      ],
+      "artifacts": [],
+      "stop_signal": {
+        "reason": "awaiting-review-pr-merge",
+        "impact": "The provider-backed dogfood path cannot claim post-merge closeout completion before the PR exists and is merged.",
+        "recovery": "Create and merge the review PR, then run post-merge closeout against carrier issue #109."
+      },
+      "resume": {
+        "target": "github-issue:109",
+        "condition": "review PR merged"
+      }
+    }
+  ]
+}
