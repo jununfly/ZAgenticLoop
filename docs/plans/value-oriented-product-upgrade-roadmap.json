@@ -43,8 +43,8 @@
     "1-1": {
       "id": "1-1",
       "label": "用户目标导向的自动 Loop 入口",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-1-1",
@@ -52,8 +52,99 @@
         "1-1-3",
         "1-1-4"
       ],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "目标型入口应该扩展 zj-loop-first-run plan，还是新增用户主入口命令？",
+          "answer": "新增 zj-loop-run，仍放在 @jununfly/zj-loop-core，不新开包。zj-loop-first-run plan 保留为安装后诊断/规划工具；zj-loop-run 作为长期主入口承载用户给出目标后自动推进到 review artifact 或 stop signal 的体验。",
+          "note": "zj-loop-run 消费自然语言/目标参数生成 candidate harness input，经 normalizeLoopProtocolInput 进入 Route Decision / Consumer Runner；不创建平行协议。"
+        },
+        {
+          "q": "zj-loop-run 第一版默认只生成计划，还是默认尝试执行？",
+          "answer": "默认尝试执行，但有严格边界。zj-loop-run \"目标描述\" 默认走目标解析、candidate harness input、normalize、Route Decision、Consumer Run Plan，并在允许时执行/推进到 review artifact 或 stop signal；--plan-only 作为只看计划、不执行的低风险选项。",
+          "note": "严格边界包括 route disabled、authority missing、review artifact path missing、consumer not execution-ready、budget/risk/verifier 不满足等条件；遇到边界必须输出 machine_envelope.status=stopped/needs_protocol_repair/skipped/failed，而不是继续猜测执行。"
+        },
+        {
+          "q": "zj-loop-run 的目标解析第一层用自由 LLM 语义判断，还是确定性规则优先？",
+          "answer": "确定性规则优先，LLM 只能生成 candidate，不能直接决定 route。显式 --route 优先；目标文本命中明确关键词/结构时由 deterministic resolver 选择 route；多个 route 合理时输出 stopped 或 needs_protocol_repair，附候选 route 列表和推荐项。",
+          "note": "第一版 CLI 内部不依赖 LLM；Codex Harness 可以帮助把自然语言整理成 candidate envelope，但执行前必须经过确定性 resolver/normalizer/Route Decision。"
+        },
+        {
+          "q": "zj-loop-run 目标解析出现歧义时，输出 stopped 还是 needs_protocol_repair？",
+          "answer": "区分两类：输入结构不完整或缺字段时输出 needs_protocol_repair；目标语义有效但 route 歧义时输出 stopped，并设置 stop_signal.reason=ambiguous-route，同时携带 candidate_routes、recommended_route 和 resume/confirmation next_action。",
+          "note": "歧义不是协议坏了，而是需要明确 route choice；这样不会误导 Agent 去修 JSON，而是让后续流程补 route 选择。"
+        },
+        {
+          "q": "zj-loop-run 第一批确定性 resolver 应覆盖哪些目标？",
+          "answer": "先覆盖 5 类常用且成熟度较高的目标：roadmap/plan/prd/implementation plan -> roadmap-sliced-development；issue backlog/triage open issues/classify issues -> issue-backlog-triage；ci/failing workflow/test failure -> ci-sweeper；post-merge/closeout/merged PR -> post-merge-roadmap-closeout；smoke/first run/validate setup -> manual-smoke-report。其他 route 必须用 --route <route_id> 显式指定。",
+          "note": "这样第一版可用面足够大，但不会靠关键词误触发 changelog、dependency、pr-steward 等更细场景。"
+        },
+        {
+          "q": "zj-loop-run 被选中后，哪些 route 可以默认 live 执行，哪些只能 plan/handoff？",
+          "answer": "zj-loop-run 先调用现有 route/consumer contract 生成 run plan；只有 route 同时满足 execution_ready 与 execution_allowed 时才 live-run。manual-smoke-report 走 report/evidence；roadmap-sliced-development 只在 activation/consumer/authority/review artifact 路径满足时推进；issue-backlog-triage 遵守 recommendation/confirmed transition 边界，不直接越权改 tracker；ci-sweeper 需要 carrier/verifier requirements；post-merge-roadmap-closeout 只允许 guarded live cleanup。未满足执行条件时输出 stopped + stop_signal，而不是伪装成 plan-only。",
+          "note": "用户确认：同意。核心取向是默认尝试执行，但以 route-level execution contract 作为硬边界，避免 agent 猜测。"
+        },
+        {
+          "q": "zj-loop-run 的 CLI 输入、resume、confirm 形态是否固定？",
+          "answer": "采用固定结构化参数：zj-loop-run \"目标描述\"；zj-loop-run --route <route_id> \"目标描述\"；zj-loop-run --plan-only \"目标描述\"；zj-loop-run --resume <run_id>；zj-loop-run --confirm <confirmation_token>。自然语言只作为 goal 字段进入 protocol envelope；route、plan-only、resume、confirm 必须通过结构化参数表达，不能藏在自然语言里。",
+          "note": "用户确认：采用。这样保留低摩擦目标入口，同时避免 human 普通指令与协议动作混淆。"
+        },
+        {
+          "q": "zj-loop-run --confirm <confirmation_token> 应确认什么级别的动作？",
+          "answer": "用户确认：同意。目标是减少重复确认，但不把一次确认扩散成隐性长期授权。",
+          "note": ""
+        },
+        {
+          "q": "zj-loop-run --confirm confirmation_token 应确认什么级别的动作？",
+          "answer": "confirm 只确认一次具体 stop signal 或 action request，不能作为全局授权。confirmation_token 必须绑定 run_id、route_id、action_id、side_effect_summary。token 过期或 action 内容变化后必须失效。confirm 后只能恢复这一条暂停链路，不能顺手执行其他 route。后续是否继续自动执行，仍由 route contract 判断 execution_ready 和 execution_allowed。",
+          "note": "用户确认：同意。目标是减少重复确认，但不把一次确认扩散成隐性长期授权。上一条同主题记录因 shell 参数截断不完整，本条为规范版本。"
+        },
+        {
+          "q": "zj-loop-run 的 run state 保存在哪里，如何避免性能瓶颈？",
+          "answer": "run state 保存到 zj-loop/runs/<run_id>.json，只写必要状态和低成本审计字段，包括 run_id、created_at、updated_at、goal、route_id、status、machine_envelope、stop_signal、confirmation_request、resume_command、review_artifacts、evidence。禁止保存完整日志、完整 diff、完整 issue body 等大内容，只保存链接、路径或摘要。resume/confirm 必须通过 run_id 精确读取单个文件，不扫描目录。后续如需跨 run 查询，再增加 zj-loop/runs/index.jsonl 或归档机制。",
+          "note": "用户确认：同意。结论是短中期使用瘦文件态，不提前引入数据库；同时把禁止塞大内容、禁止无界扫描作为实现约束。"
+        },
+        {
+          "q": "zj-loop-run 默认自动执行到什么深度才停？",
+          "answer": "默认执行到当前 route 的第一个 review artifact 或 hard stop signal，而不是一步就停或无限循环。manual-smoke-report 执行到 smoke/report evidence；issue-backlog-triage 执行到推荐 transition 列表，满足 confirmed/auto-transition 条件时推进到 transition evidence；roadmap-sliced-development 执行到 roadmap branch + PR/handoff artifact，slice implementation 只能在 route contract 允许的 max_slices 内继续；ci-sweeper 执行到修复 PR 或 escalation issue；post-merge-roadmap-closeout 执行到 guarded cleanup evidence。",
+          "note": "用户确认：默认执行到当前 route 的第一个 review artifact 或 hard stop signal。通用 hard stop 包括权限不足、成本或预算超限、route disabled、risk/verifier 不满足、需要 human review、协议修复请求、route 歧义、执行失败不可恢复。"
+        },
+        {
+          "q": "zj-loop-run 默认输出给 human 和 automation 的形态是什么？",
+          "answer": "沿用三段分离输出：human_summary 简短说明做了什么、当前状态、下一步该在哪执行；machine_envelope 是固定结构化协议，automation 只读这里；artifacts 是 PR、issue、run state、evidence 文件路径或 URL 列表。CLI 默认输出完整 envelope JSON；如用户只想看人类友好文本，可加 --format text。",
+          "note": "用户确认：同意。zj-loop-run 是自动 loop 主入口，机器可消费输出应作为默认，避免 route 串联依赖 Agent 解读自然语言。"
+        },
+        {
+          "q": "zj-loop-run 遇到可自动补齐的低风险字段时，应该停下来还是自动补齐？",
+          "answer": "默认自动补齐低风险字段，并把补齐动作写进 machine_envelope.repairs_applied。可补齐项包括 run_id、created_at、updated_at、tool/provider、format 默认值，以及 route 缺失但 deterministic resolver 单一命中的 route_id。只有不能确定，或会影响副作用边界时，才输出 needs_protocol_repair。",
+          "note": "用户确认：默认自动补齐低风险字段；不能补齐或影响副作用边界时才进入 protocol repair。目标是提高全自动完成率，同时保留审计。"
+        },
+        {
+          "q": "是否需要类似 doctor 的命令，从运行日志回放中总结问题并反哺产品改进？",
+          "answer": "需要。新增或扩展类似 doctor 的诊断入口，定期从 zj-loop/runs/<run_id>.json、machine_envelope.repairs_applied、stop_signal、evidence、review artifacts 等低成本记录中回放链路，提炼高频 protocol repair、hard stop、route ambiguity、权限/预算/verifier 缺口和用户确认摩擦点。doctor 输出应是结构化报告，供 human 和后续 roadmap/issue-backlog-triage 消费。",
+          "note": "用户补充：定期应能从类似日志回放中总结提炼问题，以便持续改进。实现上不能依赖大日志，应基于瘦 run state 和 artifact 引用。"
+        },
+        {
+          "q": "doctor 诊断入口使用 zj-loop-run doctor 还是独立 zj-loop-doctor？",
+          "answer": "采用独立命令 zj-loop-doctor，仍放在 @jununfly/zj-loop-core，不新开包。zj-loop-run 是执行入口，zj-loop-doctor 是诊断入口；两者共享 zj-loop/runs/ 的 run state schema、harness envelope schema 和 artifact 规则。zj-loop-doctor 第一阶段只做本地结构化报告，不自动改配置、不自动创建 issue，除非后续 route 明确消费它。",
+          "note": "用户确认：zj-loop-doctor。分离命名可以减少其他 Agent 把诊断当成执行子流程的误解。"
+        },
+        {
+          "q": "zj-loop-doctor 的报告是否应该直接生成可被 route 消费的 Signal？",
+          "answer": "默认生成结构化 diagnostic_report，但不自动投递为 route signal。提供显式参数 zj-loop-doctor --emit-signal，只有显式启用时才输出可供 Route Decision 消费的 Signal envelope。默认 doctor 只诊断，不触发修复链路。",
+          "note": "用户确认：同意。这样支持闭环改进，但避免诊断工具成为隐性执行入口。"
+        },
+        {
+          "q": "zj-loop-run 和 zj-loop-doctor 的帮助文档放在哪里，做到什么程度？",
+          "answer": "采用两层帮助：CLI 内置 --help 只放命令、参数、状态含义和最短示例；durable docs 更新 docs/codex-harness.md 或新增用户故事式文档，展示三条路径：PRD/plan 自动拆成 roadmap branch/PR，扫描 issue backlog 并推进可处理项，检查近期 loop 为什么停下。README 只放入口链接。",
+          "note": "用户确认：同意。目标是降低首次使用成本，同时避免 --help 变成大文档。"
+        },
+        {
+          "q": "zj-loop-run 第一阶段是否只接入确定性 plan/dispatch/state/doctor，暂不重写所有 route live runner？",
+          "answer": "第一阶段实现完整主入口和状态协议，但 live runner 只调用现有已具备 contract 的确定性能力；没有成熟 runner 的 route 输出 stopped，并设置 stop_signal.reason=missing-runner-capability，给出下一步。范围包括命令、resolver、envelope、run state、resume/confirm 骨架、doctor、help/docs、测试；能 live 的按 contract live，不能 live 的明确停止，不伪装完成。",
+          "note": "用户确认：同意。目标是先把产品主入口立住，同时避免在一个 slice 内重写所有 consumer 导致范围爆炸。"
+        }
+      ],
+      "notes": "Completed TDD implementation for zj-loop-run and zj-loop-doctor. Verification: npm test in tools/zj-loop-core passed 146 tests; git diff --check passed."
     },
     "1-2": {
       "id": "1-2",
@@ -178,42 +269,42 @@
     "1-1-1": {
       "id": "1-1-1",
       "label": "目标型命令与用户故事入口",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented zj-loop-run goal entry, deterministic resolver, explicit --route/--plan-only inputs, JSON envelope output, and package bin."
     },
     "1-1-2": {
       "id": "1-1-2",
       "label": "首次运行到下一次运行的连续体验",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented thin run state under zj-loop/runs/<run_id>.json plus resume/confirm-compatible state fields."
     },
     "1-1-3": {
       "id": "1-1-3",
       "label": "自动继续与停止提示的用户界面",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented structured stopped/needs_protocol_repair outputs, ambiguous-route stop signal, missing-runner-capability stop reason, and repairs_applied tracking."
     },
     "1-1-4": {
       "id": "1-1-4",
       "label": "用户故事式帮助文档与示例项目",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented zj-loop-doctor, updated docs/codex-harness.md user stories, and added README entry links."
     },
     "1-2-1": {
       "id": "1-2-1",
@@ -867,7 +958,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-12 21:25:38",
+    "updated": "2026-07-12 23:13:44",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

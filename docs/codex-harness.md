@@ -6,6 +6,78 @@ Activation Request, consumer runners, verification gates, or closeout
 contracts. It wraps them with structured input, structured output, evidence,
 resume anchors, and clear stop signals.
 
+## Goal-Oriented Entry
+
+`zj-loop-run` is the goal-oriented entry point for Codex + ZAgenticLoop. It
+accepts a user goal, resolves the route through deterministic rules, builds the
+consumer run plan, writes thin replay state under `zj-loop/runs/<run_id>.json`,
+and keeps going until the current route reaches its first review artifact or a
+hard stop signal.
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD with roadmap sliced development"
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run --route issue-backlog-triage "Scan open issues"
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run --plan-only "Prepare a roadmap implementation plan"
+```
+
+The default output is structured JSON. Automation should consume
+`machine_envelope`; `human_summary` is only for display. Use `--format text`
+for a short human-readable rendering.
+
+`zj-loop-doctor` replays recent run state and summarizes improvement signals
+without triggering new side effects by default:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --emit-signal
+```
+
+`--emit-signal` prints a Route Decision signal envelope for another route to
+consume. It does not write tracker state or start a fix loop by itself.
+
+## User Story: PRD To Roadmap PR
+
+You have a PRD or implementation plan and want Codex to start the loop without
+manually walking every protocol step:
+
+```bash
+zj-loop-run "Implement this PRD with roadmap sliced development"
+```
+
+The harness resolves the goal to `roadmap-sliced-development`, checks the Route
+Table and consumer run contract, writes `zj-loop/runs/<run_id>.json`, and
+returns a structured next action. If the route is execution-ready, the loop
+continues toward a roadmap branch/PR handoff. If authority, verifier, or runner
+capability is missing, the output is `stopped` with a replayable stop signal.
+
+## User Story: Issue Backlog To Transition Evidence
+
+You want to scan open issues, classify them, and advance only the items that
+are allowed by the triage transition contract:
+
+```bash
+zj-loop-run --route issue-backlog-triage "Scan current open issues"
+```
+
+The harness must not mutate tracker state just because a goal says "triage".
+It follows the Route Table and issue-triage transition boundary. Recommendation
+evidence can be produced automatically; side effects such as labels or comments
+require the route's authority and verifier requirements.
+
+## User Story: Why Did The Loop Stop?
+
+You want to understand repeated stops, protocol repairs, or confirmation
+friction across recent loop runs:
+
+```bash
+zj-loop-doctor
+```
+
+The doctor reads `zj-loop/runs/*.json`, summarizes route ambiguity,
+protocol-repair requests, and hard stops, then returns a structured
+`diagnostic_report`. It stores no large logs and does not scan unrelated
+project files.
+
 ## User Story: Issue To PR
 
 You have a GitHub issue that contains a PRD, plan, bug report, or improvement
@@ -135,7 +207,7 @@ run-state record near the provider carrier or workflow artifact. No-provider
 adapters should store it under:
 
 ```text
-zj-loop/harness/runs/<run_id>.json
+zj-loop/runs/<run_id>.json
 ```
 
 The shared core API exposes deterministic helpers for this contract:
@@ -143,6 +215,9 @@ The shared core API exposes deterministic helpers for this contract:
 - `buildHarnessRunStateRecord(...)`;
 - `getHarnessRunStatePath(run_id)`;
 - `findHarnessResumeEnvelope(...)`.
+
+Legacy harness adapters may still read older `zj-loop/harness/runs/` records,
+but new goal-oriented runs should use `zj-loop/runs/`.
 
 Natural language such as "continue" may ask Codex to look up an active resume
 envelope, but it is not itself the resume protocol action.

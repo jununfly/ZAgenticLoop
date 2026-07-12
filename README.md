@@ -45,6 +45,8 @@ being mistaken for GitHub repositories.
 | Add GitLab provider smoke/consumer jobs | `npx @jununfly/zj-loop-init . --add gitlab-ci` |
 | Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
 | Run Codex with structured loop handoff, evidence, and stop signals | [Codex Harness](docs/codex-harness.md) |
+| Run a goal until the first review artifact or hard stop | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD"` |
+| Diagnose why recent loops stopped | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor` |
 | Plan the first automation-default run | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan` |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
@@ -160,6 +162,18 @@ policy, and next steps. Ready plans also include a `dispatch_handoff` with the
 packaged command, input contract, request-carrier requirement, review handoff,
 and closeout handoff. For replay, the same JSON includes `execution_summary`,
 `evidence_index`, `state_explanation`, and `failure_replay`.
+
+For a goal-oriented Codex path, use `zj-loop-run` instead of stopping at a
+plan:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD with roadmap sliced development"
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor
+```
+
+`zj-loop-run` writes replay state under `zj-loop/runs/` and returns a structured
+`machine_envelope`. `zj-loop-doctor` summarizes recent stops and protocol repair
+signals without triggering side effects by default.
 
 3. Check cost and readiness:
 
