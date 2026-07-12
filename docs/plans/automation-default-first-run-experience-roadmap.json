@@ -54,7 +54,7 @@
     "1-2": {
       "id": "1-2",
       "label": "自动化前提条件审查与成本包络",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -171,42 +171,42 @@
     "1-2-1": {
       "id": "1-2-1",
       "label": "自动运行资格检查矩阵",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "First-run plan now emits a preconditions matrix with fixed ids for route-enabled, consumer-capability, provider-support, credentials-and-authority, cost-budget, workspace-safety, and verification-gates. Verification: npm test in tools/zj-loop-core."
     },
     "1-2-2": {
       "id": "1-2-2",
       "label": "权限凭证与 Provider 能力检查",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Provider support uses collectProjectEvidenceFacts for provider detection and adapter evidence. Credentials/authority are pass for report-only routes and warning for side-effecting routes, with runtime token and actor-permission next steps. Verification: npm test in tools/zj-loop-core."
     },
     "1-2-3": {
       "id": "1-2-3",
       "label": "预算与 max_slices 成本控制",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Budget precondition checks for zj-loop/zj-loop-budget.md. Roadmap-Sliced plans explicitly mention max_slices=30 and warn when budget file is missing before long-running automation. Verification: npm test in tools/zj-loop-core."
     },
     "1-2-4": {
       "id": "1-2-4",
       "label": "工作区安全与验证门槛检查",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Workspace safety precondition checks for zj-loop/zj-loop-safety.md. Verification gate precondition requires route capability verifiers and turns missing verifiers into hard stop signals. Documentation now explains preconditions and stop_signals in README and user-project bundle. Verification: npm test in tools/zj-loop-core; git diff --check."
     },
     "1-3-1": {
       "id": "1-3-1",
@@ -381,7 +381,7 @@
   },
   "metadata": {
     "created": "2026-07-12 13:09:18",
-    "updated": "2026-07-12 13:36:01",
+    "updated": "2026-07-12 13:40:21",
     "md_file": "docs/plans/automation-default-first-run-experience-roadmap.md"
   }
 }

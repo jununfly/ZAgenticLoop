@@ -80,8 +80,13 @@ test('buildFirstRunPlan recommends manual smoke for automatic first run', async 
     const plan = await buildFirstRunPlan({ root: dir });
     assert.equal(plan.schema, 'zj-loop.first_run_plan.v1');
     assert.equal(plan.recommended_route, 'manual-smoke-report');
+    assert.equal(plan.automation_allowed, true);
     assert.equal(plan.consumer_plan.status, 'report-only');
     assert.deepEqual(plan.stop_signals, []);
+    assert.equal(plan.preconditions.find((item) => item.id === 'route-enabled')?.status, 'pass');
+    assert.equal(plan.preconditions.find((item) => item.id === 'credentials-and-authority')?.status, 'pass');
+    assert.equal(plan.preconditions.find((item) => item.id === 'cost-budget')?.status, 'warning');
+    assert.equal(plan.preconditions.find((item) => item.id === 'workspace-safety')?.status, 'warning');
     assert.ok(plan.route_menu.find((route) => route.recommended_for_first_run && route.route_id === 'manual-smoke-report'));
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -107,9 +112,12 @@ test('buildFirstRunPlan turns blocked automation into structured stop signal', a
   try {
     const plan = await buildFirstRunPlan({ root: dir, goal: 'ci' });
     assert.equal(plan.recommended_route, 'ci-sweeper');
+    assert.equal(plan.automation_allowed, false);
     assert.equal(plan.consumer_plan.status, 'blocked');
-    assert.equal(plan.stop_signals[0].stop_reason, 'route disabled by Route Table');
-    assert.equal(plan.stop_signals[0].responsible_layer, 'route-table');
+    assert.equal(plan.preconditions.find((item) => item.id === 'route-enabled')?.status, 'fail');
+    assert.equal(plan.stop_signals[0].stop_reason, 'Route ci-sweeper is disabled');
+    assert.equal(plan.stop_signals[0].responsible_layer, 'first-run-precondition');
+    assert.ok(plan.stop_signals.some((item) => item.stop_reason === 'route disabled by Route Table'));
     assert.equal(plan.stop_signals[0].retry_policy, 'after-configuration-change');
     assert.equal(plan.stop_signals[0].human_required, true);
   } finally {
@@ -127,7 +135,7 @@ test('zj-loop-first-run CLI prints JSON and exits nonzero when automation is blo
     const ci = spawnSync(process.execPath, [CLI, 'plan', '--root', dir, '--goal', 'ci', '--json'], { encoding: 'utf8' });
     assert.equal(ci.status, 2);
     const parsed = JSON.parse(ci.stdout);
-    assert.equal(parsed.stop_signals[0].responsible_layer, 'route-table');
+    assert.equal(parsed.stop_signals[0].responsible_layer, 'first-run-precondition');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

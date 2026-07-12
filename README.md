@@ -147,6 +147,11 @@ npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal r
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
 ```
 
+Use `--json` when wiring automation. The JSON output includes a `preconditions`
+matrix for route enablement, consumer capability, provider support,
+credentials/authority, budget, workspace safety, and verification gates. Failed
+hard preconditions become `stop_signals` instead of letting the loop guess.
+
 3. Check cost and readiness:
 
 ```bash

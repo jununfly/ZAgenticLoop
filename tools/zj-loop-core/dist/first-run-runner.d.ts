@@ -9,6 +9,14 @@ export type FirstRunStopSignal = {
     human_required: boolean;
     confirmation_location: string[];
 };
+export type FirstRunPrecondition = {
+    id: 'route-enabled' | 'consumer-capability' | 'provider-support' | 'credentials-and-authority' | 'cost-budget' | 'workspace-safety' | 'verification-gates';
+    status: 'pass' | 'warning' | 'fail';
+    summary: string;
+    evidence: string[];
+    next_steps: string[];
+    stop_if_failed: boolean;
+};
 export type FirstRunPlan = {
     schema: 'zj-loop.first_run_plan.v1';
     goal: FirstRunGoal;
@@ -16,6 +24,8 @@ export type FirstRunPlan = {
     recommended_consumer: string;
     recommendation_reason: string;
     automation_intent: string;
+    automation_allowed: boolean;
+    preconditions: FirstRunPrecondition[];
     automatic_next_steps: string[];
     stop_signals: FirstRunStopSignal[];
     route_menu: Array<{

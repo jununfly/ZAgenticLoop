@@ -50,6 +50,14 @@ The plan recommends a route, explains why that route is safest or most useful
 for the current project, lists automatic next steps, and emits structured stop
 signals when the loop should pause instead of guessing.
 
+For automation wiring, run with `--json`. The output includes:
+
+- `preconditions`: route enablement, consumer capability, provider support,
+  credentials/authority, cost budget, workspace safety, and verification gates.
+- `automatic_next_steps`: what the loop may do without more user input.
+- `stop_signals`: the hard reasons the loop must pause, with responsible layer,
+  evidence, retry policy, and next steps.
+
 2. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
    or target a known route when the intent is already clear:
 
