@@ -40,9 +40,26 @@ published package runner have equivalent evidence.
 
 After installing the bundle:
 
-1. Run `ZJ Loop Smoke` manually.
-2. Inspect the workflow summary.
-3. Run:
+1. Ask for the automation-default first-run plan:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan
+```
+
+The plan recommends a route, explains why that route is safest or most useful
+for the current project, lists automatic next steps, and emits structured stop
+signals when the loop should pause instead of guessing.
+
+2. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
+   or target a known route when the intent is already clear:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal roadmap
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
+```
+
+3. Inspect the workflow summary or generated JSON evidence.
+4. Run:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status

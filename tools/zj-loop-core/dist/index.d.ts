@@ -5,6 +5,7 @@ export * from './semantic.js';
 export * from './cli.js';
 export * from './route.js';
 export * from './consumer-runner.js';
+export * from './first-run-runner.js';
 export * from './route-consumer-cli.js';
 export * from './live-runner-contract.js';
 export * from './ci-sweeper-runner.js';

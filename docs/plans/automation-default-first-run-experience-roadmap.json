@@ -1,0 +1,387 @@
+{
+  "title": "Automation-Default First Run Experience",
+  "description": "参照 value-oriented product design principles，把 ZAgenticLoop 升级为默认自动推进、只在真实 stop signal 停下来的产品体验。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Automation-Default First Run Experience",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6",
+        "1-7"
+      ],
+      "decisions": [
+        {
+          "q": "本轮产品升级的主目标是什么？",
+          "answer": "Automation-Default First Run Experience：用户选择一个目标 route 后，系统默认尽可能自动跑到 review artifact；只有遇到真实 stop signal 才停。",
+          "note": "参照 docs/prds/value-oriented-product-design-principles.md 的 Default Toward Automated Loops。"
+        },
+        {
+          "q": "Stop Signal 是否作为独立主线？",
+          "answer": "是，但作为 Automation-Default First Run 的必要底座来做，而不是孤立协议工程。",
+          "note": "停下来的体验必须一等化：reason、responsible layer、evidence、next step、retry policy、human required。"
+        },
+        {
+          "q": "本轮是否优先增加更多 route？",
+          "answer": "否。优先把现有关键 route 的 first-run 自动推进体验打通，再评估新增 route 或继续 live promotion。",
+          "note": "避免继续堆组件，先解决用户需要多次切换、多次确认、容易不知道在哪里继续的问题。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "用户目标导向的 First Run 入口",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-1-1",
+        "1-1-2",
+        "1-1-3"
+      ],
+      "decisions": [],
+      "notes": "完成条件：用户能用一个目标导向入口选择第一条自动化 loop；输出推荐 route、为什么推荐、会自动做什么、什么情况下会停。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "自动化前提条件审查与成本包络",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3",
+        "1-2-4"
+      ],
+      "decisions": [],
+      "notes": "完成条件：每条候选 route 在自动运行前都能产出资格检查结果，覆盖 route enablement、consumer capability、provider support、credentials、actor permission、budget、workspace safety、verification gates。"
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "结构化 Stop Signal 体系",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2",
+        "1-3-3",
+        "1-3-4"
+      ],
+      "decisions": [],
+      "notes": "完成条件：所有不能自动继续的情况都输出结构化 stop signal，包含 stop_reason、responsible_layer、evidence、next_steps、retry_policy、human_required、confirmation_location。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Route 到 Consumer 的自动推进编排",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3",
+        "1-4-4"
+      ],
+      "decisions": [],
+      "notes": "完成条件：从 Route Decision 到 Request Carrier 到 Consumer 的主路径可以自动衔接；Roadmap-Sliced 可在 max_slices 内连续执行多个 eligible slice，最终生成 PR/MR 或明确 stop signal。"
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "证据回放与状态可解释性",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3"
+      ],
+      "decisions": [],
+      "notes": "完成条件：自动运行成功、跳过、失败、停止都能被用户从一个执行摘要中理解，并能回放到 route decision、request carrier、consumer plan、runner evidence、review artifact。"
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "用户项目安装与升级体验",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3"
+      ],
+      "decisions": [],
+      "notes": "完成条件：zj-loop-init/audit/route status 能组合成安装后的推荐路径；GitHub/GitLab provider adapter 安装后能提示下一步 smoke、route enablement、auto-run readiness 和升级影响。"
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "Dogfood 验证与发布门槛",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-7-1",
+        "1-7-2",
+        "1-7-3"
+      ],
+      "decisions": [],
+      "notes": "完成条件：本仓和至少一个用户项目式 fixture 走通自动化 first-run；发布门槛能防止 README/Quickstart 宣称的自动体验与实际 route/consumer 能力漂移。"
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "目标选择式启动命令",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Added packaged zj-loop-first-run plan command in @jununfly/zj-loop-core. It produces zj-loop.first_run_plan.v1, supports goals auto/smoke/roadmap/issue-backlog/ci/closeout, and exits nonzero only when the first-run plan has stop signals. Verification: npm test in tools/zj-loop-core."
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "Route 菜单与推荐首选路径",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "First-run plan includes route_menu entries with route id, consumer, enabled flag, execution mode, readiness, side effect level, recommended_for_first_run, and human-readable why. Default auto goal recommends manual-smoke-report; targeted goals can recommend roadmap, issue backlog, CI, or closeout routes. Verification: npm test in tools/zj-loop-core."
+    },
+    "1-1-3": {
+      "id": "1-1-3",
+      "label": "端到端用户故事示例",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "README and user-project execution-ready bundle now show the first-run story: scaffold, run zj-loop-first-run plan, inspect recommended route, use targeted goals for roadmap or issue-backlog, then continue with smoke/status/readiness. Verification: docs diff plus git diff --check."
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "自动运行资格检查矩阵",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "权限凭证与 Provider 能力检查",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "预算与 max_slices 成本控制",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-4": {
+      "id": "1-2-4",
+      "label": "工作区安全与验证门槛检查",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Stop Signal 固定协议字段",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "停机原因分类与责任层归属",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3": {
+      "id": "1-3-3",
+      "label": "下一步动作与确认位置输出",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-4": {
+      "id": "1-3-4",
+      "label": "可重试策略与新请求边界",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Route Decision 到 Request Carrier 自动衔接",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "Request Carrier 到 Consumer 自动消费",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "Roadmap-Sliced 多 slice 自动执行",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-4": {
+      "id": "1-4-4",
+      "label": "Review Artifact 与 Closeout 自动衔接",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "统一执行摘要与证据索引",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "Route 状态解释与能力等级展示",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "失败回放与定位报告",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "安装后推荐路径生成",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "Provider 适配后的 Smoke 到 Auto Run",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "升级时保留自动化意图",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-1": {
+      "id": "1-7-1",
+      "label": "本仓自动化 First Run Dogfood",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-2": {
+      "id": "1-7-2",
+      "label": "GitHub 与 GitLab 双 Provider 验证",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-3": {
+      "id": "1-7-3",
+      "label": "发布前自动化体验验收门槛",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-12 13:09:18",
+    "updated": "2026-07-12 13:36:01",
+    "md_file": "docs/plans/automation-default-first-run-experience-roadmap.md"
+  }
+}
