@@ -416,7 +416,7 @@ test('zj-loop-dispatch execute mode normalizes GitLab roadmap activation live si
   }
 });
 
-test('zj-loop-dispatch execute mode refuses external provider writes when token is missing', async () => {
+test('zj-loop-dispatch execute mode records missing token as resumable activation evidence', async () => {
   const dir = await setupProject();
   try {
     const signal = {
@@ -453,13 +453,173 @@ test('zj-loop-dispatch execute mode refuses external provider writes when token 
       },
     });
 
-    assert.equal(executed.status, 'hard_stopped');
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.consumer_adapter_result.adapter_status, 'resumable');
     assert.equal(executed.consumer_adapter_result.live_side_effects.attempted, false);
     assert.equal(executed.consumer_adapter_result.live_side_effects.status, 'refused');
+    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts.length, 1);
+    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts[0].failure_class, 'recoverable');
+    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts[0].retry_consumed, false);
+    assert.equal(executed.consumer_adapter_result.activation_lifecycle.activation_state, 'resumable');
+    assert.equal(executed.consumer_adapter_result.activation_lifecycle.retry_budget_remaining, 3);
+    assert.equal(executed.consumer_adapter_result.activation_lifecycle.next_command, 'zj-loop-dispatch --mode execute');
+    const lifecycleArtifact = executed.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'activation-lifecycle');
+    assert.equal(lifecycleArtifact.schema, 'zj-loop.activation_lifecycle_evidence.v1');
+    const lifecycleEvidence = JSON.parse(await readFile(path.join(dir, lifecycleArtifact.path), 'utf8'));
+    assert.equal(lifecycleEvidence.activation_state, 'resumable');
+    assert.equal(lifecycleEvidence.failure_class, 'recoverable');
+    assert.equal(lifecycleEvidence.resume_allowed, true);
     assert.equal(
       executed.consumer_adapter_result.live_side_effects.refusals.some((refusal) => refusal.reason === 'github-token-required-for-live-execution'),
       true,
     );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch execute mode resumes partial GitHub branch success without duplicating branch creation', async () => {
+  const dir = await setupProject();
+  try {
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-roadmap-partial-github',
+      source: 'github_issue',
+      provider: 'github',
+      subject: {
+        kind: 'issue',
+        id: '44',
+        url: 'https://github.com/jununfly/ZAgenticLoop/issues/44',
+      },
+      intent: 'activate_roadmap',
+      payload: {
+        activation_request_comment_url: 'https://github.com/jununfly/ZAgenticLoop/issues/44#issuecomment-600',
+        title: 'Partial GitHub roadmap activation',
+        repository: 'jununfly/ZAgenticLoop',
+        target_branch: 'main',
+      },
+    };
+    await dispatchSignal({
+      root: dir,
+      signal,
+      mode: 'auto',
+      now: '2026-07-13T00:13:00.000Z',
+    });
+
+    const firstCalls = [];
+    const firstFetchImpl = async (url, options = {}) => {
+      firstCalls.push({ url: String(url), options });
+      const text = String(url);
+      if (text.endsWith('/git/ref/heads/main')) return jsonResponse({ object: { sha: 'base-sha' } });
+      if (text.includes('/git/ref/heads/zjal-')) return jsonResponse({}, 404);
+      if (text.endsWith('/git/refs')) return jsonResponse({}, 201);
+      if (text.includes('/pulls?')) return jsonResponse([]);
+      if (text.endsWith('/pulls')) return jsonResponse({ message: 'temporary outage' }, 500);
+      return jsonResponse({ message: `unexpected ${text}` }, 500);
+    };
+
+    const first = await dispatchSignal({
+      root: dir,
+      signal,
+      mode: 'execute',
+      now: '2026-07-13T00:14:00.000Z',
+      env: { GITHUB_TOKEN: 'token' },
+      fetchImpl: firstFetchImpl,
+    });
+
+    assert.equal(first.status, 'executed_to_review_artifact');
+    assert.equal(first.consumer_adapter_result.adapter_status, 'resumable');
+    assert.equal(first.consumer_adapter_result.activation_lifecycle.activation_state, 'resumable');
+    assert.equal(first.consumer_adapter_result.live_side_effects.attempts[0].operation, 'create-pull-request');
+    assert.equal(first.consumer_adapter_result.live_side_effects.attempts[0].http_status, 500);
+    assert.equal(first.consumer_adapter_result.live_side_effects.attempts[0].retry_consumed, true);
+    assert.equal(first.consumer_adapter_result.activation_lifecycle.retry_budget_remaining, 2);
+
+    const secondCalls = [];
+    const secondFetchImpl = async (url, options = {}) => {
+      secondCalls.push({ url: String(url), options });
+      const text = String(url);
+      if (text.endsWith('/git/ref/heads/main')) return jsonResponse({ object: { sha: 'base-sha' } });
+      if (text.includes('/git/ref/heads/zjal-')) return jsonResponse({ object: { sha: 'base-sha' } });
+      if (text.includes('/pulls?')) return jsonResponse([]);
+      if (text.endsWith('/pulls')) {
+        return jsonResponse({
+          number: 124,
+          html_url: 'https://github.com/jununfly/ZAgenticLoop/pull/124',
+        }, 201);
+      }
+      return jsonResponse({ message: `unexpected ${text}` }, 500);
+    };
+
+    const second = await dispatchSignal({
+      root: dir,
+      signal,
+      mode: 'execute',
+      now: '2026-07-13T00:15:00.000Z',
+      env: { GITHUB_TOKEN: 'token' },
+      fetchImpl: secondFetchImpl,
+    });
+
+    assert.equal(second.consumer_adapter_result.adapter_status, 'executed_to_live_side_effects');
+    assert.equal(second.consumer_adapter_result.live_side_effects.status, 'completed');
+    assert.equal(second.consumer_adapter_result.live_side_effects.attempts.length, 2);
+    assert.equal(second.consumer_adapter_result.live_side_effects.attempts[1].status, 'completed');
+    assert.equal(second.consumer_adapter_result.live_side_effects.review.url, 'https://github.com/jununfly/ZAgenticLoop/pull/124');
+    assert.equal(secondCalls.some((call) => call.options.method === 'POST' && call.url.endsWith('/git/refs')), false);
+    assert.equal(secondCalls.some((call) => call.options.method === 'POST' && call.url.endsWith('/pulls')), true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch execute mode treats invalid contract-plan schema as terminal activation failure', async () => {
+  const dir = await setupProject();
+  try {
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-roadmap-terminal-schema',
+      source: 'github_issue',
+      provider: 'github',
+      subject: {
+        kind: 'issue',
+        id: '45',
+        url: 'https://github.com/jununfly/ZAgenticLoop/issues/45',
+      },
+      intent: 'activate_roadmap',
+      payload: {
+        activation_request_comment_url: 'https://github.com/jununfly/ZAgenticLoop/issues/45#issuecomment-700',
+        repository: 'jununfly/ZAgenticLoop',
+        target_branch: 'main',
+      },
+    };
+    const auto = await dispatchSignal({
+      root: dir,
+      signal,
+      mode: 'auto',
+      now: '2026-07-13T00:16:00.000Z',
+    });
+    const contractPlanPath = auto.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'contract-plan').path;
+    const contractPlan = JSON.parse(await readFile(path.join(dir, contractPlanPath), 'utf8'));
+    await writeFile(path.join(dir, contractPlanPath), JSON.stringify({ ...contractPlan, schema: 'broken.schema' }, null, 2));
+
+    const executed = await dispatchSignal({
+      root: dir,
+      signal,
+      mode: 'execute',
+      now: '2026-07-13T00:17:00.000Z',
+      env: { GITHUB_TOKEN: 'token' },
+      fetchImpl: async () => {
+        throw new Error('terminal contract failure must happen before provider API calls');
+      },
+    });
+
+    assert.equal(executed.status, 'hard_stopped');
+    assert.equal(executed.consumer_adapter_result.adapter_status, 'failed');
+    assert.equal(executed.consumer_adapter_result.activation_lifecycle.activation_state, 'failed');
+    assert.equal(executed.consumer_adapter_result.activation_lifecycle.failure_class, 'terminal');
+    assert.equal(executed.consumer_adapter_result.activation_lifecycle.resume_allowed, false);
+    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts[0].failure_class, 'terminal');
+    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts[0].next_retry_allowed, false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

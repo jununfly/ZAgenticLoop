@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { buildRoadmapActivationBranchName, buildRoadmapActivationPrContract, buildRoadmapActivationPrTitle, buildRoadmapActivationReviewContract, buildRoadmapActivationReviewTitle, executeGitLabRoadmapActivation, } from './roadmap-activation-runner.js';
 export async function runConsumerLiveSideEffects(input) {
     const current = input.envelope.consumer_adapter_result;
@@ -34,17 +35,46 @@ export async function runConsumerLiveSideEffects(input) {
         env: input.env,
         fetchImpl: input.fetchImpl,
     });
-    const adapterStatus = liveSideEffects.status === 'failed' || liveSideEffects.status === 'refused'
-        ? 'hard_stopped'
-        : 'executed_to_review_artifact';
+    const previousAttempts = current.live_side_effects.attempts ?? [];
+    const attempt = buildLiveSideEffectAttempt({
+        liveSideEffects,
+        previousAttempts,
+        attemptedAt: String(input.envelope.updated_at ?? new Date().toISOString()),
+    });
+    const attempts = [...previousAttempts, attempt];
+    const liveSideEffectsWithAttempts = {
+        ...liveSideEffects,
+        attempts,
+    };
+    const activationLifecycle = buildActivationLifecycle({
+        liveSideEffects: liveSideEffectsWithAttempts,
+        attempts,
+    });
+    const lifecycleArtifact = activationLifecycle.activation_state === 'completed'
+        ? undefined
+        : await writeActivationLifecycleEvidence({
+            root: input.root,
+            orchestrationId: input.envelope.orchestration_id,
+            lifecycle: activationLifecycle,
+        });
+    const adapterStatus = adapterStatusForActivationLifecycle(activationLifecycle);
     return {
         ...current,
         adapter_status: adapterStatus,
-        live_side_effects: liveSideEffects,
-        stop_signal: adapterStatus === 'hard_stopped'
+        review_artifacts: lifecycleArtifact === undefined
+            ? current.review_artifacts
+            : [...current.review_artifacts.filter((artifact) => artifact.kind !== 'activation-lifecycle'), lifecycleArtifact],
+        live_side_effects: liveSideEffectsWithAttempts,
+        activation_lifecycle: activationLifecycle,
+        next_steps: activationLifecycle.activation_state === 'resumable'
+            ? [activationLifecycle.next_command, `Continue from ${activationLifecycle.where_to_continue}.`]
+            : current.next_steps,
+        stop_signal: adapterStatus === 'hard_stopped' || adapterStatus === 'failed'
             ? {
-                reason: String(liveSideEffects.status ?? 'live-side-effect-failed'),
-                next_steps: ['Inspect consumer_adapter_result.live_side_effects.refusals or provider_result before retrying.'],
+                reason: activationLifecycle.reason,
+                next_steps: activationLifecycle.resume_allowed
+                    ? [activationLifecycle.next_command]
+                    : ['Create a new activation request or repair the activation input before retrying.'],
             }
             : current.stop_signal,
     };
@@ -464,6 +494,144 @@ function normalizeGitLabRoadmapActivationResult(result) {
         provider_result: result,
         ...(status === 'refused' ? { reason: 'gitlab-roadmap-activation-live-gates-refused' } : {}),
     };
+}
+function buildLiveSideEffectAttempt(input) {
+    const externalTool = input.liveSideEffects.external_tool ?? 'github';
+    const operation = lastOperationKind(input.liveSideEffects.operations) ?? 'provider_preflight';
+    const status = input.liveSideEffects.status === 'completed'
+        ? 'completed'
+        : input.liveSideEffects.status === 'refused'
+            ? 'refused'
+            : 'failed';
+    const httpStatus = lastHttpStatus(input.liveSideEffects.operations);
+    const reason = String(input.liveSideEffects.reason ?? failureReasonFromEvidence(input.liveSideEffects) ?? status);
+    const failureClass = classifyActivationFailure({
+        status,
+        reason,
+        httpStatus,
+        refusals: input.liveSideEffects.refusals ?? [],
+    });
+    const retryConsumed = status === 'failed' && failureClass === 'recoverable';
+    const consumedAttempts = input.previousAttempts.filter((attempt) => attempt.retry_consumed).length + (retryConsumed ? 1 : 0);
+    const retryBudgetRemaining = Math.max(0, 3 - consumedAttempts);
+    const idempotencyKey = String(input.liveSideEffects.idempotency_key ?? 'roadmap-sliced-development:unknown');
+    const attemptNumber = input.previousAttempts.length + 1;
+    return {
+        attempt_id: `attempt-${stableHash(`${idempotencyKey}:${attemptNumber}:${reason}`)}`,
+        attempt_number: attemptNumber,
+        attempted_at: input.attemptedAt,
+        mode: 'execute',
+        external_tool: externalTool,
+        operation,
+        status,
+        failure_class: failureClass,
+        reason,
+        ...(httpStatus === undefined ? {} : { http_status: httpStatus }),
+        retry_consumed: retryConsumed,
+        next_retry_allowed: failureClass === 'recoverable' && retryBudgetRemaining > 0,
+        idempotency_key: idempotencyKey,
+        ...(input.liveSideEffects.review?.url ? { review_url: input.liveSideEffects.review.url } : {}),
+        ...(input.liveSideEffects.branch?.name ? { branch_name: input.liveSideEffects.branch.name } : {}),
+    };
+}
+function buildActivationLifecycle(input) {
+    const latestAttempt = input.attempts[input.attempts.length - 1];
+    const retryBudgetRemaining = Math.max(0, 3 - input.attempts.filter((attempt) => attempt.retry_consumed).length);
+    if (input.liveSideEffects.status === 'completed') {
+        return {
+            schema: 'zj-loop.activation_lifecycle_evidence.v1',
+            activation_state: 'completed',
+            failure_class: 'none',
+            attempt_count: input.attempts.length,
+            next_command: 'Continue Roadmap-Sliced Consumer execution from the review artifact.',
+            resume_allowed: false,
+            retry_budget_remaining: retryBudgetRemaining,
+            where_to_continue: input.liveSideEffects.review?.url ?? input.liveSideEffects.branch?.name ?? 'roadmap activation review',
+            reason: 'live-side-effects-completed',
+        };
+    }
+    const failureClass = latestAttempt.failure_class;
+    const resumable = failureClass === 'recoverable' && retryBudgetRemaining > 0;
+    return {
+        schema: 'zj-loop.activation_lifecycle_evidence.v1',
+        activation_state: resumable ? 'resumable' : 'failed',
+        failure_class: failureClass,
+        attempt_count: input.attempts.length,
+        next_command: resumable ? 'zj-loop-dispatch --mode execute' : 'Create a new activation request after repairing the input.',
+        resume_allowed: resumable,
+        retry_budget_remaining: retryBudgetRemaining,
+        where_to_continue: input.liveSideEffects.review?.url
+            ?? input.liveSideEffects.branch?.name
+            ?? input.liveSideEffects.idempotency_key
+            ?? 'stored orchestration',
+        reason: latestAttempt.reason,
+    };
+}
+async function writeActivationLifecycleEvidence(input) {
+    const artifactPath = `zj-loop/orchestrations/${input.orchestrationId}/activation-lifecycle-evidence.json`;
+    const absoluteArtifactPath = path.resolve(input.root, artifactPath);
+    await mkdir(path.dirname(absoluteArtifactPath), { recursive: true });
+    await writeFile(absoluteArtifactPath, `${JSON.stringify(input.lifecycle, null, 2)}\n`);
+    return {
+        path: artifactPath,
+        kind: 'activation-lifecycle',
+        schema: 'zj-loop.activation_lifecycle_evidence.v1',
+    };
+}
+function adapterStatusForActivationLifecycle(lifecycle) {
+    if (lifecycle.activation_state === 'completed')
+        return 'executed_to_live_side_effects';
+    if (lifecycle.activation_state === 'resumable')
+        return 'resumable';
+    return 'failed';
+}
+function classifyActivationFailure(input) {
+    if (input.status === 'completed')
+        return 'none';
+    const refusalReasons = input.refusals.map((refusal) => String(refusal.reason ?? ''));
+    if (refusalReasons.some((reason) => reason.includes('token-required') || reason.includes('credential'))) {
+        return 'recoverable';
+    }
+    const terminalReasons = [
+        'invalid-contract-plan-schema',
+        'contract-plan-provider-is-not-github',
+        'github-repository-required',
+        'target-branch-required',
+        'branch-prefix-must-be-zjal-',
+        'unsupported-roadmap-activation-provider',
+    ];
+    if (terminalReasons.some((reason) => input.reason.includes(reason) || refusalReasons.includes(reason))) {
+        return 'terminal';
+    }
+    if (input.httpStatus !== undefined) {
+        if (input.httpStatus === 429 || input.httpStatus >= 500)
+            return 'recoverable';
+        if (input.httpStatus >= 400)
+            return 'terminal';
+    }
+    if (input.status === 'refused')
+        return 'recoverable';
+    return 'recoverable';
+}
+function lastOperationKind(operations) {
+    const operation = operations?.[operations.length - 1];
+    return typeof operation?.kind === 'string' ? operation.kind : undefined;
+}
+function lastHttpStatus(operations) {
+    const operation = operations?.slice().reverse().find((item) => typeof item.status === 'number');
+    return typeof operation?.status === 'number' ? operation.status : undefined;
+}
+function failureReasonFromEvidence(liveSideEffects) {
+    const refusal = liveSideEffects.refusals?.find((item) => typeof item.reason === 'string');
+    if (typeof refusal?.reason === 'string')
+        return refusal.reason;
+    const operation = liveSideEffects.operations?.slice().reverse().find((item) => typeof item.kind === 'string');
+    if (typeof operation?.kind === 'string')
+        return `${operation.kind}-failed`;
+    return undefined;
+}
+function stableHash(value) {
+    return createHash('sha256').update(value).digest('hex').slice(0, 12);
 }
 function liveHardStop(input) {
     return {

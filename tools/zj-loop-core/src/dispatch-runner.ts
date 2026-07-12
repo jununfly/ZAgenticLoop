@@ -124,7 +124,7 @@ export async function dispatchSignal(input: {
       env: input.env ?? process.env,
       fetchImpl: input.fetchImpl,
     });
-    const status = consumerAdapterResult.adapter_status === 'hard_stopped'
+    const status = consumerAdapterResult.adapter_status === 'hard_stopped' || consumerAdapterResult.adapter_status === 'failed'
       ? 'hard_stopped'
       : 'executed_to_review_artifact';
     const updated: OrchestrationEnvelope = {

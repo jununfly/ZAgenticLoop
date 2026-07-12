@@ -1,6 +1,7 @@
 import { ConsumerRunPlan } from './consumer-runner.js';
 import type { OrchestrationEnvelope, SignalEnvelope } from './dispatch-runner.js';
-export type ConsumerAdapterStatus = 'executed_to_review_artifact' | 'hard_stopped';
+export type ConsumerAdapterStatus = 'executed_to_review_artifact' | 'executed_to_live_side_effects' | 'resumable' | 'failed' | 'hard_stopped';
+export type ActivationFailureClass = 'none' | 'recoverable' | 'terminal';
 export type ConsumerAdapterResult = {
     schema: 'zj-loop.consumer_adapter_result.v1';
     route_id: string;
@@ -37,6 +38,35 @@ export type ConsumerAdapterResult = {
         operations?: Array<Record<string, unknown>>;
         refusals?: Array<Record<string, unknown>>;
         provider_result?: Record<string, unknown>;
+        attempts?: Array<{
+            attempt_id: string;
+            attempt_number: number;
+            attempted_at: string;
+            mode: 'execute';
+            external_tool: 'github' | 'gitlab';
+            operation: string;
+            status: 'completed' | 'failed' | 'refused';
+            failure_class: ActivationFailureClass;
+            reason: string;
+            http_status?: number;
+            retry_consumed: boolean;
+            next_retry_allowed: boolean;
+            idempotency_key: string;
+            review_url?: string;
+            branch_name?: string;
+            provider_request_id?: string;
+        }>;
+    };
+    activation_lifecycle?: {
+        schema: 'zj-loop.activation_lifecycle_evidence.v1';
+        activation_state: 'completed' | 'resumable' | 'failed';
+        failure_class: ActivationFailureClass;
+        attempt_count: number;
+        next_command: string;
+        resume_allowed: boolean;
+        retry_budget_remaining: number;
+        where_to_continue: string;
+        reason: string;
     };
     next_steps: string[];
     stop_signal?: {

@@ -1140,12 +1140,48 @@
     "1-4-1-3": {
       "id": "1-4-1-3",
       "label": "Roadmap Activation Resume Failure Recovery Runner",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-1",
       "children": [],
-      "decisions": [],
-      "notes": "Later phase: resume existing activation lifecycle and recover failed activation attempts without creating duplicate activation requests or branches."
+      "decisions": [
+        {
+          "q": "failed 后恢复是否要区分 recoverable failure 与 terminal activation failure？",
+          "answer": "必须区分。recoverable failure 可复用同一个 orchestration 与 contract-plan 继续 resume/execute；terminal activation failure 不允许原地 retry，应输出 activation-failed 或 needs_protocol_repair，并要求新的 activation request 或修复输入后进入新链路。",
+          "note": "区分临时 provider/permission/API 失败与语义、schema、source traceability、route enable、安全边界类失败，避免坏 request 自动反复消费，同时减少可恢复失败导致的重复 activation。"
+        },
+        {
+          "q": "recoverable failure 的 resume 是否允许自动再次执行 provider live side effects？",
+          "answer": "允许自动再次执行，但只在同一个 execute 调用里发生；resume 本身只回放 stored orchestration、contract-plan、上次失败分类与推荐下一步，不产生 GitHub/GitLab live side effects。execute 命中 recoverable failure 且 gates 重新通过时，可复用同一个 contract-plan 重试 live adapter。",
+          "note": "保持 resume 读操作语义，避免隐藏外部副作用；同时让 execute 承担自动恢复体验。重复失败需要记录 attempt evidence，并受 retry budget / failure classification 约束，避免无限循环。"
+        },
+        {
+          "q": "recoverable failure 的 retry budget 应该如何设计？",
+          "answer": "采用固定上限 + failure reason 分级。相同 orchestration_id + contract_plan_digest + external_tool 最多 3 次 live attempt；permission/token missing 记录 refused attempt 但不消耗 provider API retry；network/5xx/rate limit 作为 recoverable attempt；4xx contract/API validation、invalid branch prefix、missing source traceability、contract schema invalid 等直接 terminal。",
+          "note": "保持策略足够简单，避免无限循环，同时为 zj-loop-doctor 从 attempts 中总结失败模式留下结构化证据。"
+        },
+        {
+          "q": "live_side_effects.attempts[] 应保存完整 provider response 还是低成本审计字段？",
+          "answer": "只保存低成本审计字段，不保存完整 provider response。attempt 记录 attempt_id、attempt_number、attempted_at、mode、external_tool、operation、status、failure_class、reason、http_status、retry_consumed、next_retry_allowed、idempotency_key、review_url、branch_name、provider_request_id 等必要字段。",
+          "note": "完整 response 不落盘，避免 token/header/隐私数据进入 repo，也避免 orchestration JSON 膨胀；provider_result 继续保留最终态摘要，attempts 用稳定小结构服务 replay/doctor。"
+        },
+        {
+          "q": "部分成功后下次 execute 应如何恢复？",
+          "answer": "必须 idempotent resume，不能重复粗暴创建。contract-plan 的 branch.name 与 idempotency_key 是恢复锚点；下次 execute 先 provider preflight，branch 已存在则复用，PR/MR 已存在则 update existing review，branch 存在但 review 不存在则只补 create review。branch 存在但 commit/target 不符合 contract-plan 时 terminal hard stop。",
+          "note": "覆盖 create_branch 成功但 create PR/MR 失败的高频真实场景；attempts 必须能展示已完成步骤、复用步骤与本次补齐步骤，避免重复 branch/review。"
+        },
+        {
+          "q": "ConsumerAdapter failure 是否必须生成外部可见 activation lifecycle evidence？",
+          "answer": "两层都要，但本刀先做本地 orchestration 为 truth，外部 comment 生成 review artifact，不直接 live 写回。orchestration JSON 负责 replay/doctor；activation-lifecycle evidence artifact 负责让 GitHub/GitLab issue comment 或其他 Agent 能看到 failure/resume handoff。",
+          "note": "1-4-1-3 聚焦 resume/failure recovery runner，不扩大到 provider comment live write；review artifact 应包含 activation_state、failure_class、attempt_count、next_command、resume_allowed、retry_budget_remaining、where_to_continue 等字段。"
+        },
+        {
+          "q": "ConsumerAdapter 是否要为 recovery 增加更细 adapter_status？",
+          "answer": "要增加，但保持小集合。adapter_status 扩展为 executed_to_review_artifact、executed_to_live_side_effects、resumable、failed、hard_stopped；外层 orchestration status 仍保持 dispatched、duplicate、hard_stopped、resume 等少量状态，细粒度放在 consumer_adapter_result.adapter_status / activation_lifecycle。",
+          "note": "避免破坏现有 orchestration 读取方，同时让 Roadmap Activation 的 resume/failure recovery 语义可被 doctor、replay 和后续 closeout/evidence promotion 稳定消费。"
+        }
+      ],
+      "notes": "Implemented ConsumerAdapter resume/failure recovery: recoverable vs terminal classification, low-cost live_side_effect attempts, activation lifecycle evidence artifact, resumable execute retry, idempotent partial GitHub branch success recovery, and terminal invalid contract handling. Verification: tools/zj-loop-core npm test passed 161/161; git diff --check passed."
     },
     "1-4-1-4": {
       "id": "1-4-1-4",
@@ -1170,7 +1206,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 01:23:47",
+    "updated": "2026-07-13 01:51:03",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }
