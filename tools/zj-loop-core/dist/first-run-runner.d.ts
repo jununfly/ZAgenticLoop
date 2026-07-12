@@ -19,6 +19,23 @@ export type FirstRunPrecondition = {
     next_steps: string[];
     stop_if_failed: boolean;
 };
+export type FirstRunDispatchHandoff = {
+    route_id: string;
+    consumer: string;
+    dispatch_status: 'ready' | 'report-only' | 'blocked';
+    dispatch_mode: 'report-evidence' | 'request-carrier' | 'consumer-runner' | 'none';
+    request_carrier_required: boolean;
+    packaged_command: string | null;
+    input_contract: string[];
+    output_artifacts: Array<{
+        path: string;
+        role: 'primary-result' | 'supporting-evidence';
+        description: string;
+    }>;
+    review_handoff: string[];
+    closeout_handoff: string[];
+    next_steps: string[];
+};
 export type FirstRunPlan = {
     schema: 'zj-loop.first_run_plan.v1';
     goal: FirstRunGoal;
@@ -30,6 +47,7 @@ export type FirstRunPlan = {
     preconditions: FirstRunPrecondition[];
     automatic_next_steps: string[];
     stop_signals: FirstRunStopSignal[];
+    dispatch_handoff: FirstRunDispatchHandoff;
     route_menu: Array<{
         route_id: string;
         consumer: string;

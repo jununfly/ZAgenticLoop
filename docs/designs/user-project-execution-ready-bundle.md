@@ -58,6 +58,10 @@ For automation wiring, run with `--json`. The output includes:
 - `stop_signals`: fixed `stop_code` values plus the human-readable reason,
   responsible layer, evidence, retry policy, confirmation location, and next
   steps.
+- `dispatch_handoff`: the deterministic next hop from Route Decision to the
+  packaged consumer command, including whether a request carrier is required,
+  the input contract, review handoff, closeout handoff, and route-specific
+  artifacts.
 
 2. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
    or target a known route when the intent is already clear:

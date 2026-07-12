@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:45:06
+> 数据文件: `automation-default-first-run-experience-roadmap.json` | 最后更新: 2026-07-12 13:48:38
 
 [~][X+] 1. Automation-Default First Run Experience
 ├── [x][X+] 1-1. 用户目标导向的 First Run 入口
@@ -18,11 +18,11 @@
 │   ├── [x][X+] 1-3-2. 停机原因分类与责任层归属
 │   ├── [x][X+] 1-3-3. 下一步动作与确认位置输出
 │   └── [x][X+] 1-3-4. 可重试策略与新请求边界
-├── [ ][X+] 1-4. Route 到 Consumer 的自动推进编排
-│   ├── [ ][X+] 1-4-1. Route Decision 到 Request Carrier 自动衔接
-│   ├── [ ][X+] 1-4-2. Request Carrier 到 Consumer 自动消费
-│   ├── [ ][X+] 1-4-3. Roadmap-Sliced 多 slice 自动执行
-│   └── [ ][X+] 1-4-4. Review Artifact 与 Closeout 自动衔接
+├── [x][X+] 1-4. Route 到 Consumer 的自动推进编排
+│   ├── [x][X+] 1-4-1. Route Decision 到 Request Carrier 自动衔接
+│   ├── [x][X+] 1-4-2. Request Carrier 到 Consumer 自动消费
+│   ├── [x][X+] 1-4-3. Roadmap-Sliced 多 slice 自动执行
+│   └── [x][X+] 1-4-4. Review Artifact 与 Closeout 自动衔接
 ├── [ ][X+] 1-5. 证据回放与状态可解释性
 │   ├── [ ][X+] 1-5-1. 统一执行摘要与证据索引
 │   ├── [ ][X+] 1-5-2. Route 状态解释与能力等级展示
@@ -50,7 +50,7 @@
 │   ... 4 more child nodes; run tree 1-2 --depth 2 for full view
 ├── [x][X+] 1-3. 结构化 Stop Signal 体系
 │   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
-├── [ ][X+] 1-4. Route 到 Consumer 的自动推进编排
+├── [x][X+] 1-4. Route 到 Consumer 的自动推进编排
 │   ... 4 more child nodes; run tree 1-4 --depth 2 for full view
 ├── [ ][X+] 1-5. 证据回放与状态可解释性
 │   ... 3 more child nodes; run tree 1-5 --depth 2 for full view

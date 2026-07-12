@@ -83,6 +83,9 @@ test('buildFirstRunPlan recommends manual smoke for automatic first run', async 
     assert.equal(plan.automation_allowed, true);
     assert.equal(plan.consumer_plan.status, 'report-only');
     assert.deepEqual(plan.stop_signals, []);
+    assert.equal(plan.dispatch_handoff.dispatch_status, 'report-only');
+    assert.equal(plan.dispatch_handoff.dispatch_mode, 'report-evidence');
+    assert.equal(plan.dispatch_handoff.request_carrier_required, false);
     assert.equal(plan.preconditions.find((item) => item.id === 'route-enabled')?.status, 'pass');
     assert.equal(plan.preconditions.find((item) => item.id === 'credentials-and-authority')?.status, 'pass');
     assert.equal(plan.preconditions.find((item) => item.id === 'cost-budget')?.status, 'warning');
@@ -99,6 +102,13 @@ test('buildFirstRunPlan can target execution-ready roadmap automation', async ()
     const plan = await buildFirstRunPlan({ root: dir, goal: 'roadmap' });
     assert.equal(plan.recommended_route, 'roadmap-sliced-development');
     assert.equal(plan.consumer_plan.status, 'ready');
+    assert.equal(plan.dispatch_handoff.dispatch_status, 'ready');
+    assert.equal(plan.dispatch_handoff.dispatch_mode, 'request-carrier');
+    assert.equal(plan.dispatch_handoff.request_carrier_required, true);
+    assert.equal(plan.dispatch_handoff.packaged_command, 'zj-loop-roadmap-activation execute');
+    assert.ok(plan.dispatch_handoff.input_contract.includes('activation_request_comment'));
+    assert.ok(plan.dispatch_handoff.review_handoff.join('\n').includes('roadmap branch PR'));
+    assert.ok(plan.dispatch_handoff.closeout_handoff.join('\n').includes('post-merge-roadmap-closeout'));
     assert.equal(plan.consumer_plan.execution_allowed, true);
     assert.match(plan.automation_intent, /bounded review artifact/);
     assert.match(plan.automatic_next_steps.join('\n'), /Run packaged roadmap-sliced-development consumer/);
@@ -114,6 +124,9 @@ test('buildFirstRunPlan turns blocked automation into structured stop signal', a
     assert.equal(plan.recommended_route, 'ci-sweeper');
     assert.equal(plan.automation_allowed, false);
     assert.equal(plan.consumer_plan.status, 'blocked');
+    assert.equal(plan.dispatch_handoff.dispatch_status, 'blocked');
+    assert.equal(plan.dispatch_handoff.dispatch_mode, 'none');
+    assert.equal(plan.dispatch_handoff.request_carrier_required, true);
     assert.equal(plan.preconditions.find((item) => item.id === 'route-enabled')?.status, 'fail');
     assert.equal(plan.stop_signals[0].stop_code, 'precondition-failed');
     assert.equal(plan.stop_signals[0].severity, 'blocked');

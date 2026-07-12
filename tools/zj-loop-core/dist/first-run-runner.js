@@ -42,6 +42,7 @@ export async function buildFirstRunPlan(input) {
             ...stopSignalsForPreconditions(preconditions),
             ...stopSignalsFor(consumerPlan),
         ],
+        dispatch_handoff: dispatchHandoffFor(consumerPlan),
         route_menu: routes.map((item) => routeMenuItem(item, route.route_id)),
         consumer_plan: consumerPlan,
     };
@@ -118,6 +119,99 @@ function stopSignalsFor(plan) {
                 : [],
         },
     ];
+}
+function dispatchHandoffFor(plan) {
+    const command = packagedCommandFor(plan.consumer);
+    if (plan.status === 'blocked') {
+        return {
+            route_id: plan.route_id,
+            consumer: plan.consumer,
+            dispatch_status: 'blocked',
+            dispatch_mode: 'none',
+            request_carrier_required: requestCarrierRequired(plan),
+            packaged_command: command,
+            input_contract: inputContractFor(plan),
+            output_artifacts: plan.route_specific_artifacts,
+            review_handoff: [],
+            closeout_handoff: [],
+            next_steps: plan.next_steps,
+        };
+    }
+    if (plan.status === 'report-only') {
+        return {
+            route_id: plan.route_id,
+            consumer: plan.consumer,
+            dispatch_status: 'report-only',
+            dispatch_mode: 'report-evidence',
+            request_carrier_required: false,
+            packaged_command: command,
+            input_contract: inputContractFor(plan),
+            output_artifacts: plan.route_specific_artifacts,
+            review_handoff: ['Write report evidence to workflow summary or configured evidence store.'],
+            closeout_handoff: [],
+            next_steps: plan.next_steps,
+        };
+    }
+    return {
+        route_id: plan.route_id,
+        consumer: plan.consumer,
+        dispatch_status: 'ready',
+        dispatch_mode: requestCarrierRequired(plan) ? 'request-carrier' : 'consumer-runner',
+        request_carrier_required: requestCarrierRequired(plan),
+        packaged_command: command,
+        input_contract: inputContractFor(plan),
+        output_artifacts: plan.route_specific_artifacts,
+        review_handoff: reviewHandoffFor(plan),
+        closeout_handoff: closeoutHandoffFor(plan),
+        next_steps: plan.next_steps,
+    };
+}
+function requestCarrierRequired(plan) {
+    return plan.request_kind !== 'report-only';
+}
+function packagedCommandFor(consumer) {
+    const commands = {
+        'manual-smoke': 'zj-loop-first-run plan --goal smoke',
+        'roadmap-sliced-development': 'zj-loop-roadmap-activation execute',
+        'ci-sweeper': 'zj-loop-ci-sweeper',
+        'dependency-sweeper': 'zj-loop-dependency-sweeper',
+        'pr-steward': 'zj-loop-pr-steward',
+        'changelog-drafter': 'zj-loop-changelog-drafter',
+        'issue-triage-action': 'zj-loop-issue-triage-action',
+        'issue-triage-transition': 'zj-loop-issue-triage-transition',
+        'post-merge-roadmap-closeout': 'zj-loop-post-merge-closeout',
+    };
+    return commands[consumer] ?? null;
+}
+function inputContractFor(plan) {
+    if (plan.request_kind === 'report-only')
+        return ['route_decision'];
+    if (plan.request_kind === 'activation-comment')
+        return ['activation_request_comment', 'request_id', 'source_issue_or_prd'];
+    if (plan.request_kind === 'issue-fix-request')
+        return ['issue_fix_request', 'request_id', 'source_issue_or_signal'];
+    return [plan.request_kind];
+}
+function reviewHandoffFor(plan) {
+    if (plan.route_id === 'roadmap-sliced-development') {
+        return ['Open or update the roadmap branch PR with roadmap view, verification evidence, and closeout contract.'];
+    }
+    if (plan.consumer_kind === 'fix-runner')
+        return ['Open or update the independent repair PR with verifier evidence.'];
+    if (plan.consumer_kind === 'draft-consumer')
+        return ['Open or update the draft PR with generated draft evidence.'];
+    if (plan.consumer_kind === 'cleanup-consumer')
+        return ['Write cleanup evidence to the source review artifact.'];
+    return ['Write completion evidence to the configured review artifact.'];
+}
+function closeoutHandoffFor(plan) {
+    if (plan.route_id === 'roadmap-sliced-development') {
+        return ['After PR merge, run post-merge-roadmap-closeout with the PR contract.'];
+    }
+    if (plan.route_id === 'post-merge-roadmap-closeout') {
+        return ['Close only the activation carrier named by the merged PR contract and delete only the merged roadmap branch.'];
+    }
+    return [];
 }
 function preconditionsFor(route, projectFacts) {
     const routeEnabled = route.enabled

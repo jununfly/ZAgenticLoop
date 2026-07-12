@@ -152,7 +152,9 @@ matrix for route enablement, consumer capability, provider support,
 credentials/authority, budget, workspace safety, and verification gates. Failed
 hard preconditions become `stop_signals` instead of letting the loop guess. Each
 stop signal carries a fixed `stop_code`, responsible layer, evidence, retry
-policy, and next steps.
+policy, and next steps. Ready plans also include a `dispatch_handoff` with the
+packaged command, input contract, request-carrier requirement, review handoff,
+and closeout handoff.
 
 3. Check cost and readiness:
 

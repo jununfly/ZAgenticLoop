@@ -84,7 +84,7 @@
     "1-4": {
       "id": "1-4",
       "label": "Route 到 Consumer 的自动推进编排",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -251,42 +251,42 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "Route Decision 到 Request Carrier 自动衔接",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：FirstRunPlan 新增 dispatch_handoff，固定表达 Route Decision 后的下一跳；request_carrier_required 与 input_contract 明确 carrier 边界，避免 agent 运行时猜测。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-4-2": {
       "id": "1-4-2",
       "label": "Request Carrier 到 Consumer 自动消费",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：dispatch_handoff 输出 packaged_command、dispatch_status、dispatch_mode；ready/report-only/blocked 三态均有测试覆盖，consumer 自动消费入口不再只藏在自然语言 next_steps。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-4-3": {
       "id": "1-4-3",
       "label": "Roadmap-Sliced 多 slice 自动执行",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：roadmap-sliced-development 的 dispatch_handoff 固定到 zj-loop-roadmap-activation execute，并声明 activation_request_comment/request_id/source_issue_or_prd 输入契约；多 slice 执行继续由 Roadmap Activation bounded consumer 承担。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-4-4": {
       "id": "1-4-4",
       "label": "Review Artifact 与 Closeout 自动衔接",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：dispatch_handoff 增加 review_handoff 与 closeout_handoff；roadmap route 明确 PR handoff 与 post-merge-roadmap-closeout，修复链路尾部靠记忆的问题。验证：tools/zj-loop-core npm test 125 passed；git diff --check passed。"
     },
     "1-5-1": {
       "id": "1-5-1",
@@ -381,7 +381,7 @@
   },
   "metadata": {
     "created": "2026-07-12 13:09:18",
-    "updated": "2026-07-12 13:45:06",
+    "updated": "2026-07-12 13:48:38",
     "md_file": "docs/plans/automation-default-first-run-experience-roadmap.md"
   }
 }
