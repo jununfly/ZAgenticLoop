@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "Automation-Default First Run Experience",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -127,7 +127,7 @@
     "1-7": {
       "id": "1-7",
       "label": "Dogfood 验证与发布门槛",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -351,37 +351,37 @@
     "1-7-1": {
       "id": "1-7-1",
       "label": "本仓自动化 First Run Dogfood",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-7",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：本仓 dogfood 执行 node tools/zj-loop-core/dist/first-run-cli.js plan --root . --json，auto 目标推荐 manual-smoke-report，automation_allowed=true，stop_signals=[]，dispatch_handoff/report replay 字段齐备；roadmap 目标正确输出 runner-not-execution-ready stop signal，阻止过度自动化。"
     },
     "1-7-2": {
       "id": "1-7-2",
       "label": "GitHub 与 GitLab 双 Provider 验证",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-7",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：GitHub 侧用本仓 .github/workflows 识别 provider=github；GitLab 侧用临时目录执行 zj-loop-init --add gitlab-ci 后 first-run plan 识别 provider=gitlab，manual-smoke-report install-ready/report-only 可执行；两侧均无 hard stop signal。"
     },
     "1-7-3": {
       "id": "1-7-3",
       "label": "发布前自动化体验验收门槛",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-7",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "完成：发布前验收门槛覆盖 tools/zj-loop-core npm test、tools/zj-loop-init npm test、git diff --check、GitHub/GitLab first-run dogfood；roadmap 全部 leaf 已有 verification evidence，可进入 closeout/PR。"
     }
   },
   "metadata": {
     "created": "2026-07-12 13:09:18",
-    "updated": "2026-07-12 13:58:32",
+    "updated": "2026-07-12 14:00:12",
     "md_file": "docs/plans/automation-default-first-run-experience-roadmap.md"
   }
 }
