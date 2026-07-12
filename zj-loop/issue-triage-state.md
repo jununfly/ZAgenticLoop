@@ -1,6 +1,6 @@
 # Issue Triage State
 
-Last run: 2026-07-11
+Last run: 2026-07-12
 
 This file records the current issue triage route state for this repository.
 Detailed historical dogfood transcripts are intentionally not kept here once
@@ -40,11 +40,31 @@ their source issues, carriers, PRs, or durable docs have absorbed the evidence.
 ## Current Open Triage Work
 
 - Active report-only scan:
-  - Scan window: `all-issues:2026-07-11`
-  - Total issues scanned: 43
-  - Open issues: 2
-  - Closed issues: 41
+  - Scan window: `open-issues:2026-07-12`
+  - Open issues scanned: 3
   - Side effects executed: none
+- Promoted transitions:
+  - Source issue: `#104`
+  - Transition request: `triage-transition-104-20260712`
+  - Issue Fix Request: `ifr_triage_a064f4b67c1c`
+  - Requested consumer: `roadmap-sliced-development`
+  - Carrier comment:
+    https://github.com/jununfly/ZAgenticLoop/issues/104#issuecomment-4949612301
+  - Consumer status: requested; not yet consumed by Roadmap-Sliced Development
+  - Source issue: `#105`
+  - Transition request: `triage-transition-105-20260712`
+  - Issue Fix Request: `ifr_triage_ec14f0deb2c5`
+  - Requested consumer: `roadmap-sliced-development`
+  - Carrier comment:
+    https://github.com/jununfly/ZAgenticLoop/issues/105#issuecomment-4949612303
+  - Consumer status: requested; not yet consumed by Roadmap-Sliced Development
+  - Source issue: `#106`
+  - Transition request: `triage-transition-106-20260712`
+  - Issue Fix Request: `ifr_triage_2b661c2e8360`
+  - Requested consumer: `roadmap-sliced-development`
+  - Carrier comment:
+    https://github.com/jununfly/ZAgenticLoop/issues/106#issuecomment-4949612316
+  - Consumer status: requested; not yet consumed by Roadmap-Sliced Development
 - Promoted transition:
   - Source issue: `#101`
   - Transition request: `triage-transition-af8f4278cf7b`
@@ -56,6 +76,15 @@ their source issues, carriers, PRs, or durable docs have absorbed the evidence.
   - Consumed evidence:
     https://github.com/jununfly/ZAgenticLoop/issues/101#issuecomment-4943236762
 - Open issue recommendations:
+  - `#104`: `label-suggestion-observation`, recommended
+    `ready-for-agent`; promoted to a source issue Issue Fix Request carrier
+    for `roadmap-sliced-development`.
+  - `#105`: `label-suggestion-observation`, recommended
+    `ready-for-agent`; promoted to a source issue Issue Fix Request carrier
+    for `roadmap-sliced-development`.
+  - `#106`: `label-suggestion-observation`, recommended
+    `ready-for-agent`; promoted to a source issue Issue Fix Request carrier
+    for `roadmap-sliced-development`.
   - `#101`: `label-suggestion-observation`, recommended
     `ready-for-agent`; promoted to a source issue Issue Fix Request carrier
     for `roadmap-sliced-development`.
@@ -135,6 +164,60 @@ formal_lifecycle_transitioned: false
 issue_fix_request_created: false
 consumer_work_started: false
 ```
+
+## Dogfood Run - 2026-07-12
+
+Scan window: `open-issues:2026-07-12`
+
+Source command:
+
+```bash
+gh issue list --repo jununfly/ZAgenticLoop --state open --limit 100 --json number,title,state,labels,assignees,createdAt,updatedAt,url,author,body,comments
+```
+
+Backlog summary:
+
+- Open issues scanned: 3
+- Open issue observations:
+  - 3 `label-suggestion-observation`
+- Report-only tracker side effects executed: none
+- Confirmed transition side effects executed:
+  - 3 source issue Issue Fix Request carrier comments
+  - no labels changed
+  - no assignments changed
+  - no milestones changed
+  - no issues closed or reopened
+  - no independent carrier issues created
+
+Observed open issues:
+
+| Issue | Signal kind | Recommended state | Decision | Request id | Carrier |
+| --- | --- | --- | --- | --- | --- |
+| [#104](https://github.com/jununfly/ZAgenticLoop/issues/104) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_104_20260712` | `triage-transition-104-20260712` | [ifr_triage_a064f4b67c1c](https://github.com/jununfly/ZAgenticLoop/issues/104#issuecomment-4949612301) |
+| [#105](https://github.com/jununfly/ZAgenticLoop/issues/105) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_105_20260712` | `triage-transition-105-20260712` | [ifr_triage_ec14f0deb2c5](https://github.com/jununfly/ZAgenticLoop/issues/105#issuecomment-4949612303) |
+| [#106](https://github.com/jununfly/ZAgenticLoop/issues/106) | `label-suggestion-observation` | `ready-for-agent` | `rd_issue_triage_106_20260712` | `triage-transition-106-20260712` | [ifr_triage_2b661c2e8360](https://github.com/jununfly/ZAgenticLoop/issues/106#issuecomment-4949612316) |
+
+Fixed confirmation phrase used by the automatic route run:
+
+```text
+CONFIRM_TRIAGE_TRANSITION
+```
+
+Boundary note:
+
+- This run executed through `issue-triage-transition` only.
+- The created Issue Fix Requests request `roadmap-sliced-development`, but
+  Roadmap-Sliced Development has not consumed these requests yet.
+- Any branch/PR work for these issues must be performed by the
+  `roadmap-sliced-development` consumer.
+
+Product finding:
+
+- `zj-loop-issue-triage-transition confirm-plan` currently does not expose a
+  `createdAt` input. The first generated carrier bodies used the runner's
+  default timestamp; the comments were edited in place to match the actual run
+  timestamp. This should be fixed in the deterministic CLI so future automatic
+  route runs do not need post-generation correction.
 
 ## Allowed Observations
 
