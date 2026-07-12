@@ -179,6 +179,23 @@ This is intentionally pre-release cross-repo dogfood evidence. It proves the
 GitLab-safe path without publishing an npm version first and without treating
 GitHub Actions as a universal provider adapter.
 
+Recent Roadmap Activation dogfood runs added three durable lessons:
+
+- Issue [#4](https://github.com/jununfly/ZAgenticLoop/issues/4) clarified that
+  `zj-loop-audit` findings must distinguish score/level impact from execution
+  blocking. Optional hardening and future-tooling findings may affect the audit
+  score without implying that a loop is blocked from running.
+- Issue [#84](https://github.com/jununfly/ZAgenticLoop/issues/84) established
+  provider-aware adoption as the default first mile. GitHub Actions are a
+  GitHub provider adapter, not a universal substrate; detected GitLab projects
+  refuse GitHub Actions install/upgrade unless the operator explicitly uses
+  `--force`.
+- Issue [#87](https://github.com/jununfly/ZAgenticLoop/issues/87) was the
+  GitLab full-parity activation. The source issue carried the Issue Fix
+  Request, Roadmap-Sliced activation command, Activation Request, and branch
+  handoff for `act-87-4932786315-8c94c5b9`, proving the source-issue carrier
+  model for a large provider-parity roadmap.
+
 Issue #92 extended the GitLab provider dogfood baseline after a downstream
 GitLab validation run. The follow-up hardening added:
 

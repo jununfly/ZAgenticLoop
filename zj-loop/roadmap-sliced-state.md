@@ -6,7 +6,7 @@ Last run: 2026-07-12
 
 - Roadmap id: issues-104-105-106-gitlab-route-readiness
 - Branch: zjal-issues-104-105-106-gitlab-route-readiness
-- Status: closeout-ready
+- Status: completed
 - Current parent node: closeout
 - Current leaf: none
 
@@ -27,6 +27,7 @@ Last run: 2026-07-12
 | 3-2-roadmap-activation-execute-command | completed | `zj-loop-roadmap-activation execute --provider gitlab --contract-plan ...` emits `zj-loop.gitlab_roadmap_activation_execution_result.v1`; dry-run CLI test passes. | pending |
 | 3-3-gitlab-ci-bundle-execution-job | completed | GitLab roadmap activation fragment runs `zj-loop-roadmap-activation execute --provider gitlab` and uploads `execution-result.json`; init tests assert generated command/artifact. | pending |
 | 3-4-issue-106-durable-docs | completed | Quickstart, Provider Adapter Parity Architecture, Route Consumer Execution Architecture, Dogfood Reference Case, and README document the narrow guarded GitLab Roadmap Activation live path. | pending |
+| issues-104-105-106-closeout | completed | Durable docs absorbed the recent GitLab route readiness decisions: smoke environment diagnostics and `needs: []`, init readiness guidance for include/stage/tags/image/package source, stable issue recommendation and transition request artifacts, guarded GitLab Roadmap Activation branch/MR execution, and the historical #4/#84/#87 activation lessons. Process files `docs/plans/issue-104-105-106-gitlab-route-readiness-roadmap.md`, `docs/plans/gitlab-full-parity-with-github-baseline.md`, `docs/plans/roadmap-activation-4.md`, and `docs/plans/roadmap-activation-84.md` were deleted after durable closeout. Verification: `git diff --check`. | pending |
 | 5-1-durable-docs-and-process-cleanup | completed | Durable docs absorbed the GitLab provider bundle hardening decisions: GitLab CI readiness output, manual replay variables, MR metadata fetch, provider-native metadata, dispatch-vs-execution readiness split, production-safe versus dogfood-validation profiles, GitLab substrate audit tracking, minimal-diff Route Table enablement, and Roadmap Activation branch slug fallback. Process roadmap files under `docs/plans/issue-101-gitlab-provider-bundle-gaps-roadmap.*` were deleted. Verification passed: `bash scripts/ci-validate-gates.sh`; `bash scripts/ci-audit-gates.sh`; `git diff --check` | pending |
 | 4-3-roadmap-activation-branch-slug-trimming | completed | Roadmap Activation branch generation uses a title fallback chain: slugged title, then `issue-<sourceIssue>`, then `activation`; branch parts are joined only when non-empty and trimmed to avoid trailing separators; tests cover normal punctuation trimming, empty title, missing title, Unicode-only title, and non-slug symbol-only title; `cd tools/zj-loop-core && npm test`; `npm run test:route-decision`; `git diff --check` | pending |
 | 4-2-yaml-preserving-route-enable | completed | `setRouteEnabled()` preserves Route Table YAML formatting by patching only the target route's `enabled` and `enabled_reason` lines when the generated Route Table shape is recognizable; parse/stringify remains as fallback for unexpected YAML shapes; regression coverage proves comments, inline comments, blank lines, and flow-style arrays outside the target route survive enable operations; `cd tools/zj-loop-core && npm test`; `git diff --check` | pending |
