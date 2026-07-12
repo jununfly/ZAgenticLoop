@@ -89,6 +89,44 @@ npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
 The status output is the route menu. Use it to choose the first route instead of
 assuming every generated workflow should run live.
 
+## Automation-Default First-Run Contract
+
+The first-run planner is the user-facing bridge from installation to a safe
+automatic loop. It should answer four questions in one deterministic artifact:
+
+- Which route should run first?
+- What must be true before automation may continue?
+- If the loop stops, which layer owns the stop and what should happen next?
+- If the route is ready, which packaged consumer command and request carrier
+  handoff should run next?
+
+The first-run JSON schema is `zj-loop.first_run_plan.v1`. Its durable contract
+is:
+
+- `preconditions`: hard and warning checks for route enablement, consumer
+  capability, provider support, credentials and authority, cost budget,
+  workspace safety, and verification gates.
+- `stop_signals`: fixed stop codes, severity, responsible layer, evidence,
+  retry policy, human requirement, confirmation location, and next steps.
+- `dispatch_handoff`: the deterministic bridge from Route Decision to request
+  carrier, packaged consumer command, review artifact, and closeout handoff.
+- `execution_summary`, `evidence_index`, `state_explanation`, and
+  `failure_replay`: compact replay fields for users and automation.
+
+Dogfood evidence from this repository established two important boundaries:
+
+- Auto first-run recommends `manual-smoke-report` and can continue in
+  report-only mode with no stop signal.
+- Targeting `roadmap-sliced-development` may still stop with
+  `runner-not-execution-ready` when the Route Table says the route is
+  dogfood-verified but not execution-ready. That stop is intentional: it keeps
+  automation-default from becoming over-claiming.
+
+Generated GitLab installs were also checked by scaffolding `--add gitlab-ci`
+into a temporary project and running first-run planning there. The planner
+detected `provider=gitlab`, selected the install-ready `manual-smoke-report`
+route, and produced report-only evidence without hard stop signals.
+
 ## Enablement Commands
 
 Enable side-effecting routes only when their row has the expected maturity and
