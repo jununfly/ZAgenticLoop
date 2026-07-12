@@ -24,6 +24,15 @@ Carrier issue:
 Pre-merge evidence comment:
 [issuecomment-4951081405](https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405).
 
+Review artifact:
+[jununfly/ZAgenticLoop#110](https://github.com/jununfly/ZAgenticLoop/pull/110).
+
+Closeout evidence:
+[issuecomment-4951105306](https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105306).
+
+Carrier close comment:
+[issuecomment-4951105657](https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105657).
+
 Roadmap branch:
 
 ```text
@@ -36,9 +45,8 @@ Structured harness run input:
 node tools/zj-loop-core/dist/harness-protocol-cli.js record-metrics docs/testing/codex-harness-provider-backed-dogfood-run.json
 ```
 
-The current run is intentionally pre-merge. It records the real issue carrier
-and branch evidence now, then stops on a structured `awaiting-review-pr-merge`
-signal until a review PR exists and is merged.
+The run completed after PR #110 merged. Post-merge closeout wrote evidence to
+carrier issue #109 before closing it, and deleted the merged roadmap branch.
 
 ## Expected Evidence
 
@@ -57,6 +65,14 @@ After PR merge:
 - Post-merge closeout writes evidence back to the carrier issue.
 - Carrier issue is closed only after closeout evidence is written.
 - Metrics are regenerated with `post_merge_closeout_evidence_count > 0`.
+
+Observed metrics after closeout:
+
+```text
+human_handoff_count: 0
+structured_stop_signal_count: 0
+post_merge_closeout_evidence_count: 1
+```
 
 ## Product Observation
 

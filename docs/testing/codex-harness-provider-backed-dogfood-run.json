@@ -42,13 +42,13 @@
     {
       "schema": "zj-loop.harness_output.v1",
       "schema_version": 1,
-      "status": "stopped",
-      "summary": "Post-merge closeout evidence is intentionally pending until the review PR is merged.",
+      "status": "completed",
+      "summary": "PR #110 merged and post-merge closeout wrote evidence before closing carrier issue #109.",
       "next_actions": [
         {
           "type": "perform_closeout",
           "target": "github-issue:109",
-          "label": "After PR merge, run post-merge roadmap closeout and close the dogfood carrier"
+          "label": "Post-merge roadmap closeout completed for carrier issue #109"
         }
       ],
       "evidence": [
@@ -59,18 +59,22 @@
         {
           "kind": "github-comment",
           "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405"
+        },
+        {
+          "kind": "post-merge-closeout",
+          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105306"
+        },
+        {
+          "kind": "github-comment",
+          "url": "https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105657"
         }
       ],
-      "artifacts": [],
-      "stop_signal": {
-        "reason": "awaiting-review-pr-merge",
-        "impact": "The provider-backed dogfood path cannot claim post-merge closeout completion before the PR exists and is merged.",
-        "recovery": "Create and merge the review PR, then run post-merge closeout against carrier issue #109."
-      },
-      "resume": {
-        "target": "github-issue:109",
-        "condition": "review PR merged"
-      }
+      "artifacts": [
+        {
+          "kind": "github-pr",
+          "url": "https://github.com/jununfly/ZAgenticLoop/pull/110"
+        }
+      ]
     }
   ]
 }

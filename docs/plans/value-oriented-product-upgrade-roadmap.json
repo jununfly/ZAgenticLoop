@@ -713,7 +713,7 @@
     "1-10": {
       "id": "1-10",
       "label": "Codex Harness 执行切片与交付顺序",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -767,12 +767,12 @@
     "1-10-4": {
       "id": "1-10-4",
       "label": "GitHub Issue 到 PR Closeout 的 Harness Dogfood",
-      "status": "blocked",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-10",
       "children": [],
       "decisions": [],
-      "notes": "Provider-backed dogfood started with real carrier issue https://github.com/jununfly/ZAgenticLoop/issues/109 and pre-merge evidence comment https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951081405 on branch zjal-value-oriented-product-upgrade-map. Added structured run evidence in docs/testing/codex-harness-provider-backed-dogfood-run.json and durable test doc docs/testing/codex-harness-provider-backed-dogfood.md. Metrics recorder output verified via node tools/zj-loop-core/dist/harness-protocol-cli.js record-metrics docs/testing/codex-harness-provider-backed-dogfood-run.json. Current metrics: human_handoff_count=0, location_switch_count=1, structured_stop_signal_count=1, post_merge_closeout_evidence_count=0. Blocked until review PR exists, is merged, and post-merge closeout evidence can be written to #109."
+      "notes": "Provider-backed dogfood completed end-to-end. Carrier issue https://github.com/jununfly/ZAgenticLoop/issues/109 was created, PR https://github.com/jununfly/ZAgenticLoop/pull/110 was merged, post-merge closeout evidence was written at https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105306, close comment at https://github.com/jununfly/ZAgenticLoop/issues/109#issuecomment-4951105657, and carrier #109 is closed. Closeout deleted local and remote branch zjal-value-oriented-product-upgrade-map. Metrics regenerated from docs/testing/codex-harness-provider-backed-dogfood-run.json: human_handoff_count=0, structured_stop_signal_count=0, post_merge_closeout_evidence_count=1."
     },
     "1-10-5": {
       "id": "1-10-5",
@@ -807,7 +807,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-12 19:56:35",
+    "updated": "2026-07-12 20:10:59",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }
