@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-12 23:13:44
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-12 23:32:39
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -9,11 +9,11 @@
 │   ├── [x][X+] 1-1-2. 首次运行到下一次运行的连续体验
 │   ├── [x][X+] 1-1-3. 自动继续与停止提示的用户界面
 │   └── [x][X+] 1-1-4. 用户故事式帮助文档与示例项目
-├── [ ][X+] 1-2. Route Readiness 与自动化授权模型
-│   ├── [ ][X+] 1-2-1. Readiness 语义收敛与升级路径
-│   ├── [ ][X+] 1-2-2. Route Table 自动化意图与执行授权拆分
-│   ├── [ ][X+] 1-2-3. Route 状态菜单、评分与推荐算法
-│   └── [ ][X+] 1-2-4. 启用、禁用、提升成熟度的确定性命令
+├── [x][Y+] 1-2. Route Readiness 与自动化授权模型
+│   ├── [x][Y+] 1-2-1. Readiness 语义收敛与升级路径
+│   ├── [x][Y+] 1-2-2. Route Table 自动化意图与执行授权拆分
+│   ├── [x][Y+] 1-2-3. Route 状态菜单、评分与推荐算法
+│   └── [x][Y+] 1-2-4. 启用、禁用、提升成熟度的确定性命令
 ├── [ ][X+] 1-3. Signal 到 Review Artifact 的自动编排
 │   ├── [ ][X+] 1-3-1. Signal Producer 统一接入面
 │   ├── [ ][X+] 1-3-2. Route Decision 持久化与去重
@@ -76,7 +76,7 @@
 **当前子树：**
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
 │   ... 4 more child nodes; run tree 1-1 --depth 2 for full view
-├── [ ][X+] 1-2. Route Readiness 与自动化授权模型
+├── [x][Y+] 1-2. Route Readiness 与自动化授权模型
 │   ... 4 more child nodes; run tree 1-2 --depth 2 for full view
 ├── [ ][X+] 1-3. Signal 到 Review Artifact 的自动编排
 │   ... 5 more child nodes; run tree 1-3 --depth 2 for full view

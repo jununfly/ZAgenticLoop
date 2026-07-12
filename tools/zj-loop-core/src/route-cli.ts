@@ -5,6 +5,7 @@ import {
   expectedConfirmationPhrase,
   listRoutes,
   loadRouteTable,
+  promoteRouteMaturity,
   setRouteEnabled,
 } from './route.js';
 
@@ -19,7 +20,7 @@ function hasFlag(args: string[], name: string): boolean {
 }
 
 function positionalAfterCommand(args: string[]): string | undefined {
-  const valueFlags = new Set(['--root', '--source', '--signal-id', '--confirm', '--reason']);
+  const valueFlags = new Set(['--root', '--source', '--signal-id', '--confirm', '--reason', '--runner']);
   for (let index = 1; index < args.length; index += 1) {
     const arg = args[index];
     if (valueFlags.has(arg)) {
@@ -39,10 +40,14 @@ Usage:
   zj-loop-route dispatch <consumer-or-route> [--root <dir>] [--source <source>] [--signal-id <id>] [--json]
   zj-loop-route enable <consumer-or-route> [--root <dir>] [--confirm <phrase>] [--reason <text>] [--json]
   zj-loop-route disable <consumer-or-route> [--root <dir>] [--json]
+  zj-loop-route promote <consumer-or-route> --runner install-ready|execution-ready [--root <dir>] [--confirm <phrase>] [--json]
 
 Side-effecting enable confirmation:
   enable <consumer> side effects
   enable <consumer> destructive side effects
+
+Execution-ready promotion confirmation:
+  promote <consumer> runner to execution-ready
 `;
 }
 
@@ -100,14 +105,37 @@ async function main(argv = process.argv.slice(2)) {
     return 0;
   }
 
+  if (command === 'promote') {
+    const runner = optionValue(argv, '--runner');
+    if (runner !== 'install-ready' && runner !== 'execution-ready') {
+      throw new Error('promote requires --runner install-ready|execution-ready');
+    }
+    const result = await promoteRouteMaturity({
+      root,
+      selector,
+      runner,
+      confirm: optionValue(argv, '--confirm'),
+    });
+    if (json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`promoted ${result.route_id} runner=${result.runner}`);
+      console.log(`enabled remains ${result.enabled ? 'true' : 'false'}`);
+      for (const step of result.next_steps) console.log(`next step: ${step}`);
+    }
+    return 0;
+  }
+
   throw new Error(`Unknown command: ${command}`);
 }
 
 function formatRouteStatusTable(routes: ReturnType<typeof listRoutes>): string {
   const rows = [
-    ['enabled', 'route', 'consumer', 'kind', 'mode', 'sidefx', 'protocol', 'runner', 'readiness', 'confirm'],
+    ['enabled', 'dispatch', 'execute', 'route', 'consumer', 'kind', 'mode', 'sidefx', 'protocol', 'runner', 'readiness', 'confirm'],
     ...routes.map((route) => [
       route.enabled ? 'yes' : 'no',
+      route.automation_model.authorization.dispatch_allowed ? 'yes' : 'no',
+      route.automation_model.authorization.execution_allowed ? 'yes' : 'no',
       route.route_id,
       route.consumer,
       route.consumer_kind,

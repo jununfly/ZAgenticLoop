@@ -296,6 +296,39 @@ should preserve comments, ordering, and unrelated formatting when it only needs
 to update a target route's `enabled` and `enabled_reason` fields. Whole-file
 YAML rewrites are acceptable only as fallback for unexpected YAML shapes.
 
+Route status must display readiness and authorization separately. In human
+output, `zj-loop-route status` shows `enabled`, `dispatch`, and `execute` as
+separate columns. In JSON output, each route includes `automation_model`:
+
+```json
+{
+  "readiness": {
+    "level": "dogfood-verified",
+    "install_ready": false,
+    "execution_ready": false,
+    "user_project_ready": false,
+    "reasons": ["live dogfood evidence exists", "not yet promoted to execution-ready"]
+  },
+  "authorization": {
+    "route_enabled": false,
+    "dispatch_allowed": false,
+    "execution_allowed": false,
+    "required_confirmation": "enable ci-sweeper side effects",
+    "blocked_reasons": ["route disabled", "route is not execution-ready"]
+  }
+}
+```
+
+Runner maturity promotion is also deterministic:
+
+```bash
+zj-loop-route promote ci-sweeper --runner install-ready
+zj-loop-route promote ci-sweeper --runner execution-ready --confirm "promote ci-sweeper runner to execution-ready"
+```
+
+`promote` updates `maturity.runner` only. It does not enable the route, does not
+grant execution authorization, and does not run a consumer.
+
 Generated Route Tables may describe route profiles under `policy`, such as
 `production_safe_default` and `dogfood_validation`. These profiles are
 documentation and policy guidance inside the Route Table; they are not blanket

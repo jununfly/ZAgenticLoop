@@ -208,6 +208,45 @@ export async function setRouteEnabled(input) {
             : [`Run zj-loop-route status ${route.consumer}`, 'Re-run audit or workflow smoke path if rollback was due to failure.'],
     };
 }
+export async function promoteRouteMaturity(input) {
+    const routeTablePath = input.routeTablePath ?? DEFAULT_ROUTE_TABLE_PATH;
+    const filePath = path.resolve(input.root, routeTablePath);
+    const text = await readFile(filePath, 'utf8');
+    const table = parseRouteTable(text);
+    const route = findRoute(table, input.selector);
+    const confirmationRequired = input.runner === 'execution-ready';
+    const expected = expectedMaturityPromotionPhrase(route, input.runner);
+    if (confirmationRequired && input.confirm !== expected) {
+        throw new Error(`Confirmation required: --confirm "${expected}"`);
+    }
+    const target = findMutableRoute(table, route.route_id);
+    const changed = target.maturity?.runner !== input.runner;
+    if (changed) {
+        const updatedText = patchRouteMaturityRunnerText(text, {
+            routeId: route.route_id,
+            runner: input.runner,
+        });
+        if (updatedText !== null) {
+            await writeFile(filePath, updatedText);
+        }
+        else {
+            target.maturity = { ...(target.maturity ?? {}), runner: input.runner };
+            await writeFile(filePath, YAML.stringify(table));
+        }
+    }
+    return {
+        route_id: route.route_id,
+        consumer: route.consumer,
+        runner: input.runner,
+        enabled: route.enabled,
+        changed,
+        confirmation_required: confirmationRequired,
+        next_steps: [
+            `Run zj-loop-route status ${route.route_id} --json`,
+            'Enable the route separately only when authorization and verifier requirements are satisfied.',
+        ],
+    };
+}
 function patchRouteEnabledText(text, input) {
     const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
     const trailingNewline = text.endsWith('\n');
@@ -250,6 +289,39 @@ function patchRouteEnabledText(text, input) {
             lines[reasonIndex] = reasonLine;
         }
     }
+    return `${lines.join(lineEnding)}${trailingNewline ? lineEnding : ''}`;
+}
+function patchRouteMaturityRunnerText(text, input) {
+    const lineEnding = text.includes('\r\n') ? '\r\n' : '\n';
+    const trailingNewline = text.endsWith('\n');
+    const lines = text.split(/\r?\n/);
+    if (trailingNewline)
+        lines.pop();
+    const routeLineIndex = lines.findIndex((line) => yamlLineScalarEquals(line, 'route_id', input.routeId));
+    if (routeLineIndex === -1)
+        return null;
+    const blockStart = findRouteBlockStart(lines, routeLineIndex);
+    if (blockStart === -1)
+        return null;
+    const itemIndent = lines[blockStart].match(/^(\s*)-\s+/)?.[1];
+    if (itemIndent === undefined)
+        return null;
+    let blockEnd = lines.length;
+    const nextItem = new RegExp(`^${escapeRegExp(itemIndent)}-\\s+`);
+    for (let index = blockStart + 1; index < lines.length; index += 1) {
+        if (nextItem.test(lines[index])) {
+            blockEnd = index;
+            break;
+        }
+    }
+    const maturityIndex = findKeyLineInBlock(lines, blockStart, blockEnd, 'maturity');
+    if (maturityIndex === -1)
+        return null;
+    const runnerIndex = findKeyLineInBlock(lines, maturityIndex + 1, blockEnd, 'runner');
+    if (runnerIndex === -1)
+        return null;
+    const runnerIndent = lines[runnerIndex].match(/^(\s*)/)?.[1] ?? `${itemIndent}    `;
+    lines[runnerIndex] = `${runnerIndent}runner: ${input.runner}`;
     return `${lines.join(lineEnding)}${trailingNewline ? lineEnding : ''}`;
 }
 function findRouteBlockStart(lines, routeLineIndex) {
@@ -310,7 +382,7 @@ function normalizeRouteSection(routes, section) {
             maturityRunner,
             recentSuccessEvidence,
         });
-        return {
+        const statusWithoutAutomation = {
             route_id: routeId,
             consumer,
             consumer_kind: consumerKind,
@@ -334,7 +406,34 @@ function normalizeRouteSection(routes, section) {
             destructive,
             side_effecting: sideEffecting,
         };
+        return {
+            ...statusWithoutAutomation,
+            automation_model: buildRouteAutomationModel(statusWithoutAutomation),
+        };
     });
+}
+export function buildRouteAutomationModel(route) {
+    const blockedReasons = [];
+    if (!route.enabled)
+        blockedReasons.push('route disabled');
+    if (!route.execution_ready)
+        blockedReasons.push('route is not execution-ready');
+    return {
+        readiness: {
+            level: route.readiness,
+            install_ready: route.install_ready,
+            execution_ready: route.execution_ready,
+            user_project_ready: route.user_project_ready,
+            reasons: route.readiness_reasons,
+        },
+        authorization: {
+            route_enabled: route.enabled,
+            dispatch_allowed: route.enabled,
+            execution_allowed: route.enabled && route.execution_ready,
+            required_confirmation: route.side_effecting && !route.enabled ? expectedConfirmationPhrase(route) : null,
+            blocked_reasons: blockedReasons,
+        },
+    };
 }
 export function classifyRouteReadiness(input) {
     const evidence = input.recentSuccessEvidence ?? [];
@@ -426,6 +525,9 @@ export function expectedConfirmationPhrase(route) {
     return route.destructive
         ? `enable ${route.consumer} destructive side effects`
         : `enable ${route.consumer} side effects`;
+}
+export function expectedMaturityPromotionPhrase(route, runner) {
+    return `promote ${route.consumer} runner to ${runner}`;
 }
 function requireString(value, field) {
     if (typeof value !== 'string' || value.length === 0)

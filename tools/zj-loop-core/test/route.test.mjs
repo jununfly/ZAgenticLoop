@@ -211,6 +211,80 @@ test('disable is low-friction and removes enabled_reason', async () => {
   }
 });
 
+test('promote runner maturity requires confirmation for execution-ready and does not enable route', async () => {
+  const dir = await setupRouteTable();
+  try {
+    const denied = spawnSync(process.execPath, [
+      CLI,
+      'promote',
+      'ci-sweeper',
+      '--root',
+      dir,
+      '--runner',
+      'execution-ready',
+    ], { encoding: 'utf8' });
+    assert.equal(denied.status, 1);
+    assert.match(denied.stderr, /Confirmation required: --confirm "promote ci-sweeper runner to execution-ready"/);
+
+    const promoted = spawnSync(process.execPath, [
+      CLI,
+      'promote',
+      'ci-sweeper',
+      '--root',
+      dir,
+      '--runner',
+      'execution-ready',
+      '--confirm',
+      'promote ci-sweeper runner to execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(promoted.status, 0);
+    const result = JSON.parse(promoted.stdout);
+    assert.equal(result.route_id, 'ci-sweeper');
+    assert.equal(result.runner, 'execution-ready');
+    assert.equal(result.enabled, false);
+
+    const updated = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(updated, /runner: execution-ready/);
+    assert.match(updated, /enabled: false/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promote runner maturity to install-ready is low friction but not execution authorization', async () => {
+  const dir = await setupRouteTable();
+  try {
+    const promoted = spawnSync(process.execPath, [
+      CLI,
+      'promote',
+      'ci-sweeper',
+      '--root',
+      dir,
+      '--runner',
+      'install-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(promoted.status, 0);
+    const result = JSON.parse(promoted.stdout);
+    assert.equal(result.runner, 'install-ready');
+    assert.equal(result.confirmation_required, false);
+    assert.equal(result.enabled, false);
+
+    const status = spawnSync(process.execPath, [CLI, 'status', 'ci-sweeper', '--root', dir, '--json'], { encoding: 'utf8' });
+    assert.equal(status.status, 0);
+    const route = JSON.parse(status.stdout).routes[0];
+    assert.equal(route.automation_model.readiness.level, 'install-ready');
+    assert.equal(route.automation_model.authorization.execution_allowed, false);
+    assert.deepEqual(route.automation_model.authorization.blocked_reasons, [
+      'route disabled',
+      'route is not execution-ready',
+    ]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('destructive route uses destructive confirmation phrase', () => {
   const route = listRoutes(parseRouteTable(ROUTE_TABLE)).find((item) => item.route_id === 'post-merge-roadmap-closeout');
   assert.ok(route);
@@ -360,12 +434,13 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
   try {
     const status = spawnSync(process.execPath, [CLI, 'status', '--root', dir], { encoding: 'utf8' });
     assert.equal(status.status, 0);
-    assert.match(status.stdout, /enabled\s+route\s+consumer\s+kind\s+mode\s+sidefx\s+protocol\s+runner\s+readiness/);
+    assert.match(status.stdout, /enabled\s+dispatch\s+execute\s+route\s+consumer\s+kind\s+mode\s+sidefx\s+protocol\s+runner\s+readiness/);
     assert.match(status.stdout, /manual-smoke-report/);
     assert.match(status.stdout, /ci-sweeper/);
     assert.match(status.stdout, /fix-runner/);
     assert.match(status.stdout, /live/);
     assert.match(status.stdout, /dogfood-verified/);
+    assert.match(status.stdout, /no\s+no\s+no\s+ci-sweeper/);
 
     const dispatch = spawnSync(process.execPath, [CLI, 'dispatch', 'ci-sweeper', '--root', dir], { encoding: 'utf8' });
     assert.equal(dispatch.status, 2);
@@ -383,6 +458,33 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
     assert.equal(parsedStatus.routes[0].execution_ready, false);
     assert.equal(parsedStatus.routes[0].user_project_ready, false);
     assert.deepEqual(parsedStatus.routes[0].capability_verifiers, ['ci-validate-gates', 'diff-check']);
+    assert.deepEqual(parsedStatus.routes[0].automation_model, {
+      readiness: {
+        level: 'dogfood-verified',
+        install_ready: false,
+        execution_ready: false,
+        user_project_ready: false,
+        reasons: ['live dogfood evidence exists', 'not yet promoted to execution-ready'],
+      },
+      authorization: {
+        route_enabled: false,
+        dispatch_allowed: false,
+        execution_allowed: false,
+        required_confirmation: 'enable ci-sweeper side effects',
+        blocked_reasons: ['route disabled', 'route is not execution-ready'],
+      },
+    });
+
+    const smokeJson = spawnSync(process.execPath, [CLI, 'status', 'manual-smoke-report', '--root', dir, '--json'], { encoding: 'utf8' });
+    assert.equal(smokeJson.status, 0);
+    const smokeStatus = JSON.parse(smokeJson.stdout);
+    assert.deepEqual(smokeStatus.routes[0].automation_model.authorization, {
+      route_enabled: true,
+      dispatch_allowed: true,
+      execution_allowed: false,
+      required_confirmation: null,
+      blocked_reasons: ['route is not execution-ready'],
+    });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

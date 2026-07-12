@@ -149,8 +149,8 @@
     "1-2": {
       "id": "1-2",
       "label": "Route Readiness 与自动化授权模型",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-2-1",
@@ -158,8 +158,19 @@
         "1-2-3",
         "1-2-4"
       ],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "1-2 的第一刀 public interface 如何收敛？",
+          "answer": "在 zj-loop-route status --json 和 core public API 中增加 automation_model：显式分离 readiness 与 authorization。readiness 描述 route/runner 是否具备安装、执行、用户项目运行条件；authorization 描述 Route Table 是否 enabled、dispatch 是否允许、execution 是否允许，以及 blocked reasons/required confirmations。",
+          "note": "TDD 第一颗 tracer bullet 从 route status JSON 开始，避免只改内部分类函数。"
+        },
+        {
+          "q": "Route 成熟度提升是否需要确定性命令？",
+          "answer": "需要。新增 zj-loop-route promote <route> --runner <maturity>，第一阶段只允许提升 runner maturity 到 install-ready 或 execution-ready。execution-ready 必须使用固定确认短语，避免 Agent 或用户把 install-ready/dogfood evidence 误当作自动执行授权。",
+          "note": "该命令只更新 Route Table maturity.runner，不直接 enable route，也不直接执行 consumer。"
+        }
+      ],
+      "notes": "Completed 1-2: route status now separates readiness from authorization, exposes automation_model in JSON/public API, displays dispatch/execute columns, and adds deterministic maturity promotion. Verification: cd tools/zj-loop-core && npm test passed 148 tests; git diff --check passed."
     },
     "1-3": {
       "id": "1-3",
@@ -309,42 +320,42 @@
     "1-2-1": {
       "id": "1-2-1",
       "label": "Readiness 语义收敛与升级路径",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: zj-loop-route status --json now exposes automation_model.readiness with level, install_ready, execution_ready, user_project_ready, and reasons; core API exposes RouteAutomationModel/buildRouteAutomationModel."
     },
     "1-2-2": {
       "id": "1-2-2",
       "label": "Route Table 自动化意图与执行授权拆分",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: automation_model.authorization separates route_enabled, dispatch_allowed, execution_allowed, required_confirmation, and blocked_reasons from readiness state."
     },
     "1-2-3": {
       "id": "1-2-3",
       "label": "Route 状态菜单、评分与推荐算法",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: zj-loop-route status table now displays enabled, dispatch, and execute separately; JSON status provides a single automation_model object for scripts and agents."
     },
     "1-2-4": {
       "id": "1-2-4",
       "label": "启用、禁用、提升成熟度的确定性命令",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: zj-loop-route promote updates maturity.runner to install-ready or execution-ready; execution-ready requires fixed phrase and promote never enables a route or runs a consumer."
     },
     "1-3-1": {
       "id": "1-3-1",
@@ -958,7 +969,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-12 23:13:44",
+    "updated": "2026-07-12 23:32:39",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

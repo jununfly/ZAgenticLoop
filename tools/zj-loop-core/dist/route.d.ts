@@ -55,6 +55,23 @@ export type RouteStatus = {
     section: 'routes' | 'disabled_dispatch_routes';
     destructive: boolean;
     side_effecting: boolean;
+    automation_model: RouteAutomationModel;
+};
+export type RouteAutomationModel = {
+    readiness: {
+        level: RouteReadiness;
+        install_ready: boolean;
+        execution_ready: boolean;
+        user_project_ready: boolean;
+        reasons: string[];
+    };
+    authorization: {
+        route_enabled: boolean;
+        dispatch_allowed: boolean;
+        execution_allowed: boolean;
+        required_confirmation: string | null;
+        blocked_reasons: string[];
+    };
 };
 export type RouteReadiness = 'install-ready' | 'execution-ready' | 'dogfood-verified' | 'live-missing-evidence' | 'replayed' | 'designed' | 'missing';
 export type RouteDecision = {
@@ -79,6 +96,15 @@ export type RouteChangeResult = {
     confirmation_required: boolean;
     destructive: boolean;
     side_effecting: boolean;
+    next_steps: string[];
+};
+export type RouteMaturityPromotionResult = {
+    route_id: string;
+    consumer: string;
+    runner: 'install-ready' | 'execution-ready';
+    enabled: boolean;
+    changed: boolean;
+    confirmation_required: boolean;
     next_steps: string[];
 };
 export type RouteExecutionValidation = {
@@ -131,6 +157,14 @@ export declare function setRouteEnabled(input: {
     reason?: string;
     routeTablePath?: string;
 }): Promise<RouteChangeResult>;
+export declare function promoteRouteMaturity(input: {
+    root: string;
+    selector: string;
+    runner: 'install-ready' | 'execution-ready';
+    confirm?: string;
+    routeTablePath?: string;
+}): Promise<RouteMaturityPromotionResult>;
+export declare function buildRouteAutomationModel(route: Omit<RouteStatus, 'automation_model'>): RouteAutomationModel;
 export declare function classifyRouteReadiness(input: {
     executionMode: string;
     sideEffectLevel: string;
@@ -140,4 +174,10 @@ export declare function classifyRouteReadiness(input: {
     readiness: RouteReadiness;
     reasons: string[];
 };
-export declare function expectedConfirmationPhrase(route: RouteStatus): string;
+export declare function expectedConfirmationPhrase(route: {
+    consumer: string;
+    destructive: boolean;
+}): string;
+export declare function expectedMaturityPromotionPhrase(route: {
+    consumer: string;
+}, runner: 'install-ready' | 'execution-ready'): string;

@@ -88,12 +88,29 @@ Report-only routes may be dispatch-allowed while execution remains false.
 Blocked action routes should still point to their primary dry-run JSON artifact
 so users can inspect why execution did not continue.
 
-Live execution must be enabled through a separate command shape that requires a
-fixed confirmation phrase, for example:
+`zj-loop-route status --json` exposes the same split under
+`automation_model`:
+
+- `automation_model.readiness` contains the route readiness level and the
+  derived `install_ready`, `execution_ready`, and `user_project_ready` booleans.
+- `automation_model.authorization` contains `route_enabled`,
+  `dispatch_allowed`, `execution_allowed`, any required fixed confirmation
+  phrase, and blocked reasons.
+
+This is intentionally redundant with the legacy top-level readiness booleans so
+agents and scripts can consume one object without treating `enabled` as
+execution permission.
+
+Runner maturity promotion is deterministic and separate from route enablement:
 
 ```bash
-zj-loop-route execution set <route-or-consumer> --mode live --confirm "enable <consumer> live execution"
+zj-loop-route promote <route-or-consumer> --runner install-ready
+zj-loop-route promote <route-or-consumer> --runner execution-ready --confirm "promote <consumer> runner to execution-ready"
 ```
+
+Promotion updates `maturity.runner`; it does not enable the route and does not
+run the consumer. Route enablement still uses `zj-loop-route enable`, and
+side-effecting routes still require their own fixed confirmation phrase.
 
 ## Side Effect Levels
 
