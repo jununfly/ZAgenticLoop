@@ -326,21 +326,6 @@ export declare function collectCloseoutInputFromGitLab(input: {
     currentRepo: string;
     gitStatus: string;
 }>;
-export declare function buildGitLabMergeRequestApiUrl(input: {
-    apiBaseUrl?: string;
-    projectPath: string;
-    iid: string | number;
-}): string;
-export declare function buildGitLabBranchApiUrl(input: {
-    apiBaseUrl?: string;
-    projectPath: string;
-    branch: string;
-}): string;
-export declare function buildGitLabIssueApiUrl(input: {
-    apiBaseUrl?: string;
-    projectPath: string;
-    issue: string | number;
-}): string;
 export declare function normalizeGhPrView(pr: PostMergePullRequest, { expectedRepo }: {
     expectedRepo: string;
 }): {

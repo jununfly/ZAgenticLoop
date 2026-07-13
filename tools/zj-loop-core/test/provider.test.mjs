@@ -1,8 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildGitLabApiUrl,
+  buildGitLabAuthHeaders,
+  buildGitLabBranchApiUrl,
+  buildGitLabIssueApiUrl,
+  buildGitLabMergeRequestApiUrl,
   buildProviderIssueUrl,
+  buildProviderAuditMetadata,
   detectProviderKind,
+  gitLabFailureReason,
   parseGitRemoteRepository,
   parseProviderIssueUrl,
   parseProviderReviewUrl,
@@ -107,4 +114,89 @@ test('parseProviderReviewUrl distinguishes GitHub PRs and GitLab MRs', () => {
     kind: 'merge-request',
     url: 'https://gitlab.com/group/subgroup/project/-/merge_requests/9',
   });
+});
+
+test('GitLab provider API helpers normalize URLs without creating a generic Git provider abstraction', () => {
+  assert.equal(
+    buildGitLabApiUrl({ projectPath: 'group/subgroup/project', path: 'merge_requests' }),
+    'https://gitlab.com/api/v4/projects/group%2Fsubgroup%2Fproject/merge_requests',
+  );
+  assert.equal(
+    buildGitLabApiUrl({ apiBaseUrl: 'https://git.example.test/api/v4/', projectPath: 'team/project', path: ['repository', 'branches'] }),
+    'https://git.example.test/api/v4/projects/team%2Fproject/repository/branches',
+  );
+  assert.equal(
+    buildGitLabMergeRequestApiUrl({ projectPath: 'group/subgroup/project', iid: 9 }),
+    'https://gitlab.com/api/v4/projects/group%2Fsubgroup%2Fproject/merge_requests/9',
+  );
+  assert.equal(
+    buildGitLabBranchApiUrl({ projectPath: 'group/subgroup/project', branch: 'zjal-act-1' }),
+    'https://gitlab.com/api/v4/projects/group%2Fsubgroup%2Fproject/repository/branches/zjal-act-1',
+  );
+  assert.equal(
+    buildGitLabIssueApiUrl({ projectPath: 'group/subgroup/project', issue: 42 }),
+    'https://gitlab.com/api/v4/projects/group%2Fsubgroup%2Fproject/issues/42',
+  );
+});
+
+test('GitLab provider auth and failure helpers keep low-cost deterministic shapes', async () => {
+  assert.deepEqual(buildGitLabAuthHeaders({ token: 'private-token', jobToken: 'job-token' }), {
+    'PRIVATE-TOKEN': 'private-token',
+  });
+  assert.deepEqual(buildGitLabAuthHeaders({ jobToken: 'job-token' }), {
+    'JOB-TOKEN': 'job-token',
+  });
+  assert.deepEqual(buildGitLabAuthHeaders({}), {});
+
+  assert.equal(
+    await gitLabFailureReason('gitlab-branch-delete-failed', {
+      status: 409,
+      text: async () => 'Branch cannot be deleted',
+    }),
+    'gitlab-branch-delete-failed:409:Branch cannot be deleted',
+  );
+});
+
+test('provider audit metadata stores stable carrier fields without full provider responses', () => {
+  assert.deepEqual(
+    buildProviderAuditMetadata({ url: 'https://github.com/jununfly/ZAgenticLoop/issues/87' }),
+    {
+      provider: 'github',
+      host: 'github.com',
+      project_path: 'jununfly/ZAgenticLoop',
+      carrier_kind: 'issue',
+      carrier_url: 'https://github.com/jununfly/ZAgenticLoop/issues/87',
+      issue: 87,
+    },
+  );
+
+  assert.deepEqual(
+    buildProviderAuditMetadata({ url: 'https://gitlab.com/group/subgroup/project/-/merge_requests/9' }),
+    {
+      provider: 'gitlab',
+      host: 'gitlab.com',
+      project_path: 'group/subgroup/project',
+      carrier_kind: 'review',
+      carrier_url: 'https://gitlab.com/group/subgroup/project/-/merge_requests/9',
+      review_kind: 'merge-request',
+      review_number: 9,
+    },
+  );
+
+  assert.deepEqual(
+    buildProviderAuditMetadata({
+      provider: 'gitlab',
+      host: 'git.example.test',
+      projectPath: 'team/project',
+      carrierKind: 'branch',
+      branch: 'zjal-act-1',
+    }),
+    {
+      provider: 'gitlab',
+      host: 'git.example.test',
+      project_path: 'team/project',
+      carrier_kind: 'branch',
+      branch: 'zjal-act-1',
+    },
+  );
 });

@@ -33,12 +33,51 @@ export interface ProviderReviewRef {
   url: string;
 }
 
+export type ProviderCarrierKind =
+  | 'issue'
+  | 'review'
+  | 'branch'
+  | 'comment'
+  | 'note'
+  | 'artifact'
+  | 'job'
+  | 'workflow';
+
+export interface ProviderApiRef {
+  provider: 'github' | 'gitlab';
+  host: string;
+  projectPath: string;
+  carrierKind: ProviderCarrierKind;
+  url?: string;
+  number?: number;
+  branch?: string;
+  reviewKind?: 'pull-request' | 'merge-request';
+}
+
+export interface ProviderAuditMetadata {
+  provider: 'github' | 'gitlab';
+  host: string;
+  project_path: string;
+  carrier_kind: ProviderCarrierKind;
+  carrier_url?: string;
+  issue?: number;
+  review_kind?: 'pull-request' | 'merge-request';
+  review_number?: number;
+  branch?: string;
+}
+
 export interface BuildProviderIssueUrlInput {
   provider?: ProviderKind | 'github' | 'gitlab';
   host?: string;
   projectPath?: string;
   repo?: string;
   issue?: number | string;
+}
+
+export interface BuildGitLabApiUrlInput {
+  apiBaseUrl?: string;
+  projectPath: string;
+  path?: string | Array<string | number>;
 }
 
 export function detectProviderKind(input: ProviderDetectionInput = {}): ProviderKind {
@@ -137,6 +176,116 @@ export function buildProviderIssueUrl(input: BuildProviderIssueUrlInput): string
   return `https://${host}/${projectPath}/-/issues/${issue}`;
 }
 
+export function buildGitLabApiUrl(input: BuildGitLabApiUrlInput): string {
+  const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+  const projectPath = encodeURIComponent(stripProjectPath(input.projectPath));
+  const suffix = normalizeApiPath(input.path);
+  return `${base}/projects/${projectPath}${suffix ? `/${suffix}` : ''}`;
+}
+
+export function buildGitLabMergeRequestApiUrl(input: {
+  apiBaseUrl?: string;
+  projectPath: string;
+  iid: string | number;
+}) {
+  return buildGitLabApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath: input.projectPath,
+    path: ['merge_requests', input.iid],
+  });
+}
+
+export function buildGitLabBranchApiUrl(input: {
+  apiBaseUrl?: string;
+  projectPath: string;
+  branch: string;
+}) {
+  return buildGitLabApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath: input.projectPath,
+    path: ['repository', 'branches', input.branch],
+  });
+}
+
+export function buildGitLabIssueApiUrl(input: {
+  apiBaseUrl?: string;
+  projectPath: string;
+  issue: string | number;
+}) {
+  return buildGitLabApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath: input.projectPath,
+    path: ['issues', input.issue],
+  });
+}
+
+export function buildGitLabAuthHeaders(input: { token?: string; jobToken?: string }): Record<string, string> {
+  if (input.token) return { 'PRIVATE-TOKEN': input.token };
+  if (input.jobToken) return { 'JOB-TOKEN': input.jobToken };
+  return {};
+}
+
+export async function gitLabFailureReason(
+  prefix: string,
+  response: { status: number; text?: () => Promise<string> },
+): Promise<string> {
+  const body = response.text ? await response.text() : '';
+  return `${prefix}:${response.status}${body ? `:${body}` : ''}`;
+}
+
+export function buildProviderAuditMetadata(input: {
+  url?: string;
+  provider?: 'github' | 'gitlab';
+  host?: string;
+  projectPath?: string;
+  carrierKind?: ProviderCarrierKind;
+  branch?: string;
+  reviewKind?: 'pull-request' | 'merge-request';
+}): ProviderAuditMetadata | null {
+  if (input.url) {
+    const issue = parseProviderIssueUrl(input.url);
+    if (issue) {
+      return {
+        provider: issue.provider,
+        host: issue.host,
+        project_path: issue.projectPath,
+        carrier_kind: 'issue',
+        carrier_url: issue.url,
+        issue: issue.issue,
+      };
+    }
+
+    const review = parseProviderReviewUrl(input.url);
+    if (review) {
+      return {
+        provider: review.provider,
+        host: review.host,
+        project_path: review.projectPath,
+        carrier_kind: 'review',
+        carrier_url: review.url,
+        review_kind: review.kind,
+        review_number: review.number,
+      };
+    }
+  }
+
+  const provider = input.provider;
+  const projectPath = stripProjectPath(input.projectPath ?? '');
+  const carrierKind = input.carrierKind;
+  if (!provider || !projectPath || !carrierKind) return null;
+
+  const metadata: ProviderAuditMetadata = {
+    provider,
+    host: String(input.host ?? defaultProviderHost(provider)).trim().toLowerCase(),
+    project_path: projectPath,
+    carrier_kind: carrierKind,
+  };
+  if (input.url) metadata.carrier_url = input.url;
+  if (input.branch) metadata.branch = input.branch;
+  if (input.reviewKind) metadata.review_kind = input.reviewKind;
+  return metadata;
+}
+
 function parseProviderWebUrl(url: string): {
   provider: 'github' | 'gitlab';
   host: string;
@@ -175,4 +324,11 @@ function stripProjectPath(input: string): string {
 
 function defaultProviderHost(provider: 'github' | 'gitlab'): string {
   return provider === 'github' ? 'github.com' : 'gitlab.com';
+}
+
+function normalizeApiPath(path: BuildGitLabApiUrlInput['path']): string {
+  if (Array.isArray(path)) {
+    return path.map((part) => encodeURIComponent(String(part))).join('/');
+  }
+  return String(path ?? '').replace(/^\/+|\/+$/g, '');
 }

@@ -8,6 +8,12 @@ import {
   POST_MERGE_CONTRACT_MODE,
   POST_MERGE_CONTRACT_VERSION,
 } from './post-merge-closeout-runner.js';
+import {
+  buildGitLabApiUrl,
+  buildGitLabAuthHeaders,
+  buildGitLabBranchApiUrl,
+  buildGitLabMergeRequestApiUrl,
+} from './providers.js';
 import { RouteStatus } from './route.js';
 
 export const ACTIVATION_SCHEMA_VERSION = 1;
@@ -619,7 +625,6 @@ export async function executeGitLabRoadmapActivation(input: {
   const live = input.live === true;
   const token = String(input.token ?? '');
   const jobToken = String(input.jobToken ?? '');
-  const apiBaseUrl = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
   const refusals: any[] = [];
 
   if (provider !== 'gitlab') refusals.push({ layer: 'provider', reason: 'contract-plan-provider-is-not-gitlab' });
@@ -655,13 +660,20 @@ export async function executeGitLabRoadmapActivation(input: {
   }
 
   const fetcher = input.fetchImpl ?? fetch;
-  const project = encodeURIComponent(projectPath);
-  const headers = gitLabAuthHeaders({ token, jobToken });
-  const branchUrl = `${apiBaseUrl}/projects/${project}/repository/branches/${encodeURIComponent(branchName)}`;
+  const headers = buildGitLabAuthHeaders({ token, jobToken });
+  const branchUrl = buildGitLabBranchApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath,
+    branch: branchName,
+  });
   const branchFound = await fetcher(branchUrl, { headers });
   const liveOperations: any[] = [];
   if (branchFound.status === 404) {
-    const createBranch = await fetcher(`${apiBaseUrl}/projects/${project}/repository/branches`, {
+    const createBranch = await fetcher(buildGitLabApiUrl({
+      apiBaseUrl: input.apiBaseUrl,
+      projectPath,
+      path: ['repository', 'branches'],
+    }), {
       method: 'POST',
       headers: { ...headers, 'content-type': 'application/json' },
       body: JSON.stringify({ branch: branchName, ref: targetBranch }),
@@ -678,7 +690,11 @@ export async function executeGitLabRoadmapActivation(input: {
   }
 
   const mrQuery = new URLSearchParams({ state: 'opened', source_branch: branchName }).toString();
-  const existingMrs = await fetcher(`${apiBaseUrl}/projects/${project}/merge_requests?${mrQuery}`, { headers });
+  const existingMrs = await fetcher(`${buildGitLabApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath,
+    path: 'merge_requests',
+  })}?${mrQuery}`, { headers });
   const mrs = existingMrs.ok ? await existingMrs.json() : [];
   liveOperations.push({ kind: 'find-merge-request', status: existingMrs.status, count: Array.isArray(mrs) ? mrs.length : 0 });
   if (!existingMrs.ok) {
@@ -687,7 +703,11 @@ export async function executeGitLabRoadmapActivation(input: {
 
   const title = draft && !baseResult.mr_title.startsWith('Draft:') ? `Draft: ${baseResult.mr_title}` : baseResult.mr_title;
   if (Array.isArray(mrs) && mrs[0]?.iid) {
-    const update = await fetcher(`${apiBaseUrl}/projects/${project}/merge_requests/${mrs[0].iid}`, {
+    const update = await fetcher(buildGitLabMergeRequestApiUrl({
+      apiBaseUrl: input.apiBaseUrl,
+      projectPath,
+      iid: mrs[0].iid,
+    }), {
       method: 'PUT',
       headers: { ...headers, 'content-type': 'application/json' },
       body: JSON.stringify({ title, description: baseResult.mr_description }),
@@ -703,7 +723,11 @@ export async function executeGitLabRoadmapActivation(input: {
     };
   }
 
-  const createMr = await fetcher(`${apiBaseUrl}/projects/${project}/merge_requests`, {
+  const createMr = await fetcher(buildGitLabApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath,
+    path: 'merge_requests',
+  }), {
     method: 'POST',
     headers: { ...headers, 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -723,12 +747,6 @@ export async function executeGitLabRoadmapActivation(input: {
     merge_request_url: created.web_url ?? '',
     live_operations: liveOperations,
   };
-}
-
-function gitLabAuthHeaders(input: { token?: string; jobToken?: string }): Record<string, string> {
-  if (input.token) return { 'PRIVATE-TOKEN': input.token };
-  if (input.jobToken) return { 'JOB-TOKEN': input.jobToken };
-  return {};
 }
 
 function buildPostMergeCloseoutContractBlock(input: {

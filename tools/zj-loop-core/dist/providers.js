@@ -92,6 +92,89 @@ export function buildProviderIssueUrl(input) {
         return `https://${host}/${projectPath}/issues/${issue}`;
     return `https://${host}/${projectPath}/-/issues/${issue}`;
 }
+export function buildGitLabApiUrl(input) {
+    const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+    const projectPath = encodeURIComponent(stripProjectPath(input.projectPath));
+    const suffix = normalizeApiPath(input.path);
+    return `${base}/projects/${projectPath}${suffix ? `/${suffix}` : ''}`;
+}
+export function buildGitLabMergeRequestApiUrl(input) {
+    return buildGitLabApiUrl({
+        apiBaseUrl: input.apiBaseUrl,
+        projectPath: input.projectPath,
+        path: ['merge_requests', input.iid],
+    });
+}
+export function buildGitLabBranchApiUrl(input) {
+    return buildGitLabApiUrl({
+        apiBaseUrl: input.apiBaseUrl,
+        projectPath: input.projectPath,
+        path: ['repository', 'branches', input.branch],
+    });
+}
+export function buildGitLabIssueApiUrl(input) {
+    return buildGitLabApiUrl({
+        apiBaseUrl: input.apiBaseUrl,
+        projectPath: input.projectPath,
+        path: ['issues', input.issue],
+    });
+}
+export function buildGitLabAuthHeaders(input) {
+    if (input.token)
+        return { 'PRIVATE-TOKEN': input.token };
+    if (input.jobToken)
+        return { 'JOB-TOKEN': input.jobToken };
+    return {};
+}
+export async function gitLabFailureReason(prefix, response) {
+    const body = response.text ? await response.text() : '';
+    return `${prefix}:${response.status}${body ? `:${body}` : ''}`;
+}
+export function buildProviderAuditMetadata(input) {
+    if (input.url) {
+        const issue = parseProviderIssueUrl(input.url);
+        if (issue) {
+            return {
+                provider: issue.provider,
+                host: issue.host,
+                project_path: issue.projectPath,
+                carrier_kind: 'issue',
+                carrier_url: issue.url,
+                issue: issue.issue,
+            };
+        }
+        const review = parseProviderReviewUrl(input.url);
+        if (review) {
+            return {
+                provider: review.provider,
+                host: review.host,
+                project_path: review.projectPath,
+                carrier_kind: 'review',
+                carrier_url: review.url,
+                review_kind: review.kind,
+                review_number: review.number,
+            };
+        }
+    }
+    const provider = input.provider;
+    const projectPath = stripProjectPath(input.projectPath ?? '');
+    const carrierKind = input.carrierKind;
+    if (!provider || !projectPath || !carrierKind)
+        return null;
+    const metadata = {
+        provider,
+        host: String(input.host ?? defaultProviderHost(provider)).trim().toLowerCase(),
+        project_path: projectPath,
+        carrier_kind: carrierKind,
+    };
+    if (input.url)
+        metadata.carrier_url = input.url;
+    if (input.branch)
+        metadata.branch = input.branch;
+    if (input.reviewKind)
+        metadata.review_kind = input.reviewKind;
+    return metadata;
+}
 function parseProviderWebUrl(url) {
     const text = String(url ?? '').trim();
     if (!text)
@@ -123,4 +206,10 @@ function stripProjectPath(input) {
 }
 function defaultProviderHost(provider) {
     return provider === 'github' ? 'github.com' : 'gitlab.com';
+}
+function normalizeApiPath(path) {
+    if (Array.isArray(path)) {
+        return path.map((part) => encodeURIComponent(String(part))).join('/');
+    }
+    return String(path ?? '').replace(/^\/+|\/+$/g, '');
 }

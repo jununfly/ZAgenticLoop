@@ -7,7 +7,14 @@ import {
   buildLiveRunnerEvidence,
   validateLiveRunnerEvidence,
 } from './live-runner-contract.js';
-import { parseGitRemoteRepository } from './providers.js';
+import {
+  buildGitLabAuthHeaders,
+  buildGitLabBranchApiUrl,
+  buildGitLabIssueApiUrl,
+  buildGitLabMergeRequestApiUrl,
+  gitLabFailureReason,
+  parseGitRemoteRepository,
+} from './providers.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -580,14 +587,12 @@ async function executeGitLabPostMergeRoadmapCloseout(
   if (typeof fetchImpl !== 'function') {
     return buildSkippedCloseoutResult(plan, 'gitlab-fetch-unavailable');
   }
+  const authHeaders = buildGitLabAuthHeaders({ token: input.token, jobToken: input.jobToken });
   const headers: Record<string, string> = {
+    ...authHeaders,
     'Content-Type': 'application/json',
   };
-  if (input.token) {
-    headers['PRIVATE-TOKEN'] = input.token;
-  } else if (input.jobToken) {
-    headers['JOB-TOKEN'] = input.jobToken;
-  } else {
+  if (Object.keys(authHeaders).length === 0) {
     return buildSkippedCloseoutResult(plan, 'gitlab-token-required-for-live-closeout');
   }
 
@@ -723,11 +728,6 @@ function buildSkippedCloseoutResult(plan: PostMergeCloseoutPlan, reason: string,
     ...skipped,
     runner_evidence: buildPostMergeLiveRunnerEvidence(skipped),
   };
-}
-
-async function gitLabFailureReason(prefix: string, response: FetchResponseLike): Promise<string> {
-  const body = response.text ? await response.text() : '';
-  return `${prefix}:${response.status}${body ? `:${body}` : ''}`;
 }
 
 export function buildCloseoutEvidenceComment(plan: PostMergeCloseoutPlan) {
@@ -908,12 +908,7 @@ export async function collectCloseoutInputFromGitLab(input: {
     projectPath: input.expectedRepo,
     iid: input.iid,
   });
-  const headers: Record<string, string> = {};
-  if (input.token) {
-    headers['PRIVATE-TOKEN'] = input.token;
-  } else if (input.jobToken) {
-    headers['JOB-TOKEN'] = input.jobToken;
-  }
+  const headers = buildGitLabAuthHeaders({ token: input.token, jobToken: input.jobToken });
   const response = await fetchImpl(apiUrl, { headers });
   if (!response.ok) {
     const body = response.text ? await response.text() : '';
@@ -927,34 +922,6 @@ export async function collectCloseoutInputFromGitLab(input: {
     currentRepo: input.expectedRepo,
     gitStatus: '',
   };
-}
-
-export function buildGitLabMergeRequestApiUrl(input: {
-  apiBaseUrl?: string;
-  projectPath: string;
-  iid: string | number;
-}) {
-  const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
-  const projectPath = encodeURIComponent(input.projectPath);
-  return `${base}/projects/${projectPath}/merge_requests/${encodeURIComponent(String(input.iid))}`;
-}
-
-export function buildGitLabBranchApiUrl(input: {
-  apiBaseUrl?: string;
-  projectPath: string;
-  branch: string;
-}) {
-  const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
-  return `${base}/projects/${encodeURIComponent(input.projectPath)}/repository/branches/${encodeURIComponent(input.branch)}`;
-}
-
-export function buildGitLabIssueApiUrl(input: {
-  apiBaseUrl?: string;
-  projectPath: string;
-  issue: string | number;
-}) {
-  const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
-  return `${base}/projects/${encodeURIComponent(input.projectPath)}/issues/${encodeURIComponent(String(input.issue))}`;
 }
 
 export function normalizeGhPrView(pr: PostMergePullRequest, { expectedRepo }: { expectedRepo: string }) {

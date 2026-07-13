@@ -1554,12 +1554,33 @@
     "1-4-5-3": {
       "id": "1-4-5-3",
       "label": "Provider Adapter API Helpers",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Provider Adapter API Helpers 的边界怎么定？",
+          "answer": "采用窄 helper 边界：只把跨 route 重复、且不会让 GitHub/GitLab 语义混淆的低层 helper 放进 @jununfly/zj-loop-core；包括 provider ref/URL helper、provider API base/auth/error helper、低成本 audit metadata helper；不做 generic Git provider 抽象，具体 route lifecycle 和 side effects 仍由 provider-specific runner/adapter 承担。",
+          "note": "保持 provider-specific adapter，避免其他 agent 误以为所有 Git 平台可无差异复用。"
+        },
+        {
+          "q": "Provider helpers 是否立刻拆成 providers/github|gitlab|shared 目录？",
+          "answer": "暂不拆目录；本刀先扩展现有 public export 的 tools/zj-loop-core/src/providers.ts，新增共享类型和 provider-specific helper，并迁移当前重复最明显的 GitLab API URL/auth/error helper。等文件明显变大或 GitHub/GitLab helper 成组后，再用后续节点做目录拆分。",
+          "note": "保持 1-4-5-3 聚焦 helper 提炼，避免变成模块迁移；helper 命名保持 provider-specific，不做 generic Git provider。"
+        },
+        {
+          "q": "Provider Adapter API Helpers 的 TDD 完成线包含哪些 helper？",
+          "answer": "采用四组完成线：ProviderApiRef/轻量 provider refs；GitLab API URL helper；GitLab auth/error helper；Provider audit metadata helper。只保存低成本审计字段，不保存完整 provider response。",
+          "note": "不新增 generic GitProvider interface；不把 issue/MR/branch/closeout 的具体副作用抽到公共 runner。"
+        },
+        {
+          "q": "实现时是否顺手改所有 provider-aware runner？",
+          "answer": "不全量铺开；本刀只改重复明显且 helper 化收益确定的调用点：post-merge-closeout-runner 迁出 GitLab API URL/auth/error helper，roadmap-activation-runner 复用 GitLab auth/API URL helper，补 provider.test.mjs。暂不批量改 ci-sweeper、pr-steward、dependency-sweeper、changelog-drafter，除非只是读取 audit metadata helper 且无行为变化。",
+          "note": "保持 1-4-5-3 聚焦 provider adapter API helpers，避免后续 agent 误以为所有 GitLab live parity 已完成。"
+        }
+      ],
+      "notes": "Completed with TDD. Public provider helpers now cover GitLab API URL construction, GitLab auth headers, GitLab failure reason strings, and low-cost provider audit metadata. post-merge-closeout and roadmap-activation reuse the shared helpers without introducing a generic Git provider abstraction. Verification: tools/zj-loop-core npm test; npm run test:provider-parity-gate; git diff --check; roadmap validate."
     },
     "1-4-5-4": {
       "id": "1-4-5-4",
@@ -1584,7 +1605,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 21:15:31",
+    "updated": "2026-07-13 22:38:28",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

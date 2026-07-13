@@ -61,7 +61,10 @@ Provider API contracts should live first in `@jununfly/zj-loop-core` because
 the current route consumers already share request validation, route table reads,
 and deterministic runner helpers there.
 
-Keep the layout split-friendly:
+The current implementation keeps the public helper surface in
+`tools/zj-loop-core/src/providers.ts`. Keep that file split-friendly, but do
+not introduce a generic Git provider abstraction. If the helper surface grows
+large enough, split by provider-specific modules behind the same public export:
 
 ```text
 tools/zj-loop-core/src/providers/
@@ -76,6 +79,7 @@ Shared code should handle:
 - provider URL parsing
 - normalized issue, pull request, merge request, comment/note, branch, and
   artifact references
+- low-cost provider audit metadata, without storing full provider API responses
 - request/evidence envelope validation
 - predictable error shapes
 
@@ -83,6 +87,7 @@ Provider-specific code should handle:
 
 - API endpoint construction
 - auth header construction
+- provider-specific API failure reason strings
 - CI environment variable extraction
 - comment versus note formatting constraints
 - PR versus MR creation and lookup
