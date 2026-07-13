@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
 
@@ -125,6 +125,42 @@ export type RouteMaturityPromotionResult = {
   changed: boolean;
   confirmation_required: boolean;
   next_steps: string[];
+};
+
+export type RoutePromotionEvidenceKey =
+  | 'contract-plan'
+  | 'provider-live-side-effect'
+  | 'activation-lifecycle'
+  | 'post-merge-closeout-handoff';
+
+export type RoutePromotionEvidenceMatch = {
+  orchestration_id: string;
+  path: string;
+  schema?: string;
+  kind?: string;
+  check_result: 'passed';
+};
+
+export type RoutePromotionEvidenceCheck = {
+  key: RoutePromotionEvidenceKey;
+  satisfied: boolean;
+  matches: RoutePromotionEvidenceMatch[];
+  missing_reason?: string;
+};
+
+export type RoutePromotionGateResult = {
+  route_id: string;
+  consumer: string;
+  target_maturity: 'execution-ready';
+  promotable: boolean;
+  applied: boolean;
+  changed: boolean;
+  required_evidence: RoutePromotionEvidenceCheck[];
+  missing_evidence: RoutePromotionEvidenceKey[];
+  failed_checks: string[];
+  next_steps: string[];
+  promotion_command: string[];
+  apply_result?: RouteMaturityPromotionResult;
 };
 
 export type RouteExecutionValidation = {
@@ -425,6 +461,261 @@ export async function promoteRouteMaturity(input: {
       'Enable the route separately only when authorization and verifier requirements are satisfied.',
     ],
   };
+}
+
+export async function evaluateRoutePromotionGate(input: {
+  root: string;
+  selector: string;
+  target: 'execution-ready';
+  orchestrationId?: string;
+  apply?: boolean;
+  confirm?: string;
+  routeTablePath?: string;
+}): Promise<RoutePromotionGateResult> {
+  const routeTablePath = input.routeTablePath ?? DEFAULT_ROUTE_TABLE_PATH;
+  const table = await loadRouteTable(input.root, routeTablePath);
+  const route = findRoute(table, input.selector);
+  const failedChecks: string[] = [];
+  if (route.route_id !== 'roadmap-sliced-development' || route.consumer !== 'roadmap-sliced-development') {
+    failedChecks.push('promotion-gate currently supports roadmap-sliced-development only');
+  }
+
+  const evidenceChecks = await collectRoadmapActivationPromotionEvidence({
+    root: input.root,
+    orchestrationId: input.orchestrationId,
+  });
+  const missingEvidence = evidenceChecks
+    .filter((check) => !check.satisfied)
+    .map((check) => check.key);
+  const promotable = failedChecks.length === 0 && missingEvidence.length === 0;
+  const promotionCommand = [
+    'zj-loop-route',
+    'promotion-gate',
+    route.route_id,
+    '--target',
+    input.target,
+    '--apply',
+    '--confirm',
+    expectedMaturityPromotionPhrase(route, input.target),
+  ];
+  const nextSteps = promotable
+    ? input.apply
+      ? [`Run zj-loop-route status ${route.route_id} --json`, 'Enable the route separately only when authorization and verifier requirements are satisfied.']
+      : ['Review the promotion gate evidence, then run the promotion_command with --apply only when intentional.']
+    : ['Collect the missing evidence, then rerun zj-loop-route promotion-gate.'];
+
+  let applyResult: RouteMaturityPromotionResult | undefined;
+  if (input.apply) {
+    if (!promotable) {
+      throw new Error(`Promotion gate failed: missing evidence ${missingEvidence.join(', ') || 'none'}${failedChecks.length > 0 ? `; ${failedChecks.join('; ')}` : ''}`);
+    }
+    applyResult = await promoteRouteMaturity({
+      root: input.root,
+      selector: route.route_id,
+      runner: input.target,
+      confirm: input.confirm,
+      routeTablePath,
+    });
+  }
+
+  return {
+    route_id: route.route_id,
+    consumer: route.consumer,
+    target_maturity: input.target,
+    promotable,
+    applied: Boolean(applyResult),
+    changed: applyResult?.changed ?? false,
+    required_evidence: evidenceChecks,
+    missing_evidence: missingEvidence,
+    failed_checks: failedChecks,
+    next_steps: nextSteps,
+    promotion_command: promotionCommand,
+    apply_result: applyResult,
+  };
+}
+
+async function collectRoadmapActivationPromotionEvidence(input: {
+  root: string;
+  orchestrationId?: string;
+}): Promise<RoutePromotionEvidenceCheck[]> {
+  const checks = new Map<RoutePromotionEvidenceKey, RoutePromotionEvidenceCheck>([
+    ['contract-plan', emptyEvidenceCheck('contract-plan', 'missing contract-plan review artifact')],
+    ['provider-live-side-effect', emptyEvidenceCheck('provider-live-side-effect', 'missing completed provider live side effect evidence')],
+    ['activation-lifecycle', emptyEvidenceCheck('activation-lifecycle', 'missing activation lifecycle evidence artifact')],
+    ['post-merge-closeout-handoff', emptyEvidenceCheck('post-merge-closeout-handoff', 'missing post-merge closeout handoff artifact')],
+  ]);
+  const orchestrationPaths = await listOrchestrationEnvelopePaths(input);
+  for (const envelopePath of orchestrationPaths) {
+    const envelope = await readJsonObject(envelopePath.absolutePath);
+    if (!isRoadmapActivationOrchestration(envelope)) continue;
+    const orchestrationId = stringField(envelope.orchestration_id) ?? envelopePath.orchestrationId;
+    const adapter = objectField(envelope.consumer_adapter_result);
+    const reviewArtifacts = arrayField(adapter?.review_artifacts);
+    const storagePath = stringField(objectField(envelope.storage)?.path) ?? envelopePath.relativePath;
+    const liveSideEffects = objectField(adapter?.live_side_effects);
+
+    const contractArtifact = reviewArtifacts.find((artifact) => stringField(objectField(artifact)?.kind) === 'contract-plan');
+    if (contractArtifact) {
+      const artifactPath = stringField(objectField(contractArtifact)?.path);
+      const schema = stringField(objectField(contractArtifact)?.schema);
+      if (artifactPath && schema === 'zj-loop.consumer_adapter_result.v1' && await jsonPathExists(input.root, artifactPath)) {
+        addEvidenceMatch(checks.get('contract-plan'), {
+          orchestration_id: orchestrationId,
+          path: artifactPath,
+          schema,
+          kind: 'contract-plan',
+          check_result: 'passed',
+        });
+      }
+    }
+
+    if (
+      liveSideEffects?.attempted === true &&
+      liveSideEffects.status === 'completed' &&
+      typeof liveSideEffects.external_tool === 'string' &&
+      typeof liveSideEffects.idempotency_key === 'string' &&
+      objectField(liveSideEffects.review)?.url &&
+      objectField(liveSideEffects.branch)?.name
+    ) {
+      addEvidenceMatch(checks.get('provider-live-side-effect'), {
+        orchestration_id: orchestrationId,
+        path: storagePath,
+        schema: 'zj-loop.consumer_adapter_result.v1',
+        kind: 'provider-live-side-effect',
+        check_result: 'passed',
+      });
+    }
+
+    const lifecycleArtifact = reviewArtifacts.find((artifact) => stringField(objectField(artifact)?.kind) === 'activation-lifecycle');
+    if (lifecycleArtifact) {
+      const artifactPath = stringField(objectField(lifecycleArtifact)?.path);
+      const schema = stringField(objectField(lifecycleArtifact)?.schema);
+      const lifecycle = artifactPath ? await readJsonObject(path.resolve(input.root, artifactPath)) : null;
+      if (
+        artifactPath &&
+        schema === 'zj-loop.activation_lifecycle_evidence.v1' &&
+        typeof lifecycle?.activation_state === 'string' &&
+        typeof lifecycle?.failure_class === 'string'
+      ) {
+        addEvidenceMatch(checks.get('activation-lifecycle'), {
+          orchestration_id: orchestrationId,
+          path: artifactPath,
+          schema,
+          kind: 'activation-lifecycle',
+          check_result: 'passed',
+        });
+      }
+    }
+
+    const closeoutArtifact = reviewArtifacts.find((artifact) => stringField(objectField(artifact)?.kind) === 'post-merge-closeout-handoff');
+    if (closeoutArtifact) {
+      const artifactPath = stringField(objectField(closeoutArtifact)?.path);
+      const schema = stringField(objectField(closeoutArtifact)?.schema);
+      const handoff = artifactPath ? await readJsonObject(path.resolve(input.root, artifactPath)) : null;
+      if (
+        artifactPath &&
+        schema === 'zj-loop.post_merge_closeout_handoff.v1' &&
+        typeof handoff?.provider === 'string' &&
+        Array.isArray(objectField(handoff.dry_run_command)?.args) &&
+        typeof objectField(handoff.live_closeout_command)?.available === 'boolean'
+      ) {
+        addEvidenceMatch(checks.get('post-merge-closeout-handoff'), {
+          orchestration_id: orchestrationId,
+          path: artifactPath,
+          schema,
+          kind: 'post-merge-closeout-handoff',
+          check_result: 'passed',
+        });
+      }
+    }
+  }
+
+  return Array.from(checks.values());
+}
+
+function emptyEvidenceCheck(key: RoutePromotionEvidenceKey, missingReason: string): RoutePromotionEvidenceCheck {
+  return {
+    key,
+    satisfied: false,
+    matches: [],
+    missing_reason: missingReason,
+  };
+}
+
+function addEvidenceMatch(check: RoutePromotionEvidenceCheck | undefined, match: RoutePromotionEvidenceMatch) {
+  if (!check) return;
+  check.matches.push(match);
+  check.satisfied = true;
+  delete check.missing_reason;
+}
+
+async function listOrchestrationEnvelopePaths(input: {
+  root: string;
+  orchestrationId?: string;
+}): Promise<Array<{ absolutePath: string; relativePath: string; orchestrationId: string }>> {
+  const baseRelative = 'zj-loop/orchestrations';
+  if (input.orchestrationId) {
+    const relativePath = `${baseRelative}/${input.orchestrationId}.json`;
+    return [{
+      absolutePath: path.resolve(input.root, relativePath),
+      relativePath,
+      orchestrationId: input.orchestrationId,
+    }];
+  }
+
+  const base = path.resolve(input.root, baseRelative);
+  let entries;
+  try {
+    entries = await readdir(base, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => {
+      const orchestrationId = entry.name.slice(0, -'.json'.length);
+      const relativePath = `${baseRelative}/${entry.name}`;
+      return {
+        absolutePath: path.resolve(input.root, relativePath),
+        relativePath,
+        orchestrationId,
+      };
+    });
+}
+
+function isRoadmapActivationOrchestration(value: Record<string, unknown> | null): value is Record<string, unknown> {
+  if (!value) return false;
+  const routeDecision = objectField(value.route_decision);
+  const consumerAdapterResult = objectField(value.consumer_adapter_result);
+  return (
+    routeDecision?.route === 'roadmap-sliced-development' &&
+    consumerAdapterResult?.route_id === 'roadmap-sliced-development'
+  );
+}
+
+async function jsonPathExists(root: string, relativePath: string): Promise<boolean> {
+  return Boolean(await readJsonObject(path.resolve(root, relativePath)));
+}
+
+async function readJsonObject(filePath: string): Promise<Record<string, unknown> | null> {
+  try {
+    const parsed = JSON.parse(await readFile(filePath, 'utf8'));
+    return objectField(parsed);
+  } catch {
+    return null;
+  }
+}
+
+function objectField(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function arrayField(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
 }
 
 function patchRouteEnabledText(

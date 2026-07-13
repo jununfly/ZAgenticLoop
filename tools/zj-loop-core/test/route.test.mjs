@@ -78,6 +78,25 @@ disabled_dispatch_routes:
       verifiers: ["ci-validate-gates", "diff-check"]
       max_side_effect_level: "pr"
     evidence_store: "zj-loop/ci-sweeper-state.md"
+  - route_id: "roadmap-sliced-development"
+    enabled: false
+    request_kind: "activation-comment"
+    consumer: "roadmap-sliced-development"
+    consumer_kind: "activation-consumer"
+    execution:
+      mode: "live"
+      side_effect_level: "branch"
+      completion_forms: ["roadmap-branch-pr", "activation-failed", "activation-resumable"]
+      recent_success_evidence:
+        - "zj-loop/roadmap-activation-state.md"
+    maturity:
+      protocol: "execution-ready"
+      runner: "dogfooded"
+    capabilities:
+      scopes: ["roadmap-activation"]
+      verifiers: ["roadmap-sliced-gates"]
+      max_side_effect_level: "branch"
+    evidence_store: "zj-loop/roadmap-activation-state.md"
 `;
 
 async function setupRouteTable() {
@@ -85,6 +104,112 @@ async function setupRouteTable() {
   await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
   await writeFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), ROUTE_TABLE);
   return dir;
+}
+
+async function writeRoadmapActivationSuccessEvidence(dir, orchestrationId) {
+  const base = path.join(dir, 'zj-loop', 'orchestrations');
+  const artifactDir = path.join(base, orchestrationId);
+  await mkdir(artifactDir, { recursive: true });
+  await writeFile(path.join(artifactDir, 'contract-plan.json'), JSON.stringify({
+    schema: 'zj-loop.roadmap_activation_contract_plan.v1',
+    provider: 'github',
+  }, null, 2));
+  await writeFile(path.join(artifactDir, 'post-merge-closeout-handoff.json'), JSON.stringify({
+    schema: 'zj-loop.post_merge_closeout_handoff.v1',
+    route_id: 'post-merge-roadmap-closeout',
+    provider: 'github',
+    review: {
+      kind: 'pull-request',
+      number: 123,
+      url: 'https://github.com/jununfly/ZAgenticLoop/pull/123',
+    },
+    dry_run_command: {
+      available: true,
+      args: ['zj-loop-post-merge-closeout', 'closeout-plan'],
+    },
+    live_closeout_command: {
+      available: true,
+      args: ['zj-loop-post-merge-closeout', 'live-closeout'],
+    },
+  }, null, 2));
+  await writeFile(path.join(base, `${orchestrationId}.json`), JSON.stringify({
+    schema: 'zj-loop.orchestration.v1',
+    orchestration_id: orchestrationId,
+    route_decision: {
+      route: 'roadmap-sliced-development',
+    },
+    storage: {
+      path: `zj-loop/orchestrations/${orchestrationId}.json`,
+    },
+    consumer_adapter_result: {
+      schema: 'zj-loop.consumer_adapter_result.v1',
+      route_id: 'roadmap-sliced-development',
+      review_artifacts: [
+        {
+          path: `zj-loop/orchestrations/${orchestrationId}/contract-plan.json`,
+          kind: 'contract-plan',
+          schema: 'zj-loop.consumer_adapter_result.v1',
+        },
+        {
+          path: `zj-loop/orchestrations/${orchestrationId}/post-merge-closeout-handoff.json`,
+          kind: 'post-merge-closeout-handoff',
+          schema: 'zj-loop.post_merge_closeout_handoff.v1',
+        },
+      ],
+      live_side_effects: {
+        attempted: true,
+        status: 'completed',
+        external_tool: 'github',
+        idempotency_key: 'roadmap-sliced-development:zjal-test',
+        review: {
+          kind: 'pull-request',
+          number: 123,
+          url: 'https://github.com/jununfly/ZAgenticLoop/pull/123',
+        },
+        branch: {
+          name: 'zjal-test',
+          target: 'main',
+        },
+      },
+    },
+  }, null, 2));
+}
+
+async function writeRoadmapActivationLifecycleEvidence(dir, orchestrationId) {
+  const base = path.join(dir, 'zj-loop', 'orchestrations');
+  const artifactDir = path.join(base, orchestrationId);
+  await mkdir(artifactDir, { recursive: true });
+  await writeFile(path.join(artifactDir, 'activation-lifecycle-evidence.json'), JSON.stringify({
+    schema: 'zj-loop.activation_lifecycle_evidence.v1',
+    activation_state: 'resumable',
+    failure_class: 'recoverable',
+    resume_allowed: true,
+  }, null, 2));
+  await writeFile(path.join(base, `${orchestrationId}.json`), JSON.stringify({
+    schema: 'zj-loop.orchestration.v1',
+    orchestration_id: orchestrationId,
+    route_decision: {
+      route: 'roadmap-sliced-development',
+    },
+    storage: {
+      path: `zj-loop/orchestrations/${orchestrationId}.json`,
+    },
+    consumer_adapter_result: {
+      schema: 'zj-loop.consumer_adapter_result.v1',
+      route_id: 'roadmap-sliced-development',
+      review_artifacts: [
+        {
+          path: `zj-loop/orchestrations/${orchestrationId}/activation-lifecycle-evidence.json`,
+          kind: 'activation-lifecycle',
+          schema: 'zj-loop.activation_lifecycle_evidence.v1',
+        },
+      ],
+      live_side_effects: {
+        attempted: false,
+        status: 'refused',
+      },
+    },
+  }, null, 2));
 }
 
 test('listRoutes normalizes enabled, disabled, side-effecting, and destructive routes', () => {
@@ -280,6 +405,133 @@ test('promote runner maturity to install-ready is low friction but not execution
       'route disabled',
       'route is not execution-ready',
     ]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promotion-gate reports missing roadmap activation evidence without mutating maturity', async () => {
+  const dir = await setupRouteTable();
+  try {
+    const checked = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'roadmap-sliced-development',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(checked.status, 2);
+    const result = JSON.parse(checked.stdout);
+    assert.equal(result.promotable, false);
+    assert.equal(result.applied, false);
+    assert.deepEqual(result.missing_evidence, [
+      'contract-plan',
+      'provider-live-side-effect',
+      'activation-lifecycle',
+      'post-merge-closeout-handoff',
+    ]);
+
+    const updated = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(updated, /runner: "dogfooded"/);
+    assert.doesNotMatch(updated, /runner: execution-ready/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promotion-gate accepts replayable roadmap activation evidence across orchestrations', async () => {
+  const dir = await setupRouteTable();
+  try {
+    await writeRoadmapActivationSuccessEvidence(dir, 'success-1');
+    await writeRoadmapActivationLifecycleEvidence(dir, 'resumable-1');
+
+    const checked = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'roadmap-sliced-development',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(checked.status, 0);
+    const result = JSON.parse(checked.stdout);
+    assert.equal(result.promotable, true);
+    assert.equal(result.applied, false);
+    assert.deepEqual(result.missing_evidence, []);
+    assert.deepEqual(result.promotion_command, [
+      'zj-loop-route',
+      'promotion-gate',
+      'roadmap-sliced-development',
+      '--target',
+      'execution-ready',
+      '--apply',
+      '--confirm',
+      'promote roadmap-sliced-development runner to execution-ready',
+    ]);
+    const keys = result.required_evidence.map((check) => check.key);
+    assert.deepEqual(keys, [
+      'contract-plan',
+      'provider-live-side-effect',
+      'activation-lifecycle',
+      'post-merge-closeout-handoff',
+    ]);
+    assert.equal(result.required_evidence.every((check) => check.satisfied), true);
+
+    const updated = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(updated, /runner: "dogfooded"/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promotion-gate apply requires fixed confirmation and only then promotes runner maturity', async () => {
+  const dir = await setupRouteTable();
+  try {
+    await writeRoadmapActivationSuccessEvidence(dir, 'success-apply');
+    await writeRoadmapActivationLifecycleEvidence(dir, 'resumable-apply');
+
+    const denied = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'roadmap-sliced-development',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--apply',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(denied.status, 1);
+    assert.match(denied.stderr, /Confirmation required: --confirm "promote roadmap-sliced-development runner to execution-ready"/);
+
+    const applied = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'roadmap-sliced-development',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--apply',
+      '--confirm',
+      'promote roadmap-sliced-development runner to execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(applied.status, 0);
+    const result = JSON.parse(applied.stdout);
+    assert.equal(result.promotable, true);
+    assert.equal(result.applied, true);
+    assert.equal(result.apply_result.runner, 'execution-ready');
+    assert.equal(result.apply_result.enabled, false);
+
+    const updated = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
+    assert.match(updated, /runner: execution-ready/);
+    assert.match(updated, /enabled: false/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

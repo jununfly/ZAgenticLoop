@@ -107,6 +107,34 @@ export type RouteMaturityPromotionResult = {
     confirmation_required: boolean;
     next_steps: string[];
 };
+export type RoutePromotionEvidenceKey = 'contract-plan' | 'provider-live-side-effect' | 'activation-lifecycle' | 'post-merge-closeout-handoff';
+export type RoutePromotionEvidenceMatch = {
+    orchestration_id: string;
+    path: string;
+    schema?: string;
+    kind?: string;
+    check_result: 'passed';
+};
+export type RoutePromotionEvidenceCheck = {
+    key: RoutePromotionEvidenceKey;
+    satisfied: boolean;
+    matches: RoutePromotionEvidenceMatch[];
+    missing_reason?: string;
+};
+export type RoutePromotionGateResult = {
+    route_id: string;
+    consumer: string;
+    target_maturity: 'execution-ready';
+    promotable: boolean;
+    applied: boolean;
+    changed: boolean;
+    required_evidence: RoutePromotionEvidenceCheck[];
+    missing_evidence: RoutePromotionEvidenceKey[];
+    failed_checks: string[];
+    next_steps: string[];
+    promotion_command: string[];
+    apply_result?: RouteMaturityPromotionResult;
+};
 export type RouteExecutionValidation = {
     route_id: string;
     valid: boolean;
@@ -164,6 +192,15 @@ export declare function promoteRouteMaturity(input: {
     confirm?: string;
     routeTablePath?: string;
 }): Promise<RouteMaturityPromotionResult>;
+export declare function evaluateRoutePromotionGate(input: {
+    root: string;
+    selector: string;
+    target: 'execution-ready';
+    orchestrationId?: string;
+    apply?: boolean;
+    confirm?: string;
+    routeTablePath?: string;
+}): Promise<RoutePromotionGateResult>;
 export declare function buildRouteAutomationModel(route: Omit<RouteStatus, 'automation_model'>): RouteAutomationModel;
 export declare function classifyRouteReadiness(input: {
     executionMode: string;

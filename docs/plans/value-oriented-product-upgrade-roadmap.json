@@ -1218,12 +1218,38 @@
     "1-4-1-5": {
       "id": "1-4-1-5",
       "label": "Roadmap Activation Evidence Promotion Gate",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-1",
       "children": [],
-      "decisions": [],
-      "notes": "Later phase: require replay/live evidence before promoting Roadmap Activation adapter maturity; parent 1-4-1 is complete only when evidence proves review artifact, live side effect, resume/failure recovery, and closeout handoff paths."
+      "decisions": [
+        {
+          "q": "Evidence Promotion Gate 提升的对象是什么？",
+          "answer": "提升的是 Route Table / consumer capability 中 Roadmap Activation 这条链路的 maturity 声明，而不是单次 orchestration 状态。单次运行证据继续放在 zj-loop/orchestrations/<id>/...；promotion gate 读取并校验多类 evidence 后，才允许把 roadmap-sliced-development / Roadmap Activation ConsumerAdapter 推到更高 maturity，例如 execution-ready。",
+          "note": "Gate 失败输出缺口清单且不修改 maturity；Gate 成功才允许更新 Route Table 或对应 consumer capability 声明。适合固化为确定性脚本/API。"
+        },
+        {
+          "q": "Promotion Gate 的最小硬证据集是什么？",
+          "answer": "升到 execution-ready 至少要四类 evidence 全部存在且 schema 可校验：contract-plan.json；provider live side effect evidence；activation-lifecycle-evidence.json；post-merge-closeout-handoff.json。GitLab live closeout 当前可标记 unavailable + follow-up node，但字段不能缺。",
+          "note": "判断结果必须结构化：promotable、target_maturity、required_evidence、missing_evidence、failed_checks、next_steps、promotion_command。"
+        },
+        {
+          "q": "Promotion Gate 是否直接修改 Route Table？",
+          "answer": "默认不直接修改，只输出 promotion_command；只有显式 --apply 且带固定确认短语时才写入。默认命令只检查 evidence 并输出 promotable、缺口与命令；写入命令必须复用现有 promote 语义。",
+          "note": "显式写入只修改 maturity.runner，不自动 enable route，不修改 protocol maturity；execution-ready 确认短语固定为 promote roadmap-sliced-development runner to execution-ready。"
+        },
+        {
+          "q": "Promotion Gate 应该从哪里自动发现 evidence？",
+          "answer": "默认从 zj-loop/orchestrations/ 自动扫描最近的 Roadmap Activation orchestration，不要求用户传 4 个文件路径；同时支持 --orchestration <id> 收窄到单次运行。默认只接受 route_id 与 consumer_adapter_result.route_id 均为 roadmap-sliced-development 的 orchestration。",
+          "note": "Promotion 级别判断允许跨多个 orchestration 聚合 success path、recoverable failure、terminal failure 等证据；每条 evidence 必须记录 orchestration_id、artifact path、schema/kind、check result，保证可回放。"
+        },
+        {
+          "q": "Promotion Gate 的确定性入口叫什么、放在哪里？",
+          "answer": "放在 @jununfly/zj-loop-core 现有 zj-loop-route CLI 里，新增子命令 promotion-gate。默认命令为 zj-loop-route promotion-gate roadmap-sliced-development --target execution-ready --json；显式写入时加 --apply --confirm \"promote roadmap-sliced-development runner to execution-ready\" --json。",
+          "note": "它检查并可能修改 Route Table maturity，因此属于 route/consumer maturity 管理；不放进 zj-loop-dispatch 或 zj-loop-run；内部可复用现有 promoteRouteRunner，但必须先通过 promotion gate evidence checker。"
+        }
+      ],
+      "notes": "Implemented zj-loop-route promotion-gate for Roadmap Activation evidence promotion. The gate checks zj-loop/orchestrations for contract-plan, provider live side effect, activation-lifecycle evidence, and post-merge closeout handoff; defaults to check-only; --apply requires fixed execution-ready confirmation and only promotes maturity.runner without enabling the route. Verification: npm test in tools/zj-loop-core passed 164/164."
     },
     "1-4-1-6": {
       "id": "1-4-1-6",
@@ -1238,7 +1264,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 02:09:23",
+    "updated": "2026-07-13 11:51:39",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

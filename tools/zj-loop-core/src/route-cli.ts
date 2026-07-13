@@ -3,6 +3,7 @@ import {
   buildRouteDecision,
   DEFAULT_ROUTE_TABLE_PATH,
   expectedConfirmationPhrase,
+  evaluateRoutePromotionGate,
   listRoutes,
   loadRouteTable,
   promoteRouteMaturity,
@@ -20,7 +21,7 @@ function hasFlag(args: string[], name: string): boolean {
 }
 
 function positionalAfterCommand(args: string[]): string | undefined {
-  const valueFlags = new Set(['--root', '--source', '--signal-id', '--confirm', '--reason', '--runner']);
+  const valueFlags = new Set(['--root', '--source', '--signal-id', '--confirm', '--reason', '--runner', '--target', '--orchestration']);
   for (let index = 1; index < args.length; index += 1) {
     const arg = args[index];
     if (valueFlags.has(arg)) {
@@ -41,6 +42,7 @@ Usage:
   zj-loop-route enable <consumer-or-route> [--root <dir>] [--confirm <phrase>] [--reason <text>] [--json]
   zj-loop-route disable <consumer-or-route> [--root <dir>] [--json]
   zj-loop-route promote <consumer-or-route> --runner install-ready|execution-ready [--root <dir>] [--confirm <phrase>] [--json]
+  zj-loop-route promotion-gate <consumer-or-route> --target execution-ready [--root <dir>] [--orchestration <id>] [--apply] [--confirm <phrase>] [--json]
 
 Side-effecting enable confirmation:
   enable <consumer> side effects
@@ -124,6 +126,32 @@ async function main(argv = process.argv.slice(2)) {
       for (const step of result.next_steps) console.log(`next step: ${step}`);
     }
     return 0;
+  }
+
+  if (command === 'promotion-gate') {
+    const target = optionValue(argv, '--target');
+    if (target !== 'execution-ready') {
+      throw new Error('promotion-gate requires --target execution-ready');
+    }
+    const result = await evaluateRoutePromotionGate({
+      root,
+      selector,
+      target,
+      orchestrationId: optionValue(argv, '--orchestration'),
+      apply: hasFlag(argv, '--apply'),
+      confirm: optionValue(argv, '--confirm'),
+    });
+    if (json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`${result.promotable ? 'promotable' : 'not promotable'} ${result.route_id} target=${result.target_maturity}`);
+      if (result.applied) console.log(`applied runner promotion changed=${result.changed ? 'true' : 'false'}`);
+      for (const missing of result.missing_evidence) console.log(`missing evidence: ${missing}`);
+      for (const failed of result.failed_checks) console.log(`failed check: ${failed}`);
+      console.log(`promotion command: ${result.promotion_command.join(' ')}`);
+      for (const step of result.next_steps) console.log(`next step: ${step}`);
+    }
+    return result.promotable ? 0 : 2;
   }
 
   throw new Error(`Unknown command: ${command}`);
