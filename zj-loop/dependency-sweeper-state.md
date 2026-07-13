@@ -21,6 +21,13 @@ Last run: 2026-07-08
 - Live runner replay covers `consumed -> repair-pr` and
   `consumed -> escalation-issue` outcomes:
   `scripts/dependency-sweeper-live-runner.test.mjs`.
+- Real workflow-dispatch dogfood evidence:
+  `https://github.com/jununfly/ZAgenticLoop/actions/runs/29234374181`.
+  The run used `core_package=./tools/zj-loop-core` to validate unreleased local
+  dist, installed local package dependencies, executed guarded live-repair with
+  `CREATE_DEPENDENCY_SWEEPER_FIX_PR`, uploaded `live-repair-result.json`, and
+  produced verifier-backed `escalation-issue` evidence without pushing a repair
+  branch or creating a repair PR.
 
 ## Boundary
 

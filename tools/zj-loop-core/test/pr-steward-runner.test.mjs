@@ -217,3 +217,32 @@ test('PR Steward fix-plan CLI reads request JSON', async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('PR Steward live-repair CLI emits structured escalation when confirmation is missing', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-pr-steward-live-'));
+  const requestPath = path.join(dir, 'request.json');
+  await writeFile(requestPath, JSON.stringify(consumedPrStewardRequest(), null, 2));
+  try {
+    const result = spawnSync(process.execPath, [
+      PR_STEWARD_CLI,
+      'live-repair',
+      '--request',
+      requestPath,
+      '--current-pr-head-sha',
+      'abc123def456',
+      '--repair-command',
+      'node -e process.exit(0)',
+      '--repair-files',
+      'README.md',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.kind, 'zj-loop.pr-steward-live-runner-result');
+    assert.equal(parsed.outcome, 'escalation-issue');
+    assert.equal(parsed.runner_evidence.completion_form, 'escalation-issue');
+    assert.ok(parsed.plan.refusals.some((item) => item.reason === 'fixed confirmation phrase is required for live execution'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

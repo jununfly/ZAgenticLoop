@@ -221,6 +221,11 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     const prSteward = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-pr-steward.yml'), 'utf8');
     assert.match(prSteward, /zj-loop-route dispatch pr-steward-report/);
     assert.match(prSteward, /zj-loop-pr-steward fix-plan/);
+    assert.match(prSteward, /zj-loop-pr-steward live-repair/);
+    assert.match(prSteward, /confirm_live_repair/);
+    assert.match(prSteward, /core_package/);
+    assert.match(prSteward, /npm install --prefix/);
+    assert.match(prSteward, /if: always\(\)/);
     assert.doesNotMatch(prSteward, /'\$\{\{ inputs\./);
     const issueTriage = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-issue-triage.yml'), 'utf8');
     assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);

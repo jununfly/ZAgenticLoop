@@ -1322,7 +1322,7 @@
     "1-4-3-2": {
       "id": "1-4-3-2",
       "label": "Dependency Sweeper Workflow-Dispatch Live Evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-3",
       "children": [],
@@ -1338,12 +1338,12 @@
           "note": "第二次 dogfood run 29233506834 暴露 local package 缺依赖和失败时 artifact 被跳过，需把这类 workflow-layer failure 也变成可回放证据。"
         }
       ],
-      "notes": "Added guarded Dependency Sweeper workflow-dispatch live-repair path but did not mark route execution-ready. Core CLI exposes zj-loop-dependency-sweeper live-repair; generated GitHub Actions/template accept confirm_live_repair and upload live-repair-result evidence. Dogfood run https://github.com/jununfly/ZAgenticLoop/actions/runs/29233185628 exposed that pinned npm package 0.1.6 cannot exercise unreleased live-repair, so the workflow now has a core_package input: default published pin for user projects, explicit ./tools/zj-loop-core override for unreleased repo dogfood. Dogfood run https://github.com/jununfly/ZAgenticLoop/actions/runs/29233506834 exposed that local package override also needs dependency installation and failure evidence retention; workflow now installs local package dependencies when core_package starts with ./, checks files before summary cat, and uploads artifacts with if: always(). Real workflow-dispatch dogfood evidence is still required before live/execution-ready promotion. Verification: cd tools/zj-loop-core && npm test; cd tools/zj-loop-init && npm test; npm run test:generated-bundle-release-gate."
+      "notes": "Completed Dependency Sweeper workflow-dispatch live evidence. Failed dogfood runs exposed two product defects and were fixed: run 29233185628 showed pinned npm package cannot validate unreleased live-repair; run 29233506834 showed local package dependencies and failure artifact retention were missing. Successful dogfood run https://github.com/jununfly/ZAgenticLoop/actions/runs/29234374181 used core_package=./tools/zj-loop-core, installed local deps, executed live-repair with CREATE_DEPENDENCY_SWEEPER_FIX_PR, uploaded live-repair-result.json, and produced verifier-backed escalation-issue evidence without pushing a repair branch or creating a repair PR. Check-only promotion gate now reports dependency-sweeper promotable=true; apply promotion remains deferred to 1-4-3-4. Verification: cd tools/zj-loop-init && npm test; npm run test:generated-bundle-release-gate; node tools/zj-loop-core/dist/route-cli.js promotion-gate dependency-sweeper --target execution-ready --json."
     },
     "1-4-3-3": {
       "id": "1-4-3-3",
       "label": "PR Steward Workflow-Dispatch Live Evidence",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-4-3",
       "children": [],
@@ -1363,7 +1363,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 16:01:52",
+    "updated": "2026-07-13 16:13:45",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }
