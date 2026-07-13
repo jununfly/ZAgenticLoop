@@ -1,6 +1,6 @@
 # Changelog Drafter State
 
-Last run: 2026-07-08
+Last run: 2026-07-13
 
 ## Current Capability
 
@@ -36,7 +36,17 @@ Last run: 2026-07-08
 - Replay evidence verifies duplicates, missing report rejection,
   publish-adjacent signal denial, and human gates for breaking, security,
   major-version, or oversized scan windows.
-- Real workflow-dispatch dogfood evidence is still required before promotion.
+- Real workflow-dispatch dogfood evidence:
+  https://github.com/jununfly/ZAgenticLoop/actions/runs/29247657726
+  - Event: `workflow_dispatch`
+  - Branch: `codex/changelog-drafter-live-draft-path`
+  - Inputs: `core_package=./tools/zj-loop-core`, `draft_mode=evidence`,
+    `confirm_live_draft=CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE`
+  - Artifact includes `live-draft-result.json` and
+    `draft-artifacts/changelog-draft.md`.
+  - Live runner outcome: `draft-evidence`, status `completed`.
+  - Side effect boundary: tag_created=false, release_created=false,
+    package_published=false, final_changelog_acceptance=false.
 
 ## Boundary
 

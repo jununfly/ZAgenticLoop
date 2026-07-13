@@ -553,7 +553,7 @@
     "1-4-4": {
       "id": "1-4-4",
       "label": "Changelog Drafter 与 Release Draft Consumer 提升",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [
@@ -1405,7 +1405,7 @@
     "1-4-4-2": {
       "id": "1-4-4-2",
       "label": "Changelog Drafter Workflow-Dispatch Live Evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-4",
       "children": [],
@@ -1441,12 +1441,12 @@
     "1-4-4-3": {
       "id": "1-4-4-3",
       "label": "Draft Consumer Promotion Apply And Docs",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Promotion gate passed and was applied with fixed confirmation phrase. Changelog Drafter draft-request route now has maturity.runner=execution-ready while execution.mode remains report-only. Durable docs and dogfood state were updated with workflow-dispatch run 29247657726 and side-effect boundary evidence."
     },
     "1-4-6": {
       "id": "1-4-6",
@@ -1461,7 +1461,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 19:46:55",
+    "updated": "2026-07-13 19:54:11",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

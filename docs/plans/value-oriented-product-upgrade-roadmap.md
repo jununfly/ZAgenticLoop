@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 19:46:55
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 19:54:11
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -26,7 +26,7 @@
 │   ├── [x][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
 │   ├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
 │   ├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
-│   ├── [~][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
+│   ├── [x][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
 │   ├── [ ][X+] 1-4-5. GitHub 与 GitLab Provider Parity
 │   └── [ ][X+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
 ├── [ ][X+] 1-5. 前提条件、安全与成本包络
@@ -67,14 +67,26 @@
     ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
     └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
 
-### 当前施工：1-4-4-2. Changelog Drafter Workflow-Dispatch Live Evidence
+### 当前施工：1-4. Consumer Runner 全链路执行能力
 
-Implementation updated: Changelog Drafter now has a guarded live-draft CLI, workflow_dispatch inputs for confirm_live_draft/core_package, artifact upload with if: always(), safe summary cat guards, and runner evidence emits final_changelog_acceptance=false. Promotion gate now only misses real workflow-dispatch dogfood evidence, which requires this workflow change to exist on a remote branch/PR before it can be run truthfully.
+Starting grill for Consumer Runner full-chain execution. Existing consumers have route-specific plan/live functions; the main design question is how zj-loop-dispatch invokes them through a stable bounded consumer adapter without flattening all consumers into fix runners.
 
 **决策：**
-- Q: Changelog Drafter workflow-dispatch live evidence 的最小成功形态是否接受 draft-evidence，而不强制 draft-pr？ → 接受 draft-evidence，不强制必须 draft-pr。 (目标是证明 runner 能通过 workflow-dispatch 安全地产生 reviewable draft outcome；draft-evidence 副作用更小但能覆盖固定确认短语、request carrier、runner lifecycle、artifact upload、side-effect boundary。draft-pr 是更强证据但不是硬要求；promotion 不应只依赖 escalation-issue。)
-- Q: Changelog Drafter workflow-dispatch dogfood 是否支持 core_package=./tools/zj-loop-core 本地包覆盖？ → 要。默认仍用发布包版本，dogfood 时允许显式传 core_package=./tools/zj-loop-core。 (本地包覆盖用于验证当前分支尚未发布的 core 改动；workflow 需要在本地包模式下先 npm install --prefix ./tools/zj-loop-core，并且 artifact upload 使用 if: always()，避免失败时丢证据。)
-- Q: Changelog Drafter live evidence 是否必须证明不触碰发布侧副作用？ → 必须。 (side-effect-boundary gate 必须证明 draft consumer 只生成可审查草稿，不完成发布。live result / state 应显式记录 tag_created=false、release_created=false、package_published=false、final_changelog_acceptance=false；最好由 runner result 结构化输出，并由 promotion gate 检查。)
-- Q: 是否把 final_changelog_acceptance=false 补进 Changelog Drafter runner result / tests / promotion gate 识别？ → 要。 (该字段作为 side-effect-boundary 的硬字段，明确 draft-evidence / draft-pr 只是可审查草稿，不代表最终 changelog 已接受；runner result、测试和 promotion gate 都应覆盖。)
-- Q: 是否把 Changelog Drafter workflow-dispatch 从 draft-plan 升级到 guarded live draft evidence 主路径？ → 同意。 (新增 confirm_live_draft input，固定短语 CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE，默认 draft_mode=evidence；dogfood 主路径生成 draft-evidence artifact，不强制 draft-pr；支持 core_package=./tools/zj-loop-core；artifact upload 必须 if: always()，workflow summary 只在文件存在时 cat。)
+- Q: Consumer Runner 的边界是什么？ → 每个 consumer 都要到自己的 bounded completion form；不把所有 consumer 简化成 fix runner，也不允许 producer/report route 直接做 worker side effects。 (来自 route-consumer-execution-architecture.md 的 Consumer Kinds 和 Completion Forms。)
+- Q: zj-loop-dispatch 在 execution_allowed=true 时如何调用各个 consumer runner？ → 新增 core 内部 ConsumerAdapter/runConsumerToReviewArtifact 层，而不是让 dispatch-runner 直接 import 每个具体 runner 的 live 函数。适配层接收 root、signal、orchestration、route、consumerRunPlan、mode，返回统一的 executed_to_review_artifact 或 hard_stopped 结果。 (内部可按 route.consumer_kind/route_id 分发到具体 runner，但每个 runner 保留自己的 bounded completion form；zj-loop-dispatch 只懂编排，不懂具体 consumer 业务细节。)
+- Q: zj-loop-dispatch --mode auto 是否直接执行所有 route 的 live side effects？ → 分两层执行能力：review-artifact runner 默认可被 auto 调用，目标是生成 PR/MR/draft/comment/evidence/plan 等可审查产物；live-side-effect runner 只在 route execution_allowed、request verifier、provider permission、预算和 safety gates 全过时运行。 (每个 consumer 必须显式实现 live adapter，不能靠通用 fallback 猜测真实 side effects；这样保持默认自动化，同时避免误触发外部副作用。)
+- Q: 1-4 的优先实现顺序先做哪类 consumer？ → 先做 activation-consumer，也就是 roadmap-sliced-development。第一阶段聚焦 ConsumerAdapter 基座 + Roadmap Activation review-artifact runner，而不是先做 CI/Dependency/PR Steward。 (这是默认自动 loop 的核心体验：Signal/Issue -> Activation -> Roadmap Branch/PR；它也最能检验 adapter 是否能保持非 fix-runner 的 bounded lifecycle 边界。)
+- Q: 分阶段实现是否会导致其他 agent 误以为 Roadmap Activation 已经完成？ → 会。按倒推逻辑，父节点必须表达完整目标，阶段性工作必须拆成子节点；第一个子节点只承接 review-artifact runner，不把它误标为 live branch/PR runner 完成。 (这样 roadmap 状态可以显示第一阶段完成但 1-4-1 父节点仍未完成，避免后续 agent 产生 job-is-done 错觉。)
+- Q: Phased Consumer Runner work may mislead future agents into treating a partial phase as complete. How should the roadmap prevent that? → Model the complete target as the parent node, put the first phase in an explicit child node, and keep parent completion blocked until all required child capabilities and evidence gates are complete.
+
+**当前子树：**
+├── [x][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
+│   ... 6 more child nodes; run tree 1-4-1 --depth 2 for full view
+├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
+├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
+│   ... 4 more child nodes; run tree 1-4-3 --depth 2 for full view
+├── [x][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
+│   ... 3 more child nodes; run tree 1-4-4 --depth 2 for full view
+├── [ ][X+] 1-4-5. GitHub 与 GitLab Provider Parity
+└── [ ][X+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
 <!-- ROADMAP_SECTION_END -->
