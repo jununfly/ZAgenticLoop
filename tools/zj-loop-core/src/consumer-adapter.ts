@@ -158,13 +158,25 @@ export async function runConsumerLiveSideEffects(input: {
         orchestrationId: input.envelope.orchestration_id,
         lifecycle: activationLifecycle,
       });
+  const closeoutHandoffArtifact = activationLifecycle.activation_state === 'completed'
+    ? await writePostMergeCloseoutHandoff({
+        root: input.root,
+        signal: input.signal,
+        orchestrationId: input.envelope.orchestration_id,
+        contractPlan,
+        liveSideEffects: liveSideEffectsWithAttempts,
+      })
+    : undefined;
   const adapterStatus = adapterStatusForActivationLifecycle(activationLifecycle);
+  const reviewArtifacts = [
+    ...current.review_artifacts.filter((artifact) => artifact.kind !== 'activation-lifecycle' && artifact.kind !== 'post-merge-closeout-handoff'),
+    ...(lifecycleArtifact === undefined ? [] : [lifecycleArtifact]),
+    ...(closeoutHandoffArtifact === undefined ? [] : [closeoutHandoffArtifact]),
+  ];
   return {
     ...current,
     adapter_status: adapterStatus,
-    review_artifacts: lifecycleArtifact === undefined
-      ? current.review_artifacts
-      : [...current.review_artifacts.filter((artifact) => artifact.kind !== 'activation-lifecycle'), lifecycleArtifact],
+    review_artifacts: reviewArtifacts,
     live_side_effects: liveSideEffectsWithAttempts,
     activation_lifecycle: activationLifecycle,
     next_steps: activationLifecycle.activation_state === 'resumable'
@@ -751,6 +763,100 @@ async function writeActivationLifecycleEvidence(input: {
   };
 }
 
+async function writePostMergeCloseoutHandoff(input: {
+  root: string;
+  signal: SignalEnvelope;
+  orchestrationId: string;
+  contractPlan: any;
+  liveSideEffects: ConsumerAdapterResult['live_side_effects'];
+}): Promise<ConsumerAdapterResult['review_artifacts'][number] | undefined> {
+  const review = input.liveSideEffects.review;
+  const branch = input.liveSideEffects.branch;
+  const provider = input.liveSideEffects.external_tool ?? input.contractPlan?.provider;
+  if (input.liveSideEffects.status !== 'completed' || !review?.url || !branch?.name || !provider) {
+    return undefined;
+  }
+  const repository = stringPayload(input.signal.payload.repository)
+    ?? stringPayload(input.contractPlan?.repository)
+    ?? providerRepositoryFromReviewUrl(review.url)
+    ?? '';
+  const projectPath = stringPayload(input.signal.payload.project_path)
+    ?? stringPayload(input.contractPlan?.projectPath)
+    ?? stringPayload(input.contractPlan?.project_path)
+    ?? repository;
+  const carrierIssue = String(input.contractPlan?.reviewContract?.closeout_contract?.activation_carrier_issue
+    ?? input.contractPlan?.prContract?.closeout_contract?.activation_carrier_issue
+    ?? input.contractPlan?.mrContract?.closeout_contract?.activation_carrier_issue
+    ?? (input.signal.subject.kind === 'issue' ? input.signal.subject.id : ''));
+  const reviewNumber = review.number === undefined || review.number === null ? '' : String(review.number);
+  const repoArg = provider === 'gitlab' ? projectPath : repository;
+  const dryRunArgs = [
+    'zj-loop-post-merge-closeout',
+    'closeout-plan',
+    '--provider',
+    provider,
+    '--repo',
+    repoArg,
+    provider === 'gitlab' ? '--merge-request' : '--pr',
+    reviewNumber,
+    '--carrier-issue',
+    carrierIssue,
+  ];
+  const liveArgs = provider === 'github'
+    ? [
+        'zj-loop-post-merge-closeout',
+        'live-closeout',
+        '--repo',
+        repoArg,
+        '--pr',
+        reviewNumber,
+        '--carrier-issue',
+        carrierIssue,
+      ]
+    : [];
+  const handoff = {
+    schema: 'zj-loop.post_merge_closeout_handoff.v1',
+    route_id: 'post-merge-roadmap-closeout',
+    provider,
+    review,
+    repository,
+    project_path: provider === 'gitlab' ? projectPath : undefined,
+    carrier_issue: carrierIssue,
+    branch,
+    contract_source: 'review_body',
+    when_to_run: 'after_review_merged',
+    required_guard: [
+      'merged_review',
+      'valid_post_merge_contract',
+      'clean_worktree',
+    ],
+    dry_run_command: {
+      available: true,
+      args: dryRunArgs,
+    },
+    live_closeout_command: provider === 'github'
+      ? {
+          available: true,
+          args: liveArgs,
+        }
+      : {
+          available: false,
+          reason: 'gitlab-live-closeout-not-supported-yet',
+          next_step: 'Run dry-run closeout-plan and use GitLab manual cleanup until GitLab live closeout is implemented.',
+          args: [],
+        },
+  };
+  const artifactPath = `zj-loop/orchestrations/${input.orchestrationId}/post-merge-closeout-handoff.json`;
+  const absoluteArtifactPath = path.resolve(input.root, artifactPath);
+  await mkdir(path.dirname(absoluteArtifactPath), { recursive: true });
+  await writeFile(absoluteArtifactPath, `${JSON.stringify(handoff, null, 2)}\n`);
+  return {
+    path: artifactPath,
+    kind: 'post-merge-closeout-handoff',
+    schema: 'zj-loop.post_merge_closeout_handoff.v1',
+  };
+}
+
 function adapterStatusForActivationLifecycle(
   lifecycle: NonNullable<ConsumerAdapterResult['activation_lifecycle']>,
 ): ConsumerAdapterStatus {
@@ -805,6 +911,11 @@ function failureReasonFromEvidence(liveSideEffects: ConsumerAdapterResult['live_
   const operation = liveSideEffects.operations?.slice().reverse().find((item) => typeof item.kind === 'string');
   if (typeof operation?.kind === 'string') return `${operation.kind}-failed`;
   return undefined;
+}
+
+function providerRepositoryFromReviewUrl(url: string): string | undefined {
+  const match = url.match(/^https?:\/\/[^/]+\/([^/]+\/[^/]+)\/(?:pull|merge_requests)\//);
+  return match?.[1];
 }
 
 function stableHash(value: string): string {

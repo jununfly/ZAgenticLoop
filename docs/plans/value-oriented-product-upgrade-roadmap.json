@@ -491,7 +491,8 @@
         "1-4-1-2",
         "1-4-1-3",
         "1-4-1-4",
-        "1-4-1-5"
+        "1-4-1-5",
+        "1-4-1-6"
       ],
       "decisions": [],
       "notes": "Parent node tracks the complete Roadmap Activation adapter path. It is not complete when only the review-artifact runner exists."
@@ -1186,12 +1187,33 @@
     "1-4-1-4": {
       "id": "1-4-1-4",
       "label": "Roadmap Activation Post Merge Closeout Handoff",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-1",
       "children": [],
-      "decisions": [],
-      "notes": "Later phase: carry Roadmap Activation outputs into post-merge closeout handoff so merged roadmap branch/PR cleanup and carrier status are not left to memory."
+      "decisions": [
+        {
+          "q": "Roadmap Activation Post Merge Closeout Handoff 应该产出在哪里？",
+          "answer": "两层都要，但主 truth 放在 orchestration review artifact，PR/MR body 继续只承载 post-merge contract。execute 成功创建/更新 PR/MR 后，ConsumerAdapter 额外生成 zj-loop/orchestrations/<id>/post-merge-closeout-handoff.json，显式交给 post-merge-roadmap-closeout。",
+          "note": "PR/MR body 作为 closeout runner 的安全 contract 载体；orchestration handoff artifact 作为 Codex/Human/其他 Agent 可回放的下一棒说明，不在本刀执行 live cleanup，也不直接写 provider comment。"
+        },
+        {
+          "q": "post-merge-closeout-handoff 是否在 resumable/failed 时也生成？",
+          "answer": "只在 review 成功存在时生成 closeout handoff；resumable/failed 继续用 activation lifecycle evidence。closeout 的前提是已有未来会 merge 的 PR/MR，必须有 review.url 和 branch；未成功创建 review 时生成 closeout handoff 会误导 Agent。",
+          "note": "activation-lifecycle-evidence 负责恢复/失败处理；post-merge-closeout-handoff 负责 PR/MR 已开后的 merge 后收尾。"
+        },
+        {
+          "q": "handoff artifact 是否要直接提供 zj-loop-post-merge-closeout 固定命令？",
+          "answer": "要，必须给固定命令数组，但同时保留结构化字段。handoff 应包含 dry_run_command.args[]、live_closeout_command.args[]、provider、review、repository/project_path、carrier_issue、branch、contract_source 等字段。",
+          "note": "Human 可以直接复制固定命令，Agent 可读结构化字段，避免从自然语言猜测；GitHub/GitLab 命令按 provider 分别生成。"
+        },
+        {
+          "q": "GitLab live closeout 尚未完整支持时 handoff 应如何表达？",
+          "answer": "不要伪装成可 live，必须结构化标记 unavailable；dry-run 仍给固定命令。GitHub live_closeout_command.available=true；GitLab 若 live cleanup 尚未完整支持，则 live_closeout_command.available=false，reason=gitlab-live-closeout-not-supported-yet，并给出 manual cleanup next_step。",
+          "note": "避免其他 Agent 误以为可以自动删除 GitLab branch 或 close issue；GitLab live closeout 能力应后续专门补齐，不在本刀扩大 destructive side effects。"
+        }
+      ],
+      "notes": "Implemented post-merge closeout handoff generation after successful Roadmap Activation PR/MR creation. ConsumerAdapter now writes post-merge-closeout-handoff.json only when review exists, with structured provider/review/branch/carrier fields and fixed dry-run/live closeout command arrays. GitLab live closeout is explicitly marked unavailable with follow-up node 1-4-1-6. Verification: tools/zj-loop-core npm test passed 161/161; git diff --check passed."
     },
     "1-4-1-5": {
       "id": "1-4-1-5",
@@ -1202,11 +1224,21 @@
       "children": [],
       "decisions": [],
       "notes": "Later phase: require replay/live evidence before promoting Roadmap Activation adapter maturity; parent 1-4-1 is complete only when evidence proves review artifact, live side effect, resume/failure recovery, and closeout handoff paths."
+    },
+    "1-4-1-6": {
+      "id": "1-4-1-6",
+      "label": "GitLab Post Merge Live Closeout 支持",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Follow-up node for implementing GitLab live closeout after 1-4-1-4 marks GitLab live_closeout_command as unavailable in handoff artifacts. Scope: support safe GitLab branch cleanup and carrier issue closeout with provider-specific guards, without pretending current GitLab closeout is live-ready."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 01:51:03",
+    "updated": "2026-07-13 02:09:23",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

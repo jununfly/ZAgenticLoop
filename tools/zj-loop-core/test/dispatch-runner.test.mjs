@@ -299,6 +299,41 @@ test('zj-loop-dispatch execute mode reuses roadmap activation contract-plan and 
     assert.equal(executed.consumer_adapter_result.live_side_effects.review.url, 'https://github.com/jununfly/ZAgenticLoop/pull/123');
     assert.equal(executed.consumer_adapter_result.live_side_effects.branch.target, 'main');
     assert.equal(executed.consumer_adapter_result.live_side_effects.branch.name.startsWith('zjal-'), true);
+    const closeoutHandoffArtifact = executed.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'post-merge-closeout-handoff');
+    assert.equal(closeoutHandoffArtifact.schema, 'zj-loop.post_merge_closeout_handoff.v1');
+    const closeoutHandoff = JSON.parse(await readFile(path.join(dir, closeoutHandoffArtifact.path), 'utf8'));
+    assert.equal(closeoutHandoff.route_id, 'post-merge-roadmap-closeout');
+    assert.equal(closeoutHandoff.provider, 'github');
+    assert.equal(closeoutHandoff.review.kind, 'pull-request');
+    assert.equal(closeoutHandoff.review.number, 123);
+    assert.equal(closeoutHandoff.review.url, 'https://github.com/jununfly/ZAgenticLoop/pull/123');
+    assert.equal(closeoutHandoff.repository, 'jununfly/ZAgenticLoop');
+    assert.equal(closeoutHandoff.carrier_issue, '42');
+    assert.equal(closeoutHandoff.branch.target, 'main');
+    assert.equal(closeoutHandoff.contract_source, 'review_body');
+    assert.deepEqual(closeoutHandoff.dry_run_command.args, [
+      'zj-loop-post-merge-closeout',
+      'closeout-plan',
+      '--provider',
+      'github',
+      '--repo',
+      'jununfly/ZAgenticLoop',
+      '--pr',
+      '123',
+      '--carrier-issue',
+      '42',
+    ]);
+    assert.deepEqual(closeoutHandoff.live_closeout_command.args, [
+      'zj-loop-post-merge-closeout',
+      'live-closeout',
+      '--repo',
+      'jununfly/ZAgenticLoop',
+      '--pr',
+      '123',
+      '--carrier-issue',
+      '42',
+    ]);
+    assert.equal(closeoutHandoff.live_closeout_command.available, true);
     assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/git/refs')), true);
     assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/pulls')), true);
 
@@ -409,6 +444,27 @@ test('zj-loop-dispatch execute mode normalizes GitLab roadmap activation live si
     assert.equal(executed.consumer_adapter_result.live_side_effects.review.number, 5);
     assert.equal(executed.consumer_adapter_result.live_side_effects.review.url, 'https://gitlab.com/group/project/-/merge_requests/5');
     assert.equal(executed.consumer_adapter_result.live_side_effects.branch.target, 'main');
+    const closeoutHandoffArtifact = executed.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'post-merge-closeout-handoff');
+    assert.equal(closeoutHandoffArtifact.schema, 'zj-loop.post_merge_closeout_handoff.v1');
+    const closeoutHandoff = JSON.parse(await readFile(path.join(dir, closeoutHandoffArtifact.path), 'utf8'));
+    assert.equal(closeoutHandoff.provider, 'gitlab');
+    assert.equal(closeoutHandoff.review.kind, 'merge-request');
+    assert.equal(closeoutHandoff.review.number, 5);
+    assert.equal(closeoutHandoff.project_path, 'group/project');
+    assert.deepEqual(closeoutHandoff.dry_run_command.args, [
+      'zj-loop-post-merge-closeout',
+      'closeout-plan',
+      '--provider',
+      'gitlab',
+      '--repo',
+      'group/project',
+      '--merge-request',
+      '5',
+      '--carrier-issue',
+      '9',
+    ]);
+    assert.equal(closeoutHandoff.live_closeout_command.available, false);
+    assert.equal(closeoutHandoff.live_closeout_command.reason, 'gitlab-live-closeout-not-supported-yet');
     assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/repository/branches')), true);
     assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')), true);
   } finally {
