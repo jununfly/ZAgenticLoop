@@ -21,7 +21,9 @@ type FetchResponseLike = {
     text?: () => Promise<string>;
 };
 type FetchLike = (url: string, init?: {
+    method?: string;
     headers?: Record<string, string>;
+    body?: string;
 }) => Promise<FetchResponseLike>;
 export type PostMergePullRequest = {
     provider?: 'github' | 'gitlab';
@@ -188,8 +190,12 @@ export declare function buildPostMergeRoadmapCloseoutExecutionPlan(input: {
 export declare function buildPostMergeLiveRunnerEvidence(result: any, { createdAt }?: {
     createdAt?: string;
 }): import("./live-runner-contract.js").LiveRunnerEvidence;
-export declare function executePostMergeRoadmapCloseout(plan: PostMergeCloseoutPlan, { runner }?: {
+export declare function executePostMergeRoadmapCloseout(plan: PostMergeCloseoutPlan, { runner, fetchImpl, gitlabToken, gitlabJobToken, gitlabApiBaseUrl, }?: {
     runner?: CommandRunner;
+    fetchImpl?: FetchLike;
+    gitlabToken?: string;
+    gitlabJobToken?: string;
+    gitlabApiBaseUrl?: string;
 }): Promise<{
     runner_evidence: import("./live-runner-contract.js").LiveRunnerEvidence;
     status: string;
@@ -324,6 +330,16 @@ export declare function buildGitLabMergeRequestApiUrl(input: {
     apiBaseUrl?: string;
     projectPath: string;
     iid: string | number;
+}): string;
+export declare function buildGitLabBranchApiUrl(input: {
+    apiBaseUrl?: string;
+    projectPath: string;
+    branch: string;
+}): string;
+export declare function buildGitLabIssueApiUrl(input: {
+    apiBaseUrl?: string;
+    projectPath: string;
+    issue: string | number;
 }): string;
 export declare function normalizeGhPrView(pr: PostMergePullRequest, { expectedRepo }: {
     expectedRepo: string;

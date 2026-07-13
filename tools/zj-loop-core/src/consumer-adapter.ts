@@ -813,7 +813,18 @@ async function writePostMergeCloseoutHandoff(input: {
         '--carrier-issue',
         carrierIssue,
       ]
-    : [];
+    : [
+        'zj-loop-post-merge-closeout',
+        'live-closeout',
+        '--provider',
+        'gitlab',
+        '--repo',
+        repoArg,
+        '--merge-request',
+        reviewNumber,
+        '--carrier-issue',
+        carrierIssue,
+      ];
   const handoff = {
     schema: 'zj-loop.post_merge_closeout_handoff.v1',
     route_id: 'post-merge-roadmap-closeout',
@@ -834,17 +845,10 @@ async function writePostMergeCloseoutHandoff(input: {
       available: true,
       args: dryRunArgs,
     },
-    live_closeout_command: provider === 'github'
-      ? {
-          available: true,
-          args: liveArgs,
-        }
-      : {
-          available: false,
-          reason: 'gitlab-live-closeout-not-supported-yet',
-          next_step: 'Run dry-run closeout-plan and use GitLab manual cleanup until GitLab live closeout is implemented.',
-          args: [],
-        },
+    live_closeout_command: {
+      available: true,
+      args: liveArgs,
+    },
   };
   const artifactPath = `zj-loop/orchestrations/${input.orchestrationId}/post-merge-closeout-handoff.json`;
   const absoluteArtifactPath = path.resolve(input.root, artifactPath);

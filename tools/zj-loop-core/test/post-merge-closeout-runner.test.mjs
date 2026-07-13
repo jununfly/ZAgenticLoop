@@ -249,6 +249,102 @@ test('post-merge closeout live execution deletes only contract branch and closes
   assert.equal(calls.some((call) => call.includes('99')), false);
 });
 
+test('post-merge GitLab live execution deletes only contract branch and closes only carrier issue through API', async () => {
+  const mr = normalizeGitLabMrView({
+    iid: 9,
+    web_url: 'https://gitlab.com/group/project/-/merge_requests/9',
+    description: VALID_BODY,
+    state: 'merged',
+    source_branch: 'zjal/post-merge-closeout-executor',
+    target_branch: 'main',
+    project_path: 'group/project',
+  }, { expectedRepo: 'group/project' });
+  const plan = buildPostMergeRoadmapCloseoutExecutionPlan({
+    pr: mr,
+    prBody: mr.body,
+    expectedRepo: 'group/project',
+    currentRepo: 'group/project',
+    gitStatus: '',
+    expectedCarrierIssue: 39,
+    live: true,
+  });
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+    const text = String(url);
+    if (text.endsWith('/repository/branches/zjal%2Fpost-merge-closeout-executor')) {
+      assert.equal(init.method, 'DELETE');
+      return { ok: true, status: 204, async json() { return {}; } };
+    }
+    if (text.endsWith('/issues/39')) {
+      if (init.method === 'GET') return { ok: true, status: 200, async json() { return { state: 'opened' }; } };
+      assert.equal(init.method, 'PUT');
+      assert.equal(init.body, JSON.stringify({ state_event: 'close' }));
+      return { ok: true, status: 200, async json() { return { state: 'closed' }; } };
+    }
+    throw new Error(`unexpected GitLab API URL: ${text}`);
+  };
+
+  const result = await executePostMergeRoadmapCloseout(plan, {
+    fetchImpl,
+    gitlabToken: 'token',
+    gitlabApiBaseUrl: 'https://gitlab.com/api/v4',
+  });
+
+  assert.equal(result.status, 'executed');
+  assert.equal(result.side_effects_executed, true);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[0].init.headers['PRIVATE-TOKEN'], 'token');
+  assert.deepEqual(result.execution.steps.map((step) => [step.type, step.result]), [
+    ['delete-branch', 'deleted'],
+    ['close-carrier-issue', 'closed'],
+  ]);
+  assert.equal(result.runner_evidence.completion_form, 'cleanup-done');
+  assert.equal(result.runner_evidence.status, 'completed');
+  assert.equal(result.runner_evidence.side_effects.actions[0].provider, 'gitlab');
+  assert.equal(result.runner_evidence.side_effects.actions[0].branch, 'zjal/post-merge-closeout-executor');
+  assert.equal(result.runner_evidence.side_effects.actions[1].issue, 39);
+});
+
+test('post-merge GitLab live execution treats missing branch and already closed carrier as completed', async () => {
+  const mr = normalizeGitLabMrView({
+    iid: 9,
+    web_url: 'https://gitlab.com/group/project/-/merge_requests/9',
+    description: VALID_BODY,
+    state: 'merged',
+    source_branch: 'zjal/post-merge-closeout-executor',
+    target_branch: 'main',
+    project_path: 'group/project',
+  }, { expectedRepo: 'group/project' });
+  const plan = buildPostMergeRoadmapCloseoutExecutionPlan({
+    pr: mr,
+    prBody: mr.body,
+    expectedRepo: 'group/project',
+    currentRepo: 'group/project',
+    gitStatus: '',
+    expectedCarrierIssue: 39,
+    live: true,
+  });
+  const fetchImpl = async (url) => {
+    const text = String(url);
+    if (text.includes('/repository/branches/')) return { ok: false, status: 404, async json() { return {}; }, async text() { return 'not found'; } };
+    if (text.endsWith('/issues/39')) return { ok: true, status: 200, async json() { return { state: 'closed' }; } };
+    throw new Error(`unexpected GitLab API URL: ${text}`);
+  };
+
+  const result = await executePostMergeRoadmapCloseout(plan, {
+    fetchImpl,
+    gitlabToken: 'token',
+  });
+
+  assert.equal(result.status, 'executed');
+  assert.deepEqual(result.execution.steps.map((step) => [step.type, step.result]), [
+    ['delete-branch', 'already_deleted'],
+    ['close-carrier-issue', 'already_closed'],
+  ]);
+  assert.equal(result.runner_evidence.completion_form, 'cleanup-done');
+});
+
 test('post-merge closeout live execution refuses unmerged branch deletion', async () => {
   const runner = async (command, args) => {
     const text = [command, ...args].join(' ');
@@ -384,8 +480,7 @@ test('post-merge GitLab dry-run comment uses MR and GitLab manual pipeline wordi
   });
 
   assert.match(comment, /Review: MR #9/);
-  assert.match(comment, /Review GitLab artifact closeout-plan\.json/);
-  assert.match(comment, /dry-run\/live-plan evidence only/);
+  assert.match(comment, /zj-loop-post-merge-closeout live-closeout --provider gitlab --repo group\/project --merge-request 9 --carrier-issue 39/);
   assert.doesNotMatch(comment, /ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION/);
   assert.doesNotMatch(comment, /GitLab manual job zj_loop_post_merge_cleanup/);
   assert.doesNotMatch(comment, /ZJ_LOOP_MERGE_REQUEST_IID=9/);

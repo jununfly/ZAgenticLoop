@@ -78,11 +78,16 @@ if (argv[0] === 'closeout-plan') {
   process.exitCode = await runCli({
     name: 'zj-loop-post-merge-closeout',
     description: 'Execute guarded Post-Merge Roadmap Closeout live cleanup.',
-    usage: 'zj-loop-post-merge-closeout live-closeout --pr <number> --repo <owner/repo> [--carrier-issue <number>] [--confirm-live-cleanup <fixed phrase>] [--require-live-confirmation] [--out <path>] [--json]',
+    usage: 'zj-loop-post-merge-closeout live-closeout --provider github|gitlab --repo <owner/repo> [--pr <number>|--merge-request <iid>] [--carrier-issue <number>] [--confirm-live-cleanup <fixed phrase>] [--require-live-confirmation] [--out <path>] [--json]',
     options: [
       { name: 'command', type: 'positional', description: 'Command', default: 'live-closeout' },
+      { name: 'provider', type: 'enum', description: 'Provider review surface', values: ['github', 'gitlab'], default: 'github' },
       { name: 'pr', type: 'string', description: 'Merged PR number' },
+      { name: 'merge-request', type: 'string', description: 'Merged GitLab MR IID' },
       { name: 'repo', type: 'string', description: 'Expected owner/repo' },
+      { name: 'gitlab-api-url', type: 'string', description: 'GitLab API v4 base URL for MR metadata fetch and live cleanup' },
+      { name: 'gitlab-token', type: 'string', description: 'GitLab PRIVATE-TOKEN for live cleanup' },
+      { name: 'gitlab-job-token', type: 'string', description: 'GitLab JOB-TOKEN for live cleanup' },
       { name: 'carrier-issue', type: 'string', description: 'Expected activation carrier issue' },
       { name: 'confirm-live-cleanup', type: 'string', description: `Fallback phrase: ${LIVE_CLEANUP_CONFIRMATION_PHRASE}` },
       { name: 'require-live-confirmation', type: 'boolean', description: 'Require the fixed phrase even when merged-PR contract authorization passes' },
@@ -90,15 +95,16 @@ if (argv[0] === 'closeout-plan') {
       { name: 'json', type: 'boolean', description: 'Print JSON output' },
     ],
     async handler({ io, options }) {
-      const pr = options.pr;
+      const provider = String(options.provider ?? 'github');
       const repo = options.repo;
-      if (typeof pr !== 'string') throw new Error('--pr is required');
       if (typeof repo !== 'string') throw new Error('--repo is required');
 
-      const input = await collectCloseoutInputFromGitHub({
-        prNumber: pr,
-        expectedRepo: repo,
-      });
+      const input = provider === 'gitlab'
+        ? await collectGitLabCloseoutInput(options, repo)
+        : await collectCloseoutInputFromGitHub({
+            prNumber: requireString(options.pr, '--pr is required'),
+            expectedRepo: repo,
+          });
       const plan = buildPostMergeRoadmapCloseoutExecutionPlan({
         ...input,
         expectedCarrierIssue: typeof options['carrier-issue'] === 'string'
@@ -111,7 +117,13 @@ if (argv[0] === 'closeout-plan') {
       if (confirmationRequired && options['confirm-live-cleanup'] !== LIVE_CLEANUP_CONFIRMATION_PHRASE) {
         throw new Error(`--confirm-live-cleanup must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
       }
-      const result = await executePostMergeRoadmapCloseout(plan);
+      const result = await executePostMergeRoadmapCloseout(plan, provider === 'gitlab'
+        ? {
+            gitlabApiBaseUrl: stringOption(options['gitlab-api-url']) ?? process.env.CI_API_V4_URL,
+            gitlabToken: stringOption(options['gitlab-token']) ?? process.env.GITLAB_TOKEN ?? process.env.GL_TOKEN,
+            gitlabJobToken: stringOption(options['gitlab-job-token']) ?? process.env.CI_JOB_TOKEN,
+          }
+        : {});
       const text = `${JSON.stringify(result, null, 2)}\n`;
       if (typeof options.out === 'string') await writeFile(options.out, text);
       if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());

@@ -43,7 +43,7 @@ type FetchResponseLike = {
   json: () => Promise<any>;
   text?: () => Promise<string>;
 };
-type FetchLike = (url: string, init?: { headers?: Record<string, string> }) => Promise<FetchResponseLike>;
+type FetchLike = (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => Promise<FetchResponseLike>;
 
 export type PostMergePullRequest = {
   provider?: 'github' | 'gitlab';
@@ -410,13 +410,14 @@ export function buildPostMergeLiveRunnerEvidence(
   { createdAt = new Date().toISOString() }: { createdAt?: string } = {},
 ) {
   const executed = result?.status === 'executed';
+  const skipped = result?.status === 'skipped';
   const evidence = buildLiveRunnerEvidence({
     runner_id: 'post-merge-cleanup',
     route_id: 'post-merge-roadmap-closeout',
     consumer_kind: 'cleanup-consumer',
     execution_mode: 'live',
-    completion_form: executed ? 'cleanup-done' : 'escalation-issue',
-    status: executed ? 'completed' : 'escalated',
+    completion_form: executed ? 'cleanup-done' : skipped ? 'cleanup-skipped' : 'escalation-issue',
+    status: executed ? 'completed' : skipped ? 'skipped' : 'escalated',
     dedupe_key: `post-merge-roadmap-closeout:${result?.pr?.number ?? 'unknown'}`,
     created_at: createdAt,
     source: {
@@ -440,9 +441,14 @@ export function buildPostMergeLiveRunnerEvidence(
       level: 'cleanup',
       actions: (result?.execution?.steps ?? []).map((step: any) => ({
         kind: step.name,
+        type: step.type,
         status: step.status,
+        result: step.result,
         reason: step.reason,
+        provider: step.provider,
+        project_path: step.project_path,
         branch: step.branch,
+        issue: step.issue,
       })),
     },
   });
@@ -455,7 +461,19 @@ export function buildPostMergeLiveRunnerEvidence(
 
 export async function executePostMergeRoadmapCloseout(
   plan: PostMergeCloseoutPlan,
-  { runner = defaultPostMergeRunner }: { runner?: CommandRunner } = {},
+  {
+    runner = defaultPostMergeRunner,
+    fetchImpl,
+    gitlabToken,
+    gitlabJobToken,
+    gitlabApiBaseUrl,
+  }: {
+    runner?: CommandRunner;
+    fetchImpl?: FetchLike;
+    gitlabToken?: string;
+    gitlabJobToken?: string;
+    gitlabApiBaseUrl?: string;
+  } = {},
 ) {
   if (plan.status !== 'ready-for-live-execution') {
     const refused = {
@@ -471,6 +489,14 @@ export async function executePostMergeRoadmapCloseout(
       ...refused,
       runner_evidence: buildPostMergeLiveRunnerEvidence(refused),
     };
+  }
+  if (plan.review.provider === 'gitlab') {
+    return executeGitLabPostMergeRoadmapCloseout(plan, {
+      fetchImpl,
+      token: gitlabToken,
+      jobToken: gitlabJobToken,
+      apiBaseUrl: gitlabApiBaseUrl,
+    });
   }
 
   const branch = plan.roadmap.branch;
@@ -539,6 +565,169 @@ export async function executePostMergeRoadmapCloseout(
     ...executed,
     runner_evidence: buildPostMergeLiveRunnerEvidence(executed),
   };
+}
+
+async function executeGitLabPostMergeRoadmapCloseout(
+  plan: PostMergeCloseoutPlan,
+  input: {
+    fetchImpl?: FetchLike;
+    token?: string;
+    jobToken?: string;
+    apiBaseUrl?: string;
+  },
+) {
+  const fetchImpl = input.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') {
+    return buildSkippedCloseoutResult(plan, 'gitlab-fetch-unavailable');
+  }
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (input.token) {
+    headers['PRIVATE-TOKEN'] = input.token;
+  } else if (input.jobToken) {
+    headers['JOB-TOKEN'] = input.jobToken;
+  } else {
+    return buildSkippedCloseoutResult(plan, 'gitlab-token-required-for-live-closeout');
+  }
+
+  const projectPath = plan.repository.expected;
+  const branch = plan.roadmap.branch;
+  const issue = plan.carrier.issue;
+  const steps: any[] = [];
+
+  const deleteBranchUrl = buildGitLabBranchApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath,
+    branch,
+  });
+  const deleteBranchResponse = await fetchImpl(deleteBranchUrl, {
+    method: 'DELETE',
+    headers,
+  });
+  if (deleteBranchResponse.ok || deleteBranchResponse.status === 204) {
+    steps.push({
+      name: 'delete-gitlab-branch',
+      type: 'delete-branch',
+      provider: 'gitlab',
+      project_path: projectPath,
+      branch,
+      status: 'ok',
+      result: 'deleted',
+    });
+  } else if (deleteBranchResponse.status === 404) {
+    steps.push({
+      name: 'delete-gitlab-branch',
+      type: 'delete-branch',
+      provider: 'gitlab',
+      project_path: projectPath,
+      branch,
+      status: 'skipped',
+      result: 'already_deleted',
+      reason: 'branch-not-found',
+    });
+  } else {
+    return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-branch-delete-failed', deleteBranchResponse), steps);
+  }
+
+  if (!Number.isInteger(issue)) {
+    return buildSkippedCloseoutResult(plan, 'carrier-issue-required-for-gitlab-live-closeout', steps);
+  }
+  const closeIssueUrl = buildGitLabIssueApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath,
+    issue: Number(issue),
+  });
+  const issueProbeResponse = await fetchImpl(closeIssueUrl, {
+    method: 'GET',
+    headers,
+  });
+  if (!issueProbeResponse.ok) {
+    return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-carrier-issue-probe-failed', issueProbeResponse), steps);
+  }
+  const issueProbe = await issueProbeResponse.json();
+  if (issueProbe?.state === 'closed') {
+    steps.push({
+      name: 'close-gitlab-carrier-issue',
+      type: 'close-carrier-issue',
+      provider: 'gitlab',
+      project_path: projectPath,
+      issue: Number(issue),
+      status: 'skipped',
+      result: 'already_closed',
+      reason: 'carrier-issue-already-closed',
+    });
+    const executed = {
+      ...plan,
+      status: 'executed',
+      side_effects_executed: true,
+      execution: {
+        status: 'executed',
+        steps,
+      },
+    };
+    return {
+      ...executed,
+      runner_evidence: buildPostMergeLiveRunnerEvidence(executed),
+    };
+  }
+
+  const closeIssueResponse = await fetchImpl(closeIssueUrl, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ state_event: 'close' }),
+  });
+  if (!closeIssueResponse.ok) {
+    return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-carrier-issue-close-failed', closeIssueResponse), steps);
+  }
+  const closedIssue = await closeIssueResponse.json();
+  steps.push({
+    name: 'close-gitlab-carrier-issue',
+    type: 'close-carrier-issue',
+    provider: 'gitlab',
+    project_path: projectPath,
+    issue: Number(issue),
+    status: 'ok',
+    result: 'closed',
+    response_state: closedIssue?.state,
+  });
+
+  const executed = {
+    ...plan,
+    status: 'executed',
+    side_effects_executed: true,
+    execution: {
+      status: 'executed',
+      steps,
+    },
+  };
+  return {
+    ...executed,
+    runner_evidence: buildPostMergeLiveRunnerEvidence(executed),
+  };
+}
+
+function buildSkippedCloseoutResult(plan: PostMergeCloseoutPlan, reason: string, steps: any[] = []) {
+  const skipped = {
+    ...plan,
+    status: 'skipped',
+    side_effects_executed: false,
+    execution: {
+      status: 'skipped',
+      reason,
+      steps,
+      next_steps: ['Review the skipped cleanup reason and rerun live closeout after fixing the GitLab API/token/precondition issue.'],
+    },
+  };
+  return {
+    ...skipped,
+    runner_evidence: buildPostMergeLiveRunnerEvidence(skipped),
+  };
+}
+
+async function gitLabFailureReason(prefix: string, response: FetchResponseLike): Promise<string> {
+  const body = response.text ? await response.text() : '';
+  return `${prefix}:${response.status}${body ? `:${body}` : ''}`;
 }
 
 export function buildCloseoutEvidenceComment(plan: PostMergeCloseoutPlan) {
@@ -643,10 +832,17 @@ export function buildDryRunEvidenceComment(
 
 export function buildLiveCommand(plan: PostMergeCloseoutPlan): string {
   if (plan.review.provider === 'gitlab') {
-    return [
-      'Review GitLab artifact closeout-plan.json',
-      'Generated GitLab bundle produces dry-run/live-plan evidence only; live cleanup side effects are not wired in the GitLab CI fragment.',
-    ].join('. ');
+    const args = [
+      'zj-loop-post-merge-closeout live-closeout',
+      '--provider gitlab',
+      `--repo ${plan.repository.expected}`,
+      `--merge-request ${plan.review.number}`,
+    ];
+    if (plan.carrier.issue) args.push(`--carrier-issue ${plan.carrier.issue}`);
+    if (plan.confirmation.required) {
+      args.push(`--confirm-live-cleanup ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+    }
+    return args.join(' ');
   }
   const args = [
     'zj-loop-post-merge-closeout live-closeout',
@@ -741,6 +937,24 @@ export function buildGitLabMergeRequestApiUrl(input: {
   const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
   const projectPath = encodeURIComponent(input.projectPath);
   return `${base}/projects/${projectPath}/merge_requests/${encodeURIComponent(String(input.iid))}`;
+}
+
+export function buildGitLabBranchApiUrl(input: {
+  apiBaseUrl?: string;
+  projectPath: string;
+  branch: string;
+}) {
+  const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+  return `${base}/projects/${encodeURIComponent(input.projectPath)}/repository/branches/${encodeURIComponent(input.branch)}`;
+}
+
+export function buildGitLabIssueApiUrl(input: {
+  apiBaseUrl?: string;
+  projectPath: string;
+  issue: string | number;
+}) {
+  const base = String(input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+  return `${base}/projects/${encodeURIComponent(input.projectPath)}/issues/${encodeURIComponent(String(input.issue))}`;
 }
 
 export function normalizeGhPrView(pr: PostMergePullRequest, { expectedRepo }: { expectedRepo: string }) {

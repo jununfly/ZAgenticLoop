@@ -483,7 +483,7 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "Roadmap Activation ConsumerAdapter 全链路执行能力",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [
@@ -1254,17 +1254,33 @@
     "1-4-1-6": {
       "id": "1-4-1-6",
       "label": "GitLab Post Merge Live Closeout 支持",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-1",
       "children": [],
-      "decisions": [],
-      "notes": "Follow-up node for implementing GitLab live closeout after 1-4-1-4 marks GitLab live_closeout_command as unavailable in handoff artifacts. Scope: support safe GitLab branch cleanup and carrier issue closeout with provider-specific guards, without pretending current GitLab closeout is live-ready."
+      "decisions": [
+        {
+          "q": "GitLab Post Merge Live Closeout 的副作用范围是什么？",
+          "answer": "与 GitHub 一样执行两个窄副作用：删除 roadmap branch + 关闭 carrier issue。必须只处理 post-merge-closeout-handoff / merged MR contract 明确指向的 zjal- roadmap branch，只关闭 contract 里的 carrier issue，不关闭 source issue 或 linked issues。",
+          "note": "必须确认 GitLab MR 已 merged、target branch 是允许主干分支、存在 GITLAB_TOKEN；branch 已不存在或 issue 已 closed 视为 already done，不失败；不做 merge、不改 MR、不碰其他分支；所有动作写入 structured live-runner evidence。"
+        },
+        {
+          "q": "GitLab live closeout 应该用 GitLab API 还是 glab CLI？",
+          "answer": "使用 GitLab API，不依赖 glab CLI。沿用 GitLab Roadmap Activation live side effects 的 API + GITLAB_TOKEN 风格，降低用户项目 CI 安装成本，并便于 deterministic tests mock fetch。",
+          "note": "API 动作：GET /projects/:project/merge_requests/:iid 确认 merged 与 source/target branch；DELETE /projects/:project/repository/branches/:branch 删除 roadmap branch，404 视为 already deleted；PUT /projects/:project/issues/:iid body { state_event: close } 关闭 carrier issue，already closed 视为 already closed。"
+        },
+        {
+          "q": "GitLab live closeout 的 evidence 成功语义如何定义？",
+          "answer": "executor guards 全部通过，并且删除 roadmap branch 与关闭 carrier issue 两个目标资源达到目标状态时，输出 completion_form=cleanup-done / status=completed。already_deleted 与 already_closed 也算 completed，但 action 必须显式标记 result。",
+          "note": "失败/跳过语义：MR 未 merged、branch 不符合 zjal-、contract 不合法、target branch 不允许、token 缺失都输出 cleanup-skipped；API 5xx/权限失败先输出 cleanup-skipped + next_steps，不自动创建 escalation issue，避免 closeout runner 过度扩权。"
+        }
+      ],
+      "notes": "Implemented GitLab Post Merge Live Closeout support. The closeout runner now supports GitLab API live cleanup with GITLAB_TOKEN/JOB-TOKEN: delete the contract zjal- roadmap branch, probe and close the carrier issue, treat already_deleted/already_closed as completed, and emit cleanup-done/cleanup-skipped live-runner evidence. CLI live-closeout accepts --provider gitlab / --merge-request / GitLab token options; Roadmap Activation handoff now emits executable GitLab live closeout commands. Verification: npm test in tools/zj-loop-core passed 166/166."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 11:51:39",
+    "updated": "2026-07-13 14:46:44",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

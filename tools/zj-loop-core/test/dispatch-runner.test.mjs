@@ -463,8 +463,19 @@ test('zj-loop-dispatch execute mode normalizes GitLab roadmap activation live si
       '--carrier-issue',
       '9',
     ]);
-    assert.equal(closeoutHandoff.live_closeout_command.available, false);
-    assert.equal(closeoutHandoff.live_closeout_command.reason, 'gitlab-live-closeout-not-supported-yet');
+    assert.equal(closeoutHandoff.live_closeout_command.available, true);
+    assert.deepEqual(closeoutHandoff.live_closeout_command.args, [
+      'zj-loop-post-merge-closeout',
+      'live-closeout',
+      '--provider',
+      'gitlab',
+      '--repo',
+      'group/project',
+      '--merge-request',
+      '5',
+      '--carrier-issue',
+      '9',
+    ]);
     assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/repository/branches')), true);
     assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')), true);
   } finally {
