@@ -578,7 +578,7 @@
     "1-4-5": {
       "id": "1-4-5",
       "label": "GitHub 与 GitLab Provider Parity",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [
@@ -1616,17 +1616,33 @@
     "1-4-5-5": {
       "id": "1-4-5-5",
       "label": "Provider Parity Release Gates And Docs",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Provider Parity Release Gates And Docs 的完成标准是什么？",
+          "answer": "定义为发布前收口，不继续扩 GitLab live 能力。完成标准包括：provider parity gate 覆盖模板配对、package pin、Route Table provider_support、route-family evidence inventory、durable docs required phrases；CI/发布前验证链路能跑到该 gate；README/docs 明确 GitHub/GitLab 是 provider adapters 且 live side-effect maturity 不完全相同；provider parity architecture 的 Release Gate Expectations 提到 route-family-provider-parity-evidence.mjs。",
+          "note": "不新增 GitLab live runner 能力，不改 route enablement/authorization/maturity，不发布版本；本节点只做到 release-ready evidence。"
+        },
+        {
+          "q": "CI/release gate 应该只跑脚本主逻辑还是完整 npm run test:provider-parity-gate？",
+          "answer": "采用完整 npm run test:provider-parity-gate。ci-validate-gates.sh 应复用该 npm script，而不是只执行 node scripts/validate-provider-parity-gate.mjs。这样 CI 同时覆盖 validate-provider-parity-gate.test.mjs、gitlab-provider-dogfood-replay.test.mjs、route-family-provider-parity-evidence.test.mjs 和 gate 主逻辑。",
+          "note": "确保 1-4-5-4 的脚本 + 测试 + gate 三件套不会在 CI 中漂移。"
+        },
+        {
+          "q": "README/docs 还需要补什么以避免误导 GitLab 全量 live parity？",
+          "answer": "只做小补，不大改 README。英文 README 已有清晰 GitHub/GitLab Compared；中文 README 在 GitHub/GitLab provider parity 附近补充当前副作用边界：provider parity gate 验证的是每个 route family 有分类、有证据、有缺口说明，不表示 GitLab 所有 route 都已 live-supported；具体成熟度以 Route Table provider_support 和 route-family-provider-parity-evidence.mjs 输出为准。",
+          "note": "避免发布前用户心智误读，同时不重复展开已有英文 README 的完整对比表。"
+        }
+      ],
+      "notes": "Completed provider parity release gate/docs closeout. ci-validate-gates now runs npm run test:provider-parity-gate, which includes route-family provider parity evidence tests plus gate main logic. README.zh-CN clarifies provider parity does not mean all GitLab routes are live-supported. Provider parity architecture Release Gate Expectations now lists route-family evidence inventory. Verification: npm run test:provider-parity-gate; bash scripts/ci-validate-gates.sh; git diff --check."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 23:06:45",
+    "updated": "2026-07-13 23:29:15",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

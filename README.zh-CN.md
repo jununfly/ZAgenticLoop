@@ -245,6 +245,12 @@ npm run test:generated-bundle-release-gate
 npm run test:provider-parity-gate
 ```
 
+`provider-parity-gate` 验证的是每个 route family 都有 GitHub/GitLab
+分类、证据和缺口说明；它不表示 GitLab 上所有 route 都已经
+`live-supported`。具体成熟度以 `zj-loop/zj-loop-route-table.yaml` 里的
+`provider_support` 和 `node scripts/route-family-provider-parity-evidence.mjs`
+输出为准。
+
 先手动运行 `ZJ Loop Smoke` workflow，再执行审计：
 
 ```bash
