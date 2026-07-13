@@ -172,8 +172,17 @@ npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor
 ```
 
 `zj-loop-run` writes replay state under `zj-loop/runs/` and returns a structured
-`machine_envelope`. `zj-loop-doctor` summarizes recent stops and protocol repair
-signals without triggering side effects by default.
+`machine_envelope`. `zj-loop-doctor` builds a derived replay view from
+`zj-loop/runs/`, `zj-loop/orchestrations/`, and low-cost review artifacts. It
+classifies stop signals, prints JSON or human text, supports targeted replay,
+and does not trigger side effects by default:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --format text
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --orchestration orch_123
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --provider github --subject issue:123
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --write-index zj-loop/evidence-index.json
+```
 
 Replay the runtime gate without entering a consumer runner:
 

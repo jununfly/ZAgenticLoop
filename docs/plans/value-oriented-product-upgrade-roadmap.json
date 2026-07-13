@@ -329,8 +329,8 @@
     "1-6": {
       "id": "1-6",
       "label": "证据回放、状态解释与故障定位",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-6-1",
@@ -338,8 +338,39 @@
         "1-6-3",
         "1-6-4"
       ],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "1-6 是否先固定统一 Run Summary / Evidence Index 作为 doctor/debug/dashboard 的消费 truth？",
+          "answer": "确认。必须先做统一摘要层。raw artifacts -> deterministic summary/index -> doctor/debug/dashboard；下游不应各自猜读 run/orchestration/provider artifact。",
+          "note": "统一摘要层只保存低成本索引、状态、stop code、artifact refs、next actions，不复制完整 provider response 或大日志。候选 core API：buildLoopEvidenceIndex / buildRunSummary。"
+        },
+        {
+          "q": "统一 Run Summary / Evidence Index 的输入范围覆盖哪些 raw artifacts？",
+          "answer": "确认。必须同时覆盖 zj-loop/runs/*.json 与 zj-loop/orchestrations/*.json 及 orchestration 子目录中的 review/lifecycle/closeout artifacts，但分层输出。",
+          "note": "输出建议分为 run_summaries、orchestration_summaries、artifact_index、linked_items。用 run_id、orchestration_id、route_id、signal_id、provider+subject 建低成本关联；不强制每个 run 都有 orchestration，也不强制每个 orchestration 都有 run。"
+        },
+        {
+          "q": "Run Summary / Evidence Index 默认按需生成还是每次 run/dispatch 后落盘缓存？",
+          "answer": "确认。默认按需扫描 raw artifacts 生成，不落盘缓存；可提供显式 --write-index 写出派生 replay artifact。",
+          "note": "summary/index 是 deterministic derived view，不是新的主 truth。避免默认维护 zj-loop/evidence-index.json 造成缓存失效、并发写入和 merge conflict。CI/大型项目可显式写出 index。"
+        },
+        {
+          "q": "Stop Signal 分类、定位与恢复建议是否新增确定性分类器？",
+          "answer": "确认。新增确定性分类器，输出 stop_code、category、responsible_layer、severity、recoverability、next_actions、source_ref；不要求历史 artifact 立刻迁移。",
+          "note": "分类来源优先级：preflight_result.stop_signal.stop_code；consumer/orchestration 结构化 stop_signal.reason；harness machine_envelope.stop_signal.reason；最后用兼容 mapping 从旧 reason 文本映射。分类器是 doctor/debug 的解释层，不反向修改 raw artifacts。"
+        },
+        {
+          "q": "跨 Provider 回放与 Debug CLI 新增 zj-loop-debug 还是扩展 zj-loop-doctor？",
+          "answer": "确认。扩展现有 zj-loop-doctor，暂时不新增 zj-loop-debug。",
+          "note": "zj-loop-doctor 同时覆盖全局扫描和单点回放：--run、--orchestration、--provider/--subject、--write-index。输出统一 schema，包含 summary、run_summaries、orchestration_summaries、artifact_index、classified_stop_signals、recommended_next_actions。未来确有交互式调试需求时再考虑独立 debug 命令。"
+        },
+        {
+          "q": "运行历史、状态看板与用户心智当前做到 CLI 输出还是持久 dashboard/HTML？",
+          "answer": "确认。先做 zj-loop-doctor 的 CLI JSON + human text 两层，不做持久 dashboard/HTML；但 schema 为 dashboard 留字段。",
+          "note": "当前目标是可回放、可定位、可恢复。输出 schema 保留 latest_status、open_stop_signals_count、recent_success_count、route_health、provider_health、last_updated_at、recommended_next_actions 等 dashboard 友好字段；README badge/GitHub summary/HTML report 后续从该 schema 派生。"
+        }
+      ],
+      "notes": "Entered 1-6. Direction: build a deterministic replay/evidence truth layer before expanding doctor/debug/dashboard behavior, so downstream surfaces consume one summarized fact model instead of reinterpreting raw run/orchestration/provider artifacts independently."
     },
     "1-7": {
       "id": "1-7",
@@ -735,42 +766,42 @@
     "1-6-1": {
       "id": "1-6-1",
       "label": "统一 Run Summary 与 Evidence Index",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed with TDD. zj-loop-doctor now builds a deterministic derived replay view from zj-loop/runs/*.json, zj-loop/orchestrations/*.json, and low-cost orchestration child artifacts. Output includes run_summaries, orchestration_summaries, artifact_index, and linked_items; default behavior does not create a new truth file. Verification: npm test --prefix tools/zj-loop-core; bash scripts/ci-validate-gates.sh; git diff --check; roadmap validate."
     },
     "1-6-2": {
       "id": "1-6-2",
       "label": "Stop Signal 分类、定位与恢复建议",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed with TDD. Added deterministic stop signal classification in doctor reports with stop_code, category, responsible_layer, severity, recoverability, next_actions, and source_ref. Classification prefers structured preflight stop_code, falls back through orchestration/consumer/harness stop reasons, and does not mutate raw artifacts. Verification: npm test --prefix tools/zj-loop-core; bash scripts/ci-validate-gates.sh; git diff --check; roadmap validate."
     },
     "1-6-3": {
       "id": "1-6-3",
       "label": "跨 Provider 回放与 Debug CLI",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed with TDD. Extended zj-loop-doctor rather than adding zj-loop-debug. CLI now supports --run, --orchestration, --provider/--subject targeted replay plus explicit --write-index for derived replay artifacts. Verification covers API, targeted CLI replay, and write-index behavior. Verification: npm test --prefix tools/zj-loop-core; bash scripts/ci-validate-gates.sh; git diff --check; roadmap validate."
     },
     "1-6-4": {
       "id": "1-6-4",
       "label": "运行历史、状态看板与用户心智",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed with TDD. Doctor reports now include dashboard-ready summary fields: latest_status, open_stop_signals_count, recent_success_count, route_health, provider_health, last_updated_at, and recommended_next_actions. CLI text output summarizes latest status, runs, orchestrations, open stops, classified stop signals, and recommendations without producing dashboard/HTML. Verification: npm test --prefix tools/zj-loop-core; bash scripts/ci-validate-gates.sh; git diff --check; roadmap validate."
     },
     "1-7-1": {
       "id": "1-7-1",
@@ -1799,7 +1830,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-14 01:25:41",
+    "updated": "2026-07-14 01:58:01",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

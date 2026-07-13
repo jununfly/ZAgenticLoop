@@ -230,6 +230,14 @@ Recommended fields:
 
 Recommended decision: ZAgenticLoop owns the evidence protocol; Codex Harness may render a human-friendly summary from that evidence.
 
+Replay and diagnosis should consume the same derived view as other route
+surfaces. `zj-loop-doctor` builds that view from `zj-loop/runs/*.json`,
+`zj-loop/orchestrations/*.json`, and low-cost child artifacts, then exposes
+run summaries, orchestration summaries, artifact index entries, linked items,
+classified stop signals, and dashboard-ready summary fields. The derived index
+is generated on demand by default; writing it with `--write-index` creates a
+reviewable replay artifact, not a new source of truth.
+
 ## 7. Roadmap Phase Order
 
 The roadmap should not jump directly into route-specific implementation.

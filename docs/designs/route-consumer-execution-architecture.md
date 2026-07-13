@@ -184,6 +184,41 @@ failures, but they should not be the first place to discover missing runtime
 authority. Preflight handles generic runtime eligibility; consumers handle
 domain correctness.
 
+## Replay Evidence And Doctor
+
+Runtime replay uses a deterministic derived view, not a new truth file. The raw
+facts remain:
+
+- `zj-loop/runs/*.json` for `zj-loop-run` and Codex Harness goal runs
+- `zj-loop/orchestrations/*.json` for Signal -> Route Decision -> Consumer
+  orchestration
+- low-cost orchestration child artifacts such as contract plans, activation
+  lifecycle evidence, draft plans, and closeout handoffs
+
+`zj-loop-doctor` scans those raw artifacts on demand and emits
+`zj-loop.diagnostic_report.v1`. The report separates:
+
+- `run_summaries`
+- `orchestration_summaries`
+- `artifact_index`
+- `linked_items`
+- `classified_stop_signals`
+- dashboard-ready `summary` fields such as latest status, provider health,
+  route health, open stop signal count, and recommended next actions
+
+The default doctor path does not mutate state and does not trigger side
+effects. `--write-index <file>` is explicit because the written file is a
+derived replay artifact, not the canonical source of truth. Targeted replay can
+filter by `--run`, `--orchestration`, or provider subject selectors such as
+`--provider github --subject issue:123`.
+
+Stop signal classification is deterministic. The classifier prefers structured
+`preflight_result.stop_signal.stop_code`, then consumer/orchestration stop
+signals, then harness stop signals, and only then compatibility mappings from
+older reason strings. The classifier adds category, responsible layer,
+severity, recoverability, next actions, and source references without rewriting
+the raw artifacts.
+
 ## Side Effect Levels
 
 `execution.side_effect_level` is a fixed enum:

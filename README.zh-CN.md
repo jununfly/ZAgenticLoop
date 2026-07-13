@@ -234,6 +234,17 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --jso
 npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --json
 ```
 
+运行后用 `zj-loop-doctor` 回放 `zj-loop/runs/`、`zj-loop/orchestrations/`
+和低成本 review artifacts。它默认只生成派生诊断视图，不触发副作用；可按
+run、orchestration、provider/subject 定位，也可显式写出 evidence index：
+
+```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-doctor --format text
+npx --yes --package @jununfly/zj-loop-core zj-loop-doctor --orchestration orch_123
+npx --yes --package @jununfly/zj-loop-core zj-loop-doctor --provider gitlab --subject issue:123
+npx --yes --package @jununfly/zj-loop-core zj-loop-doctor --write-index zj-loop/evidence-index.json
+```
+
 这个 plan 会阻止 disabled route、无效 execution contract，以及只有
 `dogfood-verified` 或 `install-ready`、但尚未 `execution-ready` 的 route。
 

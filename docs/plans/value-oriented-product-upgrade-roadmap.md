@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-14 01:25:41
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-14 01:58:01
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -35,11 +35,11 @@
 │   ├── [x][Y+] 1-5-3. Workspace Safety 与 Live Side Effect Hard Stops
 │   ├── [x][Y+] 1-5-4. Preflight Loop Key 与 Bounded Attempt Policy
 │   └── [x][Y+] 1-5-5. Preflight CLI 集成、Human Gate Envelope 与 Release Gates
-├── [ ][X+] 1-6. 证据回放、状态解释与故障定位
-│   ├── [ ][X+] 1-6-1. 统一 Run Summary 与 Evidence Index
-│   ├── [ ][X+] 1-6-2. Stop Signal 分类、定位与恢复建议
-│   ├── [ ][X+] 1-6-3. 跨 Provider 回放与 Debug CLI
-│   └── [ ][X+] 1-6-4. 运行历史、状态看板与用户心智
+├── [x][Y+] 1-6. 证据回放、状态解释与故障定位
+│   ├── [x][Y+] 1-6-1. 统一 Run Summary 与 Evidence Index
+│   ├── [x][Y+] 1-6-2. Stop Signal 分类、定位与恢复建议
+│   ├── [x][Y+] 1-6-3. 跨 Provider 回放与 Debug CLI
+│   └── [x][Y+] 1-6-4. 运行历史、状态看板与用户心智
 ├── [ ][X+] 1-7. 用户项目安装、升级与启用体验
 │   ├── [ ][X+] 1-7-1. Install Wizard 与 First-Run Guided Setup
 │   ├── [ ][X+] 1-7-2. Upgrade 保留用户意图与配置漂移治理
@@ -87,7 +87,7 @@
 │   ... 6 more child nodes; run tree 1-4 --depth 2 for full view
 ├── [x][Y+] 1-5. 前提条件、安全与成本包络
 │   ... 5 more child nodes; run tree 1-5 --depth 2 for full view
-├── [ ][X+] 1-6. 证据回放、状态解释与故障定位
+├── [x][Y+] 1-6. 证据回放、状态解释与故障定位
 │   ... 4 more child nodes; run tree 1-6 --depth 2 for full view
 ├── [ ][X+] 1-7. 用户项目安装、升级与启用体验
 │   ... 4 more child nodes; run tree 1-7 --depth 2 for full view
