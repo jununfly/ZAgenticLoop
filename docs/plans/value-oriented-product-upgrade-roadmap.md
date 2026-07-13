@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 19:31:38
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 19:46:55
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -67,16 +67,14 @@
     ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
     └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
 
-### 当前施工：1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
+### 当前施工：1-4-4-2. Changelog Drafter Workflow-Dispatch Live Evidence
 
-Start Changelog Drafter and draft-consumer promotion work. First define a shared Draft Consumer Promotion Gate, then collect Changelog Drafter workflow-dispatch live evidence and apply promotion only through explicit gate.
+Implementation updated: Changelog Drafter now has a guarded live-draft CLI, workflow_dispatch inputs for confirm_live_draft/core_package, artifact upload with if: always(), safe summary cat guards, and runner evidence emits final_changelog_acceptance=false. Promotion gate now only misses real workflow-dispatch dogfood evidence, which requires this workflow change to exist on a remote branch/PR before it can be run truthfully.
 
 **决策：**
-- Q: 是否先做共享 Draft Consumer Promotion Gate，再推进 Changelog Drafter workflow-dispatch live evidence？ → 要。先做共享 Draft Consumer Promotion Gate，作为 Changelog Drafter 与未来 Release Draft / 文档 Draft consumer 的统一晋升标准；再推进 Changelog Drafter workflow-dispatch live evidence。 (Gate 第一条可以只覆盖 Changelog Drafter，但语义必须面向 draft-consumer，而不是为单一路由临时定义 ready。)
-- Q: Changelog Drafter 这次 promotion 后是否只提升 maturity.runner，不修改 execution.mode？ → 是，只提升 runner maturity，不改 execution mode。 (runner execution-ready 表示 Changelog Drafter runner 有足够证据可被用户项目/route 使用；execution.mode 仍保持 report-only，避免 Route Decision 自动链路直接开始 draft side effect。让 Changelog Drafter 自动产出 draft artifact / draft PR 应作为后续独立节点处理。)
-
-**当前子树：**
-├── [x][Y+] 1-4-4-1. Shared Draft Consumer Promotion Gate
-├── [ ][Y+] 1-4-4-2. Changelog Drafter Workflow-Dispatch Live Evidence
-└── [ ][Y+] 1-4-4-3. Draft Consumer Promotion Apply And Docs
+- Q: Changelog Drafter workflow-dispatch live evidence 的最小成功形态是否接受 draft-evidence，而不强制 draft-pr？ → 接受 draft-evidence，不强制必须 draft-pr。 (目标是证明 runner 能通过 workflow-dispatch 安全地产生 reviewable draft outcome；draft-evidence 副作用更小但能覆盖固定确认短语、request carrier、runner lifecycle、artifact upload、side-effect boundary。draft-pr 是更强证据但不是硬要求；promotion 不应只依赖 escalation-issue。)
+- Q: Changelog Drafter workflow-dispatch dogfood 是否支持 core_package=./tools/zj-loop-core 本地包覆盖？ → 要。默认仍用发布包版本，dogfood 时允许显式传 core_package=./tools/zj-loop-core。 (本地包覆盖用于验证当前分支尚未发布的 core 改动；workflow 需要在本地包模式下先 npm install --prefix ./tools/zj-loop-core，并且 artifact upload 使用 if: always()，避免失败时丢证据。)
+- Q: Changelog Drafter live evidence 是否必须证明不触碰发布侧副作用？ → 必须。 (side-effect-boundary gate 必须证明 draft consumer 只生成可审查草稿，不完成发布。live result / state 应显式记录 tag_created=false、release_created=false、package_published=false、final_changelog_acceptance=false；最好由 runner result 结构化输出，并由 promotion gate 检查。)
+- Q: 是否把 final_changelog_acceptance=false 补进 Changelog Drafter runner result / tests / promotion gate 识别？ → 要。 (该字段作为 side-effect-boundary 的硬字段，明确 draft-evidence / draft-pr 只是可审查草稿，不代表最终 changelog 已接受；runner result、测试和 promotion gate 都应覆盖。)
+- Q: 是否把 Changelog Drafter workflow-dispatch 从 draft-plan 升级到 guarded live draft evidence 主路径？ → 同意。 (新增 confirm_live_draft input，固定短语 CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE，默认 draft_mode=evidence；dogfood 主路径生成 draft-evidence artifact，不强制 draft-pr；支持 core_package=./tools/zj-loop-core；artifact upload 必须 if: always()，workflow summary 只在文件存在时 cat。)
 <!-- ROADMAP_SECTION_END -->

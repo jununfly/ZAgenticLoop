@@ -27,9 +27,16 @@ Last run: 2026-07-08
 - Live runner replay covers `draft-request-candidate -> draft-evidence`,
   `draft-request-candidate -> draft-pr`, and escalation paths:
   `scripts/changelog-drafter-live-runner.test.mjs`.
+- Reviewable draft outcome recorded as draft-evidence and draft-pr replay
+  evidence. `draft-evidence` is the minimum successful workflow-dispatch
+  dogfood outcome; `draft-pr` is stronger but not required for runner maturity
+  promotion.
+- Side effect boundary: tag_created=false, release_created=false,
+  package_published=false, final_changelog_acceptance=false.
 - Replay evidence verifies duplicates, missing report rejection,
   publish-adjacent signal denial, and human gates for breaking, security,
   major-version, or oversized scan windows.
+- Real workflow-dispatch dogfood evidence is still required before promotion.
 
 ## Boundary
 

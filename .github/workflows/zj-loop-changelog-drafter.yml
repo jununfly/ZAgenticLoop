@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-changelog-drafter
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 7ce25dae1f59be57
+# zj-loop-template-hash: fe0ee2f9cc516ce8
 
 name: ZJ Loop Changelog Drafter
 
@@ -16,6 +16,14 @@ on:
         description: 'Draft mode: evidence or pr'
         required: false
         default: 'evidence'
+      confirm_live_draft:
+        description: 'Optional fixed phrase for live Changelog Drafter draft evidence'
+        required: false
+        default: ''
+      core_package:
+        description: 'Core package spec; use ./tools/zj-loop-core for unreleased repo dogfood'
+        required: false
+        default: '@jununfly/zj-loop-core@0.1.6'
   push:
     tags: ['v*']
 
@@ -32,20 +40,51 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install local core package dependencies
+        if: ${{ startsWith(inputs.core_package, './') }}
+        run: npm install --prefix "${{ inputs.core_package }}"
+
       - name: Changelog drafter route evidence
         env:
           CHANGELOG_DRAFT_REQUEST_JSON: ${{ inputs.changelog_draft_request_json }}
           DRAFT_MODE: ${{ inputs.draft_mode }}
+          CONFIRM_LIVE_DRAFT: ${{ inputs.confirm_live_draft }}
+          ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.6' }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route dispatch changelog-drafter-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-consumer plan changelog-drafter-report --json > consumer-plan.json || true
+          npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-route dispatch changelog-drafter-report --json > route-decision.json || true
+          npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-consumer plan changelog-drafter-report --json > consumer-plan.json || true
           if [ -n "$CHANGELOG_DRAFT_REQUEST_JSON" ]; then
             printf '%s\n' "$CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json
-            npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-changelog-drafter draft-plan \
+            npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-changelog-drafter draft-plan \
               --request changelog-draft-request.json \
               --draft-mode "$DRAFT_MODE" \
               --json > draft-plan.json || true
-            cat draft-plan.json >> "$GITHUB_STEP_SUMMARY"
+            [ -f draft-plan.json ] && cat draft-plan.json >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "$CONFIRM_LIVE_DRAFT" ]; then
+              npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-changelog-drafter live-draft \
+                --request changelog-draft-request.json \
+                --draft-mode "$DRAFT_MODE" \
+                --draft-file draft-artifacts/changelog-draft.md \
+                --confirm-live-draft "$CONFIRM_LIVE_DRAFT" \
+                --out live-draft-result.json \
+                --json || true
+              printf '\n\n### Live Draft Result\n\n' >> "$GITHUB_STEP_SUMMARY"
+              [ -f live-draft-result.json ] && cat live-draft-result.json >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi
-          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
-          cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
+          [ -f route-decision.json ] && cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
+          [ -f consumer-plan.json ] && cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Changelog Drafter evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zj-loop-changelog-drafter-${{ github.run_id }}
+          path: |
+            route-decision.json
+            consumer-plan.json
+            changelog-draft-request.json
+            draft-plan.json
+            live-draft-result.json
+            draft-artifacts/changelog-draft.md
+          if-no-files-found: ignore

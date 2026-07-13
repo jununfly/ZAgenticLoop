@@ -49,7 +49,7 @@ test('Changelog Drafter live runner creates draft-evidence from a valid draft re
     tag_created: false,
     release_created: false,
     package_published: false,
-    final_changelog_accepted: false,
+    final_changelog_acceptance: false,
   });
   assert.deepEqual(calls.map(([command]) => command), ['node']);
 });

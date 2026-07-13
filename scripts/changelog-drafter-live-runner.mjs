@@ -253,7 +253,7 @@ function buildExecutionResult({
       tag_created: false,
       release_created: false,
       package_published: false,
-      final_changelog_accepted: false,
+      final_changelog_acceptance: false,
     },
     draft_pull_request: draftPullRequest,
     draft_evidence: draftEvidence,

@@ -1405,7 +1405,7 @@
     "1-4-4-2": {
       "id": "1-4-4-2",
       "label": "Changelog Drafter Workflow-Dispatch Live Evidence",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-4-4",
       "children": [],
@@ -1429,9 +1429,14 @@
           "q": "是否把 final_changelog_acceptance=false 补进 Changelog Drafter runner result / tests / promotion gate 识别？",
           "answer": "要。",
           "note": "该字段作为 side-effect-boundary 的硬字段，明确 draft-evidence / draft-pr 只是可审查草稿，不代表最终 changelog 已接受；runner result、测试和 promotion gate 都应覆盖。"
+        },
+        {
+          "q": "是否把 Changelog Drafter workflow-dispatch 从 draft-plan 升级到 guarded live draft evidence 主路径？",
+          "answer": "同意。",
+          "note": "新增 confirm_live_draft input，固定短语 CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE，默认 draft_mode=evidence；dogfood 主路径生成 draft-evidence artifact，不强制 draft-pr；支持 core_package=./tools/zj-loop-core；artifact upload 必须 if: always()，workflow summary 只在文件存在时 cat。"
         }
       ],
-      "notes": ""
+      "notes": "Implementation updated: Changelog Drafter now has a guarded live-draft CLI, workflow_dispatch inputs for confirm_live_draft/core_package, artifact upload with if: always(), safe summary cat guards, and runner evidence emits final_changelog_acceptance=false. Promotion gate now only misses real workflow-dispatch dogfood evidence, which requires this workflow change to exist on a remote branch/PR before it can be run truthfully."
     },
     "1-4-4-3": {
       "id": "1-4-4-3",
@@ -1456,7 +1461,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 19:31:38",
+    "updated": "2026-07-13 19:46:55",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }
