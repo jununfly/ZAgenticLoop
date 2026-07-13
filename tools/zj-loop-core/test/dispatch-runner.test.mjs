@@ -47,6 +47,12 @@ routes:
       scopes: ["roadmap-activation", "branch-pr"]
       verifiers: ["activation-contract", "roadmap-branch-contract"]
       max_side_effect_level: "branch"
+    guards:
+      required_credentials:
+        github: ["GITHUB_TOKEN"]
+        gitlab: ["GITLAB_TOKEN"]
+      required_actor_roles: ["maintainer", "collaborator"]
+      max_work_units: 30
   - route_id: "changelog-drafter-draft-request"
     enabled: true
     request_kind: "draft-request"
@@ -441,7 +447,7 @@ test('zj-loop-dispatch execute mode reuses roadmap activation contract-plan and 
       signal,
       mode: 'execute',
       now: '2026-07-13T00:07:00.000Z',
-      env: { GITHUB_TOKEN: 'token' },
+      env: { GITHUB_TOKEN: 'token', ZJ_LOOP_ACTOR_ROLE: 'maintainer' },
       fetchImpl,
     });
 
@@ -528,7 +534,7 @@ test('zj-loop-dispatch execute mode hard stops when no replayable orchestration 
       signal,
       mode: 'execute',
       now: '2026-07-13T00:08:00.000Z',
-      env: { GITHUB_TOKEN: 'token' },
+      env: { GITHUB_TOKEN: 'token', ZJ_LOOP_ACTOR_ROLE: 'maintainer' },
       fetchImpl: async () => {
         throw new Error('execute without existing orchestration must not call provider API');
       },
@@ -590,7 +596,7 @@ test('zj-loop-dispatch execute mode normalizes GitLab roadmap activation live si
       signal,
       mode: 'execute',
       now: '2026-07-13T00:10:00.000Z',
-      env: { GITLAB_TOKEN: 'token' },
+      env: { GITLAB_TOKEN: 'token', ZJ_LOOP_ACTOR_ROLE: 'maintainer' },
       fetchImpl,
     });
 
@@ -678,26 +684,11 @@ test('zj-loop-dispatch execute mode records missing token as resumable activatio
       },
     });
 
-    assert.equal(executed.status, 'executed_to_review_artifact');
-    assert.equal(executed.consumer_adapter_result.adapter_status, 'resumable');
-    assert.equal(executed.consumer_adapter_result.live_side_effects.attempted, false);
-    assert.equal(executed.consumer_adapter_result.live_side_effects.status, 'refused');
-    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts.length, 1);
-    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts[0].failure_class, 'recoverable');
-    assert.equal(executed.consumer_adapter_result.live_side_effects.attempts[0].retry_consumed, false);
-    assert.equal(executed.consumer_adapter_result.activation_lifecycle.activation_state, 'resumable');
-    assert.equal(executed.consumer_adapter_result.activation_lifecycle.retry_budget_remaining, 3);
-    assert.equal(executed.consumer_adapter_result.activation_lifecycle.next_command, 'zj-loop-dispatch --mode execute');
-    const lifecycleArtifact = executed.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'activation-lifecycle');
-    assert.equal(lifecycleArtifact.schema, 'zj-loop.activation_lifecycle_evidence.v1');
-    const lifecycleEvidence = JSON.parse(await readFile(path.join(dir, lifecycleArtifact.path), 'utf8'));
-    assert.equal(lifecycleEvidence.activation_state, 'resumable');
-    assert.equal(lifecycleEvidence.failure_class, 'recoverable');
-    assert.equal(lifecycleEvidence.resume_allowed, true);
-    assert.equal(
-      executed.consumer_adapter_result.live_side_effects.refusals.some((refusal) => refusal.reason === 'github-token-required-for-live-execution'),
-      true,
-    );
+    assert.equal(executed.status, 'hard_stopped');
+    assert.equal(executed.preflight_result.status, 'hard_stop');
+    assert.equal(executed.preflight_result.stop_signal.stop_code, 'credential-missing');
+    assert.equal(executed.stop_signal.reason, 'Missing required credential: GITHUB_TOKEN.');
+    assert.equal(executed.consumer_adapter_result.adapter_status, 'executed_to_review_artifact');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -748,7 +739,7 @@ test('zj-loop-dispatch execute mode resumes partial GitHub branch success withou
       signal,
       mode: 'execute',
       now: '2026-07-13T00:14:00.000Z',
-      env: { GITHUB_TOKEN: 'token' },
+      env: { GITHUB_TOKEN: 'token', ZJ_LOOP_ACTOR_ROLE: 'maintainer' },
       fetchImpl: firstFetchImpl,
     });
 
@@ -781,7 +772,7 @@ test('zj-loop-dispatch execute mode resumes partial GitHub branch success withou
       signal,
       mode: 'execute',
       now: '2026-07-13T00:15:00.000Z',
-      env: { GITHUB_TOKEN: 'token' },
+      env: { GITHUB_TOKEN: 'token', ZJ_LOOP_ACTOR_ROLE: 'maintainer' },
       fetchImpl: secondFetchImpl,
     });
 
@@ -832,7 +823,7 @@ test('zj-loop-dispatch execute mode treats invalid contract-plan schema as termi
       signal,
       mode: 'execute',
       now: '2026-07-13T00:17:00.000Z',
-      env: { GITHUB_TOKEN: 'token' },
+      env: { GITHUB_TOKEN: 'token', ZJ_LOOP_ACTOR_ROLE: 'maintainer' },
       fetchImpl: async () => {
         throw new Error('terminal contract failure must happen before provider API calls');
       },

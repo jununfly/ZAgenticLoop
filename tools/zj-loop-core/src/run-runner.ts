@@ -6,13 +6,16 @@ import {
   LOOP_HARNESS_SCHEMA_VERSION,
   LoopHarnessProtocolOutput,
 } from './harness-protocol-contract.js';
+import { evaluateRuntimePreflight, RuntimePreflightResult } from './preflight.js';
+import { findRoute, loadRouteTable } from './route.js';
 
 export type LoopRunStatusReason =
   | 'review-artifact-ready'
   | 'report-evidence-ready'
   | 'missing-runner-capability'
   | 'ambiguous-route'
-  | 'needs-protocol-repair';
+  | 'needs-protocol-repair'
+  | 'runtime-preflight-hard-stop';
 
 export type LoopRunStateRecord = {
   schema: 'zj-loop.run_state.v1';
@@ -94,6 +97,39 @@ export async function runLoopGoal(input: LoopRunGoalInput): Promise<LoopHarnessP
     source: input.source ?? 'zj-loop-run',
     signalId: input.signalId ?? runId,
   });
+  const route = findRoute(await loadRouteTable(input.root ?? '.'), consumerPlan.route_id);
+  const preflightResult = evaluateRuntimePreflight({
+    route,
+    executionLayer: executionLayerForRun({ consumerPlan, planOnly: input.planOnly === true }),
+    signal: {
+      provider: 'none',
+      subject: { kind: 'local_goal', id: runId },
+      intent: intentForRoute(consumerPlan.route_id),
+      signal_id: input.signalId ?? runId,
+    },
+    runtime: {
+      workUnitsRequested: 1,
+    },
+  });
+
+  if (preflightResult.status === 'hard_stop') {
+    return buildStoppedOutput({
+      runId,
+      goal,
+      routeId: consumerPlan.route_id,
+      consumer: consumerPlan.consumer,
+      reason: 'runtime-preflight-hard-stop',
+      now,
+      repairsApplied: [
+        'run_id',
+        'created_at',
+        'tool',
+      ],
+      stopSignal: preflightResult.stop_signal ?? { reason: 'runtime preflight hard stopped' },
+      artifacts: consumerPlan.route_specific_artifacts,
+      preflightResult,
+    });
+  }
 
   return buildOutputFromConsumerPlan({
     goal,
@@ -101,6 +137,7 @@ export async function runLoopGoal(input: LoopRunGoalInput): Promise<LoopHarnessP
     now,
     consumerPlan,
     planOnly: input.planOnly === true,
+    preflightResult,
     repairsApplied: [
       'run_id',
       'created_at',
@@ -225,6 +262,7 @@ function buildOutputFromConsumerPlan(input: {
   now: string;
   consumerPlan: ConsumerRunPlan;
   planOnly: boolean;
+  preflightResult: RuntimePreflightResult;
   repairsApplied: string[];
 }): LoopHarnessProtocolOutput {
   const { consumerPlan } = input;
@@ -244,8 +282,9 @@ function buildOutputFromConsumerPlan(input: {
           target: `route:${consumerPlan.route_id}`,
           label: consumerPlan.reason,
         },
-        evidence: evidenceFor(input, consumerPlan),
+        evidence: evidenceFor(input, consumerPlan, input.preflightResult),
         artifacts: consumerPlan.route_specific_artifacts,
+        preflight_result: input.preflightResult,
         repairs_applied: input.repairsApplied,
         run_state_path: getLoopRunStatePath(input.runId),
       },
@@ -268,8 +307,9 @@ function buildOutputFromConsumerPlan(input: {
           target: `route:${consumerPlan.route_id}`,
           label: 'Run the packaged consumer until the first review artifact or hard stop signal.',
         },
-        evidence: evidenceFor(input, consumerPlan),
+        evidence: evidenceFor(input, consumerPlan, input.preflightResult),
         artifacts: consumerPlan.route_specific_artifacts,
+        preflight_result: input.preflightResult,
         repairs_applied: input.repairsApplied,
         run_state_path: getLoopRunStatePath(input.runId),
       },
@@ -290,6 +330,7 @@ function buildOutputFromConsumerPlan(input: {
       readiness: consumerPlan.readiness,
     },
     artifacts: consumerPlan.route_specific_artifacts,
+    preflightResult: input.preflightResult,
   });
 }
 
@@ -303,6 +344,7 @@ function buildStoppedOutput(input: {
   repairsApplied: string[];
   stopSignal: unknown;
   artifacts?: unknown[];
+  preflightResult?: RuntimePreflightResult;
 }): LoopHarnessProtocolOutput {
   return {
     schema: LOOP_HARNESS_OUTPUT_SCHEMA,
@@ -319,8 +361,12 @@ function buildStoppedOutput(input: {
         target: `run:${input.runId}`,
         label: input.reason,
       },
-      evidence: [{ kind: 'zj-loop-run-state', path: getLoopRunStatePath(input.runId), created_at: input.now }],
+      evidence: [
+        { kind: 'zj-loop-run-state', path: getLoopRunStatePath(input.runId), created_at: input.now },
+        ...(input.preflightResult === undefined ? [] : [preflightEvidence(input.preflightResult)]),
+      ],
       artifacts: input.artifacts ?? [],
+      ...(input.preflightResult === undefined ? {} : { preflight_result: input.preflightResult }),
       repairs_applied: input.repairsApplied,
       stop_signal: input.stopSignal,
       resume: {
@@ -351,7 +397,7 @@ function evidenceFor(input: {
   now: string;
   runId: string;
   goal: string;
-}, consumerPlan: ConsumerRunPlan): unknown[] {
+}, consumerPlan: ConsumerRunPlan, preflightResult: RuntimePreflightResult): unknown[] {
   return [
     {
       kind: 'zj-loop-run-state',
@@ -364,7 +410,35 @@ function evidenceFor(input: {
       status: consumerPlan.status,
       reason: consumerPlan.reason,
     },
+    preflightEvidence(preflightResult),
   ];
+}
+
+function preflightEvidence(preflightResult: RuntimePreflightResult): unknown {
+  return {
+    kind: 'runtime-preflight',
+    schema: preflightResult.schema,
+    status: preflightResult.status,
+    route_id: preflightResult.route_id,
+    loop_key: preflightResult.loop_key,
+  };
+}
+
+function executionLayerForRun(input: {
+  consumerPlan: ConsumerRunPlan;
+  planOnly: boolean;
+}): 'report-only' | 'review-artifact' {
+  if (input.planOnly || input.consumerPlan.status === 'report-only') return 'report-only';
+  return 'review-artifact';
+}
+
+function intentForRoute(routeId: string): string {
+  if (routeId === 'roadmap-sliced-development') return 'activate_roadmap';
+  if (routeId === 'issue-backlog-triage') return 'triage';
+  if (routeId === 'post-merge-roadmap-closeout') return 'closeout';
+  if (routeId === 'pr-steward-fix-request') return 'review_pr';
+  if (routeId === 'changelog-drafter-draft-request') return 'draft_changelog';
+  return 'fix';
 }
 
 function sanitizeRunId(runId: string): string {

@@ -225,6 +225,25 @@ Recommended fields:
 | `failure_owner` | Component responsible for recovery after request creation. |
 | `human_gate` | Conditions that require human review. |
 
+`guards` are consumed by Runtime Preflight before `zj-loop-run` or
+`zj-loop-dispatch` enters a consumer runner. Route rows may start with
+lightweight guards, but action-capable live paths should declare at least:
+
+```yaml
+guards:
+  required_credentials:
+    github: ["GITHUB_TOKEN"]
+    gitlab: ["GITLAB_TOKEN"]
+  required_actor_roles: ["maintainer", "collaborator", "trusted-workflow"]
+  max_work_units: 30
+```
+
+For report-only and review-artifact paths, incomplete optional guards are
+warnings and may be autofilled in `preflight_result.repairs_applied`. For
+live-side-effect paths, missing critical credential, actor, branch, cleanup,
+publish, or workspace-safety declarations fail closed with a structured
+preflight stop signal.
+
 `provider_support` is required for every generated Route Table row. Supported
 provider status values are `live-supported`, `dry-run-supported`,
 `explicitly-refused-with-reason`, and `blocked-with-follow-up`. Evidence entries
@@ -371,7 +390,7 @@ dogfood validation enables routes one by one with evidence.
 | `issue-triage-action` | `triage-action-request` | Issue Triage Action | Dry-run only. Plans narrowly allowlisted labels or fixed comment templates and refuses unsupported/freeform/high-risk actions. Live issue mutation requires a later explicit Route Table promotion backed by workflow-dispatch dogfood evidence. |
 | `pr-steward-report` / `pr-steward-fix-request` | `report-only` / `issue-fix-request` | PR Steward | Watch PR events as report evidence, create/dedupe independent failed-check Issue Fix Requests, and allow claim-only lifecycle evidence; a replayed runner can produce independent repair PR or escalation evidence after claim, but the dogfood route is not live until workflow-dispatch evidence exists. Source PR comments, labels, rebase, merge, and workflow dispatch remain forbidden. |
 | `dependency-sweeper` | `issue-fix-request` | Dependency Sweeper | Create verifier-backed dependency requests and allow claim-only lifecycle evidence for patch/minor dependency signals; a replayed runner can produce repair PR or escalation evidence after claim, but the dogfood route is not live until workflow-dispatch evidence exists. |
-| `changelog-drafter-report` / `changelog-drafter-draft-request` | `report-only` | Changelog Drafter | Record release-window evidence, then record draft request candidate evidence from an existing report; an execution-ready guarded runner can produce draft evidence or an independent draft PR after candidate evidence, but Route Decision itself never drafts, edits changelogs, creates PRs, tags, releases, publishes, or dispatches workflows. |
+| `changelog-drafter-report` / `changelog-drafter-draft-request` | `report-only` / `draft-request` | Changelog Drafter | Record release-window evidence, then consume an existing draft request carrier through `zj-loop-dispatch` to produce orchestration `draft-plan.json` as the review artifact. Guarded `live-draft` may produce draft evidence or an independent draft PR only after fixed confirmation; Route Decision itself never drafts, edits changelogs, creates PRs, tags, releases, publishes, or dispatches workflows. |
 | `roadmap-sliced-development` | `activation-comment` | Roadmap-Sliced Development | Create or consume authorized activation requests only; implementation stays with roadmap lifecycle. |
 | `post-merge-roadmap-closeout` | `report-only` | Post-Merge Cleanup | Validate merged Roadmap-Sliced PR closeout contracts and plan guarded cleanup; live branch deletion and carrier issue closure are allowed only through a valid merged-PR contract plus executor guards, or an explicit fixed-phrase fallback. |
 | `human` | `report-only` | Maintainer | Security, auth, billing, infra, ambiguous, high-risk, or policy decisions. |

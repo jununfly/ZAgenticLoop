@@ -73,6 +73,9 @@ test('runLoopGoal resolves plan-like goals into a structured roadmap run output'
     assert.equal(output.machine_envelope.run_id, 'run-test-1');
     assert.equal(output.machine_envelope.route_id, 'roadmap-sliced-development');
     assert.equal(output.machine_envelope.consumer, 'roadmap-sliced-development');
+    assert.equal(output.machine_envelope.preflight_result.schema, 'zj-loop.preflight_result.v1');
+    assert.equal(output.machine_envelope.preflight_result.execution_layer, 'review-artifact');
+    assert.equal(output.machine_envelope.evidence.some((item) => item.kind === 'runtime-preflight'), true);
     assert.deepEqual(output.machine_envelope.repairs_applied.sort(), [
       'authority',
       'closeout_strategy',

@@ -1,5 +1,6 @@
 import { ConsumerRunPlan } from './consumer-runner.js';
 import { ConsumerAdapterResult } from './consumer-adapter.js';
+import { RuntimePreflightResult } from './preflight.js';
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 export type SignalEnvelope = {
     schema: 'zj-loop.signal.v1';
@@ -35,6 +36,7 @@ export type OrchestrationEnvelope = {
         reason: string;
     };
     consumer_run_plan: ConsumerRunPlan;
+    preflight_result: RuntimePreflightResult;
     review_artifact: {
         kind: string;
         path?: string;

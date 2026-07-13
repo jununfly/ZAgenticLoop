@@ -50,9 +50,50 @@ function extractDispatchRouteIds(text) {
   return [...text.matchAll(/zj-loop-route dispatch ([a-z0-9-]+)/g)].map((match) => match[1]);
 }
 
+function validateChangelogDrafterWorkflowBoundary(input) {
+  const { workflowFile, source, body } = input;
+  if (workflowFile !== 'zj-loop-changelog-drafter.yml') return [];
+  const errors = [];
+  if (!body.includes('changelog-signal.json')) {
+    errors.push(`${workflowFile} ${source} must build changelog-signal.json before draft-plan evidence`);
+  }
+  if (!body.includes('zj-loop-dispatch --signal changelog-signal.json --mode auto')) {
+    errors.push(`${workflowFile} ${source} must route draft requests through zj-loop-dispatch orchestration`);
+  }
+  if (!body.includes('draft-plan.json')) {
+    errors.push(`${workflowFile} ${source} must upload or expose draft-plan.json`);
+  }
+  return errors;
+}
+
 function findRoute(routeTable, routeId) {
   return [...(routeTable.routes ?? []), ...(routeTable.disabled_dispatch_routes ?? [])]
     .find((route) => route.route_id === routeId);
+}
+
+function validateRuntimePreflightSurface(input) {
+  const { corePackageJson, routeTable } = input;
+  const errors = [];
+  if (corePackageJson.bin?.['zj-loop-preflight'] !== './dist/preflight-cli.js') {
+    errors.push('tools/zj-loop-core package bin must expose zj-loop-preflight -> ./dist/preflight-cli.js');
+  }
+  const roadmapRoute = findRoute(routeTable, 'roadmap-sliced-development');
+  if (!roadmapRoute) return errors;
+  const guards = roadmapRoute.guards ?? {};
+  if (!Number.isInteger(guards.max_work_units) || guards.max_work_units <= 0) {
+    errors.push('roadmap-sliced-development Route Table template must declare guards.max_work_units');
+  }
+  const credentials = guards.required_credentials ?? {};
+  if (!Array.isArray(credentials.github) || !credentials.github.includes('GITHUB_TOKEN')) {
+    errors.push('roadmap-sliced-development Route Table template must declare guards.required_credentials.github: [GITHUB_TOKEN]');
+  }
+  if (!Array.isArray(credentials.gitlab) || !credentials.gitlab.includes('GITLAB_TOKEN')) {
+    errors.push('roadmap-sliced-development Route Table template must declare guards.required_credentials.gitlab: [GITLAB_TOKEN]');
+  }
+  if (!Array.isArray(guards.required_actor_roles) || guards.required_actor_roles.length === 0) {
+    errors.push('roadmap-sliced-development Route Table template must declare guards.required_actor_roles');
+  }
+  return errors;
 }
 
 async function validateGeneratedBundleReleaseGate(root = ROOT) {
@@ -66,6 +107,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
       .replaceAll('__PATTERN_NAME__', 'Daily Triage')
       .replaceAll('__PATTERN_STATE__', 'zj-loop/STATE.md'),
   );
+  errors.push(...validateRuntimePreflightSurface({ corePackageJson, routeTable }));
 
   for (const workflowFile of GENERATED_WORKFLOWS) {
     const templatePath = path.join(root, 'templates/github-actions', workflowFile);
@@ -79,6 +121,10 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
     }
 
     for (const [source, body] of [['template', template], ['generated workflow', generated]]) {
+      errors.push(...validateChangelogDrafterWorkflowBoundary({ workflowFile, source, body }));
+      if (workflowFile === 'zj-loop-changelog-drafter.yml' && body.includes('zj-loop-changelog-drafter draft-plan')) {
+        errors.push(`${workflowFile} ${source} must not call zj-loop-changelog-drafter draft-plan directly; use orchestration draft-plan review artifacts`);
+      }
       const pins = extractCorePackagePins(body);
       for (const pin of pins) {
         if (pin !== expectedCoreVersion) {
@@ -115,6 +161,14 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
     }
     if (!gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_STAGE__')) {
       errors.push(`${gitlabTemplatePath} missing configurable GitLab stage`);
+    }
+    errors.push(...validateChangelogDrafterWorkflowBoundary({
+      workflowFile,
+      source: 'GitLab template',
+      body: gitlabTemplate,
+    }));
+    if (workflowFile === 'zj-loop-changelog-drafter.yml' && gitlabTemplate.includes('live-draft')) {
+      errors.push(`${workflowFile} GitLab template must not expose live-draft until GitLab live draft MR support is promoted`);
     }
 
     const pins = extractCorePackagePins(gitlabTemplate);

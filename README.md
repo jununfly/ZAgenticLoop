@@ -175,6 +175,12 @@ npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor
 `machine_envelope`. `zj-loop-doctor` summarizes recent stops and protocol repair
 signals without triggering side effects by default.
 
+Replay the runtime gate without entering a consumer runner:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-preflight --route roadmap-sliced-development --execution-layer review-artifact --json
+```
+
 3. Check cost and readiness:
 
 ```bash
@@ -334,7 +340,7 @@ See [Daily Triage](patterns/daily-triage.md), [Roadmap-Sliced Development](patte
 
 | Package | CLI | Purpose | Current version |
 |---------|-----|---------|----------------|
-| `@jununfly/zj-loop-core` | library + route CLIs | Shared registry, route decisions, consumer runners, project evidence, semantic queries, and CLI harness | `0.1.6` |
+| `@jununfly/zj-loop-core` | library + route CLIs | Shared registry, route decisions, runtime preflight, consumer runners, project evidence, semantic queries, and CLI harness | `0.1.6` |
 | `@jununfly/zj-loop-init` | `zj-loop-init` | Scaffold starters, route table, local runtime state, generated workflow bundle, budget, and run logs | `0.1.9` |
 | `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score, policy suggestions, and generated artifact checks | `0.1.6` |
 | `@jununfly/zj-loop-cost` | `zj-loop-cost` | Token spend estimator by local/project registry, pattern, level, and cadence | `0.1.5` |

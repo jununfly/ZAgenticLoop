@@ -595,6 +595,11 @@ routes:
       source: ["issue", "daily-triage", "human"]
       command: ["/zj-loop start roadmap-sliced-development"]
     guards:
+      required_credentials:
+        github: ["GITHUB_TOKEN"]
+        gitlab: ["GITLAB_TOKEN"]
+      required_actor_roles: ["maintainer", "collaborator", "trusted-workflow"]
+      max_work_units: 30
       allowed_permissions: ["admin", "maintain", "write"]
       consumer_allowed: true
       create_roadmap_artifacts: false

@@ -1,5 +1,5 @@
 import { LOOP_HARNESS_SCHEMA_VERSION, LoopHarnessProtocolOutput } from './harness-protocol-contract.js';
-export type LoopRunStatusReason = 'review-artifact-ready' | 'report-evidence-ready' | 'missing-runner-capability' | 'ambiguous-route' | 'needs-protocol-repair';
+export type LoopRunStatusReason = 'review-artifact-ready' | 'report-evidence-ready' | 'missing-runner-capability' | 'ambiguous-route' | 'needs-protocol-repair' | 'runtime-preflight-hard-stop';
 export type LoopRunStateRecord = {
     schema: 'zj-loop.run_state.v1';
     schema_version: typeof LOOP_HARNESS_SCHEMA_VERSION;

@@ -3,6 +3,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buildConsumerRunPlan, ConsumerRunPlan } from './consumer-runner.js';
 import { ConsumerAdapterResult, runConsumerLiveSideEffects, runConsumerToReviewArtifact } from './consumer-adapter.js';
+import { evaluateRuntimePreflight, RuntimePreflightResult } from './preflight.js';
+import { findRoute, loadRouteTable } from './route.js';
 
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 
@@ -48,6 +50,7 @@ export type OrchestrationEnvelope = {
     reason: string;
   };
   consumer_run_plan: ConsumerRunPlan;
+  preflight_result: RuntimePreflightResult;
   review_artifact: {
     kind: string;
     path?: string;
@@ -117,6 +120,42 @@ export async function dispatchSignal(input: {
     };
   }
   if (existing && mode === 'execute') {
+    const route = await loadRouteStatus(root, existing.consumer_run_plan.route_id);
+    const preflightResult = evaluateRuntimePreflight({
+      route,
+      executionLayer: 'live-side-effect',
+      signal: input.signal,
+      runtime: {
+        actorRole: actorRoleFromEnv(input.env ?? process.env),
+        credentials: input.env ?? process.env,
+        workUnitsRequested: 1,
+      },
+    });
+    if (preflightResult.status === 'hard_stop') {
+      const updated: OrchestrationEnvelope = {
+        ...existing,
+        status: 'hard_stopped',
+        mode,
+        updated_at: now,
+        preflight_result: preflightResult,
+        review_artifact: {
+          kind: 'hard-stop',
+          description: preflightResult.stop_signal?.reason ?? 'runtime preflight hard stopped',
+        },
+        closeout_hint: {
+          required: false,
+          reason: 'no closeout required before live side effects pass preflight',
+        },
+        stop_signal: preflightResult.stop_signal
+          ? {
+              reason: preflightResult.stop_signal.reason,
+              next_steps: preflightResult.stop_signal.next_steps,
+            }
+          : null,
+      };
+      await writeOrchestrationEnvelope({ root, envelope: updated });
+      return updated;
+    }
     const consumerAdapterResult = await runConsumerLiveSideEffects({
       root,
       signal: input.signal,
@@ -132,6 +171,7 @@ export async function dispatchSignal(input: {
       status,
       mode,
       updated_at: now,
+      preflight_result: preflightResult,
       consumer_adapter_result: consumerAdapterResult,
       review_artifact: buildReviewArtifact(existing.consumer_run_plan, consumerAdapterResult),
       closeout_hint: {
@@ -172,6 +212,17 @@ export async function dispatchSignal(input: {
         next_steps: ['Run auto mode first so the orchestration contains a replayable contract-plan review artifact.'],
       },
     };
+    const route = await loadRouteStatus(root, consumerRunPlan.route_id);
+    const preflightResult = evaluateRuntimePreflight({
+      route,
+      executionLayer: 'live-side-effect',
+      signal: input.signal,
+      runtime: {
+        actorRole: actorRoleFromEnv(input.env ?? process.env),
+        credentials: input.env ?? process.env,
+        workUnitsRequested: 1,
+      },
+    });
     const envelope: OrchestrationEnvelope = {
       schema: 'zj-loop.orchestration.v1',
       orchestration_id: orchestrationId,
@@ -184,6 +235,7 @@ export async function dispatchSignal(input: {
       route_decision: consumerRunPlan.route_decision,
       carrier_plan: buildCarrierPlan(input.signal),
       consumer_run_plan: consumerRunPlan,
+      preflight_result: preflightResult,
       review_artifact: buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
       consumer_adapter_result: consumerAdapterResult,
       closeout_hint: {
@@ -213,7 +265,19 @@ export async function dispatchSignal(input: {
     source: input.signal.source,
     signalId: input.signal.signal_id,
   });
+  const route = await loadRouteStatus(root, consumerRunPlan.route_id);
+  const preflightResult = evaluateRuntimePreflight({
+    route,
+    executionLayer: executionLayerForPlan({ mode, consumerRunPlan }),
+    signal: input.signal,
+    runtime: {
+      workUnitsRequested: 1,
+    },
+  });
   let status = statusForPlan({ mode, consumerRunPlan });
+  if (preflightResult.status === 'hard_stop') {
+    status = 'hard_stopped';
+  }
   const consumerAdapterResult = status === 'executed_to_review_artifact'
     ? await runConsumerToReviewArtifact({
         root,
@@ -237,6 +301,7 @@ export async function dispatchSignal(input: {
     route_decision: consumerRunPlan.route_decision,
     carrier_plan: buildCarrierPlan(input.signal),
     consumer_run_plan: consumerRunPlan,
+    preflight_result: preflightResult,
     review_artifact: buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
     ...(consumerAdapterResult === undefined ? {} : { consumer_adapter_result: consumerAdapterResult }),
     closeout_hint: {
@@ -246,7 +311,7 @@ export async function dispatchSignal(input: {
         : 'no closeout required before a review artifact exists',
     },
     stop_signal: status === 'hard_stopped'
-      ? buildStopSignal({ consumerRunPlan, consumerAdapterResult })
+      ? buildStopSignal({ consumerRunPlan, consumerAdapterResult, preflightResult })
       : null,
     storage: {
       path: storagePath,
@@ -255,6 +320,14 @@ export async function dispatchSignal(input: {
 
   await writeOrchestrationEnvelope({ root, envelope });
   return envelope;
+}
+
+async function loadRouteStatus(root: string, routeId: string) {
+  return findRoute(await loadRouteTable(root), routeId);
+}
+
+function actorRoleFromEnv(env: Record<string, string | undefined>): string | undefined {
+  return env.ZJ_LOOP_ACTOR_ROLE ?? env.GITHUB_ACTOR_ROLE ?? env.GITLAB_USER_ROLE;
 }
 
 async function readExistingOrchestration(input: {
@@ -332,6 +405,15 @@ function statusForPlan(input: { mode: DispatchMode; consumerRunPlan: ConsumerRun
   return 'planned';
 }
 
+function executionLayerForPlan(input: {
+  mode: DispatchMode;
+  consumerRunPlan: ConsumerRunPlan;
+}): 'report-only' | 'review-artifact' | 'live-side-effect' {
+  if (input.mode === 'execute') return 'live-side-effect';
+  if (input.consumerRunPlan.status === 'report-only') return 'report-only';
+  return 'review-artifact';
+}
+
 function buildReviewArtifact(
   plan: ConsumerRunPlan,
   consumerAdapterResult?: ConsumerAdapterResult,
@@ -373,7 +455,14 @@ function buildReviewArtifact(
 function buildStopSignal(input: {
   consumerRunPlan: ConsumerRunPlan;
   consumerAdapterResult?: ConsumerAdapterResult;
+  preflightResult?: RuntimePreflightResult;
 }): NonNullable<OrchestrationEnvelope['stop_signal']> {
+  if (input.preflightResult?.stop_signal) {
+    return {
+      reason: input.preflightResult.stop_signal.reason,
+      next_steps: input.preflightResult.stop_signal.next_steps,
+    };
+  }
   if (input.consumerAdapterResult?.stop_signal) {
     return {
       reason: input.consumerAdapterResult.stop_signal.reason,

@@ -144,6 +144,46 @@ append structured request comments to the source carrier unless the signal has
 no tracker carrier or the target route explicitly requires an independent
 carrier.
 
+## Runtime Preflight Gate
+
+`zj-loop-run` and `zj-loop-dispatch` must run a shared Runtime Preflight Gate
+before a consumer runner executes. Preflight is a core package API with an
+independent replay CLI:
+
+```bash
+zj-loop-preflight --route <route-id> --execution-layer report-only|review-artifact|live-side-effect --signal signal.json --json
+```
+
+The output schema is `zj-loop.preflight_result.v1`. It is persisted into
+`zj-loop-run` machine envelopes and `zj-loop-dispatch` orchestration envelopes
+as `preflight_result`, with a low-cost `runtime-preflight` evidence index.
+
+Preflight has three statuses:
+
+- `pass`: execution may continue.
+- `warn`: execution may continue, but the warning is recorded in evidence.
+- `hard_stop`: execution stops before the consumer runner and emits a
+  structured stop signal.
+
+Preflight facts come from three places:
+
+- Route Table guards and execution declarations
+- the Signal or Run envelope
+- runtime facts such as actor role, credentials, work-unit request, dirty
+  workspace paths, and existing loop state
+
+Report-only and review-artifact paths are fail-open for incomplete optional
+preflight fields: missing `max_work_units` defaults to `30` and records
+`repairs_applied`. Live side effects are fail-closed when critical declarations
+or runtime facts are missing, including provider credentials, actor role,
+target branch safety, destructive cleanup, publish/release/tag actions, or
+dirty workspace overlap.
+
+Consumer/provider adapters remain the final defense for domain-specific
+failures, but they should not be the first place to discover missing runtime
+authority. Preflight handles generic runtime eligibility; consumers handle
+domain correctness.
+
 ## Side Effect Levels
 
 `execution.side_effect_level` is a fixed enum:
@@ -349,7 +389,7 @@ The dogfood Route Table is the operational truth. Current dogfood capability:
 | PR Steward fix request | `fix-runner` | `claim-only` | `execution-ready` | Can consume matching request evidence and replay independent repair PR or escalation evidence; generated GitHub Actions has a guarded `live-repair` workflow-dispatch path, and run `29237613749` produced verifier-backed escalation evidence without mutating the source PR or pushing a repair branch. Runner promotion passed the shared fix-runner gate; execution remains `claim-only` until a separate live-mode decision. |
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
 | Dependency Sweeper | `fix-runner` | `claim-only` | `execution-ready` | Request/claim evidence plus replayed repair PR or escalation runner; generated GitHub Actions has a guarded `live-repair` workflow-dispatch path, and run `29234374181` produced verifier-backed escalation evidence. Runner promotion passed the shared fix-runner gate; execution remains `claim-only` until a separate live-mode decision. |
-| Changelog Drafter | `draft-consumer` | `report-only` | `execution-ready` | Report/draft-request evidence plus guarded workflow-dispatch `draft-evidence` dogfood run `29247657726`; runner promotion passed the shared draft-consumer gate. Route Decision remains report-only and does not start consumer work, edit changelogs, create draft PRs, tag, release, publish, or finalize changelog acceptance. |
+| Changelog Drafter | `draft-consumer` | `report-only` report route plus request-only orchestration path | `execution-ready` | Three-layer boundary: `changelog-drafter-report` records release-window evidence only; `changelog-drafter-draft-request` consumes an existing draft request carrier through `zj-loop-dispatch` and produces orchestration `draft-plan.json` as the review artifact; guarded `live-draft` runs only with `CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE` and may produce `draft-evidence` or `draft-pr`. The route never tags, releases, publishes, or finalizes changelog acceptance. |
 | Roadmap-Sliced Development | `activation-consumer` | `request-only` generated bundle, live dogfood bootstrap | `install-ready` generated bundle, dogfooded reference path | Activation bootstrap has deterministic request/contract evidence; slice execution remains bounded by roadmap gates. |
 | Post-Merge Cleanup | `cleanup-consumer` | `dry-run` | `replayed` | Automatic dry-run; live cleanup remains guarded by contract and confirmation. |
 

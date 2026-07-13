@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-14 00:14:21
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-14 01:25:41
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -22,19 +22,19 @@
 │   ├── [x][Y+] 1-3-5. Issue Backlog Triage 到 Issue Triage Transition Tracer
 │   ├── [x][Y+] 1-3-6. Roadmap Sliced Development Activation Tracer
 │   └── [x][Y+] 1-3-7. Review Artifact 与 Hard Stop 输出文档
-├── [~][X+] 1-4. Consumer Runner 全链路执行能力
+├── [x][X+] 1-4. Consumer Runner 全链路执行能力
 │   ├── [x][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
 │   ├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
 │   ├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
 │   ├── [x][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
 │   ├── [x][Y+] 1-4-5. GitHub 与 GitLab Provider Parity
-│   └── [~][Y+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
-├── [ ][X+] 1-5. 前提条件、安全与成本包络
-│   ├── [ ][X+] 1-5-1. 权限、凭证与 Actor 能力探测
-│   ├── [ ][X+] 1-5-2. 低摩擦预算模型与 max work units
-│   ├── [ ][X+] 1-5-3. 工作区安全、风险分级与硬停机
-│   ├── [ ][X+] 1-5-4. Loop Prevention 与重复请求治理
-│   └── [ ][X+] 1-5-5. 高风险 Human Gate 最小化策略
+│   └── [x][Y+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
+├── [x][Y+] 1-5. 前提条件、安全与成本包络
+│   ├── [x][Y+] 1-5-1. Runtime Preflight Result Schema 与 Core API
+│   ├── [x][Y+] 1-5-2. Preflight Work Unit Budget 与低风险 Autofill
+│   ├── [x][Y+] 1-5-3. Workspace Safety 与 Live Side Effect Hard Stops
+│   ├── [x][Y+] 1-5-4. Preflight Loop Key 与 Bounded Attempt Policy
+│   └── [x][Y+] 1-5-5. Preflight CLI 集成、Human Gate Envelope 与 Release Gates
 ├── [ ][X+] 1-6. 证据回放、状态解释与故障定位
 │   ├── [ ][X+] 1-6-1. 统一 Run Summary 与 Evidence Index
 │   ├── [ ][X+] 1-6-2. Stop Signal 分类、定位与恢复建议
@@ -67,19 +67,34 @@
     ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
     └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
 
-### 当前施工：1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
+### 当前施工：1. Value-Oriented Product Upgrade Full Map
+
+目标：把 docs/prds/value-oriented-product-design-principles.md 中的 automation-default 产品体验落实为完整产品升级地图。终局体验是：用户给出目标或信号后，ZAgenticLoop 在安全、授权、预算、验证满足时自动推进 Signal -> Route Decision -> Request Carrier -> Consumer -> bounded work -> review artifact -> closeout；只有真实 stop signal 才停下来。
 
 **决策：**
-- Q: 1-4-6 的范围是重造 runner 还是补齐自动触发/编排链路？ → 补齐自动触发/编排链路，不重造 Changelog Drafter runner。现有 runner 已支持 guarded draft-evidence / draft-pr、固定确认短语、GitHub workflow、draft request replay 和 live runner 测试。 (目标链路收敛为 release-window signal -> Route Decision -> changelog-drafter-draft-request -> guarded live draft artifact / draft PR -> review artifact；GitLab live draft MR 继续明确拒绝，后续单独节点再提升。)
-- Q: Changelog Drafter 的自动产出默认生成 draft-evidence 还是 draft-pr？ → 默认生成 draft-evidence，允许显式升级到 draft-pr。 (默认路径以低风险 review artifact 为主；draft-pr 需要通过固定确认短语或 workflow input 显式选择 draft_mode=pr，避免 release/changelog 语义被过早写入 PR。)
-- Q: Changelog Drafter 的自动触发来源是只允许 workflow_dispatch，还是允许 release-window signal 自动进入？ → 两者都支持；主路径是 release-window signal 自动进入 Route Decision，workflow_dispatch 保留为手动 replay、dogfood、修复入口。 (Route Decision 只生成 changelog-drafter-draft-request，不直接写 changelog、不创建 PR、不发布；副作用仍由 guarded runner 执行。)
-- Q: Changelog Drafter runner 是否必须只消费 changelog-drafter-draft-request？ → 必须。Runner 只消费 changelog-drafter-draft-request，不能直接消费 changelog-drafter-report 或 release-window signal。 (固定链路为 release-window signal -> Route Decision -> changelog-drafter-draft-request -> Changelog Drafter runner；report 只负责观察和记录，draft-request 才是进入副作用边界的 activation carrier。)
-- Q: Changelog Drafter 自动产出的结果证据主 truth 放在哪里？ → 两层都要，但主 truth 放 orchestration review artifact；zj-loop/changelog-drafter-state.md 只保存低成本状态摘要和可回放索引。 (draft evidence / draft PR 是一次执行的 reviewable outcome，应绑定本次 orchestration；state 文件用于 dedupe、resume、历史索引，不承载完整结果。)
-- Q: Changelog Drafter 自动产出失败后是否自动重试？ → 不自动重试；生成 structured hard stop / escalation evidence。 (同一个 draft request 失败后停在可回放证据上，避免 release/changelog 链路循环；需要 retry 时创建新的 draft request，或由 human/automation 显式 resume。)
-- Q: 1-4-6 应拆成哪些可执行 slices？ → 拆成三片：1) Changelog Drafter ConsumerAdapter Review Artifact；2) Changelog Drafter Workflow Auto Draft Evidence；3) Changelog Drafter Docs And Release Gate Alignment。 (代码探索显示 runner 已存在，但 ConsumerAdapter 只注册 roadmap activation；GitHub workflow 只有输入 draft request 时才 live-draft，tag push 仍主要是 report。优先补 orchestration review artifact 主路径，再接 workflow 自动 draft evidence，最后更新 docs/gate。)
+- Q: 全地图的终局体验是什么？ → 默认自动 loop，而不是默认等待 human 推动；不适合自动化的因素必须变成结构化 stop signal。 (来自 docs/prds/value-oriented-product-design-principles.md 的 Principle 1。)
+- Q: 实现顺序应该先做什么？ → 先收敛 readiness、授权、证据和编排底座，再逐条 route 晋升到 execution-ready；否则容易把单条 route 的小修误认为整体体验完成。 (来自 route-consumer-execution-architecture.md 的 maturity/readiness 约束和近期 dogfood 经验。)
+- Q: 这次产品升级的 2nd 目标是什么？ → 给 Codex + ZAgenticLoop 做一层 harness，并把 Codex + ZAgenticLoop 作为首条完整产品体验路径。 (Harness 是首条完整体验路径的产品承载层：让 Codex 会话能自然发起、继续、暂停、恢复、解释 ZAgenticLoop 的自动 loop，而不是只暴露底层 route/consumer/protocol。)
 
 **当前子树：**
-├── [x][Y+] 1-4-6-1. Changelog Drafter ConsumerAdapter Review Artifact
-├── [x][Y+] 1-4-6-2. Changelog Drafter Workflow Auto Draft Evidence
-└── [ ][Y+] 1-4-6-3. Changelog Drafter Docs And Release Gate Alignment
+├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
+│   ... 4 more child nodes; run tree 1-1 --depth 2 for full view
+├── [x][Y+] 1-2. Route Readiness 与自动化授权模型
+│   ... 4 more child nodes; run tree 1-2 --depth 2 for full view
+├── [x][Y+] 1-3. Signal 到 Review Artifact 的自动编排
+│   ... 7 more child nodes; run tree 1-3 --depth 2 for full view
+├── [x][X+] 1-4. Consumer Runner 全链路执行能力
+│   ... 6 more child nodes; run tree 1-4 --depth 2 for full view
+├── [x][Y+] 1-5. 前提条件、安全与成本包络
+│   ... 5 more child nodes; run tree 1-5 --depth 2 for full view
+├── [ ][X+] 1-6. 证据回放、状态解释与故障定位
+│   ... 4 more child nodes; run tree 1-6 --depth 2 for full view
+├── [ ][X+] 1-7. 用户项目安装、升级与启用体验
+│   ... 4 more child nodes; run tree 1-7 --depth 2 for full view
+├── [ ][X+] 1-8. Dogfood 验证、发布门槛与能力分级
+│   ... 4 more child nodes; run tree 1-8 --depth 2 for full view
+├── [x][Y+] 1-9. Codex + ZAgenticLoop Harness 首条完整产品体验路径
+│   ... 7 more child nodes; run tree 1-9 --depth 2 for full view
+└── [x][Y+] 1-10. Codex Harness 执行切片与交付顺序
+    ... 7 more child nodes; run tree 1-10 --depth 2 for full view
 <!-- ROADMAP_SECTION_END -->

@@ -483,6 +483,12 @@ disabled_dispatch_routes:
       verifiers: ["activation-comment", "resume-anchors", "roadmap-gates"]
       max_side_effect_level: "branch"
     evidence_store: "append-only GitHub issue comments"
+    guards:
+      required_credentials:
+        github: ["GITHUB_TOKEN"]
+        gitlab: ["GITLAB_TOKEN"]
+      required_actor_roles: ["maintainer", "collaborator", "trusted-workflow"]
+      max_work_units: 30
     provider_support:
       github:
         status: "dry-run-supported"

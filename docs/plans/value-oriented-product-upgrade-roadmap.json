@@ -239,7 +239,7 @@
     "1-4": {
       "id": "1-4",
       "label": "Consumer Runner 全链路执行能力",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -287,8 +287,8 @@
     "1-5": {
       "id": "1-5",
       "label": "前提条件、安全与成本包络",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-5-1",
@@ -297,8 +297,34 @@
         "1-5-4",
         "1-5-5"
       ],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "是否新增统一 Runtime Preflight Gate 作为 zj-loop-run / zj-loop-dispatch 进入 consumer runner 前的硬门槛？",
+          "answer": "要。新增统一 Runtime Preflight Gate，作为自动执行前的结构化前置包络。",
+          "note": "Preflight 不替代 consumer/provider adapter 的最后防线；它先产出 preflight_result，覆盖 actor/credential、route authorization、budget/max work units、workspace safety、duplicate/loop prevention、risk/human gate。默认目标仍是自动 loop，只有真实不适合自动跑的因素变成结构化 stop signal。"
+        },
+        {
+          "q": "Runtime Preflight Gate 的检查结果是否固定分为 pass / warn / hard_stop？",
+          "answer": "要。固定三级结果：pass 继续自动执行；warn 记录但不阻塞；hard_stop 输出结构化 stop signal 并停止进入 consumer runner。",
+          "note": "默认策略是尽量自动补齐低风险字段并写入 repairs_applied。只有缺权限、缺凭证、预算或 max work units 超限、dirty workspace 冲突、高风险副作用缺确认、loop prevention 命中、协议不可修复等真实边界才 hard_stop。"
+        },
+        {
+          "q": "Runtime Preflight Gate 的输入来源是否以 Route Table + Signal/Run Envelope + runtime facts 为唯一主路径？",
+          "answer": "是。Preflight 主路径由 core 统一解释 Route Table 声明、Signal/Run Envelope 请求事实和 runtime facts 探测结果。",
+          "note": "Route Table 声明 route 级别需求和边界，例如 required_credentials、required_actor_roles、max_work_units、workspace_policy、side_effect_level、human_gate_policy、loop_prevention_key。Signal/Run Envelope 提供本次请求事实；runtime facts 探测凭证、actor、git 状态、预算和重复请求。Consumer 可追加 domain stop signals，但不能绕过 core preflight。"
+        },
+        {
+          "q": "Runtime Preflight Gate 是否做成 core 内部 API + 独立 CLI 命令两层？",
+          "answer": "要。Preflight 同时提供 core 内部 API 和独立 CLI 命令。",
+          "note": "Core API 供 zj-loop-run / zj-loop-dispatch 在进入 consumer runner 前强制调用，避免绕过；CLI 暴露类似 zj-loop-preflight --signal ... --route ... --mode auto --json，供 CI、doctor、用户项目和测试用例独立回放。输出固定为 preflight_result，并进入 run/orchestration evidence。确定性判断应由脚本/API 实现，不让 Agent 在运行时猜测。"
+        },
+        {
+          "q": "Route Table 缺少完整 preflight 字段时是否分层处理？",
+          "answer": "分层处理。report-only / review-artifact 缺少可选 preflight 字段时 warn 并允许继续；live-side-effect 缺少关键安全声明时 hard_stop。",
+          "note": "Live side effect 缺少权限、凭证、目标分支、外部可见 mutation、cleanup、publish 等声明时 fail-closed。已有 route 缺少 max_work_units 时默认自动补 30 并记录 repairs_applied；如果 route 声明更低，以 route 为准。"
+        }
+      ],
+      "notes": "Runtime Preflight Gate design is aligned. Implement as core API + CLI with pass/warn/hard_stop result tiers; source facts from Route Table + Signal/Run Envelope + runtime facts; write preflight_result into run/orchestration evidence; fail open with warning for report/review optional gaps and fail closed for live side-effect critical gaps."
     },
     "1-6": {
       "id": "1-6",
@@ -634,53 +660,77 @@
     },
     "1-5-1": {
       "id": "1-5-1",
-      "label": "权限、凭证与 Actor 能力探测",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Runtime Preflight Result Schema 与 Core API",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-5",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed with TDD. Added Runtime Preflight core API and fixed preflight_result schema in @jununfly/zj-loop-core, including pass/warn/hard_stop status, checks, repairs_applied, limits, loop_key, and preflight stop_signal mapping. Exported evaluateRuntimePreflight/buildPreflightLoopKey/PREFLIGHT_RESULT_SCHEMA for run and dispatch entrypoints. Verification: npm test --prefix tools/zj-loop-core; git diff --check; roadmap validate."
     },
     "1-5-2": {
       "id": "1-5-2",
-      "label": "低摩擦预算模型与 max work units",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Preflight Work Unit Budget 与低风险 Autofill",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "预算模型是否先以 max work units 为主，而不是先做精确 token 成本扣账？",
+          "answer": "是。Runtime Preflight 先使用 max_work_units / max_slices / max_attempts / max_live_side_effects 等确定性可计数边界。",
+          "note": "Token cost 在当前阶段主要作为 warning、planning evidence 和 user-visible cost visibility；只有用户显式配置预算上限，或 run metrics 已能可靠计量时，预算超限才升级为 hard_stop。这样避免因为不可靠成本估算降低自动完成率。"
+        }
+      ],
+      "notes": "Completed with TDD. Preflight now applies deterministic max_work_units, defaults missing route guards to 30 as low-risk repairs_applied, respects stricter route limits, and hard-stops requested work units above the effective limit. Token/cost remains outside hard-stop logic unless explicit reliable caps are added later. Verification: npm test --prefix tools/zj-loop-core; git diff --check; roadmap validate."
     },
     "1-5-3": {
       "id": "1-5-3",
-      "label": "工作区安全、风险分级与硬停机",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Workspace Safety 与 Live Side Effect Hard Stops",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "dirty workspace / 未提交修改是否默认 hard_stop？",
+          "answer": "不一概 hard_stop。只读、report-only、只写 zj-loop/orchestrations 或 run evidence、或修改范围与 dirty files 无交集时可以 pass/warn；会改 repo 文件、创建/更新 PR 分支、执行 cleanup、或目标路径与 dirty files 有交集时 hard_stop。",
+          "note": "同时，当前分支/HEAD 与 expected base 不匹配且可能造成 PR/branch 写错位置时 hard_stop。目标是保护用户工作，而不是让无关本地改动阻断所有自动 loop。"
+        }
+      ],
+      "notes": "Completed with TDD. Preflight distinguishes report/review evidence from live side effects: report/review paths can warn on dirty workspaces or incomplete optional declarations, while live-side-effect paths hard-stop missing critical declarations, credentials, actor roles, or dirty target overlap. Roadmap Activation route-table guards were added to repo and template route tables. Verification: npm test --prefix tools/zj-loop-core; npm run test:generated-bundle-release-gate; git diff --check; roadmap validate."
     },
     "1-5-4": {
       "id": "1-5-4",
-      "label": "Loop Prevention 与重复请求治理",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Preflight Loop Key 与 Bounded Attempt Policy",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Loop prevention 是否以 route-level deterministic loop key + bounded attempt policy 为核心？",
+          "answer": "是。Loop prevention 使用确定性 loop_key 和有界 attempt policy，避免依赖自然语言判断重复。",
+          "note": "loop_key = provider + source_subject + route_id + intent + request_id/deduplication_key。相同 loop_key completed 返回 duplicate；in_progress/resumable 返回 resume；failed 不自动 retry，除非新 request id 或显式 resume 且未超 attempt limit。post-merge closeout 等尾部动作使用独立 loop_key，避免和 activation/implementation 混淆。"
+        }
+      ],
+      "notes": "Completed with TDD. Added deterministic preflight loop_key generation from provider, subject, intent, route_id, and signal/request id, and encoded duplicate/completed, resume/in_progress, resumable, and previous failed loop outcomes as structured hard-stop stop signals. Verification: npm test --prefix tools/zj-loop-core; git diff --check; roadmap validate."
     },
     "1-5-5": {
       "id": "1-5-5",
-      "label": "高风险 Human Gate 最小化策略",
-      "status": "pending",
-      "mode": "explore",
+      "label": "Preflight CLI 集成、Human Gate Envelope 与 Release Gates",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Human Gate 是否只允许用于高风险边界，且必须输出固定结构化确认请求？",
+          "answer": "是。Human Gate 只用于高风险边界，且必须输出固定结构化确认请求。",
+          "note": "Human Gate 不用于泛化的不确定性；不确定应转成 needs_protocol_repair、ambiguous_route 或 consumer domain stop signal。Human Gate 覆盖 destructive cleanup、branch deletion、close carrier issue、publish/release/tag/npm publish、allowlist 外部可见 mutation、security-sensitive dependency/permission change、merge/auto-merge、高成本或超出 max work units 的 scope expansion。输出必须包含 confirmation_location、required_phrase、side_effects、risk_reason、expires_at/action_id、resume_command。"
+        }
+      ],
+      "notes": "Completed with TDD. Added zj-loop-preflight CLI, wired preflight_result into zj-loop-run and zj-loop-dispatch orchestration evidence, hard-stopped execute/live dispatch before provider APIs when preflight fails, documented the Runtime Preflight Gate, and extended generated-bundle release gates to require the preflight bin and Roadmap Activation guards. Verification: npm test --prefix tools/zj-loop-core; npm test --prefix tools/zj-loop-init; npm run test:generated-bundle-release-gate; npm run test:provider-parity-gate; bash scripts/ci-validate-gates.sh; git diff --check; roadmap validate."
     },
     "1-6-1": {
       "id": "1-6-1",
@@ -1498,7 +1548,7 @@
     "1-4-6": {
       "id": "1-4-6",
       "label": "Changelog Drafter 自动产出 Draft Artifact 与 Draft PR",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [
@@ -1723,17 +1773,33 @@
     "1-4-6-3": {
       "id": "1-4-6-3",
       "label": "Changelog Drafter Docs And Release Gate Alignment",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-6",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Changelog Drafter 文档定位是否从单纯 report-only 更新为三层路径？",
+          "answer": "是。文档应描述为 report-only route + request-only/orchestration draft-plan path + guarded live-draft runner。",
+          "note": "三层用户心智：1) changelog-drafter-report 只记录 release-window evidence；2) changelog-drafter-draft-request 通过 zj-loop-dispatch 生成 orchestration draft-plan.json review artifact；3) live-draft 仅固定确认短语后写 draft-evidence 或创建 draft-pr，且不 tag、不 release、不 publish。"
+        },
+        {
+          "q": "Release gate 是否新增 Changelog Drafter orchestration workflow 硬检查？",
+          "answer": "要。Release gate 应检查 Changelog Drafter generated workflow/CI 通过 zj-loop-dispatch --signal changelog-signal.json --mode auto 生成 draft-plan.json，且 GitHub workflow 不得直接调用 zj-loop-changelog-drafter draft-plan。",
+          "note": "这是防止主 truth 分叉的架构边界；draft-plan.json 主路径必须是 orchestration review artifact，不能靠文档约束避免模板回退。"
+        },
+        {
+          "q": "1-4-6-3 是否同步更新 README？",
+          "answer": "README 只做轻量更新，核心协议细节放 durable architecture docs。",
+          "note": "README 告知用户 workflow/CI 可从 draft request 生成 orchestration draft-plan.json，live draft 需要固定确认短语；协议分层、truth placement、report -> draft request -> orchestration -> live-draft 边界放入 route-consumer-execution-architecture、dogfood-reference-case，必要时 route-table-architecture。"
+        }
+      ],
+      "notes": "Aligned Changelog Drafter documentation and release gate around the orchestration-first contract: report records release-window evidence, draft-request is consumed by zj-loop-dispatch into draft-plan.json, and live-draft remains guarded by the fixed phrase CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE without tag/release/publish side effects. Release gate now checks GitHub/GitLab generated bundle boundaries so workflow templates keep using changelog-signal.json, zj-loop-dispatch --mode auto, and draft-plan.json evidence instead of direct draft-plan calls or GitLab live-draft exposure. Verification: node scripts/validate-generated-bundle-release-gate.mjs; npm run test:provider-parity-gate; bash scripts/ci-validate-gates.sh; git diff --check."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-14 00:14:21",
+    "updated": "2026-07-14 01:25:41",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

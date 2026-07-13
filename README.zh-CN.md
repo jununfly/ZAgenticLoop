@@ -216,7 +216,7 @@ Generated bundle route menu：
 | `roadmap-sliced-development` | `zj-loop-roadmap-activation.yml` | 当 issue comment 需要创建 Roadmap-Sliced activation request 时启用。 |
 | `pr-steward-fix-request` | `zj-loop-pr-steward.yml` | 当 PR check failure 需要创建/消费独立 fix request 时启用。 |
 | `dependency-sweeper` | `zj-loop-dependency-sweeper.yml` | 当 dependency signal 需要成为有边界的 fix-request repair plan 时启用。 |
-| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | 当 release-window evidence 需要生成 draft evidence 或 draft PR plan 时启用。 |
+| `changelog-drafter-draft-request` | `zj-loop-changelog-drafter.yml` | 当已有 draft request 需要通过 orchestration 生成 `draft-plan.json` review artifact 时启用；`live-draft` 需要固定确认短语。 |
 | `issue-backlog-triage` | `zj-loop-issue-triage.yml` | 当 open issues 需要生成推荐的 `zj-triage` transition request，但暂不修改 tracker 时启用。 |
 | `issue-triage-transition` | `zj-loop-issue-triage.yml` | 当 maintainer 需要用固定 request id 确认推荐 triage transition，并在 source issue 上创建 request-only request comment 时启用。 |
 | `issue-triage-action` | `zj-loop-issue-triage.yml` | 当你需要 dry-run allowlisted label/comment action plan 时启用。 |
@@ -227,6 +227,7 @@ gate。有 action 能力的 route 优先使用自己的窄命令；report-only r
 generic planner：
 
 ```bash
+npx --yes --package @jununfly/zj-loop-core zj-loop-preflight --route roadmap-sliced-development --execution-layer review-artifact --json
 npx --yes --package @jununfly/zj-loop-core zj-loop-consumer plan <route-id> --json
 npx --yes --package @jununfly/zj-loop-core zj-loop-ci-sweeper plan --json
 npx --yes --package @jununfly/zj-loop-core zj-loop-dependency-sweeper plan --json
@@ -276,7 +277,7 @@ workflow 自定义逻辑仍然是 maintainer 决策。
 | `post-merge-roadmap-closeout` | `dry-run` | 在 Roadmap-Sliced PR 合并后规划 branch/issue cleanup；live cleanup 需要显式 operator confirmation。 |
 | `dependency-sweeper` | `claim-only` with replayed runner | Claim 合格 dependency fix request，并 replay repair/escalation evidence；还不会 live 修改 manifest 或创建 PR。 |
 | `pr-steward-fix-request` | `claim-only` with replayed runner | Claim 合格 failed-PR-check request，并 replay repair/escalation evidence；不修改 source PR。 |
-| `changelog-drafter-draft-request` | `report-only` with replayed runner | 记录 draft request evidence，并 replay draft evidence/PR outcome；还不会 live 修改 changelog。 |
+| `changelog-drafter-draft-request` | `request-only` orchestration with guarded live runner | 从已有 draft request 生成 orchestration `draft-plan.json`；固定确认短语后才写 draft evidence 或创建 draft PR，且不 tag/release/publish。 |
 | `issue-backlog-triage` | `report-only` | 记录 recommended triage transition evidence 和确认命令；确认副作用启用前，不评论、不打标、不关闭 issue、不创建 Issue Fix Request。 |
 | `issue-triage-transition` | `request-only` with replayed runner | 校验 maintainer/collaborator 确认，并为 `ready-for-agent` 在 source issue 上创建/去重 Issue Fix Request comment；已有 `issue-backlog-triage -> issue-triage-transition` E2E replay；还不会 live 修改 tracker label/state。 |
 | `issue-triage-action` | `dry-run` with replayed runner | 规划 allowlisted label 或 fixed comment template；还不会 live 修改 issue。 |
@@ -300,7 +301,7 @@ PRD issue comment 时，才使用 `--mode comment-enabled`；写入方必须用
 
 | Package | CLI | 用途 | 当前版本 |
 |---------|-----|------|----------|
-| `@jununfly/zj-loop-core` | library | 共享 registry、project evidence、semantic queries 和 CLI harness | `0.1.6` |
+| `@jununfly/zj-loop-core` | library + route CLIs | 共享 registry、runtime preflight、project evidence、semantic queries 和 CLI harness | `0.1.6` |
 | `@jununfly/zj-loop-init` | `zj-loop-init` | 初始化 starters、route table、state files、budget、run logs 和 provider workflow bundle | `0.1.9` |
 | `@jununfly/zj-loop-audit` | `zj-loop-audit` | Loop Readiness Score 和建议 | `0.1.6` |
 | `@jununfly/zj-loop-cost` | `zj-loop-cost` | 按 pattern、level、cadence 估算 token 开销 | `0.1.5` |
