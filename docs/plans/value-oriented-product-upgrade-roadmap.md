@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 16:13:45
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 17:39:31
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -25,7 +25,7 @@
 ├── [~][X+] 1-4. Consumer Runner 全链路执行能力
 │   ├── [x][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
 │   ├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
-│   ├── [~][X+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
+│   ├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
 │   ├── [ ][X+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
 │   └── [ ][X+] 1-4-5. GitHub 与 GitLab Provider Parity
 ├── [ ][X+] 1-5. 前提条件、安全与成本包络
@@ -66,5 +66,24 @@
     ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
     └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
 
-### 当前施工：1-4-3-3. PR Steward Workflow-Dispatch Live Evidence
+### 当前施工：1-4. Consumer Runner 全链路执行能力
+
+Starting grill for Consumer Runner full-chain execution. Existing consumers have route-specific plan/live functions; the main design question is how zj-loop-dispatch invokes them through a stable bounded consumer adapter without flattening all consumers into fix runners.
+
+**决策：**
+- Q: Consumer Runner 的边界是什么？ → 每个 consumer 都要到自己的 bounded completion form；不把所有 consumer 简化成 fix runner，也不允许 producer/report route 直接做 worker side effects。 (来自 route-consumer-execution-architecture.md 的 Consumer Kinds 和 Completion Forms。)
+- Q: zj-loop-dispatch 在 execution_allowed=true 时如何调用各个 consumer runner？ → 新增 core 内部 ConsumerAdapter/runConsumerToReviewArtifact 层，而不是让 dispatch-runner 直接 import 每个具体 runner 的 live 函数。适配层接收 root、signal、orchestration、route、consumerRunPlan、mode，返回统一的 executed_to_review_artifact 或 hard_stopped 结果。 (内部可按 route.consumer_kind/route_id 分发到具体 runner，但每个 runner 保留自己的 bounded completion form；zj-loop-dispatch 只懂编排，不懂具体 consumer 业务细节。)
+- Q: zj-loop-dispatch --mode auto 是否直接执行所有 route 的 live side effects？ → 分两层执行能力：review-artifact runner 默认可被 auto 调用，目标是生成 PR/MR/draft/comment/evidence/plan 等可审查产物；live-side-effect runner 只在 route execution_allowed、request verifier、provider permission、预算和 safety gates 全过时运行。 (每个 consumer 必须显式实现 live adapter，不能靠通用 fallback 猜测真实 side effects；这样保持默认自动化，同时避免误触发外部副作用。)
+- Q: 1-4 的优先实现顺序先做哪类 consumer？ → 先做 activation-consumer，也就是 roadmap-sliced-development。第一阶段聚焦 ConsumerAdapter 基座 + Roadmap Activation review-artifact runner，而不是先做 CI/Dependency/PR Steward。 (这是默认自动 loop 的核心体验：Signal/Issue -> Activation -> Roadmap Branch/PR；它也最能检验 adapter 是否能保持非 fix-runner 的 bounded lifecycle 边界。)
+- Q: 分阶段实现是否会导致其他 agent 误以为 Roadmap Activation 已经完成？ → 会。按倒推逻辑，父节点必须表达完整目标，阶段性工作必须拆成子节点；第一个子节点只承接 review-artifact runner，不把它误标为 live branch/PR runner 完成。 (这样 roadmap 状态可以显示第一阶段完成但 1-4-1 父节点仍未完成，避免后续 agent 产生 job-is-done 错觉。)
+- Q: Phased Consumer Runner work may mislead future agents into treating a partial phase as complete. How should the roadmap prevent that? → Model the complete target as the parent node, put the first phase in an explicit child node, and keep parent completion blocked until all required child capabilities and evidence gates are complete.
+
+**当前子树：**
+├── [x][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
+│   ... 6 more child nodes; run tree 1-4-1 --depth 2 for full view
+├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
+├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
+│   ... 4 more child nodes; run tree 1-4-3 --depth 2 for full view
+├── [ ][X+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
+└── [ ][X+] 1-4-5. GitHub 与 GitLab Provider Parity
 <!-- ROADMAP_SECTION_END -->

@@ -516,8 +516,8 @@
     "1-4-3": {
       "id": "1-4-3",
       "label": "CI、Dependency、PR Steward Fix Runner 提升",
-      "status": "in_progress",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-4",
       "children": [
         "1-4-3-1",
@@ -547,7 +547,7 @@
           "note": "拆为 1-4-3-1 Shared Fix Runner Promotion Gate、1-4-3-2 Dependency Sweeper Workflow-Dispatch Live Evidence、1-4-3-3 PR Steward Workflow-Dispatch Live Evidence、1-4-3-4 Apply Promotion And Docs。"
         }
       ],
-      "notes": "Started grill for CI, Dependency, and PR Steward Fix Runner upgrade. Initial scan shows CI Sweeper is live dogfooded, while Dependency Sweeper and PR Steward are claim-only/replayed with live-runner evidence but not workflow-dispatch dogfooded/execution-ready."
+      "notes": "Completed fix-runner promotion slice: shared gate added, Dependency Sweeper and PR Steward collected workflow-dispatch live evidence and were promoted to execution-ready runners; CI Sweeper remains dogfooded until explicit live-runner-evidence is recorded."
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -1343,27 +1343,27 @@
     "1-4-3-3": {
       "id": "1-4-3-3",
       "label": "PR Steward Workflow-Dispatch Live Evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed PR Steward workflow-dispatch live evidence. Real dogfood run https://github.com/jununfly/ZAgenticLoop/actions/runs/29237613749 used core_package=./tools/zj-loop-core, executed guarded live-repair, uploaded live-repair-result.json, and produced verifier-backed escalation-issue evidence without source PR mutation, repair branch push, repair PR creation, or auto-merge. Earlier run 29237363654 exposed invalid test carrier pr_number=0; reran with nonzero source PR. Check-only promotion gate for pr-steward-fix-request returned promotable=true after aligning evidence_store and auto_merge boundary in Route Table."
     },
     "1-4-3-4": {
       "id": "1-4-3-4",
       "label": "Apply Promotion And Docs",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed explicit promotion apply for dependency-sweeper and pr-steward-fix-request after shared fix-runner gate passed. Both now have maturity.runner=execution-ready while execution.mode remains claim-only; route enablement/live side effects remain separate guarded decisions. CI Sweeper was not promoted because check-only gate still misses explicit live-runner-evidence, so that gap stays visible instead of being forced through."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 16:13:45",
+    "updated": "2026-07-13 17:39:31",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

@@ -299,12 +299,12 @@ routes:
       completion_forms: ["repair-pr", "escalation-issue"]
     maturity:
       protocol: "replayed"
-      runner: "replayed"
+      runner: execution-ready
     capabilities:
       scopes: ["pull-request", "failed-check-rollup"]
       verifiers: ["status-check-rollup", "request-claim", "current-pr-head-sha"]
       max_side_effect_level: "claim"
-    evidence_store: "GitHub issues"
+    evidence_store: "zj-loop/pr-steward-state.md"
     match:
       source: ["pull_request"]
       action: ["synchronize", "ready_for_review"]
@@ -318,6 +318,7 @@ routes:
       label_changes_allowed: false
       rebase_allowed: false
       merge_allowed: false
+      auto_merge: false
       workflow_dispatch_allowed: false
       verifier_required: true
       claim_only: true
@@ -379,7 +380,7 @@ routes:
       completion_forms: ["repair-pr", "escalation-issue"]
     maturity:
       protocol: "replayed"
-      runner: "replayed"
+      runner: execution-ready
     capabilities:
       scopes: ["dependency", "patch-update", "minor-update"]
       verifiers: ["request-claim", "package-risk-check", "verification-gate"]

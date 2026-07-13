@@ -25,6 +25,16 @@ Last run: 2026-07-08
 - Live runner replay covers `consumed -> repair-pr` and
   `consumed -> escalation-issue` outcomes without mutating the source PR:
   `scripts/pr-steward-live-runner.test.mjs`.
+- Real workflow-dispatch dogfood evidence:
+  `https://github.com/jununfly/ZAgenticLoop/actions/runs/29237613749`.
+  The run used `core_package=./tools/zj-loop-core` to validate unreleased local
+  dist, installed local package dependencies, executed guarded `live-repair`
+  with `CREATE_PR_STEWARD_FIX_PR_OR_ESCALATION`, uploaded
+  `live-repair-result.json`, and produced verifier-backed `escalation-issue`
+  evidence. It reached the action path through fetch, main sync, local repair
+  branch creation, and a no-op repair command; the intentional verifier failure
+  stopped execution before any repair branch push, repair PR creation, or source
+  PR mutation. Source PR/MR side effects are false, and auto-merge is disabled.
 
 ## Boundary
 
