@@ -15,6 +15,8 @@ test('provider parity gate validates GitHub and GitLab generated route surfaces'
   assert.equal(result.routeTemplateCount, 9);
   assert.match(result.coreVersion, /^\d+\.\d+\.\d+$/);
   assert.ok(result.routeCount >= 9);
+  assert.ok(result.routeFamilyCount >= 10);
+  assert.equal(result.routeFamilyEvidenceSchema, 'zj-loop.route_family_provider_parity_evidence.v1');
 });
 
 test('provider parity gate requires provider_support inventory for every route', async () => {

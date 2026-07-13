@@ -1585,12 +1585,33 @@
     "1-4-5-4": {
       "id": "1-4-5-4",
       "label": "Route Family Provider Parity Evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Route Family Provider Parity Evidence 的目标是什么？",
+          "answer": "先做可审计证据清单和缺口分类，不在这一刀扩大 GitLab live 能力。产出应包括确定性脚本、测试、durable docs 更新，覆盖每个 route family 的 GitHub/GitLab evidence classification。",
+          "note": "不修改 route enablement、authorization 或 live runner maturity；避免把 evidence parity 误读为 live parity 已完成。"
+        },
+        {
+          "q": "Route Family Provider Parity Evidence 的 truth source 是什么？",
+          "answer": "以 Route Table provider_support 为主 truth，但 evidence inventory 脚本必须交叉读取 deterministic evidence sources，而不是只复述声明。脚本应聚合 Route Table、GitHub/GitLab generated templates、GitLab provider dogfood replay、durable docs，输出每个 route family 的 provider parity 证据、缺口和下一步。",
+          "note": "不以 templates/docs/tests 任一单点作为唯一 truth；templates 只说明 CI surface，docs 易漂移，tests 目前不是每个 family 对称覆盖。"
+        },
+        {
+          "q": "Route Family Provider Parity Evidence 应该落在哪里？",
+          "answer": "两层承载：确定性脚本输出可回放证据，durable docs 承载长期解释层。新增 scripts/route-family-provider-parity-evidence.mjs 默认输出 JSON，聚合事实字段；更新 docs/designs/provider-adapter-parity-architecture.md 的 Route Family Evidence Matrix，并引用脚本作为事实来源。",
+          "note": "不写入 runtime state，不放进 zj-loop/STATE.md；这是架构证据，不是运行队列或 triage state。"
+        },
+        {
+          "q": "Route Family Provider Parity Evidence 是否并入 provider parity gate？",
+          "answer": "采用分层推进：先新增独立脚本 scripts/route-family-provider-parity-evidence.mjs 和测试，验证每个 route family 都有 GitHub/GitLab classification、evidence refs、gap/next step 字段；再把它纳入 npm run test:provider-parity-gate。Gate 不要求所有 route live-supported，只要求不允许无分类、无证据、无缺口说明。",
+          "note": "目标是防止 provider parity evidence 漂移，而不是把发布门槛升级成必须 live parity 全完成。"
+        }
+      ],
+      "notes": "Completed with TDD. Added route-family provider parity evidence inventory script and test, integrated it into provider parity gate, and documented the script/docs split. Verification: node --test scripts/route-family-provider-parity-evidence.test.mjs; npm run test:provider-parity-gate; node scripts/route-family-provider-parity-evidence.mjs; git diff --check; roadmap validate."
     },
     "1-4-5-5": {
       "id": "1-4-5-5",
@@ -1605,7 +1626,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 22:38:28",
+    "updated": "2026-07-13 23:06:45",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

@@ -31,7 +31,7 @@
     "test:release-workflows": "node --test scripts/validate-release-workflows.test.mjs",
     "test:release-ready": "ZJ_LOOP_RELEASE_READY=1 node scripts/validate-release-workflows.mjs",
     "test:generated-bundle-release-gate": "node scripts/validate-generated-bundle-release-gate.mjs",
-    "test:provider-parity-gate": "node --test scripts/validate-provider-parity-gate.test.mjs scripts/gitlab-provider-dogfood-replay.test.mjs && node scripts/validate-provider-parity-gate.mjs",
+    "test:provider-parity-gate": "node --test scripts/validate-provider-parity-gate.test.mjs scripts/gitlab-provider-dogfood-replay.test.mjs scripts/route-family-provider-parity-evidence.test.mjs && node scripts/validate-provider-parity-gate.mjs",
     "check:zj-loop-init": "node scripts/check-zj-loop-init-sync.mjs",
     "test:zj-loop-core": "cd tools/zj-loop-core && npm test",
     "test:zj-loop-audit": "cd tools/zj-loop-audit && npm test",

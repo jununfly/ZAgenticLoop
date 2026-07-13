@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
+import { buildRouteFamilyProviderParityEvidence } from './route-family-provider-parity-evidence.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const ROUTE_TEMPLATE_FILES = [
@@ -107,6 +109,8 @@ export async function validateProviderParityGate(root = ROOT) {
   }
 
   validateProviderSupportInventory(routeTable, errors);
+  const routeFamilyEvidence = await buildRouteFamilyProviderParityEvidence(root);
+  validateRouteFamilyProviderEvidence(routeFamilyEvidence, errors);
 
   if (!dogfoodDoc.includes('GitLab Target-Project Pre-Release Evidence')) {
     errors.push('docs/designs/dogfood-reference-case.md missing GitLab target-project dogfood evidence');
@@ -123,6 +127,8 @@ export async function validateProviderParityGate(root = ROOT) {
     routeTemplateCount: ROUTE_TEMPLATE_FILES.length,
     coreVersion: expectedCoreVersion,
     routeCount: allRoutes(routeTable).length,
+    routeFamilyCount: routeFamilyEvidence.families.length,
+    routeFamilyEvidenceSchema: routeFamilyEvidence.schema,
   };
 }
 
@@ -177,10 +183,40 @@ function validateProviderSupportInventory(routeTable, errors) {
   }
 }
 
+function validateRouteFamilyProviderEvidence(evidence, errors) {
+  if (evidence?.schema !== 'zj-loop.route_family_provider_parity_evidence.v1') {
+    errors.push(`route family provider parity evidence schema invalid: ${evidence?.schema ?? '<missing>'}`);
+    return;
+  }
+
+  for (const family of evidence.families ?? []) {
+    const familyId = family.family_id ?? '<missing-family-id>';
+    for (const provider of REQUIRED_PROVIDERS) {
+      const support = family.providers?.[provider];
+      if (!support) {
+        errors.push(`route family ${familyId} missing ${provider} provider evidence`);
+        continue;
+      }
+      if (!PROVIDER_SUPPORT_STATUSES.has(support.status)) {
+        errors.push(`route family ${familyId}.${provider} status invalid: ${support.status ?? '<missing>'}`);
+      }
+      if (!Array.isArray(support.evidence_refs) || support.evidence_refs.length === 0) {
+        errors.push(`route family ${familyId}.${provider} missing evidence_refs`);
+      }
+      if (!Array.isArray(support.gaps)) {
+        errors.push(`route family ${familyId}.${provider} missing gaps array`);
+      }
+      if (!Array.isArray(support.next_steps) || support.next_steps.length === 0) {
+        errors.push(`route family ${familyId}.${provider} missing next_steps`);
+      }
+    }
+  }
+}
+
 async function main() {
   const result = await validateProviderParityGate();
   console.log(
-    `Provider parity gate valid: ${result.routeTemplateCount} GitHub/GitLab route template pairs, core ${result.coreVersion}, ${result.routeCount} Route Table routes ✓`,
+    `Provider parity gate valid: ${result.routeTemplateCount} GitHub/GitLab route template pairs, core ${result.coreVersion}, ${result.routeCount} Route Table routes, ${result.routeFamilyCount} route families ✓`,
   );
 }
 
