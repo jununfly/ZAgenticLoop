@@ -4,6 +4,11 @@ import { createHash } from 'node:crypto';
 
 import { ConsumerRunPlan } from './consumer-runner.js';
 import {
+  buildChangelogDrafterExecutionPlan,
+  CHANGELOG_DRAFT_REQUEST_SCHEMA,
+  CHANGELOG_DRAFTER_ROUTE_ID,
+} from './changelog-drafter-runner.js';
+import {
   buildRoadmapActivationBranchName,
   buildRoadmapActivationPrContract,
   buildRoadmapActivationPrTitle,
@@ -235,6 +240,9 @@ export async function runConsumerToReviewArtifact(input: {
   if (routeId === 'roadmap-sliced-development') {
     return runRoadmapActivationToContractPlan(input);
   }
+  if (routeId === CHANGELOG_DRAFTER_ROUTE_ID) {
+    return runChangelogDrafterToDraftPlan(input);
+  }
 
   return {
     schema: 'zj-loop.consumer_adapter_result.v1',
@@ -253,6 +261,69 @@ export async function runConsumerToReviewArtifact(input: {
       reason: 'missing-consumer-adapter',
       next_steps: ['Add an explicit ConsumerAdapter for this route before executing it.'],
     },
+  };
+}
+
+async function runChangelogDrafterToDraftPlan(input: {
+  root: string;
+  signal: SignalEnvelope;
+  orchestrationId: string;
+  consumerRunPlan: ConsumerRunPlan;
+}): Promise<ConsumerAdapterResult> {
+  const draftRequest = recordPayload(input.signal.payload.changelog_draft_request);
+  if (!draftRequest) {
+    return routeHardStopResult({
+      input,
+      routeId: CHANGELOG_DRAFTER_ROUTE_ID,
+      reason: 'missing-changelog-draft-request',
+      nextSteps: [`Provide payload.changelog_draft_request with schema ${CHANGELOG_DRAFT_REQUEST_SCHEMA}.`],
+      repairsApplied: [],
+    });
+  }
+
+  const draftMode = stringPayload(input.signal.payload.draft_mode) ?? 'evidence';
+  const draftFile = stringPayload(input.signal.payload.draft_file);
+  const draftPlan = buildChangelogDrafterExecutionPlan({
+    draftRequest,
+    draftMode,
+    ...(draftFile === undefined ? {} : { draftFile }),
+    live: false,
+  });
+  if (draftPlan.status === 'refused') {
+    return routeHardStopResult({
+      input,
+      routeId: CHANGELOG_DRAFTER_ROUTE_ID,
+      reason: 'changelog-draft-plan-refused',
+      nextSteps: draftPlan.refusals.map((item: any) => String(item.reason)),
+      repairsApplied: [],
+    });
+  }
+
+  const artifactPath = `zj-loop/orchestrations/${input.orchestrationId}/draft-plan.json`;
+  const absoluteArtifactPath = path.resolve(input.root, artifactPath);
+  await mkdir(path.dirname(absoluteArtifactPath), { recursive: true });
+  await writeFile(absoluteArtifactPath, `${JSON.stringify(draftPlan, null, 2)}\n`);
+
+  return {
+    schema: 'zj-loop.consumer_adapter_result.v1',
+    route_id: CHANGELOG_DRAFTER_ROUTE_ID,
+    consumer: input.consumerRunPlan.consumer,
+    consumer_kind: input.consumerRunPlan.consumer_kind,
+    adapter_status: 'executed_to_review_artifact',
+    review_artifacts: [{
+      path: artifactPath,
+      kind: 'draft-plan',
+      schema: 'zj-loop.changelog_drafter_live_runner_plan.v1',
+    }],
+    repairs_applied: [],
+    live_side_effects: {
+      attempted: false,
+      reason: 'review-artifact runner only',
+    },
+    next_steps: [
+      'Review draft-plan.json before live Changelog Drafter side effects.',
+      'Run Changelog Drafter live-draft with fixed confirmation only when draft evidence or draft PR side effects are intended.',
+    ],
   };
 }
 
@@ -410,6 +481,40 @@ function hardStopResult(input: {
       next_steps: input.nextSteps,
     },
   };
+}
+
+function routeHardStopResult(input: {
+  input: {
+    consumerRunPlan: ConsumerRunPlan;
+  };
+  routeId: string;
+  reason: string;
+  nextSteps: string[];
+  repairsApplied: ConsumerAdapterResult['repairs_applied'];
+}): ConsumerAdapterResult {
+  return {
+    schema: 'zj-loop.consumer_adapter_result.v1',
+    route_id: input.routeId,
+    consumer: input.input.consumerRunPlan.consumer,
+    consumer_kind: input.input.consumerRunPlan.consumer_kind,
+    adapter_status: 'hard_stopped',
+    review_artifacts: [],
+    repairs_applied: input.repairsApplied,
+    live_side_effects: {
+      attempted: false,
+      reason: 'hard stop before live side effects',
+    },
+    next_steps: input.nextSteps,
+    stop_signal: {
+      reason: input.reason,
+      next_steps: input.nextSteps,
+    },
+  };
+}
+
+function recordPayload(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
 }
 
 function stringPayload(value: unknown): string | undefined {

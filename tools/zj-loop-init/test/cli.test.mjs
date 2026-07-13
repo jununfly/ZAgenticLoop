@@ -241,7 +241,10 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.doesNotMatch(issueTriage, /'\$\{\{ inputs\./);
     const changelogDrafter = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-changelog-drafter.yml'), 'utf8');
     assert.match(changelogDrafter, /zj-loop-route dispatch changelog-drafter-report/);
-    assert.match(changelogDrafter, /zj-loop-changelog-drafter draft-plan/);
+    assert.match(changelogDrafter, /changelog-signal\.json/);
+    assert.match(changelogDrafter, /zj-loop-dispatch --signal changelog-signal\.json --mode auto/);
+    assert.doesNotMatch(changelogDrafter, /zj-loop-changelog-drafter draft-plan/);
+    assert.match(changelogDrafter, /zj-loop-changelog-drafter live-draft/);
     assert.doesNotMatch(changelogDrafter, /'\$\{\{ inputs\./);
     const roadmapActivation = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-roadmap-activation.yml'), 'utf8');
     assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
@@ -442,6 +445,12 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     const prSteward = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-pr-steward.yml'), 'utf8');
     assert.match(prSteward, /ZJ_LOOP_MERGE_REQUEST_IID: ""/);
     assert.match(prSteward, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}\}/);
+    const changelogDrafter = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-changelog-drafter.yml'), 'utf8');
+    assert.match(changelogDrafter, /ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON: ""/);
+    assert.match(changelogDrafter, /changelog-signal\.json/);
+    assert.match(changelogDrafter, /zj-loop-dispatch --signal changelog-signal\.json --mode auto/);
+    assert.match(changelogDrafter, /draft-plan\.json/);
+    assert.doesNotMatch(changelogDrafter, /live-draft/);
     const roadmapActivation = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-roadmap-activation.yml'), 'utf8');
     assert.match(roadmapActivation, /zj-loop-route dispatch roadmap-sliced-development/);
     assert.match(roadmapActivation, /zj-loop-roadmap-activation contract-plan --provider gitlab/);

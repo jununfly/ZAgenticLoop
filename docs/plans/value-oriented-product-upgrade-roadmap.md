@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 23:29:15
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-14 00:14:21
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -28,7 +28,7 @@
 │   ├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
 │   ├── [x][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
 │   ├── [x][Y+] 1-4-5. GitHub 与 GitLab Provider Parity
-│   └── [ ][X+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
+│   └── [~][Y+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
 ├── [ ][X+] 1-5. 前提条件、安全与成本包络
 │   ├── [ ][X+] 1-5-1. 权限、凭证与 Actor 能力探测
 │   ├── [ ][X+] 1-5-2. 低摩擦预算模型与 max work units
@@ -67,27 +67,19 @@
     ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
     └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
 
-### 当前施工：1-4. Consumer Runner 全链路执行能力
-
-Starting grill for Consumer Runner full-chain execution. Existing consumers have route-specific plan/live functions; the main design question is how zj-loop-dispatch invokes them through a stable bounded consumer adapter without flattening all consumers into fix runners.
+### 当前施工：1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
 
 **决策：**
-- Q: Consumer Runner 的边界是什么？ → 每个 consumer 都要到自己的 bounded completion form；不把所有 consumer 简化成 fix runner，也不允许 producer/report route 直接做 worker side effects。 (来自 route-consumer-execution-architecture.md 的 Consumer Kinds 和 Completion Forms。)
-- Q: zj-loop-dispatch 在 execution_allowed=true 时如何调用各个 consumer runner？ → 新增 core 内部 ConsumerAdapter/runConsumerToReviewArtifact 层，而不是让 dispatch-runner 直接 import 每个具体 runner 的 live 函数。适配层接收 root、signal、orchestration、route、consumerRunPlan、mode，返回统一的 executed_to_review_artifact 或 hard_stopped 结果。 (内部可按 route.consumer_kind/route_id 分发到具体 runner，但每个 runner 保留自己的 bounded completion form；zj-loop-dispatch 只懂编排，不懂具体 consumer 业务细节。)
-- Q: zj-loop-dispatch --mode auto 是否直接执行所有 route 的 live side effects？ → 分两层执行能力：review-artifact runner 默认可被 auto 调用，目标是生成 PR/MR/draft/comment/evidence/plan 等可审查产物；live-side-effect runner 只在 route execution_allowed、request verifier、provider permission、预算和 safety gates 全过时运行。 (每个 consumer 必须显式实现 live adapter，不能靠通用 fallback 猜测真实 side effects；这样保持默认自动化，同时避免误触发外部副作用。)
-- Q: 1-4 的优先实现顺序先做哪类 consumer？ → 先做 activation-consumer，也就是 roadmap-sliced-development。第一阶段聚焦 ConsumerAdapter 基座 + Roadmap Activation review-artifact runner，而不是先做 CI/Dependency/PR Steward。 (这是默认自动 loop 的核心体验：Signal/Issue -> Activation -> Roadmap Branch/PR；它也最能检验 adapter 是否能保持非 fix-runner 的 bounded lifecycle 边界。)
-- Q: 分阶段实现是否会导致其他 agent 误以为 Roadmap Activation 已经完成？ → 会。按倒推逻辑，父节点必须表达完整目标，阶段性工作必须拆成子节点；第一个子节点只承接 review-artifact runner，不把它误标为 live branch/PR runner 完成。 (这样 roadmap 状态可以显示第一阶段完成但 1-4-1 父节点仍未完成，避免后续 agent 产生 job-is-done 错觉。)
-- Q: Phased Consumer Runner work may mislead future agents into treating a partial phase as complete. How should the roadmap prevent that? → Model the complete target as the parent node, put the first phase in an explicit child node, and keep parent completion blocked until all required child capabilities and evidence gates are complete.
+- Q: 1-4-6 的范围是重造 runner 还是补齐自动触发/编排链路？ → 补齐自动触发/编排链路，不重造 Changelog Drafter runner。现有 runner 已支持 guarded draft-evidence / draft-pr、固定确认短语、GitHub workflow、draft request replay 和 live runner 测试。 (目标链路收敛为 release-window signal -> Route Decision -> changelog-drafter-draft-request -> guarded live draft artifact / draft PR -> review artifact；GitLab live draft MR 继续明确拒绝，后续单独节点再提升。)
+- Q: Changelog Drafter 的自动产出默认生成 draft-evidence 还是 draft-pr？ → 默认生成 draft-evidence，允许显式升级到 draft-pr。 (默认路径以低风险 review artifact 为主；draft-pr 需要通过固定确认短语或 workflow input 显式选择 draft_mode=pr，避免 release/changelog 语义被过早写入 PR。)
+- Q: Changelog Drafter 的自动触发来源是只允许 workflow_dispatch，还是允许 release-window signal 自动进入？ → 两者都支持；主路径是 release-window signal 自动进入 Route Decision，workflow_dispatch 保留为手动 replay、dogfood、修复入口。 (Route Decision 只生成 changelog-drafter-draft-request，不直接写 changelog、不创建 PR、不发布；副作用仍由 guarded runner 执行。)
+- Q: Changelog Drafter runner 是否必须只消费 changelog-drafter-draft-request？ → 必须。Runner 只消费 changelog-drafter-draft-request，不能直接消费 changelog-drafter-report 或 release-window signal。 (固定链路为 release-window signal -> Route Decision -> changelog-drafter-draft-request -> Changelog Drafter runner；report 只负责观察和记录，draft-request 才是进入副作用边界的 activation carrier。)
+- Q: Changelog Drafter 自动产出的结果证据主 truth 放在哪里？ → 两层都要，但主 truth 放 orchestration review artifact；zj-loop/changelog-drafter-state.md 只保存低成本状态摘要和可回放索引。 (draft evidence / draft PR 是一次执行的 reviewable outcome，应绑定本次 orchestration；state 文件用于 dedupe、resume、历史索引，不承载完整结果。)
+- Q: Changelog Drafter 自动产出失败后是否自动重试？ → 不自动重试；生成 structured hard stop / escalation evidence。 (同一个 draft request 失败后停在可回放证据上，避免 release/changelog 链路循环；需要 retry 时创建新的 draft request，或由 human/automation 显式 resume。)
+- Q: 1-4-6 应拆成哪些可执行 slices？ → 拆成三片：1) Changelog Drafter ConsumerAdapter Review Artifact；2) Changelog Drafter Workflow Auto Draft Evidence；3) Changelog Drafter Docs And Release Gate Alignment。 (代码探索显示 runner 已存在，但 ConsumerAdapter 只注册 roadmap activation；GitHub workflow 只有输入 draft request 时才 live-draft，tag push 仍主要是 report。优先补 orchestration review artifact 主路径，再接 workflow 自动 draft evidence，最后更新 docs/gate。)
 
 **当前子树：**
-├── [x][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
-│   ... 6 more child nodes; run tree 1-4-1 --depth 2 for full view
-├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
-├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
-│   ... 4 more child nodes; run tree 1-4-3 --depth 2 for full view
-├── [x][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
-│   ... 3 more child nodes; run tree 1-4-4 --depth 2 for full view
-├── [x][Y+] 1-4-5. GitHub 与 GitLab Provider Parity
-│   ... 5 more child nodes; run tree 1-4-5 --depth 2 for full view
-└── [ ][X+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
+├── [x][Y+] 1-4-6-1. Changelog Drafter ConsumerAdapter Review Artifact
+├── [x][Y+] 1-4-6-2. Changelog Drafter Workflow Auto Draft Evidence
+└── [ ][Y+] 1-4-6-3. Changelog Drafter Docs And Release Gate Alignment
 <!-- ROADMAP_SECTION_END -->

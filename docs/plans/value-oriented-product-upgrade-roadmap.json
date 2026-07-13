@@ -1498,11 +1498,51 @@
     "1-4-6": {
       "id": "1-4-6",
       "label": "Changelog Drafter 自动产出 Draft Artifact 与 Draft PR",
-      "status": "pending",
-      "mode": "explore",
+      "status": "in_progress",
+      "mode": "exploit",
       "parent": "1-4",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-4-6-1",
+        "1-4-6-2",
+        "1-4-6-3"
+      ],
+      "decisions": [
+        {
+          "q": "1-4-6 的范围是重造 runner 还是补齐自动触发/编排链路？",
+          "answer": "补齐自动触发/编排链路，不重造 Changelog Drafter runner。现有 runner 已支持 guarded draft-evidence / draft-pr、固定确认短语、GitHub workflow、draft request replay 和 live runner 测试。",
+          "note": "目标链路收敛为 release-window signal -> Route Decision -> changelog-drafter-draft-request -> guarded live draft artifact / draft PR -> review artifact；GitLab live draft MR 继续明确拒绝，后续单独节点再提升。"
+        },
+        {
+          "q": "Changelog Drafter 的自动产出默认生成 draft-evidence 还是 draft-pr？",
+          "answer": "默认生成 draft-evidence，允许显式升级到 draft-pr。",
+          "note": "默认路径以低风险 review artifact 为主；draft-pr 需要通过固定确认短语或 workflow input 显式选择 draft_mode=pr，避免 release/changelog 语义被过早写入 PR。"
+        },
+        {
+          "q": "Changelog Drafter 的自动触发来源是只允许 workflow_dispatch，还是允许 release-window signal 自动进入？",
+          "answer": "两者都支持；主路径是 release-window signal 自动进入 Route Decision，workflow_dispatch 保留为手动 replay、dogfood、修复入口。",
+          "note": "Route Decision 只生成 changelog-drafter-draft-request，不直接写 changelog、不创建 PR、不发布；副作用仍由 guarded runner 执行。"
+        },
+        {
+          "q": "Changelog Drafter runner 是否必须只消费 changelog-drafter-draft-request？",
+          "answer": "必须。Runner 只消费 changelog-drafter-draft-request，不能直接消费 changelog-drafter-report 或 release-window signal。",
+          "note": "固定链路为 release-window signal -> Route Decision -> changelog-drafter-draft-request -> Changelog Drafter runner；report 只负责观察和记录，draft-request 才是进入副作用边界的 activation carrier。"
+        },
+        {
+          "q": "Changelog Drafter 自动产出的结果证据主 truth 放在哪里？",
+          "answer": "两层都要，但主 truth 放 orchestration review artifact；zj-loop/changelog-drafter-state.md 只保存低成本状态摘要和可回放索引。",
+          "note": "draft evidence / draft PR 是一次执行的 reviewable outcome，应绑定本次 orchestration；state 文件用于 dedupe、resume、历史索引，不承载完整结果。"
+        },
+        {
+          "q": "Changelog Drafter 自动产出失败后是否自动重试？",
+          "answer": "不自动重试；生成 structured hard stop / escalation evidence。",
+          "note": "同一个 draft request 失败后停在可回放证据上，避免 release/changelog 链路循环；需要 retry 时创建新的 draft request，或由 human/automation 显式 resume。"
+        },
+        {
+          "q": "1-4-6 应拆成哪些可执行 slices？",
+          "answer": "拆成三片：1) Changelog Drafter ConsumerAdapter Review Artifact；2) Changelog Drafter Workflow Auto Draft Evidence；3) Changelog Drafter Docs And Release Gate Alignment。",
+          "note": "代码探索显示 runner 已存在，但 ConsumerAdapter 只注册 roadmap activation；GitHub workflow 只有输入 draft request 时才 live-draft，tag push 仍主要是 report。优先补 orchestration review artifact 主路径，再接 workflow 自动 draft evidence，最后更新 docs/gate。"
+        }
+      ],
       "notes": ""
     },
     "1-4-5-1": {
@@ -1638,11 +1678,62 @@
         }
       ],
       "notes": "Completed provider parity release gate/docs closeout. ci-validate-gates now runs npm run test:provider-parity-gate, which includes route-family provider parity evidence tests plus gate main logic. README.zh-CN clarifies provider parity does not mean all GitLab routes are live-supported. Provider parity architecture Release Gate Expectations now lists route-family evidence inventory. Verification: npm run test:provider-parity-gate; bash scripts/ci-validate-gates.sh; git diff --check."
+    },
+    "1-4-6-1": {
+      "id": "1-4-6-1",
+      "label": "Changelog Drafter ConsumerAdapter Review Artifact",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented Changelog Drafter ConsumerAdapter review artifact path. dispatchSignal auto mode now writes zj-loop/orchestrations/<orchestration_id>/draft-plan.json for changelog-drafter-draft-request and hard-stops when payload.changelog_draft_request is missing. Verification: npm test --prefix tools/zj-loop-core -- --test-name-pattern 'Changelog Drafter'; bash scripts/ci-validate-gates.sh; git diff --check."
+    },
+    "1-4-6-2": {
+      "id": "1-4-6-2",
+      "label": "Changelog Drafter Workflow Auto Draft Evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Changelog Drafter workflow 自动产出应直接调用 runner CLI，还是主路径走 zj-loop-dispatch orchestration？",
+          "answer": "主路径走 zj-loop-dispatch structured orchestration；直接 runner CLI 只保留为低层调试/兼容入口。",
+          "note": "Workflow 应构造 zj-loop.signal.v1，intent=draft_changelog，payload 带 changelog_draft_request，通过 zj-loop-dispatch --mode auto 生成 orchestration review artifact；只有显式进入 live runner 时才写 draft evidence 或 draft PR。"
+        },
+        {
+          "q": "Workflow 是否默认直接执行 live-draft 写入 draft evidence？",
+          "answer": "默认只自动生成 draft-plan.json；只有提供固定确认短语 CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE 时，才执行 live-draft 写入 draft-evidence。",
+          "note": "draft-plan.json 是低风险 orchestration review artifact；draft-artifacts/changelog-draft.md 属于 repo 文件写入的 live side effect，并伴随 release 语义、循环、权限上下文和审计边界风险。"
+        },
+        {
+          "q": "Workflow 没有 changelog_draft_request_json 时是否从 tag push / release-window 自动构造 draft request？",
+          "answer": "暂时不直接从 tag push 自动构造 draft request；必须先有 changelog-drafter-report 或等价 release-window report evidence，再生成 draft request。",
+          "note": "Tag push 直接生成 draft request 会绕过 report-only 层，削弱 human gate、dedupe 和 release-window 风险判断；report -> draft-request 自动编排应作为独立路径处理。"
+        },
+        {
+          "q": "1-4-6-2 是否同步升级 GitLab CI fragment？",
+          "answer": "要，但只做到 orchestration draft-plan.json parity，不做 GitLab live draft MR。",
+          "note": "GitHub workflow 与 GitLab CI fragment 都支持 changelog_draft_request_json -> zj-loop-dispatch auto -> draft-plan.json；GitHub 固定短语可继续 live-draft，GitLab live draft MR 继续明确拒绝，留给后续专门节点。"
+        }
+      ],
+      "notes": "Implemented workflow auto draft evidence orchestration path. GitHub workflow and GitLab CI fragment now turn changelog_draft_request_json into zj-loop.signal.v1, run zj-loop-dispatch --mode auto, and upload orchestration/draft-plan artifacts. Default remains draft-plan only; GitHub live-draft still requires CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE; GitLab live draft MR remains unsupported. Verification: npm test --prefix tools/zj-loop-init -- --test-name-pattern 'github-actions|gitlab-ci'; npm run test:provider-parity-gate; bash scripts/ci-validate-gates.sh; git diff --check."
+    },
+    "1-4-6-3": {
+      "id": "1-4-6-3",
+      "label": "Changelog Drafter Docs And Release Gate Alignment",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 23:29:15",
+    "updated": "2026-07-14 00:14:21",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

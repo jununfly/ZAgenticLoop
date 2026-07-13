@@ -47,6 +47,24 @@ routes:
       scopes: ["roadmap-activation", "branch-pr"]
       verifiers: ["activation-contract", "roadmap-branch-contract"]
       max_side_effect_level: "branch"
+  - route_id: "changelog-drafter-draft-request"
+    enabled: true
+    request_kind: "draft-request"
+    consumer: "changelog-drafter"
+    consumer_kind: "draft-consumer"
+    execution:
+      mode: "request-only"
+      side_effect_level: "draft-pr"
+      completion_forms: ["draft-pr", "draft-evidence", "escalation-issue"]
+      recent_success_evidence:
+        - "https://example.test/run/changelog-drafter"
+    maturity:
+      protocol: "execution-ready"
+      runner: "execution-ready"
+    capabilities:
+      scopes: ["release-window", "draft-artifact"]
+      verifiers: ["draft-request-contract", "reviewable-draft-outcome"]
+      max_side_effect_level: "draft-pr"
 `;
 
 async function setupProject() {
@@ -219,6 +237,146 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
     assert.equal(contractPlan.branchName.startsWith('zjal-'), true);
     assert.equal(contractPlan.reviewTitle, 'Roadmap Activation: Implement consumer adapter');
     assert.equal(contractPlan.prTitle, 'Roadmap Activation: Implement consumer adapter');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch auto mode creates a Changelog Drafter draft-plan review artifact', async () => {
+  const dir = await setupProject();
+  try {
+    const signalPath = path.join(dir, 'changelog-signal.json');
+    await writeFile(signalPath, JSON.stringify({
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-changelog-v0.1.2-v0.1.3',
+      source: 'workflow_dispatch',
+      provider: 'github',
+      subject: {
+        kind: 'local_goal',
+        id: 'release-window-v0.1.2-v0.1.3',
+      },
+      intent: 'draft_changelog',
+      payload: {
+        changelog_draft_request: {
+          schema: 'zj-loop.changelog_draft_request.v1',
+          route_id: 'changelog-drafter-draft-request',
+          status: 'draft-request-candidate',
+          dedupe_key: 'changelog:main:v0.1.2..v0.1.3',
+          summary: 'Draft release notes for the next package release.',
+          release_window: {
+            repo: 'jununfly/ZAgenticLoop',
+            base_branch: 'main',
+            since_ref: 'v0.1.2',
+            until_ref: 'v0.1.3',
+            item_count: 4,
+          },
+          human_gate: {
+            required: false,
+          },
+          side_effects: {
+            tag_created: false,
+            release_created: false,
+            package_published: false,
+          },
+        },
+      },
+    }, null, 2));
+
+    const result = spawnSync(process.execPath, [
+      CLI,
+      '--root',
+      dir,
+      '--signal',
+      signalPath,
+      '--mode',
+      'auto',
+      '--now',
+      '2026-07-13T00:03:00.000Z',
+    ], { encoding: 'utf8' });
+
+    assert.equal(result.status, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.status, 'executed_to_review_artifact');
+    assert.equal(output.route_decision.route, 'changelog-drafter-draft-request');
+    assert.equal(output.consumer_run_plan.status, 'ready');
+    assert.equal(output.review_artifact.kind, 'structured-evidence');
+    assert.equal(output.review_artifact.path, `zj-loop/orchestrations/${output.orchestration_id}/draft-plan.json`);
+    assert.equal(output.closeout_hint.required, true);
+
+    assert.equal(output.consumer_adapter_result.schema, 'zj-loop.consumer_adapter_result.v1');
+    assert.equal(output.consumer_adapter_result.route_id, 'changelog-drafter-draft-request');
+    assert.equal(output.consumer_adapter_result.consumer, 'changelog-drafter');
+    assert.equal(output.consumer_adapter_result.consumer_kind, 'draft-consumer');
+    assert.equal(output.consumer_adapter_result.adapter_status, 'executed_to_review_artifact');
+    assert.deepEqual(output.consumer_adapter_result.live_side_effects, {
+      attempted: false,
+      reason: 'review-artifact runner only',
+    });
+    assert.equal(output.consumer_adapter_result.review_artifacts[0].path, output.review_artifact.path);
+    assert.equal(output.consumer_adapter_result.review_artifacts[0].kind, 'draft-plan');
+    assert.equal(output.consumer_adapter_result.review_artifacts[0].schema, 'zj-loop.changelog_drafter_live_runner_plan.v1');
+
+    const draftPlan = JSON.parse(await readFile(path.join(dir, output.review_artifact.path), 'utf8'));
+    assert.equal(draftPlan.kind, 'zj-loop.changelog-drafter-live-runner-plan');
+    assert.equal(draftPlan.route_id, 'changelog-drafter-draft-request');
+    assert.equal(draftPlan.mode, 'dry-run');
+    assert.equal(draftPlan.draft_mode, 'evidence');
+    assert.equal(draftPlan.status, 'dry-run');
+    assert.equal(draftPlan.release_window.repo, 'jununfly/ZAgenticLoop');
+    assert.equal(draftPlan.release_window.since_ref, 'v0.1.2');
+    assert.equal(draftPlan.release_window.until_ref, 'v0.1.3');
+    assert.deepEqual(draftPlan.actions.map((action) => action.name), ['write-draft-evidence']);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch hard stops Changelog Drafter when draft request carrier is missing', async () => {
+  const dir = await setupProject();
+  try {
+    const signalPath = path.join(dir, 'changelog-signal.json');
+    await writeFile(signalPath, JSON.stringify({
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-changelog-missing-request',
+      source: 'workflow_dispatch',
+      provider: 'github',
+      subject: {
+        kind: 'local_goal',
+        id: 'release-window-v0.1.2-v0.1.3',
+      },
+      intent: 'draft_changelog',
+      payload: {
+        release_window: {
+          repo: 'jununfly/ZAgenticLoop',
+          base_branch: 'main',
+          since_ref: 'v0.1.2',
+          until_ref: 'v0.1.3',
+        },
+      },
+    }, null, 2));
+
+    const result = spawnSync(process.execPath, [
+      CLI,
+      '--root',
+      dir,
+      '--signal',
+      signalPath,
+      '--mode',
+      'auto',
+      '--now',
+      '2026-07-13T00:04:00.000Z',
+    ], { encoding: 'utf8' });
+
+    assert.equal(result.status, 2);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.status, 'hard_stopped');
+    assert.equal(output.route_decision.route, 'changelog-drafter-draft-request');
+    assert.equal(output.review_artifact.kind, 'hard-stop');
+    assert.match(output.review_artifact.description, /missing-changelog-draft-request/);
+    assert.equal(output.consumer_adapter_result.route_id, 'changelog-drafter-draft-request');
+    assert.equal(output.consumer_adapter_result.adapter_status, 'hard_stopped');
+    assert.equal(output.consumer_adapter_result.stop_signal.reason, 'missing-changelog-draft-request');
+    assert.deepEqual(output.consumer_adapter_result.review_artifacts, []);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

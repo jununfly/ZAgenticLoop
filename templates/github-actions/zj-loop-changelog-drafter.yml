@@ -55,10 +55,9 @@ jobs:
           npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-consumer plan changelog-drafter-report --json > consumer-plan.json || true
           if [ -n "$CHANGELOG_DRAFT_REQUEST_JSON" ]; then
             printf '%s\n' "$CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json
-            npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-changelog-drafter draft-plan \
-              --request changelog-draft-request.json \
-              --draft-mode "$DRAFT_MODE" \
-              --json > draft-plan.json || true
+            node -e "const fs = require('fs'); const request = JSON.parse(fs.readFileSync('changelog-draft-request.json', 'utf8')); const signal = { schema: 'zj-loop.signal.v1', signal_id: process.env.GITHUB_RUN_ID || 'manual', source: 'workflow_dispatch', provider: 'github', subject: { kind: 'local_goal', id: request.dedupe_key || 'changelog-draft-request' }, intent: 'draft_changelog', payload: { changelog_draft_request: request, draft_mode: process.env.DRAFT_MODE || 'evidence' } }; fs.writeFileSync('changelog-signal.json', JSON.stringify(signal, null, 2) + '\n');"
+            npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-dispatch --signal changelog-signal.json --mode auto --format json > orchestration.json || true
+            node -e "const fs = require('fs'); if (fs.existsSync('orchestration.json')) { const orchestration = JSON.parse(fs.readFileSync('orchestration.json', 'utf8')); const artifact = orchestration.review_artifact && orchestration.review_artifact.path; if (artifact && fs.existsSync(artifact)) fs.copyFileSync(artifact, 'draft-plan.json'); }"
             [ -f draft-plan.json ] && cat draft-plan.json >> "$GITHUB_STEP_SUMMARY"
             if [ -n "$CONFIRM_LIVE_DRAFT" ]; then
               npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-changelog-drafter live-draft \
@@ -84,6 +83,8 @@ jobs:
             route-decision.json
             consumer-plan.json
             changelog-draft-request.json
+            changelog-signal.json
+            orchestration.json
             draft-plan.json
             live-draft-result.json
             draft-artifacts/changelog-draft.md
