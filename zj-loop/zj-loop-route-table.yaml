@@ -45,6 +45,13 @@ routes:
       risk: ["high", "unknown"]
     guards:
       requires_human_review: true
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["template:zj-loop-route-table.yaml.template", "docs:provider-adapter-parity-architecture"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["template:zj-loop-route-table.yaml.template", "docs:provider-adapter-parity-architecture"]
     dedupe_window: "24h"
     failure_owner: "maintainer"
     human_gate: "always"
@@ -70,6 +77,13 @@ routes:
       route: ["ignore"]
     guards:
       requires_noise_reason: true
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["template:zj-loop-route-table.yaml.template", "docs:provider-adapter-parity-architecture"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["template:zj-loop-route-table.yaml.template", "docs:provider-adapter-parity-architecture"]
     dedupe_window: "24h"
     failure_owner: "daily-triage"
     human_gate: "none"
@@ -95,6 +109,13 @@ routes:
       route: ["daily-triage"]
     guards:
       side_effects_allowed: false
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["workflow:zj-loop-daily-triage.yml", "replay:zj-loop/STATE.md"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-daily-triage.yml", "test:provider-parity-gate"]
     dedupe_window: "24h"
     failure_owner: "daily-triage"
     human_gate: "on ambiguity or high risk"
@@ -121,6 +142,13 @@ routes:
       route: ["manual-smoke-report"]
     guards:
       side_effects_allowed: false
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["workflow:zj-loop-smoke.yml", "test:provider-parity-gate"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-smoke.yml", "test:provider-parity-gate"]
     dedupe_window: "workflow_run"
     failure_owner: "maintainer"
     human_gate: "none"
@@ -164,6 +192,13 @@ routes:
         - "already-recorded"
         - "rejected"
         - "routed-to-human-review"
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["workflow:zj-loop-issue-triage.yml", "replay:zj-loop/issue-triage-state.md"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-issue-triage.yml", "test:provider-parity-gate"]
     dedupe_window: "issue-backlog-triage:<repo>:<scan_window>:<signal_kind>:<subject>"
     failure_owner: "issue-triage"
     human_gate: "only for high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, public comment, or label mutation"
@@ -210,6 +245,13 @@ routes:
         - "skipped"
         - "rejected"
         - "escalated"
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["workflow:zj-loop-issue-triage.yml", "replay:zj-loop/issue-triage-state.md"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-issue-triage.yml", "test:provider-parity-gate"]
     dedupe_window: "issue-triage-action:<repo>:<issue>:<requested_action>:<action_value>"
     failure_owner: "issue-triage-action"
     human_gate: "required for unsupported labels, freeform comments, high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, assignment, milestone, close/reopen, or batch mutation"
@@ -254,6 +296,13 @@ routes:
         - "confirmed"
         - "rejected"
         - "escalated"
+    provider_support:
+      github:
+        status: "live-supported"
+        evidence: ["workflow:zj-loop-issue-triage.yml", "dogfood-run:https://github.com/jununfly/ZAgenticLoop/issues/7"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-issue-triage.yml", "test:provider-parity-gate"]
     dedupe_window: "issue-triage-transition:<repo>:<issue>:<recommended_state>:<request_id>"
     failure_owner: "issue-triage-transition"
     human_gate: "required for wontfix, unauthorized actors, mismatched confirmation command, missing fixed confirmation phrase, risk flags, tracker mutation, close/reopen, assignment, milestone, batch mutation, or any trusted automation path outside ready-for-agent request-carrier creation"
@@ -284,6 +333,13 @@ routes:
       label_changes_allowed: false
       rebase_allowed: false
       merge_allowed: false
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["workflow:zj-loop-pr-steward.yml", "replay:zj-loop/pr-steward-state.md"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-pr-steward.yml", "test:provider-parity-gate"]
     dedupe_window: "pr_number:action"
     failure_owner: "pr-steward"
     human_gate: "before comments, labels, rebase, merge, or fix request creation"
@@ -331,6 +387,13 @@ routes:
       branch_creation_allowed_during_claim: false
       fix_pr_creation_allowed_during_claim: false
       fix_consumer_allowlist: ["pr-steward"]
+    provider_support:
+      github:
+        status: "live-supported"
+        evidence: ["workflow:zj-loop-pr-steward.yml", "dogfood-run:https://github.com/jununfly/ZAgenticLoop/actions/runs/29237613749"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-pr-steward.yml", "test:provider-parity-gate"]
     dedupe_window: "pr:repo:pr_number:head_sha:checks"
     failure_owner: "pr-steward"
     human_gate: "before source PR comments, labels, rebase, merge, workflow dispatch, repair, branch creation, or Fix PR creation"
@@ -365,6 +428,13 @@ routes:
       create_pr_only: true
       auto_merge: false
       fix_consumer_allowlist: ["ci-sweeper", "pr-steward", "dependency-sweeper"]
+    provider_support:
+      github:
+        status: "live-supported"
+        evidence: ["workflow:zj-loop-ci-sweeper.yml", "dogfood-run:https://github.com/jununfly/ZAgenticLoop/actions/runs/28790735629"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-ci-sweeper.yml", "test:provider-parity-gate"]
     dedupe_window: "source_run_id"
     failure_owner: "ci-sweeper"
     human_gate: "when deterministic repair creates no diff or gates still fail"
@@ -403,6 +473,13 @@ routes:
       repair_allowed_during_claim: false
       auto_merge: false
       fix_consumer_allowlist: ["dependency-sweeper"]
+    provider_support:
+      github:
+        status: "live-supported"
+        evidence: ["workflow:zj-loop-dependency-sweeper.yml", "dogfood-run:https://github.com/jununfly/ZAgenticLoop/actions/runs/29234374181"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-dependency-sweeper.yml", "test:provider-parity-gate"]
     dedupe_window: "package:update_type:target_version"
     failure_owner: "dependency-sweeper"
     human_gate: "major, high risk, critical CVE, denylisted package, or verifier failure"
@@ -438,6 +515,13 @@ routes:
       package_publish_allowed: false
       workflow_dispatch_allowed: false
       human_review_required_on: ["breaking_change", "security", "major_version", "scan_window_too_large"]
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["workflow:zj-loop-changelog-drafter.yml", "replay:zj-loop/changelog-drafter-state.md"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-changelog-drafter.yml", "test:provider-parity-gate"]
     dedupe_window: "changelog:repo:base_branch:since_ref:until_ref"
     failure_owner: "changelog-drafter"
     human_gate: "breaking change, security note, major version, or scan window above 50 items"
@@ -473,6 +557,13 @@ routes:
       release_allowed: false
       package_publish_allowed: false
       workflow_dispatch_allowed: false
+    provider_support:
+      github:
+        status: "live-supported"
+        evidence: ["workflow:zj-loop-changelog-drafter.yml", "dogfood-run:https://github.com/jununfly/ZAgenticLoop/actions/runs/29247657726"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-changelog-drafter.yml", "test:provider-parity-gate"]
     dedupe_window: "draft-request:changelog:repo:base_branch:since_ref:until_ref"
     failure_owner: "changelog-drafter"
     human_gate: "breaking change, security note, major version, or scan window above 50 items before draft request"
@@ -508,6 +599,13 @@ routes:
       consumer_allowed: true
       create_roadmap_artifacts: false
       append_only_comments: true
+    provider_support:
+      github:
+        status: "live-supported"
+        evidence: ["workflow:zj-loop-roadmap-activation.yml", "dogfood-run:https://github.com/jununfly/ZAgenticLoop/issues/19#issuecomment-4893007904"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-roadmap-activation.yml", "test:provider-parity-gate"]
     dedupe_window: "active-pending-request"
     failure_owner: "roadmap-sliced-development"
     human_gate: "maintainer/collaborator command required"
@@ -547,6 +645,13 @@ routes:
       branch_prefix_allowlist: ["zjal-", "zjal/"]
       close_carrier_issue_only: true
       auto_merge: false
+    provider_support:
+      github:
+        status: "dry-run-supported"
+        evidence: ["workflow:zj-loop-post-merge-cleanup.yml", "replay:zj-loop/post-merge-state.md"]
+      gitlab:
+        status: "dry-run-supported"
+        evidence: ["gitlab-ci:zj-loop-post-merge-cleanup.yml", "test:provider-parity-gate"]
     dedupe_window: "pr_number"
     failure_owner: "post-merge-cleanup"
     human_gate: "only when contract is missing, invalid, ambiguous, or asks for broader cleanup"

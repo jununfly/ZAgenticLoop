@@ -797,6 +797,7 @@ function normalizeRouteSection(routes, section) {
             destructive,
             side_effecting: sideEffecting,
             guards: route.guards ?? {},
+            provider_support: route.provider_support ?? {},
         };
         return {
             ...statusWithoutAutomation,
@@ -825,7 +826,25 @@ export function buildRouteAutomationModel(route) {
             required_confirmation: route.side_effecting && !route.enabled ? expectedConfirmationPhrase(route) : null,
             blocked_reasons: blockedReasons,
         },
+        provider_context: buildProviderContext(route.provider_support),
     };
+}
+function buildProviderContext(providerSupport) {
+    return Object.fromEntries(Object.entries(providerSupport).map(([provider, support]) => {
+        const status = support.status ?? 'blocked-with-follow-up';
+        const context = {
+            status,
+            execution_supported: status === 'live-supported',
+            dry_run_supported: status === 'dry-run-supported',
+        };
+        if (status === 'explicitly-refused-with-reason' && support.reason) {
+            context.blocked_reason = support.reason;
+        }
+        if (status === 'blocked-with-follow-up') {
+            context.blocked_reason = support.blocker ?? support.follow_up;
+        }
+        return [provider, context];
+    }));
 }
 export function classifyRouteReadiness(input) {
     const evidence = input.recentSuccessEvidence ?? [];

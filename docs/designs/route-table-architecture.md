@@ -220,9 +220,19 @@ Recommended fields:
 | `request_kind` | `issue-fix-request`, `activation-comment`, `workflow-dispatch`, or `report-only`. |
 | `consumer` | Owning pattern, workflow, or skill. |
 | `evidence_store` | Where request lifecycle evidence/status is recorded; this must point to an allowed evidence target, not a central queue. |
+| `provider_support` | Per-provider capability inventory. This is evidence for GitHub/GitLab support, not route authorization. |
 | `dedupe_window` | Time or lifecycle window for duplicate suppression. |
 | `failure_owner` | Component responsible for recovery after request creation. |
 | `human_gate` | Conditions that require human review. |
+
+`provider_support` is required for every generated Route Table row. Supported
+provider status values are `live-supported`, `dry-run-supported`,
+`explicitly-refused-with-reason`, and `blocked-with-follow-up`. Evidence entries
+use fixed low-cost prefixes such as `template:`, `workflow:`, `gitlab-ci:`,
+`test:`, `replay:`, `artifact:`, `dogfood-run:`, `runner:`, `docs:`, `issue:`,
+and `follow-up:`. Missing or illegal values fail the provider parity gate.
+Provider support does not make a route executable by itself; `enabled`,
+`execution`, `maturity`, and `guards` remain the authorization boundary.
 
 ## Default Scaffold Contract
 
@@ -315,9 +325,25 @@ separate columns. In JSON output, each route includes `automation_model`:
     "execution_allowed": false,
     "required_confirmation": "enable ci-sweeper side effects",
     "blocked_reasons": ["route disabled", "route is not execution-ready"]
+  },
+  "provider_context": {
+    "github": {
+      "status": "live-supported",
+      "execution_supported": true,
+      "dry_run_supported": false
+    },
+    "gitlab": {
+      "status": "dry-run-supported",
+      "execution_supported": false,
+      "dry_run_supported": true
+    }
   }
 }
 ```
+
+`provider_context` is a machine-readable projection of `provider_support`.
+It helps runners and audits explain provider capability, but it does not
+override route enablement, maturity, or guard checks.
 
 Runner maturity promotion is also deterministic:
 

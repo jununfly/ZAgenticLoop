@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 19:54:11
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 20:48:32
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -27,7 +27,7 @@
 │   ├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
 │   ├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
 │   ├── [x][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
-│   ├── [ ][X+] 1-4-5. GitHub 与 GitLab Provider Parity
+│   ├── [~][Y+] 1-4-5. GitHub 与 GitLab Provider Parity
 │   └── [ ][X+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
 ├── [ ][X+] 1-5. 前提条件、安全与成本包络
 │   ├── [ ][X+] 1-5-1. 权限、凭证与 Actor 能力探测
@@ -67,26 +67,24 @@
     ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
     └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
 
-### 当前施工：1-4. Consumer Runner 全链路执行能力
+### 当前施工：1-4-5. GitHub 与 GitLab Provider Parity
 
-Starting grill for Consumer Runner full-chain execution. Existing consumers have route-specific plan/live functions; the main design question is how zj-loop-dispatch invokes them through a stable bounded consumer adapter without flattening all consumers into fix runners.
+Provider parity is the next execution focus. Goal: align GitLab support to the current GitHub route baseline, keep route protocols platform-neutral, and make any remaining provider-specific gaps explicit through deterministic gates and durable docs.
 
 **决策：**
-- Q: Consumer Runner 的边界是什么？ → 每个 consumer 都要到自己的 bounded completion form；不把所有 consumer 简化成 fix runner，也不允许 producer/report route 直接做 worker side effects。 (来自 route-consumer-execution-architecture.md 的 Consumer Kinds 和 Completion Forms。)
-- Q: zj-loop-dispatch 在 execution_allowed=true 时如何调用各个 consumer runner？ → 新增 core 内部 ConsumerAdapter/runConsumerToReviewArtifact 层，而不是让 dispatch-runner 直接 import 每个具体 runner 的 live 函数。适配层接收 root、signal、orchestration、route、consumerRunPlan、mode，返回统一的 executed_to_review_artifact 或 hard_stopped 结果。 (内部可按 route.consumer_kind/route_id 分发到具体 runner，但每个 runner 保留自己的 bounded completion form；zj-loop-dispatch 只懂编排，不懂具体 consumer 业务细节。)
-- Q: zj-loop-dispatch --mode auto 是否直接执行所有 route 的 live side effects？ → 分两层执行能力：review-artifact runner 默认可被 auto 调用，目标是生成 PR/MR/draft/comment/evidence/plan 等可审查产物；live-side-effect runner 只在 route execution_allowed、request verifier、provider permission、预算和 safety gates 全过时运行。 (每个 consumer 必须显式实现 live adapter，不能靠通用 fallback 猜测真实 side effects；这样保持默认自动化，同时避免误触发外部副作用。)
-- Q: 1-4 的优先实现顺序先做哪类 consumer？ → 先做 activation-consumer，也就是 roadmap-sliced-development。第一阶段聚焦 ConsumerAdapter 基座 + Roadmap Activation review-artifact runner，而不是先做 CI/Dependency/PR Steward。 (这是默认自动 loop 的核心体验：Signal/Issue -> Activation -> Roadmap Branch/PR；它也最能检验 adapter 是否能保持非 fix-runner 的 bounded lifecycle 边界。)
-- Q: 分阶段实现是否会导致其他 agent 误以为 Roadmap Activation 已经完成？ → 会。按倒推逻辑，父节点必须表达完整目标，阶段性工作必须拆成子节点；第一个子节点只承接 review-artifact runner，不把它误标为 live branch/PR runner 完成。 (这样 roadmap 状态可以显示第一阶段完成但 1-4-1 父节点仍未完成，避免后续 agent 产生 job-is-done 错觉。)
-- Q: Phased Consumer Runner work may mislead future agents into treating a partial phase as complete. How should the roadmap prevent that? → Model the complete target as the parent node, put the first phase in an explicit child node, and keep parent completion blocked until all required child capabilities and evidence gates are complete.
+- Q: 是否先做 GitHub 与 GitLab Provider Parity，再做 Changelog Drafter 自动 Draft Artifact / Draft PR-MR？ → 是。 (Provider Parity 是 1-4-6 的地基；先对齐 GitHub baseline 与 GitLab 全 route 能力，避免 Changelog Drafter 自动 draft 先做成 GitHub-only 路径后再补 GitLab，造成长期割裂。)
+- Q: 1-4-5 的成功标准是否定义为每个 GitHub route family 都有 GitLab 模板 + provider-aware runner/dry-run/live refusal 或 live evidence + deterministic gate 覆盖，而不是要求每条 route 都已 GitLab live 执行？ → 要。 (每条 route 必须有明确 provider parity 状态：live-supported、dry-run-supported、explicitly-refused-with-reason 或 blocked-with-follow-up。这样避免一次性打开高风险 GitLab live side effects，同时不能只靠 prose 声称未来支持。)
+- Q: Provider parity 状态矩阵是否放进 Route Table 模板作为每条 route 的结构化字段，并由 validate-provider-parity-gate 检查？ → 要。 (Route Table 是每条 route 的执行、授权、成熟度真相源；provider_support 也应成为可检查事实，避免只放 docs 导致 Agent 忽略，或放 registry 造成 route 运行能力割裂。)
+- Q: provider_support 是否必须进入 RouteStatus / zj-loop-route status --json 输出，而不是只让 provider parity gate 私下读取 YAML？ → 必须进入。 (Provider parity 是 Agent 判断某 route 在 GitHub/GitLab 上应 live、dry-run、显式拒绝还是 blocked 的运行时事实。status --json 必须暴露它；但它只表达 provider 能力状态，不等同于 route enablement，也不授权 live side effects。)
+- Q: provider_support.<provider>.status 枚举是否固定为 live-supported、dry-run-supported、explicitly-refused-with-reason、blocked-with-follow-up，且不允许 unknown？ → 同意。 (该字段用于消灭 unknown。缺字段或非法值应让 provider parity gate fail。live-supported 仍不授权执行；dry-run-supported 表示 provider-aware plan/evidence 可生成；explicitly-refused-with-reason 必须带拒绝理由；blocked-with-follow-up 必须带 follow-up/blocker。)
+- Q: provider_support 每个 provider 的最小结构是否固定为 status + evidence[]，并按状态要求额外字段？ → 同意。 (live-supported 必须有 live/dogfood/runner evidence；dry-run-supported 必须有 template/test/artifact/replay evidence；explicitly-refused-with-reason 必须有 reason 和 evidence[]；blocked-with-follow-up 必须有 blocker 和 follow_up，evidence[] 可为空但建议有。)
+- Q: provider_support.*.evidence[] 是否只允许固定前缀，避免自由散文？ → 同意。 (先允许 template:、workflow:、gitlab-ci:、test:、replay:、artifact:、dogfood-run:、runner:、docs:、issue:、follow-up:。第一层 gate 检查前缀合法；后续 hardening 再验证本地文件存在或远端 run 可访问。)
+- Q: provider_support 是否第一阶段不直接参与 automation_model.authorization.execution_allowed，只进入 provider_context；未来显式 target_provider 时再参与该次执行的 blocked reason？ → 同意。 (Route-level authorization 继续只看 route enablement + maturity，避免 GitLab dry-run/blocked 状态误伤 GitHub ready 能力。provider_support 暴露为 provider_context；显式 --provider gitlab/github 的执行路径再把 provider status 纳入 blocked reason。)
 
 **当前子树：**
-├── [x][Y+] 1-4-1. Roadmap Activation ConsumerAdapter 全链路执行能力
-│   ... 6 more child nodes; run tree 1-4-1 --depth 2 for full view
-├── [x][Y+] 1-4-2. Issue Backlog Triage 到 Transition 的自动链路
-├── [x][Y+] 1-4-3. CI、Dependency、PR Steward Fix Runner 提升
-│   ... 4 more child nodes; run tree 1-4-3 --depth 2 for full view
-├── [x][Y+] 1-4-4. Changelog Drafter 与 Release Draft Consumer 提升
-│   ... 3 more child nodes; run tree 1-4-4 --depth 2 for full view
-├── [ ][X+] 1-4-5. GitHub 与 GitLab Provider Parity
-└── [ ][X+] 1-4-6. Changelog Drafter 自动产出 Draft Artifact 与 Draft PR
+├── [x][Y+] 1-4-5-1. Provider Parity Gap Inventory
+├── [ ][Y+] 1-4-5-2. GitLab Generated CI Scaffold Parity
+├── [ ][Y+] 1-4-5-3. Provider Adapter API Helpers
+├── [ ][Y+] 1-4-5-4. Route Family Provider Parity Evidence
+└── [ ][Y+] 1-4-5-5. Provider Parity Release Gates And Docs
 <!-- ROADMAP_SECTION_END -->

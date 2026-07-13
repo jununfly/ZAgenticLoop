@@ -30,7 +30,24 @@ export type RouteTableRoute = {
   guards?: Record<string, unknown>;
   evidence_store?: string;
   enabled_reason?: string;
+  provider_support?: RouteProviderSupport;
 };
+
+export type RouteProviderSupportStatus =
+  | 'live-supported'
+  | 'dry-run-supported'
+  | 'explicitly-refused-with-reason'
+  | 'blocked-with-follow-up';
+
+export type RouteProviderSupportEntry = {
+  status?: RouteProviderSupportStatus | string;
+  evidence?: string[];
+  reason?: string;
+  blocker?: string;
+  follow_up?: string;
+};
+
+export type RouteProviderSupport = Record<string, RouteProviderSupportEntry>;
 
 export type RouteTableDocument = {
   schemaVersion?: number;
@@ -64,6 +81,7 @@ export type RouteStatus = {
   destructive: boolean;
   side_effecting: boolean;
   guards: Record<string, unknown>;
+  provider_support: RouteProviderSupport;
   automation_model: RouteAutomationModel;
 };
 
@@ -82,6 +100,12 @@ export type RouteAutomationModel = {
     required_confirmation: string | null;
     blocked_reasons: string[];
   };
+  provider_context: Record<string, {
+    status: string;
+    execution_supported: boolean;
+    dry_run_supported: boolean;
+    blocked_reason?: string;
+  }>;
 };
 
 export type RouteReadiness =
@@ -1122,6 +1146,7 @@ function normalizeRouteSection(
       destructive,
       side_effecting: sideEffecting,
       guards: route.guards ?? {},
+      provider_support: route.provider_support ?? {},
     };
     return {
       ...statusWithoutAutomation,
@@ -1149,7 +1174,26 @@ export function buildRouteAutomationModel(route: Omit<RouteStatus, 'automation_m
       required_confirmation: route.side_effecting && !route.enabled ? expectedConfirmationPhrase(route) : null,
       blocked_reasons: blockedReasons,
     },
+    provider_context: buildProviderContext(route.provider_support),
   };
+}
+
+function buildProviderContext(providerSupport: RouteProviderSupport): RouteAutomationModel['provider_context'] {
+  return Object.fromEntries(Object.entries(providerSupport).map(([provider, support]) => {
+    const status = support.status ?? 'blocked-with-follow-up';
+    const context: RouteAutomationModel['provider_context'][string] = {
+      status,
+      execution_supported: status === 'live-supported',
+      dry_run_supported: status === 'dry-run-supported',
+    };
+    if (status === 'explicitly-refused-with-reason' && support.reason) {
+      context.blocked_reason = support.reason;
+    }
+    if (status === 'blocked-with-follow-up') {
+      context.blocked_reason = support.blocker ?? support.follow_up;
+    }
+    return [provider, context];
+  }));
 }
 
 export function classifyRouteReadiness(input: {

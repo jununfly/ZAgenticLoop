@@ -175,7 +175,7 @@ implied by the standard GitLab CI fragments.
 Provider parity should be releasable only when a deterministic gate can answer:
 
 - every GitHub generated route template has an explicit GitLab parity row
-- every Route Table side-effect route states provider support status
+- every Route Table route states provider support status for GitHub and GitLab
 - generated GitLab templates call published package APIs, not repo-local scripts
 - GitLab templates pin the same package versions as GitHub templates
 - provider docs and README do not present GitHub Actions as universal automation
@@ -184,8 +184,11 @@ Provider parity should be releasable only when a deterministic gate can answer:
 
 `npm run test:provider-parity-gate` is the current deterministic guard. It
 validates paired GitHub/GitLab generated templates, package pins, Route Table
-route ids, durable provider docs, and the GitLab provider dogfood replay. The
-dogfood replay covers:
+route ids, per-route `provider_support` inventory, durable provider docs, and
+the GitLab provider dogfood replay. The first provider-support layer checks the
+fixed status enum, required provider keys, status-specific fields, and legal
+evidence prefixes; it intentionally does not deep-validate every evidence URL or
+file path yet. The dogfood replay covers:
 
 - GitLab CI Sweeper Issue Fix Request scope using `.gitlab-ci.yml` and
   `zj-loop/gitlab-ci/` instead of `.github/workflows/`

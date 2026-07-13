@@ -25,7 +25,17 @@ export type RouteTableRoute = {
     guards?: Record<string, unknown>;
     evidence_store?: string;
     enabled_reason?: string;
+    provider_support?: RouteProviderSupport;
 };
+export type RouteProviderSupportStatus = 'live-supported' | 'dry-run-supported' | 'explicitly-refused-with-reason' | 'blocked-with-follow-up';
+export type RouteProviderSupportEntry = {
+    status?: RouteProviderSupportStatus | string;
+    evidence?: string[];
+    reason?: string;
+    blocker?: string;
+    follow_up?: string;
+};
+export type RouteProviderSupport = Record<string, RouteProviderSupportEntry>;
 export type RouteTableDocument = {
     schemaVersion?: number;
     kind?: string;
@@ -57,6 +67,7 @@ export type RouteStatus = {
     destructive: boolean;
     side_effecting: boolean;
     guards: Record<string, unknown>;
+    provider_support: RouteProviderSupport;
     automation_model: RouteAutomationModel;
 };
 export type RouteAutomationModel = {
@@ -74,6 +85,12 @@ export type RouteAutomationModel = {
         required_confirmation: string | null;
         blocked_reasons: string[];
     };
+    provider_context: Record<string, {
+        status: string;
+        execution_supported: boolean;
+        dry_run_supported: boolean;
+        blocked_reason?: string;
+    }>;
 };
 export type RouteReadiness = 'install-ready' | 'execution-ready' | 'dogfood-verified' | 'live-missing-evidence' | 'replayed' | 'designed' | 'missing';
 export type RouteDecision = {

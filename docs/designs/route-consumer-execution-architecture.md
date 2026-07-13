@@ -379,7 +379,10 @@ creation, Route Decision, branch/PR contract evidence, duplicate handling,
 permission denial, disabled route denial, and loop marker detection without live
 GitHub writes.
 
-Provider parity is checked by `npm run test:provider-parity-gate`. The GitLab
+Provider parity is checked by `npm run test:provider-parity-gate`. The gate
+also validates Route Table `provider_support` for every route: GitHub and
+GitLab entries must use the fixed status enum, legal evidence prefixes, and
+status-specific required fields. The GitLab
 dogfood replay in that gate proves GitLab CI Sweeper fix scope, Roadmap
 Activation MR contract handoff into Post-Merge Closeout, and PR Steward MR
 dry-run/refusal boundaries against the current packaged core contract.

@@ -578,12 +578,59 @@
     "1-4-5": {
       "id": "1-4-5",
       "label": "GitHub 与 GitLab Provider Parity",
-      "status": "pending",
-      "mode": "explore",
+      "status": "in_progress",
+      "mode": "exploit",
       "parent": "1-4",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-4-5-1",
+        "1-4-5-2",
+        "1-4-5-3",
+        "1-4-5-4",
+        "1-4-5-5"
+      ],
+      "decisions": [
+        {
+          "q": "是否先做 GitHub 与 GitLab Provider Parity，再做 Changelog Drafter 自动 Draft Artifact / Draft PR-MR？",
+          "answer": "是。",
+          "note": "Provider Parity 是 1-4-6 的地基；先对齐 GitHub baseline 与 GitLab 全 route 能力，避免 Changelog Drafter 自动 draft 先做成 GitHub-only 路径后再补 GitLab，造成长期割裂。"
+        },
+        {
+          "q": "1-4-5 的成功标准是否定义为每个 GitHub route family 都有 GitLab 模板 + provider-aware runner/dry-run/live refusal 或 live evidence + deterministic gate 覆盖，而不是要求每条 route 都已 GitLab live 执行？",
+          "answer": "要。",
+          "note": "每条 route 必须有明确 provider parity 状态：live-supported、dry-run-supported、explicitly-refused-with-reason 或 blocked-with-follow-up。这样避免一次性打开高风险 GitLab live side effects，同时不能只靠 prose 声称未来支持。"
+        },
+        {
+          "q": "Provider parity 状态矩阵是否放进 Route Table 模板作为每条 route 的结构化字段，并由 validate-provider-parity-gate 检查？",
+          "answer": "要。",
+          "note": "Route Table 是每条 route 的执行、授权、成熟度真相源；provider_support 也应成为可检查事实，避免只放 docs 导致 Agent 忽略，或放 registry 造成 route 运行能力割裂。"
+        },
+        {
+          "q": "provider_support 是否必须进入 RouteStatus / zj-loop-route status --json 输出，而不是只让 provider parity gate 私下读取 YAML？",
+          "answer": "必须进入。",
+          "note": "Provider parity 是 Agent 判断某 route 在 GitHub/GitLab 上应 live、dry-run、显式拒绝还是 blocked 的运行时事实。status --json 必须暴露它；但它只表达 provider 能力状态，不等同于 route enablement，也不授权 live side effects。"
+        },
+        {
+          "q": "provider_support.<provider>.status 枚举是否固定为 live-supported、dry-run-supported、explicitly-refused-with-reason、blocked-with-follow-up，且不允许 unknown？",
+          "answer": "同意。",
+          "note": "该字段用于消灭 unknown。缺字段或非法值应让 provider parity gate fail。live-supported 仍不授权执行；dry-run-supported 表示 provider-aware plan/evidence 可生成；explicitly-refused-with-reason 必须带拒绝理由；blocked-with-follow-up 必须带 follow-up/blocker。"
+        },
+        {
+          "q": "provider_support 每个 provider 的最小结构是否固定为 status + evidence[]，并按状态要求额外字段？",
+          "answer": "同意。",
+          "note": "live-supported 必须有 live/dogfood/runner evidence；dry-run-supported 必须有 template/test/artifact/replay evidence；explicitly-refused-with-reason 必须有 reason 和 evidence[]；blocked-with-follow-up 必须有 blocker 和 follow_up，evidence[] 可为空但建议有。"
+        },
+        {
+          "q": "provider_support.*.evidence[] 是否只允许固定前缀，避免自由散文？",
+          "answer": "同意。",
+          "note": "先允许 template:、workflow:、gitlab-ci:、test:、replay:、artifact:、dogfood-run:、runner:、docs:、issue:、follow-up:。第一层 gate 检查前缀合法；后续 hardening 再验证本地文件存在或远端 run 可访问。"
+        },
+        {
+          "q": "provider_support 是否第一阶段不直接参与 automation_model.authorization.execution_allowed，只进入 provider_context；未来显式 target_provider 时再参与该次执行的 blocked reason？",
+          "answer": "同意。",
+          "note": "Route-level authorization 继续只看 route enablement + maturity，避免 GitLab dry-run/blocked 状态误伤 GitHub ready 能力。provider_support 暴露为 provider_context；显式 --provider gitlab/github 的执行路径再把 provider status 纳入 blocked reason。"
+        }
+      ],
+      "notes": "Provider parity is the next execution focus. Goal: align GitLab support to the current GitHub route baseline, keep route protocols platform-neutral, and make any remaining provider-specific gaps explicit through deterministic gates and durable docs."
     },
     "1-5-1": {
       "id": "1-5-1",
@@ -1457,11 +1504,61 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-4-5-1": {
+      "id": "1-4-5-1",
+      "label": "Provider Parity Gap Inventory",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented provider parity gap inventory: RouteStatus exposes provider_support and automation_model.provider_context; generated Route Table template and dogfood Route Table declare GitHub/GitLab provider_support for every route; provider parity gate now validates required providers, fixed status enum, evidence prefixes, and status-specific fields. Verification: tools/zj-loop-core npm test; scripts/validate-provider-parity-gate.test.mjs; tools/zj-loop-init npm test."
+    },
+    "1-4-5-2": {
+      "id": "1-4-5-2",
+      "label": "GitLab Generated CI Scaffold Parity",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-5-3": {
+      "id": "1-4-5-3",
+      "label": "Provider Adapter API Helpers",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-5-4": {
+      "id": "1-4-5-4",
+      "label": "Route Family Provider Parity Evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-5-5": {
+      "id": "1-4-5-5",
+      "label": "Provider Parity Release Gates And Docs",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 19:54:11",
+    "updated": "2026-07-13 20:48:32",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

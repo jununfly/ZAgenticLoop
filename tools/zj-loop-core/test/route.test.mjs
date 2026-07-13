@@ -81,6 +81,17 @@ disabled_dispatch_routes:
     guards:
       create_pr_only: true
       auto_merge: false
+    provider_support:
+      github:
+        status: "live-supported"
+        evidence:
+          - "runner:ci-sweeper"
+          - "dogfood-run:https://example.test/run/1"
+      gitlab:
+        status: "dry-run-supported"
+        evidence:
+          - "gitlab-ci:zj-loop-ci-sweeper.yml"
+          - "test:provider-parity-gate"
   - route_id: "roadmap-sliced-development"
     enabled: false
     request_kind: "activation-comment"
@@ -935,6 +946,16 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
     assert.equal(parsedStatus.routes[0].execution_ready, false);
     assert.equal(parsedStatus.routes[0].user_project_ready, false);
     assert.deepEqual(parsedStatus.routes[0].capability_verifiers, ['ci-validate-gates', 'diff-check']);
+    assert.deepEqual(parsedStatus.routes[0].provider_support, {
+      github: {
+        status: 'live-supported',
+        evidence: ['runner:ci-sweeper', 'dogfood-run:https://example.test/run/1'],
+      },
+      gitlab: {
+        status: 'dry-run-supported',
+        evidence: ['gitlab-ci:zj-loop-ci-sweeper.yml', 'test:provider-parity-gate'],
+      },
+    });
     assert.deepEqual(parsedStatus.routes[0].automation_model, {
       readiness: {
         level: 'dogfood-verified',
@@ -949,6 +970,18 @@ test('zj-loop-route cli prints status and dispatch json', async () => {
         execution_allowed: false,
         required_confirmation: 'enable ci-sweeper side effects',
         blocked_reasons: ['route disabled', 'route is not execution-ready'],
+      },
+      provider_context: {
+        github: {
+          status: 'live-supported',
+          execution_supported: true,
+          dry_run_supported: false,
+        },
+        gitlab: {
+          status: 'dry-run-supported',
+          execution_supported: false,
+          dry_run_supported: true,
+        },
       },
     });
 

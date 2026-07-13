@@ -25,6 +25,27 @@ const REQUIRED_PROVIDER_DOC_PHRASES = [
   'GitHub PRs and GitLab MRs are provider carriers for the same review boundary',
 ];
 
+const REQUIRED_PROVIDERS = ['github', 'gitlab'];
+const PROVIDER_SUPPORT_STATUSES = new Set([
+  'live-supported',
+  'dry-run-supported',
+  'explicitly-refused-with-reason',
+  'blocked-with-follow-up',
+]);
+const PROVIDER_EVIDENCE_PREFIXES = [
+  'template:',
+  'workflow:',
+  'gitlab-ci:',
+  'test:',
+  'replay:',
+  'artifact:',
+  'dogfood-run:',
+  'runner:',
+  'docs:',
+  'issue:',
+  'follow-up:',
+];
+
 function extractCorePackagePins(text) {
   return [...text.matchAll(/@jununfly\/zj-loop-core@([0-9]+\.[0-9]+\.[0-9]+)/g)].map((match) => match[1]);
 }
@@ -85,6 +106,8 @@ export async function validateProviderParityGate(root = ROOT) {
     }
   }
 
+  validateProviderSupportInventory(routeTable, errors);
+
   if (!dogfoodDoc.includes('GitLab Target-Project Pre-Release Evidence')) {
     errors.push('docs/designs/dogfood-reference-case.md missing GitLab target-project dogfood evidence');
   }
@@ -101,6 +124,57 @@ export async function validateProviderParityGate(root = ROOT) {
     coreVersion: expectedCoreVersion,
     routeCount: allRoutes(routeTable).length,
   };
+}
+
+function validateProviderSupportInventory(routeTable, errors) {
+  for (const route of allRoutes(routeTable)) {
+    const routeId = route.route_id ?? '<missing-route-id>';
+    const support = route.provider_support;
+    if (!support || typeof support !== 'object') {
+      errors.push(`route ${routeId} missing provider_support`);
+      continue;
+    }
+
+    for (const provider of REQUIRED_PROVIDERS) {
+      const entry = support[provider];
+      if (!entry || typeof entry !== 'object') {
+        errors.push(`route ${routeId} missing provider_support.${provider}`);
+        continue;
+      }
+
+      if (!PROVIDER_SUPPORT_STATUSES.has(entry.status)) {
+        errors.push(`route ${routeId} provider_support.${provider}.status invalid: ${entry.status ?? '<missing>'}`);
+      }
+
+      const evidence = Array.isArray(entry.evidence) ? entry.evidence : [];
+      if (!Array.isArray(entry.evidence)) {
+        errors.push(`route ${routeId} provider_support.${provider}.evidence must be an array`);
+      }
+      for (const item of evidence) {
+        if (typeof item !== 'string' || !PROVIDER_EVIDENCE_PREFIXES.some((prefix) => item.startsWith(prefix))) {
+          errors.push(`route ${routeId} provider_support.${provider}.evidence has invalid prefix: ${String(item)}`);
+        }
+      }
+
+      if (entry.status === 'live-supported' && !evidence.some((item) => item.startsWith('dogfood-run:') || item.startsWith('runner:'))) {
+        errors.push(`route ${routeId} provider_support.${provider} live-supported requires runner or dogfood-run evidence`);
+      }
+      if (entry.status === 'dry-run-supported' && !evidence.some((item) => item.startsWith('template:') || item.startsWith('workflow:') || item.startsWith('gitlab-ci:') || item.startsWith('test:') || item.startsWith('artifact:') || item.startsWith('replay:'))) {
+        errors.push(`route ${routeId} provider_support.${provider} dry-run-supported requires template, workflow, gitlab-ci, test, artifact, or replay evidence`);
+      }
+      if (entry.status === 'explicitly-refused-with-reason' && typeof entry.reason !== 'string') {
+        errors.push(`route ${routeId} provider_support.${provider} explicitly-refused-with-reason requires reason`);
+      }
+      if (entry.status === 'blocked-with-follow-up') {
+        if (typeof entry.blocker !== 'string') {
+          errors.push(`route ${routeId} provider_support.${provider} blocked-with-follow-up requires blocker`);
+        }
+        if (typeof entry.follow_up !== 'string') {
+          errors.push(`route ${routeId} provider_support.${provider} blocked-with-follow-up requires follow_up`);
+        }
+      }
+    }
+  }
 }
 
 async function main() {
