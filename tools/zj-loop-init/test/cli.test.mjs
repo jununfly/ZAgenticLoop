@@ -191,6 +191,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(dependencySweeper, /zj-loop-dependency-sweeper repair-plan/);
     assert.match(dependencySweeper, /zj-loop-dependency-sweeper live-repair/);
     assert.match(dependencySweeper, /confirm_live_repair/);
+    assert.match(dependencySweeper, /core_package/);
     assert.doesNotMatch(dependencySweeper, /'\$\{\{ inputs\./);
     const postMergeCleanup = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
     assert.match(postMergeCleanup, /zj-loop-post-merge-closeout plan/);
