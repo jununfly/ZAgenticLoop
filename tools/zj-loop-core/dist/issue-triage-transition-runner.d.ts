@@ -13,6 +13,8 @@ export declare function runIssueTriageTransitionRunner(input: {
     actorPermission?: string;
     command?: string;
     confirmationPhrase?: string;
+    confirmationMode?: string;
+    confirmationAuthority?: string;
     createdAt?: string;
     live?: boolean;
 }): {
@@ -22,6 +24,7 @@ export declare function runIssueTriageTransitionRunner(input: {
     decision: {
         status: string;
         reason: string;
+        confirmation_mode: string;
     };
     confirmed_transition: {
         schema: string;
@@ -88,6 +91,11 @@ export declare function runIssueTriageTransitionRunner(input: {
                 actor: string;
             }[];
         } | null;
+        confirmation: {
+            mode: string;
+            reason: string;
+            human_confirmation_required: boolean;
+        };
     };
     evidence: import("./live-runner-contract.js").LiveRunnerEvidence;
     validation: {

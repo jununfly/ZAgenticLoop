@@ -237,6 +237,9 @@ routes:
         - "confirm-triage-transition"
     guards:
       side_effects_allowed: "request-carrier-only"
+      trusted_automation_confirmation_allowed: true
+      trusted_automation_states: ["ready-for-agent"]
+      trusted_automation_authorities: ["trusted-workflow"]
       live_side_effects_allowed: false
       actor_permission_required: "maintainer-or-collaborator"
       fixed_confirmation_phrase: "CONFIRM_TRIAGE_TRANSITION"
@@ -253,7 +256,7 @@ routes:
         - "escalated"
     dedupe_window: "issue-triage-transition:<repo>:<issue>:<recommended_state>:<request_id>"
     failure_owner: "issue-triage-transition"
-    human_gate: "required for wontfix, unauthorized actors, mismatched confirmation command, missing fixed confirmation phrase, risk flags, tracker mutation, close/reopen, assignment, milestone, or batch mutation"
+    human_gate: "required for wontfix, unauthorized actors, mismatched confirmation command, missing fixed confirmation phrase, risk flags, tracker mutation, close/reopen, assignment, milestone, batch mutation, or any trusted automation path outside ready-for-agent request-carrier creation"
 
   - route_id: "pr-steward-report"
     enabled: true

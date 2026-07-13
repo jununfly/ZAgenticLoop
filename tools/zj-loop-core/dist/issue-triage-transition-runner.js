@@ -15,6 +15,8 @@ const CONSUMER_KIND = 'triage-action-consumer';
 const ALLOWED_STATES = new Set(['needs-info', 'ready-for-agent', 'ready-for-human', 'wontfix']);
 const ALLOWED_CATEGORIES = new Set(['bug', 'enhancement']);
 const ALLOWED_PERMISSIONS = new Set(['maintainer', 'admin', 'write', 'collaborator']);
+const DEFAULT_CONFIRMATION_MODE = 'human-fixed-phrase';
+const TRUSTED_AUTOMATION_MODE = 'trusted-automation';
 export async function readRecommendedTriageTransition(path) {
     return JSON.parse(await readFile(path, 'utf8'));
 }
@@ -65,6 +67,8 @@ export function runIssueTriageTransitionRunner(input) {
         actorPermission: input.actorPermission ?? 'maintainer',
         command: input.command ?? request.confirm_command,
         confirmationPhrase: input.confirmationPhrase ?? 'CONFIRM_TRIAGE_TRANSITION',
+        confirmationMode: input.confirmationMode ?? DEFAULT_CONFIRMATION_MODE,
+        confirmationAuthority: input.confirmationAuthority ?? input.actorPermission ?? 'maintainer',
         live: input.live === true,
     });
     const confirmedTransition = buildConfirmedTransition({
@@ -196,18 +200,54 @@ function decideTransition(input) {
         return decision('rejected', 'live-side-effects-not-enabled');
     if (!requestValid.ok)
         return decision('rejected', `request-invalid:${requestValid.errors[0]}`);
-    if (!ALLOWED_PERMISSIONS.has(input.actorPermission))
-        return decision('rejected', 'actor-not-maintainer-or-collaborator');
-    if (input.command !== input.request.confirm_command)
-        return decision('rejected', 'confirm-command-mismatch');
-    if (input.confirmationPhrase !== 'CONFIRM_TRIAGE_TRANSITION')
-        return decision('rejected', 'fixed-confirmation-phrase-required');
+    const confirmationMode = input.confirmationMode || DEFAULT_CONFIRMATION_MODE;
+    if (confirmationMode !== DEFAULT_CONFIRMATION_MODE && confirmationMode !== TRUSTED_AUTOMATION_MODE) {
+        return decision('rejected', 'confirmation-mode-unsupported');
+    }
+    if (confirmationMode === TRUSTED_AUTOMATION_MODE) {
+        const trustedDecision = decideTrustedAutomationTransition(input);
+        if (trustedDecision)
+            return trustedDecision;
+    }
+    else {
+        if (!ALLOWED_PERMISSIONS.has(input.actorPermission))
+            return decision('rejected', 'actor-not-maintainer-or-collaborator');
+        if (input.command !== input.request.confirm_command)
+            return decision('rejected', 'confirm-command-mismatch');
+        if (input.confirmationPhrase !== 'CONFIRM_TRIAGE_TRANSITION')
+            return decision('rejected', 'fixed-confirmation-phrase-required');
+    }
     if (input.request.recommended_state === 'wontfix')
         return decision('escalated', 'wontfix-requires-human-review');
     if (input.request.risk_flags?.length > 0 && input.request.recommended_state !== 'ready-for-human') {
         return decision('escalated', 'risk-flags-require-human-review');
     }
     return decision('confirmed', 'triage-transition-confirmed');
+}
+function decideTrustedAutomationTransition(input) {
+    const guards = input.route?.guards ?? {};
+    if (guards.trusted_automation_confirmation_allowed !== true) {
+        return decision('rejected', 'trusted-automation-not-allowed-by-route-table');
+    }
+    const allowedStates = stringArray(guards.trusted_automation_states);
+    if (!allowedStates.includes(input.request.recommended_state)) {
+        return decision('escalated', 'trusted-automation-state-requires-human-confirmation');
+    }
+    const allowedAuthorities = stringArray(guards.trusted_automation_authorities);
+    const authorityAllowed = allowedAuthorities.includes(input.confirmationAuthority);
+    if (!ALLOWED_PERMISSIONS.has(input.actorPermission) && !authorityAllowed) {
+        return decision('rejected', 'trusted-automation-authority-not-allowed');
+    }
+    if (input.request.recommended_state !== 'ready-for-agent') {
+        return decision('escalated', 'trusted-automation-state-requires-human-confirmation');
+    }
+    if (input.request.side_effects_if_confirmed?.create_issue_fix_request !== 'ready-for-agent-only') {
+        return decision('rejected', 'trusted-automation-requires-request-carrier-only');
+    }
+    if (input.request.risk_flags?.length > 0) {
+        return decision('escalated', 'risk-flags-require-human-review');
+    }
+    return decision('confirmed', 'triage-transition-auto-confirmed');
 }
 function validateRecommendedTransition(request) {
     const errors = [];
@@ -247,6 +287,7 @@ function buildConfirmedTransition(input) {
         tracker_operations: operationsFor(request, input.decision),
         triage_comment: commentFor(request, input.decision),
         issue_fix_request: issueFixRequestFor(request, input.decision, input.createdAt),
+        confirmation: confirmationFor(input.decision),
     };
 }
 function operationsFor(request, decisionResult) {
@@ -336,7 +377,7 @@ function buildEvidence(input) {
         verifier_evidence: [
             { kind: 'route-table', route_id: ROUTE_ID, status: 'matched' },
             { kind: 'permission', required: 'maintainer-or-collaborator', status: input.decision.status },
-            { kind: 'fixed-confirmation-command', command: input.request.confirm_command, status: input.decision.status },
+            confirmationVerifierFor(input.request, input.decision),
             { kind: 'zj-triage-role-contract', state: input.request.recommended_state, status: input.decision.status },
         ],
         side_effects: {
@@ -345,8 +386,29 @@ function buildEvidence(input) {
             actions: input.decision.status === 'confirmed' ? input.confirmedTransition.tracker_operations : [],
             triage_comment_planned: input.confirmedTransition.triage_comment !== null,
             issue_fix_request_planned: input.confirmedTransition.issue_fix_request !== null,
+            confirmation_mode: input.decision.confirmation_mode ?? DEFAULT_CONFIRMATION_MODE,
+            human_confirmation_required: (input.decision.confirmation_mode ?? DEFAULT_CONFIRMATION_MODE) !== TRUSTED_AUTOMATION_MODE,
         },
     });
+}
+function confirmationFor(decisionResult) {
+    const mode = decisionResult.confirmation_mode ?? DEFAULT_CONFIRMATION_MODE;
+    return {
+        mode,
+        reason: decisionResult.reason,
+        human_confirmation_required: mode !== TRUSTED_AUTOMATION_MODE,
+    };
+}
+function confirmationVerifierFor(request, decisionResult) {
+    if ((decisionResult.confirmation_mode ?? DEFAULT_CONFIRMATION_MODE) === TRUSTED_AUTOMATION_MODE) {
+        return {
+            kind: 'trusted-automation-confirmation',
+            state: request.recommended_state,
+            side_effect_boundary: 'request-carrier-only',
+            status: decisionResult.status,
+        };
+    }
+    return { kind: 'fixed-confirmation-command', command: request.confirm_command, status: decisionResult.status };
 }
 function sourceIssueUrlFor(request) {
     return request.source?.issue_url || buildProviderIssueUrl({
@@ -371,8 +433,15 @@ function titleForState(state) {
     return 'Triage Notes';
 }
 function decision(status, reason) {
-    return { status, reason };
+    return {
+        status,
+        reason,
+        confirmation_mode: reason === 'triage-transition-auto-confirmed' ? TRUSTED_AUTOMATION_MODE : DEFAULT_CONFIRMATION_MODE,
+    };
 }
 function stableHash(value) {
     return createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
+}
+function stringArray(value) {
+    return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
 }

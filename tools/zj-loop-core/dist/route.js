@@ -623,6 +623,7 @@ function normalizeRouteSection(routes, section) {
             section,
             destructive,
             side_effecting: sideEffecting,
+            guards: route.guards ?? {},
         };
         return {
             ...statusWithoutAutomation,

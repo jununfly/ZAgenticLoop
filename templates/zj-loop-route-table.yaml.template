@@ -283,6 +283,9 @@ disabled_dispatch_routes:
     evidence_store: "zj-loop/issue-triage-state.md"
     guards:
       side_effects_allowed: "request-carrier-only"
+      trusted_automation_confirmation_allowed: true
+      trusted_automation_states: ["ready-for-agent"]
+      trusted_automation_authorities: ["trusted-workflow"]
       live_side_effects_allowed: false
       actor_permission_required: "maintainer-or-collaborator"
       fixed_confirmation_phrase: "CONFIRM_TRIAGE_TRANSITION"
@@ -293,7 +296,7 @@ disabled_dispatch_routes:
       milestone_allowed: false
       batch_mutation_allowed: false
       wontfix_default_confirmation_allowed: false
-    note: "Enable when maintainers should confirm recommended triage transitions and create source issue Issue Fix Request comments for ready-for-agent recommendations."
+    note: "Enable when maintainers or trusted automation should confirm recommended triage transitions and create source issue Issue Fix Request comments for ready-for-agent recommendations."
 
   - route_id: "dependency-sweeper"
     enabled: false

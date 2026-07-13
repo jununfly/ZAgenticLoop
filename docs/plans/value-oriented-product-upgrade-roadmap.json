@@ -500,12 +500,18 @@
     "1-4-2": {
       "id": "1-4-2",
       "label": "Issue Backlog Triage 到 Transition 的自动链路",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "是否把 issue-backlog-triage -> issue-triage-transition 从 human fixed phrase only 升级为可信自动化窄确认路径？",
+          "answer": "确认：允许满足严格条件时由可信自动化自动确认，但只开放 ready-for-agent 的 request-only Issue Fix Request source issue comment 路径；不做 label/state mutation、close/reopen、assignment、milestone；必须有结构化 recommendation evidence、Route Table allowlist、maintainer/collaborator 或 trusted workflow authority，并在 evidence 中记录 confirmation_mode 与免 human 确认原因。",
+          "note": "wontfix、risk flags、非授权 actor、非固定 route/table 配置仍进入 human gate。"
+        }
+      ],
+      "notes": "Implemented trusted automation confirmation for issue-backlog-triage -> issue-triage-transition: runner/CLI support confirmation-mode trusted-automation, RouteStatus exposes route guards, dogfood/template route tables allow only ready-for-agent request-carrier automation, GitHub issue triage workflow exposes explicit confirmation mode/authority inputs, docs updated. Verification: cd tools/zj-loop-core && npm test; cd tools/zj-loop-init && npm test; npm run check:zj-loop-init; npm run test:generated-bundle-release-gate; npm run test:route-decision; bash scripts/ci-validate-gates.sh; bash scripts/ci-audit-gates.sh; roadmap validate; git diff --check."
     },
     "1-4-3": {
       "id": "1-4-3",
@@ -1280,7 +1286,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 14:46:44",
+    "updated": "2026-07-13 15:07:49",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

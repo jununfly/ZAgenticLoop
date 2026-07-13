@@ -135,6 +135,13 @@ Confirmed triage transitions are a separate side-effect step. They must use
 `ready-for-human`, `wontfix`), brief/comment semantics, unusual-transition
 guards, and maintainer override rules. `wontfix` recommendations remain blocked
 by default and require human review before any close/label/out-of-scope action.
+The default confirmation path is still a maintainer/collaborator fixed command
+and fixed phrase. A trusted automation path may skip the human phrase only when
+the Route Table explicitly allows it, the request is `ready-for-agent`, the
+side-effect boundary is request-carrier-only, and the result merely creates or
+dedupes an Issue Fix Request comment on the source issue. It must not mutate
+tracker labels, formal triage state, assignment, milestone, close/reopen, or
+batch state.
 
 `zj-loop/STATE.md` is the daily-attention view. It should hold current High
 Priority items, Watch items, Noise/Ignored items, recent state updates, human

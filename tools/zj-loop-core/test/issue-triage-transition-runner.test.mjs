@@ -39,6 +39,12 @@ const ROUTE = {
   section: 'routes',
   destructive: false,
   side_effecting: true,
+  guards: {
+    trusted_automation_confirmation_allowed: true,
+    trusted_automation_states: ['ready-for-agent'],
+    trusted_automation_authorities: ['trusted-workflow'],
+    side_effects_allowed: 'request-carrier-only',
+  },
 };
 
 test('Issue Triage Transition confirms ready-for-agent into Issue Fix Request carrier', () => {
@@ -55,6 +61,64 @@ test('Issue Triage Transition confirms ready-for-agent into Issue Fix Request ca
   assert.equal(result.confirmed_transition.issue_fix_request.carrier.kind, 'source-issue-comment');
   assert.equal(result.confirmed_transition.issue_fix_request.carrier.issue, 126);
   assert.equal(result.confirmed_transition.issue_fix_request.carrier.independent_issue_allowed, false);
+});
+
+test('Issue Triage Transition supports trusted automation for ready-for-agent request carriers', () => {
+  const result = runIssueTriageTransitionRunner({
+    route: ROUTE,
+    confirmationMode: 'trusted-automation',
+    confirmationAuthority: 'trusted-workflow',
+    command: '',
+    confirmationPhrase: '',
+  });
+
+  assert.equal(result.decision.status, 'confirmed');
+  assert.equal(result.decision.reason, 'triage-transition-auto-confirmed');
+  assert.equal(result.confirmed_transition.confirmation.mode, 'trusted-automation');
+  assert.equal(result.confirmed_transition.confirmation.human_confirmation_required, false);
+  assert.equal(result.confirmed_transition.issue_fix_request.carrier.kind, 'source-issue-comment');
+  assert.equal(result.evidence.side_effects.confirmation_mode, 'trusted-automation');
+  assert.equal(result.evidence.side_effects.human_confirmation_required, false);
+  assert.equal(
+    result.evidence.verifier_evidence.some((item) => item.kind === 'trusted-automation-confirmation' && item.status === 'confirmed'),
+    true,
+  );
+});
+
+test('Issue Triage Transition keeps trusted automation narrow', () => {
+  const needsInfo = runIssueTriageTransitionRunner({
+    route: ROUTE,
+    confirmationMode: 'trusted-automation',
+    confirmationAuthority: 'trusted-workflow',
+    request: {
+      recommended_state: 'needs-info',
+      brief_draft: { kind: 'triage-notes', body: 'Please provide a minimal reproduction.' },
+      side_effects_if_confirmed: {
+        set_tracker_state: true,
+        write_triage_comment: true,
+        create_issue_fix_request: false,
+      },
+    },
+    command: '',
+    confirmationPhrase: '',
+  });
+  const routeWithoutAutomation = {
+    ...ROUTE,
+    guards: { ...ROUTE.guards, trusted_automation_confirmation_allowed: false },
+  };
+  const disabled = runIssueTriageTransitionRunner({
+    route: routeWithoutAutomation,
+    confirmationMode: 'trusted-automation',
+    confirmationAuthority: 'trusted-workflow',
+    command: '',
+    confirmationPhrase: '',
+  });
+
+  assert.equal(needsInfo.decision.status, 'escalated');
+  assert.equal(needsInfo.decision.reason, 'trusted-automation-state-requires-human-confirmation');
+  assert.equal(needsInfo.evidence.completion_form, 'escalation-issue');
+  assert.equal(disabled.decision.status, 'rejected');
+  assert.equal(disabled.decision.reason, 'trusted-automation-not-allowed-by-route-table');
 });
 
 test('Issue Triage Transition preserves GitLab source issue carrier URLs', () => {

@@ -29,7 +29,7 @@ The first route set is deliberately small:
 | --- | --- | --- | --- |
 | `roadmap-sliced-development` | A maintainer comments `/zj-loop start roadmap-sliced-development` on a plan issue and gets a bounded roadmap branch/PR bootstrap. | Disabled until explicitly enabled. Generated workflow can produce activation, contract, and bounded-slice evidence. | Activation can create the roadmap lifecycle. Slice execution is bounded by `max_slices`, default `30`, and Roadmap-Sliced gates. |
 | `ci-sweeper` | A failing workflow can become a durable GitHub Issue Fix Request instead of disappearing in Actions history. | Disabled until explicitly enabled. Generated workflow records Route Decision and consumer plan evidence. | When allowed, it creates an independent Issue Fix Request carrier for bounded fix-runner consumption or escalation. |
-| `issue-backlog-triage` -> `issue-triage-transition` | Open issue backlog signals become recommended `zj-triage` transitions, then maintainer/collaborator confirmation creates request-only Issue Fix Request comments on the source issue for `ready-for-agent`. | Recommendation evidence is report-only. Confirmed transition requires an exact request id and fixed confirmation phrase. | No live tracker label/state mutation. The useful boundary is a replayable request comment on the user-visible source issue. |
+| `issue-backlog-triage` -> `issue-triage-transition` | Open issue backlog signals become recommended `zj-triage` transitions, then maintainer/collaborator confirmation or Route Table allowlisted trusted automation creates request-only Issue Fix Request comments on the source issue for `ready-for-agent`. | Recommendation evidence is report-only. Human confirmation requires an exact request id and fixed confirmation phrase; trusted automation is limited to `ready-for-agent` request-carrier creation. | No live tracker label/state mutation. The useful boundary is a replayable request comment on the user-visible source issue. |
 | `post-merge-roadmap-closeout` | After a Roadmap-Sliced PR is merged, cleanup can be planned and, when the merged PR contract authorizes it, close only the activation carrier and delete only the merged roadmap branch. | Dry-run evidence first; live cleanup is contract-authorized only when all executor guards pass. | Fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` is a fallback for manual/operator-required cleanup, not the default happy path. |
 
 All other action-capable routes remain selectable future paths, but should not
@@ -187,7 +187,9 @@ batch-editing the tracker.
 
 1. `issue-backlog-triage` records allowed issue backlog observations and emits
    `zj-loop.recommended_triage_transition.v1` evidence.
-2. A maintainer or collaborator confirms a specific request:
+2. A maintainer/collaborator confirms a specific request, or a trusted workflow
+   uses the explicit `trusted-automation` mode for a `ready-for-agent`
+   request-carrier-only transition:
 
 ```text
 /zj-loop confirm-triage-transition <request-id>

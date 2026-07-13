@@ -62,6 +62,7 @@ export type RouteStatus = {
   section: 'routes' | 'disabled_dispatch_routes';
   destructive: boolean;
   side_effecting: boolean;
+  guards: Record<string, unknown>;
   automation_model: RouteAutomationModel;
 };
 
@@ -888,6 +889,7 @@ function normalizeRouteSection(
       section,
       destructive,
       side_effecting: sideEffecting,
+      guards: route.guards ?? {},
     };
     return {
       ...statusWithoutAutomation,

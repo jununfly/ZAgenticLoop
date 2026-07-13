@@ -17,7 +17,7 @@ if (argv[0] === 'confirm-plan') {
   process.exitCode = await runCli({
     name: 'zj-loop-issue-triage-transition',
     description: 'Build confirmed triage transition request-only evidence from a recommended transition.',
-    usage: 'zj-loop-issue-triage-transition confirm-plan [--request <path>] [--root <dir>] [--actor-permission <permission>] [--command <command>] [--confirmation-phrase <phrase>] [--out <path>] [--json]',
+    usage: 'zj-loop-issue-triage-transition confirm-plan [--request <path>] [--root <dir>] [--actor-permission <permission>] [--command <command>] [--confirmation-phrase <phrase>] [--confirmation-mode <mode>] [--confirmation-authority <authority>] [--out <path>] [--json]',
     options: [
       { name: 'commandName', type: 'positional', description: 'Command', default: 'confirm-plan' },
       { name: 'request', type: 'string', description: 'Path to a Recommended Triage Transition JSON file' },
@@ -25,6 +25,8 @@ if (argv[0] === 'confirm-plan') {
       { name: 'actor-permission', type: 'string', description: 'Actor permission', default: 'maintainer' },
       { name: 'command', type: 'string', description: 'Exact slash command text' },
       { name: 'confirmation-phrase', type: 'string', description: 'Fixed confirmation phrase', default: 'CONFIRM_TRIAGE_TRANSITION' },
+      { name: 'confirmation-mode', type: 'enum', description: 'Confirmation mode', values: ['human-fixed-phrase', 'trusted-automation'], default: 'human-fixed-phrase' },
+      { name: 'confirmation-authority', type: 'string', description: 'Trusted automation authority or human actor identity' },
       { name: 'out', type: 'string', description: 'Write JSON result to this path' },
       { name: 'json', type: 'boolean', description: 'Print JSON output' },
     ],
@@ -40,6 +42,10 @@ if (argv[0] === 'confirm-plan') {
         actorPermission: String(options['actor-permission'] ?? 'maintainer'),
         command: typeof options.command === 'string' ? options.command : undefined,
         confirmationPhrase: String(options['confirmation-phrase'] ?? 'CONFIRM_TRIAGE_TRANSITION'),
+        confirmationMode: String(options['confirmation-mode'] ?? 'human-fixed-phrase'),
+        confirmationAuthority: typeof options['confirmation-authority'] === 'string'
+          ? options['confirmation-authority']
+          : undefined,
       });
       const text = `${JSON.stringify(result, null, 2)}\n`;
       if (typeof options.out === 'string') await writeFile(options.out, text);
