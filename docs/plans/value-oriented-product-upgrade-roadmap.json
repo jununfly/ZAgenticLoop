@@ -247,7 +247,8 @@
         "1-4-2",
         "1-4-3",
         "1-4-4",
-        "1-4-5"
+        "1-4-5",
+        "1-4-6"
       ],
       "decisions": [
         {
@@ -552,12 +553,27 @@
     "1-4-4": {
       "id": "1-4-4",
       "label": "Changelog Drafter 与 Release Draft Consumer 提升",
-      "status": "pending",
-      "mode": "explore",
+      "status": "in_progress",
+      "mode": "exploit",
       "parent": "1-4",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-4-4-1",
+        "1-4-4-2",
+        "1-4-4-3"
+      ],
+      "decisions": [
+        {
+          "q": "是否先做共享 Draft Consumer Promotion Gate，再推进 Changelog Drafter workflow-dispatch live evidence？",
+          "answer": "要。先做共享 Draft Consumer Promotion Gate，作为 Changelog Drafter 与未来 Release Draft / 文档 Draft consumer 的统一晋升标准；再推进 Changelog Drafter workflow-dispatch live evidence。",
+          "note": "Gate 第一条可以只覆盖 Changelog Drafter，但语义必须面向 draft-consumer，而不是为单一路由临时定义 ready。"
+        },
+        {
+          "q": "Changelog Drafter 这次 promotion 后是否只提升 maturity.runner，不修改 execution.mode？",
+          "answer": "是，只提升 runner maturity，不改 execution mode。",
+          "note": "runner execution-ready 表示 Changelog Drafter runner 有足够证据可被用户项目/route 使用；execution.mode 仍保持 report-only，避免 Route Decision 自动链路直接开始 draft side effect。让 Changelog Drafter 自动产出 draft artifact / draft PR 应作为后续独立节点处理。"
+        }
+      ],
+      "notes": "Start Changelog Drafter and draft-consumer promotion work. First define a shared Draft Consumer Promotion Gate, then collect Changelog Drafter workflow-dispatch live evidence and apply promotion only through explicit gate."
     },
     "1-4-5": {
       "id": "1-4-5",
@@ -1359,11 +1375,88 @@
       "children": [],
       "decisions": [],
       "notes": "Completed explicit promotion apply for dependency-sweeper and pr-steward-fix-request after shared fix-runner gate passed. Both now have maturity.runner=execution-ready while execution.mode remains claim-only; route enablement/live side effects remain separate guarded decisions. CI Sweeper was not promoted because check-only gate still misses explicit live-runner-evidence, so that gap stays visible instead of being forced through."
+    },
+    "1-4-4-1": {
+      "id": "1-4-4-1",
+      "label": "Shared Draft Consumer Promotion Gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Draft Consumer Promotion Gate 的硬证据 key 是否固定为 6 项？",
+          "answer": "同意。固定为 draft-request-carrier、draft-lifecycle、live-runner-evidence、reviewable-draft-outcome、side-effect-boundary、workflow-dispatch-dogfood。",
+          "note": "该 gate 与 fix-runner gate 同构，但把 repair/verifier outcome 换成 draft-consumer 的 reviewable draft outcome；draft-consumer 可以生成 reviewable draft artifact / draft PR / escalation issue，但不能 tag、release、publish，也不能把 draft 当成已发布结果。"
+        },
+        {
+          "q": "Draft Consumer Promotion Gate 是否复用现有 zj-loop-route promotion-gate，而不是新增命令？",
+          "answer": "复用现有 promotion-gate。",
+          "note": "实现上按 consumer_kind 分派 evidence collector：draft-consumer 使用 draft-request-carrier、draft-lifecycle、live-runner-evidence、reviewable-draft-outcome、side-effect-boundary、workflow-dispatch-dogfood；默认 check-only，只有 --apply 且固定确认短语 promote <consumer> runner to execution-ready 时才写 Route Table。"
+        },
+        {
+          "q": "Draft Consumer Promotion Gate 是否接受 escalation-issue 作为 live-runner evidence，但不能作为唯一 promotion 成功依据？",
+          "answer": "需要。",
+          "note": "live-runner-evidence 可接受 draft-evidence、draft-pr、escalation-issue；reviewable-draft-outcome 必须至少命中 draft-evidence 或 draft-pr。因此只跑出 escalation-issue 能证明失败路径可控，但不能证明 draft consumer 已具备可用的草稿产出能力。"
+        }
+      ],
+      "notes": "Implemented shared draft-consumer promotion gate through existing zj-loop-route promotion-gate. Gate now checks draft-request-carrier, draft-lifecycle, live-runner-evidence, reviewable-draft-outcome, side-effect-boundary, and workflow-dispatch-dogfood. Escalation evidence can satisfy live-runner-evidence but cannot satisfy reviewable-draft-outcome by itself."
+    },
+    "1-4-4-2": {
+      "id": "1-4-4-2",
+      "label": "Changelog Drafter Workflow-Dispatch Live Evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Changelog Drafter workflow-dispatch live evidence 的最小成功形态是否接受 draft-evidence，而不强制 draft-pr？",
+          "answer": "接受 draft-evidence，不强制必须 draft-pr。",
+          "note": "目标是证明 runner 能通过 workflow-dispatch 安全地产生 reviewable draft outcome；draft-evidence 副作用更小但能覆盖固定确认短语、request carrier、runner lifecycle、artifact upload、side-effect boundary。draft-pr 是更强证据但不是硬要求；promotion 不应只依赖 escalation-issue。"
+        },
+        {
+          "q": "Changelog Drafter workflow-dispatch dogfood 是否支持 core_package=./tools/zj-loop-core 本地包覆盖？",
+          "answer": "要。默认仍用发布包版本，dogfood 时允许显式传 core_package=./tools/zj-loop-core。",
+          "note": "本地包覆盖用于验证当前分支尚未发布的 core 改动；workflow 需要在本地包模式下先 npm install --prefix ./tools/zj-loop-core，并且 artifact upload 使用 if: always()，避免失败时丢证据。"
+        },
+        {
+          "q": "Changelog Drafter live evidence 是否必须证明不触碰发布侧副作用？",
+          "answer": "必须。",
+          "note": "side-effect-boundary gate 必须证明 draft consumer 只生成可审查草稿，不完成发布。live result / state 应显式记录 tag_created=false、release_created=false、package_published=false、final_changelog_acceptance=false；最好由 runner result 结构化输出，并由 promotion gate 检查。"
+        },
+        {
+          "q": "是否把 final_changelog_acceptance=false 补进 Changelog Drafter runner result / tests / promotion gate 识别？",
+          "answer": "要。",
+          "note": "该字段作为 side-effect-boundary 的硬字段，明确 draft-evidence / draft-pr 只是可审查草稿，不代表最终 changelog 已接受；runner result、测试和 promotion gate 都应覆盖。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-4-3": {
+      "id": "1-4-4-3",
+      "label": "Draft Consumer Promotion Apply And Docs",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-6": {
+      "id": "1-4-6",
+      "label": "Changelog Drafter 自动产出 Draft Artifact 与 Draft PR",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 17:39:31",
+    "updated": "2026-07-13 19:31:38",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

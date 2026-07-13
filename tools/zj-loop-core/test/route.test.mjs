@@ -129,6 +129,35 @@ routes:
       fix_consumer_allowlist: ["dependency-sweeper"]
 `;
 
+const CHANGELOG_DRAFTER_ROUTE_TABLE = `schemaVersion: 1
+kind: zj-loop-route-table
+routes:
+  - route_id: "changelog-drafter-draft-request"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "changelog-drafter"
+    consumer_kind: "draft-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["draft-pr", "draft-evidence", "escalation-issue"]
+    maturity:
+      protocol: "replayed"
+      runner: "replayed"
+    capabilities:
+      scopes: ["release-prep", "draft-request"]
+      verifiers: ["existing-changelog-report", "dedupe-check"]
+      max_side_effect_level: "evidence"
+    evidence_store: "zj-loop/changelog-drafter-state.md"
+    guards:
+      release_notes_draft_allowed: false
+      changelog_edit_allowed: false
+      changelog_pr_allowed: false
+      tag_allowed: false
+      release_allowed: false
+      package_publish_allowed: false
+`;
+
 async function setupRouteTable() {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-route-'));
   await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
@@ -156,6 +185,26 @@ async function writeFixRunnerState(dir, file, options = {}) {
     '- Verification gate and verifier-backed repair-pr / escalation-issue outcomes are recorded.',
     '- Side effect boundary: independent repair PR or escalation issue only; source PR/MR side effects are false; auto-merge is disabled.',
     '- Real workflow-dispatch dogfood evidence is still required before promotion.',
+    workflowEvidence,
+  ].join('\n'));
+}
+
+async function writeDraftConsumerState(dir, options = {}) {
+  const workflowEvidence = options.workflowEvidence === true
+    ? '- Real workflow-dispatch dogfood evidence: https://github.com/example/repo/actions/runs/456\n'
+    : '';
+  const outcome = options.outcome ?? 'draft-evidence';
+  const reviewableOutcome = options.reviewableOutcome === false
+    ? ''
+    : '- Reviewable draft outcome recorded as draft-evidence.';
+  await writeFile(path.join(dir, 'zj-loop', 'changelog-drafter-state.md'), [
+    '# Changelog Drafter State',
+    '',
+    '- Draft request candidate evidence exists for changelog-drafter-draft-request.',
+    '- Draft lifecycle covers draft-request-candidate -> draft-evidence and draft-pr outcomes.',
+    `- Live runner replay covers draft-request-candidate -> ${outcome}.`,
+    reviewableOutcome,
+    '- Side effect boundary: tag_created=false, release_created=false, package_published=false, final_changelog_acceptance=false.',
     workflowEvidence,
   ].join('\n'));
 }
@@ -645,6 +694,69 @@ test('promotion-gate reports workflow-dispatch dogfood as the remaining fix-runn
     assert.deepEqual(result.missing_evidence, ['workflow-dispatch-dogfood']);
     assert.equal(result.required_evidence.find((check) => check.key === 'workflow-dispatch-dogfood').satisfied, false);
     assert.equal(result.required_evidence.filter((check) => check.satisfied).length, 5);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promotion-gate accepts shared draft-consumer evidence for Changelog Drafter', async () => {
+  const dir = await setupRouteTableText(CHANGELOG_DRAFTER_ROUTE_TABLE);
+  try {
+    await writeDraftConsumerState(dir, { workflowEvidence: true });
+
+    const checked = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'changelog-drafter-draft-request',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(checked.status, 0);
+    const result = JSON.parse(checked.stdout);
+    assert.equal(result.promotable, true);
+    assert.deepEqual(result.missing_evidence, []);
+    assert.deepEqual(result.required_evidence.map((check) => check.key), [
+      'draft-request-carrier',
+      'draft-lifecycle',
+      'live-runner-evidence',
+      'reviewable-draft-outcome',
+      'side-effect-boundary',
+      'workflow-dispatch-dogfood',
+    ]);
+    assert.equal(result.required_evidence.every((check) => check.satisfied), true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promotion-gate rejects draft-consumer promotion when only escalation evidence exists', async () => {
+  const dir = await setupRouteTableText(CHANGELOG_DRAFTER_ROUTE_TABLE);
+  try {
+    await writeDraftConsumerState(dir, {
+      workflowEvidence: true,
+      outcome: 'escalation-issue',
+      reviewableOutcome: false,
+    });
+
+    const checked = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'changelog-drafter-draft-request',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(checked.status, 2);
+    const result = JSON.parse(checked.stdout);
+    assert.equal(result.promotable, false);
+    assert.deepEqual(result.missing_evidence, ['reviewable-draft-outcome']);
+    assert.equal(result.required_evidence.find((check) => check.key === 'live-runner-evidence').satisfied, true);
+    assert.equal(result.required_evidence.find((check) => check.key === 'reviewable-draft-outcome').satisfied, false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -109,7 +109,7 @@ export type RouteMaturityPromotionResult = {
     confirmation_required: boolean;
     next_steps: string[];
 };
-export type RoutePromotionEvidenceKey = 'contract-plan' | 'provider-live-side-effect' | 'activation-lifecycle' | 'post-merge-closeout-handoff' | 'request-carrier' | 'claim-lifecycle' | 'live-runner-evidence' | 'verifier-backed-outcome' | 'side-effect-boundary' | 'workflow-dispatch-dogfood';
+export type RoutePromotionEvidenceKey = 'contract-plan' | 'provider-live-side-effect' | 'activation-lifecycle' | 'post-merge-closeout-handoff' | 'request-carrier' | 'claim-lifecycle' | 'live-runner-evidence' | 'verifier-backed-outcome' | 'draft-request-carrier' | 'draft-lifecycle' | 'reviewable-draft-outcome' | 'side-effect-boundary' | 'workflow-dispatch-dogfood';
 export type RoutePromotionEvidenceMatch = {
     orchestration_id: string;
     path: string;

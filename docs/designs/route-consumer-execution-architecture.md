@@ -218,6 +218,24 @@ Runner-specific differences may change how evidence is collected, but they
 must not lower the shared gate. Missing evidence keeps the route below
 `execution-ready` even when replayed local runner evidence exists.
 
+Draft-consumer promotion uses the same `zj-loop-route promotion-gate` command
+and keeps the same check-only / explicit-apply boundary. Its required evidence
+keys are fixed:
+
+- `draft-request-carrier`
+- `draft-lifecycle`
+- `live-runner-evidence`
+- `reviewable-draft-outcome`
+- `side-effect-boundary`
+- `workflow-dispatch-dogfood`
+
+`live-runner-evidence` may include `draft-evidence`, `draft-pr`, or
+`escalation-issue`, but `reviewable-draft-outcome` must include
+`draft-evidence` or `draft-pr`. An `escalation-issue` proves the failure path is
+controlled; it does not prove the draft consumer can produce a usable draft.
+The side-effect boundary must explicitly prove the draft consumer did not tag,
+create a release, publish a package, or mark final changelog acceptance.
+
 ## Capabilities
 
 Consumer capabilities live in the Route Table as light contract fields:

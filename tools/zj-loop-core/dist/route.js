@@ -259,12 +259,14 @@ export async function evaluateRoutePromotionGate(input) {
         })
         : route.consumer_kind === 'fix-runner'
             ? await collectFixRunnerPromotionEvidence({ root: input.root, route })
-            : [];
+            : route.consumer_kind === 'draft-consumer'
+                ? await collectDraftConsumerPromotionEvidence({ root: input.root, route })
+                : [];
     if (route.consumer_kind === 'activation-consumer' && (route.route_id !== 'roadmap-sliced-development' || route.consumer !== 'roadmap-sliced-development')) {
         failedChecks.push('promotion-gate currently supports roadmap-sliced-development activation consumers only');
     }
-    if (route.consumer_kind !== 'activation-consumer' && route.consumer_kind !== 'fix-runner') {
-        failedChecks.push('promotion-gate currently supports activation-consumer and fix-runner routes only');
+    if (route.consumer_kind !== 'activation-consumer' && route.consumer_kind !== 'fix-runner' && route.consumer_kind !== 'draft-consumer') {
+        failedChecks.push('promotion-gate currently supports activation-consumer, fix-runner, and draft-consumer routes only');
     }
     const missingEvidence = evidenceChecks
         .filter((check) => !check.satisfied)
@@ -371,6 +373,85 @@ async function collectFixRunnerPromotionEvidence(input) {
             lowerState.includes('not write source pr comments') ||
             lowerState.includes('automatic routing must not') ||
             lowerState.includes('auto-merge is disabled'))) {
+        addEvidenceMatch(checks.get('side-effect-boundary'), {
+            orchestration_id: input.route.route_id,
+            path: routePath,
+            kind: 'side-effect-boundary',
+            check_result: 'passed',
+        });
+    }
+    if (input.route.recent_success_evidence.length > 0 ||
+        lowerState.includes('real workflow-dispatch dogfood evidence:')) {
+        addEvidenceMatch(checks.get('workflow-dispatch-dogfood'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'workflow-dispatch-dogfood',
+            check_result: 'passed',
+        });
+    }
+    return Array.from(checks.values());
+}
+async function collectDraftConsumerPromotionEvidence(input) {
+    const checks = new Map([
+        ['draft-request-carrier', emptyEvidenceCheck('draft-request-carrier', 'missing structured draft request carrier evidence')],
+        ['draft-lifecycle', emptyEvidenceCheck('draft-lifecycle', 'missing draft request lifecycle evidence')],
+        ['live-runner-evidence', emptyEvidenceCheck('live-runner-evidence', 'missing live runner draft-evidence/draft-pr/escalation-issue evidence')],
+        ['reviewable-draft-outcome', emptyEvidenceCheck('reviewable-draft-outcome', 'missing reviewable draft-evidence or draft-pr outcome evidence')],
+        ['side-effect-boundary', emptyEvidenceCheck('side-effect-boundary', 'missing proof that draft side effects do not tag, release, publish, or finalize changelog acceptance')],
+        ['workflow-dispatch-dogfood', emptyEvidenceCheck('workflow-dispatch-dogfood', 'missing real workflow-dispatch dogfood evidence')],
+    ]);
+    const statePath = input.route.evidence_store || `zj-loop/${input.route.consumer}-state.md`;
+    const stateText = await readTextFile(path.resolve(input.root, statePath));
+    const lowerState = stateText.toLowerCase();
+    const routePath = DEFAULT_ROUTE_TABLE_PATH;
+    if (lowerState.includes('draft request') ||
+        lowerState.includes('draft-request-candidate') ||
+        input.route.recent_success_evidence.length > 0) {
+        addEvidenceMatch(checks.get('draft-request-carrier'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'draft-request-carrier',
+            check_result: 'passed',
+        });
+    }
+    if (lowerState.includes('draft lifecycle') ||
+        lowerState.includes('draft-request-candidate ->') ||
+        lowerState.includes('draft request candidate')) {
+        addEvidenceMatch(checks.get('draft-lifecycle'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'draft-lifecycle',
+            check_result: 'passed',
+        });
+    }
+    if (lowerState.includes('live runner') &&
+        (lowerState.includes('draft-evidence') ||
+            lowerState.includes('draft-pr') ||
+            lowerState.includes('escalation-issue'))) {
+        addEvidenceMatch(checks.get('live-runner-evidence'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            schema: 'zj-loop.live_runner_evidence.v1',
+            kind: 'live-runner-evidence',
+            check_result: 'passed',
+        });
+    }
+    if (lowerState.includes('reviewable draft outcome') &&
+        (lowerState.includes('draft-evidence') || lowerState.includes('draft-pr'))) {
+        addEvidenceMatch(checks.get('reviewable-draft-outcome'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'reviewable-draft-outcome',
+            check_result: 'passed',
+        });
+    }
+    if (input.route.guards?.tag_allowed === false &&
+        input.route.guards?.release_allowed === false &&
+        input.route.guards?.package_publish_allowed === false &&
+        lowerState.includes('tag_created=false') &&
+        lowerState.includes('release_created=false') &&
+        lowerState.includes('package_published=false') &&
+        lowerState.includes('final_changelog_acceptance=false')) {
         addEvidenceMatch(checks.get('side-effect-boundary'), {
             orchestration_id: input.route.route_id,
             path: routePath,
