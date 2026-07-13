@@ -516,12 +516,38 @@
     "1-4-3": {
       "id": "1-4-3",
       "label": "CI、Dependency、PR Steward Fix Runner 提升",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "explore",
       "parent": "1-4",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-4-3-1",
+        "1-4-3-2",
+        "1-4-3-3",
+        "1-4-3-4"
+      ],
+      "decisions": [
+        {
+          "q": "是否先做共享 Fix Runner Promotion Gate，再分别推进 CI / Dependency / PR Steward live readiness？",
+          "answer": "确认：先做共享 Fix Runner Promotion Gate，作为 CI Sweeper、Dependency Sweeper、PR Steward 三条 fix-runner 从 claim/replayed/live evidence 走向 execution-ready 的统一门槛。",
+          "note": "Gate 应避免三条 runner 各自定义成熟度标准；后续 runner-specific 差异只作为该共享 gate 下的 adapter/evidence 细节。"
+        },
+        {
+          "q": "共享 Fix Runner Promotion Gate 的必需 evidence key 是否固定为 6 项？",
+          "answer": "确认：固定 6 项硬门槛：request-carrier、claim-lifecycle、live-runner-evidence、verifier-backed-outcome、side-effect-boundary、workflow-dispatch-dogfood。",
+          "note": "Gate 先统一 CI Sweeper、Dependency Sweeper、PR Steward 的 execution-ready 判断标准；runner-specific 差异只能作为 evidence adapter 细节，不能降低共享硬门槛。"
+        },
+        {
+          "q": "共享 Fix Runner Promotion Gate 是否复用现有 zj-loop-route promotion-gate，并保留默认 check-only / 显式 --apply？",
+          "answer": "确认：复用现有 zj-loop-route promotion-gate 命令，不新造命令；默认只检查 evidence，不写 Route Table；只有 --apply 且提供固定确认短语 promote <consumer> runner to execution-ready 时才更新 maturity.runner。",
+          "note": "ci-sweeper 应作为 shared gate 的 golden baseline；dependency-sweeper 与 pr-steward-fix-request 通过同一 gate 补齐 workflow-dispatch dogfood / execution-ready 缺口。"
+        },
+        {
+          "q": "1-4-3 的实现顺序是否拆成两层：先共享 Promotion Gate，再补 Dependency / PR Steward workflow-dispatch live runner 入口？",
+          "answer": "确认：分两层并都保留在 1-4-3 内，避免第一层完成后误判整个目标已完成。先实现共享 Fix Runner Promotion Gate，再分别补齐 Dependency Sweeper 与 PR Steward 的 workflow-dispatch live evidence，最后 apply promotion 与文档收束。",
+          "note": "拆为 1-4-3-1 Shared Fix Runner Promotion Gate、1-4-3-2 Dependency Sweeper Workflow-Dispatch Live Evidence、1-4-3-3 PR Steward Workflow-Dispatch Live Evidence、1-4-3-4 Apply Promotion And Docs。"
+        }
+      ],
+      "notes": "Started grill for CI, Dependency, and PR Steward Fix Runner upgrade. Initial scan shows CI Sweeper is live dogfooded, while Dependency Sweeper and PR Steward are claim-only/replayed with live-runner evidence but not workflow-dispatch dogfooded/execution-ready."
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -1282,11 +1308,51 @@
         }
       ],
       "notes": "Implemented GitLab Post Merge Live Closeout support. The closeout runner now supports GitLab API live cleanup with GITLAB_TOKEN/JOB-TOKEN: delete the contract zjal- roadmap branch, probe and close the carrier issue, treat already_deleted/already_closed as completed, and emit cleanup-done/cleanup-skipped live-runner evidence. CLI live-closeout accepts --provider gitlab / --merge-request / GitLab token options; Roadmap Activation handoff now emits executable GitLab live closeout commands. Verification: npm test in tools/zj-loop-core passed 166/166."
+    },
+    "1-4-3-1": {
+      "id": "1-4-3-1",
+      "label": "Shared Fix Runner Promotion Gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented shared Fix Runner promotion-gate evidence checks for issue-fix-request fix runners. Required evidence keys are fixed to request-carrier, claim-lifecycle, live-runner-evidence, verifier-backed-outcome, side-effect-boundary, workflow-dispatch-dogfood. CI Sweeper baseline can pass with workflow-dispatch dogfood evidence; Dependency Sweeper currently reports workflow-dispatch-dogfood as the remaining gap. Updated route consumer execution architecture docs. Verification: cd tools/zj-loop-core && npm test."
+    },
+    "1-4-3-2": {
+      "id": "1-4-3-2",
+      "label": "Dependency Sweeper Workflow-Dispatch Live Evidence",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Added guarded Dependency Sweeper workflow-dispatch live-repair path but did not mark route execution-ready. Core CLI now exposes zj-loop-dependency-sweeper live-repair, generated GitHub Actions/template accept confirm_live_repair and upload live-repair-result evidence, and init tests assert the generated bundle keeps this entrypoint. Durable docs/state record that real workflow-dispatch dogfood evidence is still required before live/execution-ready promotion. Verification: cd tools/zj-loop-core && npm test; cd tools/zj-loop-init && npm test; npm run test:generated-bundle-release-gate."
+    },
+    "1-4-3-3": {
+      "id": "1-4-3-3",
+      "label": "PR Steward Workflow-Dispatch Live Evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-3-4": {
+      "id": "1-4-3-4",
+      "label": "Apply Promotion And Docs",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 15:07:49",
+    "updated": "2026-07-13 15:35:05",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

@@ -47,6 +47,7 @@ export type RouteStatus = {
     capability_scopes: string[];
     capability_verifiers: string[];
     recent_success_evidence: string[];
+    evidence_store?: string;
     readiness: RouteReadiness;
     readiness_reasons: string[];
     install_ready: boolean;
@@ -108,7 +109,7 @@ export type RouteMaturityPromotionResult = {
     confirmation_required: boolean;
     next_steps: string[];
 };
-export type RoutePromotionEvidenceKey = 'contract-plan' | 'provider-live-side-effect' | 'activation-lifecycle' | 'post-merge-closeout-handoff';
+export type RoutePromotionEvidenceKey = 'contract-plan' | 'provider-live-side-effect' | 'activation-lifecycle' | 'post-merge-closeout-handoff' | 'request-carrier' | 'claim-lifecycle' | 'live-runner-evidence' | 'verifier-backed-outcome' | 'side-effect-boundary' | 'workflow-dispatch-dogfood';
 export type RoutePromotionEvidenceMatch = {
     orchestration_id: string;
     path: string;

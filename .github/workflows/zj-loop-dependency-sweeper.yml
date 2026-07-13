@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 84c0b9e801715e2e
+# zj-loop-template-hash: fc03ce41ec5ffcbc
 
 name: ZJ Loop Dependency Sweeper
 
@@ -12,6 +12,10 @@ on:
     inputs:
       issue_fix_request_json:
         description: 'Consumed Issue Fix Request JSON'
+        required: false
+        default: ''
+      confirm_live_repair:
+        description: 'Optional fixed phrase for live Dependency Sweeper repair'
         required: false
         default: ''
 
@@ -29,6 +33,7 @@ jobs:
       - name: Dependency sweeper route evidence
         env:
           ISSUE_FIX_REQUEST_JSON: ${{ inputs.issue_fix_request_json }}
+          CONFIRM_LIVE_REPAIR: ${{ inputs.confirm_live_repair }}
         run: |
           npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
           npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-dependency-sweeper plan --json > consumer-plan.json || true
@@ -36,6 +41,27 @@ jobs:
             printf '%s\n' "$ISSUE_FIX_REQUEST_JSON" > issue-fix-request.json
             npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-dependency-sweeper repair-plan --request issue-fix-request.json --json > repair-plan.json || true
             cat repair-plan.json >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "$CONFIRM_LIVE_REPAIR" ]; then
+              npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-dependency-sweeper live-repair \
+                --request issue-fix-request.json \
+                --confirm-live-repair "$CONFIRM_LIVE_REPAIR" \
+                --out live-repair-result.json \
+                --json || true
+              printf '\n\n### Live Repair Result\n\n' >> "$GITHUB_STEP_SUMMARY"
+              cat live-repair-result.json >> "$GITHUB_STEP_SUMMARY"
+            fi
           fi
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Dependency Sweeper evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: zj-loop-dependency-sweeper-${{ github.run_id }}
+          path: |
+            route-decision.json
+            consumer-plan.json
+            issue-fix-request.json
+            repair-plan.json
+            live-repair-result.json
+          if-no-files-found: ignore

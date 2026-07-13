@@ -195,6 +195,29 @@ Live execution requires:
 - route kind, capabilities, request verifier requirements, and side effect
   level are compatible
 
+Route runner promotion is check-only by default. To move a runner to
+`execution-ready`, use:
+
+```bash
+zj-loop-route promotion-gate <route-or-consumer> --target execution-ready
+zj-loop-route promotion-gate <route-or-consumer> --target execution-ready --apply --confirm "promote <consumer> runner to execution-ready"
+```
+
+Fix-runner promotion uses one shared evidence gate across CI Sweeper,
+Dependency Sweeper, PR Steward, and future repair consumers. The required
+evidence keys are fixed:
+
+- `request-carrier`
+- `claim-lifecycle`
+- `live-runner-evidence`
+- `verifier-backed-outcome`
+- `side-effect-boundary`
+- `workflow-dispatch-dogfood`
+
+Runner-specific differences may change how evidence is collected, but they
+must not lower the shared gate. Missing evidence keeps the route below
+`execution-ready` even when replayed local runner evidence exists.
+
 ## Capabilities
 
 Consumer capabilities live in the Route Table as light contract fields:
@@ -307,7 +330,7 @@ The dogfood Route Table is the operational truth. Current dogfood capability:
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
 | PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; GitLab MR requests use MR provider vocabulary in dry-run evidence, while live GitLab review side effects are explicitly refused until workflow-dispatch dogfood evidence exists. |
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
-| Dependency Sweeper | `fix-runner` | `claim-only` | `replayed` | Request/claim evidence plus replayed repair PR or escalation runner; not live until workflow-dispatch dogfood evidence exists. |
+| Dependency Sweeper | `fix-runner` | `claim-only` | `replayed` | Request/claim evidence plus replayed repair PR or escalation runner; generated GitHub Actions now has a guarded `live-repair` workflow-dispatch path, but the route remains below live/execution-ready until real workflow-dispatch dogfood evidence exists. |
 | Changelog Drafter | `draft-consumer` | `report-only` | `replayed` | Report/draft-request evidence plus replayed draft evidence or draft PR runner; not live until workflow-dispatch dogfood evidence exists. |
 | Roadmap-Sliced Development | `activation-consumer` | `request-only` generated bundle, live dogfood bootstrap | `install-ready` generated bundle, dogfooded reference path | Activation bootstrap has deterministic request/contract evidence; slice execution remains bounded by roadmap gates. |
 | Post-Merge Cleanup | `cleanup-consumer` | `dry-run` | `replayed` | Automatic dry-run; live cleanup remains guarded by contract and confirmation. |

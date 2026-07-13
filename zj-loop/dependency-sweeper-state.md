@@ -26,14 +26,19 @@ Last run: 2026-07-08
 
 Dependency Sweeper is not live in this repository yet. The Route Table remains
 `claim-only`, so automatic routing must not edit package manifests, update
-lockfiles, create branches, open Fix PRs, dispatch workflows, or auto-merge.
+lockfiles, create branches, open Fix PRs, dispatch workflows, or auto-merge
+from the route by default.
 
-`scripts/dependency-sweeper-live-runner.mjs` is now a replayed, guarded runner
-for npm patch/minor dependency requests that have already been claimed by
-Dependency Sweeper. Live execution requires the fixed confirmation phrase
-`CREATE_DEPENDENCY_SWEEPER_FIX_PR`, a clean working tree, low/medium route risk,
-an npm dependency subject with an explicit dependency section, verifier
-commands, and a non-empty manifest/lockfile diff before PR creation. The route
-may move to `execution.mode: live` only after real workflow-dispatch dogfood
-evidence shows the runner can create a verifier-backed repair PR or escalation
-issue safely.
+`zj-loop-dependency-sweeper live-repair` is a guarded runner entrypoint for npm
+patch/minor dependency requests that have already been claimed by Dependency
+Sweeper. The generated GitHub Actions workflow now exposes a
+`confirm_live_repair` workflow-dispatch input; when the fixed phrase
+`CREATE_DEPENDENCY_SWEEPER_FIX_PR` is provided, the workflow can execute
+live-repair and upload `live-repair-result.json` evidence.
+
+Live execution still requires a clean working tree, low/medium route risk, an
+npm dependency subject with an explicit dependency section, verifier commands,
+and a non-empty manifest/lockfile diff before PR creation. The route may move
+to `execution.mode: live` only after real workflow-dispatch dogfood evidence
+shows the runner can create a verifier-backed repair PR or escalation issue
+safely.

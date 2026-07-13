@@ -61,7 +61,7 @@ routes:
 disabled_dispatch_routes:
   - route_id: "ci-sweeper"
     enabled: false
-    request_kind: "workflow-dispatch"
+    request_kind: "issue-fix-request"
     consumer: "ci-sweeper"
     consumer_kind: "fix-runner"
     execution:
@@ -78,6 +78,9 @@ disabled_dispatch_routes:
       verifiers: ["ci-validate-gates", "diff-check"]
       max_side_effect_level: "pr"
     evidence_store: "zj-loop/ci-sweeper-state.md"
+    guards:
+      create_pr_only: true
+      auto_merge: false
   - route_id: "roadmap-sliced-development"
     enabled: false
     request_kind: "activation-comment"
@@ -99,11 +102,62 @@ disabled_dispatch_routes:
     evidence_store: "zj-loop/roadmap-activation-state.md"
 `;
 
+const DEPENDENCY_ROUTE_TABLE = `schemaVersion: 1
+kind: zj-loop-route-table
+routes:
+  - route_id: "dependency-sweeper"
+    enabled: true
+    request_kind: "issue-fix-request"
+    consumer: "dependency-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "claim-only"
+      side_effect_level: "claim"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "replayed"
+      runner: "replayed"
+    capabilities:
+      scopes: ["dependency", "patch-update", "minor-update"]
+      verifiers: ["request-claim", "package-risk-check", "verification-gate"]
+      max_side_effect_level: "claim"
+    evidence_store: "zj-loop/dependency-sweeper-state.md"
+    guards:
+      verifier_required: true
+      claim_only: true
+      auto_merge: false
+      fix_consumer_allowlist: ["dependency-sweeper"]
+`;
+
 async function setupRouteTable() {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-route-'));
   await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
   await writeFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), ROUTE_TABLE);
   return dir;
+}
+
+async function setupRouteTableText(text) {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-route-'));
+  await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
+  await writeFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), text);
+  return dir;
+}
+
+async function writeFixRunnerState(dir, file, options = {}) {
+  const workflowEvidence = options.workflowEvidence === true
+    ? '- Real workflow-dispatch dogfood evidence: https://github.com/example/repo/actions/runs/123\n'
+    : '';
+  await writeFile(path.join(dir, 'zj-loop', file), [
+    '# Fix Runner State',
+    '',
+    '- Synthetic Issue Fix Request carrier exists.',
+    '- Claim replay covers requested -> consumed lifecycle evidence.',
+    '- Live runner replay covers consumed -> repair-pr and consumed -> escalation-issue outcomes.',
+    '- Verification gate and verifier-backed repair-pr / escalation-issue outcomes are recorded.',
+    '- Side effect boundary: independent repair PR or escalation issue only; source PR/MR side effects are false; auto-merge is disabled.',
+    '- Real workflow-dispatch dogfood evidence is still required before promotion.',
+    workflowEvidence,
+  ].join('\n'));
 }
 
 async function writeRoadmapActivationSuccessEvidence(dir, orchestrationId) {
@@ -532,6 +586,65 @@ test('promotion-gate apply requires fixed confirmation and only then promotes ru
     const updated = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(updated, /runner: execution-ready/);
     assert.match(updated, /enabled: false/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promotion-gate accepts shared fix-runner evidence for CI Sweeper baseline', async () => {
+  const dir = await setupRouteTable();
+  try {
+    await writeFixRunnerState(dir, 'ci-sweeper-state.md', { workflowEvidence: true });
+
+    const checked = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'ci-sweeper',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(checked.status, 0);
+    const result = JSON.parse(checked.stdout);
+    assert.equal(result.promotable, true);
+    assert.deepEqual(result.missing_evidence, []);
+    assert.deepEqual(result.required_evidence.map((check) => check.key), [
+      'request-carrier',
+      'claim-lifecycle',
+      'live-runner-evidence',
+      'verifier-backed-outcome',
+      'side-effect-boundary',
+      'workflow-dispatch-dogfood',
+    ]);
+    assert.equal(result.required_evidence.every((check) => check.satisfied), true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('promotion-gate reports workflow-dispatch dogfood as the remaining fix-runner gap', async () => {
+  const dir = await setupRouteTableText(DEPENDENCY_ROUTE_TABLE);
+  try {
+    await writeFixRunnerState(dir, 'dependency-sweeper-state.md');
+
+    const checked = spawnSync(process.execPath, [
+      CLI,
+      'promotion-gate',
+      'dependency-sweeper',
+      '--root',
+      dir,
+      '--target',
+      'execution-ready',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(checked.status, 2);
+    const result = JSON.parse(checked.stdout);
+    assert.equal(result.promotable, false);
+    assert.deepEqual(result.missing_evidence, ['workflow-dispatch-dogfood']);
+    assert.equal(result.required_evidence.find((check) => check.key === 'workflow-dispatch-dogfood').satisfied, false);
+    assert.equal(result.required_evidence.filter((check) => check.satisfied).length, 5);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

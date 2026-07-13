@@ -252,13 +252,20 @@ export async function evaluateRoutePromotionGate(input) {
     const table = await loadRouteTable(input.root, routeTablePath);
     const route = findRoute(table, input.selector);
     const failedChecks = [];
-    if (route.route_id !== 'roadmap-sliced-development' || route.consumer !== 'roadmap-sliced-development') {
-        failedChecks.push('promotion-gate currently supports roadmap-sliced-development only');
+    const evidenceChecks = route.consumer_kind === 'activation-consumer'
+        ? await collectRoadmapActivationPromotionEvidence({
+            root: input.root,
+            orchestrationId: input.orchestrationId,
+        })
+        : route.consumer_kind === 'fix-runner'
+            ? await collectFixRunnerPromotionEvidence({ root: input.root, route })
+            : [];
+    if (route.consumer_kind === 'activation-consumer' && (route.route_id !== 'roadmap-sliced-development' || route.consumer !== 'roadmap-sliced-development')) {
+        failedChecks.push('promotion-gate currently supports roadmap-sliced-development activation consumers only');
     }
-    const evidenceChecks = await collectRoadmapActivationPromotionEvidence({
-        root: input.root,
-        orchestrationId: input.orchestrationId,
-    });
+    if (route.consumer_kind !== 'activation-consumer' && route.consumer_kind !== 'fix-runner') {
+        failedChecks.push('promotion-gate currently supports activation-consumer and fix-runner routes only');
+    }
     const missingEvidence = evidenceChecks
         .filter((check) => !check.satisfied)
         .map((check) => check.key);
@@ -305,6 +312,82 @@ export async function evaluateRoutePromotionGate(input) {
         promotion_command: promotionCommand,
         apply_result: applyResult,
     };
+}
+async function collectFixRunnerPromotionEvidence(input) {
+    const checks = new Map([
+        ['request-carrier', emptyEvidenceCheck('request-carrier', 'missing structured Issue Fix Request carrier evidence')],
+        ['claim-lifecycle', emptyEvidenceCheck('claim-lifecycle', 'missing claim or live request consumption lifecycle evidence')],
+        ['live-runner-evidence', emptyEvidenceCheck('live-runner-evidence', 'missing live runner repair-pr/escalation-issue evidence')],
+        ['verifier-backed-outcome', emptyEvidenceCheck('verifier-backed-outcome', 'missing verifier-backed repair or explicit escalation evidence')],
+        ['side-effect-boundary', emptyEvidenceCheck('side-effect-boundary', 'missing proof that side effects are bounded to repair PR or escalation issue and auto-merge is disabled')],
+        ['workflow-dispatch-dogfood', emptyEvidenceCheck('workflow-dispatch-dogfood', 'missing real workflow-dispatch dogfood evidence')],
+    ]);
+    const statePath = input.route.evidence_store || `zj-loop/${input.route.consumer}-state.md`;
+    const stateText = await readTextFile(path.resolve(input.root, statePath));
+    const lowerState = stateText.toLowerCase();
+    const routePath = DEFAULT_ROUTE_TABLE_PATH;
+    if (input.route.request_kind === 'issue-fix-request' &&
+        (lowerState.includes('issue fix request') || input.route.recent_success_evidence.length > 0)) {
+        addEvidenceMatch(checks.get('request-carrier'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'request-carrier',
+            check_result: 'passed',
+        });
+    }
+    if ((input.route.execution_mode === 'live' && input.route.recent_success_evidence.length > 0) ||
+        lowerState.includes('consumed') ||
+        lowerState.includes('claim replay') ||
+        lowerState.includes('claim evidence')) {
+        addEvidenceMatch(checks.get('claim-lifecycle'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'claim-lifecycle',
+            check_result: 'passed',
+        });
+    }
+    if (lowerState.includes('live runner') &&
+        (lowerState.includes('repair-pr') || lowerState.includes('escalation-issue'))) {
+        addEvidenceMatch(checks.get('live-runner-evidence'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            schema: 'zj-loop.live_runner_evidence.v1',
+            kind: 'live-runner-evidence',
+            check_result: 'passed',
+        });
+    }
+    if ((lowerState.includes('verification gate') || lowerState.includes('verifier') || input.route.capability_verifiers.length > 0) &&
+        (lowerState.includes('repair-pr') || lowerState.includes('escalation-issue'))) {
+        addEvidenceMatch(checks.get('verifier-backed-outcome'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'verifier-backed-outcome',
+            check_result: 'passed',
+        });
+    }
+    if (input.route.guards?.auto_merge === false &&
+        (input.route.guards?.create_pr_only === true ||
+            lowerState.includes('source pr/mr side effects are false') ||
+            lowerState.includes('not write source pr comments') ||
+            lowerState.includes('automatic routing must not') ||
+            lowerState.includes('auto-merge is disabled'))) {
+        addEvidenceMatch(checks.get('side-effect-boundary'), {
+            orchestration_id: input.route.route_id,
+            path: routePath,
+            kind: 'side-effect-boundary',
+            check_result: 'passed',
+        });
+    }
+    if (input.route.recent_success_evidence.length > 0 ||
+        lowerState.includes('real workflow-dispatch dogfood evidence:')) {
+        addEvidenceMatch(checks.get('workflow-dispatch-dogfood'), {
+            orchestration_id: input.route.route_id,
+            path: statePath,
+            kind: 'workflow-dispatch-dogfood',
+            check_result: 'passed',
+        });
+    }
+    return Array.from(checks.values());
 }
 async function collectRoadmapActivationPromotionEvidence(input) {
     const checks = new Map([
@@ -454,6 +537,14 @@ async function readJsonObject(filePath) {
     }
     catch {
         return null;
+    }
+}
+async function readTextFile(filePath) {
+    try {
+        return await readFile(filePath, 'utf8');
+    }
+    catch {
+        return '';
     }
 }
 function objectField(value) {
@@ -615,6 +706,7 @@ function normalizeRouteSection(routes, section) {
             capability_scopes: capabilityScopes,
             capability_verifiers: capabilityVerifiers,
             recent_success_evidence: recentSuccessEvidence,
+            evidence_store: route.evidence_store,
             readiness: readiness.readiness,
             readiness_reasons: readiness.reasons,
             install_ready: readiness.readiness === 'install-ready' || readiness.readiness === 'execution-ready',

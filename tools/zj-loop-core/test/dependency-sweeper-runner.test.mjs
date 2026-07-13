@@ -185,3 +185,26 @@ test('dependency sweeper repair-plan CLI reads request JSON', async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('dependency sweeper live-repair CLI emits structured escalation when confirmation is missing', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-dependency-sweeper-live-'));
+  const requestPath = path.join(dir, 'request.json');
+  await writeFile(requestPath, JSON.stringify(consumedDependencyRequest(), null, 2));
+  try {
+    const result = spawnSync(process.execPath, [
+      DEPENDENCY_SWEEPER_CLI,
+      'live-repair',
+      '--request',
+      requestPath,
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.kind, 'zj-loop.dependency-sweeper-live-runner-result');
+    assert.equal(parsed.outcome, 'escalation-issue');
+    assert.equal(parsed.runner_evidence.completion_form, 'escalation-issue');
+    assert.ok(parsed.plan.refusals.some((item) => item.reason === 'fixed confirmation phrase is required for live repair'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
