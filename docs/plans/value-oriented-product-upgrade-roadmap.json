@@ -1518,12 +1518,38 @@
     "1-4-5-2": {
       "id": "1-4-5-2",
       "label": "GitLab Generated CI Scaffold Parity",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "GitLab Generated CI Scaffold Parity 的完成标准是否从文件生成提升为生成后可自检为 provider-ready？",
+          "answer": "同意提升。完成标准是 GitLab scaffold 生成后，能通过确定性测试证明 Route Table、GitLab fragments、root include/readiness 输出、package pin、route dispatch、provider_support/provider_context 全部对齐。",
+          "note": "provider_support 是 capability inventory，不改变 route authorization；scaffold health check 负责证明生成物可解释、可审计、可回放。"
+        },
+        {
+          "q": "provider-ready 自检应该放在哪里？",
+          "answer": "同意不新增独立用户命令。优先固化到 zj-loop-init 生成/升级测试、generated/provider parity release gates，以及简洁 readiness 输出。",
+          "note": "用户不需要额外记忆一个新检查命令；发布门槛由 deterministic tests/gates 承担，zj-loop-init 输出只提供必要 next steps 和 readiness summary。"
+        },
+        {
+          "q": "GitLab readiness 输出是否新增 JSON mode？",
+          "answer": "同意不新增 JSON mode。默认保持 human-readable summary，但增加固定 provider_ready 文本锚点，并由 tests/gates 验证。",
+          "note": "机器可读 truth 已在 Route Table 和 zj-loop-route status --json；init 输出只承担短反馈、固定锚点、next steps。"
+        },
+        {
+          "q": "已有 root .gitlab-ci.yml 时是否自动 patch include？",
+          "answer": "同意默认不修改已有 root .gitlab-ci.yml，--force 也不覆盖已有 root CI。provider-ready health 以 fragments、Route Table、fixed include guidance、readiness summary 成立；自动 patch root CI 不进入本节点。",
+          "note": "root CI 是用户项目敏感编排入口；本节点只保证生成物和提示可审计，不越界重写用户 CI。"
+        },
+        {
+          "q": "已有 root .gitlab-ci.yml 时 --force 是否覆盖？",
+          "answer": "同意不覆盖。--force 可以覆盖 generated fragments，但不覆盖用户已有 root .gitlab-ci.yml；root CI 只输出 fixed include guidance。",
+          "note": "代码现状里 --add gitlab-ci --force 可能覆盖 root CI，1-4-5-2 实现时需要修正并加测试。"
+        }
+      ],
+      "notes": "Implemented GitLab generated CI scaffold parity: readiness summary now has fixed provider_ready anchor; add/upgrade tests prove generated Route Table provider_support and zj-loop-route status provider_context; --add gitlab-ci --force preserves existing root .gitlab-ci.yml while still allowing generated fragments to update; generated-bundle release gate now validates GitLab root include coverage, GitLab fragment pins, generated sentinels, stages, and dispatch route ids. Verification: cd tools/zj-loop-init && npm test; npm run test:generated-bundle-release-gate; npm run test:provider-parity-gate; roadmap validate."
     },
     "1-4-5-3": {
       "id": "1-4-5-3",
@@ -1558,7 +1584,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-13 20:48:32",
+    "updated": "2026-07-13 21:15:31",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

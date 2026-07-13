@@ -102,6 +102,36 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
     }
   }
 
+  const gitlabRootTemplate = await readFile(path.join(root, 'templates/gitlab-ci/zj-loop-root.gitlab-ci.yml'), 'utf8');
+  for (const workflowFile of GENERATED_WORKFLOWS) {
+    if (!gitlabRootTemplate.includes(`zj-loop/gitlab-ci/${workflowFile}`)) {
+      errors.push(`templates/gitlab-ci/zj-loop-root.gitlab-ci.yml does not include ${workflowFile}`);
+    }
+
+    const gitlabTemplatePath = path.join(root, 'templates/gitlab-ci', workflowFile);
+    const gitlabTemplate = await readFile(gitlabTemplatePath, 'utf8');
+    if (!gitlabTemplate.includes('# zj-loop-generated: true')) {
+      errors.push(`${gitlabTemplatePath} missing generated sentinel`);
+    }
+    if (!gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_STAGE__')) {
+      errors.push(`${gitlabTemplatePath} missing configurable GitLab stage`);
+    }
+
+    const pins = extractCorePackagePins(gitlabTemplate);
+    for (const pin of pins) {
+      if (pin !== expectedCoreVersion) {
+        errors.push(`${workflowFile} GitLab template pins @jununfly/zj-loop-core@${pin}; expected ${expectedCoreVersion}`);
+      }
+    }
+
+    for (const routeId of extractDispatchRouteIds(gitlabTemplate)) {
+      const route = findRoute(routeTable, routeId);
+      if (!route) {
+        errors.push(`${workflowFile} GitLab template dispatches unknown Route Table route: ${routeId}`);
+      }
+    }
+  }
+
   for (const routeId of ACTION_READY_ROUTES) {
     const route = findRoute(routeTable, routeId);
     if (!route) {
@@ -120,6 +150,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
   const roadmapActivationFixture = await validateRoadmapActivationUserProjectFixture(root);
   return {
     workflowCount: GENERATED_WORKFLOWS.length,
+    gitlabFragmentCount: GENERATED_WORKFLOWS.length,
     coreVersion: expectedCoreVersion,
     actionReadyRouteCount: ACTION_READY_ROUTES.size,
     roadmapActivationFixture,
@@ -129,7 +160,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
 async function main() {
   const result = await validateGeneratedBundleReleaseGate();
   console.log(
-    `Generated bundle release gate valid: ${result.workflowCount} workflows, core ${result.coreVersion}, ${result.actionReadyRouteCount} action routes, Roadmap Activation fixture ${result.roadmapActivationFixture.activationRequestId} ✓`,
+    `Generated bundle release gate valid: ${result.workflowCount} GitHub workflows, ${result.gitlabFragmentCount} GitLab fragments, core ${result.coreVersion}, ${result.actionReadyRouteCount} action routes, Roadmap Activation fixture ${result.roadmapActivationFixture.activationRequestId} ✓`,
   );
 }
 

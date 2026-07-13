@@ -141,8 +141,10 @@ Generated GitLab jobs should:
 
 `zj-loop-init --add/--upgrade gitlab-ci` must print a readiness summary that
 separates generated fragment status, root `.gitlab-ci.yml` include reachability,
-and Route Table presence. Existing root GitLab CI remains maintainer-owned:
-init should show the exact include block rather than silently patching it.
+Route Table presence, and fixed provider readiness. Existing root GitLab CI
+remains maintainer-owned: init should show the exact include block rather than
+silently patching it, including when `--force` is supplied. `--force` applies to
+official generated fragments, not to user-owned root CI.
 
 `zj-loop-audit` should warn when local GitLab substrate exists but is not
 committed into the project that CI will actually see. The tracked substrate is

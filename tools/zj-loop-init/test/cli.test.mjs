@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
 const CLI = path.resolve('dist/cli.js');
+const ROUTE_CLI = path.resolve('../zj-loop-core/dist/route-cli.js');
 
 test('bundle-assets tolerates concurrent rebuilds', async () => {
   await Promise.all([
@@ -463,8 +464,19 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);
+    assert.match(routeTable, /provider_support:/);
+    assert.match(routeTable, /gitlab:/);
     assert.match(routeTable, /production_safe_default:/);
     assert.match(routeTable, /dogfood_validation:/);
+
+    const routeStatus = await exec('node', [ROUTE_CLI, 'status', 'manual-smoke-report', '--root', dir, '--json']);
+    const parsedStatus = JSON.parse(routeStatus.stdout);
+    assert.equal(parsedStatus.routes[0].provider_support.gitlab.status, 'dry-run-supported');
+    assert.deepEqual(parsedStatus.routes[0].automation_model.provider_context.gitlab, {
+      status: 'dry-run-supported',
+      execution_supported: false,
+      dry_run_supported: true,
+    });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -516,6 +528,7 @@ test('zj-loop-init --add gitlab-ci skips existing root CI by default', async () 
     assert.match(stdout, /fragments: zj-loop\/gitlab-ci\/\*\.yml generated/);
     assert.match(stdout, /root_ci: \.gitlab-ci\.yml was not changed; add the include block below if it is missing/);
     assert.match(stdout, /route_table: zj-loop\/zj-loop-route-table\.yaml created/);
+    assert.match(stdout, /provider_ready: github=dry-run-supported gitlab=dry-run-supported/);
     assert.match(stdout, /stage: zj-loop/);
     assert.match(stdout, /runner_tags: \(none configured\)/);
     assert.match(stdout, /image: node:22/);
@@ -527,6 +540,24 @@ test('zj-loop-init --add gitlab-ci skips existing root CI by default', async () 
     assert.match(stdout, /  - local: "zj-loop\/gitlab-ci\/zj-loop-post-merge-cleanup\.yml"/);
     assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n');
     await access(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --add gitlab-ci --force still preserves existing root CI', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-add-gitlab-ci-root-force-preserve-'));
+  try {
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'stages: [test]\n# user owned\n');
+
+    const { stdout } = await exec('node', [CLI, dir, '--add', 'gitlab-ci', '--force']);
+    assert.match(stdout, /skipped: .*\.gitlab-ci\.yml already exists/);
+    assert.match(stdout, /root_ci: \.gitlab-ci\.yml was not changed; add the include block below if it is missing/);
+    assert.match(stdout, /provider_ready: github=dry-run-supported gitlab=dry-run-supported/);
+    assert.equal(await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8'), 'stages: [test]\n# user owned\n');
+
+    const smoke = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml'), 'utf8');
+    assert.match(smoke, /zj-loop-template-id: gitlab-ci\/zj-loop-smoke/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

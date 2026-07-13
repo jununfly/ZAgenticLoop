@@ -391,15 +391,20 @@ async function copyGitLabCiBundle(
 
   const rootDest = path.join(targetDir, '.gitlab-ci.yml');
   const rootCiExistsBefore = await exists(rootDest);
-  await copyRenderedWorkflowTemplate(
-    path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'),
-    rootDest,
-    dryRun,
-    force,
-    io,
-    'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI',
-    { gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage },
-  );
+  if (rootCiExistsBefore) {
+    io.stdout(`  skipped: ${rootDest} already exists`);
+    io.stdout('  next step: review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI');
+  } else {
+    await copyRenderedWorkflowTemplate(
+      path.join(srcDir, 'zj-loop-root.gitlab-ci.yml'),
+      rootDest,
+      dryRun,
+      force,
+      io,
+      'review .gitlab-ci.yml and include zj-loop/gitlab-ci/*.yml manually if this project already owns GitLab CI',
+      { gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage },
+    );
+  }
 
   for (const file of GITLAB_CI_TEMPLATE_FILES) {
     await copyRenderedWorkflowTemplate(
@@ -417,7 +422,7 @@ async function copyGitLabCiBundle(
   printGitLabCiReadinessSummary(io, {
     mode: 'add',
     rootCiExistsBefore,
-    rootCiWillBePatched: !rootCiExistsBefore || force,
+    rootCiWillBePatched: !rootCiExistsBefore,
     routeTableStatus,
     gitlabStage,
     gitlabRunnerTags,
@@ -634,6 +639,7 @@ function printGitLabCiReadinessSummary(
   fragments: zj-loop/gitlab-ci/*.yml ${fragmentVerb}
   root_ci: ${rootStatus}
   route_table: ${routeTableStatus}
+  provider_ready: github=dry-run-supported gitlab=dry-run-supported
   stage: ${summary.gitlabStage}
   runner_tags: ${summary.gitlabRunnerTags.length > 0 ? summary.gitlabRunnerTags.join(',') : '(none configured)'}
   image: ${summary.gitlabImage}

@@ -369,8 +369,9 @@ both layers are complete:
    runner-ready and not live.
 
 The generated-bundle release gate is `npm run
-test:generated-bundle-release-gate`. It checks workflow/template drift, generated
-workflow `@jununfly/zj-loop-core` package pins, Route Table route existence, and
+test:generated-bundle-release-gate`. It checks GitHub workflow/template drift,
+generated GitHub/GitLab `@jununfly/zj-loop-core` package pins, GitLab root
+include coverage for every generated fragment, Route Table route existence, and
 the rule that action-capable generated routes must be `install-ready` or
 `execution-ready` while remaining disabled by default until the user explicitly
 enables them. It also runs the deterministic Roadmap Activation user-project

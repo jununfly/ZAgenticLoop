@@ -213,7 +213,11 @@ Issue #101 tightened the GitLab provider bundle after repeated target-project
 validation gaps. The follow-up hardening added:
 
 - GitLab install/upgrade readiness output that separates fragment generation,
-  root `.gitlab-ci.yml` include reachability, and Route Table presence
+  root `.gitlab-ci.yml` include reachability, Route Table presence, and fixed
+  `provider_ready` status
+- existing root `.gitlab-ci.yml` remains user-owned even when `--force` is
+  supplied; `--force` updates generated fragments, while root CI gets fixed
+  include guidance
 - uniform `ZJ_LOOP_SIGNAL_ID` manual/API replay input across generated GitLab
   fragments, while preserving issue/MR/comment route variables
 - GitLab MR metadata fetch for post-merge closeout by MR IID
