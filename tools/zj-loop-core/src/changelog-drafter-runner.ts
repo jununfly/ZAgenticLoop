@@ -264,7 +264,7 @@ function buildExecutionResult(input: {
       tag_created: false,
       release_created: false,
       package_published: false,
-      final_changelog_accepted: false,
+      final_changelog_acceptance: false,
     },
     draft_pull_request: input.draftPullRequest ?? null,
     draft_evidence: input.draftEvidence ?? null,

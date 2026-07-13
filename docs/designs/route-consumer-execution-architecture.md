@@ -218,6 +218,24 @@ Runner-specific differences may change how evidence is collected, but they
 must not lower the shared gate. Missing evidence keeps the route below
 `execution-ready` even when replayed local runner evidence exists.
 
+Draft-consumer promotion uses the same `zj-loop-route promotion-gate` command
+and keeps the same check-only / explicit-apply boundary. Its required evidence
+keys are fixed:
+
+- `draft-request-carrier`
+- `draft-lifecycle`
+- `live-runner-evidence`
+- `reviewable-draft-outcome`
+- `side-effect-boundary`
+- `workflow-dispatch-dogfood`
+
+`live-runner-evidence` may include `draft-evidence`, `draft-pr`, or
+`escalation-issue`, but `reviewable-draft-outcome` must include
+`draft-evidence` or `draft-pr`. An `escalation-issue` proves the failure path is
+controlled; it does not prove the draft consumer can produce a usable draft.
+The side-effect boundary must explicitly prove the draft consumer did not tag,
+create a release, publish a package, or mark final changelog acceptance.
+
 ## Capabilities
 
 Consumer capabilities live in the Route Table as light contract fields:
@@ -328,10 +346,10 @@ The dogfood Route Table is the operational truth. Current dogfood capability:
 | Issue Triage Transition | `triage-action-consumer` | `request-only` | `replayed` plus live workflow-dispatch evidence | Separate confirmed-transition route for fixed request ids, fixed confirmation phrase, and `ready-for-agent` source issue Issue Fix Request comments; E2E replay proves `issue-backlog-triage -> issue-triage-transition -> source issue request carrier`; live dogfood on #7 proved workflow-dispatch execution, marker-based dedupe, and source issue request comment creation; refuses source issue tracker label/state mutation until promotion. |
 | Issue Triage Action | `triage-action-consumer` | `dry-run` | `replayed` | Separate action-capable route for narrowly allowlisted labels and fixed comment templates; refuses live mutation until dogfood evidence exists. |
 | PR Steward report | `report-consumer` | `report-only` | `missing` | Records PR event evidence only. |
-| PR Steward fix request | `fix-runner` | `claim-only` | `replayed` | Can consume matching request evidence and replay independent repair PR or escalation evidence; GitLab MR requests use MR provider vocabulary in dry-run evidence, while live GitLab review side effects are explicitly refused until workflow-dispatch dogfood evidence exists. |
+| PR Steward fix request | `fix-runner` | `claim-only` | `execution-ready` | Can consume matching request evidence and replay independent repair PR or escalation evidence; generated GitHub Actions has a guarded `live-repair` workflow-dispatch path, and run `29237613749` produced verifier-backed escalation evidence without mutating the source PR or pushing a repair branch. Runner promotion passed the shared fix-runner gate; execution remains `claim-only` until a separate live-mode decision. |
 | CI Sweeper | `fix-runner` | `live` | `dogfooded` | Narrow deterministic validate/audit repair or escalation. |
-| Dependency Sweeper | `fix-runner` | `claim-only` | `replayed` plus workflow-dispatch escalation evidence | Request/claim evidence plus replayed repair PR or escalation runner; generated GitHub Actions has a guarded `live-repair` workflow-dispatch path, and run `29234374181` produced verifier-backed escalation evidence. Route maturity promotion remains a separate explicit gate. |
-| Changelog Drafter | `draft-consumer` | `report-only` | `replayed` | Report/draft-request evidence plus replayed draft evidence or draft PR runner; not live until workflow-dispatch dogfood evidence exists. |
+| Dependency Sweeper | `fix-runner` | `claim-only` | `execution-ready` | Request/claim evidence plus replayed repair PR or escalation runner; generated GitHub Actions has a guarded `live-repair` workflow-dispatch path, and run `29234374181` produced verifier-backed escalation evidence. Runner promotion passed the shared fix-runner gate; execution remains `claim-only` until a separate live-mode decision. |
+| Changelog Drafter | `draft-consumer` | `report-only` | `execution-ready` | Report/draft-request evidence plus guarded workflow-dispatch `draft-evidence` dogfood run `29247657726`; runner promotion passed the shared draft-consumer gate. Route Decision remains report-only and does not start consumer work, edit changelogs, create draft PRs, tag, release, publish, or finalize changelog acceptance. |
 | Roadmap-Sliced Development | `activation-consumer` | `request-only` generated bundle, live dogfood bootstrap | `install-ready` generated bundle, dogfooded reference path | Activation bootstrap has deterministic request/contract evidence; slice execution remains bounded by roadmap gates. |
 | Post-Merge Cleanup | `cleanup-consumer` | `dry-run` | `replayed` | Automatic dry-run; live cleanup remains guarded by contract and confirmation. |
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -136,8 +136,72 @@ test('Changelog Drafter live execution records draft PR without release side eff
     tag_created: false,
     release_created: false,
     package_published: false,
-    final_changelog_accepted: false,
+    final_changelog_acceptance: false,
   });
+});
+
+test('Changelog Drafter live-draft CLI executes draft evidence with fixed confirmation', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-changelog-drafter-live-'));
+  await mkdir(path.join(dir, 'scripts'), { recursive: true });
+  const requestPath = path.join(dir, 'request.json');
+  const resultPath = path.join(dir, 'result.json');
+  await writeFile(requestPath, JSON.stringify(draftRequest(), null, 2));
+  await writeFile(path.join(dir, 'scripts', 'write-file-once.mjs'), [
+    "import { mkdir, writeFile } from 'node:fs/promises';",
+    "import { dirname } from 'node:path';",
+    "const [, , targetPath, content] = process.argv;",
+    "await mkdir(dirname(targetPath), { recursive: true });",
+    "await writeFile(targetPath, content, { flag: 'wx' });",
+    '',
+  ].join('\n'));
+  try {
+    const result = spawnSync(process.execPath, [
+      CHANGELOG_DRAFTER_CLI,
+      'live-draft',
+      '--request',
+      requestPath,
+      '--draft-mode',
+      'evidence',
+      '--draft-file',
+      'docs/release-notes-draft.md',
+      '--confirm-live-draft',
+      CHANGELOG_DRAFTER_CONFIRMATION_PHRASE,
+      '--out',
+      resultPath,
+      '--json',
+    ], { encoding: 'utf8', cwd: dir });
+    assert.equal(result.status, 0);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.outcome, 'draft-evidence');
+    assert.equal(parsed.runner_evidence.release_side_effects.final_changelog_acceptance, false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('Changelog Drafter live-draft CLI refuses missing fixed confirmation', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-changelog-drafter-live-refuse-'));
+  const requestPath = path.join(dir, 'request.json');
+  await writeFile(requestPath, JSON.stringify(draftRequest(), null, 2));
+  try {
+    const result = spawnSync(process.execPath, [
+      CHANGELOG_DRAFTER_CLI,
+      'live-draft',
+      '--request',
+      requestPath,
+      '--draft-mode',
+      'evidence',
+      '--confirm-live-draft',
+      'yes',
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.outcome, 'escalation-issue');
+    assert.match(parsed.runner_evidence.escalation.reason, /plan-not-ready-for-live-execution/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('Changelog Drafter draft-plan CLI reads request JSON', async () => {
