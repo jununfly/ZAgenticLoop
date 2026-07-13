@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 932299fae2a81404
+# zj-loop-template-hash: cbc329b17197c7e0
 
 name: ZJ Loop Dependency Sweeper
 
@@ -34,6 +34,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install local core package dependencies
+        if: ${{ startsWith(inputs.core_package, './') }}
+        run: npm install --prefix "${{ inputs.core_package }}"
+
       - name: Dependency sweeper route evidence
         env:
           ISSUE_FIX_REQUEST_JSON: ${{ inputs.issue_fix_request_json }}
@@ -45,7 +49,7 @@ jobs:
           if [ -n "$ISSUE_FIX_REQUEST_JSON" ]; then
             printf '%s\n' "$ISSUE_FIX_REQUEST_JSON" > issue-fix-request.json
             npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-dependency-sweeper repair-plan --request issue-fix-request.json --json > repair-plan.json || true
-            cat repair-plan.json >> "$GITHUB_STEP_SUMMARY"
+            [ -f repair-plan.json ] && cat repair-plan.json >> "$GITHUB_STEP_SUMMARY"
             if [ -n "$CONFIRM_LIVE_REPAIR" ]; then
               npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-dependency-sweeper live-repair \
                 --request issue-fix-request.json \
@@ -53,13 +57,14 @@ jobs:
                 --out live-repair-result.json \
                 --json || true
               printf '\n\n### Live Repair Result\n\n' >> "$GITHUB_STEP_SUMMARY"
-              cat live-repair-result.json >> "$GITHUB_STEP_SUMMARY"
+              [ -f live-repair-result.json ] && cat live-repair-result.json >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
-          cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
-          cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
+          [ -f route-decision.json ] && cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
+          [ -f consumer-plan.json ] && cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Dependency Sweeper evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zj-loop-dependency-sweeper-${{ github.run_id }}

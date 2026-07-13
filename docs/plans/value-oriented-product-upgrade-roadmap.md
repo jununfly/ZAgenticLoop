@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 15:51:11
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-13 16:01:52
 
 [~][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -68,8 +68,9 @@
 
 ### 当前施工：1-4-3-2. Dependency Sweeper Workflow-Dispatch Live Evidence
 
-Added guarded Dependency Sweeper workflow-dispatch live-repair path but did not mark route execution-ready. Core CLI exposes zj-loop-dependency-sweeper live-repair; generated GitHub Actions/template accept confirm_live_repair and upload live-repair-result evidence. Dogfood run https://github.com/jununfly/ZAgenticLoop/actions/runs/29233185628 exposed that pinned npm package 0.1.6 cannot exercise unreleased live-repair, so the workflow now has a core_package input: default published pin for user projects, explicit ./tools/zj-loop-core override for unreleased repo dogfood. Real workflow-dispatch dogfood evidence is still required before live/execution-ready promotion. Verification: cd tools/zj-loop-core && npm test; cd tools/zj-loop-init && npm test; npm run test:generated-bundle-release-gate.
+Added guarded Dependency Sweeper workflow-dispatch live-repair path but did not mark route execution-ready. Core CLI exposes zj-loop-dependency-sweeper live-repair; generated GitHub Actions/template accept confirm_live_repair and upload live-repair-result evidence. Dogfood run https://github.com/jununfly/ZAgenticLoop/actions/runs/29233185628 exposed that pinned npm package 0.1.6 cannot exercise unreleased live-repair, so the workflow now has a core_package input: default published pin for user projects, explicit ./tools/zj-loop-core override for unreleased repo dogfood. Dogfood run https://github.com/jununfly/ZAgenticLoop/actions/runs/29233506834 exposed that local package override also needs dependency installation and failure evidence retention; workflow now installs local package dependencies when core_package starts with ./, checks files before summary cat, and uploads artifacts with if: always(). Real workflow-dispatch dogfood evidence is still required before live/execution-ready promotion. Verification: cd tools/zj-loop-core && npm test; cd tools/zj-loop-init && npm test; npm run test:generated-bundle-release-gate.
 
 **决策：**
 - Q: 未发布的 Dependency Sweeper live-repair 如何做 workflow-dispatch dogfood？ → 给 Dependency Sweeper workflow 增加 core_package 输入，默认保持发布包 pin；本仓未发布 dogfood 显式传 ./tools/zj-loop-core 使用当前 checkout dist。 (避免为了验证未发布功能而提前发版；用户项目默认路径仍使用发布包，dogfood 路径必须显式覆盖。)
+- Q: local core_package override 需要哪些额外 workflow guard？ → 当 core_package 以 ./ 开头时，workflow 先 npm install --prefix <local-package>；summary cat 必须先检查文件存在；artifact upload 使用 if: always() 保留失败证据。 (第二次 dogfood run 29233506834 暴露 local package 缺依赖和失败时 artifact 被跳过，需把这类 workflow-layer failure 也变成可回放证据。)
 <!-- ROADMAP_SECTION_END -->
