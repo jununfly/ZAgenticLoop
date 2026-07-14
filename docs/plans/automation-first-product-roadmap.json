@@ -253,12 +253,12 @@
     "1-2-1": {
       "id": "1-2-1",
       "label": "Migrate current Route Table rows into explicit completion targets",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": "Migrate the repository dogfood Route Table to metadata completion target plus every row adapter target, then validate it through the core parser and completion doctor."
+      "notes": "Migrated repository dogfood Route Table to metadata.completion_target plus explicit GitHub/GitLab/Workspace targets on all 15 routes. Regression: zj-loop-doctor --completion returns 45 declared adapter cells; every applicable cell passes architecture_integrity and every N/A cell carries a reason. Core test: npm test (193 passing)."
     },
     "1-2-2": {
       "id": "1-2-2",
@@ -686,7 +686,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 19:34:54",
+    "updated": "2026-07-14 23:20:21",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

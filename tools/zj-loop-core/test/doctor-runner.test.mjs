@@ -10,6 +10,7 @@ import {
 } from '../dist/index.js';
 
 const DOCTOR_CLI = fileURLToPath(new URL('../dist/doctor-cli.js', import.meta.url));
+const REPOSITORY_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
 async function setupRuns() {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-doctor-'));
@@ -257,5 +258,29 @@ test('zj-loop-doctor completion report stays readable while require-complete is 
     assert.equal(JSON.parse(strict.stdout).schema, 'zj-loop.completion-alignment-ledger.v1');
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('repository dogfood Route Table declares a completion target for every route and adapter', () => {
+  const report = spawnSync(process.execPath, [
+    DOCTOR_CLI,
+    '--root',
+    REPOSITORY_ROOT,
+    '--completion',
+  ], { encoding: 'utf8' });
+
+  assert.equal(report.status, 0, report.stderr);
+  const ledger = JSON.parse(report.stdout);
+  assert.equal(ledger.target.id, 'automation-first-product');
+  assert.equal(ledger.cells.length, 45);
+
+  for (const cell of ledger.cells) {
+    assert.ok(cell.route_id);
+    assert.ok(['github', 'gitlab', 'workspace'].includes(cell.adapter_id));
+    if (cell.status === 'not-applicable-with-reason') {
+      assert.ok(cell.not_applicable_reason);
+    } else {
+      assert.equal(cell.gates.architecture_integrity, 'pass');
+    }
   }
 });
