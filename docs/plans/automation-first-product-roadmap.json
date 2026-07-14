@@ -1,0 +1,148 @@
+{
+  "title": "Automation-First Product Goal Roadmap",
+  "description": "Keep architecture readiness and user experience readiness dynamically aligned until ZAgenticLoop delivers automation-first loops.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Automation-First Product Goal Roadmap",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6",
+        "1-7"
+      ],
+      "decisions": [
+        {
+          "q": "架构目标与用户体验目标是否二选一？",
+          "answer": "两者必须同时满足，并在项目演进中动态保持一致。架构目标先进时应拉动用户体验补齐；用户体验落后时应作为稳定参考对象反向打磨架构确定性。",
+          "note": "参考动态规划思路：每个阶段都维护局部最优与全局目标的一致性，避免架构漂亮但体验不顺，或体验承诺超过架构事实。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "双目标完成标准与动态对齐评分",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "完成标准应该按架构目标还是用户体验目标？",
+          "answer": "两者同时作为 hard completion criteria：架构上必须有 Route Table truth、runner/preflight/replay/gate 证据；体验上必须能从用户信号自动推进到 review artifact 或结构化 hard stop，且用户不需要在多个位置反复猜下一步。",
+          "note": "这是动态对齐评分，不是二选一。A 先进时拉 B，B 落后时约束 A 的宣称。"
+        }
+      ],
+      "notes": "Define a scorecard that pairs architecture readiness with user-experience readiness for each route family. A route is not product-complete unless both sides pass: deterministic architecture evidence and a smooth user-facing loop path."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "当前 Route 能力与用户体验缺口盘点",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "当前是否已经完成 value-oriented 产品目标？",
+          "answer": "尚未完成。当前已建立 automation-first 架构主线和若干 dogfooded/live 链路，但多数 route 仍停留在 report-only/request-only/claim-only/dry-run，GitLab 多数能力仍为 dry-run-supported，用户体验仍存在确认、切换、消费动作偏多的问题。",
+          "note": "盘点必须以 Route Table 为事实源，不能用过程 roadmap 或口头结论替代当前能力真相。"
+        }
+      ],
+      "notes": "Inventory every Route Table row by architecture maturity, execution mode, provider support, and user journey friction. Output should identify which route families are product-complete, architecture-ahead, UX-ahead, or both-behind."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "默认自动执行到 review artifact 或 hard stop",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "自动化默认应该执行到哪里？",
+          "answer": "默认执行到当前 route 的第一个 review artifact 或 hard stop signal。不能一步一停，也不能无边界循环；route 必须声明 bounded work、verification evidence、review artifact 和 stop conditions。",
+          "note": "这直接承接 value-oriented 原则中的 end-to-end loop 体验。"
+        }
+      ],
+      "notes": "Upgrade route families so safe paths continue automatically from signal to request carrier, consumer execution, verification, and review artifact. Preserve hard stops for missing authority, credentials, budget, unsafe workspace state, high risk, unsupported provider capability, and failed verification."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "结构化 stop signal 与 human handoff 体验",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "human handoff 如何避免重新变成多次确认摩擦？",
+          "answer": "所有需要 human 的地方都输出固定结构：confirmation_location、required_phrase、side_effects、why_required、resume_command、retry_policy。低风险字段默认自动补齐并记录 repairs_applied；不能安全补齐时才输出 protocol_repair_request。",
+          "note": "human gate 应该是高价值中断，而不是 agent 不知道下一步时的普通停顿。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "GitHub 与 GitLab 的 live 能力对齐",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "GitHub/GitLab 对齐的抽象边界是什么？",
+          "answer": "Route 链路协议应平台无关；GitHub/GitLab 是 provider-specific adapters。相同抽象组件尽量复用，容易误导或存在不可回避平台差异时分别实现，但必须共享同一协议、证据字段和能力映射。",
+          "note": "以 GitHub 当前实现为事实 baseline，GitLab 不应长期停留在 dry-run-supported。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "确定性脚本 gate 与 replay 证据闭环",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "哪些部分必须固化成确定性脚本或 gate？",
+          "answer": "凡是 route matching、capability truth、preflight、request/carrier schema、dedupe/resume、confirmation envelope、release capability claim、provider parity、replay/doctor 汇总，都应优先固化为 core API/CLI/gate。LLM 只能生成 candidate，不能直接决定 route 或当前能力宣称。",
+          "note": "确定性脚本是架构目标与用户体验目标动态对齐的桥。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "Dogfood 仪表盘与发布前完成判定",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "发布前如何判定产品目标推进到位？",
+          "answer": "发布前应有 dogfood/readiness view，按 route family 展示 architecture readiness、UX readiness、provider support、last live/replay evidence、open hard stops 和 next improvement。不能只看测试通过，也不能只看用户故事顺滑。",
+          "note": "这会成为动态规划式演进的观测面：每次 A 或 B 领先，都能看到另一侧该补哪里。"
+        }
+      ],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-14 14:07:31",
+    "updated": "2026-07-14 14:15:36",
+    "md_file": "docs/plans/automation-first-product-roadmap.md"
+  }
+}

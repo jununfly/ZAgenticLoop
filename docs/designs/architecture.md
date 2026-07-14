@@ -30,6 +30,39 @@ outputs.
 package identity and `zj-goal-audit` CLI name while the root repository quality
 gates still build and test it with the loop tools to avoid release drift.
 
+## Architecture And Experience Alignment
+
+ZAgenticLoop treats architecture readiness and user experience readiness as a
+paired design constraint. They are not alternative completion criteria. A
+route, runner, provider adapter, or product surface is not product-complete
+unless both sides are true:
+
+- the architecture has deterministic truth, bounded execution semantics,
+  replayable evidence, and gates that prevent capability drift
+- the user experience can continue from signal to review artifact or structured
+  hard stop without asking the user to infer hidden next steps
+
+The two sides should stay dynamically aligned as the product evolves. When the
+architecture moves ahead, it should pull the user experience forward by exposing
+clear commands, low-friction defaults, and structured handoff evidence. When
+the user experience exposes friction, repeated confirmations, unclear stop
+locations, or manual stitching, that friction should feed back into the
+architecture as a missing deterministic contract, runner capability, adapter
+boundary, or replay surface.
+
+This principle prevents two failure modes:
+
+- architecture-ahead drift, where Route Table fields, runners, and gates exist
+  but the actual loop still feels like a sequence of manual instructions
+- experience-ahead drift, where documentation or UI promises automation that
+  the Route Table, provider adapters, or verification gates cannot prove
+
+The durable truth source for current execution capability remains the Route
+Table and release capability ledger. Product docs may explain desired
+experience, but they must not claim a route has reached a higher execution mode,
+runner maturity, or provider capability than the current Route Table row and
+gate evidence support.
+
 ## Registry
 
 `patterns/registry.yaml` is the shared pattern index. It carries stable metadata
