@@ -7,7 +7,7 @@
       "id": "1",
       "label": "Automation-First Product Goal Roadmap",
       "status": "in_progress",
-      "mode": "explore",
+      "mode": "exploit",
       "parent": null,
       "children": [
         "1-1",
@@ -23,33 +23,53 @@
           "q": "架构目标与用户体验目标是否二选一？",
           "answer": "两者必须同时满足，并在项目演进中动态保持一致。架构目标先进时应拉动用户体验补齐；用户体验落后时应作为稳定参考对象反向打磨架构确定性。",
           "note": "参考动态规划思路：每个阶段都维护局部最优与全局目标的一致性，避免架构漂亮但体验不顺，或体验承诺超过架构事实。"
+        },
+        {
+          "q": "路线图应如何切成可执行 slices？",
+          "answer": "按同一真相面、核心派生、自动推进与Workspace、GitHub/GitLab适配、确定性gate/replay、reference dogfood/release 六条依赖线切分；每个叶子必须有明确接口、测试或dogfood证据，不能把中间报告误作完成。",
+          "note": "先完成可表达并可判定的 completion contract，后续 adapter 与用户体验工作才有共同完成标准。"
         }
       ],
-      "notes": ""
+      "notes": "先完成 1-1 的 completion contract；1-2 迁移并基线化当前事实；1-3 与 1-4 可在 contract 稳定后并行；1-5、1-6、1-7 依次收口 adapter、gates 和 release evidence。"
     },
     "1-1": {
       "id": "1-1",
-      "label": "双目标完成标准与动态对齐评分",
+      "label": "Completion Alignment Ledger 与不可补偿完成硬门",
       "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-1-1",
+        "1-1-2",
+        "1-1-3",
+        "1-1-4",
+        "1-1-5"
+      ],
       "decisions": [
         {
           "q": "完成标准应该按架构目标还是用户体验目标？",
           "answer": "两者同时作为 hard completion criteria：架构上必须有 Route Table truth、runner/preflight/replay/gate 证据；体验上必须能从用户信号自动推进到 review artifact 或结构化 hard stop，且用户不需要在多个位置反复猜下一步。",
           "note": "这是动态对齐评分，不是二选一。A 先进时拉 B，B 落后时约束 A 的宣称。"
+        },
+        {
+          "q": "完成度是否允许加权评分抵消硬缺口？",
+          "answer": "不允许。以 Completion Alignment Ledger 替代评分；Architecture Integrity、live capability、stop/recovery、experience continuity、automatic progression 与 verification 均为不可补偿硬门。",
+          "note": "旧的评分措辞正式废弃；历史决策保留其被替换原因。"
         }
       ],
-      "notes": "Define a scorecard that pairs architecture readiness with user-experience readiness for each route family. A route is not product-complete unless both sides pass: deterministic architecture evidence and a smooth user-facing loop path."
+      "notes": "顺序：1-1-1 已完成 durable design；1-1-2 定义同一 Route Table 结构；1-1-3 派生 core ledger；1-1-4 暴露 doctor；1-1-5 固化兼容性回归。"
     },
     "1-2": {
       "id": "1-2",
       "label": "当前 Route 能力与用户体验缺口盘点",
       "status": "pending",
-      "mode": "explore",
+      "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3"
+      ],
       "decisions": [
         {
           "q": "当前是否已经完成 value-oriented 产品目标？",
@@ -57,7 +77,7 @@
           "note": "盘点必须以 Route Table 为事实源，不能用过程 roadmap 或口头结论替代当前能力真相。"
         }
       ],
-      "notes": "Inventory every Route Table row by architecture maturity, execution mode, provider support, and user journey friction. Output should identify which route families are product-complete, architecture-ahead, UX-ahead, or both-behind."
+      "notes": "依赖 1-1-2 与 1-1-3。只迁移/派生当前事实，不以手工报告替代 Route Table 或 ledger。"
     },
     "1-3": {
       "id": "1-3",
@@ -65,15 +85,25 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-3-1",
+        "1-3-2",
+        "1-3-3",
+        "1-3-4"
+      ],
       "decisions": [
         {
           "q": "自动化默认应该执行到哪里？",
           "answer": "默认执行到当前 route 的第一个 review artifact 或 hard stop signal。不能一步一停，也不能无边界循环；route 必须声明 bounded work、verification evidence、review artifact 和 stop conditions。",
           "note": "这直接承接 value-oriented 原则中的 end-to-end loop 体验。"
+        },
+        {
+          "q": "Workspace Adapter 的完成是否可由单一 no-provider fixture 证明？",
+          "answer": "不能。fixture 只证明协议；Workspace 必须分别证明 local carrier/review/closeout runtime，以及 control、repair、draft、roadmap 等适用 route family 的真实 Git workspace 成功与 recovery evidence。",
+          "note": "issue 与 PR/MR 语义仍为 not-applicable-with-reason，不应伪造 local tracker 或 local PR。"
         }
       ],
-      "notes": "Upgrade route families so safe paths continue automatically from signal to request carrier, consumer execution, verification, and review artifact. Preserve hard stops for missing authority, credentials, budget, unsafe workspace state, high risk, unsupported provider capability, and failed verification."
+      "notes": "依赖 1-1 completion contract。Workspace 是 provider:none 的 adapter，不伪造 issue 或 PR；每个叶子需真实 Git workspace evidence。"
     },
     "1-4": {
       "id": "1-4",
@@ -81,7 +111,11 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3"
+      ],
       "decisions": [
         {
           "q": "human handoff 如何避免重新变成多次确认摩擦？",
@@ -89,7 +123,7 @@
           "note": "human gate 应该是高价值中断，而不是 agent 不知道下一步时的普通停顿。"
         }
       ],
-      "notes": ""
+      "notes": "依赖 Harness output contract；确认、location、side effects、why required、resume/retry 必须结构化，普通自然语言不触发副作用。"
     },
     "1-5": {
       "id": "1-5",
@@ -97,15 +131,26 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3",
+        "1-5-4",
+        "1-5-5"
+      ],
       "decisions": [
         {
           "q": "GitHub/GitLab 对齐的抽象边界是什么？",
           "answer": "Route 链路协议应平台无关；GitHub/GitLab 是 provider-specific adapters。相同抽象组件尽量复用，容易误导或存在不可回避平台差异时分别实现，但必须共享同一协议、证据字段和能力映射。",
           "note": "以 GitHub 当前实现为事实 baseline，GitLab 不应长期停留在 dry-run-supported。"
+        },
+        {
+          "q": "Provider live 对齐能否只用一条全量 dogfood 证明？",
+          "answer": "不能。GitHub 与 GitLab 均按 triage、PR stewardship、repair、draft、roadmap/closeout 等 route family 分别完成 live 与 recovery evidence；全量 dogfood 仅作为最终集成证据。",
+          "note": "不同 family 的 carrier、权限、review artifact 和 closeout 语义不同，合并会掩盖未完成能力。"
         }
       ],
-      "notes": ""
+      "notes": "依赖目标矩阵与 shared completion schema。GitHub 是现有事实基线；GitLab 以共享协议做 provider-specific live adapter，不能用 dry-run parity 冒充完成。"
     },
     "1-6": {
       "id": "1-6",
@@ -113,7 +158,12 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3",
+        "1-6-4"
+      ],
       "decisions": [
         {
           "q": "哪些部分必须固化成确定性脚本或 gate？",
@@ -121,15 +171,20 @@
           "note": "确定性脚本是架构目标与用户体验目标动态对齐的桥。"
         }
       ],
-      "notes": ""
+      "notes": "依赖 core ledger 与 runtime evidence schema。所有可判定规则进入 deterministic gate；结构性抽象变化才产生 architecture_review_required。"
     },
     "1-7": {
       "id": "1-7",
       "label": "Dogfood 仪表盘与发布前完成判定",
       "status": "pending",
-      "mode": "explore",
+      "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-7-1",
+        "1-7-2",
+        "1-7-3",
+        "1-7-4"
+      ],
       "decisions": [
         {
           "q": "发布前如何判定产品目标推进到位？",
@@ -137,12 +192,495 @@
           "note": "这会成为动态规划式演进的观测面：每次 A 或 B 领先，都能看到另一侧该补哪里。"
         }
       ],
+      "notes": "依赖 1-3 至 1-6。release completion 只由受控 reference installation 证明；具体用户项目由 doctor self-assessment 判定。"
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "Durable completion-alignment architecture and applicability map",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "Route Table completion target schema and generated template",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "实现切入点：在 Route Table metadata 增加 stable completion target id/schema version；每条 route row 增加 completion_target.adapters.<adapter>，与 provider_support 并列。先完成 core parser/schema 和生成模板，再派生 ledger。"
+    },
+    "1-1-3": {
+      "id": "1-1-3",
+      "label": "Core Completion Alignment Ledger derivation API",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-4": {
+      "id": "1-1-4",
+      "label": "Doctor completion ledger JSON text and exit contract",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-5": {
+      "id": "1-1-5",
+      "label": "Completion contract parser and compatibility regression tests",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "Migrate current Route Table rows into explicit completion targets",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "Derive initial required-cell capability and evidence gap baseline",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "Classify current evidence as compatible stale or missing",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Automatic-progression transition trace contract",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "Workspace Adapter local activation and review artifact runner",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [
+        "1-3-2-1",
+        "1-3-2-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3": {
+      "id": "1-3-3",
+      "label": "Workspace Adapter local closeout resume and real Git dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [
+        "1-3-3-1",
+        "1-3-3-2",
+        "1-3-3-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-4": {
+      "id": "1-3-4",
+      "label": "Bounded multi-slice continuation to artifact or hard stop",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Machine-readable human handoff location and confirmation contract",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "Low-risk protocol repairs and structured protocol repair request",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "Ambiguous-handoff and unnecessary-confirmation metrics gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "Provider adapter completion evidence mapping",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "GitHub required-route live and recovery reference evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [
+        "1-5-2-1",
+        "1-5-2-2",
+        "1-5-2-3",
+        "1-5-2-4",
+        "1-5-2-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "GitLab signal and request-carrier live adapter parity",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [
+        "1-5-3-1",
+        "1-5-3-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4": {
+      "id": "1-5-4",
+      "label": "GitLab branch MR review and closeout live adapter parity",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [
+        "1-5-4-1",
+        "1-5-4-2",
+        "1-5-4-3",
+        "1-5-4-4",
+        "1-5-4-5",
+        "1-5-4-6"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5": {
+      "id": "1-5-5",
+      "label": "GitLab required-route reference dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "Architecture Integrity deterministic validation gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "Evidence compatibility invalidation and stale-status derivation",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "Completion delta CI and release hard gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-4": {
+      "id": "1-6-4",
+      "label": "Structured hard-stop and recovery replay corpus",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-1": {
+      "id": "1-7-1",
+      "label": "Reference installation fixtures for GitHub GitLab and Workspace",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-2": {
+      "id": "1-7-2",
+      "label": "Doctor completion text renderer and user next actions",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-3": {
+      "id": "1-7-3",
+      "label": "README and capability-claim guard for completion targets",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-4": {
+      "id": "1-7-4",
+      "label": "Release candidate complete-matrix audit",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-1": {
+      "id": "1-5-2-1",
+      "label": "GitHub control and issue-triage live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-2": {
+      "id": "1-5-2-2",
+      "label": "GitHub PR Steward live review and fix-request evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-3": {
+      "id": "1-5-2-3",
+      "label": "GitHub CI and dependency repair PR live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-4": {
+      "id": "1-5-2-4",
+      "label": "GitHub Changelog Drafter draft artifact live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-5": {
+      "id": "1-5-2-5",
+      "label": "GitHub Roadmap activation and post-merge closeout live evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3-1": {
+      "id": "1-5-3-1",
+      "label": "GitLab issue-backlog scheduled signal and report evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3-2": {
+      "id": "1-5-3-2",
+      "label": "GitLab confirmed triage transition source-issue carrier evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-1": {
+      "id": "1-5-4-1",
+      "label": "GitLab Roadmap activation branch and draft-MR contract",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-2": {
+      "id": "1-5-4-2",
+      "label": "GitLab post-merge roadmap closeout execution evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-3": {
+      "id": "1-5-4-3",
+      "label": "GitLab CI Sweeper repair-MR live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-4": {
+      "id": "1-5-4-4",
+      "label": "GitLab Dependency Sweeper repair-MR live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-5": {
+      "id": "1-5-4-5",
+      "label": "GitLab PR Steward MR report and fix-request evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-6": {
+      "id": "1-5-4-6",
+      "label": "GitLab Changelog Drafter draft artifact or draft-MR evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2-1": {
+      "id": "1-3-2-1",
+      "label": "Workspace Route Decision local carrier and evidence-store adapter",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2-2": {
+      "id": "1-3-2-2",
+      "label": "Workspace branch patch and changed-file review-artifact executor",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3-1": {
+      "id": "1-3-3-1",
+      "label": "Workspace local closeout archive and resume runtime",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3-2": {
+      "id": "1-3-3-2",
+      "label": "Workspace control CI and dependency route reference dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3-3": {
+      "id": "1-3-3-3",
+      "label": "Workspace changelog and roadmap route reference dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [],
       "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 14:15:36",
+    "updated": "2026-07-14 18:43:32",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
