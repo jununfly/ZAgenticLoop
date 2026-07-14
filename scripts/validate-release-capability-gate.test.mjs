@@ -72,6 +72,41 @@ test('release capability gate fails route-specific docs capability claims that o
   }
 });
 
+test('release capability gate fails explicit current truth blocks that drift from Route Table', async () => {
+  const fixture = await makeReleaseCapabilityFixture();
+  try {
+    const docPath = path.join(fixture, 'docs', 'designs', 'dogfood-reference-case.md');
+    await writeFile(docPath, [
+      await readFile(docPath, 'utf8'),
+      '',
+      '## Drift Fixture',
+      '',
+      'CI Sweeper',
+      '',
+      'Current Route Table truth: `consumer_kind: fix-runner`,',
+      '`execution.mode: live`, `side_effect_level: pr`, `maturity.runner:',
+      'dogfooded`.',
+    ].join('\n'));
+
+    const result = await validateReleaseCapabilityGate(fixture);
+
+    assert.ok(result.errors.some((error) =>
+      error.includes('docs/designs/dogfood-reference-case.md') &&
+      error.includes('ci-sweeper') &&
+      error.includes('execution.mode live') &&
+      error.includes('request-only')
+    ));
+    assert.ok(result.errors.some((error) =>
+      error.includes('docs/designs/dogfood-reference-case.md') &&
+      error.includes('ci-sweeper') &&
+      error.includes('maturity.runner dogfooded') &&
+      error.includes('install-ready')
+    ));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
 test('release capability gate CLI emits JSON ledger for automation', async () => {
   const { stdout } = await execFileAsync('node', ['scripts/validate-release-capability-gate.mjs', '--json'], {
     cwd: ROOT,

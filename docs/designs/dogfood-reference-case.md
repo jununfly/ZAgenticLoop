@@ -366,8 +366,10 @@ CI Sweeper is not a general-purpose autonomous coding agent. Broader repair
 ability requires a separate route and consumer contract.
 
 Current Route Table truth: `consumer_kind: fix-runner`,
-`execution.mode: live`, `side_effect_level: pr`, `maturity.runner:
-dogfooded`. The live evidence is recorded in `zj-loop/ci-sweeper-state.md`.
+`execution.mode: request-only`, `side_effect_level: request`,
+`maturity.runner: install-ready`. Dogfood evidence is recorded in
+`zj-loop/ci-sweeper-state.md`, but Route Table maturity remains the published
+truth.
 
 ## Post-Merge Roadmap Closeout
 

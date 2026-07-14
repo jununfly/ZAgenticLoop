@@ -197,7 +197,7 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
       payload: {
         activation_request_comment_url: 'https://github.com/jununfly/ZAgenticLoop/issues/42#issuecomment-100',
         title: 'Implement consumer adapter',
-        process_roadmap_path: 'docs/plans/value-oriented-product-upgrade-roadmap.md',
+        process_roadmap_path: 'zj-loop/process/consumer-adapter-roadmap.md',
       },
     }, null, 2));
 

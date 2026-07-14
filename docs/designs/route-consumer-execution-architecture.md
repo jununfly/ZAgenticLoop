@@ -469,7 +469,12 @@ template instead of reading a separately maintained matrix. All routes get
 structural validation. Routes claiming `install-ready`, `execution-ready`, or
 `user-project-ready` get stronger evidence checks across provider support,
 local workflow/template/docs/test refs, and durable dogfood mentions for
-external run or issue refs.
+external run or issue refs. The same gate treats the derived Route Table
+ledger as the published capability truth: durable docs, README, Quickstart, and
+explicit `Current Route Table truth` blocks must not claim a route's
+`execution.mode` or `maturity.runner` has advanced beyond the Route Table row.
+Process roadmaps may preserve historical promotion evidence, but they must not
+be read as current capability truth after closeout.
 
 GitLab Roadmap Activation has a narrow live execution path. It can consume a
 GitLab `contract-plan.json` into `execution-result.json`, refuse missing-token

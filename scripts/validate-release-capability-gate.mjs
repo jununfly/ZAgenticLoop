@@ -264,6 +264,7 @@ async function validateDocumentCapabilityClaims({ root, routes, errors }) {
       validateRouteSpecificClaimLine({ relativePath, line, lineNumber: index + 1, routeAliases, errors });
       validatePublicProductClaimLine({ relativePath, line, lineNumber: index + 1, hasExecutionReadyRoute, errors });
     });
+    validateExplicitTruthBlocks({ relativePath, lines, routeAliases, errors });
   }
 }
 
@@ -295,6 +296,36 @@ function validatePublicProductClaimLine({ relativePath, line, lineNumber, hasExe
   if (!/(first\s+execution-ready|execution-ready\s+(route set|user-project choices|bundle)|user-project\s+execution-ready)/i.test(line)) return;
 
   errors.push(`${relativePath}:${lineNumber}: docs claim execution-ready user-project capability, but no Route Table route currently claims execution-ready`);
+}
+
+function validateExplicitTruthBlocks({ relativePath, lines, routeAliases, errors }) {
+  lines.forEach((line, index) => {
+    if (!/Current Route Table truth:/i.test(line)) return;
+    const contextStart = Math.max(0, index - 8);
+    const contextEnd = Math.min(lines.length, index + 4);
+    const context = lines.slice(contextStart, contextEnd).join('\n');
+    const normalizedContext = normalizeClaimText(context);
+    const matchedRoutes = new Set();
+
+    for (const { route, alias } of routeAliases) {
+      if (!normalizedContext.includes(alias)) continue;
+      if (matchedRoutes.has(route.route_id)) continue;
+      matchedRoutes.add(route.route_id);
+      validateExplicitTruthBlockForRoute({ relativePath, lineNumber: index + 1, context, route, errors });
+    }
+  });
+}
+
+function validateExplicitTruthBlockForRoute({ relativePath, lineNumber, context, route, errors }) {
+  const executionMode = context.match(/execution\.mode:\s*([a-z-]+)/)?.[1];
+  if (executionMode && executionMode !== route.execution?.mode) {
+    errors.push(`${relativePath}:${lineNumber}: Current Route Table truth for ${route.route_id} claims execution.mode ${executionMode}, but Route Table has ${route.execution?.mode ?? '<missing>'}`);
+  }
+
+  const runner = context.match(/maturity\.runner:\s*([a-z-]+)/)?.[1];
+  if (runner && runner !== route.maturity?.runner) {
+    errors.push(`${relativePath}:${lineNumber}: Current Route Table truth for ${route.route_id} claims maturity.runner ${runner}, but Route Table has ${route.maturity?.runner ?? '<missing>'}`);
+  }
 }
 
 function routeClaimAliases(route) {

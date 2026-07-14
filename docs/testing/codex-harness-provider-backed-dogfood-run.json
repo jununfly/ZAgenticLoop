@@ -35,8 +35,8 @@
             "path": "git:branch:zjal-value-oriented-product-upgrade-map"
           },
           {
-            "kind": "local-artifact",
-            "path": "docs/plans/value-oriented-product-upgrade-roadmap.json"
+            "kind": "durable-doc",
+            "path": "docs/designs/route-consumer-execution-architecture.md"
           }
         ]
       }
