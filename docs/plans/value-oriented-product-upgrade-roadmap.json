@@ -19,7 +19,8 @@
         "1-7",
         "1-8",
         "1-9",
-        "1-10"
+        "1-10",
+        "1-11"
       ],
       "decisions": [
         {
@@ -1891,11 +1892,27 @@
         }
       ],
       "notes": "Aligned Changelog Drafter documentation and release gate around the orchestration-first contract: report records release-window evidence, draft-request is consumed by zj-loop-dispatch into draft-plan.json, and live-draft remains guarded by the fixed phrase CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE without tag/release/publish side effects. Release gate now checks GitHub/GitLab generated bundle boundaries so workflow templates keep using changelog-signal.json, zj-loop-dispatch --mode auto, and draft-plan.json evidence instead of direct draft-plan calls or GitLab live-draft exposure. Verification: node scripts/validate-generated-bundle-release-gate.mjs; npm run test:provider-parity-gate; bash scripts/ci-validate-gates.sh; git diff --check."
+    },
+    "1-11": {
+      "id": "1-11",
+      "label": "能力宣称一致性与 release gate 防漂移",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "发现 docs 声称 execution-ready 但 Route Table truth 是 install-ready 时，应该提升 Route Table 还是收敛 docs？",
+          "answer": "先收敛 docs。Route Table 是能力台账 truth，当前 release capability ledger 显示所有 route claim_level 为 install-ready；没有必要为了文档措辞临时提升成熟度。",
+          "note": "同时给 release capability gate 增加 docs claim drift 检查，防止 README/Quickstart/长期文档继续声称未被 Route Table 支撑的 execution-ready/user-project-ready 能力。"
+        }
+      ],
+      "notes": "Completed: Route Table remains the capability truth source; docs now describe current user-project routes as install-ready/request-backed with dogfood evidence rather than unsupported execution-ready claims. Release capability gate now scans README, Quickstart, dogfood, route-consumer architecture, and user-project bundle docs for route-specific execution-ready/user-project-ready claims that outrun Route Table truth. Post-merge closeout Route Table branch prefix allowlist now lists zjal- first and keeps zjal/ as legacy compatibility. Verification: npm run test:release-capability-gate; npm test --prefix tools/zj-loop-init; bash scripts/ci-validate-gates.sh; git diff --check."
     }
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-14 12:25:20",
+    "updated": "2026-07-14 13:13:44",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

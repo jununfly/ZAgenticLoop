@@ -4,7 +4,7 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Quickstart](docs/QUICKSTART.md) · [Codex Harness](docs/codex-harness.md) · [Pattern picker](docs/pattern-picker.md) · [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Architecture](docs/designs/architecture.md) · [Route Table Architecture](docs/designs/route-table-architecture.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Quickstart](docs/QUICKSTART.md) · [Codex Harness](docs/codex-harness.md) · [Pattern picker](docs/pattern-picker.md) · [User-project install-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Architecture](docs/designs/architecture.md) · [Route Table Architecture](docs/designs/route-table-architecture.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Release playbook](docs/RELEASE.md)
 
 ## What's New In This Release
 
@@ -44,7 +44,7 @@ being mistaken for GitHub repositories.
 | Inspect exactly what install or upgrade changed | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex --json` |
 | Add GitHub provider smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
 | Add GitLab provider smoke/consumer jobs | `npx @jununfly/zj-loop-init . --add gitlab-ci` |
-| Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
+| Choose the first install-ready user-project route | [User-project install-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
 | Run Codex with structured loop handoff, evidence, and stop signals | [Codex Harness](docs/codex-harness.md) |
 | Run a goal until the first review artifact or hard stop | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD"` |
 | Diagnose why recent loops stopped | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor` |
@@ -317,7 +317,7 @@ npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable ci-sweeper
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable ci-sweeper
 ```
 
-The first execution-ready route set is request-backed:
+The first install-ready route set is request-backed:
 
 - `roadmap-sliced-development`: issue slash command to Activation Request to
   bounded roadmap branch/PR bootstrap.
@@ -333,7 +333,7 @@ The first execution-ready route set is request-backed:
 Report-only scanners recommend; confirmed transitions create durable request
 evidence; execution consumers produce branches, PRs, repair plans, or closeout
 evidence inside their own authority boundary. For the complete route menu and
-safety boundaries, see [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md).
+safety boundaries, see [User-project install-ready bundle](docs/designs/user-project-execution-ready-bundle.md).
 
 Upgrade generated workflows intentionally when package pins or templates change:
 

@@ -24,6 +24,14 @@ const MATURITY_LEVELS = new Set([
 const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
 const LOCAL_EVIDENCE_PREFIXES = new Set(['template', 'workflow', 'gitlab-ci', 'test', 'docs']);
 const EXTERNAL_EVIDENCE_PREFIXES = new Set(['dogfood-run', 'issue', 'runner', 'artifact', 'replay', 'follow-up']);
+const DOC_CAPABILITY_CLAIM_FILES = [
+  'README.md',
+  'docs/QUICKSTART.md',
+  'docs/designs/dogfood-reference-case.md',
+  'docs/designs/route-consumer-execution-architecture.md',
+  'docs/designs/user-project-execution-ready-bundle.md',
+];
+const CLAIM_LEVEL_ORDER = ['not-user-executable', 'install-ready', 'execution-ready', 'user-project-ready'];
 
 async function validateReleaseCapabilityGate(root = ROOT) {
   const errors = [];
@@ -73,6 +81,7 @@ async function validateReleaseCapabilityGate(root = ROOT) {
       missing_or_weak_evidence: missingOrWeakEvidence,
     });
   }
+  await validateDocumentCapabilityClaims({ root, routes: allRoutes(routeTable), errors });
 
   return {
     ledger: {
@@ -240,6 +249,69 @@ function claimLevelFor(route) {
   if (runner === 'execution-ready') return 'execution-ready';
   if (runner === 'install-ready') return 'install-ready';
   return 'not-user-executable';
+}
+
+async function validateDocumentCapabilityClaims({ root, routes, errors }) {
+  const routeAliases = routes.flatMap((route) =>
+    routeClaimAliases(route).map((alias) => ({ route, alias: normalizeClaimText(alias) })),
+  ).filter((entry) => entry.alias.length >= 4);
+  const hasExecutionReadyRoute = routes.some((route) => claimSatisfies(claimLevelFor(route), 'execution-ready'));
+
+  for (const relativePath of DOC_CAPABILITY_CLAIM_FILES) {
+    const text = await readText(path.join(root, relativePath));
+    const lines = text.split(/\r?\n/);
+    lines.forEach((line, index) => {
+      validateRouteSpecificClaimLine({ relativePath, line, lineNumber: index + 1, routeAliases, errors });
+      validatePublicProductClaimLine({ relativePath, line, lineNumber: index + 1, hasExecutionReadyRoute, errors });
+    });
+  }
+}
+
+function validateRouteSpecificClaimLine({ relativePath, line, lineNumber, routeAliases, errors }) {
+  const claimedLevel = line.includes('user-project-ready')
+    ? 'user-project-ready'
+    : line.includes('execution-ready')
+      ? 'execution-ready'
+      : null;
+  if (!claimedLevel) return;
+
+  const normalizedLine = normalizeClaimText(line);
+  const matchedRoutes = new Set();
+  for (const { route, alias } of routeAliases) {
+    if (!normalizedLine.includes(alias)) continue;
+    if (matchedRoutes.has(route.route_id)) continue;
+    matchedRoutes.add(route.route_id);
+
+    const actualLevel = claimLevelFor(route);
+    if (!claimSatisfies(actualLevel, claimedLevel)) {
+      errors.push(`${relativePath}:${lineNumber}: docs claim ${route.route_id} is ${claimedLevel}, but Route Table runner is ${route.maturity?.runner ?? '<missing>'}`);
+    }
+  }
+}
+
+function validatePublicProductClaimLine({ relativePath, line, lineNumber, hasExecutionReadyRoute, errors }) {
+  if (hasExecutionReadyRoute) return;
+  if (!['README.md', 'docs/QUICKSTART.md', 'docs/designs/user-project-execution-ready-bundle.md'].includes(relativePath)) return;
+  if (!/(first\s+execution-ready|execution-ready\s+(route set|user-project choices|bundle)|user-project\s+execution-ready)/i.test(line)) return;
+
+  errors.push(`${relativePath}:${lineNumber}: docs claim execution-ready user-project capability, but no Route Table route currently claims execution-ready`);
+}
+
+function routeClaimAliases(route) {
+  return [
+    route.route_id,
+    route.consumer,
+    route.route_id?.replaceAll('-', ' '),
+    route.consumer?.replaceAll('-', ' '),
+  ].filter(Boolean);
+}
+
+function normalizeClaimText(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function claimSatisfies(actual, claimed) {
+  return CLAIM_LEVEL_ORDER.indexOf(actual) >= CLAIM_LEVEL_ORDER.indexOf(claimed);
 }
 
 function providerEvidence(route) {

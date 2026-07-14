@@ -48,6 +48,30 @@ test('release capability gate fails locally resolvable missing evidence refs', a
   }
 });
 
+test('release capability gate fails route-specific docs capability claims that outrun Route Table truth', async () => {
+  const fixture = await makeReleaseCapabilityFixture();
+  try {
+    const docPath = path.join(fixture, 'docs', 'designs', 'dogfood-reference-case.md');
+    await writeFile(docPath, [
+      await readFile(docPath, 'utf8'),
+      '',
+      '| Route | Capability |',
+      '| --- | --- |',
+      '| CI Sweeper | `execution-ready` |',
+    ].join('\n'));
+
+    const result = await validateReleaseCapabilityGate(fixture);
+
+    assert.ok(result.errors.some((error) =>
+      error.includes('docs/designs/dogfood-reference-case.md') &&
+      error.includes('ci-sweeper') &&
+      error.includes('execution-ready')
+    ));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
 test('release capability gate CLI emits JSON ledger for automation', async () => {
   const { stdout } = await execFileAsync('node', ['scripts/validate-release-capability-gate.mjs', '--json'], {
     cwd: ROOT,
@@ -67,9 +91,13 @@ async function makeReleaseCapabilityFixture() {
   await cp(path.join(ROOT, 'templates', 'github-actions'), path.join(fixture, 'templates', 'github-actions'), { recursive: true });
   await cp(path.join(ROOT, 'templates', 'gitlab-ci'), path.join(fixture, 'templates', 'gitlab-ci'), { recursive: true });
   await cp(path.join(ROOT, '.github', 'workflows'), path.join(fixture, '.github', 'workflows'), { recursive: true });
+  await cp(path.join(ROOT, 'README.md'), path.join(fixture, 'README.md'));
+  await cp(path.join(ROOT, 'docs', 'QUICKSTART.md'), path.join(fixture, 'docs', 'QUICKSTART.md'));
   await cp(path.join(ROOT, 'templates', 'zj-loop-route-table.yaml.template'), path.join(fixture, 'templates', 'zj-loop-route-table.yaml.template'));
   await cp(path.join(ROOT, 'docs', 'designs', 'dogfood-reference-case.md'), path.join(fixture, 'docs', 'designs', 'dogfood-reference-case.md'));
   await cp(path.join(ROOT, 'docs', 'designs', 'provider-adapter-parity-architecture.md'), path.join(fixture, 'docs', 'designs', 'provider-adapter-parity-architecture.md'));
+  await cp(path.join(ROOT, 'docs', 'designs', 'route-consumer-execution-architecture.md'), path.join(fixture, 'docs', 'designs', 'route-consumer-execution-architecture.md'));
+  await cp(path.join(ROOT, 'docs', 'designs', 'user-project-execution-ready-bundle.md'), path.join(fixture, 'docs', 'designs', 'user-project-execution-ready-bundle.md'));
   await cp(path.join(ROOT, 'package.json'), path.join(fixture, 'package.json'));
   await cp(path.join(ROOT, 'scripts', 'ci-validate-gates.sh'), path.join(fixture, 'scripts', 'ci-validate-gates.sh'));
   return fixture;

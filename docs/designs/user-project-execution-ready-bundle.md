@@ -1,4 +1,4 @@
-# User Project Execution-Ready Bundle
+# User Project Install-Ready Bundle
 
 This document explains the first ZAgenticLoop workflow-dispatch bundle that is
 intended to be useful in ordinary user projects, not only in this repository's
@@ -21,7 +21,7 @@ The Route Table is the control plane: it decides which routes are enabled, what
 side effects are allowed, and which fixed confirmation phrase is required
 before a route can act.
 
-## First Execution-Ready Route Set
+## First Install-Ready Route Set
 
 The first route set is deliberately small:
 
@@ -33,7 +33,7 @@ The first route set is deliberately small:
 | `post-merge-roadmap-closeout` | After a Roadmap-Sliced PR is merged, cleanup can be planned and, when the merged PR contract authorizes it, close only the activation carrier and delete only the merged roadmap branch. | Dry-run evidence first; live cleanup is contract-authorized only when all executor guards pass. | Fixed phrase `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER` is a fallback for manual/operator-required cleanup, not the default happy path. |
 
 All other action-capable routes remain selectable future paths, but should not
-be described as user-project execution-ready unless their generated workflow and
+be promoted beyond `install-ready` unless their generated workflow and
 published package runner have equivalent evidence.
 
 ## Human-Readable First Run

@@ -261,7 +261,7 @@ scaffold route policy, workflows, package commands, and plan/report evidence;
 `execution-ready` means real signals can become durable request carriers and
 bounded consumer outcomes.
 
-The first execution-ready user-project choices are:
+The first install-ready user-project choices are:
 
 - **Turn a plan issue into a roadmap run:** enable
   `roadmap-sliced-development`, then comment
@@ -352,7 +352,7 @@ npm run test:generated-bundle-release-gate
 ```
 
 The longer reference is
-[User-project execution-ready bundle](./designs/user-project-execution-ready-bundle.md).
+[User-project install-ready bundle](./designs/user-project-execution-ready-bundle.md).
 
 ### GitLab CI
 

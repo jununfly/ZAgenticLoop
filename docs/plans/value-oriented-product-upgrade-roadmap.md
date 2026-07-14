@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-14 12:25:20
+> 数据文件: `value-oriented-product-upgrade-roadmap.json` | 最后更新: 2026-07-14 13:13:44
 
 [x][X+] 1. Value-Oriented Product Upgrade Full Map
 ├── [x][Y+] 1-1. 用户目标导向的自动 Loop 入口
@@ -58,12 +58,13 @@
 │   ├── [x][Y+] 1-9-5. Codex Dogfood 到用户项目复制路径
 │   ├── [x][Y+] 1-9-6. 无 GitHub/GitLab 依赖的 Codex-Centered Loop 路径
 │   └── [x][Y+] 1-9-7. Codex Harness 全局结构化 Input/Output 协议
-└── [x][Y+] 1-10. Codex Harness 执行切片与交付顺序
-    ├── [x][Y+] 1-10-1. Core 协议 Schema 与 Validator
-    ├── [x][Y+] 1-10-2. Core 协议 Renderer 与 CLI/API 入口
-    ├── [x][Y+] 1-10-3. Core Run Metrics Recorder
-    ├── [x][Y+] 1-10-4. GitHub Issue 到 PR Closeout 的 Harness Dogfood
-    ├── [x][Y+] 1-10-5. No-Provider Codex-Centered 协议等价物
-    ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
-    └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
+├── [x][Y+] 1-10. Codex Harness 执行切片与交付顺序
+│   ├── [x][Y+] 1-10-1. Core 协议 Schema 与 Validator
+│   ├── [x][Y+] 1-10-2. Core 协议 Renderer 与 CLI/API 入口
+│   ├── [x][Y+] 1-10-3. Core Run Metrics Recorder
+│   ├── [x][Y+] 1-10-4. GitHub Issue 到 PR Closeout 的 Harness Dogfood
+│   ├── [x][Y+] 1-10-5. No-Provider Codex-Centered 协议等价物
+│   ├── [x][Y+] 1-10-6. Codex Harness 用户故事与帮助示例
+│   └── [x][Y+] 1-10-7. 发布前 Gate 与回归证据
+└── [x][Y+] 1-11. 能力宣称一致性与 release gate 防漂移
 <!-- ROADMAP_SECTION_END -->

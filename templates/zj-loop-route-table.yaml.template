@@ -521,7 +521,7 @@ disabled_dispatch_routes:
       report_only_if_contract_missing: true
       requires_no_pending_followups: true
       destructive_actions_enabled: false
-      branch_prefix_allowlist: ["zjal/"]
+      branch_prefix_allowlist: ["zjal-", "zjal/"]
       close_carrier_issue_only: true
     provider_support:
       github:
