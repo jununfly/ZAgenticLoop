@@ -223,12 +223,12 @@
     "1-1-3": {
       "id": "1-1-3",
       "label": "Core Completion Alignment Ledger derivation API",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented and exported pure buildCompletionAlignmentLedger API with SHA-256 target/Route Table digests, required adapter cells, not-applicable separation, unsupported/incomplete/blocked/stale priority, structured next actions, and supplied evidence overlays. Verification: npm test in tools/zj-loop-core (191 passing)."
     },
     "1-1-4": {
       "id": "1-1-4",
@@ -686,7 +686,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 19:09:20",
+    "updated": "2026-07-14 19:31:25",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

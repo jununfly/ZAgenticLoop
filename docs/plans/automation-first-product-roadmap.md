@@ -1,13 +1,13 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 19:09:20
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 19:31:25
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [~][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
 │   ├── [x][Y+] 1-1-1. Durable completion-alignment architecture and applicability map
 │   ├── [x][Y+] 1-1-2. Route Table completion target schema and generated template
-│   ├── [ ][Y+] 1-1-3. Core Completion Alignment Ledger derivation API
+│   ├── [x][Y+] 1-1-3. Core Completion Alignment Ledger derivation API
 │   ├── [ ][Y+] 1-1-4. Doctor completion ledger JSON text and exit contract
 │   └── [ ][Y+] 1-1-5. Completion contract parser and compatibility regression tests
 ├── [ ][Y+] 1-2. 当前 Route 能力与用户体验缺口盘点
@@ -51,7 +51,7 @@
 **当前子树：**
 ├── [x][Y+] 1-1-1. Durable completion-alignment architecture and applicability map
 ├── [x][Y+] 1-1-2. Route Table completion target schema and generated template
-├── [ ][Y+] 1-1-3. Core Completion Alignment Ledger derivation API
+├── [x][Y+] 1-1-3. Core Completion Alignment Ledger derivation API
 ├── [ ][Y+] 1-1-4. Doctor completion ledger JSON text and exit contract
 └── [ ][Y+] 1-1-5. Completion contract parser and compatibility regression tests
 <!-- ROADMAP_SECTION_END -->
