@@ -32,6 +32,7 @@
     "test:release-ready": "ZJ_LOOP_RELEASE_READY=1 node scripts/validate-release-workflows.mjs",
     "test:generated-bundle-release-gate": "node scripts/validate-generated-bundle-release-gate.mjs",
     "test:provider-parity-gate": "node --test scripts/validate-provider-parity-gate.test.mjs scripts/gitlab-provider-dogfood-replay.test.mjs scripts/route-family-provider-parity-evidence.test.mjs && node scripts/validate-provider-parity-gate.mjs",
+    "test:release-capability-gate": "node --test scripts/validate-release-capability-gate.test.mjs && node scripts/validate-release-capability-gate.mjs",
     "check:zj-loop-init": "node scripts/check-zj-loop-init-sync.mjs",
     "test:zj-loop-core": "cd tools/zj-loop-core && npm test",
     "test:zj-loop-audit": "cd tools/zj-loop-audit && npm test",
@@ -40,7 +41,7 @@
     "test:zj-loop-sync": "cd tools/zj-loop-sync && npm test",
     "test:zj-loop-mcp-server": "cd tools/zj-loop-mcp-server && npm test",
     "test:zj-goal-audit": "cd tools/zj-goal-audit && npm test",
-    "test:tools": "npm run test:registry && npm run test:activation-contract && npm run test:route-decision && npm run test:issue-fix-request && npm run test:roadmap-handoff && npm run test:protocol-terminology && npm run test:post-merge-roadmap-closeout && npm run test:tool-gates && npm run test:release-workflows && npm run test:generated-bundle-release-gate && npm run test:provider-parity-gate && node scripts/run-tool-package-scripts.mjs test",
+    "test:tools": "npm run test:registry && npm run test:activation-contract && npm run test:route-decision && npm run test:issue-fix-request && npm run test:roadmap-handoff && npm run test:protocol-terminology && npm run test:post-merge-roadmap-closeout && npm run test:tool-gates && npm run test:release-workflows && npm run test:generated-bundle-release-gate && npm run test:provider-parity-gate && npm run test:release-capability-gate && node scripts/run-tool-package-scripts.mjs test",
     "build:tools": "node scripts/run-tool-package-scripts.mjs build"
   },
   "devDependencies": {

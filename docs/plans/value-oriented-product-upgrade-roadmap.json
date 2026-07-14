@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "Value-Oriented Product Upgrade Full Map",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -375,8 +375,8 @@
     "1-7": {
       "id": "1-7",
       "label": "用户项目安装、升级与启用体验",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-7-1",
@@ -384,14 +384,30 @@
         "1-7-3",
         "1-7-4"
       ],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "1-7 主目标是继续扩展文件生成能力，还是升级成安装后引导体验？",
+          "answer": "确认。升级成安装后引导体验，文件生成只是底座。",
+          "note": "主线：zj-loop-init/add/upgrade -> deterministic install summary -> zj-loop-first-run guided setup -> route bundle enable/rollback commands -> README/Quickstart 场景化。目标是让用户知道当前能跑什么、为什么不能跑、下一步执行哪条命令。"
+        },
+        {
+          "q": "zj-loop-init/add/upgrade 后是否输出固定结构 install_summary？",
+          "answer": "确认。必须固定结构化 install_summary；默认打印人类可读 text，--json 输出 machine summary。",
+          "note": "install_summary 是安装/升级结果，不是 runtime doctor report；不扫描历史 runs/orchestrations。字段包括 schema、operation、target_dir、provider_adapters、files、route_table、first_run.recommended_commands、warnings、next_steps。"
+        },
+        {
+          "q": "Route bundle 选择、启用与回滚是否由 zj-loop-init 直接实现 route enable/disable？",
+          "answer": "确认。不要把 route enable/disable 逻辑塞进 zj-loop-init；zj-loop-init 只做安装/升级 summary 和 next steps，route enable/disable/promote/rollback 继续由 zj-loop-route 或 Route Table 控制面负责。",
+          "note": "install/upgrade 默认只安装 route bundle，不授权副作用 route。install_summary.next_steps 列出可选 enable/disable/promotion 命令；side-effecting route enable 仍需要固定确认短语。Rollback 分为 generated workflow .bak/upgrade 恢复与 zj-loop-route disable，不做黑盒 zj-loop-init rollback。"
+        }
+      ],
+      "notes": "Entered 1-7. Direction: upgrade user-project install/upgrade from file generation into guided setup. zj-loop-init remains the substrate, but the product goal is a deterministic install summary that tells users what is installed, what can run, what is blocked, and which first-run/route commands to execute next."
     },
     "1-8": {
       "id": "1-8",
       "label": "Dogfood 验证、发布门槛与能力分级",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1",
       "children": [
         "1-8-1",
@@ -404,9 +420,34 @@
           "q": "能力晋升的证据标准是什么？",
           "answer": "dogfood/replay 只是晋升材料；宣称 execution-ready 必须有生成 bundle 或用户项目路径上的 live evidence、失败路径、去重证据和可回放结果。",
           "note": "来自 route-consumer-execution-architecture.md 的 user-project-ready gate。"
+        },
+        {
+          "q": "发布门槛应是文档 checklist + 人工判断，还是确定性 release evidence gate + 文档解释？",
+          "answer": "确认。采用确定性 release evidence gate + 文档解释。",
+          "note": "文档保留能力分级和 dogfood 故事，帮助 human 建立心智；但发布前是否可以宣称 route 为 install-ready / execution-ready / user-project-ready，必须由脚本读取 Route Table、generated bundle、provider parity evidence、replay/live evidence、release workflow pins 等判断。人工判断只处理例外和解释，不承担常规 gate 判断。实现目标应包含可跑的 release capability audit，并接入现有 release/CI gates。"
+        },
+        {
+          "q": "能力台账的真相源应该放在哪里？",
+          "answer": "选 B。以 templates/zj-loop-route-table.yaml.template / 当前 Route Table 的 route rows 为主 truth。",
+          "note": "Route Table 已经承载 route enablement、execution mode、maturity、provider_support、capabilities。能力台账如果另开 truth，会和 Route Table 漂移。文档只解释为什么，dogfood doc 保留稳定故事和证据引用；release capability gate 从 Route Table 派生 capability ledger，再检查 docs/fixtures/evidence 是否支撑这些宣称。"
+        },
+        {
+          "q": "Release capability gate 应该检查所有 route 的完整证据链，还是只对达到特定成熟度的 route 严格检查？",
+          "answer": "确认。采用分层检查。所有 route 做基础结构检查；install-ready / execution-ready / user-project-ready 才触发强证据检查。",
+          "note": "基础结构检查覆盖 route_id、consumer、consumer_kind、execution.mode、maturity、provider_support、capabilities 和合法 provider status。designed/replayed/dogfooded 可存在，但不得被 README/docs 宣称为用户项目可执行能力。execution-ready 必须有 generated/user-project path evidence、failure path、duplicate/resume evidence、release gate/replay evidence。user-project-ready 定义为最高级，不能随意设置。"
+        },
+        {
+          "q": "Release capability gate 对 evidence refs 应该检查到什么粒度？",
+          "answer": "确认。分三层：本地可解析引用强校验，evidence 类型做语义校验，外部 dogfood-run/issue 只检查格式和文档提及。",
+          "note": "workflow/gitlab-ci/template/docs/test 等可解析引用必须在仓库中存在或映射到 package scripts / ci gate；dry-run-supported/live-supported/execution-ready 根据 evidence 类型做语义校验；dogfood-run、issue 等外部短链不在线查询，避免 release gate 受网络/API/权限影响。"
+        },
+        {
+          "q": "Release capability gate 的输出应该只是 pass/fail，还是同时生成派生 capability ledger？",
+          "answer": "确认。同时生成派生 capability ledger。",
+          "note": "CLI 默认输出简短 pass/fail 摘要，适合 CI；--json 输出 zj-loop.release_capability_ledger.v1，由 Route Table 派生，不手写维护。ledger 按 route 列出 route_id、consumer、consumer_kind、execution.mode、maturity.protocol、maturity.runner、enabled_by_default、provider_support、claim_level、evidence_status、missing_or_weak_evidence。docs 可引用 ledger 概念，但不提交生成结果作为新真相源。"
         }
       ],
-      "notes": ""
+      "notes": "Entered 1-8. Remaining product-upgrade gap is dogfood verification, release gates, and capability classification. Existing docs already define maturity/readiness vocabulary; this node should turn that into deterministic release evidence and route capability ledger rather than another prose-only checklist."
     },
     "1-1-1": {
       "id": "1-1-1",
@@ -806,82 +847,106 @@
     "1-7-1": {
       "id": "1-7-1",
       "label": "Install Wizard 与 First-Run Guided Setup",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-7",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Install Wizard / First-Run Guided Setup 是否要做成交互式 wizard 或隐藏执行器？",
+          "answer": "确认。不做交互式 wizard；做成确定性的 zj-loop-first-run plan / --json guided setup。",
+          "note": "安装后输出固定 install_summary；用户运行 first-run plan 后得到推荐 route、可自动执行到哪里、当前阻塞点、下一条固定命令。真正执行仍交给 zj-loop-dispatch / consumer runner，first-run 不做隐藏副作用执行器。责任边界：init 安装，first-run 规划，route/dispatch 启用与执行。"
+        }
+      ],
+      "notes": "Implemented as deterministic guided setup: zj-loop-init now emits install_summary JSON for harnesses, and docs clarify first-run plans instead of hidden execution. Verification: npm test --prefix tools/zj-loop-init; bash scripts/ci-validate-gates.sh."
     },
     "1-7-2": {
       "id": "1-7-2",
       "label": "Upgrade 保留用户意图与配置漂移治理",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-7",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Upgrade 是否需要确定性 drift classification，并保留用户启用意图？",
+          "answer": "确认。upgrade 需要在 install_summary.files 中给出确定性 drift classification，并保留 Route Table 中的用户启用/禁用意图。",
+          "note": "分类建议包括 clean_generated、modified_generated_backed_up、user_owned_skipped、missing_created、unchanged、force_overwritten 等。基本误覆盖防护即可，不为任意用户编辑做过度兜底；带 metadata 的 generated files 可升级，修改过的 generated files 先 .bak；用户拥有的 root .gitlab-ci.yml 默认 skipped 并输出 include snippet；init/upgrade 不重置 route enabled 状态。"
+        }
+      ],
+      "notes": "Implemented deterministic install_summary.files drift classification for install/upgrade. Modified generated GitLab CI fragments preserve modified_generated_backed_up with backup_path; root CI skips are visible; route_table.enablement_preserved remains true. Verification: npm test --prefix tools/zj-loop-init; bash scripts/ci-validate-gates.sh."
     },
     "1-7-3": {
       "id": "1-7-3",
       "label": "Route Bundle 选择、启用与回滚命令",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-7",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Route Bundle 是否新增 bundle/profile enable/disable 控制面？",
+          "answer": "确认。暂时不新增 bundle 执行命令；常用 route 组合只作为 install_summary.next_steps、first-run plan 和文档中的固定命令数组输出。",
+          "note": "现有 route 粒度已经能表达安全边界。bundle enable 容易一次打开多个 side-effect route，削弱固定确认短语的精确性。真正需要组合体验时，先由 zj-loop-first-run plan --goal ... 输出推荐命令，而不是新增控制面概念。"
+        }
+      ],
+      "notes": "Implemented as fixed recommended command arrays in install_summary.next_steps and documentation, without adding bundle/profile enablement. Route enable/disable/promote remain per-route Route Table control-plane commands with fixed confirmation phrases for side effects. Verification: npm test --prefix tools/zj-loop-init; bash scripts/ci-validate-gates.sh."
     },
     "1-7-4": {
       "id": "1-7-4",
       "label": "README、Quickstart 与场景化教程重构",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-7",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "README/Quickstart 是否要按安装到首跑 route 的用户路径重构？",
+          "answer": "要。README 保持产品总览和最短 happy path；Quickstart 改成第一次装到用户项目并跑通一个 route 的操作教程。",
+          "note": "文档路径重排为：安装 substrate -> 看 install_summary -> 运行 first-run plan -> 选择 route -> enable 单个 route -> dispatch/consumer 执行 -> doctor 回放。GitHub/GitLab、architecture、dogfood 细节下沉到 durable docs。README/Quickstart 都必须明确：zj-loop-init 不授权副作用，first-run 不执行隐藏副作用，真正执行走 zj-loop-route / zj-loop-dispatch / consumer runner。"
+        }
+      ],
+      "notes": "README, Quickstart, and user-project execution-ready bundle now present the install -> install_summary -> first-run plan -> route status/enable -> execution -> doctor path, while linking GitHub/GitLab and architecture details to durable docs. Verification: git diff --check; bash scripts/ci-validate-gates.sh."
     },
     "1-8-1": {
       "id": "1-8-1",
       "label": "本仓 Dogfood Matrix 与 Route 能力台账",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-8",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: Route capability ledger is derived from templates/zj-loop-route-table.yaml.template via scripts/validate-release-capability-gate.mjs. The ledger keeps Route Table as truth source and emits zj-loop.release_capability_ledger.v1 with route id, consumer, execution mode, maturity, provider support, claim level, and evidence status. Verification: npm run test:release-capability-gate; bash scripts/ci-validate-gates.sh."
     },
     "1-8-2": {
       "id": "1-8-2",
       "label": "每条 Route 的 E2E Replay 与 Live Evidence",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-8",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: gate validates provider_support evidence for GitHub and GitLab route rows. Local refs workflow/gitlab-ci/template/docs/test are strongly checked; runner/artifact/replay/dogfood-run/issue refs are checked by type and durable-doc mention where appropriate. Docs now point dogfood evidence to capability promotion and user-project readiness. Verification: npm run test:release-capability-gate; bash scripts/ci-validate-gates.sh."
     },
     "1-8-3": {
       "id": "1-8-3",
       "label": "发布前 Gate、版本策略与回归套件",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-8",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: release capability gate is wired into package.json as test:release-capability-gate and into scripts/ci-validate-gates.sh. It fails on missing local evidence, invalid provider support, invalid maturity/execution fields, and unsupported evidence refs; --json emits the derived ledger for automation. Verification: git diff --check; npm run test:release-capability-gate; bash scripts/ci-validate-gates.sh."
     },
     "1-8-4": {
       "id": "1-8-4",
       "label": "能力分级晋升到 execution-ready 的证据审计",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-8",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completed: maturity promotion is now evidence-backed. All routes get baseline structure/provider/capability checks; install-ready/execution-ready/user-project-ready claims require stronger replay/gate/live evidence and warn on enabled side-effect routes. Generated ledger remains derived evidence, not a committed truth source. Verification: npm run test:release-capability-gate; bash scripts/ci-validate-gates.sh."
     },
     "1-9": {
       "id": "1-9",
@@ -1830,7 +1895,7 @@
   },
   "metadata": {
     "created": "2026-07-12 14:26:23",
-    "updated": "2026-07-14 01:58:01",
+    "updated": "2026-07-14 12:25:20",
     "md_file": "docs/plans/value-oriented-product-upgrade-roadmap.md"
   }
 }

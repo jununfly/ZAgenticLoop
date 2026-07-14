@@ -17,6 +17,7 @@ const execFileAsync = promisify(execFile);
 type Tool = 'grok' | 'claude' | 'codex';
 type AddArtifact = 'safety' | 'pattern-registry' | 'route-table' | 'github-actions' | 'gitlab-ci';
 type ProjectProviderKind = 'github' | 'gitlab' | 'manual';
+type InstallSummaryOperation = 'install' | 'add' | 'upgrade';
 
 type InitPattern = RegistryPattern & {
   state: string;
@@ -24,6 +25,43 @@ type InitPattern = RegistryPattern & {
   init: NonNullable<RegistryPattern['init']>;
 };
 type ScaffoldStatus = 'created' | 'exists' | 'would-create' | 'missing-template';
+
+type InstallSummaryFile = {
+  path: string;
+  status:
+    | 'created'
+    | 'copied'
+    | 'would_create'
+    | 'skipped'
+    | 'user_owned_skipped'
+    | 'unchanged'
+    | 'clean_generated'
+    | 'modified_generated_backed_up'
+    | 'force_overwritten'
+    | 'upgraded';
+  backup_path?: string;
+};
+
+type InstallSummary = {
+  schema: 'zj-loop.install_summary.v1';
+  operation: InstallSummaryOperation;
+  target_dir: string;
+  provider_adapters: ProjectProviderKind[];
+  files: InstallSummaryFile[];
+  route_table: {
+    path: string;
+    status: string;
+    enablement_preserved: boolean;
+  };
+  first_run: {
+    recommended_commands: string[];
+  };
+  warnings: string[];
+  next_steps: Array<{
+    label: string;
+    command?: string;
+  }>;
+};
 
 const VALID_TOOLS: Tool[] = ['grok', 'claude', 'codex'];
 const VALID_ADD_ARTIFACTS: AddArtifact[] = ['safety', 'pattern-registry', 'route-table', 'github-actions', 'gitlab-ci'];
@@ -671,6 +709,152 @@ include:
 ${GITLAB_CI_TEMPLATE_FILES.map((file) => `  - local: "zj-loop/gitlab-ci/${file}"`).join('\n')}`);
 }
 
+function providerAdaptersForArtifacts(artifacts: AddArtifact[]): ProjectProviderKind[] {
+  const adapters: ProjectProviderKind[] = [];
+  if (artifacts.includes('github-actions')) adapters.push('github');
+  if (artifacts.includes('gitlab-ci')) adapters.push('gitlab');
+  return adapters;
+}
+
+function buildInstallSummary(input: {
+  operation: InstallSummaryOperation;
+  targetDir: string;
+  providerAdapters: ProjectProviderKind[];
+  outputLines: string[];
+}): InstallSummary {
+  const text = input.outputLines.join('\n');
+  const firstRunCommands = extractCommands(text).filter((command) => command.includes('zj-loop-first-run plan'));
+  const files = summarizeInstallFiles(input.outputLines, input.targetDir);
+  const routeTableFile = files.find((file) => file.path === LOOP_ARTIFACTS.routeTable.primary);
+  const warnings = input.outputLines
+    .map((line) => line.trim())
+    .filter((line) => /^warning:|WARNING:|Refusing /i.test(line));
+
+  return {
+    schema: 'zj-loop.install_summary.v1',
+    operation: input.operation,
+    target_dir: input.targetDir,
+    provider_adapters: input.providerAdapters,
+    files,
+    route_table: {
+      path: LOOP_ARTIFACTS.routeTable.primary,
+      status: routeTableFile?.status ?? routeTableStatusFromText(text),
+      enablement_preserved: true,
+    },
+    first_run: {
+      recommended_commands: unique(firstRunCommands),
+    },
+    warnings,
+    next_steps: [
+      ...unique(firstRunCommands).map((command) => ({
+        label: command.includes('--json') ? 'Run machine-readable first-run plan' : 'Run human-readable first-run plan',
+        command,
+      })),
+      ...recommendedRouteCommands(),
+    ],
+  };
+}
+
+function summarizeInstallFiles(lines: string[], targetDir: string): InstallSummaryFile[] {
+  const files = new Map<string, InstallSummaryFile>();
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const parsed = parseInstallFileLine(line, targetDir);
+    if (!parsed) continue;
+    files.set(parsed.path, mergeInstallFileSummary(files.get(parsed.path), parsed));
+  }
+  return [...files.values()].sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function mergeInstallFileSummary(current: InstallSummaryFile | undefined, next: InstallSummaryFile): InstallSummaryFile {
+  if (!current) return next;
+  const priority: Record<InstallSummaryFile['status'], number> = {
+    modified_generated_backed_up: 6,
+    force_overwritten: 5,
+    user_owned_skipped: 4,
+    skipped: 4,
+    upgraded: 3,
+    clean_generated: 2,
+    created: 2,
+    copied: 2,
+    would_create: 1,
+    unchanged: 1,
+  };
+  return priority[next.status] > priority[current.status]
+    ? { ...next, backup_path: next.backup_path ?? current.backup_path }
+    : { ...current, backup_path: current.backup_path ?? next.backup_path };
+}
+
+function parseInstallFileLine(line: string, targetDir: string): InstallSummaryFile | null {
+  const patterns: Array<[RegExp, InstallSummaryFile['status']]> = [
+    [/^created: (?<path>.+?)(?: \(template\))?$/, 'created'],
+    [/^copied: .+ → (?<path>.+)$/, 'created'],
+    [/^would copy: .+ → (?<path>.+)$/, 'would_create'],
+    [/^would write: (?<path>.+)$/, 'would_create'],
+    [/^would create: (?<path>.+)$/, 'would_create'],
+    [/^skipped: (?<path>.+?) already exists$/, 'skipped'],
+    [/^OVERWRITTEN with --force: (?<path>.+)$/, 'force_overwritten'],
+    [/^upgraded: (?<path>.+)$/, 'upgraded'],
+  ];
+  for (const [pattern, status] of patterns) {
+    const match = line.match(pattern);
+    const filePath = match?.groups?.path;
+    if (filePath) return { path: normalizeSummaryPath(filePath, targetDir), status };
+  }
+
+  const backupMatch = line.match(/^backed up modified (?:workflow|generated file): (?<path>.+?) → (?<backup>.+)$/);
+  if (backupMatch?.groups?.path && backupMatch.groups.backup) {
+    return {
+      path: normalizeSummaryPath(backupMatch.groups.path, targetDir),
+      status: 'modified_generated_backed_up',
+      backup_path: normalizeSummaryPath(backupMatch.groups.backup, targetDir),
+    };
+  }
+  return null;
+}
+
+function normalizeSummaryPath(filePath: string, targetDir: string): string {
+  const cleaned = filePath.trim();
+  const absolute = path.isAbsolute(cleaned) ? cleaned : path.resolve(targetDir, cleaned);
+  const relative = path.relative(targetDir, absolute);
+  return relative && !relative.startsWith('..') ? relative : cleaned;
+}
+
+function routeTableStatusFromText(text: string): string {
+  if (/Route Table enablement is preserved/i.test(text)) return 'preserved';
+  if (/route_table: .* present/i.test(text)) return 'exists';
+  if (/route_table: .* created/i.test(text)) return 'created';
+  return 'unknown';
+}
+
+function extractCommands(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('npx ') || line.startsWith('npm exec ') || line.startsWith('zj-loop-'));
+}
+
+function recommendedRouteCommands(): Array<{ label: string; command: string }> {
+  return [
+    {
+      label: 'Inspect route status before enabling side effects',
+      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status',
+    },
+    {
+      label: 'Enable roadmap activation only when appropriate',
+      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"',
+    },
+    {
+      label: 'Disable a route without a confirmation phrase',
+      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable roadmap-sliced-development',
+    },
+  ];
+}
+
+function unique<T>(items: T[]): T[] {
+  return Array.from(new Set(items));
+}
+
 async function upgradeRenderedTemplateFile(
   src: string,
   dest: string,
@@ -1081,6 +1265,18 @@ function firstLoopCommand(pattern: InitPattern, tool: Tool): string {
 }
 
 async function handleInitCommand({ io, options }: CliHandlerContext) {
+  const jsonOutput = options.json === true;
+  const outputLines: string[] = [];
+  const commandIo: CliIo = jsonOutput
+    ? {
+        stdout(message: string) {
+          outputLines.push(message);
+        },
+        stderr(message: string) {
+          outputLines.push(message);
+        },
+      }
+    : io;
   let addArtifacts: AddArtifact[];
   try {
     addArtifacts = parseAddArtifacts(options.add);
@@ -1107,6 +1303,21 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
   const force = options.force === true;
   const registry = await loadRegistry();
   const patterns = registry.patterns.map(requireInitPattern);
+  const finish = (
+    operation: InstallSummaryOperation,
+    providerAdapters: ProjectProviderKind[],
+    exitCode: number,
+  ) => {
+    if (jsonOutput) {
+      io.stdout(JSON.stringify(buildInstallSummary({
+        operation,
+        targetDir,
+        providerAdapters,
+        outputLines,
+      }), null, 2));
+    }
+    return exitCode;
+  };
 
   if (options.upgrade !== undefined && options.upgrade !== false) {
     const upgradeTarget = String(options.upgrade);
@@ -1117,14 +1328,17 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
     const templatesRoot = await resolveBundledOrMonorepo('templates');
     if (upgradeTarget === 'gitlab-ci') {
       const defaultPattern = patterns.find((pattern) => pattern.id === 'daily-triage') ?? patterns[0];
-      return upgradeGitLabCiBundle(targetDir, templatesRoot, defaultPattern, dryRun, force, io, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage);
+      const exitCode = await upgradeGitLabCiBundle(targetDir, templatesRoot, defaultPattern, dryRun, force, commandIo, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage);
+      return finish('upgrade', ['gitlab'], exitCode);
     }
-    return upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
+    const exitCode = await upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, commandIo);
+    return finish('upgrade', ['github'], exitCode);
   }
 
   if (addArtifacts.length > 0) {
     const templatesRoot = await resolveBundledOrMonorepo('templates');
-    return handleAddArtifacts(addArtifacts, targetDir, templatesRoot, patterns, dryRun, force, io, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage);
+    const exitCode = await handleAddArtifacts(addArtifacts, targetDir, templatesRoot, patterns, dryRun, force, commandIo, gitlabStage, gitlabRunnerTags, gitlabImage, gitlabCorePackage);
+    return finish('add', providerAdaptersForArtifacts(addArtifacts), exitCode);
   }
 
   const pattern = String(options.pattern ?? 'daily-triage');
@@ -1132,11 +1346,11 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
 
   const selectedPattern = patterns.find((p) => p.id === pattern);
   if (!selectedPattern) {
-    io.stderr(`Unknown pattern: ${pattern}. Valid: ${patterns.map((p) => p.id).join(', ')}`);
+    commandIo.stderr(`Unknown pattern: ${pattern}. Valid: ${patterns.map((p) => p.id).join(', ')}`);
     return 1;
   }
   if (!VALID_TOOLS.includes(tool)) {
-    io.stderr(`Unknown tool: ${tool}. Valid: ${VALID_TOOLS.join(', ')}`);
+    commandIo.stderr(`Unknown tool: ${tool}. Valid: ${VALID_TOOLS.join(', ')}`);
     return 1;
   }
 
@@ -1149,17 +1363,17 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
   if (!(await exists(starterRoot))) {
     const fallback = path.join(startersRoot, baseStarter);
     if (!(await exists(fallback))) {
-      io.stderr(`Starter not found: ${starterRoot}`);
+      commandIo.stderr(`Starter not found: ${starterRoot}`);
       return 1;
     }
-    io.stdout(`Note: no ${tool} variant for ${pattern} — using ${baseStarter} (Grok paths)`);
+    commandIo.stdout(`Note: no ${tool} variant for ${pattern} — using ${baseStarter} (Grok paths)`);
   }
 
   const effectiveStarter = (await exists(starterRoot))
     ? starterRoot
     : path.join(startersRoot, baseStarter);
 
-  io.stdout(`\nzj-loop-init: ${pattern} → ${targetDir} (${tool})${dryRun ? ' [dry-run]' : ''}\n`);
+  commandIo.stdout(`\nzj-loop-init: ${pattern} → ${targetDir} (${tool})${dryRun ? ' [dry-run]' : ''}\n`);
 
   const skillRoots = [
     path.join(effectiveStarter, '.grok', 'skills'),
@@ -1180,7 +1394,7 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
         path.join(skillsDir, entry),
         path.join(targetDir, toolPrefix, entry),
         dryRun,
-        io,
+        commandIo,
       );
     }
   }
@@ -1193,7 +1407,7 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
     if (await exists(src)) {
       const entries = await readDirNames(src);
       for (const entry of entries) {
-        await copyFile(path.join(src, entry), path.join(dest, entry), dryRun, io);
+        await copyFile(path.join(src, entry), path.join(dest, entry), dryRun, commandIo);
       }
     }
   }
@@ -1206,37 +1420,37 @@ async function handleInitCommand({ io, options }: CliHandlerContext) {
   const stateDest = path.join(targetDir, stateOutputPath);
   if (await exists(stateExample)) {
     if (selectedPattern.id === 'daily-triage') {
-      await copyRuntimeExampleAndLocal(stateExample, stateDest, dryRun, io);
+      await copyRuntimeExampleAndLocal(stateExample, stateDest, dryRun, commandIo);
     } else {
-      await copyFile(stateExample, stateDest, dryRun, io);
+      await copyFile(stateExample, stateDest, dryRun, commandIo);
     }
   } else {
     const alt = path.join(effectiveStarter, 'STATE.md.example');
     if (await exists(alt)) {
       if (selectedPattern.id === 'daily-triage') {
-        await copyRuntimeExampleAndLocal(alt, stateDest, dryRun, io);
+        await copyRuntimeExampleAndLocal(alt, stateDest, dryRun, commandIo);
       } else {
-        await copyFile(alt, stateDest, dryRun, io);
+        await copyFile(alt, stateDest, dryRun, commandIo);
       }
     }
   }
 
   const loopMd = path.join(effectiveStarter, 'ZJ-LOOP.md');
   if (await exists(loopMd)) {
-    await writeLoopContract(loopMd, path.join(targetDir, LOOP_ARTIFACTS.config.primary), dryRun, force, io);
+    await writeLoopContract(loopMd, path.join(targetDir, LOOP_ARTIFACTS.config.primary), dryRun, force, commandIo);
   }
 
-  await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
-  await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun, io);
+  await copyL2Templates(selectedPattern, tool, targetDir, templatesRoot, dryRun, commandIo);
+  await scaffoldObservability(selectedPattern, tool, targetDir, templatesRoot, dryRun, commandIo);
   if (selectedPattern.id === 'daily-triage') {
     await ensureGitignoreEntries(targetDir, [
       stateOutputPath,
       LOOP_ARTIFACTS.runLog.primary,
-    ], dryRun, io);
+    ], dryRun, commandIo);
   }
 
-  await scaffoldConstraints(targetDir, templatesRoot, tool, dryRun, io);
-  await scaffoldRouteTable(selectedPattern, targetDir, templatesRoot, dryRun, io);
+  await scaffoldConstraints(targetDir, templatesRoot, tool, dryRun, commandIo);
+  await scaffoldRouteTable(selectedPattern, targetDir, templatesRoot, dryRun, commandIo);
   if (!dryRun && !(await exists(path.join(targetDir, 'AGENTS.md')))) {
     const agentsTemplate = `# AGENTS.md
 
@@ -1249,10 +1463,10 @@ npm run lint
 - See ${LOOP_ARTIFACTS.config.primary} for cadence and human gates
 `;
     await writeFile(path.join(targetDir, 'AGENTS.md'), agentsTemplate);
-    io.stdout('  created: AGENTS.md (template)');
+    commandIo.stdout('  created: AGENTS.md (template)');
   }
 
-  io.stdout(`\n=== Next steps ===
+  commandIo.stdout(`\n=== Next steps ===
   npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${target === '.' ? '.' : target}
   npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --root ${target === '.' ? '.' : target} --json
   npx @jununfly/zj-loop-audit ${target === '.' ? '.' : target} --suggest
@@ -1261,7 +1475,7 @@ npm run lint
   ${firstLoopCommand(selectedPattern, tool)}
 `);
 
-  return 0;
+  return finish('install', [], 0);
 }
 
 async function readDirNames(dir: string): Promise<string[]> {
@@ -1296,6 +1510,7 @@ Options:
   --gitlab-image  Image rendered into generated GitLab CI jobs (default: node:22)
   --gitlab-core-package
                   Package source rendered into generated GitLab npx --package calls (default: @jununfly/zj-loop-core@0.1.6)
+  --json          Print deterministic install_summary JSON instead of human text
   --dry-run       Print actions without copying
   -h, --help      This help
 
@@ -1328,6 +1543,7 @@ const SPEC: CliSpec = {
     { name: 'gitlabRunnerTags', flag: 'gitlab-runner-tags', type: 'string', description: 'Comma-separated GitLab runner tags for generated GitLab jobs' },
     { name: 'gitlabImage', flag: 'gitlab-image', type: 'string', description: 'GitLab CI image for generated GitLab jobs', default: DEFAULT_GITLAB_IMAGE },
     { name: 'gitlabCorePackage', flag: 'gitlab-core-package', type: 'string', description: 'Package source rendered into generated GitLab npx --package calls', default: DEFAULT_GITLAB_CORE_PACKAGE },
+    { name: 'json', type: 'boolean', description: 'Print deterministic install_summary JSON instead of human text' },
     { name: 'dryRun', flag: 'dry-run', type: 'boolean', description: 'Print actions without copying' },
   ],
   handler: handleInitCommand,

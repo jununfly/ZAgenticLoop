@@ -41,6 +41,7 @@ being mistaken for GitHub repositories.
 | Map loops across tools | [Primitives matrix](docs/primitives-matrix.md) |
 | Check whether a repo is loop-ready | `npx @jununfly/zj-loop-audit . --suggest` |
 | Scaffold loop state and skills | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok` |
+| Inspect exactly what install or upgrade changed | `npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex --json` |
 | Add GitHub provider smoke/consumer workflows | `npx @jununfly/zj-loop-init . --add github-actions` |
 | Add GitLab provider smoke/consumer jobs | `npx @jununfly/zj-loop-init . --add gitlab-ci` |
 | Choose the first execution-ready user-project route | [User-project execution-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
@@ -89,11 +90,21 @@ flow, gates, and current automation boundaries: [Dogfood reference case](docs/de
 
 ## Install And Run
 
+The short path is:
+
+```text
+install substrate -> read install_summary -> run first-run plan -> choose one route
+-> enable only that route if needed -> dispatch/consumer executes -> doctor replays evidence
+```
+
 Use the public npm packages directly:
 
 ```bash
 # Scaffold a starter into your repo
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+
+# Machine-readable install summary for harnesses and automation
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex --json
 
 # Estimate operating cost before scheduling
 npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
@@ -136,7 +147,10 @@ npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
 ```
 
 `zj-loop-init` also prints the first-run planning commands after install and
-upgrade, so the next move is visible before enabling side-effecting routes.
+upgrade, so the next move is visible before enabling side-effecting routes. Use
+`--json` when a harness needs the fixed `zj-loop.install_summary.v1` contract:
+`operation`, `target_dir`, provider adapters, file drift classifications,
+Route Table preservation, first-run commands, warnings, and next steps.
 
 2. Ask ZAgenticLoop what should run first:
 
@@ -162,6 +176,30 @@ policy, and next steps. Ready plans also include a `dispatch_handoff` with the
 packaged command, input contract, request-carrier requirement, review handoff,
 and closeout handoff. For replay, the same JSON includes `execution_summary`,
 `evidence_index`, `state_explanation`, and `failure_replay`.
+
+`zj-loop-init` installs and upgrades files. `zj-loop-first-run` plans the next
+safe route. Neither command authorizes hidden side effects. Live or
+request-backed work must still pass Route Table policy and the route-specific
+consumer runner through `zj-loop-route`, `zj-loop-dispatch`, or the generated
+provider workflow.
+
+3. Inspect route status before enabling anything:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
+```
+
+Enable only the one route you intend to exercise:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
+```
+
+Disable remains low-friction:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable roadmap-sliced-development
+```
 
 For a goal-oriented Codex path, use `zj-loop-run` instead of stopping at a
 plan:
@@ -190,20 +228,20 @@ Replay the runtime gate without entering a consumer runner:
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-preflight --route roadmap-sliced-development --execution-layer review-artifact --json
 ```
 
-3. Check cost and readiness:
+4. Check cost and readiness:
 
 ```bash
 npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
 npx @jununfly/zj-loop-audit . --suggest
 ```
 
-4. Run report-only for week one:
+5. Run report-only for week one if you are still learning the route:
 
 ```text
 /loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix in week one.
 ```
 
-5. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold. For Daily Triage, `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md` are local runtime files by default; commit the `.example` templates and policy files, not the cursor-bearing local state.
+6. Read `zj-loop/STATE.md`, correct anything wrong, then commit the scaffold. For Daily Triage, `zj-loop/STATE.md` and `zj-loop/zj-loop-run-log.md` are local runtime files by default; commit the `.example` templates and policy files, not the cursor-bearing local state.
 
 Phased rollout separates two axes: **readiness level** says how prepared the repo is; **execution authority** says what the loop may actually do. Start with report-only authority even when audit readiness is high. Do not skip the human-read step just because the loop is automated.
 

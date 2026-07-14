@@ -47,6 +47,36 @@ test('zj-loop-init dry-run scaffolds daily-triage', async () => {
   }
 });
 
+test('zj-loop-init --json emits deterministic install summary without text chatter', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-json-summary-'));
+  try {
+    const { stdout } = await exec('node', [
+      CLI,
+      dir,
+      '--pattern',
+      'daily-triage',
+      '--tool',
+      'codex',
+      '--json',
+    ]);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(summary.schema, 'zj-loop.install_summary.v1');
+    assert.equal(summary.operation, 'install');
+    assert.equal(summary.target_dir, path.resolve(dir));
+    assert.deepEqual(summary.provider_adapters, []);
+    assert.ok(summary.files.some((file) => file.path === 'zj-loop/ZJ-LOOP.md' && file.status === 'created'));
+    assert.ok(summary.files.some((file) => file.path === 'zj-loop/zj-loop-route-table.yaml' && file.status === 'created'));
+    assert.equal(summary.route_table.path, 'zj-loop/zj-loop-route-table.yaml');
+    assert.equal(summary.route_table.enablement_preserved, true);
+    assert.ok(summary.first_run.recommended_commands.some((command) => command.includes('zj-loop-first-run plan --root')));
+    assert.ok(summary.next_steps.some((step) => step.command?.includes('zj-loop-first-run plan --root')));
+    assert.deepEqual(summary.warnings, []);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-init scaffolds daily-triage runtime files with examples and gitignore entries', async () => {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-daily-triage-runtime-'));
   try {
@@ -649,6 +679,34 @@ test('zj-loop-init --upgrade gitlab-ci upgrades fragments and leaves existing ro
     assert.match(upgraded, /tags:\n    - "k8s"/);
     assert.match(upgraded, /image: "registry\.example\.com\/node:20"/);
     assert.match(upgraded, /--package \.\/zj-loop\/vendor\/jununfly-zj-loop-core-0\.1\.6\.tgz/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-init --upgrade gitlab-ci --json reports drift classification and preserved route intent', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-init-upgrade-gitlab-ci-json-'));
+  try {
+    await exec('node', [CLI, dir, '--add', 'gitlab-ci']);
+    const smokePath = path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-smoke.yml');
+    await writeFile(smokePath, `${await readFile(smokePath, 'utf8')}\n# local edit\n`);
+    await writeFile(path.join(dir, '.gitlab-ci.yml'), 'stages: [test]\n');
+
+    const { stdout } = await exec('node', [CLI, dir, '--upgrade', 'gitlab-ci', '--json']);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(summary.schema, 'zj-loop.install_summary.v1');
+    assert.equal(summary.operation, 'upgrade');
+    assert.deepEqual(summary.provider_adapters, ['gitlab']);
+    assert.equal(summary.route_table.enablement_preserved, true);
+    assert.ok(summary.files.some((file) =>
+      file.path === 'zj-loop/gitlab-ci/zj-loop-smoke.yml' &&
+      file.status === 'modified_generated_backed_up' &&
+      file.backup_path === 'zj-loop/gitlab-ci/zj-loop-smoke.yml.bak'
+    ));
+    assert.ok(summary.files.some((file) => file.path === '.gitlab-ci.yml' && file.status === 'skipped'));
+    assert.ok(summary.first_run.recommended_commands.some((command) => command.includes('zj-loop-first-run plan --root')));
+    assert.ok(summary.next_steps.some((step) => step.command?.includes('zj-loop-route status')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

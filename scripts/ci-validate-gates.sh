@@ -31,6 +31,8 @@ node scripts/check-zj-loop-init-sync.mjs
 node scripts/validate-release-workflows.mjs
 node scripts/validate-generated-bundle-release-gate.mjs
 npm run test:provider-parity-gate
+node --test scripts/validate-release-capability-gate.test.mjs
+node scripts/validate-release-capability-gate.mjs
 node scripts/ci-sweeper-e2e-replay.mjs > /tmp/ci-sweeper-e2e-replay.json
 node --test scripts/ci-sweeper-e2e-replay.test.mjs
 node scripts/issue-fix-request-e2e-replay.mjs > /tmp/issue-fix-request-e2e-replay.json

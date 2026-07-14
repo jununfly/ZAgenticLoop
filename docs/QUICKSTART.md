@@ -7,44 +7,80 @@ Landed from the [repository](https://github.com/jununfly/ZAgenticLoop), a packag
 The commands below use the public npm packages. Contributors can also run the
 same CLIs from this monorepo; see [From source](#from-source) below.
 
-## 1. Pick your pain (30 seconds)
+## 1. Install the portable substrate (60 seconds)
 
-Not sure which loop?
+Run this in the root of any git project. Use `--tool codex`, `grok`, or
+`claude` to match the agent you will run first.
 
 ```bash
-# Scaffold starter (or copy manually)
 npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex
-
-# Score loop readiness (this repo also comments scores on PRs in CI)
-npx @jununfly/zj-loop-audit . --suggest
-
-# Optional: score run-until-done goal readiness
-npx @jununfly/zj-goal-audit . --suggest
-
-# Codex — report only, week one
-/loop 1d Run zj-loop-triage. Update zj-loop/STATE.md. No auto-fix.
-
-# Also try the new low-risk pattern
-/loop 1d Run zj-changelog-scan + zj-draft-release-notes. Write RELEASE_NOTES_DRAFT.md. Human review only.
 ```
 
-Or start with **Daily Triage** if you just want to learn loop discipline with low risk.
+`zj-loop-init` copies the starter kit, creates `zj-loop/STATE.md`,
+`zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-route-table.yaml`,
+`zj-loop/zj-loop-budget.md`, and `zj-loop/zj-loop-run-log.md`, then prints the
+next first-run command. For Daily Triage, `STATE.md` and
+`zj-loop-run-log.md` are local runtime files by default and `.example`
+templates are created beside them.
 
-## 2. Scaffold in your repo (60 seconds)
-
-Run this in the root of any git project (no clone required):
+For a machine-readable install result, run the same command with `--json`:
 
 ```bash
-npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
+npx @jununfly/zj-loop-init . --pattern daily-triage --tool codex --json
 ```
 
-Swap `--tool grok` for `claude` or `codex` if needed. Swap `--pattern` for any pattern from [patterns/registry.yaml](../patterns/registry.yaml).
+The JSON schema is `zj-loop.install_summary.v1`. It reports the operation,
+target directory, provider adapters, file statuses such as `created`,
+`skipped`, and `modified_generated_backed_up`, Route Table preservation,
+first-run commands, warnings, and next steps.
 
-`zj-loop-init` copies the starter kit, creates `zj-loop/STATE.md`, `zj-loop/ZJ-LOOP.md`, `zj-loop/zj-loop-route-table.yaml`, `zj-loop/zj-loop-budget.md`, and `zj-loop/zj-loop-run-log.md`, then prints your first command. For Daily Triage, `STATE.md` and `zj-loop-run-log.md` are local runtime files by default and `.example` templates are created beside them.
+## 2. Plan the first route (60 seconds)
 
-`zj-loop/zj-loop-route-table.yaml` is the routing control plane. It records which loop signals should stay human-readable, be ignored, remain report-only, or later dispatch to another pattern. It is policy, not a runtime queue.
+Ask ZAgenticLoop what should run first:
 
-Optional GitHub provider adapter:
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan
+```
+
+Use targeted goals when the desired path is already clear:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal roadmap
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
+```
+
+`zj-loop-first-run` is a deterministic guided setup, not a hidden executor. It
+recommends a route, explains the automation boundary, shows hard stop signals,
+and prints fixed next commands. Use `--json` for automation wiring.
+
+## 3. Choose exactly one route to enable
+
+`zj-loop/zj-loop-route-table.yaml` is the routing control plane. It records
+which loop signals stay report-only, which are disabled, and which consumer may
+handle a signal later. It is policy, not a runtime queue.
+
+Inspect it before enabling side effects:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
+```
+
+Enable only the route you intend to exercise. There is no aggregate bundle
+enable command; fixed command arrays are recommendations, not blanket
+authorization.
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable roadmap-sliced-development
+```
+
+`zj-loop-init` installs and upgrades files. `zj-loop-first-run` plans. Real
+execution still goes through `zj-loop-route`, `zj-loop-dispatch`, provider
+workflows, or a route-specific consumer runner.
+
+## 4. Add a provider adapter when you need platform automation
+
+GitHub-hosted repositories:
 
 ```bash
 npx @jununfly/zj-loop-init . --add github-actions
@@ -52,22 +88,9 @@ npx @jununfly/zj-loop-init . --add github-actions
 
 This adds generated `zj-loop-*.yml` workflows. Start with the manual `ZJ Loop
 Smoke` workflow; it produces Route Decision evidence and runs audit without
-creating issues, PRs, branches, or comments. Side-effecting consumers stay under
-Route Table control.
+creating issues, PRs, branches, or comments.
 
-For GitLab, self-managed GitLab, or local/manual projects, do not start by
-installing `.github/workflows`. Keep the portable substrate local first:
-
-```bash
-npx @jununfly/zj-loop-init . --pattern daily-triage --tool grok
-npx @jununfly/zj-loop-init . --add route-table
-npx @jununfly/zj-loop-audit . --suggest
-```
-
-`zj-loop-init --add github-actions` is guarded in detected GitLab projects and
-requires `--force` only for intentional GitHub adapter mirroring.
-
-Optional GitLab provider adapter:
+GitLab or self-managed GitLab repositories:
 
 ```bash
 npx @jununfly/zj-loop-init . --add gitlab-ci
@@ -145,7 +168,7 @@ Vendored package tarballs alone do not guarantee fully offline execution:
 `npm exec` may still require registry access or a prepared npm cache for
 transitive dependencies.
 
-## 3. Check cost before you schedule (30 seconds)
+## 5. Check cost before you schedule (30 seconds)
 
 ```bash
 npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
@@ -153,7 +176,7 @@ npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d
 
 Adjust `--pattern`, `--level` (readiness/cost model), and `--cadence` to match what you plan to run. `zj-loop-cost .` prefers your local `patterns/registry.yaml`; use `--package-registry` only when you intentionally want package defaults. High-frequency loops (CI Sweeper at 5m) can burn tokens fast — slow the cadence or require early-exit triage first.
 
-## 4. Audit readiness (30 seconds)
+## 6. Audit readiness (30 seconds)
 
 ```bash
 npx @jununfly/zj-loop-audit . --suggest
@@ -171,7 +194,7 @@ For bounded run-until-done work, audit goal readiness separately:
 npx @jununfly/zj-goal-audit . --suggest
 ```
 
-## 5. Run your first loop — report only (2 minutes)
+## 7. Run your first loop or replay why it stopped
 
 ### Grok
 
@@ -188,6 +211,19 @@ npx @jununfly/zj-goal-audit . --suggest
 ### Codex
 
 Use the first-run command printed by `zj-loop-init` (pattern-specific). Week one: triage and state updates only.
+
+For a bounded Codex run, use `zj-loop-run`:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD with roadmap sliced development"
+```
+
+Replay recent runs without triggering side effects:
+
+```bash
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --format text
+npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --write-index zj-loop/evidence-index.json
+```
 
 ### OpenClaw
 

@@ -397,12 +397,16 @@ Use the narrowest relevant gate after dogfood changes:
 node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-backlog-triage-e2e-replay.test.mjs scripts/issue-triage-transition-e2e-replay.test.mjs scripts/issue-triage-action-runner.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-live-runner.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-live-runner.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-live-runner.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/live-runner-contract.test.mjs
 node --test scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs scripts/validate-post-merge-closeout-workflow.test.mjs
 npm run test:provider-parity-gate
+npm run test:release-capability-gate
 bash scripts/ci-audit-gates.sh
 bash scripts/ci-validate-gates.sh
 ```
 
 `zj-loop/ZJ-LOOP.md` is the operational source for current live evidence and
-run links. Keep this design document focused on stable capability boundaries.
+run links. `test:release-capability-gate` derives the route capability ledger
+from the Route Table, so this document should explain stable capability
+boundaries and evidence stories without becoming a second hand-maintained
+capability matrix.
 
 ## Drift Checklist
 

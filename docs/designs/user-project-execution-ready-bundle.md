@@ -40,7 +40,28 @@ published package runner have equivalent evidence.
 
 After installing the bundle:
 
-1. Ask for the automation-default first-run plan:
+1. Read the install or upgrade summary.
+
+`zj-loop-init` prints human text by default. With `--json`, it emits the fixed
+`zj-loop.install_summary.v1` contract for harnesses and automation. The summary
+is the install/upgrade result, not a runtime doctor report. It does not scan
+historical runs or orchestrations.
+
+The summary includes:
+
+- `operation`, `target_dir`, and `provider_adapters`.
+- `files`, including drift classifications such as `created`, `skipped`,
+  `force_overwritten`, and `modified_generated_backed_up`.
+- `route_table.path`, `route_table.status`, and
+  `route_table.enablement_preserved`.
+- `first_run.recommended_commands`, `warnings`, and structured `next_steps`.
+
+Upgrade preserves Route Table enablement as the user's automation intent
+source. Modified generated provider files are backed up before canonical
+versions are written; user-owned root CI files are skipped with explicit next
+steps instead of being patched silently.
+
+2. Ask for the automation-default first-run plan:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan
@@ -50,8 +71,7 @@ The plan recommends a route, explains why that route is safest or most useful
 for the current project, lists automatic next steps, and emits structured stop
 signals when the loop should pause instead of guessing.
 
-`zj-loop-init` prints first-run planning commands after install and upgrade.
-Upgrade preserves Route Table enablement as the user's automation intent source,
+`zj-loop-init` prints first-run planning commands after install and upgrade,
 then asks the user to rerun the planner so current route choices are visible
 before any live route executes.
 
@@ -71,7 +91,7 @@ For automation wiring, run with `--json`. The output includes:
   `failure_replay`: the compact replay surface for understanding what happened,
   why it was allowed or blocked, and where to inspect the supporting evidence.
 
-2. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
+3. Run `ZJ Loop Smoke` manually when the recommended route is the smoke path,
    or target a known route when the intent is already clear:
 
 ```bash
@@ -79,8 +99,8 @@ npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal r
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
 ```
 
-3. Inspect the workflow summary or generated JSON evidence.
-4. Run:
+4. Inspect the workflow summary or generated JSON evidence.
+5. Run:
 
 ```bash
 npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
@@ -236,10 +256,24 @@ Before publishing a bundle release, run:
 
 ```bash
 npm run test:generated-bundle-release-gate
+npm run test:provider-parity-gate
+npm run test:release-capability-gate
 bash scripts/ci-validate-gates.sh
 ```
 
 The generated-bundle gate checks template/workflow drift, package pins, Route
 Table route existence, action-capable route readiness, and the Roadmap
-Activation fixture. `ci-validate-gates.sh` remains the broader repository
-validation gate.
+Activation fixture. The provider-parity gate checks GitHub/GitLab route
+surface consistency and provider support inventory.
+
+The release-capability gate derives `zj-loop.release_capability_ledger.v1` from
+`templates/zj-loop-route-table.yaml.template`; it is a generated view, not a
+second truth source. The gate validates all route rows structurally and applies
+stronger evidence checks only when a route claims `install-ready`,
+`execution-ready`, or `user-project-ready`. Local evidence refs such as
+`workflow:`, `gitlab-ci:`, `template:`, `docs:`, and `test:` are checked
+against repository files or scripts. External refs such as `dogfood-run:` and
+`issue:` are checked for format and durable dogfood documentation mention
+without calling GitHub or GitLab APIs.
+
+`ci-validate-gates.sh` remains the broader repository validation gate.

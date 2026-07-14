@@ -463,6 +463,14 @@ dogfood replay in that gate proves GitLab CI Sweeper fix scope, Roadmap
 Activation MR contract handoff into Post-Merge Closeout, and PR Steward MR
 dry-run/refusal boundaries against the current packaged core contract.
 
+Release capability claims are checked by `npm run test:release-capability-gate`.
+The gate derives `zj-loop.release_capability_ledger.v1` from the Route Table
+template instead of reading a separately maintained matrix. All routes get
+structural validation. Routes claiming `install-ready`, `execution-ready`, or
+`user-project-ready` get stronger evidence checks across provider support,
+local workflow/template/docs/test refs, and durable dogfood mentions for
+external run or issue refs.
+
 GitLab Roadmap Activation has a narrow live execution path. It can consume a
 GitLab `contract-plan.json` into `execution-result.json`, refuse missing-token
 or non-`zjal-*` branch cases with structured evidence, and create/update a draft
