@@ -121,6 +121,12 @@ carrier surfaces differ:
 | Workflow artifact | Local evidence JSON/log |
 | Provider closeout comment | Local closeout record |
 
+For a `provider: none` dispatch, the Workspace Adapter writes the activation
+carrier beneath `zj-loop/requests/` and its Route Decision evidence beneath
+`zj-loop/evidence/route-decisions/`. These are the replayable local handoff;
+they are not a substitute for the branch, patch, or changed-file review
+artifact produced by the Workspace executor.
+
 Replayable examples are in
 [Codex Harness No-Provider E2E Protocol](testing/codex-harness-no-provider-e2e.md).
 

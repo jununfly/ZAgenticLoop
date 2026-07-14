@@ -1,6 +1,7 @@
 import { ConsumerRunPlan } from './consumer-runner.js';
 import { ConsumerAdapterResult } from './consumer-adapter.js';
 import { RuntimePreflightResult } from './preflight.js';
+import { WorkspaceRouteDecisionRecord } from './workspace-route-decision.js';
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 export type SignalEnvelope = {
     schema: 'zj-loop.signal.v1';
@@ -59,6 +60,7 @@ export type OrchestrationEnvelope = {
     };
     consumer_adapter_result?: ConsumerAdapterResult;
     progression_trace?: AutomaticProgressionTrace;
+    workspace_adapter?: WorkspaceRouteDecisionRecord;
     closeout_hint: {
         required: boolean;
         reason: string;

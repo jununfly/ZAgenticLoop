@@ -5,6 +5,7 @@ import { buildConsumerRunPlan, ConsumerRunPlan } from './consumer-runner.js';
 import { ConsumerAdapterResult, runConsumerLiveSideEffects, runConsumerToReviewArtifact } from './consumer-adapter.js';
 import { evaluateRuntimePreflight, RuntimePreflightResult } from './preflight.js';
 import { findRoute, loadRouteTable } from './route.js';
+import { WorkspaceRouteDecisionRecord, writeWorkspaceRouteDecision } from './workspace-route-decision.js';
 
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 
@@ -74,6 +75,7 @@ export type OrchestrationEnvelope = {
   };
   consumer_adapter_result?: ConsumerAdapterResult;
   progression_trace?: AutomaticProgressionTrace;
+  workspace_adapter?: WorkspaceRouteDecisionRecord;
   closeout_hint: {
     required: boolean;
     reason: string;
@@ -291,9 +293,21 @@ export async function dispatchSignal(input: {
       workUnitsRequested: 1,
     },
   });
+  const workspaceAdapter = input.signal.provider === 'none'
+    ? await writeWorkspaceRouteDecision({
+        root,
+        orchestrationId,
+        signal: input.signal,
+        consumerRunPlan,
+        now,
+      })
+    : undefined;
   let status = statusForPlan({ mode, consumerRunPlan });
   if (preflightResult.status === 'hard_stop') {
     status = 'hard_stopped';
+  }
+  if (workspaceAdapter && status === 'executed_to_review_artifact') {
+    status = 'planned';
   }
   const consumerAdapterResult = status === 'executed_to_review_artifact'
     ? await runConsumerToReviewArtifact({
@@ -319,8 +333,15 @@ export async function dispatchSignal(input: {
     carrier_plan: buildCarrierPlan(input.signal),
     consumer_run_plan: consumerRunPlan,
     preflight_result: preflightResult,
-    review_artifact: buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
+    review_artifact: workspaceAdapter
+      ? {
+          kind: 'local-activation',
+          path: workspaceAdapter.carrier.path,
+          description: 'Workspace local activation and route-decision evidence were persisted; a branch, patch, or changed-file review artifact is the next executor boundary.',
+        }
+      : buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
     ...(consumerAdapterResult === undefined ? {} : { consumer_adapter_result: consumerAdapterResult }),
+    ...(workspaceAdapter === undefined ? {} : { workspace_adapter: workspaceAdapter }),
     closeout_hint: {
       required: status === 'executed_to_review_artifact',
       reason: status === 'executed_to_review_artifact'

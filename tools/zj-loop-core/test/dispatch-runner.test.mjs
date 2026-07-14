@@ -259,6 +259,45 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
   }
 });
 
+test('zj-loop-dispatch creates a local carrier and route-decision evidence for Workspace Adapter signals', async () => {
+  const dir = await setupProject();
+  try {
+    const output = await dispatchSignal({
+      root: dir,
+      now: '2026-07-14T00:00:00.000Z',
+      signal: {
+        schema: 'zj-loop.signal.v1',
+        signal_id: 'sig-workspace-roadmap-1',
+        source: 'codex',
+        provider: 'none',
+        subject: { kind: 'local_goal', id: 'workspace-roadmap-1' },
+        intent: 'activate_roadmap',
+        payload: { title: 'Create local review artifact' },
+      },
+    });
+
+    assert.equal(output.status, 'planned');
+    assert.equal(output.workspace_adapter.schema, 'zj-loop.workspace_route_decision.v1');
+    assert.equal(output.workspace_adapter.carrier.kind, 'local-activation-request');
+    assert.match(output.workspace_adapter.carrier.path, /^zj-loop\/requests\//);
+    assert.match(output.workspace_adapter.evidence.path, /^zj-loop\/evidence\/route-decisions\//);
+    assert.equal(output.progression_trace.outcome, 'planned');
+
+    const carrier = JSON.parse(await readFile(path.join(dir, output.workspace_adapter.carrier.path), 'utf8'));
+    assert.equal(carrier.schema, 'zj-loop.workspace_activation_request.v1');
+    assert.equal(carrier.provider, 'none');
+    assert.equal(carrier.route_id, 'roadmap-sliced-development');
+    assert.equal(carrier.source.subject.id, 'workspace-roadmap-1');
+
+    const evidence = JSON.parse(await readFile(path.join(dir, output.workspace_adapter.evidence.path), 'utf8'));
+    assert.equal(evidence.schema, 'zj-loop.workspace_route_decision_evidence.v1');
+    assert.equal(evidence.carrier.path, output.workspace_adapter.carrier.path);
+    assert.equal(evidence.route_decision.route, 'roadmap-sliced-development');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-dispatch auto mode creates a Changelog Drafter draft-plan review artifact', async () => {
   const dir = await setupProject();
   try {
