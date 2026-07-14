@@ -1,24 +1,46 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { runCli } from './cli.js';
+import { buildCompletionAlignmentLedger } from './completion-alignment.js';
 import { buildLoopDoctorReport } from './doctor-runner.js';
+import { DEFAULT_ROUTE_TABLE_PATH, loadRouteTable } from './route.js';
 const exitCode = await runCli({
     name: 'zj-loop-doctor',
     description: 'Replay ZAgenticLoop run state and summarize improvement signals.',
-    usage: 'zj-loop-doctor [--root <dir>] [--run <run_id>] [--orchestration <orchestration_id>] [--provider <provider> --subject <kind:id>] [--write-index <file>] [--emit-signal] [--format json|text]',
+    usage: 'zj-loop-doctor [--root <dir>] [--completion] [--require-complete] [--run <run_id>] [--orchestration <orchestration_id>] [--provider <provider> --subject <kind:id>] [--write-index <file>] [--emit-signal] [--format json|text]',
     options: [
         { name: 'root', type: 'string', description: 'Project root', default: '.' },
         { name: 'run', type: 'string', description: 'Replay a single run id' },
         { name: 'orchestration', type: 'string', description: 'Replay a single orchestration id' },
         { name: 'provider', type: 'string', description: 'Filter orchestration evidence by provider' },
         { name: 'subject', type: 'string', description: 'Filter orchestration evidence by subject key, such as issue:123' },
+        { name: 'completion', type: 'boolean', description: 'Derive the Completion Alignment Ledger' },
+        { name: 'requireComplete', flag: 'require-complete', type: 'boolean', description: 'Exit nonzero unless every required completion cell is complete' },
         { name: 'writeIndex', flag: 'write-index', type: 'string', description: 'Write the derived evidence index/report to a file' },
         { name: 'emitSignal', flag: 'emit-signal', type: 'boolean', description: 'Include a Route Decision signal envelope in the report' },
         { name: 'format', type: 'enum', description: 'Output format', values: ['json', 'text'], default: 'json' },
     ],
     async handler({ io, options }) {
         const root = String(options.root ?? '.');
+        if (options.completion === true) {
+            const routeTablePath = path.resolve(root, DEFAULT_ROUTE_TABLE_PATH);
+            const [table, routeTableText] = await Promise.all([
+                loadRouteTable(root),
+                readFile(routeTablePath, 'utf8'),
+            ]);
+            const ledger = buildCompletionAlignmentLedger({ table, routeTableText });
+            if (options.format === 'text') {
+                io.stdout(`target: ${ledger.target.id}`);
+                for (const [status, count] of Object.entries(ledger.summary))
+                    io.stdout(`${status}: ${count}`);
+            }
+            else {
+                io.stdout(JSON.stringify(ledger, null, 2));
+            }
+            const complete = ledger.cells.every((cell) => cell.status === 'complete' || cell.status === 'not-applicable-with-reason');
+            return options.requireComplete === true && !complete ? 1 : 0;
+        }
         const report = await buildLoopDoctorReport({
             root,
             emitSignal: options.emitSignal === true,

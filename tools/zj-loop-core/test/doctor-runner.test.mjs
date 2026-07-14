@@ -15,6 +15,38 @@ async function setupRuns() {
   const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-doctor-'));
   await mkdir(path.join(dir, 'zj-loop', 'runs'), { recursive: true });
   await mkdir(path.join(dir, 'zj-loop', 'orchestrations', 'orch-roadmap'), { recursive: true });
+  await writeFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), `schemaVersion: 1
+kind: zj-loop-route-table
+metadata:
+  completion_target:
+    id: automation-first-product
+    schema_version: 1
+routes:
+  - route_id: roadmap-sliced-development
+    enabled: true
+    request_kind: activation-comment
+    consumer: roadmap-activation
+    consumer_kind: activation-consumer
+    execution:
+      mode: live
+      side_effect_level: branch
+      completion_forms: [roadmap-branch-pr, activation-failed, activation-resumable]
+    maturity:
+      protocol: dogfooded
+      runner: dogfooded
+    capabilities:
+      scopes: [roadmap-activation]
+      verifiers: [roadmap-gates]
+      max_side_effect_level: branch
+    provider_support:
+      github: { status: dry-run-supported, evidence: [workflow:zj-loop-roadmap-activation.yml] }
+      gitlab: { status: dry-run-supported, evidence: [gitlab-ci:zj-loop-roadmap-activation.yml] }
+    completion_target:
+      adapters:
+        github: { applicability: applicable, requirement: required, signal_initiation_mode: explicit-on-demand }
+        gitlab: { applicability: applicable, requirement: required, signal_initiation_mode: explicit-on-demand }
+        workspace: { applicability: applicable, requirement: required, signal_initiation_mode: explicit-on-demand }
+`);
   await writeFile(path.join(dir, 'zj-loop', 'runs', 'run-1.json'), JSON.stringify({
     schema: 'zj-loop.run_state.v1',
     schema_version: 1,
@@ -208,6 +240,21 @@ test('zj-loop-doctor CLI emits diagnostic JSON and only includes signal when req
     assert.equal(written.status, 0);
     const writtenIndex = JSON.parse(await readFile(indexPath, 'utf8'));
     assert.equal(writtenIndex.schema, 'zj-loop.diagnostic_report.v1');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-doctor completion report stays readable while require-complete is a strict gate', async () => {
+  const dir = await setupRuns();
+  try {
+    const report = spawnSync(process.execPath, [DOCTOR_CLI, '--root', dir, '--completion'], { encoding: 'utf8' });
+    assert.equal(report.status, 0);
+    assert.equal(JSON.parse(report.stdout).schema, 'zj-loop.completion-alignment-ledger.v1');
+
+    const strict = spawnSync(process.execPath, [DOCTOR_CLI, '--root', dir, '--completion', '--require-complete'], { encoding: 'utf8' });
+    assert.equal(strict.status, 1);
+    assert.equal(JSON.parse(strict.stdout).schema, 'zj-loop.completion-alignment-ledger.v1');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

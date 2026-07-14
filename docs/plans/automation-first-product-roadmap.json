@@ -233,12 +233,12 @@
     "1-1-4": {
       "id": "1-1-4",
       "label": "Doctor completion ledger JSON text and exit contract",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Implemented zj-loop-doctor --completion JSON/text output and --require-complete strict exit contract using the core ledger. Normal incomplete reports exit 0; strict mode exits 1 while preserving machine-readable output. Verification: npm test in tools/zj-loop-core (192 passing)."
     },
     "1-1-5": {
       "id": "1-1-5",
@@ -686,7 +686,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 19:31:25",
+    "updated": "2026-07-14 19:34:21",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
