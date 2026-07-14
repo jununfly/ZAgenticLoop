@@ -30,6 +30,22 @@ export type OrchestrationStatus =
   | 'resume'
   | 'superseded';
 
+export type AutomaticProgressionTrace = {
+  schema: 'zj-loop.automatic_progression_trace.v1';
+  outcome: 'planned' | 'review_artifact' | 'hard_stop' | 'resume' | 'duplicate';
+  transitions: Array<{
+    sequence: number;
+    from: string;
+    to: string;
+    actor: 'dispatcher' | 'consumer_adapter';
+    reason: string;
+    evidence?: {
+      kind: string;
+      path?: string;
+    };
+  }>;
+};
+
 export type OrchestrationEnvelope = {
   schema: 'zj-loop.orchestration.v1';
   orchestration_id: string;
@@ -57,6 +73,7 @@ export type OrchestrationEnvelope = {
     description: string;
   };
   consumer_adapter_result?: ConsumerAdapterResult;
+  progression_trace?: AutomaticProgressionTrace;
   closeout_hint: {
     required: boolean;
     reason: string;
@@ -112,12 +129,12 @@ export async function dispatchSignal(input: {
   const storagePath = getOrchestrationPath(orchestrationId);
   const existing = await readExistingOrchestration({ root, storagePath });
   if (existing && mode === 'resume') {
-    return {
+    return withAutomaticProgressionTrace({
       ...existing,
       status: 'resume',
       resumes: existing.orchestration_id,
       updated_at: now,
-    };
+    });
   }
   if (existing && mode === 'execute') {
     const route = await loadRouteStatus(root, existing.consumer_run_plan.route_id);
@@ -251,12 +268,12 @@ export async function dispatchSignal(input: {
     return envelope;
   }
   if (existing && mode !== 'resume') {
-    return {
+    return withAutomaticProgressionTrace({
       ...existing,
       status: 'duplicate',
       duplicate_of: existing.orchestration_id,
       updated_at: now,
-    };
+    });
   }
 
   const consumerRunPlan = await buildConsumerRunPlan({
@@ -350,9 +367,90 @@ export async function writeOrchestrationEnvelope(input: {
   root?: string;
   envelope: OrchestrationEnvelope;
 }): Promise<void> {
-  const absolutePath = path.resolve(input.root ?? '.', input.envelope.storage.path);
+  const envelope = Object.assign(input.envelope, withAutomaticProgressionTrace(input.envelope));
+  const absolutePath = path.resolve(input.root ?? '.', envelope.storage.path);
   await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, `${JSON.stringify(input.envelope, null, 2)}\n`);
+  await writeFile(absolutePath, `${JSON.stringify(envelope, null, 2)}\n`);
+}
+
+export function withAutomaticProgressionTrace(envelope: OrchestrationEnvelope): OrchestrationEnvelope {
+  const transitions: AutomaticProgressionTrace['transitions'] = [{
+    sequence: 1,
+    from: 'signal_received',
+    to: 'route_decided',
+    actor: 'dispatcher',
+    reason: `resolved ${envelope.signal.intent} signal to ${envelope.consumer_run_plan.route_id}`,
+  }];
+
+  if (envelope.status === 'duplicate') {
+    transitions.push({
+      sequence: 2,
+      from: 'route_decided',
+      to: 'duplicate_detected',
+      actor: 'dispatcher',
+      reason: `reused existing orchestration ${envelope.duplicate_of ?? envelope.orchestration_id}`,
+    });
+    return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'duplicate', transitions } };
+  }
+  if (envelope.status === 'resume') {
+    transitions.push({
+      sequence: 2,
+      from: 'route_decided',
+      to: 'resume_available',
+      actor: 'dispatcher',
+      reason: `returned replayable orchestration ${envelope.resumes ?? envelope.orchestration_id}`,
+    });
+    return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'resume', transitions } };
+  }
+
+  const preflightPassed = envelope.preflight_result.status !== 'hard_stop';
+  transitions.push({
+    sequence: 2,
+    from: 'route_decided',
+    to: preflightPassed ? 'preflight_passed' : 'hard_stop',
+    actor: 'dispatcher',
+    reason: preflightPassed
+      ? `runtime preflight ${envelope.preflight_result.status}`
+      : envelope.preflight_result.stop_signal?.reason ?? 'runtime preflight hard stopped',
+  });
+  if (!preflightPassed) {
+    return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'hard_stop', transitions } };
+  }
+
+  if (envelope.status === 'hard_stopped') {
+    transitions.push({
+      sequence: 3,
+      from: 'preflight_passed',
+      to: 'hard_stop',
+      actor: envelope.consumer_adapter_result ? 'consumer_adapter' : 'dispatcher',
+      reason: envelope.stop_signal?.reason ?? envelope.review_artifact.description,
+    });
+    return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'hard_stop', transitions } };
+  }
+
+  if (envelope.status === 'executed_to_review_artifact') {
+    transitions.push({
+      sequence: 3,
+      from: 'preflight_passed',
+      to: 'review_artifact',
+      actor: envelope.consumer_adapter_result ? 'consumer_adapter' : 'dispatcher',
+      reason: envelope.review_artifact.description,
+      evidence: {
+        kind: envelope.review_artifact.kind,
+        ...(envelope.review_artifact.path === undefined ? {} : { path: envelope.review_artifact.path }),
+      },
+    });
+    return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'review_artifact', transitions } };
+  }
+
+  transitions.push({
+    sequence: 3,
+    from: 'preflight_passed',
+    to: 'planned',
+    actor: 'dispatcher',
+    reason: envelope.consumer_run_plan.reason,
+  });
+  return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'planned', transitions } };
 }
 
 function resolveRouteForSignal(signal: SignalEnvelope): string {

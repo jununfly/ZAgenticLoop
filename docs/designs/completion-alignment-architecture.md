@@ -113,6 +113,15 @@ Every cell declares one `signal_initiation_mode`:
 Manual workflow dispatch proves only `explicit-on-demand`; it does not prove an
 event-driven or scheduled claim.
 
+Every persisted orchestration carries a derived
+`zj-loop.automatic_progression_trace.v1`. Its ordered transitions record the
+fixed dispatcher or consumer-adapter actor, deterministic reason, and review
+artifact evidence when one exists. The trace terminates at `review_artifact`,
+`hard_stop`, `planned`, `resume`, or `duplicate`; it does not create a second
+runtime state machine. This gives `automatic_progression` a replayable proof
+that an accepted signal advanced through Route Decision and preflight instead
+of relying on narrative logs.
+
 ## Evidence Rules
 
 Evidence has four distinct roles:

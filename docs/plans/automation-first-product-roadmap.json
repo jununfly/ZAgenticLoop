@@ -289,12 +289,12 @@
     "1-3-1": {
       "id": "1-3-1",
       "label": "Automatic-progression transition trace contract",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Added derived zj-loop.automatic_progression_trace.v1 to every persisted dispatcher orchestration. It records deterministic actor/reason transitions from signal_received through route_decided and preflight to review_artifact or hard_stop, and separately represents resume/duplicate control flow. TDD regression covers review-artifact and consumer hard-stop paths (core npm test: 193 passing)."
     },
     "1-3-2": {
       "id": "1-3-2",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 23:23:44",
+    "updated": "2026-07-14 23:28:17",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

@@ -16,6 +16,21 @@ export type SignalEnvelope = {
     payload: Record<string, unknown>;
 };
 export type OrchestrationStatus = 'planned' | 'executed_to_review_artifact' | 'hard_stopped' | 'duplicate' | 'resume' | 'superseded';
+export type AutomaticProgressionTrace = {
+    schema: 'zj-loop.automatic_progression_trace.v1';
+    outcome: 'planned' | 'review_artifact' | 'hard_stop' | 'resume' | 'duplicate';
+    transitions: Array<{
+        sequence: number;
+        from: string;
+        to: string;
+        actor: 'dispatcher' | 'consumer_adapter';
+        reason: string;
+        evidence?: {
+            kind: string;
+            path?: string;
+        };
+    }>;
+};
 export type OrchestrationEnvelope = {
     schema: 'zj-loop.orchestration.v1';
     orchestration_id: string;
@@ -43,6 +58,7 @@ export type OrchestrationEnvelope = {
         description: string;
     };
     consumer_adapter_result?: ConsumerAdapterResult;
+    progression_trace?: AutomaticProgressionTrace;
     closeout_hint: {
         required: boolean;
         reason: string;
@@ -72,3 +88,4 @@ export declare function writeOrchestrationEnvelope(input: {
     root?: string;
     envelope: OrchestrationEnvelope;
 }): Promise<void>;
+export declare function withAutomaticProgressionTrace(envelope: OrchestrationEnvelope): OrchestrationEnvelope;

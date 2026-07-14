@@ -222,6 +222,17 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
     assert.equal(output.review_artifact.kind, 'structured-evidence');
     assert.equal(output.review_artifact.path, `zj-loop/orchestrations/${output.orchestration_id}/contract-plan.json`);
     assert.equal(output.closeout_hint.required, true);
+    assert.equal(output.progression_trace.schema, 'zj-loop.automatic_progression_trace.v1');
+    assert.equal(output.progression_trace.outcome, 'review_artifact');
+    assert.deepEqual(
+      output.progression_trace.transitions.map((transition) => [transition.from, transition.to, transition.actor]),
+      [
+        ['signal_received', 'route_decided', 'dispatcher'],
+        ['route_decided', 'preflight_passed', 'dispatcher'],
+        ['preflight_passed', 'review_artifact', 'consumer_adapter'],
+      ],
+    );
+    assert.equal(output.progression_trace.transitions[2].evidence.path, output.review_artifact.path);
 
     assert.equal(output.consumer_adapter_result.schema, 'zj-loop.consumer_adapter_result.v1');
     assert.equal(output.consumer_adapter_result.route_id, 'roadmap-sliced-development');
@@ -383,6 +394,16 @@ test('zj-loop-dispatch hard stops Changelog Drafter when draft request carrier i
     assert.equal(output.consumer_adapter_result.adapter_status, 'hard_stopped');
     assert.equal(output.consumer_adapter_result.stop_signal.reason, 'missing-changelog-draft-request');
     assert.deepEqual(output.consumer_adapter_result.review_artifacts, []);
+    assert.equal(output.progression_trace.outcome, 'hard_stop');
+    assert.deepEqual(
+      output.progression_trace.transitions.map((transition) => [transition.from, transition.to, transition.actor]),
+      [
+        ['signal_received', 'route_decided', 'dispatcher'],
+        ['route_decided', 'preflight_passed', 'dispatcher'],
+        ['preflight_passed', 'hard_stop', 'consumer_adapter'],
+      ],
+    );
+    assert.equal(output.progression_trace.transitions[2].reason, 'missing-changelog-draft-request');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
