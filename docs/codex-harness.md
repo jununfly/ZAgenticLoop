@@ -133,6 +133,11 @@ manifest under `zj-loop/reviews/`. It never creates a branch, commits, or
 edits product files. A clean workspace is a structured `workspace-no-changes`
 hard stop, because there is no reviewable implementation artifact.
 
+After review, `zj-loop-workspace-closeout` keeps the carrier resumable until
+it receives `ACCEPT_LOCAL_REVIEW_ARTIFACT`. It then moves only the local
+activation request to `zj-loop/archive/requests/` and records closeout evidence
+under `zj-loop/closeouts/`. Repeating a completed closeout is idempotent.
+
 Replayable examples are in
 [Codex Harness No-Provider E2E Protocol](testing/codex-harness-no-provider-e2e.md).
 

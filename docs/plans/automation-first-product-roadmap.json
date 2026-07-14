@@ -662,12 +662,12 @@
     "1-3-3-1": {
       "id": "1-3-3-1",
       "label": "Workspace local closeout archive and resume runtime",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Added zj-loop-workspace-closeout runtime and CLI. It requires a local review manifest, stays resumable until ACCEPT_LOCAL_REVIEW_ARTIFACT, then archives only the local activation carrier and records idempotent closeout evidence. It never deletes Git refs or product files. TDD covers resumable, completed, and repeated paths (core npm test: 197 passing)."
     },
     "1-3-3-2": {
       "id": "1-3-3-2",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 23:39:30",
+    "updated": "2026-07-14 23:45:34",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
