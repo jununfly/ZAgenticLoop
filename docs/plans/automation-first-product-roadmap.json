@@ -207,12 +207,18 @@
     "1-1-2": {
       "id": "1-1-2",
       "label": "Route Table completion target schema and generated template",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
-      "decisions": [],
-      "notes": "实现切入点：在 Route Table metadata 增加 stable completion target id/schema version；每条 route row 增加 completion_target.adapters.<adapter>，与 provider_support 并列。先完成 core parser/schema 和生成模板，再派生 ledger。"
+      "decisions": [
+        {
+          "q": "unsupported 应属于 completion target 还是派生 ledger？",
+          "answer": "unsupported 只属于派生 Completion Alignment Ledger status。Route Table completion_target.adapters 只声明 applicable 或 not-applicable-with-reason；applicable target 再用 requirement: required 表示本轮必须完成。",
+          "note": "避免把静态范围与动态能力事实混为一处；not-applicable 不阻塞，unsupported 必须阻塞完成。"
+        }
+      ],
+      "notes": "Implemented parser/type validation for metadata completion target and per-route adapter declarations; Workspace is rejected in provider_support. Generated Route Table template declares GitHub/GitLab/Workspace targets for every route. Verification: npm run build && node --test test/route.test.mjs in tools/zj-loop-core; npm test in tools/zj-loop-init."
     },
     "1-1-3": {
       "id": "1-1-3",
@@ -680,7 +686,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 18:43:32",
+    "updated": "2026-07-14 19:09:20",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

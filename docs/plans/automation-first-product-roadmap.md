@@ -1,12 +1,12 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 18:43:32
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 19:09:20
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [~][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
 │   ├── [x][Y+] 1-1-1. Durable completion-alignment architecture and applicability map
-│   ├── [~][Y+] 1-1-2. Route Table completion target schema and generated template
+│   ├── [x][Y+] 1-1-2. Route Table completion target schema and generated template
 │   ├── [ ][Y+] 1-1-3. Core Completion Alignment Ledger derivation API
 │   ├── [ ][Y+] 1-1-4. Doctor completion ledger JSON text and exit contract
 │   └── [ ][Y+] 1-1-5. Completion contract parser and compatibility regression tests
@@ -40,7 +40,18 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-1-2. Route Table completion target schema and generated template
+### 当前施工：1-1. Completion Alignment Ledger 与不可补偿完成硬门
 
-实现切入点：在 Route Table metadata 增加 stable completion target id/schema version；每条 route row 增加 completion_target.adapters.<adapter>，与 provider_support 并列。先完成 core parser/schema 和生成模板，再派生 ledger。
+顺序：1-1-1 已完成 durable design；1-1-2 定义同一 Route Table 结构；1-1-3 派生 core ledger；1-1-4 暴露 doctor；1-1-5 固化兼容性回归。
+
+**决策：**
+- Q: 完成标准应该按架构目标还是用户体验目标？ → 两者同时作为 hard completion criteria：架构上必须有 Route Table truth、runner/preflight/replay/gate 证据；体验上必须能从用户信号自动推进到 review artifact 或结构化 hard stop，且用户不需要在多个位置反复猜下一步。 (这是动态对齐评分，不是二选一。A 先进时拉 B，B 落后时约束 A 的宣称。)
+- Q: 完成度是否允许加权评分抵消硬缺口？ → 不允许。以 Completion Alignment Ledger 替代评分；Architecture Integrity、live capability、stop/recovery、experience continuity、automatic progression 与 verification 均为不可补偿硬门。 (旧的评分措辞正式废弃；历史决策保留其被替换原因。)
+
+**当前子树：**
+├── [x][Y+] 1-1-1. Durable completion-alignment architecture and applicability map
+├── [x][Y+] 1-1-2. Route Table completion target schema and generated template
+├── [ ][Y+] 1-1-3. Core Completion Alignment Ledger derivation API
+├── [ ][Y+] 1-1-4. Doctor completion ledger JSON text and exit contract
+└── [ ][Y+] 1-1-5. Completion contract parser and compatibility regression tests
 <!-- ROADMAP_SECTION_END -->

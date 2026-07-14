@@ -26,6 +26,21 @@ export type RouteTableRoute = {
     evidence_store?: string;
     enabled_reason?: string;
     provider_support?: RouteProviderSupport;
+    completion_target?: RouteCompletionTarget;
+};
+export type RouteCompletionTargetApplicability = 'applicable' | 'not-applicable-with-reason';
+export type RouteCompletionTargetAdapter = {
+    applicability?: RouteCompletionTargetApplicability | string;
+    requirement?: 'required' | string;
+    signal_initiation_mode?: 'event-driven' | 'scheduled' | 'explicit-on-demand' | string;
+    not_applicable_reason?: string;
+};
+export type RouteCompletionTarget = {
+    adapters?: Record<string, RouteCompletionTargetAdapter>;
+};
+export type RouteTableCompletionTargetMetadata = {
+    id?: string;
+    schema_version?: number;
 };
 export type RouteProviderSupportStatus = 'live-supported' | 'dry-run-supported' | 'explicitly-refused-with-reason' | 'blocked-with-follow-up';
 export type RouteProviderSupportEntry = {
@@ -39,6 +54,10 @@ export type RouteProviderSupport = Record<string, RouteProviderSupportEntry>;
 export type RouteTableDocument = {
     schemaVersion?: number;
     kind?: string;
+    metadata?: {
+        completion_target?: RouteTableCompletionTargetMetadata;
+        [key: string]: unknown;
+    };
     routes?: RouteTableRoute[];
     disabled_dispatch_routes?: RouteTableRoute[];
 };

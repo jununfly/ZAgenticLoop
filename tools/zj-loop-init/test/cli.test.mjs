@@ -125,6 +125,15 @@ test('zj-loop-init scaffolds issue-triage with bundled assets', async () => {
     await access(path.join(dir, 'zj-loop', 'zj-loop-run-log.md'));
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /primary_pattern: "issue-triage"/);
+    assert.match(routeTable, /completion_target:\n    id: automation-first-product\n    schema_version: 1/);
+    const routeBlocks = routeTable.split(/\n  - route_id:/).slice(1);
+    assert.ok(routeBlocks.length > 0);
+    for (const routeBlock of routeBlocks) {
+      assert.match(routeBlock, /completion_target:\n      adapters:/);
+      assert.match(routeBlock, /github:/);
+      assert.match(routeBlock, /gitlab:/);
+      assert.match(routeBlock, /workspace:/);
+    }
     assert.match(routeTable, /route_profiles:/);
     assert.match(routeTable, /production_safe_default:/);
     assert.match(routeTable, /dogfood_validation:/);

@@ -61,7 +61,8 @@ scorecard. A cell is complete only when all applicable fields pass:
 
 | Field | Required truth |
 | --- | --- |
-| `applicability` | `applicable`, `not-applicable-with-reason`, or `unsupported` with an explicit semantic reason. |
+| `applicability` | `applicable` or `not-applicable-with-reason`; the latter carries an explicit semantic reason. |
+| `requirement` | `required` for an applicable cell in this target. |
 | `architecture_integrity` | The Architecture Integrity hard gate passes. |
 | `live_capability` | Compatible live success evidence reaches the route's declared reviewable completion artifact. |
 | `stop_recovery` | A real blocked path records a structured hard stop and resume/recovery evidence. |
@@ -76,8 +77,8 @@ The fixed cell statuses are:
 - `blocked`: an external prerequisite is missing; owner, evidence, and resume
   action are required.
 - `stale`: a compatible-success claim was invalidated by a relevant change.
-- `unsupported`: the adapter should support this semantic route but does not
-  yet.
+- `unsupported`: an applicable required adapter cell does not yet have the
+  implementation or capability evidence it needs.
 - `not-applicable-with-reason`: the route's semantic object does not exist on
   the adapter.
 

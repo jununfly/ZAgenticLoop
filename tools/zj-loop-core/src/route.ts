@@ -31,6 +31,27 @@ export type RouteTableRoute = {
   evidence_store?: string;
   enabled_reason?: string;
   provider_support?: RouteProviderSupport;
+  completion_target?: RouteCompletionTarget;
+};
+
+export type RouteCompletionTargetApplicability =
+  | 'applicable'
+  | 'not-applicable-with-reason';
+
+export type RouteCompletionTargetAdapter = {
+  applicability?: RouteCompletionTargetApplicability | string;
+  requirement?: 'required' | string;
+  signal_initiation_mode?: 'event-driven' | 'scheduled' | 'explicit-on-demand' | string;
+  not_applicable_reason?: string;
+};
+
+export type RouteCompletionTarget = {
+  adapters?: Record<string, RouteCompletionTargetAdapter>;
+};
+
+export type RouteTableCompletionTargetMetadata = {
+  id?: string;
+  schema_version?: number;
 };
 
 export type RouteProviderSupportStatus =
@@ -52,6 +73,10 @@ export type RouteProviderSupport = Record<string, RouteProviderSupportEntry>;
 export type RouteTableDocument = {
   schemaVersion?: number;
   kind?: string;
+  metadata?: {
+    completion_target?: RouteTableCompletionTargetMetadata;
+    [key: string]: unknown;
+  };
   routes?: RouteTableRoute[];
   disabled_dispatch_routes?: RouteTableRoute[];
 };
@@ -269,7 +294,64 @@ export function parseRouteTable(text: string): RouteTableDocument {
   if (!parsed || parsed.kind !== 'zj-loop-route-table') {
     throw new Error('Expected kind: zj-loop-route-table');
   }
+  validateCompletionTargetContract(parsed);
   return parsed;
+}
+
+const COMPLETION_TARGET_ADAPTERS = new Set(['github', 'gitlab', 'workspace']);
+const COMPLETION_TARGET_APPLICABILITY = new Set<RouteCompletionTargetApplicability>([
+  'applicable',
+  'not-applicable-with-reason',
+]);
+const SIGNAL_INITIATION_MODES = new Set([
+  'event-driven',
+  'scheduled',
+  'explicit-on-demand',
+]);
+
+function validateCompletionTargetContract(table: RouteTableDocument): void {
+  const metadata = table.metadata?.completion_target;
+  const routes = [...(table.routes ?? []), ...(table.disabled_dispatch_routes ?? [])];
+  const hasRouteTargets = routes.some((route) => route.completion_target !== undefined);
+  if (!metadata && !hasRouteTargets) return;
+
+  if (!metadata?.id || typeof metadata.id !== 'string') {
+    throw new Error('completion_target.id must be a non-empty string');
+  }
+  if (metadata.schema_version !== 1) {
+    throw new Error('completion_target.schema_version must be 1');
+  }
+
+  for (const route of routes) {
+    if (route.provider_support?.workspace !== undefined) {
+      throw new Error(`provider_support.workspace is invalid for route ${route.route_id ?? '<missing-route-id>'}; use completion_target.adapters.workspace`);
+    }
+    const adapters = route.completion_target?.adapters;
+    if (route.completion_target !== undefined && (!adapters || typeof adapters !== 'object')) {
+      throw new Error(`completion_target.adapters must be an object for route ${route.route_id ?? '<missing-route-id>'}`);
+    }
+    for (const [adapterId, target] of Object.entries(adapters ?? {})) {
+      if (!COMPLETION_TARGET_ADAPTERS.has(adapterId)) {
+        throw new Error(`completion_target.adapters.${adapterId} is not supported`);
+      }
+      if (!COMPLETION_TARGET_APPLICABILITY.has(target.applicability as RouteCompletionTargetApplicability)) {
+        throw new Error(`completion_target.adapters.${adapterId}.applicability is invalid`);
+      }
+      if (target.applicability === 'applicable') {
+        if (target.requirement !== 'required') {
+          throw new Error(`completion_target.adapters.${adapterId}.requirement must be required`);
+        }
+        if (!SIGNAL_INITIATION_MODES.has(String(target.signal_initiation_mode))) {
+          throw new Error(`completion_target.adapters.${adapterId}.signal_initiation_mode is invalid`);
+        }
+        if (target.not_applicable_reason !== undefined) {
+          throw new Error(`completion_target.adapters.${adapterId}.not_applicable_reason is only valid for not-applicable-with-reason`);
+        }
+      } else if (!target.not_applicable_reason || typeof target.not_applicable_reason !== 'string') {
+        throw new Error(`completion_target.adapters.${adapterId}.not_applicable_reason must be a non-empty string`);
+      }
+    }
+  }
 }
 
 export function listRoutes(table: RouteTableDocument): RouteStatus[] {
