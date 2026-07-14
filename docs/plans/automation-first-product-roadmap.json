@@ -82,7 +82,7 @@
     "1-3": {
       "id": "1-3",
       "label": "默认自动执行到 review artifact 或 hard stop",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -326,12 +326,12 @@
     "1-3-4": {
       "id": "1-3-4",
       "label": "Bounded multi-slice continuation to artifact or hard stop",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Integrated existing deterministic bounded-slice pack into Roadmap Activation review artifacts when an explicit leaf_slices payload is present. Pack selects eligible leaves up to max_slices (default 30), carries fixed continuation/stop conditions, and requires a gate-backed result before further continuation. TDD integration covers max_slices=2 selection; full core suite passes 201 tests."
     },
     "1-4-1": {
       "id": "1-4-1",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 23:53:36",
+    "updated": "2026-07-14 23:58:35",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

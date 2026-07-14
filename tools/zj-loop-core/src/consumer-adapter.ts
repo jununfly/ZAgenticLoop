@@ -14,6 +14,7 @@ import {
   buildRoadmapActivationPrTitle,
   buildRoadmapActivationReviewContract,
   buildRoadmapActivationReviewTitle,
+  buildRoadmapBoundedSlicePack,
   executeGitLabRoadmapActivation,
   RoadmapActivationReviewProvider,
 } from './roadmap-activation-runner.js';
@@ -525,6 +526,20 @@ async function runRoadmapActivationToContractPlan(input: {
   const absoluteArtifactPath = path.resolve(input.root, artifactPath);
   await mkdir(path.dirname(absoluteArtifactPath), { recursive: true });
   await writeFile(absoluteArtifactPath, `${JSON.stringify(contractPlan, null, 2)}\n`);
+  const leafSlices = Array.isArray(input.signal.payload.leaf_slices) ? input.signal.payload.leaf_slices : undefined;
+  const boundedSlicePack = leafSlices === undefined ? undefined : buildRoadmapBoundedSlicePack({
+    activationRequestId,
+    roadmapPath: processRoadmapPath || `zj-loop/orchestrations/${input.orchestrationId}/roadmap.json`,
+    branchName,
+    maxSlices: numberPayload(input.signal.payload.max_slices),
+    leafSlices,
+  });
+  const boundedSlicePackPath = boundedSlicePack === undefined
+    ? undefined
+    : `zj-loop/orchestrations/${input.orchestrationId}/bounded-slice-pack.json`;
+  if (boundedSlicePackPath) {
+    await writeFile(path.resolve(input.root, boundedSlicePackPath), `${JSON.stringify(boundedSlicePack, null, 2)}\n`);
+  }
 
   return {
     schema: 'zj-loop.consumer_adapter_result.v1',
@@ -536,13 +551,19 @@ async function runRoadmapActivationToContractPlan(input: {
       path: artifactPath,
       kind: 'contract-plan',
       schema: 'zj-loop.roadmap_activation_contract_plan.v1',
-    }],
+    }, ...(boundedSlicePackPath === undefined ? [] : [{
+      path: boundedSlicePackPath,
+      kind: 'bounded-slice-pack',
+      schema: 'zj-loop.roadmap_bounded_slice_pack.v1',
+    }])],
     repairs_applied: repairsApplied,
     live_side_effects: {
       attempted: false,
       reason: 'review-artifact runner only',
     },
-    next_steps: contractPlan.nextSteps,
+    next_steps: boundedSlicePack === undefined
+      ? contractPlan.nextSteps
+      : [...contractPlan.nextSteps, ...boundedSlicePack.next_steps],
   };
 }
 
@@ -644,6 +665,11 @@ function recordPayload(value: unknown): Record<string, unknown> | undefined {
 
 function stringPayload(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function numberPayload(value: unknown): number | undefined {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : undefined;
 }
 
 function repairFromSignalId(

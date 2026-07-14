@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 23:53:36
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 23:58:35
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -14,11 +14,11 @@
 │   ├── [x][Y+] 1-2-1. Migrate current Route Table rows into explicit completion targets
 │   ├── [x][Y+] 1-2-2. Derive initial required-cell capability and evidence gap baseline
 │   └── [x][Y+] 1-2-3. Classify current evidence as compatible stale or missing
-├── [ ][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
+├── [x][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
 │   ├── [x][Y+] 1-3-1. Automatic-progression transition trace contract
 │   ├── [x][Y+] 1-3-2. Workspace Adapter local activation and review artifact runner
 │   ├── [x][Y+] 1-3-3. Workspace Adapter local closeout resume and real Git dogfood
-│   └── [ ][Y+] 1-3-4. Bounded multi-slice continuation to artifact or hard stop
+│   └── [x][Y+] 1-3-4. Bounded multi-slice continuation to artifact or hard stop
 ├── [ ][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
 │   ├── [ ][Y+] 1-4-1. Machine-readable human handoff location and confirmation contract
 │   ├── [ ][Y+] 1-4-2. Low-risk protocol repairs and structured protocol repair request
@@ -53,7 +53,7 @@
 │   ... 5 more child nodes; run tree 1-1 --depth 2 for full view
 ├── [x][Y+] 1-2. 当前 Route 能力与用户体验缺口盘点
 │   ... 3 more child nodes; run tree 1-2 --depth 2 for full view
-├── [ ][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
+├── [x][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
 │   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
 ├── [ ][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
 │   ... 3 more child nodes; run tree 1-4 --depth 2 for full view

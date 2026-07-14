@@ -287,6 +287,12 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
         activation_request_comment_url: 'https://github.com/jununfly/ZAgenticLoop/issues/42#issuecomment-100',
         title: 'Implement consumer adapter',
         process_roadmap_path: 'zj-loop/process/consumer-adapter-roadmap.md',
+        max_slices: 2,
+        leaf_slices: [
+          { id: 'slice-1', title: 'First', status: 'pending' },
+          { id: 'slice-2', title: 'Second', status: 'pending' },
+          { id: 'slice-3', title: 'Third', status: 'pending' },
+        ],
       },
     }, null, 2));
 
@@ -335,6 +341,8 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
     assert.equal(output.consumer_adapter_result.review_artifacts[0].path, output.review_artifact.path);
     assert.equal(output.consumer_adapter_result.review_artifacts[0].kind, 'contract-plan');
     assert.equal(output.consumer_adapter_result.review_artifacts[0].schema, 'zj-loop.roadmap_activation_contract_plan.v1');
+    const boundedPackArtifact = output.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'bounded-slice-pack');
+    assert.ok(boundedPackArtifact);
 
     const contractPlan = JSON.parse(await readFile(path.join(dir, output.review_artifact.path), 'utf8'));
     assert.equal(contractPlan.schema, 'zj-loop.roadmap_activation_contract_plan.v1');
@@ -343,6 +351,9 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
     assert.equal(contractPlan.branchName.startsWith('zjal-'), true);
     assert.equal(contractPlan.reviewTitle, 'Roadmap Activation: Implement consumer adapter');
     assert.equal(contractPlan.prTitle, 'Roadmap Activation: Implement consumer adapter');
+    const boundedPack = JSON.parse(await readFile(path.join(dir, boundedPackArtifact.path), 'utf8'));
+    assert.equal(boundedPack.max_slices, 2);
+    assert.deepEqual(boundedPack.selected_slices.map((slice) => slice.slice_id), ['slice-1', 'slice-2']);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
