@@ -249,6 +249,24 @@ workflow, protocol, or gate changes. The next step classifies whether recorded
 evidence is compatible, stale, or absent; until then this baseline only
 identifies the capability and evidence gaps that must be closed.
 
+### Initial Evidence Classification
+
+At the initial baseline, no existing evidence record carries the target digest,
+Route Table digest, adapter identity, gate versions, and outcome needed to
+prove compatibility. Therefore the conservative classification is:
+
+| Classification | Initial count | Treatment |
+| --- | ---: | --- |
+| Compatible completion evidence | 0 | No release or completion claim may rely on it. |
+| Stale completion evidence | 0 | Staleness cannot be derived until the invalidation map exists. |
+| Missing compatible completion evidence | 40 applicable cells | Includes the two GitHub cells with historical live links: the links establish a useful lead, but not a compatibility-proof record. |
+
+Existing `provider_support.evidence` and `recent_success_evidence` remain
+route facts and investigation leads. They are not silently promoted into
+completion evidence. The deterministic compatibility record, invalidation map,
+and stale derivation belong to the later evidence lifecycle gate; until then a
+missing compatibility record fails closed.
+
 The lifecycle is fixed:
 
 - relevant PRs emit a completion ledger delta; Architecture Integrity violations
