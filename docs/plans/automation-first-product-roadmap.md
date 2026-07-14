@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 23:20:21
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 23:22:33
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -12,7 +12,7 @@
 │   └── [x][Y+] 1-1-5. Completion contract parser and compatibility regression tests
 ├── [ ][Y+] 1-2. 当前 Route 能力与用户体验缺口盘点
 │   ├── [x][Y+] 1-2-1. Migrate current Route Table rows into explicit completion targets
-│   ├── [ ][Y+] 1-2-2. Derive initial required-cell capability and evidence gap baseline
+│   ├── [x][Y+] 1-2-2. Derive initial required-cell capability and evidence gap baseline
 │   └── [ ][Y+] 1-2-3. Classify current evidence as compatible stale or missing
 ├── [ ][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
 │   ├── [ ][Y+] 1-3-1. Automatic-progression transition trace contract

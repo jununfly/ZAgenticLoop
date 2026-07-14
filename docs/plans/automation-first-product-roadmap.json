@@ -263,12 +263,12 @@
     "1-2-2": {
       "id": "1-2-2",
       "label": "Derive initial required-cell capability and evidence gap baseline",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Derived the initial dogfood baseline through zj-loop-doctor --completion: 15 routes, 45 adapter cells, complete=0, incomplete=2, unsupported=38, N/A=5, blocked=0, stale=0. Durable architecture document records it as a historical derived observation, not a hand-maintained source of truth."
     },
     "1-2-3": {
       "id": "1-2-3",
@@ -686,7 +686,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 23:20:21",
+    "updated": "2026-07-14 23:22:33",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

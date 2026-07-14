@@ -224,6 +224,31 @@ non-zero whenever a required cell is not complete, for CI and release gates.
 Invalid input, an unreadable Route Table, or an invalid ledger are command
 errors in either mode.
 
+## Initial Dogfood Baseline
+
+The first repository baseline was derived on 2026-07-14 from the dogfood Route
+Table with:
+
+```bash
+zj-loop-doctor --root . --completion --format json
+```
+
+It declared 15 routes and 45 adapter cells. The derived summary was:
+
+| Status | Cells | Meaning |
+| --- | ---: | --- |
+| `complete` | 0 | No route can yet claim end-to-end completion. |
+| `incomplete` | 2 | GitHub CI Sweeper and GitHub Roadmap-Sliced Development have live capability evidence, but lack the remaining completion gates. |
+| `unsupported` | 38 | The required adapter route lacks compatible live capability evidence. |
+| `not-applicable-with-reason` | 5 | Workspace excludes the three issue-tracker routes and two PR/MR routes because those semantic objects do not exist locally. |
+| `blocked` / `stale` | 0 | These are evidence lifecycle states, not initial capability claims. |
+
+The baseline is a historical observation, not an additional source of truth.
+`zj-loop-doctor --completion` must be rerun after relevant route, adapter,
+workflow, protocol, or gate changes. The next step classifies whether recorded
+evidence is compatible, stale, or absent; until then this baseline only
+identifies the capability and evidence gaps that must be closed.
+
 The lifecycle is fixed:
 
 - relevant PRs emit a completion ledger delta; Architecture Integrity violations
