@@ -19,6 +19,7 @@ import {
 } from './roadmap-activation-runner.js';
 import type { OrchestrationEnvelope, SignalEnvelope } from './dispatch-runner.js';
 import { captureWorkspaceReviewArtifacts } from './workspace-review.js';
+import { writeWorkspaceDraftEvidence, writeWorkspaceReportEvidence } from './workspace-evidence.js';
 
 export type ConsumerAdapterStatus =
   | 'executed_to_review_artifact'
@@ -215,6 +216,49 @@ async function runWorkspaceReviewArtifact(input: {
       nextSteps: ['Run auto mode first to create the local activation carrier and Route Decision evidence.'],
     });
   }
+  const consumerPlan = input.envelope.consumer_run_plan;
+  if (consumerPlan.consumer_kind === 'report-consumer' || consumerPlan.consumer_kind === 'producer-router') {
+    const evidencePath = await writeWorkspaceReportEvidence({
+      root: input.root,
+      orchestrationId: input.envelope.orchestration_id,
+      routeId: consumerPlan.route_id,
+      consumer: consumerPlan.consumer,
+      carrierPath: workspace.carrier.path,
+      now: input.envelope.updated_at,
+    });
+    return workspaceEvidenceResult({
+      input,
+      path: evidencePath,
+      kind: 'workspace-report-evidence',
+      schema: 'zj-loop.workspace_report_evidence.v1',
+      reason: 'recorded Workspace report evidence without code changes',
+    });
+  }
+  const draftMode = input.signal.payload.workspace_draft_mode;
+  if (consumerPlan.consumer_kind === 'draft-consumer' && draftMode !== 'file-patch') {
+    const evidencePath = await writeWorkspaceDraftEvidence({
+      root: input.root,
+      orchestrationId: input.envelope.orchestration_id,
+      routeId: consumerPlan.route_id,
+      consumer: consumerPlan.consumer,
+      carrierPath: workspace.carrier.path,
+      now: input.envelope.updated_at,
+    });
+    return workspaceEvidenceResult({
+      input,
+      path: evidencePath,
+      kind: 'workspace-draft-evidence',
+      schema: 'zj-loop.workspace_draft_evidence.v1',
+      reason: 'recorded Workspace draft evidence without code changes',
+    });
+  }
+  if (consumerPlan.consumer_kind !== 'fix-runner' && consumerPlan.consumer_kind !== 'activation-consumer' && consumerPlan.consumer_kind !== 'draft-consumer') {
+    return liveHardStop({
+      input: { consumerRunPlan: consumerPlan },
+      reason: 'workspace-route-not-applicable',
+      nextSteps: ['Use a provider adapter for issue/PR semantics, or choose a Workspace-applicable control, fix, draft, or roadmap route.'],
+    });
+  }
   const capture = await captureWorkspaceReviewArtifacts({
     root: input.root,
     orchestrationId: input.envelope.orchestration_id,
@@ -255,6 +299,27 @@ async function runWorkspaceReviewArtifact(input: {
       `Review ${capture.patch_path} and ${capture.changed_files_path}.`,
       'Run deterministic verification before accepting or closing out the local change.',
     ],
+  };
+}
+
+function workspaceEvidenceResult(input: {
+  input: { envelope: OrchestrationEnvelope };
+  path: string;
+  kind: string;
+  schema: string;
+  reason: string;
+}): ConsumerAdapterResult {
+  const plan = input.input.envelope.consumer_run_plan;
+  return {
+    schema: 'zj-loop.consumer_adapter_result.v1',
+    route_id: plan.route_id,
+    consumer: plan.consumer,
+    consumer_kind: plan.consumer_kind,
+    adapter_status: 'executed_to_review_artifact',
+    review_artifacts: [{ path: input.path, kind: input.kind, schema: input.schema }],
+    repairs_applied: [],
+    live_side_effects: { attempted: false, reason: input.reason },
+    next_steps: [`Review local evidence: ${input.path}.`],
   };
 }
 

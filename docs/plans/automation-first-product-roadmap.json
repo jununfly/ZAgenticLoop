@@ -312,7 +312,7 @@
     "1-3-3": {
       "id": "1-3-3",
       "label": "Workspace Adapter local closeout resume and real Git dogfood",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [
@@ -672,27 +672,27 @@
     "1-3-3-2": {
       "id": "1-3-3-2",
       "label": "Workspace control CI and dependency route reference dogfood",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Dogfooded Workspace control/report plus CI Sweeper and Dependency Sweeper in real temporary Git worktrees. Control routes write local report evidence without code diffs; CI and dependency routes produce current-branch binary patch and changed-file review artifacts. Regression coverage runs through public dispatch (core npm test: 201 passing)."
     },
     "1-3-3-3": {
       "id": "1-3-3-3",
       "label": "Workspace changelog and roadmap route reference dogfood",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Dogfooded Workspace Changelog Drafter and Roadmap-Sliced Development in real temporary Git worktrees. Changelog defaults to draft evidence and requires explicit workspace_draft_mode:file-patch for file review; roadmap produces Git patch/changed-file artifacts. The durable reference documents all applicable Workspace route families and explicit N/A tracker routes (core npm test: 201 passing)."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 23:45:34",
+    "updated": "2026-07-14 23:53:36",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

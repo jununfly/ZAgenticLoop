@@ -12,6 +12,22 @@ const CLI = fileURLToPath(new URL('../dist/dispatch-cli.js', import.meta.url));
 const ROUTE_TABLE = `schemaVersion: 1
 kind: zj-loop-route-table
 routes:
+  - route_id: "manual-smoke-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "manual-smoke"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "dogfooded"
+      runner: "missing"
+    capabilities:
+      scopes: ["manual-smoke"]
+      verifiers: ["workflow-summary"]
+      max_side_effect_level: "evidence"
   - route_id: "issue-backlog-triage"
     enabled: true
     request_kind: "report-only"
@@ -71,6 +87,42 @@ routes:
       scopes: ["release-window", "draft-artifact"]
       verifiers: ["draft-request-contract", "reviewable-draft-outcome"]
       max_side_effect_level: "draft-pr"
+  - route_id: "ci-sweeper"
+    enabled: true
+    request_kind: "issue-fix-request"
+    consumer: "ci-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "live"
+      side_effect_level: "pr"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "execution-ready"
+      runner: "execution-ready"
+    capabilities:
+      scopes: ["ci"]
+      verifiers: ["verification-gate"]
+      max_side_effect_level: "pr"
+    guards:
+      max_work_units: 30
+  - route_id: "dependency-sweeper"
+    enabled: true
+    request_kind: "issue-fix-request"
+    consumer: "dependency-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "live"
+      side_effect_level: "pr"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "execution-ready"
+      runner: "execution-ready"
+    capabilities:
+      scopes: ["dependency"]
+      verifiers: ["verification-gate"]
+      max_side_effect_level: "pr"
+    guards:
+      max_work_units: 30
 `;
 
 async function setupProject() {
@@ -83,6 +135,38 @@ async function setupProject() {
 function runGit(root, args) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
+}
+
+async function runWorkspacePatchDogfood({ routeId, intent }) {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'before\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+    await writeFile(path.join(dir, 'README.md'), `after ${routeId}\n`);
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: `sig-workspace-${routeId}`,
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: `workspace-${routeId}` },
+      intent,
+      payload: { route_id: routeId },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.review_artifact.kind, 'workspace-patch');
+    const patch = await readFile(path.join(dir, executed.review_artifact.path), 'utf8');
+    assert.match(patch, new RegExp(`\\+after ${routeId}`));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 test('zj-loop-dispatch turns a structured issue signal into a persisted orchestration envelope', async () => {
@@ -372,6 +456,95 @@ test('zj-loop-dispatch hard stops a Workspace Adapter review when no local chang
     assert.equal(executed.status, 'hard_stopped');
     assert.equal(executed.consumer_adapter_result.stop_signal.reason, 'workspace-no-changes');
     assert.equal(executed.progression_trace.outcome, 'hard_stop');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch records Workspace report evidence without requiring a code patch', async () => {
+  const dir = await setupProject();
+  try {
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-manual-smoke',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-manual-smoke' },
+      intent: 'triage',
+      payload: { route_id: 'manual-smoke-report' },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.consumer_adapter_result.review_artifacts[0].kind, 'workspace-report-evidence');
+    const report = JSON.parse(await readFile(path.join(dir, executed.consumer_adapter_result.review_artifacts[0].path), 'utf8'));
+    assert.equal(report.schema, 'zj-loop.workspace_report_evidence.v1');
+    assert.equal(report.route_id, 'manual-smoke-report');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch dogfoods CI and dependency Workspace routes through real Git patch artifacts', async () => {
+  await runWorkspacePatchDogfood({ routeId: 'ci-sweeper', intent: 'fix' });
+  await runWorkspacePatchDogfood({ routeId: 'dependency-sweeper', intent: 'fix' });
+});
+
+test('zj-loop-dispatch records Workspace Changelog draft evidence by default without requiring a code patch', async () => {
+  const dir = await setupProject();
+  try {
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-changelog',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-changelog' },
+      intent: 'draft_changelog',
+      payload: { route_id: 'changelog-drafter-draft-request' },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.consumer_adapter_result.review_artifacts[0].kind, 'workspace-draft-evidence');
+    const draft = JSON.parse(await readFile(path.join(dir, executed.consumer_adapter_result.review_artifacts[0].path), 'utf8'));
+    assert.equal(draft.schema, 'zj-loop.workspace_draft_evidence.v1');
+    assert.equal(draft.route_id, 'changelog-drafter-draft-request');
+    assert.equal(draft.draft_mode, 'evidence');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch upgrades Workspace Changelog to a patch review only when explicitly requested', async () => {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'before\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+    await writeFile(path.join(dir, 'README.md'), 'after\n');
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-changelog-patch',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-changelog-patch' },
+      intent: 'draft_changelog',
+      payload: {
+        route_id: 'changelog-drafter-draft-request',
+        workspace_draft_mode: 'file-patch',
+      },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.review_artifact.kind, 'workspace-patch');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -29,3 +29,4 @@ export * from './preflight.js';
 export * from './workspace-route-decision.js';
 export * from './workspace-review.js';
 export * from './workspace-closeout.js';
+export * from './workspace-evidence.js';
