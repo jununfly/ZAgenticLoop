@@ -35,7 +35,7 @@
     "1-1": {
       "id": "1-1",
       "label": "Completion Alignment Ledger 与不可补偿完成硬门",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -243,22 +243,22 @@
     "1-1-5": {
       "id": "1-1-5",
       "label": "Completion contract parser and compatibility regression tests",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completion contract regression coverage is provided by route parser tests for valid target, invalid target, Workspace/provider boundary, and ledger status precedence; init integration test verifies generated Route Tables declare all adapter targets. Verification: npm test in tools/zj-loop-core; npm test in tools/zj-loop-init."
     },
     "1-2-1": {
       "id": "1-2-1",
       "label": "Migrate current Route Table rows into explicit completion targets",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Migrate the repository dogfood Route Table to metadata completion target plus every row adapter target, then validate it through the core parser and completion doctor."
     },
     "1-2-2": {
       "id": "1-2-2",
@@ -686,7 +686,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 19:34:21",
+    "updated": "2026-07-14 19:34:54",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
