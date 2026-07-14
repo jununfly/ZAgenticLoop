@@ -80,6 +80,11 @@ async function setupProject() {
   return dir;
 }
 
+function runGit(root, args) {
+  const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+}
+
 test('zj-loop-dispatch turns a structured issue signal into a persisted orchestration envelope', async () => {
   const dir = await setupProject();
   try {
@@ -293,6 +298,80 @@ test('zj-loop-dispatch creates a local carrier and route-decision evidence for W
     assert.equal(evidence.schema, 'zj-loop.workspace_route_decision_evidence.v1');
     assert.equal(evidence.carrier.path, output.workspace_adapter.carrier.path);
     assert.equal(evidence.route_decision.route, 'roadmap-sliced-development');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch executes a Workspace Adapter request into local patch and changed-file review artifacts', async () => {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'before\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+    await writeFile(path.join(dir, 'README.md'), 'after\n');
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-review-1',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-review-1' },
+      intent: 'activate_roadmap',
+      payload: { title: 'Review local change' },
+    };
+    const planned = await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(planned.status, 'planned');
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.consumer_adapter_result.adapter_status, 'executed_to_review_artifact');
+    assert.equal(executed.review_artifact.kind, 'workspace-patch');
+    assert.match(executed.review_artifact.path, /^zj-loop\/reviews\//);
+
+    const patch = await readFile(path.join(dir, executed.review_artifact.path), 'utf8');
+    assert.match(patch, /-before/);
+    assert.match(patch, /\+after/);
+
+    const manifestPath = executed.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'changed-files').path;
+    const manifest = JSON.parse(await readFile(path.join(dir, manifestPath), 'utf8'));
+    assert.equal(manifest.schema, 'zj-loop.workspace_changed_files.v1');
+    assert.deepEqual(manifest.changed_files, ['README.md']);
+    assert.ok(manifest.git.branch);
+    assert.match(manifest.git.head_sha, /^[a-f0-9]{40}$/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch hard stops a Workspace Adapter review when no local change exists', async () => {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'baseline\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-review-empty',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-review-empty' },
+      intent: 'activate_roadmap',
+      payload: { title: 'No local change' },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'hard_stopped');
+    assert.equal(executed.consumer_adapter_result.stop_signal.reason, 'workspace-no-changes');
+    assert.equal(executed.progression_trace.outcome, 'hard_stop');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

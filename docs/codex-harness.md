@@ -127,6 +127,12 @@ carrier beneath `zj-loop/requests/` and its Route Decision evidence beneath
 they are not a substitute for the branch, patch, or changed-file review
 artifact produced by the Workspace executor.
 
+When the same local orchestration is executed, the executor snapshots the
+current Git branch and `HEAD`, then writes a binary patch and changed-file
+manifest under `zj-loop/reviews/`. It never creates a branch, commits, or
+edits product files. A clean workspace is a structured `workspace-no-changes`
+hard stop, because there is no reviewable implementation artifact.
+
 Replayable examples are in
 [Codex Harness No-Provider E2E Protocol](testing/codex-harness-no-provider-e2e.md).
 

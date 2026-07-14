@@ -3,7 +3,11 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { buildChangelogDrafterExecutionPlan, CHANGELOG_DRAFT_REQUEST_SCHEMA, CHANGELOG_DRAFTER_ROUTE_ID, } from './changelog-drafter-runner.js';
 import { buildRoadmapActivationBranchName, buildRoadmapActivationPrContract, buildRoadmapActivationPrTitle, buildRoadmapActivationReviewContract, buildRoadmapActivationReviewTitle, executeGitLabRoadmapActivation, } from './roadmap-activation-runner.js';
+import { captureWorkspaceReviewArtifacts } from './workspace-review.js';
 export async function runConsumerLiveSideEffects(input) {
+    if (input.signal.provider === 'none') {
+        return runWorkspaceReviewArtifact(input);
+    }
     const current = input.envelope.consumer_adapter_result;
     if (!current) {
         return liveHardStop({
@@ -90,6 +94,57 @@ export async function runConsumerLiveSideEffects(input) {
                     : ['Create a new activation request or repair the activation input before retrying.'],
             }
             : current.stop_signal,
+    };
+}
+async function runWorkspaceReviewArtifact(input) {
+    const workspace = input.envelope.workspace_adapter;
+    if (!workspace) {
+        return liveHardStop({
+            input: { consumerRunPlan: input.envelope.consumer_run_plan },
+            reason: 'missing-workspace-route-decision',
+            nextSteps: ['Run auto mode first to create the local activation carrier and Route Decision evidence.'],
+        });
+    }
+    const capture = await captureWorkspaceReviewArtifacts({
+        root: input.root,
+        orchestrationId: input.envelope.orchestration_id,
+        carrierPath: workspace.carrier.path,
+        now: input.envelope.updated_at,
+    });
+    if (capture.status === 'hard_stopped') {
+        return liveHardStop({
+            input: { consumerRunPlan: input.envelope.consumer_run_plan },
+            reason: capture.reason,
+            nextSteps: capture.next_steps,
+        });
+    }
+    return {
+        schema: 'zj-loop.consumer_adapter_result.v1',
+        route_id: input.envelope.consumer_run_plan.route_id,
+        consumer: input.envelope.consumer_run_plan.consumer,
+        consumer_kind: input.envelope.consumer_run_plan.consumer_kind,
+        adapter_status: 'executed_to_review_artifact',
+        review_artifacts: [
+            {
+                path: capture.patch_path,
+                kind: 'workspace-patch',
+                schema: 'git-diff-binary',
+            },
+            {
+                path: capture.changed_files_path,
+                kind: 'changed-files',
+                schema: 'zj-loop.workspace_changed_files.v1',
+            },
+        ],
+        repairs_applied: [],
+        live_side_effects: {
+            attempted: false,
+            reason: `captured ${capture.changed_files.length} local changed file(s) on ${capture.branch} at ${capture.head_sha}`,
+        },
+        next_steps: [
+            `Review ${capture.patch_path} and ${capture.changed_files_path}.`,
+            'Run deterministic verification before accepting or closing out the local change.',
+        ],
     };
 }
 export async function executeRoadmapActivationLiveSideEffects(input) {

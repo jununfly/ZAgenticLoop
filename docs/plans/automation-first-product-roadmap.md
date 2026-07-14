@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 23:31:52
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-14 23:39:30
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -16,7 +16,7 @@
 │   └── [x][Y+] 1-2-3. Classify current evidence as compatible stale or missing
 ├── [ ][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
 │   ├── [x][Y+] 1-3-1. Automatic-progression transition trace contract
-│   ├── [ ][Y+] 1-3-2. Workspace Adapter local activation and review artifact runner
+│   ├── [x][Y+] 1-3-2. Workspace Adapter local activation and review artifact runner
 │   ├── [ ][Y+] 1-3-3. Workspace Adapter local closeout resume and real Git dogfood
 │   └── [ ][Y+] 1-3-4. Bounded multi-slice continuation to artifact or hard stop
 ├── [ ][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
