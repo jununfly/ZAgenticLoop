@@ -532,12 +532,12 @@
     "1-5-2-3": {
       "id": "1-5-2-3",
       "label": "GitHub CI and dependency repair PR live recovery evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "GitHub live recovery dogfood completed: core 0.1.7 and generated workflow probes exposed CLI, identity, contents permission, GH_TOKEN, and residual branch lease gaps; fixes shipped through core 0.1.8 and workflow adapter hardening. Final run 29385283810 consumed bounded yaml 2.8.0 -> 2.8.1, passed npm run test:dependency-sweeper-route and git diff --check, recovered the residual candidate with force-with-lease after confirming no open PR, created repair PR #128, and PR #128 was human-merged. Route Table execution.mode remains claim-only pending a separate promotion decision."
     },
     "1-5-2-4": {
       "id": "1-5-2-4",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 09:32:55",
+    "updated": "2026-07-15 11:02:43",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
