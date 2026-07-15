@@ -131,8 +131,8 @@ token；issue note、label、branch、MR 或 cleanup 需要 `GITLAB_TOKEN` 和 r
 GitLab fragments，避免手工搜索替换 CI YAML：
 
 ```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.7.tgz
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.7.tgz
 ```
 
 GitLab stage 是 YAML 编译期配置，不应依赖运行时变量。默认生成 stage 为
@@ -191,9 +191,9 @@ signal 能变成 durable request carrier，并产出有边界的 consumer outcom
 consumer 仍然需要显式通过 Route Table 启用：
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable ci-sweeper
 ```
 
 用户项目的第一条启用链路应按 route readiness 自选，而不是按安装顺序固定。

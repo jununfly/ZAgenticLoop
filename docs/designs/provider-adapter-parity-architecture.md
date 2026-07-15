@@ -153,7 +153,7 @@ Generated GitLab jobs should:
   those fields carry provider-native meaning
 - allow the rendered core package source to be overridden for unpublished
   dogfood validation, for example with
-  `--gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz`
+  `--gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.7.tgz`
 - inherit configurable stage, runner tags, Node image, and Node >=18 preflight
   behavior across every generated fragment
 - emit concise job logs

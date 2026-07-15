@@ -2,7 +2,7 @@
 
 Planned package versions:
 
-- `@jununfly/zj-loop-core@0.1.6`
+- `@jununfly/zj-loop-core@0.1.7`
 - `@jununfly/zj-loop-audit@0.1.6`
 - `@jununfly/zj-loop-init@0.1.9`
 
@@ -22,7 +22,7 @@ across both platforms.
 
 ## Publish Order
 
-1. Publish `@jununfly/zj-loop-core@0.1.6`.
+1. Publish `@jununfly/zj-loop-core@0.1.7`.
 2. Publish `@jununfly/zj-loop-audit@0.1.6`.
 3. Publish `@jununfly/zj-loop-init@0.1.9`.
 
