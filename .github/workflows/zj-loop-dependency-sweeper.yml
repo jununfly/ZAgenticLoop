@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: a59baf7e8b78985e
+# zj-loop-template-hash: 1195536dc957f96b
 
 name: ZJ Loop Dependency Sweeper
 
@@ -24,7 +24,7 @@ on:
         default: '@jununfly/zj-loop-core@0.1.7'
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
 
