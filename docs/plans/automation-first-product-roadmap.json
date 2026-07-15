@@ -557,7 +557,7 @@
       "parent": "1-5-2",
       "children": [],
       "decisions": [],
-      "notes": "Gap confirmed: historical closeout effects predate the current workflow; controlled carrier #131 will provide current GitHub contract-authorized live-cleanup evidence."
+      "notes": "#132 proved the fail-closed boundary: a hand-authored partial contract was refused with no cleanup. #131 remains open and branch intact. Correction uses the existing deterministic roadmap-handoff body generator and explicit authoring rule before retrying controlled live evidence."
     },
     "1-5-3-1": {
       "id": "1-5-3-1",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 11:35:28",
+    "updated": "2026-07-15 11:41:29",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

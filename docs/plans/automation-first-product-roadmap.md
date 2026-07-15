@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 11:35:28
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 11:41:29
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -42,5 +42,5 @@
 
 ### 当前施工：1-5-2-5. GitHub Roadmap activation and post-merge closeout live evidence
 
-Gap confirmed: historical closeout effects predate the current workflow; controlled carrier #131 will provide current GitHub contract-authorized live-cleanup evidence.
+#132 proved the fail-closed boundary: a hand-authored partial contract was refused with no cleanup. #131 remains open and branch intact. Correction uses the existing deterministic roadmap-handoff body generator and explicit authoring rule before retrying controlled live evidence.
 <!-- ROADMAP_SECTION_END -->
