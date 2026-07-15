@@ -20,6 +20,7 @@ export declare function buildDependencySweeperExecutionPlan(input?: {
     confirmationPhrase?: string;
     gitStatus?: string;
     createdAt?: string;
+    existingRepairPullRequestUrl?: string;
 }): {
     schemaVersion: number;
     kind: string;
@@ -51,6 +52,7 @@ export declare function buildDependencySweeperExecutionPlan(input?: {
         manifest_files: any;
     };
     branch: string;
+    existing_repair_pull_request_url: string;
     refusals: {
         layer: string;
         reason: string;

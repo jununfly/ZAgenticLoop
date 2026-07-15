@@ -109,13 +109,15 @@ export function buildDependencySweeperExecutionPlan(input = {}) {
         refusals.push({ layer: 'provider', reason: 'gitlab-live-repair-mr-side-effects-not-enabled' });
     }
     const executable = refusals.length === 0;
+    const existingRepairPullRequestUrl = String(input.existingRepairPullRequestUrl ?? '').trim();
+    const existingRepairPullRequest = executable && input.live && existingRepairPullRequestUrl !== '';
     return {
         schemaVersion: 1,
         kind: 'zj-loop.dependency-sweeper-live-runner-plan',
         runner_id: DEPENDENCY_SWEEPER_RUNNER_ID,
         route_id: DEPENDENCY_SWEEPER_ROUTE_ID,
         mode: input.live ? 'live' : 'dry-run',
-        status: executable ? (input.live ? 'ready-for-live-execution' : 'dry-run') : 'refused',
+        status: executable ? (existingRepairPullRequest ? 'existing-repair-pr' : (input.live ? 'ready-for-live-execution' : 'dry-run')) : 'refused',
         created_at: input.createdAt ?? new Date().toISOString(),
         request_id: input.request?.request_id ?? '',
         dedupe_key: input.request?.dedupe_key ?? '',
@@ -137,8 +139,9 @@ export function buildDependencySweeperExecutionPlan(input = {}) {
             manifest_files: subject.manifest_files ?? [],
         },
         branch,
+        existing_repair_pull_request_url: existingRepairPullRequestUrl,
         refusals,
-        actions: executable
+        actions: executable && !existingRepairPullRequest
             ? [
                 { name: 'create-branch', command: 'git', args: ['switch', '-c', branch] },
                 { name: 'update-dependency', command: updateCommand[0], args: updateCommand[1] },
@@ -155,7 +158,7 @@ export function buildDependencySweeperExecutionPlan(input = {}) {
                     command: 'git',
                     args: ['commit', '-m', `Update ${subject.package_name} to ${subject.target_version}`],
                 },
-                { name: 'push-branch', command: 'git', args: ['push', '-u', 'origin', branch] },
+                { name: 'push-branch', command: 'git', args: ['push', '-u', 'origin', branch, '--force-with-lease'] },
                 {
                     name: 'create-repair-pr',
                     command: 'gh',
@@ -177,6 +180,17 @@ export function buildDependencySweeperExecutionPlan(input = {}) {
     };
 }
 export async function executeDependencySweeperLiveRunner(plan, { runner = defaultDependencySweeperRunner } = {}) {
+    if (plan.status === 'existing-repair-pr') {
+        return buildExecutionResult({
+            plan,
+            completionForm: 'repair-pr',
+            status: 'completed',
+            steps: [],
+            sideEffectsExecuted: false,
+            verifierEvidence: [{ name: 'existing-repair-pr', status: 'passed', url: plan.existing_repair_pull_request_url }],
+            repairPullRequest: { branch: plan.branch, url: plan.existing_repair_pull_request_url },
+        });
+    }
     if (plan.status !== 'ready-for-live-execution') {
         return buildExecutionResult({
             plan,
