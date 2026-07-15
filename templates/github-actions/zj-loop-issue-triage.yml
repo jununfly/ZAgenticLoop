@@ -54,6 +54,17 @@ jobs:
           fi
           if [ -n "$TRIAGE_TRANSITION_REQUEST_JSON" ]; then
             printf '%s\n' "$TRIAGE_TRANSITION_REQUEST_JSON" > triage-transition-request.json
+            if ! jq -e --arg repository "$GITHUB_REPOSITORY" '
+              .schema == "zj-loop.recommended_triage_transition.v1"
+              and (.request_id | type == "string" and length > 0)
+              and (.source.tracker == "github")
+              and (.source.repo == $repository)
+              and (.source.issue | type == "number" and . > 0)
+            ' triage-transition-request.json >/dev/null; then
+              jq -n '{schema: "zj-loop.issue-triage-transition-preflight.v1", status: "rejected", reason: "invalid-transition-request"}' > transition-plan.json
+              cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
             npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-issue-triage-transition confirm-plan \
               --request triage-transition-request.json \
               --confirmation-phrase "$TRIAGE_TRANSITION_CONFIRMATION" \
