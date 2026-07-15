@@ -42,6 +42,25 @@ export declare function readGitLabScheduleProbeState(input: {
     probeId: string;
 }): Promise<any>;
 export declare function createGitLabOwnedSchedule(input: any): Promise<any>;
+export declare function preflightGitLabScheduleProbeCapability(input: any): Promise<{
+    schema: string;
+    status: string;
+    reason: string;
+    capability: {
+        id: string;
+        status: string;
+        detail: string;
+    };
+    operations: never[];
+} | {
+    schema: string;
+    status: string;
+    capability: {
+        id: string;
+        status: string;
+        schedule_id: any;
+    };
+}>;
 export declare function cleanupGitLabOwnedSchedule(input: any): Promise<any>;
 export declare function readGitLabOwnedSchedulePipeline(input: any): Promise<{
     status: string;

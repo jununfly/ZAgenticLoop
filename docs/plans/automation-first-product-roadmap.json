@@ -568,7 +568,7 @@
     "1-5-3-1": {
       "id": "1-5-3-1",
       "label": "GitLab issue-backlog scheduled signal and report evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3",
       "children": [
@@ -861,7 +861,7 @@
     "1-5-3-1-5": {
       "id": "1-5-3-1-5",
       "label": "GitLab target scheduled live evidence and escalation record",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1",
       "children": [
@@ -904,7 +904,7 @@
     "1-5-3-1-5-2": {
       "id": "1-5-3-1-5-2",
       "label": "Temporary owned GitLab schedule evidence and guarded cleanup",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5",
       "children": [
@@ -1076,7 +1076,7 @@
     "1-5-3-1-5-2-3": {
       "id": "1-5-3-1-5-2-3",
       "label": "Target-project tarball rollout and owned scheduled artifact evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2",
       "children": [
@@ -1188,17 +1188,23 @@
     "1-5-3-1-5-2-3-5": {
       "id": "1-5-3-1-5-2-3-5",
       "label": "Pinned-image ai-studio tarball dogfood with receipt and cleanup evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "What happens when GitLab cannot read schedule variables back?",
+          "answer": "Treat the provider as schedule-probe capability blocked before schedule creation.",
+          "note": "Schedule variable identity is mandatory. The deterministic preflight performs only GET requests and refuses with schedule-probe-capability-blocked plus no operations; it does not weaken identity or fall back to manual cleanup."
+        }
+      ],
+      "notes": "2026-07-15 ai-studio pinned-image dogfood: Web pipeline 10501751/job 25930669 created owned schedule 960, but schedule detail omitted variables and both variables endpoints returned 404; schedule fired but no source=schedule pipeline appeared. Human-session cleanup removed 960; normal schedule 957 remained unchanged. Follow-up implementation now performs a read-only preflight before any POST: it lists existing schedules then requires an existing schedule detail to expose variables as an array. This GitLab instance therefore returns blocked/schedule-probe-capability-blocked with operations=[] and CLI exit 2; no temporary schedule or cleanup is attempted. Verification: core build plus schedule-probe runner/CLI tests passed."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 18:16:45",
+    "updated": "2026-07-15 18:44:21",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

@@ -95,3 +95,17 @@ test('schedule probe CLI maps escalated evidence to exit 2 after printing the re
   assert.equal(exitCode, 2);
   assert.equal(JSON.parse(output.stdout[0]).status, 'escalated');
 });
+
+test('schedule probe CLI maps blocked provider capability to exit 2 after printing the result', async () => {
+  const output = capturedIo();
+  const fakeRunner = runner();
+  fakeRunner.runGitLabScheduleProbe = async () => ({ status: 'blocked', reason: 'schedule-probe-capability-blocked', operations: [] });
+
+  const exitCode = await runScheduleProbeCli({
+    argv: ['start', '--project', 'group/project', '--due-in-minutes', '3', '--confirmation', 'RUN_TEMPORARY_GITLAB_SCHEDULE_PROBE'],
+    io: output.io, env: { GITLAB_TOKEN: 'token' }, signalTarget: new EventEmitter(), runner: fakeRunner,
+  });
+
+  assert.equal(exitCode, 2);
+  assert.equal(JSON.parse(output.stdout[0]).reason, 'schedule-probe-capability-blocked');
+});

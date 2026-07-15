@@ -73,6 +73,45 @@ export async function createGitLabOwnedSchedule(input: any) {
     : { ...created, status: 'escalated', reason: 'owned-schedule-identity-mismatch' };
 }
 
+export async function preflightGitLabScheduleProbeCapability(input: any) {
+  const fetchImpl = input.fetchImpl ?? globalThis.fetch;
+  const apiUrl = String(input.apiUrl ?? 'https://gitlab.com/api/v4').replace(/\/$/, '');
+  const project = encodeURIComponent(input.project ?? input.plan?.project);
+  const headers = { 'PRIVATE-TOKEN': input.token };
+  const blocked = (detail: string) => ({
+    schema: 'zj-loop.gitlab_schedule_probe.v1',
+    status: 'blocked',
+    reason: 'schedule-probe-capability-blocked',
+    capability: {
+      id: 'gitlab-schedule-variable-readback',
+      status: 'blocked',
+      detail,
+    },
+    operations: [],
+  });
+
+  const schedulesResponse = await fetchImpl(`${apiUrl}/projects/${project}/pipeline_schedules?per_page=100`, { headers });
+  if (!schedulesResponse.ok) return blocked('schedule-list-read-failed');
+  const schedules = await schedulesResponse.json();
+  const existingSchedule = Array.isArray(schedules) ? schedules.find((schedule: any) => schedule?.id != null) : undefined;
+  if (!existingSchedule) return blocked('schedule-variable-readback-unproven');
+
+  const scheduleResponse = await fetchImpl(`${apiUrl}/projects/${project}/pipeline_schedules/${existingSchedule.id}`, { headers });
+  if (!scheduleResponse.ok) return blocked('schedule-detail-read-failed');
+  const schedule = await scheduleResponse.json();
+  if (!Array.isArray(schedule.variables)) return blocked('schedule-variable-readback-unavailable');
+
+  return {
+    schema: 'zj-loop.gitlab_schedule_probe.v1',
+    status: 'supported',
+    capability: {
+      id: 'gitlab-schedule-variable-readback',
+      status: 'supported',
+      schedule_id: schedule.id,
+    },
+  };
+}
+
 function ownedScheduleMatches(expected: any, current: any) {
   const expectedProbe = expected.variables?.find((variable: any) => variable.key === 'ZJ_LOOP_SCHEDULE_PROBE_ID');
   const currentProbe = current.variables?.find((variable: any) => variable.key === 'ZJ_LOOP_SCHEDULE_PROBE_ID');
@@ -154,6 +193,8 @@ export async function runGitLabScheduleProbe(input: any) {
   const plan = planGitLabScheduleProbe(input);
   if (plan.status === 'refused') return plan;
   if (input.signal?.aborted) return { ...plan, status: 'interrupted', reason: 'signal-received' };
+  const capability = await preflightGitLabScheduleProbeCapability({ ...input, plan });
+  if (capability.status !== 'supported') return capability;
   const created = await createGitLabOwnedSchedule({ ...input, plan });
   if (created.status !== 'created') {
     await writeGitLabScheduleProbeState({ root: input.root, plan: created });

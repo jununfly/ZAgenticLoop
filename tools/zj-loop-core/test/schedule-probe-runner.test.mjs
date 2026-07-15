@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { cleanupGitLabOwnedSchedule, createGitLabOwnedSchedule, readGitLabOwnedSchedulePipeline, readGitLabScheduleProbeReceipt, planGitLabScheduleProbe, readGitLabScheduleProbeState, runGitLabScheduleProbe, SCHEDULE_PROBE_CONFIRMATION, writeGitLabScheduleProbeState } from '../dist/schedule-probe-runner.js';
+import { cleanupGitLabOwnedSchedule, createGitLabOwnedSchedule, preflightGitLabScheduleProbeCapability, readGitLabOwnedSchedulePipeline, readGitLabScheduleProbeReceipt, planGitLabScheduleProbe, readGitLabScheduleProbeState, runGitLabScheduleProbe, SCHEDULE_PROBE_CONFIRMATION, writeGitLabScheduleProbeState } from '../dist/schedule-probe-runner.js';
 
 test('owned GitLab schedule probe refuses without its fixed confirmation before any side effect', () => {
   const result = planGitLabScheduleProbe({
@@ -54,6 +54,39 @@ test('owned GitLab schedule probe creates only its marked temporary schedule', a
   assert.match(calls[0].init.body, /zj-loop\.schedule_probe\.v1/);
   assert.match(calls[0].init.body, /ZJ_LOOP_SCHEDULE_PROBE_ID/);
   assert.equal(calls[1].init.method, undefined);
+});
+
+test('owned GitLab schedule probe fails closed before creation when variables cannot be read back', async () => {
+  const calls = [];
+  const result = await runGitLabScheduleProbe({
+    project: 'group/project', dueInMinutes: 3, confirmation: SCHEDULE_PROBE_CONFIRMATION,
+    token: 'token', apiUrl: 'https://gitlab.example/api/v4',
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url: String(url), init });
+      return String(url).includes('?per_page=100')
+        ? { ok: true, async json() { return [{ id: 97 }]; } }
+        : { ok: true, async json() { return { id: 97, variables: undefined }; } };
+    },
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.reason, 'schedule-probe-capability-blocked');
+  assert.equal(result.capability.id, 'gitlab-schedule-variable-readback');
+  assert.equal(result.capability.detail, 'schedule-variable-readback-unavailable');
+  assert.deepEqual(result.operations, []);
+  assert.equal(calls.filter((call) => call.init.method === 'POST' || call.init.method === 'DELETE').length, 0);
+});
+
+test('owned GitLab schedule probe preflight permits creation only after observable variable read-back support', async () => {
+  const result = await preflightGitLabScheduleProbeCapability({
+    project: 'group/project', token: 'token', apiUrl: 'https://gitlab.example/api/v4',
+    fetchImpl: async (url) => String(url).includes('?per_page=100')
+      ? { ok: true, async json() { return [{ id: 97 }]; } }
+      : { ok: true, async json() { return { id: 97, variables: [] }; } },
+  });
+
+  assert.equal(result.status, 'supported');
+  assert.equal(result.capability.schedule_id, 97);
 });
 
 test('owned GitLab schedule probe deletes only a schedule whose identity still matches its state', async () => {
@@ -173,6 +206,7 @@ test('owned GitLab schedule probe runs start through scheduled evidence and guar
       nowFn: () => new Date('2026-07-15T07:12:00Z'),
       fetchImpl: async (url, init = {}) => {
         const text = String(url);
+        if (text.includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
         if (init.method === 'DELETE') return { ok: true, async json() { return {}; } };
         if (text.includes('/pipelines/2/jobs?')) return { ok: true, async json() { return [{ id: 3, name: 'zj_loop_schedule_probe_receipt', status: 'success' }]; } };
@@ -199,6 +233,7 @@ test('owned GitLab schedule probe exposes persisted arm state for signal-safe cl
       token: 'token', apiUrl: 'https://gitlab.example/api/v4', now: '2026-07-15T07:11:00Z', nowFn: () => new Date('2026-07-15T07:12:00Z'),
       onArmed: (state) => { armedState = state; },
       fetchImpl: async (url, init = {}) => {
+        if (String(url).includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
         if (init.method === 'DELETE') return { ok: true, async json() { return {}; } };
         if (String(url).includes('/pipelines/2/jobs?')) return { ok: true, async json() { return [{ id: 3, name: 'zj_loop_schedule_probe_receipt', status: 'success' }]; } };
@@ -223,6 +258,7 @@ test('owned GitLab schedule probe stops polling on cancellation without competin
       onArmed: () => controller.abort(),
       fetchImpl: async (url, init = {}) => {
         calls.push({ url: String(url), init });
+        if (String(url).includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
         return { ok: true, async json() { return { id: 99, description: 'zj-loop.schedule_probe.v1:probe-20260715T071100000Z', ref: 'main', cron: '14 07 * * *', cron_timezone: 'UTC', variables: [{ key: 'ZJ_LOOP_SCHEDULE_PROBE_ID', value: 'probe-20260715T071100000Z', variable_type: 'env_var' }] }; } };
       },
