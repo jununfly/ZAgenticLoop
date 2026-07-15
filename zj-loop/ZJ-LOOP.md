@@ -202,8 +202,8 @@ Current dogfood status:
   `kind/version/consumer/mode/roadmap/carrier/cleanup/safety` object, which is
   the only contract shape the closeout parser accepts.
 - Route: `post-merge-roadmap-closeout` in `zj-loop/zj-loop-route-table.yaml`.
-- Current mode: Route Decision remains report-only; live cleanup requires
-  explicit operator invocation of `scripts/post-merge-roadmap-closeout.mjs`.
+- Current mode: Route Decision remains report-only; the executor may perform
+  live cleanup after a valid merged-PR contract and all guards pass.
 - Automatic dry-run: `.github/workflows/post-merge-roadmap-closeout.yml`
   comments script-generated evidence on merged PRs and uploads the full JSON
   plan as an artifact.
@@ -211,6 +211,11 @@ Current dogfood status:
   `npm run post-merge-closeout -- --pr <number> --repo jununfly/ZAgenticLoop --carrier-issue <issue> --live`.
 - Optional live workflow dispatch requires the fixed confirmation phrase
   `DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER`.
+- Current GitHub live evidence: [PR #133](https://github.com/jununfly/ZAgenticLoop/pull/133)
+  passed all guards, deleted only its named merged `zjal-` branch, and closed
+  only carrier [#131](https://github.com/jununfly/ZAgenticLoop/issues/131).
+  [PR #132](https://github.com/jununfly/ZAgenticLoop/pull/132) records the
+  paired fail-closed refusal for a partial contract.
 - Boundary: the executor may delete only the merged `zjal-` roadmap branch named
   in the valid contract and close only the contract carrier issue after writing
   closeout evidence. Historical `zjal/` branches remain accepted for closeout

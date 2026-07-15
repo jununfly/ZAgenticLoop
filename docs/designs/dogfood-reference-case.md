@@ -391,6 +391,24 @@ Post-Merge Roadmap Closeout is active with contract-authorized live cleanup.
 
 It is not a generic merged-PR cleanup agent.
 
+### GitHub Live Evidence
+
+The controlled closeout dogfood used carrier
+[#131](https://github.com/jununfly/ZAgenticLoop/issues/131) to prove both
+outcomes of the current contract boundary:
+
+1. [PR #132](https://github.com/jununfly/ZAgenticLoop/pull/132) supplied a
+   hand-authored partial YAML block. The parser refused it, the dry-run comment
+   reported no contract, and neither the carrier nor the roadmap branch changed.
+2. [PR #133](https://github.com/jununfly/ZAgenticLoop/pull/133) used the
+   deterministic `roadmap-handoff:body` generator. Its dry-run passed all five
+   executor guards, then the contract-authorized executor deleted only
+   `zjal-closeout-contract-template-fix` and closed only #131 after appending
+   live evidence.
+
+This establishes that the generated contract is an operational requirement, not
+just a documentation convention.
+
 ## Verification Gates
 
 Use the narrowest relevant gate after dogfood changes:
