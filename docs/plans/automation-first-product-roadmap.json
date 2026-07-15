@@ -784,18 +784,39 @@
           "q": "What does the current GitLab schedule 961 dogfood prove?",
           "answer": "The current GitLab instance has real scheduled trusted-automation evidence for issue-backlog-triage and issue-triage-transition.",
           "note": "Pipeline 10503630 source=schedule; zj_loop_issue_triage success; transition-result completed duplicate for Issue #160 with note 19639888 and roadmap-sliced-development handoff."
+        },
+        {
+          "q": "Does the merged master branch preserve the GitLab scheduled triage route?",
+          "answer": "Yes. Schedule 961 now targets master and pipeline 10503861 completed the scheduled issue-backlog-triage and issue-triage-transition path.",
+          "note": "source=schedule; ref=master; daily triage, issue triage, and schedule-probe receipt succeeded; Issue #160 returned completed duplicate with note 19639888 and roadmap-sliced-development handoff."
         }
       ],
-      "notes": "Completed with GitLab dogfood evidence: schedule 961 produced pipeline 10503630 from source=schedule at commit f35b0784; daily triage, issue triage, and schedule-probe receipt jobs succeeded. Issue #160 recommendation was consumed by trusted automation; transition-result completed with duplicate outcome, note 19639888, deterministic note URL, and roadmap-sliced-development handoff request ifr_triage_6504fff8d631. Schedule probe remains capability-blocked when no probe_id is supplied, but is now a non-blocking structured warning."
+      "notes": "Completed with dogfood and post-merge stable-branch evidence: schedule 961 was migrated from zjal-gitlab-yaml-folded-script-fix to master after target MR !296 merged. Pipeline 10503861 on master had source=schedule; daily triage, issue triage, and schedule-probe receipt jobs succeeded. Issue #160 returned completed duplicate with note 19639888, deterministic note URL, and roadmap-sliced-development handoff request ifr_triage_6504fff8d631. Schedule probe remains capability-blocked when no probe_id is supplied, but emits non-blocking structured evidence."
     },
     "1-5-4-1": {
       "id": "1-5-4-1",
       "label": "GitLab Roadmap activation branch and draft-MR contract",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "Which credential may GitLab Roadmap Activation use for live branch/MR side effects?",
+          "answer": "Only GITLAB_TOKEN.",
+          "note": "The generated GitLab workflow must not authorize live activation with CI_JOB_TOKEN; the core CLI and adapter use PRIVATE-TOKEN from GITLAB_TOKEN only."
+        },
+        {
+          "q": "What is the GitLab activation target branch source?",
+          "answer": "Use CI_DEFAULT_BRANCH from the target project.",
+          "note": "This keeps self-managed GitLab projects such as ai-studio on master without a provider-specific hardcoded main fallback."
+        },
+        {
+          "q": "When may the GitLab activation workflow create a branch or draft MR?",
+          "answer": "Only an explicitly enabled Route Table route may reach the manual live job; the job then requires GITLAB_TOKEN and emits branch/MR evidence.",
+          "note": "Route enablement remains separate from the generated user's default disabled route profile."
+        }
+      ],
       "notes": ""
     },
     "1-5-4-2": {
@@ -1310,7 +1331,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 21:20:11",
+    "updated": "2026-07-15 21:59:05",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

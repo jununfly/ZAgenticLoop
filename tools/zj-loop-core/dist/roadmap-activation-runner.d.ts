@@ -351,7 +351,6 @@ export declare function executeGitLabRoadmapActivation(input: {
     projectPath?: string;
     apiBaseUrl?: string;
     token?: string;
-    jobToken?: string;
     targetBranch?: string;
     draft?: boolean;
     live?: boolean;

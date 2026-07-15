@@ -503,7 +503,6 @@ export async function executeGitLabRoadmapActivation(input) {
     const draft = input.draft !== false;
     const live = input.live === true;
     const token = String(input.token ?? '');
-    const jobToken = String(input.jobToken ?? '');
     const refusals = [];
     if (provider !== 'gitlab')
         refusals.push({ layer: 'provider', reason: 'contract-plan-provider-is-not-gitlab' });
@@ -511,7 +510,7 @@ export async function executeGitLabRoadmapActivation(input) {
         refusals.push({ layer: 'branch', reason: 'branch-prefix-must-be-zjal-' });
     if (!projectPath)
         refusals.push({ layer: 'project', reason: 'gitlab-project-path-required' });
-    if (live && !token && !jobToken)
+    if (live && !token)
         refusals.push({ layer: 'credential', reason: 'gitlab-token-required-for-live-execution' });
     const baseResult = {
         schema: 'zj-loop.gitlab_roadmap_activation_execution_result.v1',
@@ -539,7 +538,7 @@ export async function executeGitLabRoadmapActivation(input) {
         return { ...baseResult, status: 'dry-run', execution_allowed: false };
     }
     const fetcher = input.fetchImpl ?? fetch;
-    const headers = buildGitLabAuthHeaders({ token, jobToken });
+    const headers = buildGitLabAuthHeaders({ token });
     const branchUrl = buildGitLabBranchApiUrl({
         apiBaseUrl: input.apiBaseUrl,
         projectPath,
