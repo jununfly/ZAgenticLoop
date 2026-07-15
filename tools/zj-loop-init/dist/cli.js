@@ -38,7 +38,7 @@ const GITLAB_CI_TEMPLATE_FILES = [
 ];
 const DEFAULT_GITLAB_STAGE = 'zj-loop';
 const DEFAULT_GITLAB_IMAGE = 'node:22';
-const DEFAULT_GITLAB_CORE_PACKAGE = '@jununfly/zj-loop-core@0.1.7';
+const DEFAULT_GITLAB_CORE_PACKAGE = '@jununfly/zj-loop-core@0.1.8';
 const GITLAB_VENDOR_TARBALL_PROBE = 'zj-loop/vendor/jununfly-zj-loop-core-0.1.7.tgz';
 async function loadRegistry() {
     return loadPatternRegistry({
@@ -235,8 +235,8 @@ async function handleAddArtifacts(artifacts, targetDir, templatesRoot, patterns,
         }
     }
     io.stdout(`\n=== Next steps ===
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${targetDir}
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${targetDir} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
   Review any created or overwritten policy/catalog files before committing.
 `);
@@ -415,8 +415,8 @@ async function upgradeGitHubActionsBundle(targetDir, templatesRoot, dryRun, forc
     io.stdout(`\n=== Next steps ===
   Review .github/workflows/*.bak files if any were created.
   Route Table enablement is preserved; rerun first-run planning to review current automation intent.
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${targetDir}
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${targetDir} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
   `);
     return 0;
@@ -455,8 +455,8 @@ async function upgradeGitLabCiBundle(targetDir, templatesRoot, defaultPattern, d
 === Next steps ===
   Review zj-loop/gitlab-ci/*.bak files if any were created.
   Route Table enablement is preserved; rerun first-run planning to review current automation intent.
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${targetDir}
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${targetDir} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
 `);
     return 0;
@@ -626,15 +626,15 @@ function recommendedRouteCommands() {
     return [
         {
             label: 'Inspect route status before enabling side effects',
-            command: 'npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status',
+            command: 'npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route status',
         },
         {
             label: 'Enable roadmap activation only when appropriate',
-            command: 'npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"',
+            command: 'npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"',
         },
         {
             label: 'Disable a route without a confirmation phrase',
-            command: 'npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable roadmap-sliced-development',
+            command: 'npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route disable roadmap-sliced-development',
         },
     ];
 }
@@ -1143,8 +1143,8 @@ npm run lint
         commandIo.stdout('  created: AGENTS.md (template)');
     }
     commandIo.stdout(`\n=== Next steps ===
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${target === '.' ? '.' : target}
-  npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --root ${target === '.' ? '.' : target} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${target === '.' ? '.' : target}
+  npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --root ${target === '.' ? '.' : target} --json
   npx @jununfly/zj-loop-audit ${target === '.' ? '.' : target} --suggest
   npx @jununfly/zj-loop-cost --pattern ${pattern}
   First loop command (${tool}):
@@ -1182,7 +1182,7 @@ Options:
                   Comma-separated runner tags rendered into generated GitLab CI jobs
   --gitlab-image  Image rendered into generated GitLab CI jobs (default: node:22)
   --gitlab-core-package
-                  Package source rendered into generated GitLab npx --package calls (default: @jununfly/zj-loop-core@0.1.7)
+                  Package source rendered into generated GitLab npx --package calls (default: @jununfly/zj-loop-core@0.1.8)
   --json          Print deterministic install_summary JSON instead of human text
   --dry-run       Print actions without copying
   -h, --help      This help

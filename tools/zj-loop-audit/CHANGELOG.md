@@ -6,7 +6,7 @@ All notable changes to `@jununfly/zj-loop-audit` are documented here.
 
 ### Changed
 - Align generated bundle readiness checks with the GitLab provider bundle and current route table maturity contract.
-- Keep audit smoke workflow pins aligned with the `@jununfly/zj-loop-core@0.1.7` release.
+- Keep audit smoke workflow pins aligned with the `@jununfly/zj-loop-core@0.1.8` release.
 
 ## [0.1.5] - 2026-07-11
 

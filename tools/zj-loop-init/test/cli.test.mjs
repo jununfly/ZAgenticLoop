@@ -218,7 +218,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
     assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.6/);
-    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.7/);
+    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.8/);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /zj-loop-consumer plan manual-smoke-report/);
     const ciSweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-ci-sweeper.yml'), 'utf8');
@@ -234,6 +234,8 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(dependencySweeper, /core_package/);
     assert.match(dependencySweeper, /permissions:\n  contents: write/);
     assert.match(dependencySweeper, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+    assert.match(dependencySweeper, /gh pr list --head/);
+    assert.match(dependencySweeper, /--existing-repair-pr-url/);
     assert.match(dependencySweeper, /npm install --prefix/);
     assert.match(dependencySweeper, /git config user\.name "github-actions\[bot\]"/);
     assert.match(dependencySweeper, /git config user\.email "41898282\+github-actions\[bot\]@users\.noreply\.github\.com"/);
@@ -457,7 +459,7 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
       assert.match(body, /stage: "zj-loop"/);
       assert.match(body, /image: "node:22"/);
       assert.match(body, /ZJ Loop GitLab CI requires Node >=18/);
-      assert.match(body, /--package @jununfly\/zj-loop-core@0\.1\.7/);
+      assert.match(body, /--package @jununfly\/zj-loop-core@0\.1\.8/);
       assert.match(body, /> consumer-plan\.json \|\| true/);
       assert.doesNotMatch(body, /\n  tags:\n/);
       assert.match(body, /artifacts:/);

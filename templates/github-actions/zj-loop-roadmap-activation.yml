@@ -70,9 +70,9 @@ jobs:
           printf 'Signal: maintainer slash command for `roadmap-sliced-development`.\n\n' >> "$GITHUB_STEP_SUMMARY"
           printf '%s\n' "$COMMENTS_JSON" > activation-comments.json
           printf '%s\n' "$LEAF_SLICES_JSON" > leaf-slices.json
-          npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route dispatch roadmap-sliced-development --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-roadmap-activation plan --json > consumer-plan.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-roadmap-activation activation-plan \
+          npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route dispatch roadmap-sliced-development --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-roadmap-activation plan --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-roadmap-activation activation-plan \
             --command-text "$COMMAND_TEXT" \
             --requested-by "$REQUESTED_BY" \
             --permission "$REQUEST_PERMISSION" \
@@ -85,7 +85,7 @@ jobs:
           if [ -n "$ACTIVATION_REQUEST_ID" ]; then
             SOURCE_ISSUE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/issues/${SOURCE_ISSUE}"
             SOURCE_COMMENT_URL="${SOURCE_ISSUE_URL}#issuecomment-${COMMAND_COMMENT_ID}"
-            npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-roadmap-activation contract-plan \
+            npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-roadmap-activation contract-plan \
               --activation-request-id "$ACTIVATION_REQUEST_ID" \
               --title "${ACTIVATION_TITLE:-issue-${SOURCE_ISSUE}}" \
               --source-issue "$SOURCE_ISSUE" \
@@ -94,7 +94,7 @@ jobs:
               --process-roadmap-path "docs/plans/roadmap-activation-${SOURCE_ISSUE}.md" \
               --json > contract-plan.json || true
             BRANCH_NAME="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('contract-plan.json','utf8')); process.stdout.write(p.branchName || '')")"
-            npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-roadmap-activation bounded-slices-pack \
+            npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-roadmap-activation bounded-slices-pack \
               --activation-request-id "$ACTIVATION_REQUEST_ID" \
               --roadmap-path "docs/plans/roadmap-activation-${SOURCE_ISSUE}.md" \
               --branch-name "$BRANCH_NAME" \

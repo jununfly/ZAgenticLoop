@@ -64,7 +64,7 @@ steps instead of being patched silently.
 2. Ask for the automation-default first-run plan:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan
 ```
 
 The plan recommends a route, explains why that route is safest or most useful
@@ -95,15 +95,15 @@ For automation wiring, run with `--json`. The output includes:
    or target a known route when the intent is already clear:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --goal roadmap
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --goal issue-backlog
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --goal roadmap
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-first-run plan --goal issue-backlog
 ```
 
 4. Inspect the workflow summary or generated JSON evidence.
 5. Run:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route status
 ```
 
 The status output is the route menu. Use it to choose the first route instead of
@@ -153,15 +153,15 @@ Enable side-effecting routes only when their row has the expected maturity and
 you accept the side-effect boundary:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable post-merge-roadmap-closeout --confirm "enable post-merge-roadmap-closeout side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route enable post-merge-roadmap-closeout --confirm "enable post-merge-roadmap-closeout side effects"
 ```
 
 Disable stays low-friction:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route disable ci-sweeper
 ```
 
 ## Roadmap Activation Path

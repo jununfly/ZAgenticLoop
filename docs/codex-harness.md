@@ -15,9 +15,9 @@ and keeps going until the current route reaches its first review artifact or a
 hard stop signal.
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-run "Implement this PRD with roadmap sliced development"
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-run --route issue-backlog-triage "Scan open issues"
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-run --plan-only "Prepare a roadmap implementation plan"
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-run "Implement this PRD with roadmap sliced development"
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-run --route issue-backlog-triage "Scan open issues"
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-run --plan-only "Prepare a roadmap implementation plan"
 ```
 
 The default output is structured JSON. Automation should consume
@@ -28,8 +28,8 @@ for a short human-readable rendering.
 without triggering new side effects by default:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor --emit-signal
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-doctor
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-doctor --emit-signal
 ```
 
 `--emit-signal` prints a Route Decision signal envelope for another route to

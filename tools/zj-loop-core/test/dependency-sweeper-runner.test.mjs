@@ -105,6 +105,28 @@ test('dependency sweeper builds deterministic dry-run and live repair plans', ()
     'create-repair-pr',
   ]);
   assert.deepEqual(live.actions[1].args, ['install', 'yaml@2.7.1', '--save-exact', '--save-prod']);
+  assert.deepEqual(live.actions.at(-2).args, ['push', '-u', 'origin', live.branch, '--force-with-lease']);
+});
+
+test('dependency sweeper reuses an open repair PR without rewriting its branch', async () => {
+  const existingRepairPullRequestUrl = 'https://github.com/jununfly/ZAgenticLoop/pull/999';
+  const plan = buildDependencySweeperExecutionPlan({
+    request: consumedDependencyRequest(),
+    live: true,
+    confirmationPhrase: DEPENDENCY_SWEEPER_CONFIRMATION_PHRASE,
+    existingRepairPullRequestUrl,
+  });
+
+  assert.equal(plan.status, 'existing-repair-pr');
+  assert.deepEqual(plan.actions, []);
+
+  const result = await executeDependencySweeperLiveRunner(plan, {
+    runner: async () => assert.fail('existing repair PR must not execute commands'),
+  });
+  assert.equal(result.outcome, 'repair-pr');
+  assert.equal(result.runner_evidence.status, 'completed');
+  assert.equal(result.runner_evidence.side_effects.executed, false);
+  assert.equal(result.runner_evidence.repair_pull_request.url, existingRepairPullRequestUrl);
 });
 
 test('dependency sweeper carries GitLab provider metadata and refuses live MR side effects', () => {
