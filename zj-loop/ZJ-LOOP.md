@@ -196,6 +196,11 @@ Current dogfood status:
 ### Post-Merge (guarded roadmap closeout)
 - Trigger: merged Roadmap-Sliced PR signal with a PR body
   `zj-loop.post-merge-contract`.
+- PR handoff authoring: generate the complete PR body with
+  `npm run roadmap-handoff:body`; do not hand-author a partial contract block.
+  The deterministic generator emits the required
+  `kind/version/consumer/mode/roadmap/carrier/cleanup/safety` object, which is
+  the only contract shape the closeout parser accepts.
 - Route: `post-merge-roadmap-closeout` in `zj-loop/zj-loop-route-table.yaml`.
 - Current mode: Route Decision remains report-only; live cleanup requires
   explicit operator invocation of `scripts/post-merge-roadmap-closeout.mjs`.
