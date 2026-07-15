@@ -61,6 +61,7 @@ jobs:
               EXISTING_REPAIR_PR=""
               if [ -n "$REPAIR_BRANCH" ]; then
                 EXISTING_REPAIR_PR="$(gh pr list --head "$REPAIR_BRANCH" --base main --state open --json url --jq '.[0].url' 2>/dev/null || true)"
+                [ -n "$EXISTING_REPAIR_PR" ] || git fetch origin "$REPAIR_BRANCH" || true
               fi
               args=(
                 zj-loop-dependency-sweeper live-repair
