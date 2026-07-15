@@ -85,6 +85,11 @@ export declare function dispatchSignal(input: {
     env?: Record<string, string | undefined>;
     fetchImpl?: typeof fetch;
 }): Promise<OrchestrationEnvelope>;
+export declare function resumeOrchestration(input: {
+    root?: string;
+    orchestrationId: string;
+    now?: string;
+}): Promise<OrchestrationEnvelope>;
 export declare function getOrchestrationPath(orchestrationId: string): string;
 export declare function writeOrchestrationEnvelope(input: {
     root?: string;

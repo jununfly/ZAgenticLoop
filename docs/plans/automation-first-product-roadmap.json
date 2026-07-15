@@ -336,12 +336,12 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "Machine-readable human handoff location and confirmation contract",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Canonical dispatcher resume is now zj-loop-dispatch --root <dir> --orchestration <id> --mode resume. It resumes persisted orchestration context without requiring the original signal file or recomputing a duplicate key. Remaining work: emit the full machine-readable human handoff envelope from hard stops and confirmation boundaries."
     },
     "1-4-2": {
       "id": "1-4-2",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-14 23:58:35",
+    "updated": "2026-07-15 08:37:00",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

@@ -1335,6 +1335,23 @@ test('zj-loop-dispatch resume mode returns the stored orchestration as resumable
     assert.equal(resumedOutput.resumes, firstOutput.orchestration_id);
     assert.equal(resumedOutput.created_at, firstOutput.created_at);
     assert.equal(resumedOutput.updated_at, '2026-07-13T00:03:00.000Z');
+
+    const directResume = spawnSync(process.execPath, [
+      CLI,
+      '--root',
+      dir,
+      '--orchestration',
+      firstOutput.orchestration_id,
+      '--mode',
+      'resume',
+      '--now',
+      '2026-07-13T00:04:00.000Z',
+    ], { encoding: 'utf8' });
+    assert.equal(directResume.status, 0, directResume.stderr);
+    const directOutput = JSON.parse(directResume.stdout);
+    assert.equal(directOutput.status, 'resume');
+    assert.equal(directOutput.orchestration_id, firstOutput.orchestration_id);
+    assert.equal(directOutput.updated_at, '2026-07-13T00:04:00.000Z');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

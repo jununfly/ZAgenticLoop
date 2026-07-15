@@ -268,6 +268,21 @@ export async function dispatchSignal(input) {
     await writeOrchestrationEnvelope({ root, envelope });
     return envelope;
 }
+export async function resumeOrchestration(input) {
+    const orchestrationId = sanitizeId(input.orchestrationId);
+    const existing = await readExistingOrchestration({
+        root: input.root ?? '.',
+        storagePath: getOrchestrationPath(orchestrationId),
+    });
+    if (!existing)
+        throw new Error(`Unknown orchestration: ${input.orchestrationId}`);
+    return withAutomaticProgressionTrace({
+        ...existing,
+        status: 'resume',
+        resumes: existing.orchestration_id,
+        updated_at: input.now ?? new Date().toISOString(),
+    });
+}
 async function loadRouteStatus(root, routeId) {
     return findRoute(await loadRouteTable(root), routeId);
 }
