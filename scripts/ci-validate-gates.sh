@@ -29,6 +29,7 @@ npm install --no-save yaml@2 ajv@8 zod@3
 node scripts/validate-registry.mjs
 node scripts/check-zj-loop-init-sync.mjs
 node scripts/validate-release-workflows.mjs
+node tools/zj-loop-init/scripts/bundle-assets.mjs
 node scripts/validate-generated-bundle-release-gate.mjs
 npm run test:provider-parity-gate
 node --test scripts/validate-release-capability-gate.test.mjs
