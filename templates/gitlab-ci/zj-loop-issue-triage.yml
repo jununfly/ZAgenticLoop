@@ -6,16 +6,20 @@
 zj_loop_issue_triage:
   stage: __ZJ_LOOP_GITLAB_STAGE__
 __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
-  when: manual
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
   variables:
     ZJ_LOOP_SIGNAL_ID: ""
     ZJ_LOOP_ISSUE_IID: ""
     ZJ_LOOP_TRIAGE_REQUEST_JSON: ""
+    ZJ_LOOP_ISSUE_TRIAGE_LIMIT: "30"
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > route-decision.json
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > consumer-plan.json || true
-    - node -e "const fs = require('fs'); const project = process.env.CI_PROJECT_PATH || ''; const pipeline = process.env.CI_PIPELINE_URL || ''; const issue = process.env.ZJ_LOOP_ISSUE_IID || ''; const projectUrl = process.env.CI_PROJECT_URL || ''; const issueUrl = issue && projectUrl ? projectUrl + '/-/issues/' + issue : ''; const recommendation = { schema: 'zj-loop.issue_recommendations.v1', provider: 'gitlab', project_path: project, pipeline_url: pipeline, route: 'issue-backlog-triage', source: 'gitlab-ci', issue_count: issue ? 1 : 0, recommendations: issue ? [{ provider: 'gitlab', project_path: project, issue_iid: Number(issue), issue_url: issueUrl, labels: [], assignees: [], recommendation: 'manual-review-required', reason: 'Set ZJ_LOOP_TRIAGE_REQUEST_JSON to pass a reviewed recommendation payload.', request: process.env.ZJ_LOOP_TRIAGE_REQUEST_JSON ? JSON.parse(process.env.ZJ_LOOP_TRIAGE_REQUEST_JSON) : null }] : [] }; fs.writeFileSync('issue-recommendations.json', JSON.stringify(recommendation, null, 2));"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-issue-backlog scan --provider gitlab --project "${CI_PROJECT_PATH}" --api-url "${CI_API_V4_URL}" --pipeline-url "${CI_PIPELINE_URL}" --limit "${ZJ_LOOP_ISSUE_TRIAGE_LIMIT}" --out issue-recommendations.json
     - node -e "const fs = require('fs'); const recommendations = JSON.parse(fs.readFileSync('issue-recommendations.json', 'utf8')); const artifact = { schema: 'zj-loop.transition_requests.v1', provider: 'gitlab', route: 'issue-triage-transition', source: 'gitlab-ci', candidate_count: 0, transitions: [], note: 'request-only transition evidence is produced after a confirmed recommendation payload is supplied' }; fs.writeFileSync('transition-requests.json', JSON.stringify(artifact, null, 2));"
     - cat route-decision.json
     - cat consumer-plan.json

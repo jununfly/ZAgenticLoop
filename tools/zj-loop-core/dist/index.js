@@ -17,6 +17,7 @@ export * from './pr-steward-runner.js';
 export * from './changelog-drafter-runner.js';
 export * from './issue-triage-action-runner.js';
 export * from './issue-triage-transition-runner.js';
+export * from './issue-backlog-runner.js';
 export * from './roadmap-activation-runner.js';
 export * from './prd-handoff-runner.js';
 export * from './harness-protocol-contract.js';

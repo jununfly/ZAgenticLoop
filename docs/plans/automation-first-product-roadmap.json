@@ -562,12 +562,12 @@
     "1-5-3-1": {
       "id": "1-5-3-1",
       "label": "GitLab issue-backlog scheduled signal and report evidence",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "GitLab target is API-authenticated but canonical bundle is manual-only and does not scan backlog; target has an unversioned inline prototype. Implement a deterministic core reporter, wire scheduled/manual template rules, then upgrade target with local packed packages for live evidence."
     },
     "1-5-3-2": {
       "id": "1-5-3-2",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 11:47:58",
+    "updated": "2026-07-15 11:56:37",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
