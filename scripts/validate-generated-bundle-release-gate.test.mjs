@@ -12,7 +12,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 test('generated bundle release gate accepts every rendered GitLab fragment', async () => {
   const result = await validateGeneratedBundleReleaseGate();
 
-  assert.equal(result.gitlabFragmentCount, 9);
+  assert.equal(result.gitlabFragmentCount, 10);
 });
 
 test('generated bundle release gate rejects an invalid rendered bundled GitLab fragment', async () => {

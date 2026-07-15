@@ -528,6 +528,14 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.doesNotMatch(postMerge, /--review-body-file/);
     assert.doesNotMatch(postMerge, /--target-branch/);
     assert.doesNotMatch(postMerge, /ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION/);
+    const scheduleProbe = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-schedule-probe.yml'), 'utf8');
+    assert.match(scheduleProbe, /zj_loop_schedule_probe:/);
+    assert.match(scheduleProbe, /CI_PIPELINE_SOURCE == "web"/);
+    assert.match(scheduleProbe, /timeout: 45m/);
+    assert.match(scheduleProbe, /ZJ_LOOP_SCHEDULE_PROBE_DUE_IN_MINUTES: ""/);
+    assert.match(scheduleProbe, /ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION: ""/);
+    assert.match(scheduleProbe, /zj-loop-schedule-probe start/);
+    assert.match(scheduleProbe, /schedule-probe-result\.json/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);

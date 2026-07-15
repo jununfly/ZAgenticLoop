@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 16:14:15
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 16:48:09
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,11 +40,16 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-3-1-5-2-1. Owned GitLab schedule probe lifecycle state and guarded cleanup
+### 当前施工：1-5-3-1-5. GitLab target scheduled live evidence and escalation record
+
+Read-only GitLab configuration evidence checked 2026-07-15: schedule 957 is active, cron is 0 9 * * * Asia/Shanghai, next_run_at is 2026-07-16T09:03:00+08:00, and no source=schedule pipeline exists yet. This is not_due under the fixed 10-minute grace; do not classify it as a scheduler failure. GitLab project settings provide GITLAB_TOKEN to CI jobs, not to the local Codex shell. GitLab master pipeline 10496862 was created successfully with status manual after the YAML recovery, which confirms the full include parses; it is source=api and is not scheduled live evidence. Recheck after the due window for a source=schedule pipeline and issue-recommendations.json schema evidence.
 
 **决策：**
-- Q: 轮询期间 GitLab API 临时失败时如何处理？ → 继续每 30 秒有界重试直到 deadline，记录低成本错误计数；仅在 deadline 后 cleanup 并输出 escalation。 (一次网络/API 抖动不应中断真实 scheduled evidence 观察；deadline 与 guarded cleanup 防止无限循环和临时 schedule 残留。)
-- Q: resume 是否可重新计算或延长 probe 观察窗口？ → 必须复用 state 中原始 armed_at 与 deadline，绝不重新计算或延长；deadline 已过则直接 guarded cleanup 并返回原窗口的 escalation/evidence。 (resume 仅恢复同一次有界事务，不能把中断变成无限等待。)
-- Q: restore 的资源身份如何限定？ → 只接受 --probe-id，从 zj-loop/schedule-probes/<id>.json 读取 owned schedule 身份；没有 state、marker 不匹配或 state 已 cleaned 都拒绝，绝不接受任意 --schedule-id。 (restore 保持为清理自身资源的专用接口，不成为通用 GitLab schedule 删除工具。)
-- Q: guarded cleanup 成功后如何处理 probe state？ → 保留 state 文件并标记为 cleaned，作为低成本 replay evidence；restore 看到 cleaned 时幂等拒绝，不再 DELETE。 (保留创建、观察、cleanup 的完整闭环证据，同时阻止重复清理。)
+- Q: schedule-health 的真实运行窗口应以什么时间为准？ → 采用由 cron 推导的最近一次应执行窗口，加固定 10 分钟 grace；scheduled pipeline 必须晚于该窗口与 schedule.updated_at。 (GitLab next_run_at 在一次运行后会前移到未来，不能作为成功窗口的唯一依据。)
+
+**当前子树：**
+├── [x][Y+] 1-5-3-1-5-1. Cron-derived scheduled execution window contract and regression tests
+│   ... 2 more child nodes; run tree 1-5-3-1-5-1 --depth 2 for full view
+└── [ ][Y+] 1-5-3-1-5-2. Temporary owned GitLab schedule evidence and guarded cleanup
+    ... 3 more child nodes; run tree 1-5-3-1-5-2 --depth 2 for full view
 <!-- ROADMAP_SECTION_END -->

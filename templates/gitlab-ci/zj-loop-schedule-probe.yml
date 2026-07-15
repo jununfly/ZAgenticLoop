@@ -1,0 +1,25 @@
+# zj-loop-generated: true
+# zj-loop-template-id: gitlab-ci/zj-loop-schedule-probe
+# zj-loop-template-version: 1
+# zj-loop-template-hash: generated-by-zj-loop-init
+
+zj_loop_schedule_probe:
+  stage: __ZJ_LOOP_GITLAB_STAGE__
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+  timeout: 45m
+  variables:
+    ZJ_LOOP_SCHEDULE_PROBE_DUE_IN_MINUTES: ""
+    ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION: ""
+  script:
+    - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18.'); process.exit(1); }"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-schedule-probe start --root . --project "$CI_PROJECT_PATH" --ref "$CI_DEFAULT_BRANCH" --timezone "${CI_TIMEZONE:-UTC}" --api-url "$CI_API_V4_URL" --due-in-minutes "$ZJ_LOOP_SCHEDULE_PROBE_DUE_IN_MINUTES" --confirmation "$ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION" > schedule-probe-result.json
+    - cat schedule-probe-result.json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - schedule-probe-result.json
+      - zj-loop/schedule-probes/*.json

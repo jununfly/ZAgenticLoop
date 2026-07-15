@@ -96,8 +96,11 @@ export async function runGitLabScheduleProbe(input) {
     const plan = planGitLabScheduleProbe(input);
     if (plan.status === 'refused')
         return plan;
+    if (input.signal?.aborted)
+        return { ...plan, status: 'interrupted', reason: 'signal-received' };
     const created = await createGitLabOwnedSchedule({ ...input, plan });
     const armed = await writeGitLabScheduleProbeState({ root: input.root, plan: { ...created, armed_at: input.now ?? new Date().toISOString(), status: 'armed', poll_errors: 0 } });
+    await input.onArmed?.(armed.record);
     return await resumeGitLabScheduleProbe({ ...input, state: armed.record });
 }
 export async function resumeGitLabScheduleProbe(input) {
@@ -106,9 +109,21 @@ export async function resumeGitLabScheduleProbe(input) {
         return { ...state, status: 'refused', reason: 'probe-already-cleaned' };
     const now = input.nowFn ?? (() => new Date());
     const sleep = input.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+    const waitForNextPoll = async (milliseconds) => {
+        if (!input.signal)
+            return sleep(milliseconds);
+        if (input.signal.aborted)
+            return;
+        await Promise.race([
+            sleep(milliseconds),
+            new Promise((resolve) => input.signal.addEventListener('abort', resolve, { once: true })),
+        ]);
+    };
     let pipeline = null;
     let pollErrors = Number(state.poll_errors ?? 0);
     while (now().getTime() < new Date(state.deadline_at).getTime()) {
+        if (input.signal?.aborted)
+            return { ...state, status: 'interrupted', reason: 'signal-received', poll_errors: pollErrors };
         try {
             pipeline = await findGitLabOwnedSchedulePipeline({ ...input, project: state.project, armedAt: state.armed_at });
         }
@@ -117,13 +132,15 @@ export async function resumeGitLabScheduleProbe(input) {
         }
         if (pipeline)
             break;
-        await sleep(input.pollIntervalMs ?? 30_000);
+        await waitForNextPoll(input.pollIntervalMs ?? 30_000);
     }
+    if (input.signal?.aborted)
+        return { ...state, status: 'interrupted', reason: 'signal-received', poll_errors: pollErrors };
     const cleaned = await cleanupGitLabOwnedSchedule({ ...input, plan: state });
     const result = cleaned.status === 'cleaned'
         ? { ...cleaned, status: pipeline ? 'completed' : 'escalated', poll_errors: pollErrors, ...(pipeline ? { pipeline } : { reason: 'scheduled-pipeline-missing' }) }
         : { ...cleaned, poll_errors: pollErrors };
-    await writeGitLabScheduleProbeState({ root: input.root, plan: cleaned.status === 'cleaned' ? { ...result, status: 'cleaned', outcome: result.status } : result });
+    await writeGitLabScheduleProbeState({ root: input.root, plan: cleaned.status === 'cleaned' ? { ...result, status: 'cleaned', outcome: result.status, cleanup_outcome: 'cleaned' } : result });
     return result;
 }
 export async function restoreGitLabScheduleProbe(input) {
@@ -131,7 +148,7 @@ export async function restoreGitLabScheduleProbe(input) {
     if (state.status === 'cleaned')
         return { ...state, status: 'refused', reason: 'probe-already-cleaned' };
     const result = await cleanupGitLabOwnedSchedule({ ...input, plan: state });
-    await writeGitLabScheduleProbeState({ root: input.root, plan: result.status === 'cleaned' ? { ...result, outcome: 'cleaned' } : result });
+    await writeGitLabScheduleProbeState({ root: input.root, plan: result.status === 'cleaned' ? { ...result, outcome: 'cleaned', cleanup_outcome: 'cleaned' } : result });
     return result;
 }
 import { mkdir, readFile, writeFile } from 'node:fs/promises';

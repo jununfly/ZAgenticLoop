@@ -977,6 +977,11 @@
           "q": "自动 cleanup 删除临时 schedule 前需要哪些身份保护？",
           "answer": "必须重新读取 schedule id，并验证固定 marker、probe id、ref、cron/timezone 与 state 一致；任一不一致或资源不存在都拒绝删除并输出 escalation。",
           "note": "持有 id 不是充分授权；probe 只能删除可证明由自身创建且状态未漂移的 schedule。"
+        },
+        {
+          "q": "在进入目标 GitLab rollout 前，是否先收口本地 probe operator？",
+          "answer": "先完成 signal-safe CLI、CLI integration tests 与 bundle gate，再进入 target-project tarball rollout。",
+          "note": "真实项目只使用完整、可取消、可回放的 operator，不承担尚未完成的核心安全语义。"
         }
       ],
       "notes": ""
@@ -1004,7 +1009,7 @@
     "1-5-3-1-5-2-1": {
       "id": "1-5-3-1-5-2-1",
       "label": "Owned GitLab schedule probe lifecycle state and guarded cleanup",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2",
       "children": [],
@@ -1030,17 +1035,43 @@
           "note": "保留创建、观察、cleanup 的完整闭环证据，同时阻止重复清理。"
         }
       ],
-      "notes": ""
+      "notes": "Implemented bounded owned-schedule lifecycle, persisted replay state, guarded identity cleanup, cancellation-safe runner behavior, and CLI SIGINT/SIGTERM cleanup with 130/143 semantics. Verified by core integration tests."
     },
     "1-5-3-1-5-2-2": {
       "id": "1-5-3-1-5-2-2",
       "label": "GitLab manual schedule probe fragment and generated-bundle gates",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "GitLab schedule probe job 的默认安装与触发边界是什么？",
+          "answer": "作为 bundle 默认安装的独立 manual job，仅允许 web pipeline 手动执行，不走 Route Decision 或 consumer dispatch。",
+          "note": "它是受控 provider-operator；避免 Daily Triage 或 schedule 自触发 probe 形成递归 loop。"
+        },
+        {
+          "q": "GitLab schedule probe manual job 应保留哪些 artifact？",
+          "answer": "固定上传 schedule-probe-result.json 与 zj-loop/schedule-probes/*.json，保留 7 天。",
+          "note": "前者给出本次结果，后者保存 owned schedule 身份、deadline 与 cleanup outcome；足够回放且不含 token 或完整 provider response。"
+        },
+        {
+          "q": "GitLab schedule probe manual job 的 timeout 应如何设置？",
+          "answer": "显式设定 timeout: 45m，覆盖最大 30m 延迟、10m grace 与 cleanup 余量。",
+          "note": "不依赖目标项目默认 timeout，保证有界 probe 有机会完成 guarded cleanup。"
+        },
+        {
+          "q": "manual job 被取消或 runner 终止时如何降低临时 schedule 残留？",
+          "answer": "CLI 必须处理 SIGINT/SIGTERM：写入当前 probe state 后立即尝试同一 guarded cleanup；若失败，保留 state 供 restore --probe-id 恢复。",
+          "note": "不能依赖 GitLab after_script 的取消语义；CLI signal handler 是可确定实现的第一道清理路径。"
+        },
+        {
+          "q": "SIGINT/SIGTERM 后 cleanup 成功时 CLI 应如何退出？",
+          "answer": "仍以取消语义退出：SIGINT 为 130、SIGTERM 为 143；结构化 state/result 标记 cleanup_outcome: cleaned。",
+          "note": "资源清理成功不等于 probe 成功；保留取消退出码让 GitLab pipeline 如实呈现中断，同时 evidence 证明未遗留 owned schedule。"
+        }
+      ],
+      "notes": "Added the manual GitLab schedule-probe fragment, root include, init rendering support, and generated-bundle parser coverage. Verified by zj-loop-init tests and generated-bundle release gate."
     },
     "1-5-3-1-5-2-3": {
       "id": "1-5-3-1-5-2-3",
@@ -1055,7 +1086,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 16:14:15",
+    "updated": "2026-07-15 16:48:09",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

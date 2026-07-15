@@ -118,6 +118,54 @@ test('owned GitLab schedule probe runs start through scheduled evidence and guar
     assert.equal(result.status, 'completed', JSON.stringify(result));
     assert.equal(result.pipeline.id, 2);
     assert.equal(pipelineQueries, 1);
+    const state = await readGitLabScheduleProbeState({ root, probeId: result.probe_id });
+    assert.equal(state.status, 'cleaned');
+    assert.equal(state.cleanup_outcome, 'cleaned');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('owned GitLab schedule probe exposes persisted arm state for signal-safe cleanup', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-schedule-probe-signal-'));
+  try {
+    let armedState;
+    await runGitLabScheduleProbe({
+      root, project: 'group/project', ref: 'main', dueInMinutes: 3, confirmation: SCHEDULE_PROBE_CONFIRMATION,
+      token: 'token', apiUrl: 'https://gitlab.example/api/v4', now: '2026-07-15T07:11:00Z', nowFn: () => new Date('2026-07-15T07:12:00Z'),
+      onArmed: (state) => { armedState = state; },
+      fetchImpl: async (url, init = {}) => {
+        if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
+        if (init.method === 'DELETE') return { ok: true, async json() { return {}; } };
+        if (String(url).includes('/pipelines?')) return { ok: true, async json() { return [{ id: 2, source: 'schedule', created_at: '2026-07-15T07:14:00Z' }]; } };
+        return { ok: true, async json() { return { id: 99, description: 'zj-loop.schedule_probe.v1:probe-20260715T071100000Z', ref: 'main', cron: '14 15 * * *', cron_timezone: 'UTC' }; } };
+      },
+    });
+    assert.equal(armedState?.owned_schedule_id, 99);
+    assert.equal(armedState?.status, 'armed');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('owned GitLab schedule probe stops polling on cancellation without competing cleanup', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-schedule-probe-cancel-'));
+  try {
+    const controller = new AbortController();
+    const calls = [];
+    const result = await runGitLabScheduleProbe({
+      root, project: 'group/project', ref: 'main', dueInMinutes: 3, confirmation: SCHEDULE_PROBE_CONFIRMATION,
+      token: 'token', apiUrl: 'https://gitlab.example/api/v4', now: '2026-07-15T07:11:00Z', signal: controller.signal,
+      onArmed: () => controller.abort(),
+      fetchImpl: async (url, init = {}) => {
+        calls.push({ url: String(url), init });
+        return init.method === 'POST'
+          ? { ok: true, async json() { return { id: 99 }; } }
+          : { ok: true, async json() { return {}; } };
+      },
+    });
+
+    assert.equal(result.status, 'interrupted');
+    assert.equal(result.reason, 'signal-received');
+    assert.equal(calls.filter((call) => call.init.method === 'DELETE').length, 0);
+    const state = await readGitLabScheduleProbeState({ root, probeId: result.probe_id });
+    assert.equal(state.status, 'armed');
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

@@ -19,6 +19,7 @@ const GENERATED_WORKFLOWS = [
   'zj-loop-roadmap-activation.yml',
   'zj-loop-post-merge-cleanup.yml',
 ];
+const GITLAB_FRAGMENTS = [...GENERATED_WORKFLOWS, 'zj-loop-schedule-probe.yml'];
 const GITLAB_RENDER_VARIANTS = [
   { label: 'default runner tags', runnerTags: [] },
   { label: 'controlled runner tags', runnerTags: ['zj-loop'] },
@@ -186,7 +187,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
     errors.push(...yamlParseErrors(`templates/gitlab-ci/zj-loop-root.gitlab-ci.yml (${variant.label})`, renderGitLabTemplate(gitlabRootTemplate, options)));
     errors.push(...yamlParseErrors(`tools/zj-loop-init/templates/gitlab-ci/zj-loop-root.gitlab-ci.yml (${variant.label})`, renderGitLabTemplate(bundledGitlabRootTemplate, options)));
   }
-  for (const workflowFile of GENERATED_WORKFLOWS) {
+  for (const workflowFile of GITLAB_FRAGMENTS) {
     if (!gitlabRootTemplate.includes(`zj-loop/gitlab-ci/${workflowFile}`)) {
       errors.push(`templates/gitlab-ci/zj-loop-root.gitlab-ci.yml does not include ${workflowFile}`);
     }
@@ -253,7 +254,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
   const roadmapActivationFixture = await validateRoadmapActivationUserProjectFixture(root);
   return {
     workflowCount: GENERATED_WORKFLOWS.length,
-    gitlabFragmentCount: GENERATED_WORKFLOWS.length,
+    gitlabFragmentCount: GITLAB_FRAGMENTS.length,
     coreVersion: expectedCoreVersion,
     actionReadyRouteCount: ACTION_READY_ROUTES.size,
     roadmapActivationFixture,
