@@ -1,0 +1,698 @@
+{
+  "title": "Automation-First Product Goal Roadmap",
+  "description": "Keep architecture readiness and user experience readiness dynamically aligned until ZAgenticLoop delivers automation-first loops.",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Automation-First Product Goal Roadmap",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6",
+        "1-7"
+      ],
+      "decisions": [
+        {
+          "q": "架构目标与用户体验目标是否二选一？",
+          "answer": "两者必须同时满足，并在项目演进中动态保持一致。架构目标先进时应拉动用户体验补齐；用户体验落后时应作为稳定参考对象反向打磨架构确定性。",
+          "note": "参考动态规划思路：每个阶段都维护局部最优与全局目标的一致性，避免架构漂亮但体验不顺，或体验承诺超过架构事实。"
+        },
+        {
+          "q": "路线图应如何切成可执行 slices？",
+          "answer": "按同一真相面、核心派生、自动推进与Workspace、GitHub/GitLab适配、确定性gate/replay、reference dogfood/release 六条依赖线切分；每个叶子必须有明确接口、测试或dogfood证据，不能把中间报告误作完成。",
+          "note": "先完成可表达并可判定的 completion contract，后续 adapter 与用户体验工作才有共同完成标准。"
+        }
+      ],
+      "notes": "先完成 1-1 的 completion contract；1-2 迁移并基线化当前事实；1-3 与 1-4 可在 contract 稳定后并行；1-5、1-6、1-7 依次收口 adapter、gates 和 release evidence。"
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Completion Alignment Ledger 与不可补偿完成硬门",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-1-1",
+        "1-1-2",
+        "1-1-3",
+        "1-1-4",
+        "1-1-5"
+      ],
+      "decisions": [
+        {
+          "q": "完成标准应该按架构目标还是用户体验目标？",
+          "answer": "两者同时作为 hard completion criteria：架构上必须有 Route Table truth、runner/preflight/replay/gate 证据；体验上必须能从用户信号自动推进到 review artifact 或结构化 hard stop，且用户不需要在多个位置反复猜下一步。",
+          "note": "这是动态对齐评分，不是二选一。A 先进时拉 B，B 落后时约束 A 的宣称。"
+        },
+        {
+          "q": "完成度是否允许加权评分抵消硬缺口？",
+          "answer": "不允许。以 Completion Alignment Ledger 替代评分；Architecture Integrity、live capability、stop/recovery、experience continuity、automatic progression 与 verification 均为不可补偿硬门。",
+          "note": "旧的评分措辞正式废弃；历史决策保留其被替换原因。"
+        }
+      ],
+      "notes": "顺序：1-1-1 已完成 durable design；1-1-2 定义同一 Route Table 结构；1-1-3 派生 core ledger；1-1-4 暴露 doctor；1-1-5 固化兼容性回归。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "当前 Route 能力与用户体验缺口盘点",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3"
+      ],
+      "decisions": [
+        {
+          "q": "当前是否已经完成 value-oriented 产品目标？",
+          "answer": "尚未完成。当前已建立 automation-first 架构主线和若干 dogfooded/live 链路，但多数 route 仍停留在 report-only/request-only/claim-only/dry-run，GitLab 多数能力仍为 dry-run-supported，用户体验仍存在确认、切换、消费动作偏多的问题。",
+          "note": "盘点必须以 Route Table 为事实源，不能用过程 roadmap 或口头结论替代当前能力真相。"
+        }
+      ],
+      "notes": "依赖 1-1-2 与 1-1-3。只迁移/派生当前事实，不以手工报告替代 Route Table 或 ledger。"
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "默认自动执行到 review artifact 或 hard stop",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2",
+        "1-3-3",
+        "1-3-4"
+      ],
+      "decisions": [
+        {
+          "q": "自动化默认应该执行到哪里？",
+          "answer": "默认执行到当前 route 的第一个 review artifact 或 hard stop signal。不能一步一停，也不能无边界循环；route 必须声明 bounded work、verification evidence、review artifact 和 stop conditions。",
+          "note": "这直接承接 value-oriented 原则中的 end-to-end loop 体验。"
+        },
+        {
+          "q": "Workspace Adapter 的完成是否可由单一 no-provider fixture 证明？",
+          "answer": "不能。fixture 只证明协议；Workspace 必须分别证明 local carrier/review/closeout runtime，以及 control、repair、draft、roadmap 等适用 route family 的真实 Git workspace 成功与 recovery evidence。",
+          "note": "issue 与 PR/MR 语义仍为 not-applicable-with-reason，不应伪造 local tracker 或 local PR。"
+        }
+      ],
+      "notes": "依赖 1-1 completion contract。Workspace 是 provider:none 的 adapter，不伪造 issue 或 PR；每个叶子需真实 Git workspace evidence。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "结构化 stop signal 与 human handoff 体验",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3"
+      ],
+      "decisions": [
+        {
+          "q": "human handoff 如何避免重新变成多次确认摩擦？",
+          "answer": "所有需要 human 的地方都输出固定结构：confirmation_location、required_phrase、side_effects、why_required、resume_command、retry_policy。低风险字段默认自动补齐并记录 repairs_applied；不能安全补齐时才输出 protocol_repair_request。",
+          "note": "human gate 应该是高价值中断，而不是 agent 不知道下一步时的普通停顿。"
+        }
+      ],
+      "notes": "依赖 Harness output contract；确认、location、side effects、why required、resume/retry 必须结构化，普通自然语言不触发副作用。"
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "GitHub 与 GitLab 的 live 能力对齐",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3",
+        "1-5-4",
+        "1-5-5"
+      ],
+      "decisions": [
+        {
+          "q": "GitHub/GitLab 对齐的抽象边界是什么？",
+          "answer": "Route 链路协议应平台无关；GitHub/GitLab 是 provider-specific adapters。相同抽象组件尽量复用，容易误导或存在不可回避平台差异时分别实现，但必须共享同一协议、证据字段和能力映射。",
+          "note": "以 GitHub 当前实现为事实 baseline，GitLab 不应长期停留在 dry-run-supported。"
+        },
+        {
+          "q": "Provider live 对齐能否只用一条全量 dogfood 证明？",
+          "answer": "不能。GitHub 与 GitLab 均按 triage、PR stewardship、repair、draft、roadmap/closeout 等 route family 分别完成 live 与 recovery evidence；全量 dogfood 仅作为最终集成证据。",
+          "note": "不同 family 的 carrier、权限、review artifact 和 closeout 语义不同，合并会掩盖未完成能力。"
+        }
+      ],
+      "notes": "依赖目标矩阵与 shared completion schema。GitHub 是现有事实基线；GitLab 以共享协议做 provider-specific live adapter，不能用 dry-run parity 冒充完成。"
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "确定性脚本 gate 与 replay 证据闭环",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3",
+        "1-6-4"
+      ],
+      "decisions": [
+        {
+          "q": "哪些部分必须固化成确定性脚本或 gate？",
+          "answer": "凡是 route matching、capability truth、preflight、request/carrier schema、dedupe/resume、confirmation envelope、release capability claim、provider parity、replay/doctor 汇总，都应优先固化为 core API/CLI/gate。LLM 只能生成 candidate，不能直接决定 route 或当前能力宣称。",
+          "note": "确定性脚本是架构目标与用户体验目标动态对齐的桥。"
+        }
+      ],
+      "notes": "依赖 core ledger 与 runtime evidence schema。所有可判定规则进入 deterministic gate；结构性抽象变化才产生 architecture_review_required。"
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "Dogfood 仪表盘与发布前完成判定",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-7-1",
+        "1-7-2",
+        "1-7-3",
+        "1-7-4"
+      ],
+      "decisions": [
+        {
+          "q": "发布前如何判定产品目标推进到位？",
+          "answer": "发布前应有 dogfood/readiness view，按 route family 展示 architecture readiness、UX readiness、provider support、last live/replay evidence、open hard stops 和 next improvement。不能只看测试通过，也不能只看用户故事顺滑。",
+          "note": "这会成为动态规划式演进的观测面：每次 A 或 B 领先，都能看到另一侧该补哪里。"
+        }
+      ],
+      "notes": "依赖 1-3 至 1-6。release completion 只由受控 reference installation 证明；具体用户项目由 doctor self-assessment 判定。"
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "Durable completion-alignment architecture and applicability map",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "Route Table completion target schema and generated template",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "unsupported 应属于 completion target 还是派生 ledger？",
+          "answer": "unsupported 只属于派生 Completion Alignment Ledger status。Route Table completion_target.adapters 只声明 applicable 或 not-applicable-with-reason；applicable target 再用 requirement: required 表示本轮必须完成。",
+          "note": "避免把静态范围与动态能力事实混为一处；not-applicable 不阻塞，unsupported 必须阻塞完成。"
+        }
+      ],
+      "notes": "Implemented parser/type validation for metadata completion target and per-route adapter declarations; Workspace is rejected in provider_support. Generated Route Table template declares GitHub/GitLab/Workspace targets for every route. Verification: npm run build && node --test test/route.test.mjs in tools/zj-loop-core; npm test in tools/zj-loop-init."
+    },
+    "1-1-3": {
+      "id": "1-1-3",
+      "label": "Core Completion Alignment Ledger derivation API",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented and exported pure buildCompletionAlignmentLedger API with SHA-256 target/Route Table digests, required adapter cells, not-applicable separation, unsupported/incomplete/blocked/stale priority, structured next actions, and supplied evidence overlays. Verification: npm test in tools/zj-loop-core (191 passing)."
+    },
+    "1-1-4": {
+      "id": "1-1-4",
+      "label": "Doctor completion ledger JSON text and exit contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented zj-loop-doctor --completion JSON/text output and --require-complete strict exit contract using the core ledger. Normal incomplete reports exit 0; strict mode exits 1 while preserving machine-readable output. Verification: npm test in tools/zj-loop-core (192 passing)."
+    },
+    "1-1-5": {
+      "id": "1-1-5",
+      "label": "Completion contract parser and compatibility regression tests",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Completion contract regression coverage is provided by route parser tests for valid target, invalid target, Workspace/provider boundary, and ledger status precedence; init integration test verifies generated Route Tables declare all adapter targets. Verification: npm test in tools/zj-loop-core; npm test in tools/zj-loop-init."
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "Migrate current Route Table rows into explicit completion targets",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Migrated repository dogfood Route Table to metadata.completion_target plus explicit GitHub/GitLab/Workspace targets on all 15 routes. Regression: zj-loop-doctor --completion returns 45 declared adapter cells; every applicable cell passes architecture_integrity and every N/A cell carries a reason. Core test: npm test (193 passing)."
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "Derive initial required-cell capability and evidence gap baseline",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Derived the initial dogfood baseline through zj-loop-doctor --completion: 15 routes, 45 adapter cells, complete=0, incomplete=2, unsupported=38, N/A=5, blocked=0, stale=0. Durable architecture document records it as a historical derived observation, not a hand-maintained source of truth."
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "Classify current evidence as compatible stale or missing",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "How should existing unanchored evidence links be classified before the compatibility lifecycle gate exists?",
+          "answer": "Treat every applicable cell as missing compatible completion evidence; do not infer compatible or stale from bare links.",
+          "note": "Existing provider_support and recent_success links remain route facts and investigation leads. Compatibility and stale derivation require the later deterministic evidence lifecycle gate."
+        }
+      ],
+      "notes": "Documented conservative initial evidence classification: compatible=0, stale=0, and all 40 applicable cells lack compatible completion evidence because no current record carries target/Route Table/gate compatibility anchors. Bare route evidence links remain leads, not completion proof."
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Automatic-progression transition trace contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Added derived zj-loop.automatic_progression_trace.v1 to every persisted dispatcher orchestration. It records deterministic actor/reason transitions from signal_received through route_decided and preflight to review_artifact or hard_stop, and separately represents resume/duplicate control flow. TDD regression covers review-artifact and consumer hard-stop paths (core npm test: 193 passing)."
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "Workspace Adapter local activation and review artifact runner",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [
+        "1-3-2-1",
+        "1-3-2-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3": {
+      "id": "1-3-3",
+      "label": "Workspace Adapter local closeout resume and real Git dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [
+        "1-3-3-1",
+        "1-3-3-2",
+        "1-3-3-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-4": {
+      "id": "1-3-4",
+      "label": "Bounded multi-slice continuation to artifact or hard stop",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Integrated existing deterministic bounded-slice pack into Roadmap Activation review artifacts when an explicit leaf_slices payload is present. Pack selects eligible leaves up to max_slices (default 30), carries fixed continuation/stop conditions, and requires a gate-backed result before further continuation. TDD integration covers max_slices=2 selection; full core suite passes 201 tests."
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Machine-readable human handoff location and confirmation contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": "Dispatcher hard stops now emit zj-loop.human_handoff.v1 with confirmation_location, required_phrase, side_effects, why_required, canonical orchestration-id resume_command, and retry_policy. Credential remediation is explicitly not a human confirmation; disabled side-effect routes carry the fixed enable phrase and terminal-command location. Covered by dispatcher integration tests."
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "Low-risk protocol repairs and structured protocol repair request",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": "Harness normalizer fills only declared low-risk fields and does not invent authority. Every repair now carries protocol-input location, confirmation_required: false, and a deterministic resume_loop action keyed to its repair envelope; prose command hints are display-only."
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "Ambiguous-handoff and unnecessary-confirmation metrics gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": "Run metrics now deterministically identify confirmations lacking stopped + stop_signal + resume evidence. zj-loop.run_metrics_gate.v1 fails on those unnecessary confirmations or ambiguous next actions; tests cover a valid human gate and an invalid in-progress confirmation."
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "Provider adapter completion evidence mapping",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "Completion ledger now maps live capability evidence by provider adapter: only provider_support.<provider>.evidence can satisfy that provider cell. A GitHub success link cannot promote GitLab."
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "GitHub required-route live and recovery reference evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [
+        "1-5-2-1",
+        "1-5-2-2",
+        "1-5-2-3",
+        "1-5-2-4",
+        "1-5-2-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "GitLab signal and request-carrier live adapter parity",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [
+        "1-5-3-1",
+        "1-5-3-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4": {
+      "id": "1-5-4",
+      "label": "GitLab branch MR review and closeout live adapter parity",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [
+        "1-5-4-1",
+        "1-5-4-2",
+        "1-5-4-3",
+        "1-5-4-4",
+        "1-5-4-5",
+        "1-5-4-6"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5": {
+      "id": "1-5-5",
+      "label": "GitLab required-route reference dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "Architecture Integrity deterministic validation gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "Evidence compatibility invalidation and stale-status derivation",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "Completion delta CI and release hard gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-6-4": {
+      "id": "1-6-4",
+      "label": "Structured hard-stop and recovery replay corpus",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-1": {
+      "id": "1-7-1",
+      "label": "Reference installation fixtures for GitHub GitLab and Workspace",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-2": {
+      "id": "1-7-2",
+      "label": "Doctor completion text renderer and user next actions",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-3": {
+      "id": "1-7-3",
+      "label": "README and capability-claim guard for completion targets",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-7-4": {
+      "id": "1-7-4",
+      "label": "Release candidate complete-matrix audit",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-1": {
+      "id": "1-5-2-1",
+      "label": "GitHub control and issue-triage live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Control runs 29380641716 (Smoke) and 29380643447 (Issue Triage) succeeded. Recovery probe 29380702254 exposed a real false-success: published core 0.1.6 rejects --confirmation-mode in the generated workflow and || true hid it. Template/canonical workflow now use only the published fixed-phrase interface; generated bundle and provider parity gates pass. Needs push/merge then rerun before completion."
+    },
+    "1-5-2-2": {
+      "id": "1-5-2-2",
+      "label": "GitHub PR Steward live review and fix-request evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-3": {
+      "id": "1-5-2-3",
+      "label": "GitHub CI and dependency repair PR live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-4": {
+      "id": "1-5-2-4",
+      "label": "GitHub Changelog Drafter draft artifact live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2-5": {
+      "id": "1-5-2-5",
+      "label": "GitHub Roadmap activation and post-merge closeout live evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3-1": {
+      "id": "1-5-3-1",
+      "label": "GitLab issue-backlog scheduled signal and report evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3-2": {
+      "id": "1-5-3-2",
+      "label": "GitLab confirmed triage transition source-issue carrier evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-1": {
+      "id": "1-5-4-1",
+      "label": "GitLab Roadmap activation branch and draft-MR contract",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-2": {
+      "id": "1-5-4-2",
+      "label": "GitLab post-merge roadmap closeout execution evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-3": {
+      "id": "1-5-4-3",
+      "label": "GitLab CI Sweeper repair-MR live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-4": {
+      "id": "1-5-4-4",
+      "label": "GitLab Dependency Sweeper repair-MR live recovery evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-5": {
+      "id": "1-5-4-5",
+      "label": "GitLab PR Steward MR report and fix-request evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-6": {
+      "id": "1-5-4-6",
+      "label": "GitLab Changelog Drafter draft artifact or draft-MR evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2-1": {
+      "id": "1-3-2-1",
+      "label": "Workspace Route Decision local carrier and evidence-store adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented Workspace Route Decision adapter for provider:none signals. Dispatcher deterministically writes a local activation request under zj-loop/requests and low-cost route-decision evidence under zj-loop/evidence/route-decisions, then remains planned until the separate branch/patch review executor exists. TDD regression covers carrier and evidence persistence (core npm test: 194 passing)."
+    },
+    "1-3-2-2": {
+      "id": "1-3-2-2",
+      "label": "Workspace branch patch and changed-file review-artifact executor",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented Workspace review executor for provider:none dispatch execution. It snapshots current Git branch/HEAD plus tracked and untracked code changes into a binary patch and changed-file manifest under zj-loop/reviews, without creating branches, commits, or product-file writes. A clean workspace returns workspace-no-changes hard stop. TDD covers both paths (core npm test: 196 passing)."
+    },
+    "1-3-3-1": {
+      "id": "1-3-3-1",
+      "label": "Workspace local closeout archive and resume runtime",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Added zj-loop-workspace-closeout runtime and CLI. It requires a local review manifest, stays resumable until ACCEPT_LOCAL_REVIEW_ARTIFACT, then archives only the local activation carrier and records idempotent closeout evidence. It never deletes Git refs or product files. TDD covers resumable, completed, and repeated paths (core npm test: 197 passing)."
+    },
+    "1-3-3-2": {
+      "id": "1-3-3-2",
+      "label": "Workspace control CI and dependency route reference dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Dogfooded Workspace control/report plus CI Sweeper and Dependency Sweeper in real temporary Git worktrees. Control routes write local report evidence without code diffs; CI and dependency routes produce current-branch binary patch and changed-file review artifacts. Regression coverage runs through public dispatch (core npm test: 201 passing)."
+    },
+    "1-3-3-3": {
+      "id": "1-3-3-3",
+      "label": "Workspace changelog and roadmap route reference dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Dogfooded Workspace Changelog Drafter and Roadmap-Sliced Development in real temporary Git worktrees. Changelog defaults to draft evidence and requires explicit workspace_draft_mode:file-patch for file review; roadmap produces Git patch/changed-file artifacts. The durable reference documents all applicable Workspace route families and explicit N/A tracker routes (core npm test: 201 passing)."
+    }
+  },
+  "metadata": {
+    "created": "2026-07-14 14:07:31",
+    "updated": "2026-07-15 09:07:32",
+    "md_file": "docs/plans/automation-first-product-roadmap.md"
+  }
+}

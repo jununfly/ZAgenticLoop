@@ -6,6 +6,9 @@ metadata:
   primary_pattern_name: "Daily Triage"
   generated_by: "zj-loop-init"
   dogfood: true
+  completion_target:
+    id: automation-first-product
+    schema_version: 1
 
 policy:
   description: "Routing policy for ZAgenticLoop dogfood signals. This file is not a runtime queue."
@@ -52,6 +55,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["template:zj-loop-route-table.yaml.template", "docs:provider-adapter-parity-architecture"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
     dedupe_window: "24h"
     failure_owner: "maintainer"
     human_gate: "always"
@@ -84,6 +101,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["template:zj-loop-route-table.yaml.template", "docs:provider-adapter-parity-architecture"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
     dedupe_window: "24h"
     failure_owner: "daily-triage"
     human_gate: "none"
@@ -116,6 +147,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-daily-triage.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
     dedupe_window: "24h"
     failure_owner: "daily-triage"
     human_gate: "on ambiguity or high risk"
@@ -149,6 +194,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-smoke.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
     dedupe_window: "workflow_run"
     failure_owner: "maintainer"
     human_gate: "none"
@@ -199,6 +258,19 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-issue-triage.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        workspace:
+          applicability: not-applicable-with-reason
+          not_applicable_reason: no-issue-tracker-semantic-object
     dedupe_window: "issue-backlog-triage:<repo>:<scan_window>:<signal_kind>:<subject>"
     failure_owner: "issue-triage"
     human_gate: "only for high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, public comment, or label mutation"
@@ -252,6 +324,19 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-issue-triage.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: not-applicable-with-reason
+          not_applicable_reason: no-issue-tracker-semantic-object
     dedupe_window: "issue-triage-action:<repo>:<issue>:<requested_action>:<action_value>"
     failure_owner: "issue-triage-action"
     human_gate: "required for unsupported labels, freeform comments, high/unknown risk, security/privacy, auth/billing/legal, destructive action, lifecycle transition, assignment, milestone, close/reopen, or batch mutation"
@@ -303,6 +388,19 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-issue-triage.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: not-applicable-with-reason
+          not_applicable_reason: no-issue-tracker-semantic-object
     dedupe_window: "issue-triage-transition:<repo>:<issue>:<recommended_state>:<request_id>"
     failure_owner: "issue-triage-transition"
     human_gate: "required for wontfix, unauthorized actors, mismatched confirmation command, missing fixed confirmation phrase, risk flags, tracker mutation, close/reopen, assignment, milestone, batch mutation, or any trusted automation path outside ready-for-agent request-carrier creation"
@@ -340,6 +438,19 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-pr-steward.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: not-applicable-with-reason
+          not_applicable_reason: no-pr-mr-semantic-object
     dedupe_window: "pr_number:action"
     failure_owner: "pr-steward"
     human_gate: "before comments, labels, rebase, merge, or fix request creation"
@@ -394,6 +505,19 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-pr-steward.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: not-applicable-with-reason
+          not_applicable_reason: no-pr-mr-semantic-object
     dedupe_window: "pr:repo:pr_number:head_sha:checks"
     failure_owner: "pr-steward"
     human_gate: "before source PR comments, labels, rebase, merge, workflow dispatch, repair, branch creation, or Fix PR creation"
@@ -435,6 +559,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-ci-sweeper.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
     dedupe_window: "source_run_id"
     failure_owner: "ci-sweeper"
     human_gate: "when deterministic repair creates no diff or gates still fail"
@@ -480,6 +618,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-dependency-sweeper.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
     dedupe_window: "package:update_type:target_version"
     failure_owner: "dependency-sweeper"
     human_gate: "major, high risk, critical CVE, denylisted package, or verifier failure"
@@ -522,6 +674,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-changelog-drafter.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
     dedupe_window: "changelog:repo:base_branch:since_ref:until_ref"
     failure_owner: "changelog-drafter"
     human_gate: "breaking change, security note, major version, or scan window above 50 items"
@@ -564,6 +730,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-changelog-drafter.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: scheduled
     dedupe_window: "draft-request:changelog:repo:base_branch:since_ref:until_ref"
     failure_owner: "changelog-drafter"
     human_gate: "breaking change, security note, major version, or scan window above 50 items before draft request"
@@ -611,6 +791,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-roadmap-activation.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
     dedupe_window: "active-pending-request"
     failure_owner: "roadmap-sliced-development"
     human_gate: "maintainer/collaborator command required"
@@ -657,6 +851,20 @@ routes:
       gitlab:
         status: "dry-run-supported"
         evidence: ["gitlab-ci:zj-loop-post-merge-cleanup.yml", "test:provider-parity-gate"]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        gitlab:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: event-driven
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
     dedupe_window: "pr_number"
     failure_owner: "post-merge-cleanup"
     human_gate: "only when contract is missing, invalid, ambiguous, or asks for broader cleanup"

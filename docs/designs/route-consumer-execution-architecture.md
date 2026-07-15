@@ -13,12 +13,22 @@ consumers behind those routes.
 
 Every action-capable Route consumer should eventually execute to its own
 bounded completion form, while report-only consumers remain visibly report-only.
-The system must make partial readiness obvious:
+This execution goal follows the architecture-and-experience alignment principle
+in [ZAgenticLoop Architecture](./architecture.md): route capability is complete
+only when deterministic execution evidence and the user-facing loop experience
+advance together. The system must make partial readiness obvious:
 
 - a route can be enabled without being live
 - a protocol can be replayed without having a runner
 - a request can be claimable without starting repair
 - a live runner must carry recent successful evidence
+
+Whenever a route advances in protocol maturity, runner maturity, execution
+mode, or provider support, the corresponding user experience must also be
+checked: can a user or automation move from signal to request carrier, consumer
+run, verification evidence, and review artifact or structured hard stop without
+guessing where to reply, which command to run next, or which evidence is the
+current source of truth?
 
 ## Control Surfaces
 

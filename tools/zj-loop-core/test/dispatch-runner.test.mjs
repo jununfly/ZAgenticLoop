@@ -12,6 +12,22 @@ const CLI = fileURLToPath(new URL('../dist/dispatch-cli.js', import.meta.url));
 const ROUTE_TABLE = `schemaVersion: 1
 kind: zj-loop-route-table
 routes:
+  - route_id: "manual-smoke-report"
+    enabled: true
+    request_kind: "report-only"
+    consumer: "manual-smoke"
+    consumer_kind: "report-consumer"
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["report-evidence"]
+    maturity:
+      protocol: "dogfooded"
+      runner: "missing"
+    capabilities:
+      scopes: ["manual-smoke"]
+      verifiers: ["workflow-summary"]
+      max_side_effect_level: "evidence"
   - route_id: "issue-backlog-triage"
     enabled: true
     request_kind: "report-only"
@@ -71,6 +87,42 @@ routes:
       scopes: ["release-window", "draft-artifact"]
       verifiers: ["draft-request-contract", "reviewable-draft-outcome"]
       max_side_effect_level: "draft-pr"
+  - route_id: "ci-sweeper"
+    enabled: true
+    request_kind: "issue-fix-request"
+    consumer: "ci-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "live"
+      side_effect_level: "pr"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "execution-ready"
+      runner: "execution-ready"
+    capabilities:
+      scopes: ["ci"]
+      verifiers: ["verification-gate"]
+      max_side_effect_level: "pr"
+    guards:
+      max_work_units: 30
+  - route_id: "dependency-sweeper"
+    enabled: true
+    request_kind: "issue-fix-request"
+    consumer: "dependency-sweeper"
+    consumer_kind: "fix-runner"
+    execution:
+      mode: "live"
+      side_effect_level: "pr"
+      completion_forms: ["repair-pr", "escalation-issue"]
+    maturity:
+      protocol: "execution-ready"
+      runner: "execution-ready"
+    capabilities:
+      scopes: ["dependency"]
+      verifiers: ["verification-gate"]
+      max_side_effect_level: "pr"
+    guards:
+      max_work_units: 30
 `;
 
 async function setupProject() {
@@ -78,6 +130,43 @@ async function setupProject() {
   await mkdir(path.join(dir, 'zj-loop'), { recursive: true });
   await writeFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), ROUTE_TABLE);
   return dir;
+}
+
+function runGit(root, args) {
+  const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+}
+
+async function runWorkspacePatchDogfood({ routeId, intent }) {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'before\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+    await writeFile(path.join(dir, 'README.md'), `after ${routeId}\n`);
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: `sig-workspace-${routeId}`,
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: `workspace-${routeId}` },
+      intent,
+      payload: { route_id: routeId },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.review_artifact.kind, 'workspace-patch');
+    const patch = await readFile(path.join(dir, executed.review_artifact.path), 'utf8');
+    assert.match(patch, new RegExp(`\\+after ${routeId}`));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 test('zj-loop-dispatch turns a structured issue signal into a persisted orchestration envelope', async () => {
@@ -198,6 +287,12 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
         activation_request_comment_url: 'https://github.com/jununfly/ZAgenticLoop/issues/42#issuecomment-100',
         title: 'Implement consumer adapter',
         process_roadmap_path: 'zj-loop/process/consumer-adapter-roadmap.md',
+        max_slices: 2,
+        leaf_slices: [
+          { id: 'slice-1', title: 'First', status: 'pending' },
+          { id: 'slice-2', title: 'Second', status: 'pending' },
+          { id: 'slice-3', title: 'Third', status: 'pending' },
+        ],
       },
     }, null, 2));
 
@@ -222,6 +317,17 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
     assert.equal(output.review_artifact.kind, 'structured-evidence');
     assert.equal(output.review_artifact.path, `zj-loop/orchestrations/${output.orchestration_id}/contract-plan.json`);
     assert.equal(output.closeout_hint.required, true);
+    assert.equal(output.progression_trace.schema, 'zj-loop.automatic_progression_trace.v1');
+    assert.equal(output.progression_trace.outcome, 'review_artifact');
+    assert.deepEqual(
+      output.progression_trace.transitions.map((transition) => [transition.from, transition.to, transition.actor]),
+      [
+        ['signal_received', 'route_decided', 'dispatcher'],
+        ['route_decided', 'preflight_passed', 'dispatcher'],
+        ['preflight_passed', 'review_artifact', 'consumer_adapter'],
+      ],
+    );
+    assert.equal(output.progression_trace.transitions[2].evidence.path, output.review_artifact.path);
 
     assert.equal(output.consumer_adapter_result.schema, 'zj-loop.consumer_adapter_result.v1');
     assert.equal(output.consumer_adapter_result.route_id, 'roadmap-sliced-development');
@@ -235,6 +341,8 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
     assert.equal(output.consumer_adapter_result.review_artifacts[0].path, output.review_artifact.path);
     assert.equal(output.consumer_adapter_result.review_artifacts[0].kind, 'contract-plan');
     assert.equal(output.consumer_adapter_result.review_artifacts[0].schema, 'zj-loop.roadmap_activation_contract_plan.v1');
+    const boundedPackArtifact = output.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'bounded-slice-pack');
+    assert.ok(boundedPackArtifact);
 
     const contractPlan = JSON.parse(await readFile(path.join(dir, output.review_artifact.path), 'utf8'));
     assert.equal(contractPlan.schema, 'zj-loop.roadmap_activation_contract_plan.v1');
@@ -243,6 +351,211 @@ test('zj-loop-dispatch auto mode reaches a review artifact for execution-ready r
     assert.equal(contractPlan.branchName.startsWith('zjal-'), true);
     assert.equal(contractPlan.reviewTitle, 'Roadmap Activation: Implement consumer adapter');
     assert.equal(contractPlan.prTitle, 'Roadmap Activation: Implement consumer adapter');
+    const boundedPack = JSON.parse(await readFile(path.join(dir, boundedPackArtifact.path), 'utf8'));
+    assert.equal(boundedPack.max_slices, 2);
+    assert.deepEqual(boundedPack.selected_slices.map((slice) => slice.slice_id), ['slice-1', 'slice-2']);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch creates a local carrier and route-decision evidence for Workspace Adapter signals', async () => {
+  const dir = await setupProject();
+  try {
+    const output = await dispatchSignal({
+      root: dir,
+      now: '2026-07-14T00:00:00.000Z',
+      signal: {
+        schema: 'zj-loop.signal.v1',
+        signal_id: 'sig-workspace-roadmap-1',
+        source: 'codex',
+        provider: 'none',
+        subject: { kind: 'local_goal', id: 'workspace-roadmap-1' },
+        intent: 'activate_roadmap',
+        payload: { title: 'Create local review artifact' },
+      },
+    });
+
+    assert.equal(output.status, 'planned');
+    assert.equal(output.workspace_adapter.schema, 'zj-loop.workspace_route_decision.v1');
+    assert.equal(output.workspace_adapter.carrier.kind, 'local-activation-request');
+    assert.match(output.workspace_adapter.carrier.path, /^zj-loop\/requests\//);
+    assert.match(output.workspace_adapter.evidence.path, /^zj-loop\/evidence\/route-decisions\//);
+    assert.equal(output.progression_trace.outcome, 'planned');
+
+    const carrier = JSON.parse(await readFile(path.join(dir, output.workspace_adapter.carrier.path), 'utf8'));
+    assert.equal(carrier.schema, 'zj-loop.workspace_activation_request.v1');
+    assert.equal(carrier.provider, 'none');
+    assert.equal(carrier.route_id, 'roadmap-sliced-development');
+    assert.equal(carrier.source.subject.id, 'workspace-roadmap-1');
+
+    const evidence = JSON.parse(await readFile(path.join(dir, output.workspace_adapter.evidence.path), 'utf8'));
+    assert.equal(evidence.schema, 'zj-loop.workspace_route_decision_evidence.v1');
+    assert.equal(evidence.carrier.path, output.workspace_adapter.carrier.path);
+    assert.equal(evidence.route_decision.route, 'roadmap-sliced-development');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch executes a Workspace Adapter request into local patch and changed-file review artifacts', async () => {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'before\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+    await writeFile(path.join(dir, 'README.md'), 'after\n');
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-review-1',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-review-1' },
+      intent: 'activate_roadmap',
+      payload: { title: 'Review local change' },
+    };
+    const planned = await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(planned.status, 'planned');
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.consumer_adapter_result.adapter_status, 'executed_to_review_artifact');
+    assert.equal(executed.review_artifact.kind, 'workspace-patch');
+    assert.match(executed.review_artifact.path, /^zj-loop\/reviews\//);
+
+    const patch = await readFile(path.join(dir, executed.review_artifact.path), 'utf8');
+    assert.match(patch, /-before/);
+    assert.match(patch, /\+after/);
+
+    const manifestPath = executed.consumer_adapter_result.review_artifacts.find((artifact) => artifact.kind === 'changed-files').path;
+    const manifest = JSON.parse(await readFile(path.join(dir, manifestPath), 'utf8'));
+    assert.equal(manifest.schema, 'zj-loop.workspace_changed_files.v1');
+    assert.deepEqual(manifest.changed_files, ['README.md']);
+    assert.ok(manifest.git.branch);
+    assert.match(manifest.git.head_sha, /^[a-f0-9]{40}$/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch hard stops a Workspace Adapter review when no local change exists', async () => {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'baseline\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-review-empty',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-review-empty' },
+      intent: 'activate_roadmap',
+      payload: { title: 'No local change' },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'hard_stopped');
+    assert.equal(executed.consumer_adapter_result.stop_signal.reason, 'workspace-no-changes');
+    assert.equal(executed.progression_trace.outcome, 'hard_stop');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch records Workspace report evidence without requiring a code patch', async () => {
+  const dir = await setupProject();
+  try {
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-manual-smoke',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-manual-smoke' },
+      intent: 'triage',
+      payload: { route_id: 'manual-smoke-report' },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.consumer_adapter_result.review_artifacts[0].kind, 'workspace-report-evidence');
+    const report = JSON.parse(await readFile(path.join(dir, executed.consumer_adapter_result.review_artifacts[0].path), 'utf8'));
+    assert.equal(report.schema, 'zj-loop.workspace_report_evidence.v1');
+    assert.equal(report.route_id, 'manual-smoke-report');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch dogfoods CI and dependency Workspace routes through real Git patch artifacts', async () => {
+  await runWorkspacePatchDogfood({ routeId: 'ci-sweeper', intent: 'fix' });
+  await runWorkspacePatchDogfood({ routeId: 'dependency-sweeper', intent: 'fix' });
+});
+
+test('zj-loop-dispatch records Workspace Changelog draft evidence by default without requiring a code patch', async () => {
+  const dir = await setupProject();
+  try {
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-changelog',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-changelog' },
+      intent: 'draft_changelog',
+      payload: { route_id: 'changelog-drafter-draft-request' },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.consumer_adapter_result.review_artifacts[0].kind, 'workspace-draft-evidence');
+    const draft = JSON.parse(await readFile(path.join(dir, executed.consumer_adapter_result.review_artifacts[0].path), 'utf8'));
+    assert.equal(draft.schema, 'zj-loop.workspace_draft_evidence.v1');
+    assert.equal(draft.route_id, 'changelog-drafter-draft-request');
+    assert.equal(draft.draft_mode, 'evidence');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch upgrades Workspace Changelog to a patch review only when explicitly requested', async () => {
+  const dir = await setupProject();
+  try {
+    runGit(dir, ['init']);
+    runGit(dir, ['config', 'user.email', 'loop@example.test']);
+    runGit(dir, ['config', 'user.name', 'ZJ Loop']);
+    await writeFile(path.join(dir, 'README.md'), 'before\n');
+    runGit(dir, ['add', '.']);
+    runGit(dir, ['commit', '-m', 'baseline']);
+    await writeFile(path.join(dir, 'README.md'), 'after\n');
+
+    const signal = {
+      schema: 'zj-loop.signal.v1',
+      signal_id: 'sig-workspace-changelog-patch',
+      source: 'codex',
+      provider: 'none',
+      subject: { kind: 'local_goal', id: 'workspace-changelog-patch' },
+      intent: 'draft_changelog',
+      payload: {
+        route_id: 'changelog-drafter-draft-request',
+        workspace_draft_mode: 'file-patch',
+      },
+    };
+    await dispatchSignal({ root: dir, signal, now: '2026-07-14T00:00:00.000Z' });
+    const executed = await dispatchSignal({ root: dir, signal, mode: 'execute', now: '2026-07-14T00:01:00.000Z' });
+
+    assert.equal(executed.status, 'executed_to_review_artifact');
+    assert.equal(executed.review_artifact.kind, 'workspace-patch');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -383,6 +696,16 @@ test('zj-loop-dispatch hard stops Changelog Drafter when draft request carrier i
     assert.equal(output.consumer_adapter_result.adapter_status, 'hard_stopped');
     assert.equal(output.consumer_adapter_result.stop_signal.reason, 'missing-changelog-draft-request');
     assert.deepEqual(output.consumer_adapter_result.review_artifacts, []);
+    assert.equal(output.progression_trace.outcome, 'hard_stop');
+    assert.deepEqual(
+      output.progression_trace.transitions.map((transition) => [transition.from, transition.to, transition.actor]),
+      [
+        ['signal_received', 'route_decided', 'dispatcher'],
+        ['route_decided', 'preflight_passed', 'dispatcher'],
+        ['preflight_passed', 'hard_stop', 'consumer_adapter'],
+      ],
+    );
+    assert.equal(output.progression_trace.transitions[2].reason, 'missing-changelog-draft-request');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -689,6 +1012,23 @@ test('zj-loop-dispatch execute mode records missing token as resumable activatio
     assert.equal(executed.preflight_result.stop_signal.stop_code, 'credential-missing');
     assert.equal(executed.stop_signal.reason, 'Missing required credential: GITHUB_TOKEN.');
     assert.equal(executed.consumer_adapter_result.adapter_status, 'executed_to_review_artifact');
+    assert.deepEqual(executed.human_handoff, {
+      schema: 'zj-loop.human_handoff.v1',
+      confirmation_location: 'not-required',
+      required_phrase: null,
+      side_effects: [],
+      why_required: 'No human confirmation is required; provide the missing credential before retrying live side effects.',
+      resume_command: [
+        'zj-loop-dispatch',
+        '--root',
+        '.',
+        '--orchestration',
+        executed.orchestration_id,
+        '--mode',
+        'resume',
+      ],
+      retry_policy: 'resume-after-remediation',
+    });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -915,6 +1255,46 @@ test('zj-loop-dispatch hard stops roadmap activation when activation comment URL
   }
 });
 
+test('zj-loop-dispatch makes a disabled side-effect route confirmation boundary machine-readable', async () => {
+  const dir = await setupProject();
+  try {
+    const tablePath = path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml');
+    const table = await readFile(tablePath, 'utf8');
+    await writeFile(tablePath, table.replace(
+      'route_id: "roadmap-sliced-development"\n    enabled: true',
+      'route_id: "roadmap-sliced-development"\n    enabled: false',
+    ));
+    const output = await dispatchSignal({
+      root: dir,
+      signal: {
+        schema: 'zj-loop.signal.v1',
+        signal_id: 'sig-disabled-roadmap-route',
+        source: 'github_issue',
+        provider: 'github',
+        subject: { kind: 'issue', id: 'disabled-route' },
+        intent: 'activate_roadmap',
+        payload: {},
+      },
+      now: '2026-07-15T00:00:00.000Z',
+    });
+
+    assert.equal(output.status, 'hard_stopped');
+    assert.deepEqual(output.human_handoff, {
+      schema: 'zj-loop.human_handoff.v1',
+      confirmation_location: 'terminal-command',
+      required_phrase: 'enable roadmap-activation side effects',
+      side_effects: ['Enable roadmap-sliced-development for its declared request-only side effects.'],
+      why_required: 'Route Table authorization must explicitly enable roadmap-sliced-development before its declared side effects can run.',
+      resume_command: [
+        'zj-loop-dispatch', '--root', '.', '--orchestration', output.orchestration_id, '--mode', 'resume',
+      ],
+      retry_policy: 'resume-after-remediation',
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('zj-loop-dispatch records low-risk roadmap activation input repairs', async () => {
   const dir = await setupProject();
   try {
@@ -1012,6 +1392,23 @@ test('zj-loop-dispatch resume mode returns the stored orchestration as resumable
     assert.equal(resumedOutput.resumes, firstOutput.orchestration_id);
     assert.equal(resumedOutput.created_at, firstOutput.created_at);
     assert.equal(resumedOutput.updated_at, '2026-07-13T00:03:00.000Z');
+
+    const directResume = spawnSync(process.execPath, [
+      CLI,
+      '--root',
+      dir,
+      '--orchestration',
+      firstOutput.orchestration_id,
+      '--mode',
+      'resume',
+      '--now',
+      '2026-07-13T00:04:00.000Z',
+    ], { encoding: 'utf8' });
+    assert.equal(directResume.status, 0, directResume.stderr);
+    const directOutput = JSON.parse(directResume.stdout);
+    assert.equal(directOutput.status, 'resume');
+    assert.equal(directOutput.orchestration_id, firstOutput.orchestration_id);
+    assert.equal(directOutput.updated_at, '2026-07-13T00:04:00.000Z');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

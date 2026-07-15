@@ -1,6 +1,8 @@
 import { ConsumerRunPlan } from './consumer-runner.js';
 import { ConsumerAdapterResult } from './consumer-adapter.js';
 import { RuntimePreflightResult } from './preflight.js';
+import { WorkspaceRouteDecisionRecord } from './workspace-route-decision.js';
+import { HumanHandoff } from './human-handoff.js';
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 export type SignalEnvelope = {
     schema: 'zj-loop.signal.v1';
@@ -16,6 +18,21 @@ export type SignalEnvelope = {
     payload: Record<string, unknown>;
 };
 export type OrchestrationStatus = 'planned' | 'executed_to_review_artifact' | 'hard_stopped' | 'duplicate' | 'resume' | 'superseded';
+export type AutomaticProgressionTrace = {
+    schema: 'zj-loop.automatic_progression_trace.v1';
+    outcome: 'planned' | 'review_artifact' | 'hard_stop' | 'resume' | 'duplicate';
+    transitions: Array<{
+        sequence: number;
+        from: string;
+        to: string;
+        actor: 'dispatcher' | 'consumer_adapter';
+        reason: string;
+        evidence?: {
+            kind: string;
+            path?: string;
+        };
+    }>;
+};
 export type OrchestrationEnvelope = {
     schema: 'zj-loop.orchestration.v1';
     orchestration_id: string;
@@ -43,6 +60,8 @@ export type OrchestrationEnvelope = {
         description: string;
     };
     consumer_adapter_result?: ConsumerAdapterResult;
+    progression_trace?: AutomaticProgressionTrace;
+    workspace_adapter?: WorkspaceRouteDecisionRecord;
     closeout_hint: {
         required: boolean;
         reason: string;
@@ -51,6 +70,7 @@ export type OrchestrationEnvelope = {
         reason: string;
         next_steps: string[];
     };
+    human_handoff: HumanHandoff | null;
     storage: {
         path: string;
     };
@@ -67,8 +87,14 @@ export declare function dispatchSignal(input: {
     env?: Record<string, string | undefined>;
     fetchImpl?: typeof fetch;
 }): Promise<OrchestrationEnvelope>;
+export declare function resumeOrchestration(input: {
+    root?: string;
+    orchestrationId: string;
+    now?: string;
+}): Promise<OrchestrationEnvelope>;
 export declare function getOrchestrationPath(orchestrationId: string): string;
 export declare function writeOrchestrationEnvelope(input: {
     root?: string;
     envelope: OrchestrationEnvelope;
 }): Promise<void>;
+export declare function withAutomaticProgressionTrace(envelope: OrchestrationEnvelope): OrchestrationEnvelope;

@@ -24,14 +24,6 @@ on:
         description: 'Fixed confirmation phrase for confirmed triage transition'
         required: false
         default: ''
-      triage_transition_confirmation_mode:
-        description: 'Confirmation mode: human-fixed-phrase or trusted-automation'
-        required: false
-        default: 'human-fixed-phrase'
-      triage_transition_confirmation_authority:
-        description: 'Trusted automation authority when confirmation mode is trusted-automation'
-        required: false
-        default: ''
 
 permissions:
   contents: read
@@ -50,8 +42,6 @@ jobs:
           TRIAGE_ACTION_REQUEST_JSON: ${{ inputs.triage_action_request_json }}
           TRIAGE_TRANSITION_REQUEST_JSON: ${{ inputs.triage_transition_request_json }}
           TRIAGE_TRANSITION_CONFIRMATION: ${{ inputs.triage_transition_confirmation }}
-          TRIAGE_TRANSITION_CONFIRMATION_MODE: ${{ inputs.triage_transition_confirmation_mode }}
-          TRIAGE_TRANSITION_CONFIRMATION_AUTHORITY: ${{ inputs.triage_transition_confirmation_authority }}
         run: |
           npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route dispatch issue-backlog-triage --json > route-decision.json || true
           npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-consumer plan issue-backlog-triage --json > consumer-plan.json || true
@@ -67,8 +57,6 @@ jobs:
             npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-issue-triage-transition confirm-plan \
               --request triage-transition-request.json \
               --confirmation-phrase "$TRIAGE_TRANSITION_CONFIRMATION" \
-              --confirmation-mode "${TRIAGE_TRANSITION_CONFIRMATION_MODE:-human-fixed-phrase}" \
-              --confirmation-authority "${TRIAGE_TRANSITION_CONFIRMATION_AUTHORITY:-trusted-workflow}" \
               --json > transition-plan.json || true
             cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
             if jq -e '.decision.status == "confirmed" and .confirmed_transition.issue_fix_request != null' transition-plan.json >/dev/null; then

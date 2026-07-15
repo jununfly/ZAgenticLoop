@@ -2,8 +2,13 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { buildChangelogDrafterExecutionPlan, CHANGELOG_DRAFT_REQUEST_SCHEMA, CHANGELOG_DRAFTER_ROUTE_ID, } from './changelog-drafter-runner.js';
-import { buildRoadmapActivationBranchName, buildRoadmapActivationPrContract, buildRoadmapActivationPrTitle, buildRoadmapActivationReviewContract, buildRoadmapActivationReviewTitle, executeGitLabRoadmapActivation, } from './roadmap-activation-runner.js';
+import { buildRoadmapActivationBranchName, buildRoadmapActivationPrContract, buildRoadmapActivationPrTitle, buildRoadmapActivationReviewContract, buildRoadmapActivationReviewTitle, buildRoadmapBoundedSlicePack, executeGitLabRoadmapActivation, } from './roadmap-activation-runner.js';
+import { captureWorkspaceReviewArtifacts } from './workspace-review.js';
+import { writeWorkspaceDraftEvidence, writeWorkspaceReportEvidence } from './workspace-evidence.js';
 export async function runConsumerLiveSideEffects(input) {
+    if (input.signal.provider === 'none') {
+        return runWorkspaceReviewArtifact(input);
+    }
     const current = input.envelope.consumer_adapter_result;
     if (!current) {
         return liveHardStop({
@@ -90,6 +95,114 @@ export async function runConsumerLiveSideEffects(input) {
                     : ['Create a new activation request or repair the activation input before retrying.'],
             }
             : current.stop_signal,
+    };
+}
+async function runWorkspaceReviewArtifact(input) {
+    const workspace = input.envelope.workspace_adapter;
+    if (!workspace) {
+        return liveHardStop({
+            input: { consumerRunPlan: input.envelope.consumer_run_plan },
+            reason: 'missing-workspace-route-decision',
+            nextSteps: ['Run auto mode first to create the local activation carrier and Route Decision evidence.'],
+        });
+    }
+    const consumerPlan = input.envelope.consumer_run_plan;
+    if (consumerPlan.consumer_kind === 'report-consumer' || consumerPlan.consumer_kind === 'producer-router') {
+        const evidencePath = await writeWorkspaceReportEvidence({
+            root: input.root,
+            orchestrationId: input.envelope.orchestration_id,
+            routeId: consumerPlan.route_id,
+            consumer: consumerPlan.consumer,
+            carrierPath: workspace.carrier.path,
+            now: input.envelope.updated_at,
+        });
+        return workspaceEvidenceResult({
+            input,
+            path: evidencePath,
+            kind: 'workspace-report-evidence',
+            schema: 'zj-loop.workspace_report_evidence.v1',
+            reason: 'recorded Workspace report evidence without code changes',
+        });
+    }
+    const draftMode = input.signal.payload.workspace_draft_mode;
+    if (consumerPlan.consumer_kind === 'draft-consumer' && draftMode !== 'file-patch') {
+        const evidencePath = await writeWorkspaceDraftEvidence({
+            root: input.root,
+            orchestrationId: input.envelope.orchestration_id,
+            routeId: consumerPlan.route_id,
+            consumer: consumerPlan.consumer,
+            carrierPath: workspace.carrier.path,
+            now: input.envelope.updated_at,
+        });
+        return workspaceEvidenceResult({
+            input,
+            path: evidencePath,
+            kind: 'workspace-draft-evidence',
+            schema: 'zj-loop.workspace_draft_evidence.v1',
+            reason: 'recorded Workspace draft evidence without code changes',
+        });
+    }
+    if (consumerPlan.consumer_kind !== 'fix-runner' && consumerPlan.consumer_kind !== 'activation-consumer' && consumerPlan.consumer_kind !== 'draft-consumer') {
+        return liveHardStop({
+            input: { consumerRunPlan: consumerPlan },
+            reason: 'workspace-route-not-applicable',
+            nextSteps: ['Use a provider adapter for issue/PR semantics, or choose a Workspace-applicable control, fix, draft, or roadmap route.'],
+        });
+    }
+    const capture = await captureWorkspaceReviewArtifacts({
+        root: input.root,
+        orchestrationId: input.envelope.orchestration_id,
+        carrierPath: workspace.carrier.path,
+        now: input.envelope.updated_at,
+    });
+    if (capture.status === 'hard_stopped') {
+        return liveHardStop({
+            input: { consumerRunPlan: input.envelope.consumer_run_plan },
+            reason: capture.reason,
+            nextSteps: capture.next_steps,
+        });
+    }
+    return {
+        schema: 'zj-loop.consumer_adapter_result.v1',
+        route_id: input.envelope.consumer_run_plan.route_id,
+        consumer: input.envelope.consumer_run_plan.consumer,
+        consumer_kind: input.envelope.consumer_run_plan.consumer_kind,
+        adapter_status: 'executed_to_review_artifact',
+        review_artifacts: [
+            {
+                path: capture.patch_path,
+                kind: 'workspace-patch',
+                schema: 'git-diff-binary',
+            },
+            {
+                path: capture.changed_files_path,
+                kind: 'changed-files',
+                schema: 'zj-loop.workspace_changed_files.v1',
+            },
+        ],
+        repairs_applied: [],
+        live_side_effects: {
+            attempted: false,
+            reason: `captured ${capture.changed_files.length} local changed file(s) on ${capture.branch} at ${capture.head_sha}`,
+        },
+        next_steps: [
+            `Review ${capture.patch_path} and ${capture.changed_files_path}.`,
+            'Run deterministic verification before accepting or closing out the local change.',
+        ],
+    };
+}
+function workspaceEvidenceResult(input) {
+    const plan = input.input.envelope.consumer_run_plan;
+    return {
+        schema: 'zj-loop.consumer_adapter_result.v1',
+        route_id: plan.route_id,
+        consumer: plan.consumer,
+        consumer_kind: plan.consumer_kind,
+        adapter_status: 'executed_to_review_artifact',
+        review_artifacts: [{ path: input.path, kind: input.kind, schema: input.schema }],
+        repairs_applied: [],
+        live_side_effects: { attempted: false, reason: input.reason },
+        next_steps: [`Review local evidence: ${input.path}.`],
     };
 }
 export async function executeRoadmapActivationLiveSideEffects(input) {
@@ -265,6 +378,20 @@ async function runRoadmapActivationToContractPlan(input) {
     const absoluteArtifactPath = path.resolve(input.root, artifactPath);
     await mkdir(path.dirname(absoluteArtifactPath), { recursive: true });
     await writeFile(absoluteArtifactPath, `${JSON.stringify(contractPlan, null, 2)}\n`);
+    const leafSlices = Array.isArray(input.signal.payload.leaf_slices) ? input.signal.payload.leaf_slices : undefined;
+    const boundedSlicePack = leafSlices === undefined ? undefined : buildRoadmapBoundedSlicePack({
+        activationRequestId,
+        roadmapPath: processRoadmapPath || `zj-loop/orchestrations/${input.orchestrationId}/roadmap.json`,
+        branchName,
+        maxSlices: numberPayload(input.signal.payload.max_slices),
+        leafSlices,
+    });
+    const boundedSlicePackPath = boundedSlicePack === undefined
+        ? undefined
+        : `zj-loop/orchestrations/${input.orchestrationId}/bounded-slice-pack.json`;
+    if (boundedSlicePackPath) {
+        await writeFile(path.resolve(input.root, boundedSlicePackPath), `${JSON.stringify(boundedSlicePack, null, 2)}\n`);
+    }
     return {
         schema: 'zj-loop.consumer_adapter_result.v1',
         route_id: 'roadmap-sliced-development',
@@ -275,13 +402,19 @@ async function runRoadmapActivationToContractPlan(input) {
                 path: artifactPath,
                 kind: 'contract-plan',
                 schema: 'zj-loop.roadmap_activation_contract_plan.v1',
-            }],
+            }, ...(boundedSlicePackPath === undefined ? [] : [{
+                    path: boundedSlicePackPath,
+                    kind: 'bounded-slice-pack',
+                    schema: 'zj-loop.roadmap_bounded_slice_pack.v1',
+                }])],
         repairs_applied: repairsApplied,
         live_side_effects: {
             attempted: false,
             reason: 'review-artifact runner only',
         },
-        next_steps: contractPlan.nextSteps,
+        next_steps: boundedSlicePack === undefined
+            ? contractPlan.nextSteps
+            : [...contractPlan.nextSteps, ...boundedSlicePack.next_steps],
     };
 }
 function buildReviewContract(input) {
@@ -356,6 +489,10 @@ function recordPayload(value) {
 }
 function stringPayload(value) {
     return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+function numberPayload(value) {
+    const number = Number(value);
+    return Number.isInteger(number) && number > 0 ? number : undefined;
 }
 function repairFromSignalId(signalId, repairsApplied) {
     repairsApplied.push({

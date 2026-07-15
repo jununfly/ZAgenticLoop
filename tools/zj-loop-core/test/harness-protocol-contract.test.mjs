@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import {
   renderLoopProtocolOutputMarkdown,
   recordLoopRunMetrics,
+  evaluateLoopRunMetricsGate,
   runHarnessProtocolCli,
   buildHarnessRunStateRecord,
   findHarnessResumeEnvelope,
@@ -117,6 +118,13 @@ test('loop protocol input normalizer autofills low-risk fields and returns repai
     'payload.review_artifact_target',
   ]);
   assert.equal(repair.protocol_repair_request.next_command_hint, 'Provide a complete harness input envelope and resume with the included resume_envelope.');
+  assert.equal(repair.protocol_repair_request.repair_location, 'protocol-input');
+  assert.deepEqual(repair.protocol_repair_request.next_action, {
+    type: 'resume_loop',
+    target: `protocol-repair:${repair.protocol_repair_request.resume_envelope.resume_id}`,
+    label: 'Repair protocol input and resume',
+  });
+  assert.equal(repair.protocol_repair_request.confirmation_required, false);
 });
 
 test('loop protocol output accepts canonical JSON and rejects natural language commands', () => {
@@ -447,6 +455,33 @@ test('run metrics recorder summarizes structured harness outputs deterministical
   assert.equal(metrics.signal_to_review_artifact_completed, true);
   assert.deepEqual(metrics.surfaces, ['github-issue', 'github-pr']);
   assert.equal(metrics.location_switch_count, 1);
+  assert.deepEqual(evaluateLoopRunMetricsGate(metrics), {
+    schema: 'zj-loop.run_metrics_gate.v1',
+    status: 'pass',
+    violations: [],
+  });
+});
+
+test('run metrics gate rejects confirmations without a stopped resume boundary', () => {
+  const metrics = recordLoopRunMetrics({
+    run_id: 'invalid-confirmation',
+    outputs: [harnessOutput({
+      machine_envelope: {
+        status: 'in_progress',
+        run_id: 'invalid-confirmation',
+        completed_steps: [],
+        next_action: { type: 'request_confirmation', target: 'terminal', label: 'Confirm' },
+        evidence: [],
+        artifacts: [],
+      },
+    })],
+  });
+  assert.equal(metrics.unnecessary_confirmation_count, 1);
+  assert.deepEqual(evaluateLoopRunMetricsGate(metrics), {
+    schema: 'zj-loop.run_metrics_gate.v1',
+    status: 'fail',
+    violations: ['unnecessary-confirmation'],
+  });
 });
 
 test('harness run state records expose deterministic resume lookup and local storage paths', () => {

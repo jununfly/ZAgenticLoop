@@ -333,6 +333,76 @@ test('listRoutes normalizes enabled, disabled, side-effecting, and destructive r
   assert.equal(routes.find((route) => route.route_id === 'post-merge-roadmap-closeout')?.destructive, true);
 });
 
+test('parseRouteTable preserves a valid completion target for each adapter', () => {
+  const table = parseRouteTable(`schemaVersion: 1
+kind: zj-loop-route-table
+metadata:
+  completion_target:
+    id: automation-first-product
+    schema_version: 1
+routes:
+  - route_id: manual-smoke-report
+    enabled: true
+    request_kind: report-only
+    consumer: manual-smoke
+    consumer_kind: report-consumer
+    execution:
+      mode: report-only
+      side_effect_level: evidence
+      completion_forms: [report-evidence]
+    maturity:
+      protocol: dogfooded
+      runner: dogfooded
+    capabilities:
+      scopes: [manual-smoke]
+      verifiers: [workflow-summary]
+      max_side_effect_level: evidence
+    provider_support:
+      github:
+        status: dry-run-supported
+        evidence: [template:zj-loop-route-table.yaml.template]
+      gitlab:
+        status: dry-run-supported
+        evidence: [template:zj-loop-route-table.yaml.template]
+    completion_target:
+      adapters:
+        github:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
+        workspace:
+          applicability: applicable
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
+`);
+
+  assert.equal(table.metadata?.completion_target?.id, 'automation-first-product');
+  assert.equal(table.routes?.[0]?.completion_target?.adapters?.workspace?.applicability, 'applicable');
+});
+
+test('parseRouteTable rejects malformed completion target adapter declarations', () => {
+  assert.throws(
+    () => parseRouteTable(`schemaVersion: 1
+kind: zj-loop-route-table
+metadata:
+  completion_target:
+    schema_version: 1
+routes:
+  - route_id: manual-smoke-report
+    provider_support:
+      workspace:
+        status: live-supported
+    completion_target:
+      adapters:
+        workspace:
+          applicability: maybe
+          requirement: required
+          signal_initiation_mode: explicit-on-demand
+`),
+    /completion_target\.id|provider_support\.workspace|applicability/,
+  );
+});
+
 test('buildRouteDecision denies disabled route and allows enabled report route', () => {
   const table = parseRouteTable(ROUTE_TABLE);
   assert.equal(buildRouteDecision({ table, selector: 'ci-sweeper' }).allowed, false);

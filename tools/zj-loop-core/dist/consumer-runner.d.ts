@@ -28,6 +28,10 @@ export type ConsumerRunPlan = {
         errors: string[];
         warnings: string[];
     };
+    confirmation?: {
+        required: boolean;
+        phrase: string | null;
+    };
 };
 export declare function buildConsumerRunPlan(input: {
     root: string;

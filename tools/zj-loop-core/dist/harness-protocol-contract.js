@@ -197,6 +197,7 @@ export function recordLoopRunMetrics(input) {
     const surfaces = [];
     let humanHandoffCount = 0;
     let ambiguousNextSteps = 0;
+    let unnecessaryConfirmations = 0;
     let structuredStopSignals = 0;
     let postMergeCloseoutEvidenceCount = 0;
     let hasReviewArtifact = false;
@@ -206,8 +207,12 @@ export function recordLoopRunMetrics(input) {
             throw new Error(`Invalid loop protocol output: ${validation.errors.join(', ')}`);
         }
         const envelope = output.machine_envelope;
-        if (envelope.next_action.type === 'request_confirmation')
+        if (envelope.next_action.type === 'request_confirmation') {
             humanHandoffCount++;
+            if (envelope.status !== 'stopped' || envelope.stop_signal === undefined || envelope.resume === undefined) {
+                unnecessaryConfirmations++;
+            }
+        }
         if (envelope.stop_signal !== undefined)
             structuredStopSignals++;
         if (!envelope.next_action.type || !envelope.next_action.target || !envelope.next_action.label) {
@@ -230,12 +235,26 @@ export function recordLoopRunMetrics(input) {
         run_id: input.run_id,
         human_handoff_count: humanHandoffCount,
         location_switch_count: Math.max(0, surfaces.length - 1),
-        unnecessary_confirmation_count: 0,
+        unnecessary_confirmation_count: unnecessaryConfirmations,
         ambiguous_natural_language_next_step_count: ambiguousNextSteps,
         structured_stop_signal_count: structuredStopSignals,
         signal_to_review_artifact_completed: hasReviewArtifact,
         post_merge_closeout_evidence_count: postMergeCloseoutEvidenceCount,
         surfaces,
+    };
+}
+export function evaluateLoopRunMetricsGate(metrics) {
+    const violations = [];
+    if (metrics.ambiguous_natural_language_next_step_count > 0) {
+        violations.push('ambiguous-natural-language-next-step');
+    }
+    if (metrics.unnecessary_confirmation_count > 0) {
+        violations.push('unnecessary-confirmation');
+    }
+    return {
+        schema: 'zj-loop.run_metrics_gate.v1',
+        status: violations.length === 0 ? 'pass' : 'fail',
+        violations,
     };
 }
 export function buildHarnessRunStateRecord(input) {
@@ -314,6 +333,7 @@ function autofillPayloadField(payload, field, value, autofillAttempted) {
     }
 }
 function buildProtocolRepairRequest(input) {
+    const resumeId = `protocol-repair-${stableHash(input.input)}`;
     return {
         missing_fields: input.missingFields,
         invalid_fields: input.invalidFields,
@@ -329,8 +349,15 @@ function buildProtocolRepairRequest(input) {
             'repo',
         ],
         required_human_input: input.missingFields,
+        repair_location: 'protocol-input',
+        confirmation_required: false,
+        next_action: {
+            type: 'resume_loop',
+            target: `protocol-repair:${resumeId}`,
+            label: 'Repair protocol input and resume',
+        },
         resume_envelope: {
-            resume_id: `protocol-repair-${stableHash(input.input)}`,
+            resume_id: resumeId,
             original_input: input.input,
             next_safe_step: 'repair_protocol_input',
         },

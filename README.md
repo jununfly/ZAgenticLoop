@@ -4,7 +4,7 @@ ZAgenticLoop is a practical reference for **Agentic Loop Working**: designing th
 
 It gives you a method, production patterns, starter kits, and small CLIs for moving from ad-hoc prompting to repeatable loops across Grok, Claude Code, Codex, Cursor, OpenClaw, Windsurf, and GitHub Actions.
 
-**Start here:** [Quickstart](docs/QUICKSTART.md) · [Codex Harness](docs/codex-harness.md) · [Pattern picker](docs/pattern-picker.md) · [User-project install-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Architecture](docs/designs/architecture.md) · [Route Table Architecture](docs/designs/route-table-architecture.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Release playbook](docs/RELEASE.md)
+**Start here:** [Quickstart](docs/QUICKSTART.md) · [Codex Harness](docs/codex-harness.md) · [Pattern picker](docs/pattern-picker.md) · [User-project install-ready bundle](docs/designs/user-project-execution-ready-bundle.md) · [Architecture](docs/designs/architecture.md) · [Completion alignment target](docs/designs/completion-alignment-architecture.md) · [Route Table Architecture](docs/designs/route-table-architecture.md) · [Dogfood reference case](docs/designs/dogfood-reference-case.md) · [Release playbook](docs/RELEASE.md)
 
 ## What's New In This Release
 
@@ -74,6 +74,7 @@ The larger architecture docs are meant to answer different questions:
 | How should issue and daily triage divide discovery, recommendation, and side effects? | [Triage Architecture](docs/designs/triage-architecture.md) |
 | What separates a route being installed, dogfood-verified, execution-ready, or live? | [Route Consumer Execution Architecture](docs/designs/route-consumer-execution-architecture.md) |
 | How do GitHub and GitLab adapters share protocol while keeping platform semantics clear? | [Provider Adapter Parity Architecture](docs/designs/provider-adapter-parity-architecture.md) |
+| What must pass before a route, installation, or release can be called complete across GitHub, GitLab, and the no-provider Workspace Adapter path? | [Completion Alignment Architecture](docs/designs/completion-alignment-architecture.md) |
 
 The important boundary: **readiness is not authority**. Readiness says the repo
 has the structure and evidence to run a loop. Authority is granted by Route

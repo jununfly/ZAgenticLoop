@@ -14,6 +14,11 @@ friction, lower cognitive load, better evidence, and clearer stop conditions.
 Principles here should guide roadmap design, route behavior, consumer runner
 semantics, documentation, and default user experience.
 
+Architecture readiness and user experience readiness are paired completion
+criteria, not competing priorities. The durable design rule and its execution
+implications live in
+[Architecture And Experience Alignment](../designs/architecture.md#architecture-and-experience-alignment).
+
 ## Principle 1: Default Toward Automated Loops
 
 ZAgenticLoop should make fully automated loop execution the default product

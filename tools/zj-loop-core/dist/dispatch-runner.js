@@ -5,6 +5,8 @@ import { buildConsumerRunPlan } from './consumer-runner.js';
 import { runConsumerLiveSideEffects, runConsumerToReviewArtifact } from './consumer-adapter.js';
 import { evaluateRuntimePreflight } from './preflight.js';
 import { findRoute, loadRouteTable } from './route.js';
+import { writeWorkspaceRouteDecision } from './workspace-route-decision.js';
+import { buildHumanHandoff } from './human-handoff.js';
 export async function readSignalEnvelope(input) {
     return validateSignalEnvelope(JSON.parse(await readFile(input.path, 'utf8')));
 }
@@ -41,18 +43,18 @@ export async function dispatchSignal(input) {
     const storagePath = getOrchestrationPath(orchestrationId);
     const existing = await readExistingOrchestration({ root, storagePath });
     if (existing && mode === 'resume') {
-        return {
+        return withAutomaticProgressionTrace({
             ...existing,
             status: 'resume',
             resumes: existing.orchestration_id,
             updated_at: now,
-        };
+        });
     }
     if (existing && mode === 'execute') {
         const route = await loadRouteStatus(root, existing.consumer_run_plan.route_id);
         const preflightResult = evaluateRuntimePreflight({
             route,
-            executionLayer: 'live-side-effect',
+            executionLayer: input.signal.provider === 'none' ? 'review-artifact' : 'live-side-effect',
             signal: input.signal,
             runtime: {
                 actorRole: actorRoleFromEnv(input.env ?? process.env),
@@ -80,6 +82,9 @@ export async function dispatchSignal(input) {
                         reason: preflightResult.stop_signal.reason,
                         next_steps: preflightResult.stop_signal.next_steps,
                     }
+                    : null,
+                human_handoff: preflightResult.stop_signal
+                    ? buildHandoff({ orchestrationId: existing.orchestration_id, preflightResult })
                     : null,
             };
             await writeOrchestrationEnvelope({ root, envelope: updated });
@@ -111,6 +116,9 @@ export async function dispatchSignal(input) {
             },
             stop_signal: status === 'hard_stopped'
                 ? buildStopSignal({ consumerRunPlan: existing.consumer_run_plan, consumerAdapterResult })
+                : null,
+            human_handoff: status === 'hard_stopped'
+                ? buildHandoff({ orchestrationId: existing.orchestration_id, consumerAdapterResult })
                 : null,
         };
         await writeOrchestrationEnvelope({ root, envelope: updated });
@@ -172,6 +180,7 @@ export async function dispatchSignal(input) {
                 reason: 'no closeout required before a review artifact exists',
             },
             stop_signal: buildStopSignal({ consumerRunPlan, consumerAdapterResult }),
+            human_handoff: buildHandoff({ orchestrationId, consumerAdapterResult }),
             storage: {
                 path: storagePath,
             },
@@ -180,12 +189,12 @@ export async function dispatchSignal(input) {
         return envelope;
     }
     if (existing && mode !== 'resume') {
-        return {
+        return withAutomaticProgressionTrace({
             ...existing,
             status: 'duplicate',
             duplicate_of: existing.orchestration_id,
             updated_at: now,
-        };
+        });
     }
     const consumerRunPlan = await buildConsumerRunPlan({
         root,
@@ -202,9 +211,21 @@ export async function dispatchSignal(input) {
             workUnitsRequested: 1,
         },
     });
+    const workspaceAdapter = input.signal.provider === 'none'
+        ? await writeWorkspaceRouteDecision({
+            root,
+            orchestrationId,
+            signal: input.signal,
+            consumerRunPlan,
+            now,
+        })
+        : undefined;
     let status = statusForPlan({ mode, consumerRunPlan });
     if (preflightResult.status === 'hard_stop') {
         status = 'hard_stopped';
+    }
+    if (workspaceAdapter && status === 'executed_to_review_artifact') {
+        status = 'planned';
     }
     const consumerAdapterResult = status === 'executed_to_review_artifact'
         ? await runConsumerToReviewArtifact({
@@ -230,8 +251,15 @@ export async function dispatchSignal(input) {
         carrier_plan: buildCarrierPlan(input.signal),
         consumer_run_plan: consumerRunPlan,
         preflight_result: preflightResult,
-        review_artifact: buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
+        review_artifact: workspaceAdapter
+            ? {
+                kind: 'local-activation',
+                path: workspaceAdapter.carrier.path,
+                description: 'Workspace local activation and route-decision evidence were persisted; a branch, patch, or changed-file review artifact is the next executor boundary.',
+            }
+            : buildReviewArtifact(consumerRunPlan, consumerAdapterResult),
         ...(consumerAdapterResult === undefined ? {} : { consumer_adapter_result: consumerAdapterResult }),
+        ...(workspaceAdapter === undefined ? {} : { workspace_adapter: workspaceAdapter }),
         closeout_hint: {
             required: status === 'executed_to_review_artifact',
             reason: status === 'executed_to_review_artifact'
@@ -241,12 +269,30 @@ export async function dispatchSignal(input) {
         stop_signal: status === 'hard_stopped'
             ? buildStopSignal({ consumerRunPlan, consumerAdapterResult, preflightResult })
             : null,
+        human_handoff: status === 'hard_stopped'
+            ? buildHandoff({ orchestrationId, preflightResult, consumerAdapterResult, consumerRunPlan })
+            : null,
         storage: {
             path: storagePath,
         },
     };
     await writeOrchestrationEnvelope({ root, envelope });
     return envelope;
+}
+export async function resumeOrchestration(input) {
+    const orchestrationId = sanitizeId(input.orchestrationId);
+    const existing = await readExistingOrchestration({
+        root: input.root ?? '.',
+        storagePath: getOrchestrationPath(orchestrationId),
+    });
+    if (!existing)
+        throw new Error(`Unknown orchestration: ${input.orchestrationId}`);
+    return withAutomaticProgressionTrace({
+        ...existing,
+        status: 'resume',
+        resumes: existing.orchestration_id,
+        updated_at: input.now ?? new Date().toISOString(),
+    });
 }
 async function loadRouteStatus(root, routeId) {
     return findRoute(await loadRouteTable(root), routeId);
@@ -268,9 +314,84 @@ export function getOrchestrationPath(orchestrationId) {
     return `zj-loop/orchestrations/${sanitizeId(orchestrationId)}.json`;
 }
 export async function writeOrchestrationEnvelope(input) {
-    const absolutePath = path.resolve(input.root ?? '.', input.envelope.storage.path);
+    const envelope = Object.assign(input.envelope, withAutomaticProgressionTrace(input.envelope));
+    const absolutePath = path.resolve(input.root ?? '.', envelope.storage.path);
     await mkdir(path.dirname(absolutePath), { recursive: true });
-    await writeFile(absolutePath, `${JSON.stringify(input.envelope, null, 2)}\n`);
+    await writeFile(absolutePath, `${JSON.stringify(envelope, null, 2)}\n`);
+}
+export function withAutomaticProgressionTrace(envelope) {
+    const transitions = [{
+            sequence: 1,
+            from: 'signal_received',
+            to: 'route_decided',
+            actor: 'dispatcher',
+            reason: `resolved ${envelope.signal.intent} signal to ${envelope.consumer_run_plan.route_id}`,
+        }];
+    if (envelope.status === 'duplicate') {
+        transitions.push({
+            sequence: 2,
+            from: 'route_decided',
+            to: 'duplicate_detected',
+            actor: 'dispatcher',
+            reason: `reused existing orchestration ${envelope.duplicate_of ?? envelope.orchestration_id}`,
+        });
+        return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'duplicate', transitions } };
+    }
+    if (envelope.status === 'resume') {
+        transitions.push({
+            sequence: 2,
+            from: 'route_decided',
+            to: 'resume_available',
+            actor: 'dispatcher',
+            reason: `returned replayable orchestration ${envelope.resumes ?? envelope.orchestration_id}`,
+        });
+        return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'resume', transitions } };
+    }
+    const preflightPassed = envelope.preflight_result.status !== 'hard_stop';
+    transitions.push({
+        sequence: 2,
+        from: 'route_decided',
+        to: preflightPassed ? 'preflight_passed' : 'hard_stop',
+        actor: 'dispatcher',
+        reason: preflightPassed
+            ? `runtime preflight ${envelope.preflight_result.status}`
+            : envelope.preflight_result.stop_signal?.reason ?? 'runtime preflight hard stopped',
+    });
+    if (!preflightPassed) {
+        return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'hard_stop', transitions } };
+    }
+    if (envelope.status === 'hard_stopped') {
+        transitions.push({
+            sequence: 3,
+            from: 'preflight_passed',
+            to: 'hard_stop',
+            actor: envelope.consumer_adapter_result ? 'consumer_adapter' : 'dispatcher',
+            reason: envelope.stop_signal?.reason ?? envelope.review_artifact.description,
+        });
+        return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'hard_stop', transitions } };
+    }
+    if (envelope.status === 'executed_to_review_artifact') {
+        transitions.push({
+            sequence: 3,
+            from: 'preflight_passed',
+            to: 'review_artifact',
+            actor: envelope.consumer_adapter_result ? 'consumer_adapter' : 'dispatcher',
+            reason: envelope.review_artifact.description,
+            evidence: {
+                kind: envelope.review_artifact.kind,
+                ...(envelope.review_artifact.path === undefined ? {} : { path: envelope.review_artifact.path }),
+            },
+        });
+        return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'review_artifact', transitions } };
+    }
+    transitions.push({
+        sequence: 3,
+        from: 'preflight_passed',
+        to: 'planned',
+        actor: 'dispatcher',
+        reason: envelope.consumer_run_plan.reason,
+    });
+    return { ...envelope, progression_trace: { schema: 'zj-loop.automatic_progression_trace.v1', outcome: 'planned', transitions } };
 }
 function resolveRouteForSignal(signal) {
     const explicitRoute = signal.payload.route_id;
@@ -344,7 +465,7 @@ function buildReviewArtifact(plan, consumerAdapterResult) {
     }
     if (adapterArtifact) {
         return {
-            kind: 'structured-evidence',
+            kind: adapterArtifact.kind === 'workspace-patch' ? 'workspace-patch' : 'structured-evidence',
             path: adapterArtifact.path,
             description: `${adapterArtifact.kind} review artifact generated by ConsumerAdapter.`,
         };
@@ -385,6 +506,25 @@ function buildStopSignal(input) {
         reason: input.consumerRunPlan.reason,
         next_steps: input.consumerRunPlan.next_steps,
     };
+}
+function buildHandoff(input) {
+    const preflightStop = input.preflightResult?.stop_signal;
+    const consumerStop = input.consumerAdapterResult?.stop_signal;
+    return buildHumanHandoff({
+        orchestrationId: input.orchestrationId,
+        stopCode: preflightStop?.stop_code,
+        reason: preflightStop?.reason ?? consumerStop?.reason ?? input.consumerRunPlan?.reason ?? 'runtime hard stopped',
+        requiredPhrase: input.consumerRunPlan?.confirmation?.required
+            ? input.consumerRunPlan.confirmation.phrase ?? undefined
+            : undefined,
+        confirmationLocation: input.consumerRunPlan?.confirmation?.required ? 'terminal-command' : undefined,
+        sideEffects: input.consumerRunPlan?.confirmation?.required
+            ? [`Enable ${input.consumerRunPlan.route_id} for its declared ${input.consumerRunPlan.execution_mode} side effects.`]
+            : undefined,
+        whyRequired: input.consumerRunPlan?.confirmation?.required
+            ? `Route Table authorization must explicitly enable ${input.consumerRunPlan.route_id} before its declared side effects can run.`
+            : undefined,
+    });
 }
 function requireSubject(value) {
     if (!isRecord(value))
