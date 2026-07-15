@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 11:56:37
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 15:52:37
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,7 +40,5 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-3-1. GitLab issue-backlog scheduled signal and report evidence
-
-GitLab target is API-authenticated but canonical bundle is manual-only and does not scan backlog; target has an unversioned inline prototype. Implement a deterministic core reporter, wire scheduled/manual template rules, then upgrade target with local packed packages for live evidence.
+### 当前施工：1-5-3-1-5-2-1. Owned GitLab schedule probe lifecycle state and guarded cleanup
 <!-- ROADMAP_SECTION_END -->

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, access, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import YAML from 'yaml';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -446,6 +447,10 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     const root = await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8');
     assert.match(root, /zj-loop-generated: true/);
     assert.match(root, /zj-loop-template-id: gitlab-ci\/zj-loop-root/);
+    for (const fragment of fragments) {
+      const body = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', fragment), 'utf8');
+      assert.doesNotThrow(() => YAML.parse(body), `generated ${fragment} must parse as YAML`);
+    }
     assert.match(root, /zj-loop-template-hash: [a-f0-9]{16}/);
     assert.match(root, /stages:\n  - "zj-loop"/);
     for (const fragment of fragments) {

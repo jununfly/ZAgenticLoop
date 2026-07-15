@@ -18,6 +18,8 @@ export * from './changelog-drafter-runner.js';
 export * from './issue-triage-action-runner.js';
 export * from './issue-triage-transition-runner.js';
 export * from './issue-backlog-runner.js';
+export * from './schedule-health-contract.js';
+export * from './schedule-probe-runner.js';
 export * from './roadmap-activation-runner.js';
 export * from './prd-handoff-runner.js';
 export * from './harness-protocol-contract.js';

@@ -20,7 +20,8 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > route-decision.json
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > consumer-plan.json || true
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-issue-backlog scan --provider gitlab --project "${CI_PROJECT_PATH}" --api-url "${CI_API_V4_URL}" --pipeline-url "${CI_PIPELINE_URL}" --limit "${ZJ_LOOP_ISSUE_TRIAGE_LIMIT}" --out issue-recommendations.json
-    - node -e "const fs = require('fs'); const recommendations = JSON.parse(fs.readFileSync('issue-recommendations.json', 'utf8')); const artifact = { schema: 'zj-loop.transition_requests.v1', provider: 'gitlab', route: 'issue-triage-transition', source: 'gitlab-ci', candidate_count: 0, transitions: [], note: 'request-only transition evidence is produced after a confirmed recommendation payload is supplied' }; fs.writeFileSync('transition-requests.json', JSON.stringify(artifact, null, 2));"
+    - >-
+      node -e "const fs = require('fs'); const recommendations = JSON.parse(fs.readFileSync('issue-recommendations.json', 'utf8')); const artifact = { schema: 'zj-loop.transition_requests.v1', provider: 'gitlab', route: 'issue-triage-transition', source: 'gitlab-ci', candidate_count: 0, transitions: [], note: 'request-only transition evidence is produced after a confirmed recommendation payload is supplied' }; fs.writeFileSync('transition-requests.json', JSON.stringify(artifact, null, 2));"
     - cat route-decision.json
     - cat consumer-plan.json
     - cat issue-recommendations.json
