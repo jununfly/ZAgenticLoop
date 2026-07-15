@@ -1012,6 +1012,23 @@ test('zj-loop-dispatch execute mode records missing token as resumable activatio
     assert.equal(executed.preflight_result.stop_signal.stop_code, 'credential-missing');
     assert.equal(executed.stop_signal.reason, 'Missing required credential: GITHUB_TOKEN.');
     assert.equal(executed.consumer_adapter_result.adapter_status, 'executed_to_review_artifact');
+    assert.deepEqual(executed.human_handoff, {
+      schema: 'zj-loop.human_handoff.v1',
+      confirmation_location: 'not-required',
+      required_phrase: null,
+      side_effects: [],
+      why_required: 'No human confirmation is required; provide the missing credential before retrying live side effects.',
+      resume_command: [
+        'zj-loop-dispatch',
+        '--root',
+        '.',
+        '--orchestration',
+        executed.orchestration_id,
+        '--mode',
+        'resume',
+      ],
+      retry_policy: 'resume-after-remediation',
+    });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -1233,6 +1250,46 @@ test('zj-loop-dispatch hard stops roadmap activation when activation comment URL
       reason: 'hard stop before live side effects',
     });
     assert.equal(output.stop_signal.reason, 'missing-activation-request-comment-url');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('zj-loop-dispatch makes a disabled side-effect route confirmation boundary machine-readable', async () => {
+  const dir = await setupProject();
+  try {
+    const tablePath = path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml');
+    const table = await readFile(tablePath, 'utf8');
+    await writeFile(tablePath, table.replace(
+      'route_id: "roadmap-sliced-development"\n    enabled: true',
+      'route_id: "roadmap-sliced-development"\n    enabled: false',
+    ));
+    const output = await dispatchSignal({
+      root: dir,
+      signal: {
+        schema: 'zj-loop.signal.v1',
+        signal_id: 'sig-disabled-roadmap-route',
+        source: 'github_issue',
+        provider: 'github',
+        subject: { kind: 'issue', id: 'disabled-route' },
+        intent: 'activate_roadmap',
+        payload: {},
+      },
+      now: '2026-07-15T00:00:00.000Z',
+    });
+
+    assert.equal(output.status, 'hard_stopped');
+    assert.deepEqual(output.human_handoff, {
+      schema: 'zj-loop.human_handoff.v1',
+      confirmation_location: 'terminal-command',
+      required_phrase: 'enable roadmap-activation side effects',
+      side_effects: ['Enable roadmap-sliced-development for its declared request-only side effects.'],
+      why_required: 'Route Table authorization must explicitly enable roadmap-sliced-development before its declared side effects can run.',
+      resume_command: [
+        'zj-loop-dispatch', '--root', '.', '--orchestration', output.orchestration_id, '--mode', 'resume',
+      ],
+      retry_policy: 'resume-after-remediation',
+    });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

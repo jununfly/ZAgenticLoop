@@ -1,4 +1,4 @@
-import { buildRouteDecision, findRoute, loadRouteTable, validateRouteExecutionContract, } from './route.js';
+import { buildRouteDecision, expectedConfirmationPhrase, findRoute, loadRouteTable, validateRouteExecutionContract, } from './route.js';
 export async function buildConsumerRunPlan(input) {
     const table = await loadRouteTable(input.root);
     const route = findRoute(table, input.selector);
@@ -36,6 +36,12 @@ export function buildConsumerRunPlanFromRoute(input) {
         route_specific_artifacts: routeSpecificArtifacts,
         route_decision: input.routeDecision,
         validation,
+        confirmation: {
+            required: input.route.side_effecting && !input.route.enabled,
+            phrase: input.route.side_effecting && !input.route.enabled
+                ? expectedConfirmationPhrase(input.route)
+                : null,
+        },
     });
     if (!input.routeDecision.allowed) {
         return blocked('route disabled by Route Table', [

@@ -122,6 +122,22 @@ runtime state machine. This gives `automatic_progression` a replayable proof
 that an accepted signal advanced through Route Decision and preflight instead
 of relying on narrative logs.
 
+### Machine-Readable Human Handoff
+
+Every dispatcher hard stop emits `zj-loop.human_handoff.v1` beside its stop
+signal. The fixed fields are `confirmation_location`, `required_phrase`,
+`side_effects`, `why_required`, `resume_command`, and `retry_policy`. This is
+the sole handoff contract that Codex Harness and deterministic automation
+should consume; prose `next_steps` remains display guidance only.
+
+The contract distinguishes a remediation stop from a confirmation boundary.
+For example, a missing provider credential sets
+`confirmation_location: not-required` and `required_phrase: null`: it needs a
+configuration repair, not a human approval. A disabled side-effect route sets
+the explicit terminal-command confirmation location, fixed enable phrase, and
+declared side-effect scope. Both forms include the canonical orchestration-id
+resume command so routine recovery does not require reconstructing the signal.
+
 ## Evidence Rules
 
 Evidence has four distinct roles:

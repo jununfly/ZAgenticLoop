@@ -1,5 +1,6 @@
 import {
   buildRouteDecision,
+  expectedConfirmationPhrase,
   findRoute,
   loadRouteTable,
   RouteDecision,
@@ -36,6 +37,10 @@ export type ConsumerRunPlan = {
     valid: boolean;
     errors: string[];
     warnings: string[];
+  };
+  confirmation?: {
+    required: boolean;
+    phrase: string | null;
   };
 };
 
@@ -85,6 +90,12 @@ export function buildConsumerRunPlanFromRoute(input: {
     route_specific_artifacts: routeSpecificArtifacts,
     route_decision: input.routeDecision,
     validation,
+    confirmation: {
+      required: input.route.side_effecting && !input.route.enabled,
+      phrase: input.route.side_effecting && !input.route.enabled
+        ? expectedConfirmationPhrase(input.route)
+        : null,
+    },
   });
 
   if (!input.routeDecision.allowed) {

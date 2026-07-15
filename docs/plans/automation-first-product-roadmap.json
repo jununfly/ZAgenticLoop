@@ -336,12 +336,12 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "Machine-readable human handoff location and confirmation contract",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": "Canonical dispatcher resume is now zj-loop-dispatch --root <dir> --orchestration <id> --mode resume. It resumes persisted orchestration context without requiring the original signal file or recomputing a duplicate key. Remaining work: emit the full machine-readable human handoff envelope from hard stops and confirmation boundaries."
+      "notes": "Dispatcher hard stops now emit zj-loop.human_handoff.v1 with confirmation_location, required_phrase, side_effects, why_required, canonical orchestration-id resume_command, and retry_policy. Credential remediation is explicitly not a human confirmation; disabled side-effect routes carry the fixed enable phrase and terminal-command location. Covered by dispatcher integration tests."
     },
     "1-4-2": {
       "id": "1-4-2",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 08:37:00",
+    "updated": "2026-07-15 08:46:16",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

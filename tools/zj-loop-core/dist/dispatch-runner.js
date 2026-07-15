@@ -6,6 +6,7 @@ import { runConsumerLiveSideEffects, runConsumerToReviewArtifact } from './consu
 import { evaluateRuntimePreflight } from './preflight.js';
 import { findRoute, loadRouteTable } from './route.js';
 import { writeWorkspaceRouteDecision } from './workspace-route-decision.js';
+import { buildHumanHandoff } from './human-handoff.js';
 export async function readSignalEnvelope(input) {
     return validateSignalEnvelope(JSON.parse(await readFile(input.path, 'utf8')));
 }
@@ -82,6 +83,9 @@ export async function dispatchSignal(input) {
                         next_steps: preflightResult.stop_signal.next_steps,
                     }
                     : null,
+                human_handoff: preflightResult.stop_signal
+                    ? buildHandoff({ orchestrationId: existing.orchestration_id, preflightResult })
+                    : null,
             };
             await writeOrchestrationEnvelope({ root, envelope: updated });
             return updated;
@@ -112,6 +116,9 @@ export async function dispatchSignal(input) {
             },
             stop_signal: status === 'hard_stopped'
                 ? buildStopSignal({ consumerRunPlan: existing.consumer_run_plan, consumerAdapterResult })
+                : null,
+            human_handoff: status === 'hard_stopped'
+                ? buildHandoff({ orchestrationId: existing.orchestration_id, consumerAdapterResult })
                 : null,
         };
         await writeOrchestrationEnvelope({ root, envelope: updated });
@@ -173,6 +180,7 @@ export async function dispatchSignal(input) {
                 reason: 'no closeout required before a review artifact exists',
             },
             stop_signal: buildStopSignal({ consumerRunPlan, consumerAdapterResult }),
+            human_handoff: buildHandoff({ orchestrationId, consumerAdapterResult }),
             storage: {
                 path: storagePath,
             },
@@ -260,6 +268,9 @@ export async function dispatchSignal(input) {
         },
         stop_signal: status === 'hard_stopped'
             ? buildStopSignal({ consumerRunPlan, consumerAdapterResult, preflightResult })
+            : null,
+        human_handoff: status === 'hard_stopped'
+            ? buildHandoff({ orchestrationId, preflightResult, consumerAdapterResult, consumerRunPlan })
             : null,
         storage: {
             path: storagePath,
@@ -495,6 +506,25 @@ function buildStopSignal(input) {
         reason: input.consumerRunPlan.reason,
         next_steps: input.consumerRunPlan.next_steps,
     };
+}
+function buildHandoff(input) {
+    const preflightStop = input.preflightResult?.stop_signal;
+    const consumerStop = input.consumerAdapterResult?.stop_signal;
+    return buildHumanHandoff({
+        orchestrationId: input.orchestrationId,
+        stopCode: preflightStop?.stop_code,
+        reason: preflightStop?.reason ?? consumerStop?.reason ?? input.consumerRunPlan?.reason ?? 'runtime hard stopped',
+        requiredPhrase: input.consumerRunPlan?.confirmation?.required
+            ? input.consumerRunPlan.confirmation.phrase ?? undefined
+            : undefined,
+        confirmationLocation: input.consumerRunPlan?.confirmation?.required ? 'terminal-command' : undefined,
+        sideEffects: input.consumerRunPlan?.confirmation?.required
+            ? [`Enable ${input.consumerRunPlan.route_id} for its declared ${input.consumerRunPlan.execution_mode} side effects.`]
+            : undefined,
+        whyRequired: input.consumerRunPlan?.confirmation?.required
+            ? `Route Table authorization must explicitly enable ${input.consumerRunPlan.route_id} before its declared side effects can run.`
+            : undefined,
+    });
 }
 function requireSubject(value) {
     if (!isRecord(value))
