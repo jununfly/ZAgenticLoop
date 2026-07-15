@@ -34,6 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Configure repair commit identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Install local core package dependencies
         if: ${{ startsWith(inputs.core_package, './') }}
         run: npm install --prefix "${{ inputs.core_package }}"
