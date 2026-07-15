@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 1eed38743554eace
+# zj-loop-template-hash: a59baf7e8b78985e
 
 name: ZJ Loop Dependency Sweeper
 
@@ -33,6 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Configure repair commit identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Install local core package dependencies
         if: ${{ startsWith(inputs.core_package, './') }}
