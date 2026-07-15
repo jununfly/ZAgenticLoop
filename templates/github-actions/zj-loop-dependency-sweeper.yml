@@ -45,6 +45,7 @@ jobs:
 
       - name: Dependency sweeper route evidence
         env:
+          GH_TOKEN: ${{ github.token }}
           ISSUE_FIX_REQUEST_JSON: ${{ inputs.issue_fix_request_json }}
           CONFIRM_LIVE_REPAIR: ${{ inputs.confirm_live_repair }}
           ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.7' }}

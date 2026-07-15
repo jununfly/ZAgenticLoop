@@ -233,6 +233,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(dependencySweeper, /confirm_live_repair/);
     assert.match(dependencySweeper, /core_package/);
     assert.match(dependencySweeper, /permissions:\n  contents: write/);
+    assert.match(dependencySweeper, /GH_TOKEN: \$\{\{ github\.token \}\}/);
     assert.match(dependencySweeper, /npm install --prefix/);
     assert.match(dependencySweeper, /git config user\.name "github-actions\[bot\]"/);
     assert.match(dependencySweeper, /git config user\.email "41898282\+github-actions\[bot\]@users\.noreply\.github\.com"/);
