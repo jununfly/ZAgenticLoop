@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 16:48:09
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 17:31:29
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,16 +40,10 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-3-1-5. GitLab target scheduled live evidence and escalation record
+### 当前施工：1-5-3-1-5-2-3. Target-project tarball rollout and owned scheduled artifact evidence
 
-Read-only GitLab configuration evidence checked 2026-07-15: schedule 957 is active, cron is 0 9 * * * Asia/Shanghai, next_run_at is 2026-07-16T09:03:00+08:00, and no source=schedule pipeline exists yet. This is not_due under the fixed 10-minute grace; do not classify it as a scheduler failure. GitLab project settings provide GITLAB_TOKEN to CI jobs, not to the local Codex shell. GitLab master pipeline 10496862 was created successfully with status manual after the YAML recovery, which confirms the full include parses; it is source=api and is not scheduled live evidence. Recheck after the due window for a source=schedule pipeline and issue-recommendations.json schema evidence.
+2026-07-15 ai-studio live dogfood: deployed fresh core/init tarballs to zjal-gitlab-yaml-folded-script-fix with runner tag jinkela-k8s-runner-jscs-05 and reachable internal Node image. Probe job 25926933 created owned schedule 959; GitLab consumed the schedule but produced no source=schedule pipeline before deadline. Artifact recorded scheduled-pipeline-missing with poll_errors=0, while guarded cleanup removed 959 and state recorded cleanup_outcome=cleaned. Existing schedule 957 was unchanged.
 
 **决策：**
-- Q: schedule-health 的真实运行窗口应以什么时间为准？ → 采用由 cron 推导的最近一次应执行窗口，加固定 10 分钟 grace；scheduled pipeline 必须晚于该窗口与 schedule.updated_at。 (GitLab next_run_at 在一次运行后会前移到未来，不能作为成功窗口的唯一依据。)
-
-**当前子树：**
-├── [x][Y+] 1-5-3-1-5-1. Cron-derived scheduled execution window contract and regression tests
-│   ... 2 more child nodes; run tree 1-5-3-1-5-1 --depth 2 for full view
-└── [ ][Y+] 1-5-3-1-5-2. Temporary owned GitLab schedule evidence and guarded cleanup
-    ... 3 more child nodes; run tree 1-5-3-1-5-2 --depth 2 for full view
+- Q: Probe CLI reports escalation but GitLab job is success → Treat this as a follow-up defect: scheduled-pipeline-missing must propagate a nonzero process exit or explicit workflow health failure after artifact upload. (The live artifact proved the current CLI exits 0 for an escalated result, which obscures the missing evidence in GitLab job status. Keep the artifact and guarded cleanup behavior, but add a deterministic failure mapping before accepting scheduled live evidence as complete.)
 <!-- ROADMAP_SECTION_END -->

@@ -1076,17 +1076,23 @@
     "1-5-3-1-5-2-3": {
       "id": "1-5-3-1-5-2-3",
       "label": "Target-project tarball rollout and owned scheduled artifact evidence",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Probe CLI reports escalation but GitLab job is success",
+          "answer": "Treat this as a follow-up defect: scheduled-pipeline-missing must propagate a nonzero process exit or explicit workflow health failure after artifact upload.",
+          "note": "The live artifact proved the current CLI exits 0 for an escalated result, which obscures the missing evidence in GitLab job status. Keep the artifact and guarded cleanup behavior, but add a deterministic failure mapping before accepting scheduled live evidence as complete."
+        }
+      ],
+      "notes": "2026-07-15 ai-studio live dogfood: deployed fresh core/init tarballs to zjal-gitlab-yaml-folded-script-fix with runner tag jinkela-k8s-runner-jscs-05 and reachable internal Node image. Probe job 25926933 created owned schedule 959; GitLab consumed the schedule but produced no source=schedule pipeline before deadline. Artifact recorded scheduled-pipeline-missing with poll_errors=0, while guarded cleanup removed 959 and state recorded cleanup_outcome=cleaned. Existing schedule 957 was unchanged."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 16:48:09",
+    "updated": "2026-07-15 17:31:29",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
