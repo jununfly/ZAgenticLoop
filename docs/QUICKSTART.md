@@ -39,14 +39,14 @@ first-run commands, warnings, and next steps.
 Ask ZAgenticLoop what should run first:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan
 ```
 
 Use targeted goals when the desired path is already clear:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal roadmap
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --goal roadmap
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --goal issue-backlog
 ```
 
 `zj-loop-first-run` is a deterministic guided setup, not a hidden executor. It
@@ -62,7 +62,7 @@ handle a signal later. It is policy, not a runtime queue.
 Inspect it before enabling side effects:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
 ```
 
 Enable only the route you intend to exercise. There is no aggregate bundle
@@ -70,8 +70,8 @@ enable command; fixed command arrays are recommendations, not blanket
 authorization.
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable roadmap-sliced-development
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable roadmap-sliced-development
 ```
 
 `zj-loop-init` installs and upgrades files. `zj-loop-first-run` plans. Real
@@ -114,8 +114,8 @@ For unpublished dogfood or internal validation, render a local package tarball
 as the GitLab core package source:
 
 ```bash
-npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz
-npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.6.tgz
+npx @jununfly/zj-loop-init . --add gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.7.tgz
+npx @jununfly/zj-loop-init . --upgrade gitlab-ci --gitlab-core-package ./zj-loop/vendor/jununfly-zj-loop-core-0.1.7.tgz
 ```
 
 If your GitLab project has a fixed stage list, render the generated jobs into an
@@ -215,14 +215,14 @@ Use the first-run command printed by `zj-loop-init` (pattern-specific). Week one
 For a bounded Codex run, use `zj-loop-run`:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD with roadmap sliced development"
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-run "Implement this PRD with roadmap sliced development"
 ```
 
 Replay recent runs without triggering side effects:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --format text
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --write-index zj-loop/evidence-index.json
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor --format text
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor --write-index zj-loop/evidence-index.json
 ```
 
 ### OpenClaw
@@ -251,7 +251,7 @@ npx @jununfly/zj-loop-audit . --suggest
 Then inspect Route Table status before enabling any consumer route:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
 ```
 
 Treat this output as the route selection menu. The `readiness` column separates
@@ -327,13 +327,13 @@ npx --yes --package @jununfly/zj-loop-core zj-loop-post-merge-closeout plan --js
 Enable side-effecting routes with a fixed confirmation phrase:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
 ```
 
 Disable is intentionally low friction:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable ci-sweeper
 ```
 
 Upgrade generated workflows intentionally when package pins or templates change:
@@ -367,7 +367,7 @@ Run the manual smoke job first. It should produce `route-decision.json`,
 creating issues, notes, branches, or MRs. Then inspect Route Table status:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
 ```
 
 GitLab generated jobs mirror the GitHub route families but use GitLab carrier

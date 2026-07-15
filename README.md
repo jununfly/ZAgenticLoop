@@ -46,9 +46,9 @@ being mistaken for GitHub repositories.
 | Add GitLab provider smoke/consumer jobs | `npx @jununfly/zj-loop-init . --add gitlab-ci` |
 | Choose the first install-ready user-project route | [User-project install-ready bundle](docs/designs/user-project-execution-ready-bundle.md) |
 | Run Codex with structured loop handoff, evidence, and stop signals | [Codex Harness](docs/codex-harness.md) |
-| Run a goal until the first review artifact or hard stop | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD"` |
-| Diagnose why recent loops stopped | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor` |
-| Plan the first automation-default run | `npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan` |
+| Run a goal until the first review artifact or hard stop | `npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-run "Implement this PRD"` |
+| Diagnose why recent loops stopped | `npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor` |
+| Plan the first automation-default run | `npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan` |
 | Estimate token spend before scheduling | `npx @jununfly/zj-loop-cost . --pattern daily-triage --level L1 --cadence 1d` |
 | Audit bounded goal readiness | `npx @jununfly/zj-goal-audit . --suggest` |
 | Integrate loop knowledge through MCP | [zj-loop-mcp-server](tools/zj-loop-mcp-server/) |
@@ -156,7 +156,7 @@ Route Table preservation, first-run commands, warnings, and next steps.
 2. Ask ZAgenticLoop what should run first:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan
 ```
 
 The first-run plan recommends a route, explains why, lists what can happen
@@ -164,8 +164,8 @@ automatically, and emits structured stop signals when the loop should not
 continue. Use targeted goals when you already know the desired path:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal roadmap
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-first-run plan --goal issue-backlog
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --goal roadmap
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-first-run plan --goal issue-backlog
 ```
 
 Use `--json` when wiring automation. The JSON output includes a `preconditions`
@@ -187,27 +187,27 @@ provider workflow.
 3. Inspect route status before enabling anything:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
 ```
 
 Enable only the one route you intend to exercise:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"
 ```
 
 Disable remains low-friction:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable roadmap-sliced-development
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable roadmap-sliced-development
 ```
 
 For a goal-oriented Codex path, use `zj-loop-run` instead of stopping at a
 plan:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-run "Implement this PRD with roadmap sliced development"
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-run "Implement this PRD with roadmap sliced development"
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor
 ```
 
 `zj-loop-run` writes replay state under `zj-loop/runs/` and returns a structured
@@ -217,16 +217,16 @@ classifies stop signals, prints JSON or human text, supports targeted replay,
 and does not trigger side effects by default:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --format text
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --orchestration orch_123
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --provider github --subject issue:123
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-doctor --write-index zj-loop/evidence-index.json
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor --format text
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor --orchestration orch_123
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor --provider github --subject issue:123
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-doctor --write-index zj-loop/evidence-index.json
 ```
 
 Replay the runtime gate without entering a consumer runner:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-preflight --route roadmap-sliced-development --execution-layer review-artifact --json
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-preflight --route roadmap-sliced-development --execution-layer review-artifact --json
 ```
 
 4. Check cost and readiness:
@@ -313,9 +313,9 @@ generated metadata. Run `ZJ Loop Smoke` first, then inspect Route Table status
 before enabling side-effecting routes:
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable ci-sweeper
 ```
 
 The first install-ready route set is request-backed:

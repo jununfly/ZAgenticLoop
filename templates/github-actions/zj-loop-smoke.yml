@@ -23,8 +23,8 @@ jobs:
 
       - name: Smoke route decision
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
-          npx --yes --package @jununfly/zj-loop-core@0.1.6 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
 
