@@ -512,12 +512,12 @@
     "1-5-2-1": {
       "id": "1-5-2-1",
       "label": "GitHub control and issue-triage live recovery evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-2",
       "children": [],
       "decisions": [],
-      "notes": "Control runs 29380641716 (Smoke) and 29380643447 (Issue Triage) succeeded. Recovery probe 29380702254 exposed a real false-success: published core 0.1.6 rejects --confirmation-mode in the generated workflow and || true hid it. Template/canonical workflow now use only the published fixed-phrase interface; generated bundle and provider parity gates pass. Needs push/merge then rerun before completion."
+      "notes": "GitHub control evidence: Smoke 29380641716 and Issue Triage 29380643447 succeeded. Recovery probe 29380702254 exposed published-CLI option drift, fixed in PR 118; follow-up 29381170623 exposed unsafe default fixture behavior, fixed fail-closed in PR 120. Final recovery probe 29381446480 succeeded with invalid-transition-request rejection before CLI or GitHub issue operations."
     },
     "1-5-2-2": {
       "id": "1-5-2-2",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 09:07:32",
+    "updated": "2026-07-15 09:24:05",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
