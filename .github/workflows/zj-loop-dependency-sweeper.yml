@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: bc73f0aff47e94ef
+# zj-loop-template-hash: 0649642e5729ff21
 
 name: ZJ Loop Dependency Sweeper
 
@@ -61,6 +61,7 @@ jobs:
               EXISTING_REPAIR_PR=""
               if [ -n "$REPAIR_BRANCH" ]; then
                 EXISTING_REPAIR_PR="$(gh pr list --head "$REPAIR_BRANCH" --base main --state open --json url --jq '.[0].url' 2>/dev/null || true)"
+                [ -n "$EXISTING_REPAIR_PR" ] || git fetch origin "$REPAIR_BRANCH" || true
               fi
               args=(
                 zj-loop-dependency-sweeper live-repair

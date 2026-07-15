@@ -235,6 +235,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
     assert.match(dependencySweeper, /permissions:\n  contents: write/);
     assert.match(dependencySweeper, /GH_TOKEN: \$\{\{ github\.token \}\}/);
     assert.match(dependencySweeper, /gh pr list --head/);
+    assert.match(dependencySweeper, /git fetch origin "\$REPAIR_BRANCH" \|\| true/);
     assert.match(dependencySweeper, /--existing-repair-pr-url/);
     assert.match(dependencySweeper, /npm install --prefix/);
     assert.match(dependencySweeper, /git config user\.name "github-actions\[bot\]"/);
