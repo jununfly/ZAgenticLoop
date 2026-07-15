@@ -138,6 +138,13 @@ the explicit terminal-command confirmation location, fixed enable phrase, and
 declared side-effect scope. Both forms include the canonical orchestration-id
 resume command so routine recovery does not require reconstructing the signal.
 
+Malformed Harness inputs follow the same rule. The normalizer fills only
+declared low-risk defaults, never authority or a side-effect boundary. When
+repair is needed it emits a `protocol_repair_request` with the fixed
+`protocol-input` location, `confirmation_required: false`, and a structured
+`resume_loop` action keyed by its repair envelope; a prose command hint is not
+the automation contract.
+
 ## Evidence Rules
 
 Evidence has four distinct roles:

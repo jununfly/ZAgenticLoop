@@ -117,6 +117,13 @@ test('loop protocol input normalizer autofills low-risk fields and returns repai
     'payload.review_artifact_target',
   ]);
   assert.equal(repair.protocol_repair_request.next_command_hint, 'Provide a complete harness input envelope and resume with the included resume_envelope.');
+  assert.equal(repair.protocol_repair_request.repair_location, 'protocol-input');
+  assert.deepEqual(repair.protocol_repair_request.next_action, {
+    type: 'resume_loop',
+    target: `protocol-repair:${repair.protocol_repair_request.resume_envelope.resume_id}`,
+    label: 'Repair protocol input and resume',
+  });
+  assert.equal(repair.protocol_repair_request.confirmation_required, false);
 });
 
 test('loop protocol output accepts canonical JSON and rejects natural language commands', () => {

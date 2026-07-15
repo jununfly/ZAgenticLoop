@@ -45,6 +45,9 @@ export type LoopProtocolRepairRequest = {
     autofill_attempted: string[];
     safe_defaults_available: string[];
     required_human_input: string[];
+    repair_location: 'protocol-input';
+    confirmation_required: false;
+    next_action: LoopHarnessNextAction;
     resume_envelope: {
         resume_id: string;
         original_input: unknown;

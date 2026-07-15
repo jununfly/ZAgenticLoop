@@ -314,6 +314,7 @@ function autofillPayloadField(payload, field, value, autofillAttempted) {
     }
 }
 function buildProtocolRepairRequest(input) {
+    const resumeId = `protocol-repair-${stableHash(input.input)}`;
     return {
         missing_fields: input.missingFields,
         invalid_fields: input.invalidFields,
@@ -329,8 +330,15 @@ function buildProtocolRepairRequest(input) {
             'repo',
         ],
         required_human_input: input.missingFields,
+        repair_location: 'protocol-input',
+        confirmation_required: false,
+        next_action: {
+            type: 'resume_loop',
+            target: `protocol-repair:${resumeId}`,
+            label: 'Repair protocol input and resume',
+        },
         resume_envelope: {
-            resume_id: `protocol-repair-${stableHash(input.input)}`,
+            resume_id: resumeId,
             original_input: input.input,
             next_safe_step: 'repair_protocol_input',
         },

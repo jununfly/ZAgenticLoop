@@ -346,12 +346,12 @@
     "1-4-2": {
       "id": "1-4-2",
       "label": "Low-risk protocol repairs and structured protocol repair request",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Harness normalizer fills only declared low-risk fields and does not invent authority. Every repair now carries protocol-input location, confirmation_required: false, and a deterministic resume_loop action keyed to its repair envelope; prose command hints are display-only."
     },
     "1-4-3": {
       "id": "1-4-3",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 08:46:16",
+    "updated": "2026-07-15 08:49:10",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
