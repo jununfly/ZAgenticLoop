@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 17:57:01
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 18:16:45
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -58,9 +58,9 @@
 - Q: 定位到 owned last_pipeline 后，receipt job 的等待、失败与 cleanup 边界是什么？ → receipt success 且 artifact 校验通过立即 cleanup 并 completed；failed/canceled 立即 cleanup 后 escalated exit 2；pending/running/缺 artifact 每 30 秒轮询到原始 deadline，随后 cleanup escalated exit 2。 (API 临时失败仅记录低成本计数并有界重试，不延长 deadline；cleanup 漂移或失败保留 state 并 escalated，不自动重试。pipeline、receipt、cleanup 组成同一有界事务。)
 
 **当前子树：**
-├── [ ][Y+] 1-5-3-1-5-2-3-1. Atomic owned-schedule probe variable and full cleanup identity guard
-├── [ ][Y+] 1-5-3-1-5-2-3-2. Exact owned-schedule last-pipeline correlation and ref validation
-├── [ ][Y+] 1-5-3-1-5-2-3-3. Scheduled receipt job fragment and generated-bundle contract gates
-├── [ ][Y+] 1-5-3-1-5-2-3-4. Receipt artifact polling, validation, and escalation exit-code mapping
+├── [x][Y+] 1-5-3-1-5-2-3-1. Atomic owned-schedule probe variable and full cleanup identity guard
+├── [x][Y+] 1-5-3-1-5-2-3-2. Exact owned-schedule last-pipeline correlation and ref validation
+├── [x][Y+] 1-5-3-1-5-2-3-3. Scheduled receipt job fragment and generated-bundle contract gates
+├── [x][Y+] 1-5-3-1-5-2-3-4. Receipt artifact polling, validation, and escalation exit-code mapping
 └── [ ][Y+] 1-5-3-1-5-2-3-5. Pinned-image ai-studio tarball dogfood with receipt and cleanup evidence
 <!-- ROADMAP_SECTION_END -->

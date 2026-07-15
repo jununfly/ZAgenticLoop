@@ -1148,42 +1148,42 @@
     "1-5-3-1-5-2-3-1": {
       "id": "1-5-3-1-5-2-3-1",
       "label": "Atomic owned-schedule probe variable and full cleanup identity guard",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "TDD: probe id is atomically carried in the schedule variables, creation re-reads the schedule, and cleanup rejects variable drift. Verified by schedule-probe runner tests."
     },
     "1-5-3-1-5-2-3-2": {
       "id": "1-5-3-1-5-2-3-2",
       "label": "Exact owned-schedule last-pipeline correlation and ref validation",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "TDD: schedule observation now follows only owned_schedule_id.last_pipeline.id and rejects source/ref/time mismatches. Verified by schedule-probe runner tests."
     },
     "1-5-3-1-5-2-3-3": {
       "id": "1-5-3-1-5-2-3-3",
       "label": "Scheduled receipt job fragment and generated-bundle contract gates",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "TDD: schedule-probe fragment now contains a receipt job gated by source=schedule plus probe id, with fixed receipt schema and artifacts. Verified by zj-loop-init tests and generated-bundle release gate."
     },
     "1-5-3-1-5-2-3-4": {
       "id": "1-5-3-1-5-2-3-4",
       "label": "Receipt artifact polling, validation, and escalation exit-code mapping",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2-3",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "TDD: exact receipt job/artifact validation now gates completion; receipt failures remain bounded and cleanup-safe; CLI escalations print evidence then exit 2. Verified by core, init, and generated-bundle gates."
     },
     "1-5-3-1-5-2-3-5": {
       "id": "1-5-3-1-5-2-3-5",
@@ -1198,7 +1198,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 17:57:01",
+    "updated": "2026-07-15 18:16:45",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

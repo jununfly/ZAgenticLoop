@@ -53,7 +53,7 @@ export async function runScheduleProbeCli(input = {}) {
                             : (() => { throw new Error('Use start, resume, or restore'); })();
                 if (!signal) {
                     io.stdout(JSON.stringify(result, null, 2));
-                    return 0;
+                    return result.status === 'escalated' ? 2 : 0;
                 }
                 beginCleanup();
                 const cleanup = cleanupPromise ? await cleanupPromise : { status: 'not-armed' };

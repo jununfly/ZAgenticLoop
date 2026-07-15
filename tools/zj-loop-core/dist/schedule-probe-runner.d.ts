@@ -21,6 +21,11 @@ export declare function planGitLabScheduleProbe(input: any): {
         ref: string;
         cron: string;
         cron_timezone: string;
+        variables: {
+            key: string;
+            value: string;
+            variable_type: string;
+        }[];
     };
     operations: string[];
     reason?: undefined;
@@ -38,7 +43,35 @@ export declare function readGitLabScheduleProbeState(input: {
 }): Promise<any>;
 export declare function createGitLabOwnedSchedule(input: any): Promise<any>;
 export declare function cleanupGitLabOwnedSchedule(input: any): Promise<any>;
-export declare function findGitLabOwnedSchedulePipeline(input: any): Promise<any>;
+export declare function readGitLabOwnedSchedulePipeline(input: any): Promise<{
+    status: string;
+    reason?: undefined;
+    pipeline?: undefined;
+} | {
+    status: string;
+    reason: string;
+    pipeline?: undefined;
+} | {
+    status: string;
+    pipeline: any;
+    reason?: undefined;
+}>;
+export declare function readGitLabScheduleProbeReceipt(input: any): Promise<{
+    status: string;
+    reason?: undefined;
+    receipt?: undefined;
+    job_id?: undefined;
+} | {
+    status: string;
+    reason: string;
+    receipt?: undefined;
+    job_id?: undefined;
+} | {
+    status: string;
+    receipt: any;
+    job_id: any;
+    reason?: undefined;
+}>;
 export declare function runGitLabScheduleProbe(input: any): Promise<any>;
 export declare function resumeGitLabScheduleProbe(input: any): Promise<any>;
 export declare function restoreGitLabScheduleProbe(input: any): Promise<any>;

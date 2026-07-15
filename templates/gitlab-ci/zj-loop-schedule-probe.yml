@@ -15,11 +15,33 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION: ""
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18.'); process.exit(1); }"
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-schedule-probe start --root . --project "$CI_PROJECT_PATH" --ref "$CI_DEFAULT_BRANCH" --timezone "${CI_TIMEZONE:-UTC}" --api-url "$CI_API_V4_URL" --due-in-minutes "$ZJ_LOOP_SCHEDULE_PROBE_DUE_IN_MINUTES" --confirmation "$ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION" > schedule-probe-result.json
-    - cat schedule-probe-result.json
+    - |
+      set +e
+      npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-schedule-probe start --root . --project "$CI_PROJECT_PATH" --ref "$CI_COMMIT_REF_NAME" --timezone "${CI_TIMEZONE:-UTC}" --api-url "$CI_API_V4_URL" --due-in-minutes "$ZJ_LOOP_SCHEDULE_PROBE_DUE_IN_MINUTES" --confirmation "$ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION" > schedule-probe-result.json
+      exit_code=$?
+      set -e
+      cat schedule-probe-result.json
+      exit "$exit_code"
   artifacts:
     when: always
     expire_in: 7 days
     paths:
       - schedule-probe-result.json
       - zj-loop/schedule-probes/*.json
+
+zj_loop_schedule_probe_receipt:
+  stage: __ZJ_LOOP_GITLAB_STAGE__
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $ZJ_LOOP_SCHEDULE_PROBE_ID != ""'
+  needs: []
+  allow_failure: false
+  timeout: 5m
+  script:
+    - |
+      node -e "const fs = require('fs'); const receipt = { schema: 'zj-loop.gitlab_schedule_probe_receipt.v1', probe_id: process.env.ZJ_LOOP_SCHEDULE_PROBE_ID, pipeline_id: process.env.CI_PIPELINE_ID, project: process.env.CI_PROJECT_PATH, ref: process.env.CI_COMMIT_REF_NAME, source: process.env.CI_PIPELINE_SOURCE }; fs.writeFileSync('schedule-probe-receipt.json', JSON.stringify(receipt, null, 2)); if (!receipt.probe_id || !receipt.pipeline_id || !receipt.project || !receipt.ref || receipt.source !== 'schedule') process.exit(1);"
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - schedule-probe-receipt.json

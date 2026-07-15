@@ -81,3 +81,17 @@ test('schedule probe CLI preserves SIGTERM exit 143 after guarded cleanup', asyn
   assert.equal(fakeRunner.calls.filter((call) => call.action === 'restore').length, 1);
   assert.equal(JSON.parse(output.stdout[0]).signal, 'SIGTERM');
 });
+
+test('schedule probe CLI maps escalated evidence to exit 2 after printing the result', async () => {
+  const output = capturedIo();
+  const fakeRunner = runner();
+  fakeRunner.runGitLabScheduleProbe = async () => ({ status: 'escalated', reason: 'scheduled-pipeline-missing' });
+
+  const exitCode = await runScheduleProbeCli({
+    argv: ['start', '--project', 'group/project', '--due-in-minutes', '3', '--confirmation', 'RUN_TEMPORARY_GITLAB_SCHEDULE_PROBE'],
+    io: output.io, env: { GITLAB_TOKEN: 'token' }, signalTarget: new EventEmitter(), runner: fakeRunner,
+  });
+
+  assert.equal(exitCode, 2);
+  assert.equal(JSON.parse(output.stdout[0]).status, 'escalated');
+});
