@@ -25,6 +25,27 @@ policy:
     selected_pattern_report_only: true
     cross_component_dispatch: true
     side_effect_routes: true
+  triage_role_mapping:
+    github:
+      category:
+        bug: ["bug"]
+        enhancement: ["enhancement"]
+      state:
+        needs-triage: ["needs-triage"]
+        needs-info: ["needs-info"]
+        ready-for-agent: ["ready-for-agent"]
+        ready-for-human: ["ready-for-human"]
+        wontfix: ["wontfix"]
+    gitlab:
+      category:
+        bug: ["bug"]
+        enhancement: ["enhancement"]
+      state:
+        needs-triage: ["needs-triage"]
+        needs-info: ["needs-info"]
+        ready-for-agent: ["ready-for-agent"]
+        ready-for-human: ["ready-for-human"]
+        wontfix: ["wontfix"]
 
 routes:
   - route_id: "human"

@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
+import { validateTriageRoleMapping } from './triage-role-mapping.js';
 export const DEFAULT_ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
 const EXECUTION_MODES = new Set(['report-only', 'request-only', 'claim-only', 'dry-run', 'live']);
 const SIDE_EFFECT_LEVELS = ['none', 'evidence', 'request', 'claim', 'issue-comment', 'label', 'branch', 'pr', 'draft-pr', 'cleanup'];
@@ -44,6 +45,11 @@ export function parseRouteTable(text) {
         throw new Error('Expected kind: zj-loop-route-table');
     }
     validateCompletionTargetContract(parsed);
+    for (const [provider, mapping] of Object.entries(parsed.policy?.triage_role_mapping ?? {})) {
+        const validation = validateTriageRoleMapping(mapping);
+        if (!validation.ok)
+            throw new Error(`triage_role_mapping.${provider} is invalid: ${validation.errors.join(', ')}`);
+    }
     return parsed;
 }
 const COMPLETION_TARGET_ADAPTERS = new Set(['github', 'gitlab', 'workspace']);

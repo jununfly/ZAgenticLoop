@@ -58,6 +58,10 @@ export type RouteTableDocument = {
         completion_target?: RouteTableCompletionTargetMetadata;
         [key: string]: unknown;
     };
+    policy?: {
+        triage_role_mapping?: Record<string, unknown>;
+        [key: string]: unknown;
+    };
     routes?: RouteTableRoute[];
     disabled_dispatch_routes?: RouteTableRoute[];
 };

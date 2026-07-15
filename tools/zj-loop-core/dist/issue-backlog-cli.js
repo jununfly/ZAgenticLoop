@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { writeFile } from 'node:fs/promises';
 import { scanGitLabIssueBacklog } from './issue-backlog-runner.js';
 const args = process.argv.slice(2);

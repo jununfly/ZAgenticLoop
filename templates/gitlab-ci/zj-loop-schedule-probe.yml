@@ -39,7 +39,7 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   timeout: 5m
   script:
     - |
-      node -e "const fs = require('fs'); const receipt = { schema: 'zj-loop.gitlab_schedule_probe_receipt.v1', probe_id: process.env.ZJ_LOOP_SCHEDULE_PROBE_ID, pipeline_id: process.env.CI_PIPELINE_ID, project: process.env.CI_PROJECT_PATH, ref: process.env.CI_COMMIT_REF_NAME, source: process.env.CI_PIPELINE_SOURCE }; fs.writeFileSync('schedule-probe-receipt.json', JSON.stringify(receipt, null, 2)); if (!receipt.probe_id || !receipt.pipeline_id || !receipt.project || !receipt.ref || receipt.source !== 'schedule') process.exit(1);"
+      node -e "const fs = require('fs'); const receipt = { schema: 'zj-loop.gitlab_schedule_probe_receipt.v1', status: process.env.ZJ_LOOP_SCHEDULE_PROBE_ID ? 'completed' : 'blocked', reason: process.env.ZJ_LOOP_SCHEDULE_PROBE_ID ? undefined : 'schedule-probe-capability-blocked', probe_id: process.env.ZJ_LOOP_SCHEDULE_PROBE_ID || null, pipeline_id: process.env.CI_PIPELINE_ID, project: process.env.CI_PROJECT_PATH, ref: process.env.CI_COMMIT_REF_NAME, source: process.env.CI_PIPELINE_SOURCE, next_steps: process.env.ZJ_LOOP_SCHEDULE_PROBE_ID ? [] : [{ command: 'zj-loop-schedule-probe start', purpose: 'create an owned schedule probe before claiming scheduled capability' }] }; fs.writeFileSync('schedule-probe-receipt.json', JSON.stringify(receipt, null, 2)); if (receipt.status === 'blocked') process.exit(0); if (!receipt.pipeline_id || !receipt.project || !receipt.ref || receipt.source !== 'schedule') process.exit(1);"
   artifacts:
     when: always
     expire_in: 7 days

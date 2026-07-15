@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 
 import {
   buildIssueTriageTransitionIssueFixRequestBody,
@@ -8,6 +8,8 @@ import {
   readRecommendedTriageTransition,
   runIssueTriageTransitionRunner,
 } from './issue-triage-transition-runner.js';
+import { buildGitLabTrustedTransitionRequest, executeGitLabIssueTriageTransition } from './gitlab-issue-triage-transition-runner.js';
+import { getTriageRoleMapping } from './triage-role-mapping.js';
 import { runCli } from './cli.js';
 import { findRoute, loadRouteTable } from './route.js';
 import { runRouteConsumerCli } from './route-consumer-cli.js';
@@ -22,7 +24,7 @@ if (argv[0] === 'confirm-plan') {
       { name: 'commandName', type: 'positional', description: 'Command', default: 'confirm-plan' },
       { name: 'request', type: 'string', description: 'Path to a Recommended Triage Transition JSON file' },
       { name: 'root', type: 'string', description: 'Project root', default: '.' },
-      { name: 'actor-permission', type: 'string', description: 'Actor permission', default: 'maintainer' },
+      { name: 'actor-permission', type: 'string', description: 'Actor permission (normally resolved from GITLAB_TOKEN)' },
       { name: 'command', type: 'string', description: 'Exact slash command text' },
       { name: 'confirmation-phrase', type: 'string', description: 'Fixed confirmation phrase', default: 'CONFIRM_TRIAGE_TRANSITION' },
       { name: 'confirmation-mode', type: 'enum', description: 'Confirmation mode', values: ['human-fixed-phrase', 'trusted-automation'], default: 'human-fixed-phrase' },
@@ -33,13 +35,14 @@ if (argv[0] === 'confirm-plan') {
     async handler({ io, options }) {
       const table = await loadRouteTable(String(options.root ?? '.'));
       const route = findRoute(table, 'issue-triage-transition');
+      const roleMapping = getTriageRoleMapping(table, 'gitlab');
       const request = typeof options.request === 'string'
         ? await readRecommendedTriageTransition(options.request)
         : buildRecommendedTriageTransitionFixture();
       const result = runIssueTriageTransitionRunner({
         route,
         request,
-        actorPermission: String(options['actor-permission'] ?? 'maintainer'),
+        actorPermission: typeof options['actor-permission'] === 'string' ? options['actor-permission'] : undefined,
         command: typeof options.command === 'string' ? options.command : undefined,
         confirmationPhrase: String(options['confirmation-phrase'] ?? 'CONFIRM_TRIAGE_TRANSITION'),
         confirmationMode: String(options['confirmation-mode'] ?? 'human-fixed-phrase'),
@@ -91,6 +94,73 @@ if (argv[0] === 'confirm-plan') {
       } else if (typeof options.out !== 'string') {
         io.stdout(body);
       }
+    },
+  }, argv);
+} else if (argv[0] === 'gitlab-live') {
+  process.exitCode = await runCli({
+    name: 'zj-loop-issue-triage-transition',
+    description: 'Execute a bounded GitLab source-issue Issue Fix Request transition.',
+    usage: 'zj-loop-issue-triage-transition gitlab-live --project <group/project> (--request <path>|--recommendations <path>) [options]',
+    options: [
+      { name: 'commandName', type: 'positional', description: 'Command', default: 'gitlab-live' },
+      { name: 'root', type: 'string', description: 'Project root', default: '.' },
+      { name: 'project', type: 'string', description: 'GitLab project path' },
+      { name: 'issue', type: 'string', description: 'Source issue IID' },
+      { name: 'request', type: 'string', description: 'Recommended transition JSON path' },
+      { name: 'recommendations', type: 'string', description: 'Issue recommendations artifact path' },
+      { name: 'api-url', type: 'string', description: 'GitLab API URL' },
+      { name: 'mode', type: 'enum', description: 'Confirmation mode', values: ['human-fixed-phrase', 'trusted-automation'], default: 'human-fixed-phrase' },
+      { name: 'confirmation', type: 'string', description: 'Fixed confirmation phrase' },
+      { name: 'command', type: 'string', description: 'Exact request confirmation command' },
+      { name: 'actor-permission', type: 'string', description: 'Actor permission', default: 'maintainer' },
+      { name: 'authority', type: 'string', description: 'Confirmation authority', default: 'trusted-workflow' },
+      { name: 'json', type: 'boolean', description: 'Print JSON output' },
+    ],
+    async handler({ io, options }) {
+      if (typeof options.project !== 'string') throw new Error('--project is required');
+      const table = await loadRouteTable(String(options.root ?? '.'));
+      const route = findRoute(table, 'issue-triage-transition');
+      const roleMapping = getTriageRoleMapping(table, 'gitlab');
+      const mode = String(options.mode ?? 'human-fixed-phrase') as 'human-fixed-phrase' | 'trusted-automation';
+      let request: any;
+      let labels: string[] = [];
+      let issue = typeof options.issue === 'string' ? Number(options.issue) : undefined;
+      if (typeof options.request === 'string') {
+        request = JSON.parse(await readFile(options.request, 'utf8'));
+      } else if (typeof options.recommendations === 'string') {
+        const artifact = JSON.parse(await readFile(options.recommendations, 'utf8'));
+        const selected = buildGitLabTrustedTransitionRequest({
+          recommendations: artifact.recommendations,
+          projectPath: String(options.project),
+          apiBaseUrl: typeof options['api-url'] === 'string' ? options['api-url'] : undefined,
+          roleMapping,
+        });
+        if (selected.status !== 'eligible') {
+          io.stdout(JSON.stringify(selected, null, 2));
+          return selected.status === 'blocked' ? 2 : 0;
+        }
+        request = selected.request;
+        labels = selected.selected_labels ?? [];
+        issue = selected.selected_issue_iid;
+      } else {
+        throw new Error('one of --request or --recommendations is required');
+      }
+      const result = await executeGitLabIssueTriageTransition({
+        projectPath: String(options.project), issueIid: issue ?? request?.source?.issue, request, route,
+        token: process.env.GITLAB_TOKEN,
+        apiBaseUrl: typeof options['api-url'] === 'string' ? options['api-url'] : undefined,
+        confirmationMode: mode,
+        confirmationPhrase: typeof options.confirmation === 'string' ? options.confirmation : undefined,
+        command: typeof options.command === 'string' ? options.command : undefined,
+        actorPermission: String(options['actor-permission'] ?? 'maintainer'),
+        confirmationAuthority: String(options.authority ?? 'trusted-workflow'),
+        pipelineSource: process.env.CI_PIPELINE_SOURCE,
+        trustedAutomationEnabled: process.env.ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION,
+        labels,
+        roleMapping,
+      });
+      io.stdout(JSON.stringify(result, null, 2));
+      return result.status === 'completed' ? 0 : 2;
     },
   }, argv);
 } else {

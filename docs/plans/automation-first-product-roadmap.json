@@ -392,7 +392,7 @@
     "1-5-3": {
       "id": "1-5-3",
       "label": "GitLab signal and request-carrier live adapter parity",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [
@@ -404,6 +404,11 @@
           "q": "真实 scheduled evidence 等待期间是否允许并行推进 GitLab confirmed triage transition？",
           "answer": "允许并行推进 1-5-3-2，但 issue-backlog route 的 live maturity 不得在 1-5-3-1-5 获得 source=schedule artifact evidence 前提升。",
           "note": "避免时间窗口造成整体停摆，同时保持 live capability claim 的证据边界。"
+        },
+        {
+          "q": "Does a blocked GitLab schedule probe block all GitLab route parity?",
+          "answer": "No. It blocks only schedule-probe evidence; manual and event-triggered GitLab routes continue independently.",
+          "note": "Schedule variable read-back is a strict preflight for temporary owned schedules, not a platform-wide capability claim."
         }
       ],
       "notes": ""
@@ -675,12 +680,113 @@
     "1-5-3-2": {
       "id": "1-5-3-2",
       "label": "GitLab confirmed triage transition source-issue carrier evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "What is the first GitLab confirmation entrypoint?",
+          "answer": "A maintainer manually starts a GitLab Web pipeline with a structured transition request and fixed confirmation phrase.",
+          "note": "The CI job writes the request-only Issue Fix Request comment to the source issue through the GitLab Issue Notes API. A later webhook can reuse this protocol without changing its side-effect contract."
+        },
+        {
+          "q": "Which credential may write a GitLab source issue request comment?",
+          "answer": "Only GITLAB_TOKEN.",
+          "note": "No fallback to CI_JOB_TOKEN, GITLAB_PRIVATE_TOKEN, or GLAB_TOKEN. Missing GITLAB_TOKEN is a structured hard stop before any Issue Notes API request."
+        },
+        {
+          "q": "How does the manual GitLab pipeline receive a confirmed transition?",
+          "answer": "It accepts only ZJ_LOOP_TRIAGE_REQUEST_JSON and ZJ_LOOP_TRIAGE_CONFIRMATION.",
+          "note": "The request must validate as zj-loop.recommended_triage_transition.v1 and confirmation must exactly equal CONFIRM_TRIAGE_TRANSITION. Missing or invalid values produce a structured refusal artifact before any Issue Notes API call."
+        },
+        {
+          "q": "How does GitLab transition execution remain idempotent?",
+          "answer": "Read and parse source issue notes before writing; return duplicate for an existing active request instead of posting another note.",
+          "note": "The dedupe check uses Issue Fix Request markers and active dedupe_key/request state. A new note is posted only when no active source-issue carrier exists."
+        },
+        {
+          "q": "How is the GitLab source issue bound to a transition request?",
+          "answer": "It must bind exactly to the current CI project and a positive GitLab issue IID.",
+          "note": "tracker must be gitlab; source repo/project_path must equal CI_PROJECT_PATH; and any source URL must parse to that same GitLab project and issue. Any mismatch returns request-source-mismatch before any Issue Notes API call."
+        },
+        {
+          "q": "How does GitLab transition execution recover from an uncertain Issue Notes write?",
+          "answer": "Never retry the write blindly; re-read notes once to detect the exact request marker.",
+          "note": "A matching marker returns recovered-duplicate with note evidence. No match after timeout/network/5xx returns note-write-unknown hard stop. Explicit 4xx failures hard-stop directly without a second read."
+        },
+        {
+          "q": "Does a successful GitLab transition job directly start Roadmap-Sliced Development?",
+          "answer": "No. It stops after creating or deduplicating the source-issue Issue Fix Request carrier.",
+          "note": "It emits structured handoff evidence only. Roadmap-Sliced Development must independently consume the carrier through Route Dispatcher and owns branch/MR plus implementation lifecycle."
+        },
+        {
+          "q": "What is required to claim GitLab live support for this route?",
+          "answer": "A real GitLab Web pipeline artifact must prove validated binding, dedupe outcome, verified source note marker, and Route Dispatcher handoff.",
+          "note": "Persist only low-cost audit fields: request id, source issue URL/IID, current project binding, note ID/URL, marker validation, dedupe outcome, and handoff reference. Unit/replay tests alone remain replayed evidence."
+        },
+        {
+          "q": "Should GitLab trusted-automation confirmation be implemented in this slice?",
+          "answer": "Yes. Implement it as a real bounded runner in the same slice, not only as a Route Table declaration.",
+          "note": "It must remain separately guarded and evidenced from the human Web-pipeline path; no unsupported provider context may claim trusted automation."
+        },
+        {
+          "q": "What GitLab runtime fact authorizes trusted transition automation?",
+          "answer": "Only a scheduled pipeline with CI_PIPELINE_SOURCE=schedule and ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION=enabled.",
+          "note": "The trusted path may consume only same-job generated and validated ready-for-agent recommendations. It never accepts externally supplied transition JSON. A provider unable to execute scheduled pipelines hard-stops this automatic path while preserving the human Web-pipeline path."
+        },
+        {
+          "q": "How many carrier notes may trusted scheduled automation create per scan?",
+          "answer": "At most one, selected by a deterministic order from eligible ready-for-agent recommendations.",
+          "note": "Remaining candidates stay recommendation evidence for later runs. This preserves progress while honoring batch_mutation_allowed=false and bounding write cost plus replay scope."
+        },
+        {
+          "q": "Which scheduled candidates may trusted automation confirm?",
+          "answer": "Only deterministic high-confidence ready-for-agent candidates with no assignment, risk flag, or blocker.",
+          "note": "The candidate must be agent-ready-request, carry ready-for-agent, map to an allowlisted bug or enhancement category, and be converted by deterministic rules into a high-confidence transition request. All other recommendations remain report-only."
+        },
+        {
+          "q": "How are GitLab tracker labels interpreted for trusted triage automation?",
+          "answer": "Resolve them only through an explicit Route Table mapping to zj-triage canonical roles; ignore all unrelated labels.",
+          "note": "Auto confirmation requires exactly one mapped category role and exactly one mapped ready-for-agent state role. Missing or conflicting role mappings remain report-only rather than inviting invented label semantics."
+        },
+        {
+          "q": "Where and how are canonical triage role mappings defined?",
+          "answer": "Define the complete provider-scoped mapping in Route Table policy, and enforce parsing, disjointness, and precise edits through deterministic scripts.",
+          "note": "All seven zj-triage roles are declared once per provider. Extra tracker labels are ignored. Auto transition reads only bug|enhancement plus ready-for-agent. No agent infers mappings; changes must be explicit and script-validated."
+        },
+        {
+          "q": "Must adapting a new tracker label require a core package release?",
+          "answer": "No. It is an explicit project Route Table mapping change made only through a deterministic CLI and validation gate.",
+          "note": "The CLI prevents agent inference and hand-edited ambiguity while keeping per-project label adaptation practical. Core code changes only when mapping semantics or the canonical role model itself changes."
+        },
+        {
+          "q": "How may a deterministic triage-role mapping CLI change Route Table policy?",
+          "answer": "It defaults to read-only validation and plan output; only apply with UPDATE_TRIAGE_ROLE_MAPPING may write.",
+          "note": "validate is CI-safe. plan shows the exact disjointness-checked diff. apply is the sole mutation path and records the fixed confirmation boundary for a change that affects future automation eligibility."
+        },
+        {
+          "q": "Should starters ship a default triage-role mapping?",
+          "answer": "Yes. Generate standard same-name canonical mappings for GitHub and GitLab, but keep trusted automation disabled by default.",
+          "note": "Projects using other labels must update the mapping through the deterministic validate/plan/apply CLI. Installation alone never writes issue notes or enables trusted automation."
+        },
+        {
+          "q": "Can the current GitLab instance claim scheduled trusted-automation live support?",
+          "answer": "No. Keep scheduled trusted automation blocked-with-follow-up until another GitLab instance proves real scheduled pipeline evidence.",
+          "note": "The implementation, protocol, deterministic tests, and human Web-pipeline path may complete independently. Missing scheduled evidence must remain visible and cannot be compensated by human-path success."
+        },
+        {
+          "q": "Do human Web and trusted scheduled GitLab paths share the transition executor?",
+          "answer": "Yes. Share deterministic role mapping, request validation, source binding, authority checks, dedupe, note-write recovery, and low-cost evidence.",
+          "note": "The GitLab-specific adapter owns only Issue Notes API calls and CI context parsing. Web and scheduled inputs must not grow separate side-effect semantics."
+        },
+        {
+          "q": "What does the current GitLab schedule 961 dogfood prove?",
+          "answer": "The current GitLab instance has real scheduled trusted-automation evidence for issue-backlog-triage and issue-triage-transition.",
+          "note": "Pipeline 10503630 source=schedule; zj_loop_issue_triage success; transition-result completed duplicate for Issue #160 with note 19639888 and roadmap-sliced-development handoff."
+        }
+      ],
+      "notes": "Completed with GitLab dogfood evidence: schedule 961 produced pipeline 10503630 from source=schedule at commit f35b0784; daily triage, issue triage, and schedule-probe receipt jobs succeeded. Issue #160 recommendation was consumed by trusted automation; transition-result completed with duplicate outcome, note 19639888, deterministic note URL, and roadmap-sliced-development handoff request ifr_triage_6504fff8d631. Schedule probe remains capability-blocked when no probe_id is supplied, but is now a non-blocking structured warning."
     },
     "1-5-4-1": {
       "id": "1-5-4-1",
@@ -1204,7 +1310,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 18:44:21",
+    "updated": "2026-07-15 21:20:11",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

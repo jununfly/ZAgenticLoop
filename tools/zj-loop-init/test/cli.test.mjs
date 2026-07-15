@@ -494,12 +494,16 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(issueTriage, /ZJ_LOOP_ISSUE_IID: ""/);
     assert.match(issueTriage, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_ISSUE_IID:-\$CI_PIPELINE_ID\}\}/);
     assert.match(issueTriage, /issue-recommendations\.json/);
-    assert.match(issueTriage, /transition-requests\.json/);
+    assert.match(issueTriage, /transition-result\.json/);
     assert.match(issueTriage, /CI_PIPELINE_SOURCE == "schedule"/);
     assert.match(issueTriage, /CI_PIPELINE_SOURCE == "web"/);
     assert.match(issueTriage, /zj-loop-issue-backlog scan --provider gitlab/);
     assert.match(issueTriage, /ZJ_LOOP_ISSUE_TRIAGE_LIMIT/);
-    assert.match(issueTriage, /zj-loop\.transition_requests\.v1/);
+    assert.match(issueTriage, /ZJ_LOOP_TRIAGE_REQUEST_JSON/);
+    assert.match(issueTriage, /ZJ_LOOP_TRIAGE_CONFIRMATION/);
+    assert.match(issueTriage, /ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION/);
+    assert.match(issueTriage, /gitlab-live --recommendations issue-recommendations\.json/);
+    assert.match(issueTriage, /gitlab-live --request transition-request\.json/);
     const prSteward = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-pr-steward.yml'), 'utf8');
     assert.match(prSteward, /ZJ_LOOP_MERGE_REQUEST_IID: ""/);
     assert.match(prSteward, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}\}/);
