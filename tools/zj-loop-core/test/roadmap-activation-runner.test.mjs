@@ -253,6 +253,40 @@ test('Roadmap Activation GitLab execute refuses missing live token and unsafe br
   ]);
 });
 
+test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLAB_TOKEN', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).includes('/repository/branches/')) return { ok: false, status: 404, json: async () => ({}) };
+    if (String(url).endsWith('/repository/branches')) return { ok: true, status: 201, json: async () => ({ name: 'zjal-act-87-note-gitlab' }) };
+    if (String(url).includes('/merge_requests?')) return { ok: true, status: 200, json: async () => [] };
+    if (String(url).endsWith('/merge_requests')) return { ok: true, status: 201, json: async () => ({ iid: 12, web_url: 'https://gitlab.com/group/project/-/merge_requests/12' }) };
+    return { ok: false, status: 500, json: async () => ({}) };
+  };
+  const result = await executeGitLabRoadmapActivation({
+    live: true,
+    token: 'private-token',
+    fetchImpl,
+    contractPlan: {
+      provider: 'gitlab',
+      activationRequestId: 'act-87-note',
+      branchName: 'zjal-act-87-note-gitlab',
+      mrTitle: 'Roadmap Activation: GitLab full parity',
+      mrContract: 'contract',
+    },
+    projectPath: 'group/project',
+    targetBranch: 'master',
+  });
+
+  assert.equal(result.status, 'completed');
+  assert.equal(result.merge_request_iid, 12);
+  assert.equal(result.target_branch, 'master');
+  assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/repository/branches')), true);
+  assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')), true);
+  assert.equal(calls.filter((call) => call.options.headers?.['PRIVATE-TOKEN'] === 'private-token').length, calls.length);
+  assert.match(JSON.parse(calls.find((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')).options.body).title, /^Draft:/);
+});
+
 test('Roadmap Activation GitLab execute dry-run plans branch and MR operations', async () => {
   const result = await executeGitLabRoadmapActivation({
     contractPlan: {

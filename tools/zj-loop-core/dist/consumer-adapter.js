@@ -216,7 +216,6 @@ export async function executeRoadmapActivationLiveSideEffects(input) {
             targetBranch: stringPayload(input.signal.payload.target_branch) ?? input.env?.CI_DEFAULT_BRANCH,
             apiBaseUrl: stringPayload(input.signal.payload.gitlab_api_url) ?? input.env?.CI_API_V4_URL,
             token: input.env?.GITLAB_TOKEN,
-            jobToken: input.env?.CI_JOB_TOKEN,
             live: true,
             fetchImpl: input.fetchImpl,
         });

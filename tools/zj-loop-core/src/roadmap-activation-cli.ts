@@ -223,7 +223,7 @@ if (argv[0] === 'activation-plan') {
   process.exitCode = await runCli({
     name: 'zj-loop-roadmap-activation',
     description: 'Execute a guarded Roadmap Activation contract for provider-native branch/MR creation.',
-    usage: 'zj-loop-roadmap-activation execute --provider gitlab --contract-plan <path> --project-path <group/project> [--target-branch <branch>] [--gitlab-api-url <url>] [--gitlab-token <token>] [--gitlab-job-token <token>] [--live] [--out <path>] [--json]',
+    usage: 'zj-loop-roadmap-activation execute --provider gitlab --contract-plan <path> --project-path <group/project> [--target-branch <branch>] [--gitlab-api-url <url>] [--gitlab-token <token>] [--live] [--out <path>] [--json]',
     options: [
       { name: 'command', type: 'positional', description: 'Command', default: 'execute' },
       { name: 'provider', type: 'enum', description: 'Provider execution surface', values: ['gitlab'], default: 'gitlab' },
@@ -232,7 +232,6 @@ if (argv[0] === 'activation-plan') {
       { name: 'target-branch', type: 'string', description: 'Target branch', default: 'main' },
       { name: 'gitlab-api-url', type: 'string', description: 'GitLab API v4 base URL' },
       { name: 'gitlab-token', type: 'string', description: 'GitLab PRIVATE-TOKEN for live branch/MR execution' },
-      { name: 'gitlab-job-token', type: 'string', description: 'GitLab JOB-TOKEN for live branch/MR execution' },
       { name: 'live', type: 'boolean', description: 'Perform live GitLab branch/MR side effects' },
       { name: 'out', type: 'string', description: 'Write JSON result to this path' },
       { name: 'json', type: 'boolean', description: 'Print JSON output' },
@@ -246,7 +245,6 @@ if (argv[0] === 'activation-plan') {
         targetBranch: typeof options['target-branch'] === 'string' ? options['target-branch'] : process.env.CI_DEFAULT_BRANCH,
         apiBaseUrl: typeof options['gitlab-api-url'] === 'string' ? options['gitlab-api-url'] : process.env.CI_API_V4_URL,
         token: typeof options['gitlab-token'] === 'string' ? options['gitlab-token'] : process.env.GITLAB_TOKEN,
-        jobToken: typeof options['gitlab-job-token'] === 'string' ? options['gitlab-job-token'] : process.env.CI_JOB_TOKEN,
         live: options.live === true,
       });
       const text = `${JSON.stringify(result, null, 2)}\n`;
