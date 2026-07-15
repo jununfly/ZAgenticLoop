@@ -7,6 +7,7 @@ export declare function planGitLabScheduleProbe(input: any): {
     probe_id?: undefined;
     project?: undefined;
     state_path?: undefined;
+    deadline_at?: undefined;
     temporary_schedule?: undefined;
 } | {
     schema: string;
@@ -14,6 +15,7 @@ export declare function planGitLabScheduleProbe(input: any): {
     probe_id: string;
     project: string;
     state_path: string;
+    deadline_at: string;
     temporary_schedule: {
         description: string;
         ref: string;
@@ -36,3 +38,7 @@ export declare function readGitLabScheduleProbeState(input: {
 }): Promise<any>;
 export declare function createGitLabOwnedSchedule(input: any): Promise<any>;
 export declare function cleanupGitLabOwnedSchedule(input: any): Promise<any>;
+export declare function findGitLabOwnedSchedulePipeline(input: any): Promise<any>;
+export declare function runGitLabScheduleProbe(input: any): Promise<any>;
+export declare function resumeGitLabScheduleProbe(input: any): Promise<any>;
+export declare function restoreGitLabScheduleProbe(input: any): Promise<any>;

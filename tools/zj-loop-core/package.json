@@ -22,6 +22,7 @@
     "zj-loop-harness-protocol": "./dist/harness-protocol-cli.js",
     "zj-loop-run": "./dist/run-cli.js",
     "zj-loop-doctor": "./dist/doctor-cli.js",
+    "zj-loop-schedule-probe": "./dist/schedule-probe-cli.js",
     "zj-loop-dispatch": "./dist/dispatch-cli.js",
     "zj-loop-preflight": "./dist/preflight-cli.js",
     "zj-loop-workspace-closeout": "./dist/workspace-closeout-cli.js"

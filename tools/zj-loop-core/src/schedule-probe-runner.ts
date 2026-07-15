@@ -26,6 +26,7 @@ export function planGitLabScheduleProbe(input: any) {
     probe_id: probeId,
     project: String(input.project),
     state_path: `zj-loop/schedule-probes/${probeId}.json`,
+    deadline_at: new Date(due.getTime() + 10 * 60 * 1000).toISOString(),
     temporary_schedule: {
       description: marker,
       ref: String(input.ref ?? 'main'),
@@ -80,6 +81,56 @@ export async function cleanupGitLabOwnedSchedule(input: any) {
   const deleted = await fetchImpl(url, { method: 'DELETE', headers });
   if (!deleted.ok) return { ...input.plan, status: 'escalated', reason: 'owned-schedule-delete-failed' };
   return { ...input.plan, status: 'cleaned' };
+}
+
+export async function findGitLabOwnedSchedulePipeline(input: any) {
+  const fetchImpl = input.fetchImpl ?? globalThis.fetch;
+  const apiUrl = String(input.apiUrl ?? 'https://gitlab.com/api/v4').replace(/\/$/, '');
+  const project = encodeURIComponent(input.project);
+  const response = await fetchImpl(`${apiUrl}/projects/${project}/pipelines?source=schedule&per_page=20`, {
+    headers: { 'PRIVATE-TOKEN': input.token },
+  });
+  if (!response.ok) throw new Error('gitlab-scheduled-pipeline-query-failed');
+  const armedAt = new Date(input.armedAt).getTime();
+  return (await response.json()).find((pipeline: any) =>
+    pipeline.source === 'schedule' && new Date(pipeline.created_at).getTime() >= armedAt,
+  ) ?? null;
+}
+
+export async function runGitLabScheduleProbe(input: any) {
+  const plan = planGitLabScheduleProbe(input);
+  if (plan.status === 'refused') return plan;
+  const created = await createGitLabOwnedSchedule({ ...input, plan });
+  const armed = await writeGitLabScheduleProbeState({ root: input.root, plan: { ...created, armed_at: input.now ?? new Date().toISOString(), status: 'armed', poll_errors: 0 } });
+  return await resumeGitLabScheduleProbe({ ...input, state: armed.record });
+}
+
+export async function resumeGitLabScheduleProbe(input: any) {
+  const state = input.state ?? await readGitLabScheduleProbeState({ root: input.root, probeId: input.probeId });
+  if (state.status === 'cleaned') return { ...state, status: 'refused', reason: 'probe-already-cleaned' };
+  const now = input.nowFn ?? (() => new Date());
+  const sleep = input.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  let pipeline = null;
+  let pollErrors = Number(state.poll_errors ?? 0);
+  while (now().getTime() < new Date(state.deadline_at).getTime()) {
+    try { pipeline = await findGitLabOwnedSchedulePipeline({ ...input, project: state.project, armedAt: state.armed_at }); } catch { pollErrors += 1; }
+    if (pipeline) break;
+    await sleep(input.pollIntervalMs ?? 30_000);
+  }
+  const cleaned = await cleanupGitLabOwnedSchedule({ ...input, plan: state });
+  const result = cleaned.status === 'cleaned'
+    ? { ...cleaned, status: pipeline ? 'completed' : 'escalated', poll_errors: pollErrors, ...(pipeline ? { pipeline } : { reason: 'scheduled-pipeline-missing' }) }
+    : { ...cleaned, poll_errors: pollErrors };
+  await writeGitLabScheduleProbeState({ root: input.root, plan: cleaned.status === 'cleaned' ? { ...result, status: 'cleaned', outcome: result.status } : result });
+  return result;
+}
+
+export async function restoreGitLabScheduleProbe(input: any) {
+  const state = await readGitLabScheduleProbeState({ root: input.root, probeId: input.probeId });
+  if (state.status === 'cleaned') return { ...state, status: 'refused', reason: 'probe-already-cleaned' };
+  const result = await cleanupGitLabOwnedSchedule({ ...input, plan: state });
+  await writeGitLabScheduleProbeState({ root: input.root, plan: result.status === 'cleaned' ? { ...result, outcome: 'cleaned' } : result });
+  return result;
 }
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';

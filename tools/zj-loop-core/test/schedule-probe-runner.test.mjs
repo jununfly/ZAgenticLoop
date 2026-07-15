@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { cleanupGitLabOwnedSchedule, createGitLabOwnedSchedule, planGitLabScheduleProbe, readGitLabScheduleProbeState, SCHEDULE_PROBE_CONFIRMATION, writeGitLabScheduleProbeState } from '../dist/schedule-probe-runner.js';
+import { cleanupGitLabOwnedSchedule, createGitLabOwnedSchedule, findGitLabOwnedSchedulePipeline, planGitLabScheduleProbe, readGitLabScheduleProbeState, runGitLabScheduleProbe, SCHEDULE_PROBE_CONFIRMATION, writeGitLabScheduleProbeState } from '../dist/schedule-probe-runner.js';
 
 test('owned GitLab schedule probe refuses without its fixed confirmation before any side effect', () => {
   const result = planGitLabScheduleProbe({
@@ -69,6 +69,56 @@ test('owned GitLab schedule probe deletes only a schedule whose identity still m
 
   assert.equal(result.status, 'cleaned');
   assert.equal(calls[1].init.method, 'DELETE');
+});
+
+test('owned GitLab schedule probe refuses cleanup when its schedule marker drifts', async () => {
+  const plan = planGitLabScheduleProbe({ project: 'group/project', dueInMinutes: 3, confirmation: SCHEDULE_PROBE_CONFIRMATION, now: '2026-07-15T07:11:00Z', ref: 'main' });
+  const calls = [];
+  const result = await cleanupGitLabOwnedSchedule({
+    plan: { ...plan, owned_schedule_id: 99 }, token: 'token', apiUrl: 'https://gitlab.example/api/v4',
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url: String(url), init });
+      return { ok: true, async json() { return { id: 99, ...plan.temporary_schedule, description: 'human-owned' }; } };
+    },
+  });
+
+  assert.equal(result.status, 'escalated');
+  assert.equal(result.reason, 'owned-schedule-identity-mismatch');
+  assert.equal(calls.length, 1);
+});
+
+test('owned GitLab schedule probe observes only a scheduled pipeline created after it armed', async () => {
+  const result = await findGitLabOwnedSchedulePipeline({
+    project: 'group/project', token: 'token', apiUrl: 'https://gitlab.example/api/v4', armedAt: '2026-07-15T07:11:00Z',
+    fetchImpl: async () => ({ ok: true, async json() { return [
+      { id: 1, source: 'schedule', created_at: '2026-07-15T07:10:00Z' },
+      { id: 2, source: 'schedule', created_at: '2026-07-15T07:14:00Z' },
+    ]; } }),
+  });
+
+  assert.equal(result?.id, 2);
+});
+
+test('owned GitLab schedule probe runs start through scheduled evidence and guarded cleanup', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-schedule-probe-run-'));
+  try {
+    let pipelineQueries = 0;
+    const result = await runGitLabScheduleProbe({
+      root, project: 'group/project', ref: 'main', timezone: 'Asia/Shanghai', dueInMinutes: 3,
+      confirmation: SCHEDULE_PROBE_CONFIRMATION, token: 'token', apiUrl: 'https://gitlab.example/api/v4', now: '2026-07-15T07:11:00Z',
+      nowFn: () => new Date('2026-07-15T07:12:00Z'),
+      fetchImpl: async (url, init = {}) => {
+        const text = String(url);
+        if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
+        if (init.method === 'DELETE') return { ok: true, async json() { return {}; } };
+        if (text.includes('/pipelines?')) return { ok: true, async json() { pipelineQueries += 1; return [{ id: 2, source: 'schedule', created_at: '2026-07-15T07:14:00Z' }]; } };
+        return { ok: true, async json() { return { id: 99, description: `zj-loop.schedule_probe.v1:probe-20260715T071100000Z`, ref: 'main', cron: '14 15 * * *', cron_timezone: 'Asia/Shanghai' }; } };
+      },
+    });
+    assert.equal(result.status, 'completed', JSON.stringify(result));
+    assert.equal(result.pipeline.id, 2);
+    assert.equal(pipelineQueries, 1);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test('owned GitLab schedule probe plans a single owned schedule and replay state', () => {
