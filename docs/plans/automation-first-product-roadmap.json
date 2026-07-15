@@ -542,12 +542,12 @@
     "1-5-2-4": {
       "id": "1-5-2-4",
       "label": "GitHub Changelog Drafter draft artifact live recovery evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "GitHub workflow-dispatch dogfood run 29247657726 consumed a valid changelog draft request with core_package=./tools/zj-loop-core, draft_mode=evidence, and fixed confirmation CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE. Artifact contained live-draft-result.json and draft-artifacts/changelog-draft.md; outcome draft-evidence completed and tag_created/release_created/package_published/final_changelog_acceptance were all false. The current 0.1.8 recovery release did not change Changelog Drafter runner behavior, so replaying this identical bounded evidence would add no recovery signal. Route Table remains report-only pending a separate promotion decision."
     },
     "1-5-2-5": {
       "id": "1-5-2-5",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 11:02:43",
+    "updated": "2026-07-15 11:25:46",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
