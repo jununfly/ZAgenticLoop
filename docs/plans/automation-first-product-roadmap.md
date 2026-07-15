@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 11:41:29
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 11:47:58
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -25,7 +25,7 @@
 │   └── [x][Y+] 1-4-3. Ambiguous-handoff and unnecessary-confirmation metrics gate
 ├── [ ][Y+] 1-5. GitHub 与 GitLab 的 live 能力对齐
 │   ├── [x][Y+] 1-5-1. Provider adapter completion evidence mapping
-│   ├── [ ][Y+] 1-5-2. GitHub required-route live and recovery reference evidence
+│   ├── [x][Y+] 1-5-2. GitHub required-route live and recovery reference evidence
 │   ├── [ ][Y+] 1-5-3. GitLab signal and request-carrier live adapter parity
 │   ├── [ ][Y+] 1-5-4. GitLab branch MR review and closeout live adapter parity
 │   └── [ ][Y+] 1-5-5. GitLab required-route reference dogfood
@@ -40,7 +40,27 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-2-5. GitHub Roadmap activation and post-merge closeout live evidence
+### 当前施工：1. Automation-First Product Goal Roadmap
 
-#132 proved the fail-closed boundary: a hand-authored partial contract was refused with no cleanup. #131 remains open and branch intact. Correction uses the existing deterministic roadmap-handoff body generator and explicit authoring rule before retrying controlled live evidence.
+先完成 1-1 的 completion contract；1-2 迁移并基线化当前事实；1-3 与 1-4 可在 contract 稳定后并行；1-5、1-6、1-7 依次收口 adapter、gates 和 release evidence。
+
+**决策：**
+- Q: 架构目标与用户体验目标是否二选一？ → 两者必须同时满足，并在项目演进中动态保持一致。架构目标先进时应拉动用户体验补齐；用户体验落后时应作为稳定参考对象反向打磨架构确定性。 (参考动态规划思路：每个阶段都维护局部最优与全局目标的一致性，避免架构漂亮但体验不顺，或体验承诺超过架构事实。)
+- Q: 路线图应如何切成可执行 slices？ → 按同一真相面、核心派生、自动推进与Workspace、GitHub/GitLab适配、确定性gate/replay、reference dogfood/release 六条依赖线切分；每个叶子必须有明确接口、测试或dogfood证据，不能把中间报告误作完成。 (先完成可表达并可判定的 completion contract，后续 adapter 与用户体验工作才有共同完成标准。)
+
+**当前子树：**
+├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
+│   ... 5 more child nodes; run tree 1-1 --depth 2 for full view
+├── [x][Y+] 1-2. 当前 Route 能力与用户体验缺口盘点
+│   ... 3 more child nodes; run tree 1-2 --depth 2 for full view
+├── [x][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
+│   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
+├── [x][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
+│   ... 3 more child nodes; run tree 1-4 --depth 2 for full view
+├── [ ][Y+] 1-5. GitHub 与 GitLab 的 live 能力对齐
+│   ... 5 more child nodes; run tree 1-5 --depth 2 for full view
+├── [ ][Y+] 1-6. 确定性脚本 gate 与 replay 证据闭环
+│   ... 4 more child nodes; run tree 1-6 --depth 2 for full view
+└── [ ][Y+] 1-7. Dogfood 仪表盘与发布前完成判定
+    ... 4 more child nodes; run tree 1-7 --depth 2 for full view
 <!-- ROADMAP_SECTION_END -->
