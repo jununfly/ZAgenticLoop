@@ -191,9 +191,9 @@ signal 能变成 durable request carrier，并产出有边界的 consumer outcom
 consumer 仍然需要显式通过 Route Table 启用：
 
 ```bash
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route status
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
-npx --yes --package @jununfly/zj-loop-core@0.1.7 zj-loop-route disable ci-sweeper
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route status
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route enable ci-sweeper --confirm "enable ci-sweeper side effects"
+npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route disable ci-sweeper
 ```
 
 用户项目的第一条启用链路应按 route readiness 自选，而不是按安装顺序固定。

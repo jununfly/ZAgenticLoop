@@ -43,11 +43,12 @@ if (argv[0] === 'repair-plan') {
   process.exitCode = await runCli({
     name: 'zj-loop-dependency-sweeper',
     description: 'Execute Dependency Sweeper live repair from a consumed Issue Fix Request.',
-    usage: 'zj-loop-dependency-sweeper live-repair --request <path> --confirm-live-repair <phrase> [--out <path>] [--json]',
+    usage: 'zj-loop-dependency-sweeper live-repair --request <path> --confirm-live-repair <phrase> [--existing-repair-pr-url <url>] [--out <path>] [--json]',
     options: [
       { name: 'command', type: 'positional', description: 'Command', default: 'live-repair' },
       { name: 'request', type: 'string', description: 'Path to a consumed Issue Fix Request JSON file' },
       { name: 'confirm-live-repair', type: 'string', description: 'Fixed confirmation phrase for live repair' },
+      { name: 'existing-repair-pr-url', type: 'string', description: 'Existing open repair PR URL; reuse it without branch side effects' },
       { name: 'out', type: 'string', description: 'Write JSON result to this path' },
       { name: 'json', type: 'boolean', description: 'Print JSON output' },
     ],
@@ -59,6 +60,9 @@ if (argv[0] === 'repair-plan') {
         live: true,
         confirmationPhrase: typeof options['confirm-live-repair'] === 'string'
           ? options['confirm-live-repair']
+          : '',
+        existingRepairPullRequestUrl: typeof options['existing-repair-pr-url'] === 'string'
+          ? options['existing-repair-pr-url']
           : '',
       });
       const result = await executeDependencySweeperLiveRunner(plan);
