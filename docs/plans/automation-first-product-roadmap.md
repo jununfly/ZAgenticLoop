@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 08:51:29
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 08:57:03
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -24,7 +24,7 @@
 │   ├── [x][Y+] 1-4-2. Low-risk protocol repairs and structured protocol repair request
 │   └── [x][Y+] 1-4-3. Ambiguous-handoff and unnecessary-confirmation metrics gate
 ├── [ ][Y+] 1-5. GitHub 与 GitLab 的 live 能力对齐
-│   ├── [ ][Y+] 1-5-1. Provider adapter completion evidence mapping
+│   ├── [x][Y+] 1-5-1. Provider adapter completion evidence mapping
 │   ├── [ ][Y+] 1-5-2. GitHub required-route live and recovery reference evidence
 │   ├── [ ][Y+] 1-5-3. GitLab signal and request-carrier live adapter parity
 │   ├── [ ][Y+] 1-5-4. GitLab branch MR review and closeout live adapter parity

@@ -133,8 +133,8 @@ function unavailableGates(): CompletionAlignmentCell['gates'] {
 function liveCapabilityFor(route: RouteTableRoute, adapterId: string): CompletionGateStatus {
   if (adapterId === 'workspace') return 'missing';
   const support = route.provider_support?.[adapterId];
-  const hasRecentSuccess = (route.execution?.recent_success_evidence ?? []).length > 0;
-  return support?.status === 'live-supported' && hasRecentSuccess ? 'pass' : 'missing';
+  const hasProviderSuccessEvidence = (support?.evidence ?? []).length > 0;
+  return support?.status === 'live-supported' && hasProviderSuccessEvidence ? 'pass' : 'missing';
 }
 
 function statusFor(gates: CompletionAlignmentCell['gates']): CompletionCellStatus {

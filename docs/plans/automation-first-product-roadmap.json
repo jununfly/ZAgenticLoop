@@ -366,12 +366,12 @@
     "1-5-1": {
       "id": "1-5-1",
       "label": "Provider adapter completion evidence mapping",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completion ledger now maps live capability evidence by provider adapter: only provider_support.<provider>.evidence can satisfy that provider cell. A GitHub success link cannot promote GitLab."
     },
     "1-5-2": {
       "id": "1-5-2",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 08:51:29",
+    "updated": "2026-07-15 08:57:03",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

@@ -32,7 +32,7 @@ routes:
       max_side_effect_level: evidence
     provider_support:
       github: { status: live-supported, evidence: [dogfood-run:manual-smoke] }
-      gitlab: { status: dry-run-supported, evidence: [gitlab-ci:zj-loop-smoke.yml] }
+      gitlab: { status: live-supported, evidence: [] }
     completion_target:
       adapters:
         github: { applicability: applicable, requirement: required, signal_initiation_mode: explicit-on-demand }

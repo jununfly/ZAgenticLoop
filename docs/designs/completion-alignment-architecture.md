@@ -70,6 +70,10 @@ scorecard. A cell is complete only when all applicable fields pass:
 | `automatic_progression` | Eligible transitions advance automatically from the declared signal initiation point. |
 | `verification` | Deterministic gates and evidence indexes identify the current truth. |
 
+Provider live-capability evidence is scoped to its adapter cell. A GitHub
+success link cannot establish GitLab capability, and route-wide historical
+links are not a substitute for `provider_support.<provider>.evidence`.
+
 The fixed cell statuses are:
 
 - `complete`: every applicable hard gate passes.
