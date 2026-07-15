@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import {
   renderLoopProtocolOutputMarkdown,
   recordLoopRunMetrics,
+  evaluateLoopRunMetricsGate,
   runHarnessProtocolCli,
   buildHarnessRunStateRecord,
   findHarnessResumeEnvelope,
@@ -454,6 +455,33 @@ test('run metrics recorder summarizes structured harness outputs deterministical
   assert.equal(metrics.signal_to_review_artifact_completed, true);
   assert.deepEqual(metrics.surfaces, ['github-issue', 'github-pr']);
   assert.equal(metrics.location_switch_count, 1);
+  assert.deepEqual(evaluateLoopRunMetricsGate(metrics), {
+    schema: 'zj-loop.run_metrics_gate.v1',
+    status: 'pass',
+    violations: [],
+  });
+});
+
+test('run metrics gate rejects confirmations without a stopped resume boundary', () => {
+  const metrics = recordLoopRunMetrics({
+    run_id: 'invalid-confirmation',
+    outputs: [harnessOutput({
+      machine_envelope: {
+        status: 'in_progress',
+        run_id: 'invalid-confirmation',
+        completed_steps: [],
+        next_action: { type: 'request_confirmation', target: 'terminal', label: 'Confirm' },
+        evidence: [],
+        artifacts: [],
+      },
+    })],
+  });
+  assert.equal(metrics.unnecessary_confirmation_count, 1);
+  assert.deepEqual(evaluateLoopRunMetricsGate(metrics), {
+    schema: 'zj-loop.run_metrics_gate.v1',
+    status: 'fail',
+    violations: ['unnecessary-confirmation'],
+  });
 });
 
 test('harness run state records expose deterministic resume lookup and local storage paths', () => {

@@ -107,6 +107,11 @@ export type LoopRunMetrics = {
     post_merge_closeout_evidence_count: number;
     surfaces: string[];
 };
+export type LoopRunMetricsGate = {
+    schema: 'zj-loop.run_metrics_gate.v1';
+    status: 'pass' | 'fail';
+    violations: string[];
+};
 export type LoopHarnessRunStateRecord = {
     schema: typeof LOOP_HARNESS_RUN_STATE_SCHEMA;
     schema_version: typeof LOOP_HARNESS_SCHEMA_VERSION;
@@ -141,6 +146,7 @@ export declare function recordLoopRunMetrics(input: {
     run_id: string;
     outputs: LoopHarnessProtocolOutput[];
 }): LoopRunMetrics;
+export declare function evaluateLoopRunMetricsGate(metrics: LoopRunMetrics): LoopRunMetricsGate;
 export declare function buildHarnessRunStateRecord(input: {
     source: LoopHarnessRunStateRecord['source'];
     output: LoopHarnessProtocolOutput;

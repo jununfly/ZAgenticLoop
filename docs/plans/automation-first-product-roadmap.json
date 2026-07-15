@@ -108,7 +108,7 @@
     "1-4": {
       "id": "1-4",
       "label": "结构化 stop signal 与 human handoff 体验",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -356,12 +356,12 @@
     "1-4-3": {
       "id": "1-4-3",
       "label": "Ambiguous-handoff and unnecessary-confirmation metrics gate",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Run metrics now deterministically identify confirmations lacking stopped + stop_signal + resume evidence. zj-loop.run_metrics_gate.v1 fails on those unnecessary confirmations or ambiguous next actions; tests cover a valid human gate and an invalid in-progress confirmation."
     },
     "1-5-1": {
       "id": "1-5-1",
@@ -692,7 +692,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 08:49:10",
+    "updated": "2026-07-15 08:51:29",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

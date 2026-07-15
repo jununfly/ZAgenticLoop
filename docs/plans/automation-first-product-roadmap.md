@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 08:49:10
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 08:51:29
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -19,10 +19,10 @@
 │   ├── [x][Y+] 1-3-2. Workspace Adapter local activation and review artifact runner
 │   ├── [x][Y+] 1-3-3. Workspace Adapter local closeout resume and real Git dogfood
 │   └── [x][Y+] 1-3-4. Bounded multi-slice continuation to artifact or hard stop
-├── [ ][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
+├── [x][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
 │   ├── [x][Y+] 1-4-1. Machine-readable human handoff location and confirmation contract
 │   ├── [x][Y+] 1-4-2. Low-risk protocol repairs and structured protocol repair request
-│   └── [ ][Y+] 1-4-3. Ambiguous-handoff and unnecessary-confirmation metrics gate
+│   └── [x][Y+] 1-4-3. Ambiguous-handoff and unnecessary-confirmation metrics gate
 ├── [ ][Y+] 1-5. GitHub 与 GitLab 的 live 能力对齐
 │   ├── [ ][Y+] 1-5-1. Provider adapter completion evidence mapping
 │   ├── [ ][Y+] 1-5-2. GitHub required-route live and recovery reference evidence
@@ -55,7 +55,7 @@
 │   ... 3 more child nodes; run tree 1-2 --depth 2 for full view
 ├── [x][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
 │   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
-├── [ ][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
+├── [x][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
 │   ... 3 more child nodes; run tree 1-4 --depth 2 for full view
 ├── [ ][Y+] 1-5. GitHub 与 GitLab 的 live 能力对齐
 │   ... 5 more child nodes; run tree 1-5 --depth 2 for full view

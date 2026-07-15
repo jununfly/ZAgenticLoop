@@ -145,6 +145,12 @@ repair is needed it emits a `protocol_repair_request` with the fixed
 `resume_loop` action keyed by its repair envelope; a prose command hint is not
 the automation contract.
 
+`zj-loop.run_metrics_gate.v1` fails when a run contains an ambiguous next
+action or a confirmation outside a stopped boundary with both stop and resume
+evidence. This keeps the automation-first default measurable: a confirmation
+is acceptable only when it names a real boundary, not when routine progress
+could have continued.
+
 ## Evidence Rules
 
 Evidence has four distinct roles:
