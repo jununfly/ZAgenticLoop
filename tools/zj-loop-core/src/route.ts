@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
+import { validateTriageRoleMapping } from './triage-role-mapping.js';
 
 export const DEFAULT_ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
 
@@ -75,6 +76,10 @@ export type RouteTableDocument = {
   kind?: string;
   metadata?: {
     completion_target?: RouteTableCompletionTargetMetadata;
+    [key: string]: unknown;
+  };
+  policy?: {
+    triage_role_mapping?: Record<string, unknown>;
     [key: string]: unknown;
   };
   routes?: RouteTableRoute[];
@@ -295,6 +300,10 @@ export function parseRouteTable(text: string): RouteTableDocument {
     throw new Error('Expected kind: zj-loop-route-table');
   }
   validateCompletionTargetContract(parsed);
+  for (const [provider, mapping] of Object.entries(parsed.policy?.triage_role_mapping ?? {})) {
+    const validation = validateTriageRoleMapping(mapping);
+    if (!validation.ok) throw new Error(`triage_role_mapping.${provider} is invalid: ${validation.errors.join(', ')}`);
+  }
   return parsed;
 }
 

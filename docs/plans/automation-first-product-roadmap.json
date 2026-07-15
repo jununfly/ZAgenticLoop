@@ -392,14 +392,25 @@
     "1-5-3": {
       "id": "1-5-3",
       "label": "GitLab signal and request-carrier live adapter parity",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [
         "1-5-3-1",
         "1-5-3-2"
       ],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "真实 scheduled evidence 等待期间是否允许并行推进 GitLab confirmed triage transition？",
+          "answer": "允许并行推进 1-5-3-2，但 issue-backlog route 的 live maturity 不得在 1-5-3-1-5 获得 source=schedule artifact evidence 前提升。",
+          "note": "避免时间窗口造成整体停摆，同时保持 live capability claim 的证据边界。"
+        },
+        {
+          "q": "Does a blocked GitLab schedule probe block all GitLab route parity?",
+          "answer": "No. It blocks only schedule-probe evidence; manual and event-triggered GitLab routes continue independently.",
+          "note": "Schedule variable read-back is a strict preflight for temporary owned schedules, not a platform-wide capability claim."
+        }
+      ],
       "notes": ""
     },
     "1-5-4": {
@@ -562,22 +573,220 @@
     "1-5-3-1": {
       "id": "1-5-3-1",
       "label": "GitLab issue-backlog scheduled signal and report evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-3-1-1",
+        "1-5-3-1-2",
+        "1-5-3-1-3",
+        "1-5-3-1-4",
+        "1-5-3-1-5"
+      ],
+      "decisions": [
+        {
+          "q": "当 GitLab scheduler 无法生成 source=schedule pipeline 时，是否允许用 API/manual pipeline 充当 scheduled evidence？",
+          "answer": "不允许；必须输出可回放的 schedule-health escalation",
+          "note": "API/manual 可用于运行时诊断，但不能替代 scheduled evidence。"
+        },
+        {
+          "q": "GitLab schedule-health 的完成判定是否同时要求配置存在与真实 scheduled pipeline/artifact？",
+          "answer": "两层都要",
+          "note": "配置层检查 active/cron/ref；执行层检查预期窗口内 source=schedule pipeline 和 route artifact，并分别给出 escalation reason。"
+        },
+        {
+          "q": "schedule-health 应使用独立命令，还是归入现有 zj-loop-doctor？",
+          "answer": "归入 zj-loop-doctor",
+          "note": "Doctor 提供 provider-aware 统一诊断与 escalation；adapter 仅查询平台事实。"
+        },
+        {
+          "q": "zj-loop-doctor 是否默认访问 provider API 检查 schedule-health？",
+          "answer": "仅在显式 --provider gitlab 或 --schedule-health 时访问网络",
+          "note": "普通 doctor 保持本地；provider 检查分别报告认证、连通性、配置与执行证据。"
+        },
+        {
+          "q": "schedule-health 的执行窗口如何判定？",
+          "answer": "从 cron 推导周期，允许 --expected-within-minutes 覆盖，并加固定 10 分钟 grace",
+          "note": "Doctor 输出计算后的 expected_window，支持非标准 cron 与时区差异下的可回放诊断。"
+        },
+        {
+          "q": "zj-loop-doctor --schedule-health 是否允许自动启用 schedule、修改 cron 或调用 play？",
+          "answer": "不允许",
+          "note": "Doctor 只读输出 schedule-health escalation；任何外部副作用由独立 setup/operate 路径承担。"
+        },
+        {
+          "q": "schedule-health escalation 的主 truth 与用户输出是什么？",
+          "answer": "Doctor 结构化 JSON 为主 truth，同时提供简短摘要和 next_steps 命令数组",
+          "note": "不自动写 issue/comment/state，避免诊断制造 tracker 噪声。"
+        },
+        {
+          "q": "成功 scheduled pipeline 是否自动提升 GitLab issue-backlog-triage Route Table maturity？",
+          "answer": "不自动提升",
+          "note": "只形成 promotion candidate/live evidence；Route Table 仍经明确 promotion gate 升级。"
+        },
+        {
+          "q": "schedule-health 第一阶段应只硬编码 issue-backlog-triage，还是采用通用协议？",
+          "answer": "通用协议，先实现 GitLab adapter，命令显式 --route <route-id>",
+          "note": "避免复制逻辑；不默认猜 route，GitLab 先解决当前缺口。"
+        },
+        {
+          "q": "同一 route 存在多个 GitLab schedules 时，doctor 如何定位目标？",
+          "answer": "schedule_id 参数必填",
+          "note": "route 参数与 schedule_id 参数均显式提供，不按 description、cron 或 ref 模糊匹配。"
+        },
+        {
+          "q": "Doctor 的 GitLab API 凭据应如何提供？",
+          "answer": "仅解析现有环境变量 GITLAB_TOKEN、GITLAB_PRIVATE_TOKEN、GLAB_TOKEN，不新增 token CLI 参数",
+          "note": "按该优先级解析；仅报告 auth_source 名称，禁止输出 token 或完整 provider response。"
+        },
+        {
+          "q": "Doctor 的自托管 GitLab API 地址如何确定？",
+          "answer": "api-url 参数可选；默认 CI_API_V4_URL，否则回退 GitLab.com API",
+          "note": "结构化 JSON 记录最终 api_url；支持 CI 与本地 self-hosted 场景。"
+        },
+        {
+          "q": "GitLab project path 是否允许从 CI 或 git remote 推导？",
+          "answer": "project 参数必填",
+          "note": "与 route、schedule_id 一样显式指定，避免 worktree、fork 或 remote 导致错误关联。"
+        },
+        {
+          "q": "Doctor 如何确认 scheduled pipeline 完成了指定 route？",
+          "answer": "artifact path 参数必填",
+          "note": "查询最新 source=schedule pipeline 的对应 job，并验证显式指定 artifact 存在；不硬编码 route-artifact 映射。"
+        },
+        {
+          "q": "仅验证 scheduled artifact 存在是否足够？",
+          "answer": "不够；artifact schema 参数必填并下载验证 JSON schema 字段",
+          "note": "当前 issue backlog 使用 zj-loop.issue_recommendations.v1；避免空文件或错误产物误判为成功。"
+        },
+        {
+          "q": "Doctor 从 scheduled pipeline 的哪个 job 下载 artifact？",
+          "answer": "job name 参数必填",
+          "note": "避免同一 pipeline 多个 consumer 上传同名 artifact 时误关联；目标对象全部显式。"
+        },
+        {
+          "q": "schedule 下一次预期运行尚未来到时，doctor 应如何报告？",
+          "answer": "not_due，不作为 warning 或 escalation",
+          "note": "输出 next_run_at、expected_window 与当前时间；超出窗口仍无 scheduled pipeline 才 execution_missing。"
+        },
+        {
+          "q": "schedule 被编辑后，旧 scheduled pipeline 能否继续作为健康证据？",
+          "answer": "不能",
+          "note": "匹配 pipeline 创建时间必须不早于 schedule.updated_at；配置变更后必须有新的真实 scheduled evidence。"
+        }
+      ],
       "notes": "GitLab target is API-authenticated but canonical bundle is manual-only and does not scan backlog; target has an unversioned inline prototype. Implement a deterministic core reporter, wire scheduled/manual template rules, then upgrade target with local packed packages for live evidence."
     },
     "1-5-3-2": {
       "id": "1-5-3-2",
       "label": "GitLab confirmed triage transition source-issue carrier evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "What is the first GitLab confirmation entrypoint?",
+          "answer": "A maintainer manually starts a GitLab Web pipeline with a structured transition request and fixed confirmation phrase.",
+          "note": "The CI job writes the request-only Issue Fix Request comment to the source issue through the GitLab Issue Notes API. A later webhook can reuse this protocol without changing its side-effect contract."
+        },
+        {
+          "q": "Which credential may write a GitLab source issue request comment?",
+          "answer": "Only GITLAB_TOKEN.",
+          "note": "No fallback to CI_JOB_TOKEN, GITLAB_PRIVATE_TOKEN, or GLAB_TOKEN. Missing GITLAB_TOKEN is a structured hard stop before any Issue Notes API request."
+        },
+        {
+          "q": "How does the manual GitLab pipeline receive a confirmed transition?",
+          "answer": "It accepts only ZJ_LOOP_TRIAGE_REQUEST_JSON and ZJ_LOOP_TRIAGE_CONFIRMATION.",
+          "note": "The request must validate as zj-loop.recommended_triage_transition.v1 and confirmation must exactly equal CONFIRM_TRIAGE_TRANSITION. Missing or invalid values produce a structured refusal artifact before any Issue Notes API call."
+        },
+        {
+          "q": "How does GitLab transition execution remain idempotent?",
+          "answer": "Read and parse source issue notes before writing; return duplicate for an existing active request instead of posting another note.",
+          "note": "The dedupe check uses Issue Fix Request markers and active dedupe_key/request state. A new note is posted only when no active source-issue carrier exists."
+        },
+        {
+          "q": "How is the GitLab source issue bound to a transition request?",
+          "answer": "It must bind exactly to the current CI project and a positive GitLab issue IID.",
+          "note": "tracker must be gitlab; source repo/project_path must equal CI_PROJECT_PATH; and any source URL must parse to that same GitLab project and issue. Any mismatch returns request-source-mismatch before any Issue Notes API call."
+        },
+        {
+          "q": "How does GitLab transition execution recover from an uncertain Issue Notes write?",
+          "answer": "Never retry the write blindly; re-read notes once to detect the exact request marker.",
+          "note": "A matching marker returns recovered-duplicate with note evidence. No match after timeout/network/5xx returns note-write-unknown hard stop. Explicit 4xx failures hard-stop directly without a second read."
+        },
+        {
+          "q": "Does a successful GitLab transition job directly start Roadmap-Sliced Development?",
+          "answer": "No. It stops after creating or deduplicating the source-issue Issue Fix Request carrier.",
+          "note": "It emits structured handoff evidence only. Roadmap-Sliced Development must independently consume the carrier through Route Dispatcher and owns branch/MR plus implementation lifecycle."
+        },
+        {
+          "q": "What is required to claim GitLab live support for this route?",
+          "answer": "A real GitLab Web pipeline artifact must prove validated binding, dedupe outcome, verified source note marker, and Route Dispatcher handoff.",
+          "note": "Persist only low-cost audit fields: request id, source issue URL/IID, current project binding, note ID/URL, marker validation, dedupe outcome, and handoff reference. Unit/replay tests alone remain replayed evidence."
+        },
+        {
+          "q": "Should GitLab trusted-automation confirmation be implemented in this slice?",
+          "answer": "Yes. Implement it as a real bounded runner in the same slice, not only as a Route Table declaration.",
+          "note": "It must remain separately guarded and evidenced from the human Web-pipeline path; no unsupported provider context may claim trusted automation."
+        },
+        {
+          "q": "What GitLab runtime fact authorizes trusted transition automation?",
+          "answer": "Only a scheduled pipeline with CI_PIPELINE_SOURCE=schedule and ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION=enabled.",
+          "note": "The trusted path may consume only same-job generated and validated ready-for-agent recommendations. It never accepts externally supplied transition JSON. A provider unable to execute scheduled pipelines hard-stops this automatic path while preserving the human Web-pipeline path."
+        },
+        {
+          "q": "How many carrier notes may trusted scheduled automation create per scan?",
+          "answer": "At most one, selected by a deterministic order from eligible ready-for-agent recommendations.",
+          "note": "Remaining candidates stay recommendation evidence for later runs. This preserves progress while honoring batch_mutation_allowed=false and bounding write cost plus replay scope."
+        },
+        {
+          "q": "Which scheduled candidates may trusted automation confirm?",
+          "answer": "Only deterministic high-confidence ready-for-agent candidates with no assignment, risk flag, or blocker.",
+          "note": "The candidate must be agent-ready-request, carry ready-for-agent, map to an allowlisted bug or enhancement category, and be converted by deterministic rules into a high-confidence transition request. All other recommendations remain report-only."
+        },
+        {
+          "q": "How are GitLab tracker labels interpreted for trusted triage automation?",
+          "answer": "Resolve them only through an explicit Route Table mapping to zj-triage canonical roles; ignore all unrelated labels.",
+          "note": "Auto confirmation requires exactly one mapped category role and exactly one mapped ready-for-agent state role. Missing or conflicting role mappings remain report-only rather than inviting invented label semantics."
+        },
+        {
+          "q": "Where and how are canonical triage role mappings defined?",
+          "answer": "Define the complete provider-scoped mapping in Route Table policy, and enforce parsing, disjointness, and precise edits through deterministic scripts.",
+          "note": "All seven zj-triage roles are declared once per provider. Extra tracker labels are ignored. Auto transition reads only bug|enhancement plus ready-for-agent. No agent infers mappings; changes must be explicit and script-validated."
+        },
+        {
+          "q": "Must adapting a new tracker label require a core package release?",
+          "answer": "No. It is an explicit project Route Table mapping change made only through a deterministic CLI and validation gate.",
+          "note": "The CLI prevents agent inference and hand-edited ambiguity while keeping per-project label adaptation practical. Core code changes only when mapping semantics or the canonical role model itself changes."
+        },
+        {
+          "q": "How may a deterministic triage-role mapping CLI change Route Table policy?",
+          "answer": "It defaults to read-only validation and plan output; only apply with UPDATE_TRIAGE_ROLE_MAPPING may write.",
+          "note": "validate is CI-safe. plan shows the exact disjointness-checked diff. apply is the sole mutation path and records the fixed confirmation boundary for a change that affects future automation eligibility."
+        },
+        {
+          "q": "Should starters ship a default triage-role mapping?",
+          "answer": "Yes. Generate standard same-name canonical mappings for GitHub and GitLab, but keep trusted automation disabled by default.",
+          "note": "Projects using other labels must update the mapping through the deterministic validate/plan/apply CLI. Installation alone never writes issue notes or enables trusted automation."
+        },
+        {
+          "q": "Can the current GitLab instance claim scheduled trusted-automation live support?",
+          "answer": "No. Keep scheduled trusted automation blocked-with-follow-up until another GitLab instance proves real scheduled pipeline evidence.",
+          "note": "The implementation, protocol, deterministic tests, and human Web-pipeline path may complete independently. Missing scheduled evidence must remain visible and cannot be compensated by human-path success."
+        },
+        {
+          "q": "Do human Web and trusted scheduled GitLab paths share the transition executor?",
+          "answer": "Yes. Share deterministic role mapping, request validation, source binding, authority checks, dedupe, note-write recovery, and low-cost evidence.",
+          "note": "The GitLab-specific adapter owns only Issue Notes API calls and CI context parsing. Web and scheduled inputs must not grow separate side-effect semantics."
+        },
+        {
+          "q": "What does the current GitLab schedule 961 dogfood prove?",
+          "answer": "The current GitLab instance has real scheduled trusted-automation evidence for issue-backlog-triage and issue-triage-transition.",
+          "note": "Pipeline 10503630 source=schedule; zj_loop_issue_triage success; transition-result completed duplicate for Issue #160 with note 19639888 and roadmap-sliced-development handoff."
+        }
+      ],
+      "notes": "Completed with GitLab dogfood evidence: schedule 961 produced pipeline 10503630 from source=schedule at commit f35b0784; daily triage, issue triage, and schedule-probe receipt jobs succeeded. Issue #160 recommendation was consumed by trusted automation; transition-result completed with duplicate outcome, note 19639888, deterministic note URL, and roadmap-sliced-development handoff request ifr_triage_6504fff8d631. Schedule probe remains capability-blocked when no probe_id is supplied, but is now a non-blocking structured warning."
     },
     "1-5-4-1": {
       "id": "1-5-4-1",
@@ -688,11 +897,420 @@
       "children": [],
       "decisions": [],
       "notes": "Dogfooded Workspace Changelog Drafter and Roadmap-Sliced Development in real temporary Git worktrees. Changelog defaults to draft evidence and requires explicit workspace_draft_mode:file-patch for file review; roadmap produces Git patch/changed-file artifacts. The durable reference documents all applicable Workspace route families and explicit N/A tracker routes (core npm test: 201 passing)."
+    },
+    "1-5-3-1-1": {
+      "id": "1-5-3-1-1",
+      "label": "Provider-neutral schedule-health result contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Added zj-loop.schedule_health.v1 contract with deterministic not_due, execution_missing, artifact validation, explicit target fields, low-cost audit data, and next_steps. Contract tests pass."
+    },
+    "1-5-3-1-2": {
+      "id": "1-5-3-1-2",
+      "label": "GitLab schedule API adapter and zj-loop-doctor CLI",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab read-only schedule/pipeline adapter and explicit doctor CLI parameters implemented; missing token returns structured escalation."
+    },
+    "1-5-3-1-3": {
+      "id": "1-5-3-1-3",
+      "label": "Scheduled job artifact schema verifier and deterministic tests",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Explicit job/artifact/schema lookup and JSON schema verification implemented with deterministic contract tests."
+    },
+    "1-5-3-1-4": {
+      "id": "1-5-3-1-4",
+      "label": "GitLab generated-fragment YAML parser gate and target rollout recovery",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "GitLab fragment YAML parser gate 应放在哪些层？",
+          "answer": "zj-loop-init 标准测试与根仓库 generated-bundle/release gate 两层都要",
+          "note": "源模板快速失败，发布资产再次验证，防止 bundle drift。"
+        },
+        {
+          "q": "本地确定性 YAML parser gate 应采用什么证据标准？",
+          "answer": "Node yaml parser 验证 init 实际渲染的每个 fragment；GitLab pipeline 作为 target dogfood 第二层证据",
+          "note": "不依赖网络/token；只校验渲染产物，服务端差异由真实 target pipeline 捕获。"
+        },
+        {
+          "q": "target project rollout recovery 的默认动作是什么？",
+          "answer": "使用本地 tarball 执行 init upgrade gitlab-ci force，保留 bak，提交前运行 parser gate，根 CI 仅显式最小变更",
+          "note": "证明用户升级路径；不手工伪造 fragments，不接管 Dejavu 等 root CI 配置。"
+        },
+        {
+          "q": "YAML recovery 的 target dogfood 成功标准是否要求所有 generated manual jobs 成功？",
+          "answer": "只要求完整 include 被 GitLab 解析并创建 pipeline，yaml_errors 为空",
+          "note": "consumer 运行时/route artifact 属于后续 live-evidence slice，避免混淆根因。"
+        },
+        {
+          "q": "自管 root GitLab CI 缺少 include/stage 时，是否让 init 标准 parser gate 硬失败？",
+          "answer": "不硬失败；输出 root_ci_integration_missing warning 与 next steps",
+          "note": "Root CI 属于用户/平台；新建 root 由 bundle test 覆盖，target rollout 通过显式人审检查 include/stage。"
+        }
+      ],
+      "notes": "Completed deterministic two-layer YAML gate: init parses each rendered GitLab fragment; generated-bundle gate parses canonical and bundled fragments with default and controlled runner tags, and rejects bundle drift. Verified npm test (zj-loop-init, 32/32), npm run test:generated-bundle-release-gate, npm run check:zj-loop-init, and git diff --check."
+    },
+    "1-5-3-1-5": {
+      "id": "1-5-3-1-5",
+      "label": "GitLab target scheduled live evidence and escalation record",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1",
+      "children": [
+        "1-5-3-1-5-1",
+        "1-5-3-1-5-2"
+      ],
+      "decisions": [
+        {
+          "q": "schedule-health 的真实运行窗口应以什么时间为准？",
+          "answer": "采用由 cron 推导的最近一次应执行窗口，加固定 10 分钟 grace；scheduled pipeline 必须晚于该窗口与 schedule.updated_at。",
+          "note": "GitLab next_run_at 在一次运行后会前移到未来，不能作为成功窗口的唯一依据。"
+        }
+      ],
+      "notes": "Read-only GitLab configuration evidence checked 2026-07-15: schedule 957 is active, cron is 0 9 * * * Asia/Shanghai, next_run_at is 2026-07-16T09:03:00+08:00, and no source=schedule pipeline exists yet. This is not_due under the fixed 10-minute grace; do not classify it as a scheduler failure. GitLab project settings provide GITLAB_TOKEN to CI jobs, not to the local Codex shell. GitLab master pipeline 10496862 was created successfully with status manual after the YAML recovery, which confirms the full include parses; it is source=api and is not scheduled live evidence. Recheck after the due window for a source=schedule pipeline and issue-recommendations.json schema evidence."
+    },
+    "1-5-3-1-5-1": {
+      "id": "1-5-3-1-5-1",
+      "label": "Cron-derived scheduled execution window contract and regression tests",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5",
+      "children": [
+        "1-5-3-1-5-1-1",
+        "1-5-3-1-5-1-2"
+      ],
+      "decisions": [
+        {
+          "q": "Cron-derived schedule window 应如何解析？",
+          "answer": "使用成熟的 timezone-aware cron parser，作为 @jununfly/zj-loop-core 的运行时依赖。",
+          "note": "schedule-health 是通用协议；必须可靠支持 weekday、step、range 等常见 GitLab cron，而不是只覆盖当前固定每日 cron。"
+        },
+        {
+          "q": "已有有效 scheduled evidence、但下一个 cron 尚未到期时，doctor 应报告什么状态？",
+          "answer": "报告 healthy，并携带下一次 expected window；not_due 仅用于 schedule 创建或更新后首个窗口尚未到来。",
+          "note": "避免将持续健康的 schedule 表示为未验证状态，同时保留首次配置等待期的静默语义。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-3-1-5-2": {
+      "id": "1-5-3-1-5-2",
+      "label": "Temporary owned GitLab schedule evidence and guarded cleanup",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5",
+      "children": [
+        "1-5-3-1-5-2-1",
+        "1-5-3-1-5-2-2",
+        "1-5-3-1-5-2-3"
+      ],
+      "decisions": [
+        {
+          "q": "临时真实 scheduled evidence 应如何触发？",
+          "answer": "临时改为当前时刻约 3 分钟后的精确单分钟 cron；检测到首个 source=schedule pipeline 后立即恢复每日 09:00 Asia/Shanghai。",
+          "note": "避免 */1 重复执行 report-only triage、生成冗余 artifact 与审计噪声。"
+        },
+        {
+          "q": "临时 schedule 的恢复是否应防止覆盖并发人为修改？",
+          "answer": "必须保存原始 cron、timezone、ref、active 等低成本字段；恢复前重新读取并确认仍是本次写入的临时 cron，否则拒绝覆盖并输出结构化 recovery/escalation evidence。",
+          "note": "临时验证不能接管用户的 schedule 配置；compare-before-restore 保留人为配置的最终控制权。"
+        },
+        {
+          "q": "临时 cron 在什么时点恢复日常配置？",
+          "answer": "检测到首个 source=schedule pipeline 创建后立即受保护恢复，不等待 job/artifact 成功；随后单独验证 job 与 artifact。若 grace 后仍无 scheduled pipeline，也立即尝试受保护恢复并记录 execution_missing。",
+          "note": "限制临时 cron 的重复执行；执行与 artifact 失败仍保留为独立、可回放的诊断事实。"
+        },
+        {
+          "q": "临时 schedule 验证应由哪个接口执行？",
+          "answer": "新增独立 zj-loop-schedule-probe CLI，仍放在 @jununfly/zj-loop-core；它执行临时 cron、观察、compare-before-restore 与结构化证据。",
+          "note": "Doctor 保持只读；确定性 operator CLI 取代人工 API 拼接，并要求固定确认短语、显式项目/schedule 参数和环境变量凭据。"
+        },
+        {
+          "q": "临时 schedule probe 是否允许任意 cron 写入？",
+          "answer": "不允许；仅接受必填 --due-in-minutes <N>，范围 3–30 分钟，并由 CLI 生成精确单分钟 cron。",
+          "note": "把它限定为 evidence probe，避免演化为可误用的通用 schedule 配置工具。"
+        },
+        {
+          "q": "临时 schedule probe 的写入确认如何保护？",
+          "answer": "使用固定确认短语 RUN_TEMPORARY_GITLAB_SCHEDULE_PROBE；缺失或不匹配时只输出结构化 refusal，零 API 写入。",
+          "note": "短语与唯一的 schedule mutation 边界一一对应，并形成可审计授权事实。"
+        },
+        {
+          "q": "临时 cron 写入后若 CLI 中断，应如何恢复？",
+          "answer": "必须在 zj-loop/ 下保存低成本 probe state，并支持确定性的 --resume 与受保护 --restore。state 仅保存 probe id、目标、原始/临时配置摘要、写入时间与恢复状态。",
+          "note": "重启后不依赖记忆或人工猜测，可继续观察或先安全恢复，避免遗留测试 schedule。"
+        },
+        {
+          "q": "probe 在首次固定确认后，恢复日常 cron 是否需要第二次确认？",
+          "answer": "不需要；--resume 在观察到首个 scheduled pipeline 或超时后自动执行 compare-before-restore。",
+          "note": "首次确认授权有界 probe 事务；恢复是必需清理而非新的任意配置修改。compare-before-restore 失败时停止并输出 escalation。"
+        },
+        {
+          "q": "zj-loop-schedule-probe start 的默认执行模型是什么？",
+          "answer": "在同一进程内每 30 秒轮询，直到出现 scheduled pipeline 或达到目标 minute 加固定 10 分钟 grace；完成自动恢复后才返回。",
+          "note": "提供完整 loop；仅进程中断或临时网络故障等异常情况需要 --resume。"
+        },
+        {
+          "q": "GitLab 项目变量中的 GITLAB_TOKEN 如何进入 schedule probe？",
+          "answer": "在 GitLab CI bundle 新增手动 zj_loop_schedule_probe job，调用同一个 core CLI；本地 CLI 保留给已有允许环境变量的场景。",
+          "note": "核心协议与逻辑只实现一次；GitLab adapter 仅提供项目变量运行环境，不放宽仅环境变量认证契约。"
+        },
+        {
+          "q": "GitLab 手动 schedule probe job 的授权输入如何提供？",
+          "answer": "必须在启动时显式填写 ZJ_LOOP_SCHEDULE_PROBE_DUE_IN_MINUTES=3 和 ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION=RUN_TEMPORARY_GITLAB_SCHEDULE_PROBE；模板默认留空。",
+          "note": "缺失时 CLI 输出结构化 refusal，零 schedule 写入，避免 YAML 默认值绕过确认边界。"
+        },
+        {
+          "q": "临时真实 schedule evidence 是否修改既有 schedule 957？",
+          "answer": "不修改；创建带固定 ZJ Loop marker 的一次性临时 GitLab schedule，验证后仅删除该 probe 自己创建的 schedule。",
+          "note": "GitLab schedule update 没有已确认的原子 conditional-update 合约；独立 schedule 消除覆盖人为配置的竞争风险，并使中断恢复只需删除持有的 schedule id。"
+        },
+        {
+          "q": "自动 cleanup 删除临时 schedule 前需要哪些身份保护？",
+          "answer": "必须重新读取 schedule id，并验证固定 marker、probe id、ref、cron/timezone 与 state 一致；任一不一致或资源不存在都拒绝删除并输出 escalation。",
+          "note": "持有 id 不是充分授权；probe 只能删除可证明由自身创建且状态未漂移的 schedule。"
+        },
+        {
+          "q": "在进入目标 GitLab rollout 前，是否先收口本地 probe operator？",
+          "answer": "先完成 signal-safe CLI、CLI integration tests 与 bundle gate，再进入 target-project tarball rollout。",
+          "note": "真实项目只使用完整、可取消、可回放的 operator，不承担尚未完成的核心安全语义。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-3-1-5-1-1": {
+      "id": "1-5-3-1-5-1-1",
+      "label": "Timezone-aware cron expected-window evaluator and status regression suite",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Added cron-parser runtime dependency and timezone-aware cron evaluator. schedule-health now derives the post-update execution window from cron, reports healthy with the next window after valid evidence, and rejects stale scheduled pipelines. Verified core npm test (217 tests) and git diff --check."
+    },
+    "1-5-3-1-5-1-2": {
+      "id": "1-5-3-1-5-1-2",
+      "label": "Doctor schedule-health replay output and complete next-step commands",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed replay output hardening: self-hosted GitLab API URLs and explicit expected-within-minutes overrides are preserved in structured next-step command arrays; doctor exposes validated --expected-within-minutes. Verified core npm test (217 tests) and git diff --check."
+    },
+    "1-5-3-1-5-2-1": {
+      "id": "1-5-3-1-5-2-1",
+      "label": "Owned GitLab schedule probe lifecycle state and guarded cleanup",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "轮询期间 GitLab API 临时失败时如何处理？",
+          "answer": "继续每 30 秒有界重试直到 deadline，记录低成本错误计数；仅在 deadline 后 cleanup 并输出 escalation。",
+          "note": "一次网络/API 抖动不应中断真实 scheduled evidence 观察；deadline 与 guarded cleanup 防止无限循环和临时 schedule 残留。"
+        },
+        {
+          "q": "resume 是否可重新计算或延长 probe 观察窗口？",
+          "answer": "必须复用 state 中原始 armed_at 与 deadline，绝不重新计算或延长；deadline 已过则直接 guarded cleanup 并返回原窗口的 escalation/evidence。",
+          "note": "resume 仅恢复同一次有界事务，不能把中断变成无限等待。"
+        },
+        {
+          "q": "restore 的资源身份如何限定？",
+          "answer": "只接受 --probe-id，从 zj-loop/schedule-probes/<id>.json 读取 owned schedule 身份；没有 state、marker 不匹配或 state 已 cleaned 都拒绝，绝不接受任意 --schedule-id。",
+          "note": "restore 保持为清理自身资源的专用接口，不成为通用 GitLab schedule 删除工具。"
+        },
+        {
+          "q": "guarded cleanup 成功后如何处理 probe state？",
+          "answer": "保留 state 文件并标记为 cleaned，作为低成本 replay evidence；restore 看到 cleaned 时幂等拒绝，不再 DELETE。",
+          "note": "保留创建、观察、cleanup 的完整闭环证据，同时阻止重复清理。"
+        }
+      ],
+      "notes": "Implemented bounded owned-schedule lifecycle, persisted replay state, guarded identity cleanup, cancellation-safe runner behavior, and CLI SIGINT/SIGTERM cleanup with 130/143 semantics. Verified by core integration tests."
+    },
+    "1-5-3-1-5-2-2": {
+      "id": "1-5-3-1-5-2-2",
+      "label": "GitLab manual schedule probe fragment and generated-bundle gates",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "GitLab schedule probe job 的默认安装与触发边界是什么？",
+          "answer": "作为 bundle 默认安装的独立 manual job，仅允许 web pipeline 手动执行，不走 Route Decision 或 consumer dispatch。",
+          "note": "它是受控 provider-operator；避免 Daily Triage 或 schedule 自触发 probe 形成递归 loop。"
+        },
+        {
+          "q": "GitLab schedule probe manual job 应保留哪些 artifact？",
+          "answer": "固定上传 schedule-probe-result.json 与 zj-loop/schedule-probes/*.json，保留 7 天。",
+          "note": "前者给出本次结果，后者保存 owned schedule 身份、deadline 与 cleanup outcome；足够回放且不含 token 或完整 provider response。"
+        },
+        {
+          "q": "GitLab schedule probe manual job 的 timeout 应如何设置？",
+          "answer": "显式设定 timeout: 45m，覆盖最大 30m 延迟、10m grace 与 cleanup 余量。",
+          "note": "不依赖目标项目默认 timeout，保证有界 probe 有机会完成 guarded cleanup。"
+        },
+        {
+          "q": "manual job 被取消或 runner 终止时如何降低临时 schedule 残留？",
+          "answer": "CLI 必须处理 SIGINT/SIGTERM：写入当前 probe state 后立即尝试同一 guarded cleanup；若失败，保留 state 供 restore --probe-id 恢复。",
+          "note": "不能依赖 GitLab after_script 的取消语义；CLI signal handler 是可确定实现的第一道清理路径。"
+        },
+        {
+          "q": "SIGINT/SIGTERM 后 cleanup 成功时 CLI 应如何退出？",
+          "answer": "仍以取消语义退出：SIGINT 为 130、SIGTERM 为 143；结构化 state/result 标记 cleanup_outcome: cleaned。",
+          "note": "资源清理成功不等于 probe 成功；保留取消退出码让 GitLab pipeline 如实呈现中断，同时 evidence 证明未遗留 owned schedule。"
+        }
+      ],
+      "notes": "Added the manual GitLab schedule-probe fragment, root include, init rendering support, and generated-bundle parser coverage. Verified by zj-loop-init tests and generated-bundle release gate."
+    },
+    "1-5-3-1-5-2-3": {
+      "id": "1-5-3-1-5-2-3",
+      "label": "Target-project tarball rollout and owned scheduled artifact evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2",
+      "children": [
+        "1-5-3-1-5-2-3-1",
+        "1-5-3-1-5-2-3-2",
+        "1-5-3-1-5-2-3-3",
+        "1-5-3-1-5-2-3-4",
+        "1-5-3-1-5-2-3-5"
+      ],
+      "decisions": [
+        {
+          "q": "Probe CLI reports escalation but GitLab job is success",
+          "answer": "Treat this as a follow-up defect: scheduled-pipeline-missing must propagate a nonzero process exit or explicit workflow health failure after artifact upload.",
+          "note": "The live artifact proved the current CLI exits 0 for an escalated result, which obscures the missing evidence in GitLab job status. Keep the artifact and guarded cleanup behavior, but add a deterministic failure mapping before accepting scheduled live evidence as complete."
+        },
+        {
+          "q": "手动触发的 owned schedule probe 默认应指向哪个 ref？",
+          "answer": "默认使用 CI_COMMIT_REF_NAME；检查默认分支长期调度健康时，才显式传 --ref \"$CI_DEFAULT_BRANCH\"。",
+          "note": "测试分支的安装验证与默认分支生产健康是两类证据。默认跟随当前 job ref 才能验证刚部署的 CI bundle，不再隐式把临时 schedule 固定到默认分支。"
+        },
+        {
+          "q": "probe 已上传 artifact 但结果为 escalated 时，CI 应如何退出？",
+          "answer": "使用固定 exit 2；completed 为 0，refused/usage error 为 1，SIGINT 为 130，SIGTERM 为 143。",
+          "note": "让 GitLab job 状态与结构化 result 一致，同时保留 130/143 的取消语义，避免把 escalation 误显示为成功。"
+        },
+        {
+          "q": "owned schedule 与 scheduled pipeline 的归属如何做到无歧义？",
+          "answer": "以 owned_schedule_id 的 schedule detail 中 last_pipeline.id 为唯一锚点；再验证 pipeline.source=schedule、pipeline.ref=temporary_schedule.ref、pipeline.created_at>=armed_at。任何缺失或不一致均 escalation、上传 artifact、exit 2 并 guarded cleanup。",
+          "note": "不使用基于 source/ref/time 的候选匹配 fallback。模板默认传 CI_COMMIT_REF_NAME，默认分支健康检查才显式传 CI_DEFAULT_BRANCH。"
+        },
+        {
+          "q": "owned probe 成功是否必须验证 scheduled pipeline 内的 receipt artifact？",
+          "answer": "必须。成功链路固定为 owned schedule -> exact last_pipeline.id -> source=schedule pipeline -> 专属 receipt job -> schedule-probe-receipt.json -> probe 校验 -> guarded cleanup。",
+          "note": "创建 schedule 时注入唯一 ZJ_LOOP_SCHEDULE_PROBE_ID；receipt artifact 回显 probe_id、pipeline id、ref 与 schema。仅创建 pipeline 或候选匹配都不能作为成功证据。"
+        },
+        {
+          "q": "receipt job 的自动触发与副作用边界是什么？",
+          "answer": "仅在 CI_PIPELINE_SOURCE=schedule 且 ZJ_LOOP_SCHEDULE_PROBE_ID 非空时自动运行；needs: []、allow_failure: false、短 timeout，使用 bundle 配置的 image/runner tags。",
+          "note": "它不进入 Route Decision、不消费 Issue Fix Request、不创建 schedule；只写 schedule-probe-receipt.json 与最小 replay state。普通 schedule（如 957）没有 probe id，因此完全不触发。"
+        },
+        {
+          "q": "probe id 如何写入和验证，才能成为创建、receipt 与 cleanup 的共同身份？",
+          "answer": "创建 schedule 时原子写入 ZJ_LOOP_SCHEDULE_PROBE_ID=<probe-id>；创建后与 cleanup 前都重新读取并验证 marker、ref、cron、timezone、变量值完全一致。",
+          "note": "变量创建/回读不支持则 arm 失败；若资源已创建，仅在完整 identity 匹配时立即清理。任何漂移拒绝 DELETE 并 escalation。"
+        },
+        {
+          "q": "receipt artifact 的最小硬 schema 是什么？",
+          "answer": "固定 zj-loop.gitlab_schedule_probe_receipt.v1，必含 probe_id、pipeline_id、project、ref、source=schedule。",
+          "note": "probe 必须用 exact last_pipeline.id 定位 pipeline，再定位固定 job zj_loop_schedule_probe_receipt，下载 artifact 并逐字段验证；job、artifact、JSON、schema 或字段任一缺失/不一致均 exit 2 后 cleanup。"
+        },
+        {
+          "q": "escalated exit 2 时如何避免 GitLab shell 吞掉结构化证据？",
+          "answer": "fragment 必须以 set +e 运行 CLI、捕获 exit_code、恢复 set -e、cat schedule-probe-result.json，再以原 exit_code 退出；artifact 维持 when: always。",
+          "note": "completed 保持 0；escalated 可见 result 后以 2 失败；SIGINT/SIGTERM 保持 130/143。这样 shell、job 状态与 artifact 的事实一致。"
+        },
+        {
+          "q": "GitLab image 的通用默认与 ai-studio dogfood 应如何分层？",
+          "answer": "发布 bundle 继续默认 node:22；ai-studio dogfood 显式 pin hub.bilibili.co/nyx-compile/bilibili-nodejs-debian12@sha256:1d9b33a6a995d34ba57623a66f60c7564fbe41180bb53d49e82bc01770196290。",
+          "note": "通用默认保持跨项目可移植；target project 用 zj-loop-init --gitlab-image 传入自身可达镜像。Node 22.21.1 digest 避免 Docker Hub 不可达与 tag 漂移。"
+        },
+        {
+          "q": "定位到 owned last_pipeline 后，receipt job 的等待、失败与 cleanup 边界是什么？",
+          "answer": "receipt success 且 artifact 校验通过立即 cleanup 并 completed；failed/canceled 立即 cleanup 后 escalated exit 2；pending/running/缺 artifact 每 30 秒轮询到原始 deadline，随后 cleanup escalated exit 2。",
+          "note": "API 临时失败仅记录低成本计数并有界重试，不延长 deadline；cleanup 漂移或失败保留 state 并 escalated，不自动重试。pipeline、receipt、cleanup 组成同一有界事务。"
+        }
+      ],
+      "notes": "2026-07-15 ai-studio live dogfood: deployed fresh core/init tarballs to zjal-gitlab-yaml-folded-script-fix with runner tag jinkela-k8s-runner-jscs-05 and reachable internal Node image. Probe job 25926933 created owned schedule 959; GitLab consumed the schedule but produced no source=schedule pipeline before deadline. Artifact recorded scheduled-pipeline-missing with poll_errors=0, while guarded cleanup removed 959 and state recorded cleanup_outcome=cleaned. Existing schedule 957 was unchanged."
+    },
+    "1-5-3-1-5-2-3-1": {
+      "id": "1-5-3-1-5-2-3-1",
+      "label": "Atomic owned-schedule probe variable and full cleanup identity guard",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2-3",
+      "children": [],
+      "decisions": [],
+      "notes": "TDD: probe id is atomically carried in the schedule variables, creation re-reads the schedule, and cleanup rejects variable drift. Verified by schedule-probe runner tests."
+    },
+    "1-5-3-1-5-2-3-2": {
+      "id": "1-5-3-1-5-2-3-2",
+      "label": "Exact owned-schedule last-pipeline correlation and ref validation",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2-3",
+      "children": [],
+      "decisions": [],
+      "notes": "TDD: schedule observation now follows only owned_schedule_id.last_pipeline.id and rejects source/ref/time mismatches. Verified by schedule-probe runner tests."
+    },
+    "1-5-3-1-5-2-3-3": {
+      "id": "1-5-3-1-5-2-3-3",
+      "label": "Scheduled receipt job fragment and generated-bundle contract gates",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2-3",
+      "children": [],
+      "decisions": [],
+      "notes": "TDD: schedule-probe fragment now contains a receipt job gated by source=schedule plus probe id, with fixed receipt schema and artifacts. Verified by zj-loop-init tests and generated-bundle release gate."
+    },
+    "1-5-3-1-5-2-3-4": {
+      "id": "1-5-3-1-5-2-3-4",
+      "label": "Receipt artifact polling, validation, and escalation exit-code mapping",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2-3",
+      "children": [],
+      "decisions": [],
+      "notes": "TDD: exact receipt job/artifact validation now gates completion; receipt failures remain bounded and cleanup-safe; CLI escalations print evidence then exit 2. Verified by core, init, and generated-bundle gates."
+    },
+    "1-5-3-1-5-2-3-5": {
+      "id": "1-5-3-1-5-2-3-5",
+      "label": "Pinned-image ai-studio tarball dogfood with receipt and cleanup evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-3-1-5-2-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "What happens when GitLab cannot read schedule variables back?",
+          "answer": "Treat the provider as schedule-probe capability blocked before schedule creation.",
+          "note": "Schedule variable identity is mandatory. The deterministic preflight performs only GET requests and refuses with schedule-probe-capability-blocked plus no operations; it does not weaken identity or fall back to manual cleanup."
+        }
+      ],
+      "notes": "2026-07-15 ai-studio pinned-image dogfood: Web pipeline 10501751/job 25930669 created owned schedule 960, but schedule detail omitted variables and both variables endpoints returned 404; schedule fired but no source=schedule pipeline appeared. Human-session cleanup removed 960; normal schedule 957 remained unchanged. Follow-up implementation now performs a read-only preflight before any POST: it lists existing schedules then requires an existing schedule detail to expose variables as an array. This GitLab instance therefore returns blocked/schedule-probe-capability-blocked with operations=[] and CLI exit 2; no temporary schedule or cleanup is attempted. Verification: core build plus schedule-probe runner/CLI tests passed."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 11:56:37",
+    "updated": "2026-07-15 21:20:11",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

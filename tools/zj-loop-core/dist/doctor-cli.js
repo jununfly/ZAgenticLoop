@@ -4,6 +4,7 @@ import path from 'node:path';
 import { runCli } from './cli.js';
 import { buildCompletionAlignmentLedger } from './completion-alignment.js';
 import { buildLoopDoctorReport } from './doctor-runner.js';
+import { inspectGitLabScheduleHealth } from './schedule-health-contract.js';
 import { DEFAULT_ROUTE_TABLE_PATH, loadRouteTable } from './route.js';
 const exitCode = await runCli({
     name: 'zj-loop-doctor',
@@ -14,6 +15,15 @@ const exitCode = await runCli({
         { name: 'run', type: 'string', description: 'Replay a single run id' },
         { name: 'orchestration', type: 'string', description: 'Replay a single orchestration id' },
         { name: 'provider', type: 'string', description: 'Filter orchestration evidence by provider' },
+        { name: 'scheduleHealth', flag: 'schedule-health', type: 'boolean', description: 'Inspect explicit provider schedule health (network read)' },
+        { name: 'project', type: 'string', description: 'Provider project path for schedule health' },
+        { name: 'route', type: 'string', description: 'Route id for schedule health' },
+        { name: 'scheduleId', flag: 'schedule-id', type: 'string', description: 'Provider schedule id for schedule health' },
+        { name: 'job', type: 'string', description: 'Scheduled job name for artifact lookup' },
+        { name: 'artifact', type: 'string', description: 'Expected job artifact path' },
+        { name: 'artifactSchema', flag: 'artifact-schema', type: 'string', description: 'Expected JSON artifact schema' },
+        { name: 'expectedWithinMinutes', flag: 'expected-within-minutes', type: 'string', description: 'Optional first scheduled execution window override in minutes' },
+        { name: 'apiUrl', flag: 'api-url', type: 'string', description: 'Optional provider API URL' },
         { name: 'subject', type: 'string', description: 'Filter orchestration evidence by subject key, such as issue:123' },
         { name: 'completion', type: 'boolean', description: 'Derive the Completion Alignment Ledger' },
         { name: 'requireComplete', flag: 'require-complete', type: 'boolean', description: 'Exit nonzero unless every required completion cell is complete' },
@@ -23,6 +33,28 @@ const exitCode = await runCli({
     ],
     async handler({ io, options }) {
         const root = String(options.root ?? '.');
+        if (options.scheduleHealth === true) {
+            if (options.provider !== 'gitlab')
+                throw new Error('--schedule-health currently requires --provider gitlab');
+            for (const key of ['project', 'route', 'scheduleId', 'job', 'artifact', 'artifactSchema'])
+                if (typeof options[key] !== 'string' || options[key].trim() === '')
+                    throw new Error(`--${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)} is required with --schedule-health`);
+            const expectedWithinMinutes = options.expectedWithinMinutes === undefined
+                ? undefined
+                : Number(options.expectedWithinMinutes);
+            if (expectedWithinMinutes !== undefined && (!Number.isInteger(expectedWithinMinutes) || expectedWithinMinutes <= 0)) {
+                throw new Error('--expected-within-minutes must be a positive integer');
+            }
+            const result = await inspectGitLabScheduleHealth({ target: { provider: 'gitlab', project: options.project, route_id: options.route, schedule_id: options.scheduleId, job: options.job, artifact: options.artifact, artifact_schema: options.artifactSchema }, apiUrl: options.apiUrl, expectedWithinMinutes });
+            if (options.format === 'text') {
+                io.stdout(`schedule_health: ${result.status}`);
+                for (const step of result.next_steps)
+                    io.stdout(`next: ${step.command.join(' ')}`);
+            }
+            else
+                io.stdout(JSON.stringify(result, null, 2));
+            return 0;
+        }
         if (options.completion === true) {
             const routeTablePath = path.resolve(root, DEFAULT_ROUTE_TABLE_PATH);
             const [table, routeTableText] = await Promise.all([

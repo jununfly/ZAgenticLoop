@@ -19,6 +19,11 @@ const GENERATED_WORKFLOWS = [
   'zj-loop-roadmap-activation.yml',
   'zj-loop-post-merge-cleanup.yml',
 ];
+const GITLAB_FRAGMENTS = [...GENERATED_WORKFLOWS, 'zj-loop-schedule-probe.yml'];
+const GITLAB_RENDER_VARIANTS = [
+  { label: 'default runner tags', runnerTags: [] },
+  { label: 'controlled runner tags', runnerTags: ['zj-loop'] },
+];
 
 const ACTION_READY_ROUTES = new Set([
   'ci-sweeper',
@@ -40,6 +45,28 @@ function workflowTemplateHash(text) {
 
 function renderWorkflowTemplate(template) {
   return template.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${workflowTemplateHash(template)}`);
+}
+
+function yamlString(value) {
+  return JSON.stringify(value);
+}
+
+function renderGitLabTemplate(template, options) {
+  const runnerTags = options.runnerTags.length === 0
+    ? ''
+    : ['  tags:', ...options.runnerTags.map((tag) => `    - ${yamlString(tag)}`), ''].join('\n');
+  const rendered = template
+    .replace(/__ZJ_LOOP_GITLAB_STAGE__/g, yamlString(options.stage))
+    .replace(/__ZJ_LOOP_GITLAB_IMAGE__/g, yamlString(options.image))
+    .replace(/__ZJ_LOOP_CORE_PACKAGE__/g, options.corePackage)
+    .replace(/__ZJ_LOOP_GITLAB_TAGS__\n?/g, runnerTags);
+  return rendered.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${workflowTemplateHash(rendered)}`);
+}
+
+function yamlParseErrors(label, body) {
+  const document = YAML.parseDocument(body);
+  if (document.errors.length === 0) return [];
+  return document.errors.map((error) => `${label} rendered YAML is invalid: ${error.message}`);
 }
 
 function extractCorePackagePins(text) {
@@ -100,6 +127,11 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
   const errors = [];
   const corePackageJson = JSON.parse(await readFile(path.join(root, 'tools/zj-loop-core/package.json'), 'utf8'));
   const expectedCoreVersion = corePackageJson.version;
+  const gitlabRenderOptions = {
+    stage: 'zj-loop',
+    image: 'node:22',
+    corePackage: `@jununfly/zj-loop-core@${expectedCoreVersion}`,
+  };
   const routeTableTemplate = await readFile(path.join(root, 'templates/zj-loop-route-table.yaml.template'), 'utf8');
   const routeTable = YAML.parse(
     routeTableTemplate
@@ -149,13 +181,31 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
   }
 
   const gitlabRootTemplate = await readFile(path.join(root, 'templates/gitlab-ci/zj-loop-root.gitlab-ci.yml'), 'utf8');
-  for (const workflowFile of GENERATED_WORKFLOWS) {
+  const bundledGitlabRootTemplate = await readFile(path.join(root, 'tools/zj-loop-init/templates/gitlab-ci/zj-loop-root.gitlab-ci.yml'), 'utf8');
+  for (const variant of GITLAB_RENDER_VARIANTS) {
+    const options = { ...gitlabRenderOptions, runnerTags: variant.runnerTags };
+    errors.push(...yamlParseErrors(`templates/gitlab-ci/zj-loop-root.gitlab-ci.yml (${variant.label})`, renderGitLabTemplate(gitlabRootTemplate, options)));
+    errors.push(...yamlParseErrors(`tools/zj-loop-init/templates/gitlab-ci/zj-loop-root.gitlab-ci.yml (${variant.label})`, renderGitLabTemplate(bundledGitlabRootTemplate, options)));
+  }
+  for (const workflowFile of GITLAB_FRAGMENTS) {
     if (!gitlabRootTemplate.includes(`zj-loop/gitlab-ci/${workflowFile}`)) {
       errors.push(`templates/gitlab-ci/zj-loop-root.gitlab-ci.yml does not include ${workflowFile}`);
     }
 
     const gitlabTemplatePath = path.join(root, 'templates/gitlab-ci', workflowFile);
     const gitlabTemplate = await readFile(gitlabTemplatePath, 'utf8');
+    const bundledGitlabTemplatePath = path.join(root, 'tools/zj-loop-init/templates/gitlab-ci', workflowFile);
+    const bundledGitlabTemplate = await readFile(bundledGitlabTemplatePath, 'utf8');
+    for (const variant of GITLAB_RENDER_VARIANTS) {
+      const options = { ...gitlabRenderOptions, runnerTags: variant.runnerTags };
+      const renderedCanonical = renderGitLabTemplate(gitlabTemplate, options);
+      const renderedBundled = renderGitLabTemplate(bundledGitlabTemplate, options);
+      errors.push(...yamlParseErrors(`${gitlabTemplatePath} (${variant.label})`, renderedCanonical));
+      errors.push(...yamlParseErrors(`${bundledGitlabTemplatePath} (${variant.label})`, renderedBundled));
+      if (renderedBundled !== renderedCanonical) {
+        errors.push(`${bundledGitlabTemplatePath} is not the rendered form of ${gitlabTemplatePath} (${variant.label})`);
+      }
+    }
     if (!gitlabTemplate.includes('# zj-loop-generated: true')) {
       errors.push(`${gitlabTemplatePath} missing generated sentinel`);
     }
@@ -204,7 +254,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
   const roadmapActivationFixture = await validateRoadmapActivationUserProjectFixture(root);
   return {
     workflowCount: GENERATED_WORKFLOWS.length,
-    gitlabFragmentCount: GENERATED_WORKFLOWS.length,
+    gitlabFragmentCount: GITLAB_FRAGMENTS.length,
     coreVersion: expectedCoreVersion,
     actionReadyRouteCount: ACTION_READY_ROUTES.size,
     roadmapActivationFixture,

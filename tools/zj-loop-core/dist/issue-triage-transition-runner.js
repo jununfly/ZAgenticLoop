@@ -106,6 +106,8 @@ export function buildIssueTriageTransitionIssueFixRequestBody(input) {
     const request = input.issueFixRequest;
     const comment = buildIssueFixRequestComment(request).trim();
     return [
+        TRIAGE_AI_DISCLAIMER,
+        '',
         `## Issue Fix Request: ${request.requested_consumer.consumer_id}`,
         '',
         comment,

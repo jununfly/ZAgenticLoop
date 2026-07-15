@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, access, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import YAML from 'yaml';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -446,6 +447,10 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     const root = await readFile(path.join(dir, '.gitlab-ci.yml'), 'utf8');
     assert.match(root, /zj-loop-generated: true/);
     assert.match(root, /zj-loop-template-id: gitlab-ci\/zj-loop-root/);
+    for (const fragment of fragments) {
+      const body = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', fragment), 'utf8');
+      assert.doesNotThrow(() => YAML.parse(body), `generated ${fragment} must parse as YAML`);
+    }
     assert.match(root, /zj-loop-template-hash: [a-f0-9]{16}/);
     assert.match(root, /stages:\n  - "zj-loop"/);
     for (const fragment of fragments) {
@@ -489,12 +494,16 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(issueTriage, /ZJ_LOOP_ISSUE_IID: ""/);
     assert.match(issueTriage, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_ISSUE_IID:-\$CI_PIPELINE_ID\}\}/);
     assert.match(issueTriage, /issue-recommendations\.json/);
-    assert.match(issueTriage, /transition-requests\.json/);
+    assert.match(issueTriage, /transition-result\.json/);
     assert.match(issueTriage, /CI_PIPELINE_SOURCE == "schedule"/);
     assert.match(issueTriage, /CI_PIPELINE_SOURCE == "web"/);
     assert.match(issueTriage, /zj-loop-issue-backlog scan --provider gitlab/);
     assert.match(issueTriage, /ZJ_LOOP_ISSUE_TRIAGE_LIMIT/);
-    assert.match(issueTriage, /zj-loop\.transition_requests\.v1/);
+    assert.match(issueTriage, /ZJ_LOOP_TRIAGE_REQUEST_JSON/);
+    assert.match(issueTriage, /ZJ_LOOP_TRIAGE_CONFIRMATION/);
+    assert.match(issueTriage, /ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION/);
+    assert.match(issueTriage, /gitlab-live --recommendations issue-recommendations\.json/);
+    assert.match(issueTriage, /gitlab-live --request transition-request\.json/);
     const prSteward = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-pr-steward.yml'), 'utf8');
     assert.match(prSteward, /ZJ_LOOP_MERGE_REQUEST_IID: ""/);
     assert.match(prSteward, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}\}/);
@@ -523,6 +532,23 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.doesNotMatch(postMerge, /--review-body-file/);
     assert.doesNotMatch(postMerge, /--target-branch/);
     assert.doesNotMatch(postMerge, /ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION/);
+    const scheduleProbe = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-schedule-probe.yml'), 'utf8');
+    assert.match(scheduleProbe, /zj_loop_schedule_probe:/);
+    assert.match(scheduleProbe, /CI_PIPELINE_SOURCE == "web"/);
+    assert.match(scheduleProbe, /timeout: 45m/);
+    assert.match(scheduleProbe, /ZJ_LOOP_SCHEDULE_PROBE_DUE_IN_MINUTES: ""/);
+    assert.match(scheduleProbe, /ZJ_LOOP_SCHEDULE_PROBE_CONFIRMATION: ""/);
+    assert.match(scheduleProbe, /zj-loop-schedule-probe start/);
+    assert.match(scheduleProbe, /schedule-probe-result\.json/);
+    assert.match(scheduleProbe, /exit_code=\$\?/);
+    assert.match(scheduleProbe, /exit "\$exit_code"/);
+    assert.match(scheduleProbe, /zj_loop_schedule_probe_receipt:/);
+    assert.match(scheduleProbe, /CI_PIPELINE_SOURCE == "schedule"/);
+    assert.match(scheduleProbe, /ZJ_LOOP_SCHEDULE_PROBE_ID != ""/);
+    assert.match(scheduleProbe, /needs: \[\]/);
+    assert.match(scheduleProbe, /allow_failure: false/);
+    assert.match(scheduleProbe, /zj-loop\.gitlab_schedule_probe_receipt\.v1/);
+    assert.match(scheduleProbe, /schedule-probe-receipt\.json/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);

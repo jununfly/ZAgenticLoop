@@ -35,6 +35,7 @@ const GITLAB_CI_TEMPLATE_FILES = [
     'zj-loop-changelog-drafter.yml',
     'zj-loop-roadmap-activation.yml',
     'zj-loop-post-merge-cleanup.yml',
+    'zj-loop-schedule-probe.yml',
 ];
 const DEFAULT_GITLAB_STAGE = 'zj-loop';
 const DEFAULT_GITLAB_IMAGE = 'node:22';

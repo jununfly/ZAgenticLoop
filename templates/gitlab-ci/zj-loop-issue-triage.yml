@@ -14,17 +14,35 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     ZJ_LOOP_SIGNAL_ID: ""
     ZJ_LOOP_ISSUE_IID: ""
     ZJ_LOOP_TRIAGE_REQUEST_JSON: ""
+    ZJ_LOOP_TRIAGE_CONFIRMATION: ""
+    ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION: ""
     ZJ_LOOP_ISSUE_TRIAGE_LIMIT: "30"
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > route-decision.json
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan issue-backlog-triage --source gitlab-issue --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_ISSUE_IID:-$CI_PIPELINE_ID}}" --json > consumer-plan.json || true
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-issue-backlog scan --provider gitlab --project "${CI_PROJECT_PATH}" --api-url "${CI_API_V4_URL}" --pipeline-url "${CI_PIPELINE_URL}" --limit "${ZJ_LOOP_ISSUE_TRIAGE_LIMIT}" --out issue-recommendations.json
-    - node -e "const fs = require('fs'); const recommendations = JSON.parse(fs.readFileSync('issue-recommendations.json', 'utf8')); const artifact = { schema: 'zj-loop.transition_requests.v1', provider: 'gitlab', route: 'issue-triage-transition', source: 'gitlab-ci', candidate_count: 0, transitions: [], note: 'request-only transition evidence is produced after a confirmed recommendation payload is supplied' }; fs.writeFileSync('transition-requests.json', JSON.stringify(artifact, null, 2));"
+    - |
+      set +e
+      : > transition-request.json
+      if [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then
+        if [ "$ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION" = "enabled" ]; then
+          npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-issue-triage-transition gitlab-live --recommendations issue-recommendations.json --project "$CI_PROJECT_PATH" --api-url "$CI_API_V4_URL" --mode trusted-automation --json > transition-result.json
+        else
+          node -e "require('fs').writeFileSync('transition-result.json', JSON.stringify({ schema: 'zj-loop.gitlab_issue_triage_transition_live.v1', status: 'blocked', reason: 'trusted-automation-not-enabled', next_steps: [{ command: 'set-project-variable', value: 'ZJ_LOOP_TRUSTED_TRIAGE_AUTOMATION=enabled' }] }, null, 2));"
+        fi
+      else
+        printf '%s' "$ZJ_LOOP_TRIAGE_REQUEST_JSON" > transition-request.json
+        npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-issue-triage-transition gitlab-live --request transition-request.json --project "$CI_PROJECT_PATH" --api-url "$CI_API_V4_URL" --mode human-fixed-phrase --confirmation "$ZJ_LOOP_TRIAGE_CONFIRMATION" --json > transition-result.json
+      fi
+      exit_code=$?
+      set -e
+      cat transition-result.json
+      exit "$exit_code"
     - cat route-decision.json
     - cat consumer-plan.json
     - cat issue-recommendations.json
-    - cat transition-requests.json
+    - cat transition-result.json
   artifacts:
     when: always
     expire_in: 7 days
@@ -32,4 +50,5 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
       - route-decision.json
       - consumer-plan.json
       - issue-recommendations.json
-      - transition-requests.json
+      - transition-request.json
+      - transition-result.json
