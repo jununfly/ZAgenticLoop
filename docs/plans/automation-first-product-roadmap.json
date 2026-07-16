@@ -984,6 +984,11 @@
           "q": "GitLab Dependency Sweeper fragment 是否加入独立 gitlab-repair-mr 手动作业？",
           "answer": "是；仅消费显式 verifier-generated actions 与固定 request/source/branch/target 参数，默认 manual，不自动 claim、不自动启用 Route Table live side effects",
           "note": "fragment 负责确定性入口和 artifact wiring；Dependency verifier 负责语义与 scope；adapter 负责 GitLab API。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper live dogfood 使用哪个目标项目与变更边界？",
+          "answer": "继续使用 mlive-dev/ai-studio；只在 zj-loop/dogfood/dependency-fixture 验证 yaml 2.8.0 -> 2.8.1，不修改 ai-studio 业务 package.json、package-lock.json 或业务源码",
+          "note": "真实证据必须包含 GitLab Commit API、Dependency repair MR、human merge 前后的 lifecycle；fixture substrate 与业务依赖隔离。"
         }
       ],
       "notes": ""
@@ -1733,12 +1738,12 @@
     "1-5-4-4-6": {
       "id": "1-5-4-4-6",
       "label": "Dependency Sweeper GitLab repair-MR live dogfood evidence",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "ai-studio dogfood substrate 已推送到 codex/gitlab-dependency-sweeper-live，提交 cf2d2b82；fixture、生成 GitLab repair-MR fragment 与包含新 adapter 的 core tarball 已就绪。待真实 GitLab Issue Fix Request carrier/request_id 与 CI job evidence。"
     },
     "1-5-4-4-7": {
       "id": "1-5-4-4-7",
@@ -1753,7 +1758,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 19:41:48",
+    "updated": "2026-07-16 19:52:54",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
