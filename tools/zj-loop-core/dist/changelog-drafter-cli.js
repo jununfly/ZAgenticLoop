@@ -4,8 +4,30 @@ import { buildChangelogDrafterExecutionPlan, executeChangelogDrafterLiveRunner, 
 import { runCli } from './cli.js';
 import { runRouteConsumerCli } from './route-consumer-cli.js';
 import { createGitLabChangelogDraftCarrier, claimGitLabChangelogDraftCarrier, createGitLabChangelogDraftMr } from './gitlab-changelog-drafter-adapter.js';
+import { closeGitLabChangelogDraft } from './gitlab-changelog-drafter-closeout.js';
 const argv = process.argv.slice(2);
-if (argv[0] === 'gitlab-draft-evidence') {
+if (argv[0] === 'gitlab-closeout') {
+    process.exitCode = await runCli({
+        name: 'zj-loop-changelog-drafter', description: 'Close a merged GitLab Changelog Draft MR and its carrier.',
+        usage: 'zj-loop-changelog-drafter gitlab-closeout --project <group/project> --merge-request <iid> --issue-iid <iid> --request-id <id> --claim-id <id> --branch <branch> --target-branch <branch> --confirm <phrase> [--api-url <url>] [--out <path>] [--json]',
+        options: [
+            { name: 'command', type: 'positional', description: 'Command', default: 'gitlab-closeout' }, { name: 'project', type: 'string', description: 'GitLab project path' }, { name: 'merge-request', type: 'string', description: 'Draft MR IID' }, { name: 'issue-iid', type: 'string', description: 'Carrier Issue IID' }, { name: 'request-id', type: 'string', description: 'Request id' }, { name: 'claim-id', type: 'string', description: 'Claim id' }, { name: 'branch', type: 'string', description: 'Draft branch' }, { name: 'target-branch', type: 'string', description: 'Target branch' }, { name: 'confirm', type: 'string', description: 'Fixed closeout confirmation' }, { name: 'api-url', type: 'string', description: 'GitLab API URL' }, { name: 'out', type: 'string', description: 'Result artifact path' }, { name: 'json', type: 'boolean', description: 'Print JSON' },
+        ],
+        async handler({ io, options }) {
+            for (const name of ['project', 'merge-request', 'issue-iid', 'request-id', 'claim-id', 'branch', 'target-branch', 'confirm'])
+                if (typeof options[name] !== 'string')
+                    throw new Error(`--${name} is required`);
+            const result = await closeGitLabChangelogDraft({ projectPath: String(options.project), mergeRequestIid: String(options['merge-request']), issueIid: String(options['issue-iid']), requestId: String(options['request-id']), claimId: String(options['claim-id']), branch: String(options.branch), targetBranch: String(options['target-branch']), confirmationPhrase: String(options.confirm), token: process.env.GITLAB_TOKEN, apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined });
+            const text = `${JSON.stringify(result, null, 2)}\n`;
+            if (typeof options.out === 'string')
+                await writeFile(String(options.out), text);
+            if (options.json === true || typeof options.out !== 'string')
+                io.stdout(text.trimEnd());
+            return result.status === 'completed' ? 0 : 2;
+        },
+    }, argv);
+}
+else if (argv[0] === 'gitlab-draft-evidence') {
     process.exitCode = await runCli({
         name: 'zj-loop-changelog-drafter', description: 'Create GitLab draft-evidence without provider-side writes.',
         usage: 'zj-loop-changelog-drafter gitlab-draft-evidence --request <path> --project <group/project> [--draft-file <path>] [--out <path>] [--json]',
