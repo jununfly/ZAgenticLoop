@@ -1032,11 +1032,93 @@
     "1-5-4-6": {
       "id": "1-5-4-6",
       "label": "GitLab Changelog Drafter draft artifact or draft-MR evidence",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-4-6-1",
+        "1-5-4-6-2",
+        "1-5-4-6-3",
+        "1-5-4-6-4",
+        "1-5-4-6-5"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab Changelog Drafter 的默认完成形态是什么？",
+          "answer": "默认 draft-evidence，只有显式确认才创建 draft-MR。",
+          "note": "复用现有 promotion-gate 与 draft-consumer completion contract；GitLab provider-specific adapter 只在确认后执行 branch/commit/MR API。"
+        },
+        {
+          "q": "draft-evidence 的副作用边界是什么？",
+          "answer": "默认只生成并上传 CI artifact，不写入 tracked repository files；只有显式确认 draft-MR 才允许 GitLab branch/commit/MR API 写入。",
+          "note": "draft-plan.json 与 changelog-draft.md 是 review artifact；draft-MR 是独立的 provider-side effect path。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 如何获得 release window？",
+          "answer": "只消费显式且完整的 ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON；不自动猜测 since_ref、until_ref 或 release window。缺失或 repo/base_branch 不匹配时输出 protocol_repair_request 或 escalation，零次 draft-MR API 写入。",
+          "note": "结构化输入是协议边界；provider adapter 不替 Agent 推断发布范围。"
+        },
+        {
+          "q": "GitLab draft-evidence 是否要求 GITLAB_TOKEN？",
+          "answer": "不要求。draft-evidence 只生成 CI artifact；只有显式 draft-MR 才要求 GITLAB_TOKEN 并调用 GitLab branch/commit/MR API。",
+          "note": "token 绑定 provider-side write，不把无副作用的 artifact 生成误判为 live 授权。"
+        },
+        {
+          "q": "GitLab draft-MR 如何授权？",
+          "answer": "复用 CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE，但只有显式 draft_mode=pr 且确认短语匹配时才允许创建 MR；确认短语本身不能升级默认 draft-evidence。",
+          "note": "复用 promotion-gate 兼容协议，同时把 output mode 作为独立副作用边界。"
+        },
+        {
+          "q": "GitLab draft-MR 的 provider-side write 如何执行？",
+          "answer": "必须由 provider-specific GitLab Branch/Commit/Merge Request API 创建；目标分支严格取显式 release_window.base_branch，禁止 git push、gh 或分支推断。",
+          "note": "adapter 输出低成本 endpoint/payload 摘要与 MR lifecycle evidence，支持回放和审计。"
+        },
+        {
+          "q": "GitLab draft-MR 的文件 scope 如何固定？",
+          "answer": "只允许一个 repository-relative draft 文件，默认 docs/release-notes-draft.md；拒绝额外文件、绝对路径、路径穿越及 source MR 文件。",
+          "note": "Commit API actions 必须恰好覆盖该文件，adapter 在任何 provider write 前 fail-closed。"
+        },
+        {
+          "q": "GitLab draft-MR 的生命周期属性是什么？",
+          "answer": "始终以 Draft 状态创建，remove_source_branch=false，禁止 auto-merge；branch 使用确定性 automated/changelog-drafter-gitlab-<window-hash>，由独立 closeout 节点负责清理。",
+          "note": "draft-MR 是可审阅 artifact，不代表合并或发布完成。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 是否创建 carrier Issue？",
+          "answer": "是，但仅显式 draft-MR 路径创建一个独立且可去重的 carrier Issue；默认 draft-evidence 不创建 Issue。",
+          "note": "carrier 绑定 draft request、draft-MR、human merge 和 closeout；避免把 artifact completion 当作发布完成。"
+        },
+        {
+          "q": "Changelog Drafter carrier 使用什么协议？",
+          "answer": "使用 Changelog Drafter 专属结构化 schema（zj-loop.changelog_draft_request.v1）；复用 GitLab lifecycle 的 dedupe、claim、reread 原语，但不复用 issue-fix-request schema。",
+          "note": "draft-consumer 与 fix-runner 保持语义分离。"
+        },
+        {
+          "q": "GitLab Changelog draft-MR 何时允许 provider write？",
+          "answer": "必须先成功 claim 专属 Changelog carrier；claim、request、project、release_window.base_branch 或 source binding 任一失败时，零次 branch/commit/MR API 写入并输出结构化 hard stop。",
+          "note": "claim 是唯一消费权，provider write 只能发生在 verifier-backed claim 之后。"
+        },
+        {
+          "q": "GitLab Changelog Drafter dogfood 的 draft 文件放在哪里？",
+          "answer": "使用 ai-studio 的专用 zj-loop/dogfood/changelog-draft.md 单文件 fixture，不修改业务目录或真实 README/CHANGELOG。",
+          "note": "draft-MR 只验证 Commit/MR/closeout API，fixture 可回滚且不代表业务文件变更。"
+        },
+        {
+          "q": "GitLab Changelog Drafter artifact 保存什么？",
+          "answer": "只保存低成本审计字段与生成结果，包括 request id、repo、base/since/until refs、draft mode、file scope 和 provider operation summary；不保存完整 GitLab response、token 或敏感 payload。",
+          "note": "保持可回放、低成本、低泄露面的 evidence contract。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 的 truth 如何分层？",
+          "answer": "orchestration review artifact 是主 truth；draft-MR body 只承载 post-merge contract 与简短摘要，不承载完整 draft 内容或 provider response。",
+          "note": "保持 Codex Harness/Doctor 可回放，同时让 MR body 面向 human review 与 closeout。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 的实现顺序是什么？",
+          "answer": "按 core adapter、CLI、GitLab fragment、ai-studio draft fixture dogfood、human merge closeout 的顺序执行 TDD。",
+          "note": "每个 slice 单独验证；draft-evidence、draft-MR、closeout 不互相冒充完成。"
+        }
+      ],
       "notes": ""
     },
     "1-3-2-1": {
@@ -1832,11 +1914,77 @@
       "children": [],
       "decisions": [],
       "notes": "GitLab live escalation evidence completed on ai-studio. Added provider-specific gitlab-escalation CLI and manual recovery job with explicit needs: [], so same-stage DAG blocking cannot prevent a bounded operator start. Job 25983856 in API pipeline 10517011 consumed Issue #189 claim identity (request_id=ifr_31bf89f5f5e5, claim_id=claim-pr-steward-313-92e140b8, MR !313, head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de), revalidated request/project/MR head, appended one structured pr-steward-escalation marker, reread it, and produced outcome=escalated with repair_mr_created=false. Carrier Issue #189 now contains exactly one escalation marker after the claim marker; source MR !313 was not mutated. The first run exposed a stale tarball and was fail-closed before any API write; refreshed bundle passed on retry."
+    },
+    "1-5-4-6-1": {
+      "id": "1-5-4-6-1",
+      "label": "GitLab Changelog Drafter draft-MR human merge、closeout 与 carrier lifecycle evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "GitLab Changelog draft-MR closeout 如何授权？",
+          "answer": "必须使用固定确认短语 DELETE_MERGED_CHANGELOG_DRAFT_BRANCH_AND_CLOSE_CARRIER，且该授权独立于创建 draft-MR 的确认。",
+          "note": "closeout 的 branch 删除、closeout evidence 和 carrier 关闭均属于不可逆副作用。"
+        },
+        {
+          "q": "GitLab Changelog draft-MR 的 closeout 判定条件是什么？",
+          "answer": "必须重新读取并验证 state=merged、merged_at、merge_commit_sha、source branch、target branch、request ID 与 carrier binding；任一不满足时零次 branch DELETE 或 carrier close 写入。",
+          "note": "CI 变量和人工描述不是 merge truth，provider 当前事实才是唯一依据。"
+        },
+        {
+          "q": "GitLab Changelog draft-MR closeout 的操作顺序是什么？",
+          "answer": "固定为先追加并 reread closeout evidence，再删除 draft branch，最后关闭 carrier Issue；中途失败保留 carrier open并输出可恢复 structured escalation。",
+          "note": "先持久化 truth，再执行清理，避免 carrier 已关闭但 branch 未清理。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-4-6-2": {
+      "id": "1-5-4-6-2",
+      "label": "GitLab Changelog carrier、claim 与 Commit/MR adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": "Core TDD slice complete. Added provider-specific GitLab Changelog carrier, claim winner reread, single safe repository-relative draft-file action validation, and Commit/MR adapter. Carrier requires explicit CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE and GITLAB_TOKEN; draft MR requires a verified claim, explicit base branch, deterministic automated/changelog-drafter-gitlab-* branch, draft=true, remove_source_branch=false, and exactly one file action. Missing token, request/project mismatch, claim mismatch, unsafe scope, or invalid target fail closed before provider writes. Targeted adapter tests pass."
+    },
+    "1-5-4-6-3": {
+      "id": "1-5-4-6-3",
+      "label": "GitLab Changelog Drafter CLI 的 draft-evidence 与 draft-MR 模式",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-6-4": {
+      "id": "1-5-4-6-4",
+      "label": "GitLab Changelog Drafter 独立 fragment 与 generated-bundle gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-6-5": {
+      "id": "1-5-4-6-5",
+      "label": "ai-studio changelog draft fixture 与真实 draft-evidence dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 23:46:49",
+    "updated": "2026-07-17 00:41:07",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

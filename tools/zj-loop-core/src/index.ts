@@ -43,3 +43,4 @@ export * from './gitlab-pr-steward-report.js';
 export * from './gitlab-pr-steward-request.js';
 export * from './gitlab-pr-steward-claim.js';
 export * from './gitlab-pr-steward-escalation.js';
+export * from './gitlab-changelog-drafter-adapter.js';
