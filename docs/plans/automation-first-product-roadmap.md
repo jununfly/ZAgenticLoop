@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 19:52:54
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 20:08:01
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -42,5 +42,5 @@
 
 ### 当前施工：1-5-4-4-6. Dependency Sweeper GitLab repair-MR live dogfood evidence
 
-ai-studio dogfood substrate 已推送到 codex/gitlab-dependency-sweeper-live，提交 cf2d2b82；fixture、生成 GitLab repair-MR fragment 与包含新 adapter 的 core tarball 已就绪。待真实 GitLab Issue Fix Request carrier/request_id 与 CI job evidence。
+ai-studio live evidence 已产生：pipeline 10515751，job 25977525，GitLab repair MR !311，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186b，request ifr_gitlab_dependency_fixture_yaml_20260716；Commit/MR API 成功，scope 仅 dependency fixture 两文件。待 human merge !311 后执行 Dependency-specific closeout 与 carrier lifecycle evidence。
 <!-- ROADMAP_SECTION_END -->

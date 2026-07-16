@@ -1743,7 +1743,7 @@
       "parent": "1-5-4-4",
       "children": [],
       "decisions": [],
-      "notes": "ai-studio dogfood substrate 已推送到 codex/gitlab-dependency-sweeper-live，提交 cf2d2b82；fixture、生成 GitLab repair-MR fragment 与包含新 adapter 的 core tarball 已就绪。待真实 GitLab Issue Fix Request carrier/request_id 与 CI job evidence。"
+      "notes": "ai-studio live evidence 已产生：pipeline 10515751，job 25977525，GitLab repair MR !311，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186b，request ifr_gitlab_dependency_fixture_yaml_20260716；Commit/MR API 成功，scope 仅 dependency fixture 两文件。待 human merge !311 后执行 Dependency-specific closeout 与 carrier lifecycle evidence。"
     },
     "1-5-4-4-7": {
       "id": "1-5-4-4-7",
@@ -1758,7 +1758,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 19:52:54",
+    "updated": "2026-07-16 20:08:01",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
