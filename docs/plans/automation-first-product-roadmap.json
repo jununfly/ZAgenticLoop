@@ -974,6 +974,11 @@
           "q": "Issue Fix Request carrier/claim/lifecycle 是否提炼为共享 GitLab lifecycle 原语？",
           "answer": "是；共享 envelope/source binding、dedupe、claim winner re-read、lifecycle evidence 与 audit 字段，CI/Dependency 保留各自 verifier、capability 和 repair scope",
           "note": "共享的是确定性协议组件，不是泛 Git provider；route-specific 语义继续由各 consumer adapter 控制。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper adapter 是否由 verifier 生成固定 Commit API actions，adapter 只负责 provider API？",
+          "answer": "是；verifier 生成固定 package.json/package-lock.json actions，GitLab provider-specific adapter 只负责 branch、Commit API 与 MR API，不执行 shell/npm/git，也不复用 CI Sweeper repair command",
+          "note": "Dependency 语义、scope、版本与 verification 由独立 verifier 控制；adapter 只转换并提交已验证 actions，human merge 保持独立。"
         }
       ],
       "notes": ""
@@ -1703,12 +1708,12 @@
     "1-5-4-4-4": {
       "id": "1-5-4-4-4",
       "label": "GitLab Dependency Sweeper provider-specific Commit/MR adapter",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "新增 provider-specific GitLab Dependency Sweeper adapter 与 zj-loop-dependency-sweeper gitlab-repair-mr CLI。adapter 只调用 branch、repository/commits、merge_requests API，消费 verifier-generated actions；不执行 shell/npm/git，不调用 gh。source binding、action scope、branch pattern、duplicate MR 与零写入 hard stop 均有测试。core npm test 全量通过。"
     },
     "1-5-4-4-5": {
       "id": "1-5-4-4-5",
@@ -1743,7 +1748,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 19:29:43",
+    "updated": "2026-07-16 19:35:33",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
