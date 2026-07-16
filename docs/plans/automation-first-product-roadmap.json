@@ -946,6 +946,26 @@
           "q": "GitLab Dependency Sweeper 是否沿用 CI Sweeper 的 Issue Fix Request、claim/verifier、repair-MR 与 closeout 主链路？",
           "answer": "是；复用共享协议和已验证基础设施，保留 Dependency Sweeper 自己的 provider adapter、repair scope、verification gates 与 closeout contract",
           "note": "目标是验证第二类 repair consumer，不能因复用 CI Sweeper 基础设施而把两个 route 的 capability、scope 或 evidence 语义混为一谈。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper dogfood 是否修改 ai-studio 业务依赖？",
+          "answer": "否；使用 zj-loop/dogfood 下的专用 npm fixture，并由 GitLab provider-specific Commit/MR API 创建 repair MR",
+          "note": "fixture 只验证 dependency repair-MR 协议、scope、verification 和 closeout，不改变目标项目业务 package.json；不能把 gh CLI 逻辑泛化为 GitLab adapter。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper dogfood 的 fixture 变更如何固定？",
+          "answer": "固定 zj-loop/dogfood/dependency-fixture 中 yaml 2.8.0 -> 2.8.1 的 patch 升级，更新 package.json 与 package-lock.json，并运行 fixture 内 npm ci 与测试 gate",
+          "note": "复用既有 yaml patch 升级先例；双文件 scope 可验证 manifest/lockfile 一致性，避免修改 ai-studio 业务依赖。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper 是否复用 CI Sweeper 的 route-specific repair command？",
+          "answer": "否；新增独立 dependency-sweeper GitLab repair-MR adapter/CLI，复用协议与 provider API 原语，但独立校验 dependency scope、版本升级和 verification evidence",
+          "note": "CI Sweeper 与 Dependency Sweeper 的 repair action 语义不同；共享抽象不能掩盖 route-specific capability。"
+        },
+        {
+          "q": "Issue Fix Request carrier/claim/lifecycle 是否提炼为共享 GitLab lifecycle 原语？",
+          "answer": "是；共享 envelope/source binding、dedupe、claim winner re-read、lifecycle evidence 与 audit 字段，CI/Dependency 保留各自 verifier、capability 和 repair scope",
+          "note": "共享的是确定性协议组件，不是泛 Git provider；route-specific 语义继续由各 consumer adapter 控制。"
         }
       ],
       "notes": ""
@@ -1645,7 +1665,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 19:05:33",
+    "updated": "2026-07-16 19:13:20",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
