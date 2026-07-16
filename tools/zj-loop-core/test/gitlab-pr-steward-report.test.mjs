@@ -12,6 +12,9 @@ test('GitLab PR Steward report reads MR and head pipeline without writes', async
     projectPath: 'group/project', mergeRequestIid: 12, token: 'secret', signalId: 'mr:12:head:abc',
     fetchImpl: async (url, options = {}) => {
       calls.push([url, options]);
+      if (url.endsWith('/pipelines/99/jobs')) return response(200, [
+        { id: 100, name: 'fixture_failure', status: 'failed', web_url: 'https://git.example/group/project/-/jobs/100' },
+      ]);
       return response(200, {
         iid: 12,
         title: 'dogfood fixture',
@@ -21,7 +24,7 @@ test('GitLab PR Steward report reads MR and head pipeline without writes', async
         sha: 'abc',
         web_url: 'https://git.example/group/project/-/merge_requests/12',
         head_pipeline: {
-          id: 99, status: 'failed', sha: 'abc',
+          id: 99, status: 'manual', sha: 'abc',
           web_url: 'https://git.example/group/project/-/pipelines/99',
         },
       });
@@ -33,7 +36,7 @@ test('GitLab PR Steward report reads MR and head pipeline without writes', async
   assert.equal(result.report.observations.checks, 'failure');
   assert.equal(result.report.next_action, 'candidate-fix-request');
   assert.equal(result.report.side_effects_executed, false);
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
   assert.equal(calls[0][1].method, undefined);
 });
 

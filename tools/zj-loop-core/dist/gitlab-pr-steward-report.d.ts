@@ -44,6 +44,12 @@ export declare function fetchGitLabPrStewardReport(input: {
             pipeline_status: string;
             pipeline_id: any;
             pipeline_url: string;
+            failed_jobs: {
+                id: any;
+                name: string;
+                status: string;
+                url: string;
+            }[];
         };
         next_action: string;
         side_effects_executed: boolean;
