@@ -1,14 +1,14 @@
 import { buildGitLabApiUrl, buildGitLabAuthHeaders, } from './providers.js';
 import { buildGitLabLifecycleAudit, validateGitLabRequestSourceBinding, } from './gitlab-request-lifecycle.js';
 const BRANCH_PATTERN = /^automated\/dependency-sweeper-gitlab-[a-z0-9-]+$/;
-const EXPECTED_FILES = ['package.json', 'package-lock.json'];
-export function validateGitLabDependencySweeperCommitActions(actions) {
+const DEFAULT_EXPECTED_FILES = ['package.json', 'package-lock.json'];
+export function validateGitLabDependencySweeperCommitActions(actions, expectedFiles = DEFAULT_EXPECTED_FILES) {
     const errors = [];
-    if (!Array.isArray(actions) || actions.length !== EXPECTED_FILES.length) {
+    if (!Array.isArray(actions) || actions.length !== expectedFiles.length) {
         errors.push('dependency-commit-actions-must-cover-exactly-two-files');
     }
     const paths = Array.isArray(actions) ? actions.map((item) => String(item?.file_path ?? '')) : [];
-    if (JSON.stringify([...paths].sort()) !== JSON.stringify([...EXPECTED_FILES].sort()))
+    if (JSON.stringify([...paths].sort()) !== JSON.stringify([...expectedFiles].sort()))
         errors.push('dependency-commit-file-scope-mismatch');
     for (const item of Array.isArray(actions) ? actions : []) {
         if (item?.action !== 'update')
@@ -53,7 +53,10 @@ export async function createGitLabDependencySweeperRepairMr(input) {
     });
     if (!binding.ok)
         return blocked(binding.reason ?? 'request-source-mismatch');
-    const actionValidation = validateGitLabDependencySweeperCommitActions(input.actions);
+    const expectedFiles = Array.isArray(input.request?.subject?.manifest_files) && input.request.subject.manifest_files.length > 0
+        ? input.request.subject.manifest_files.map((file) => String(file))
+        : DEFAULT_EXPECTED_FILES;
+    const actionValidation = validateGitLabDependencySweeperCommitActions(input.actions, expectedFiles);
     if (!actionValidation.ok)
         return blocked('commit-actions-invalid', { action_validation: actionValidation });
     const fetchImpl = input.fetchImpl ?? globalThis.fetch;

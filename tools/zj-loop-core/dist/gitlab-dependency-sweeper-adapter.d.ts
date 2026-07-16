@@ -1,4 +1,4 @@
-export declare function validateGitLabDependencySweeperCommitActions(actions: any[]): {
+export declare function validateGitLabDependencySweeperCommitActions(actions: any[], expectedFiles?: string[]): {
     ok: boolean;
     errors: string[];
 };
