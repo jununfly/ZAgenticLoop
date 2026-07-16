@@ -1954,17 +1954,17 @@
     "1-5-4-6-3": {
       "id": "1-5-4-6-3",
       "label": "GitLab Changelog Drafter CLI 的 draft-evidence 与 draft-MR 模式",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "TDD CLI slice complete. Added GitLab draft-evidence (no token, artifact-only), gitlab-carrier (fixed confirmation plus GITLAB_TOKEN), gitlab-claim, and gitlab-draft-mr (explicit confirmation, single-file scope, verified claim). Mismatch returns protocol_repair_request with exit 2 and no provider write. CLI and adapter regression tests pass."
     },
     "1-5-4-6-4": {
       "id": "1-5-4-6-4",
       "label": "GitLab Changelog Drafter 独立 fragment 与 generated-bundle gate",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
@@ -1984,7 +1984,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 00:41:07",
+    "updated": "2026-07-17 00:44:24",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
