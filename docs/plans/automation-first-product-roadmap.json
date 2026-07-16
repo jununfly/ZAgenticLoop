@@ -1040,7 +1040,8 @@
         "1-5-4-6-2",
         "1-5-4-6-3",
         "1-5-4-6-4",
-        "1-5-4-6-5"
+        "1-5-4-6-5",
+        "1-5-4-6-6"
       ],
       "decisions": [
         {
@@ -1974,6 +1975,16 @@
     "1-5-4-6-5": {
       "id": "1-5-4-6-5",
       "label": "ai-studio changelog draft fixture 与真实 draft-evidence dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": "Real ai-studio GitLab draft-evidence dogfood completed. Pipeline 10517165 job 25984901 ran on runner jinkela-k8s-runner-jscs-05 with explicit request cdr_gitlab_dogfood_20260717, repo mlive-dev/ai-studio, base_branch=master, since_ref=master, until_ref=codex/gitlab-changelog-drafter-live, and fixture summary. Artifacts included route-decision.json, consumer-plan.json, changelog-signal.json, orchestration.json, draft-plan.json, and gitlab-changelog-draft-evidence.json. Result outcome=draft-evidence and side_effects_executed=false; no GITLAB_TOKEN, carrier Issue, branch, commit, or MR side effect was used. Two fail-closed dogfood retries exposed and fixed runner tags, disabled-route report handling, and shell JSON quoting."
+    },
+    "1-5-4-6-6": {
+      "id": "1-5-4-6-6",
+      "label": "ai-studio GitLab Changelog draft-MR live dogfood and provider write evidence",
       "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4-6",
@@ -1984,7 +1995,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 00:49:51",
+    "updated": "2026-07-17 01:10:34",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
