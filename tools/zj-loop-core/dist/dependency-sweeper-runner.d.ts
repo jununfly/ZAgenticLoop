@@ -2,6 +2,32 @@ export declare const DEPENDENCY_SWEEPER_RUNNER_ID = "dependency-sweeper";
 export declare const DEPENDENCY_SWEEPER_ROUTE_ID = "dependency-sweeper";
 export declare const DEPENDENCY_SWEEPER_CONSUMER_KIND = "fix-runner";
 export declare const DEPENDENCY_SWEEPER_CONFIRMATION_PHRASE = "CREATE_DEPENDENCY_SWEEPER_FIX_PR";
+export declare function buildDependencySweeperFixtureContract(): {
+    readonly schema: "zj-loop.dependency_sweeper_fixture.v1";
+    readonly package_name: "yaml";
+    readonly current_version: "2.8.0";
+    readonly target_version: "2.8.1";
+    readonly update_type: "patch";
+    readonly dependency_section: "dependencies";
+    readonly manifest_files: readonly ["package.json", "package-lock.json"];
+    readonly verification_commands: readonly [{
+        readonly command: "npm";
+        readonly args: readonly ["ci"];
+        readonly cwd: ".";
+    }, {
+        readonly command: "npm";
+        readonly args: readonly ["test"];
+        readonly cwd: ".";
+    }];
+};
+export declare function validateDependencySweeperFixtureContract(input: {
+    contract?: ReturnType<typeof buildDependencySweeperFixtureContract>;
+    request?: any;
+    changedFiles?: string[];
+}): {
+    ok: boolean;
+    errors: string[];
+};
 export declare function defaultDependencySweeperRunner(command: string, args?: string[]): Promise<{
     command: string;
     args: string[];

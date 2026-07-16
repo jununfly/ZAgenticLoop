@@ -15,6 +15,41 @@ export const DEPENDENCY_SWEEPER_ROUTE_ID = 'dependency-sweeper';
 export const DEPENDENCY_SWEEPER_CONSUMER_KIND = 'fix-runner';
 export const DEPENDENCY_SWEEPER_CONFIRMATION_PHRASE = 'CREATE_DEPENDENCY_SWEEPER_FIX_PR';
 
+export function buildDependencySweeperFixtureContract() {
+  return {
+    schema: 'zj-loop.dependency_sweeper_fixture.v1',
+    package_name: 'yaml',
+    current_version: '2.8.0',
+    target_version: '2.8.1',
+    update_type: 'patch',
+    dependency_section: 'dependencies',
+    manifest_files: ['package.json', 'package-lock.json'],
+    verification_commands: [
+      { command: 'npm', args: ['ci'], cwd: '.' },
+      { command: 'npm', args: ['test'], cwd: '.' },
+    ],
+  } as const;
+}
+
+export function validateDependencySweeperFixtureContract(input: {
+  contract?: ReturnType<typeof buildDependencySweeperFixtureContract>;
+  request?: any;
+  changedFiles?: string[];
+}) {
+  const contract = input.contract ?? buildDependencySweeperFixtureContract();
+  const subject = input.request?.subject ?? {};
+  const errors: string[] = [];
+  if (subject.package_name !== contract.package_name) errors.push('package-name-mismatch');
+  if (subject.current_version !== contract.current_version) errors.push('current-version-mismatch');
+  if (subject.target_version !== contract.target_version) errors.push('target-version-mismatch');
+  if (subject.update_type !== contract.update_type) errors.push('update-type-mismatch');
+  if (subject.dependency_section !== contract.dependency_section) errors.push('dependency-section-mismatch');
+  if (JSON.stringify(subject.manifest_files ?? []) !== JSON.stringify(contract.manifest_files)) errors.push('manifest-files-mismatch');
+  const changedFiles = [...new Set((input.changedFiles ?? []).map((file) => String(file).replaceAll('\\', '/')))].sort();
+  if (JSON.stringify(changedFiles) !== JSON.stringify([...contract.manifest_files].sort())) errors.push('changed-file-scope-mismatch');
+  return { ok: errors.length === 0, errors };
+}
+
 const ALLOWED_CAPABILITIES = new Set(['patch-dependency-fix', 'minor-dependency-fix']);
 const ALLOWED_UPDATE_TYPES = new Set(['patch', 'minor']);
 const ALLOWED_RISKS = new Set(['low', 'medium']);

@@ -1693,12 +1693,12 @@
     "1-5-4-4-3": {
       "id": "1-5-4-4-3",
       "label": "Dependency Sweeper fixture scope、版本升级与 verifier contract",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "新增 zj-loop/dogfood/dependency-fixture：固定 yaml 2.8.0 -> 2.8.1、dependencies、package.json/package-lock.json；新增确定性 fixture verifier，拒绝包名、版本、section、文件范围偏差。验证：fixture npm ci 与 npm test 通过；core build、fixture contract tests 与 dependency sweeper 回归通过。"
     },
     "1-5-4-4-4": {
       "id": "1-5-4-4-4",
@@ -1743,7 +1743,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 19:20:23",
+    "updated": "2026-07-16 19:29:43",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

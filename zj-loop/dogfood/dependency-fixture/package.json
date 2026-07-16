@@ -1,0 +1,11 @@
+{
+  "name": "zj-loop-dependency-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node test/fixture.test.mjs"
+  },
+  "dependencies": {
+    "yaml": "2.8.0"
+  }
+}
