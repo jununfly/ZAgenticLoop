@@ -45,3 +45,27 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     expire_in: 7 days
     paths:
       - gitlab-repair-mr-result.json
+
+zj_loop_dependency_sweeper_closeout:
+  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
+  needs: []
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  when: manual
+  allow_failure: false
+  variables:
+    ZJ_LOOP_DEPENDENCY_CLOSEOUT_MR: ""
+    ZJ_LOOP_DEPENDENCY_CLOSEOUT_ISSUE: ""
+    ZJ_LOOP_DEPENDENCY_CLOSEOUT_REQUEST: ""
+    ZJ_LOOP_DEPENDENCY_CLOSEOUT_CLAIM: ""
+    ZJ_LOOP_DEPENDENCY_CLOSEOUT_BRANCH: ""
+    ZJ_LOOP_DEPENDENCY_CLOSEOUT_TARGET: ""
+    ZJ_LOOP_DEPENDENCY_CLOSEOUT_CONFIRM: ""
+  script:
+    - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
+    - test -n "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_MR" && test -n "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_ISSUE" && test -n "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_REQUEST" && test -n "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_CLAIM" && test -n "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_BRANCH" && test -n "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_TARGET" && test -n "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_CONFIRM"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-dependency-sweeper gitlab-closeout --project "$CI_PROJECT_PATH" --merge-request "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_MR" --issue-iid "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_ISSUE" --request-id "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_REQUEST" --claim-id "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_CLAIM" --branch "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_BRANCH" --target-branch "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_TARGET" --confirm "$ZJ_LOOP_DEPENDENCY_CLOSEOUT_CONFIRM" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out dependency-sweeper-closeout-result.json --json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - dependency-sweeper-closeout-result.json

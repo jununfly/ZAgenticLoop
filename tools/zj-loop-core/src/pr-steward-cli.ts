@@ -8,9 +8,38 @@ import {
 } from './pr-steward-runner.js';
 import { runCli } from './cli.js';
 import { runRouteConsumerCli } from './route-consumer-cli.js';
+import { fetchGitLabPrStewardReport } from './gitlab-pr-steward-report.js';
 
 const argv = process.argv.slice(2);
-if (argv[0] === 'fix-plan') {
+if (argv[0] === 'gitlab-report') {
+  process.exitCode = await runCli({
+    name: 'zj-loop-pr-steward',
+    description: 'Read a GitLab MR and its head pipeline into report-only evidence.',
+    usage: 'zj-loop-pr-steward gitlab-report --project <group/project> --merge-request <iid> --signal-id <id> [--api-url <url>] [--out <path>] [--json]',
+    options: [
+      { name: 'command', type: 'positional', description: 'Command', default: 'gitlab-report' },
+      { name: 'project', type: 'string', description: 'GitLab group/project path' },
+      { name: 'merge-request', type: 'string', description: 'GitLab MR IID' },
+      { name: 'signal-id', type: 'string', description: 'Stable report signal id' },
+      { name: 'api-url', type: 'string', description: 'GitLab API v4 base URL' },
+      { name: 'out', type: 'string', description: 'Write report JSON to this path' },
+      { name: 'json', type: 'boolean', description: 'Print JSON output' },
+    ],
+    async handler({ io, options }) {
+      for (const name of ['project', 'merge-request', 'signal-id']) {
+        if (typeof options[name] !== 'string' || String(options[name]).trim() === '') throw new Error(`--${name} is required`);
+      }
+      const result = await fetchGitLabPrStewardReport({
+        projectPath: String(options.project), mergeRequestIid: String(options['merge-request']), signalId: String(options['signal-id']),
+        token: process.env.GITLAB_TOKEN, apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined,
+      });
+      const text = `${JSON.stringify(result, null, 2)}\n`;
+      if (typeof options.out === 'string') await writeFile(String(options.out), text);
+      if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());
+      return result.status === 'completed' ? 0 : 2;
+    },
+  }, argv);
+} else if (argv[0] === 'fix-plan') {
   process.exitCode = await runCli({
     name: 'zj-loop-pr-steward',
     description: 'Build PR Steward fix or escalation plan evidence from a consumed Issue Fix Request.',

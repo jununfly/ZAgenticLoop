@@ -1001,11 +1001,25 @@
     "1-5-4-5": {
       "id": "1-5-4-5",
       "label": "GitLab PR Steward MR report and fix-request evidence",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-4-5-1",
+        "1-5-4-5-2"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab PR Steward live evidence 是否作为 Dependency Sweeper 之后的下一条 provider parity 路线？",
+          "answer": "是；直接进入 GitLab PR Steward live evidence，复用已验证的 GitLab MR、Issue Fix Request、claim、scope verifier 与 closeout 基础设施，但保留 PR Steward 自己的 review/checks 语义和 provider-specific adapter。",
+          "note": "先完成 report/request 与 MR source binding 的最小真实链路，再推进 fix-request/claim/live repair；不把 Dependency Sweeper 的 dependency scope 逻辑泛化到 PR Steward。"
+        },
+        {
+          "q": "PR Steward GitLab dogfood 使用什么 fixture？",
+          "answer": "使用 ai-studio 中只影响 zj-loop/dogfood 的受控 CI failure MR；先完成 MR report-only live evidence，再推进 failed-check 到 Issue Fix Request，不触碰业务代码。",
+          "note": "fixture 必须可回滚、可重复，report-only 不评论/改 label/创建 request；request-only 只消费 allowlisted failed-check evidence，并固定校验 project、MR IID、head SHA 与 route consumer binding。"
+        }
+      ],
       "notes": ""
     },
     "1-5-4-6": {
@@ -1759,11 +1773,37 @@
       "children": [],
       "decisions": [],
       "notes": "GitLab Dependency Sweeper closeout live evidence：MR !312 已合并；closeout job 25980469 使用固定确认短语 DELETE_MERGED_DEPENDENCY_SWEEPER_BRANCH_AND_CLOSE_CARRIER，删除 automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c，写入 closeout evidence 并关闭 carrier Issue #186；随后旧 MR !311 对应分支 automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186b 已单独删除。链路完成：fixture verifier -> provider-specific Commit/MR API -> human merge -> guarded closeout -> carrier lifecycle。"
+    },
+    "1-5-4-5-1": {
+      "id": "1-5-4-5-1",
+      "label": "PR Steward GitLab MR report-only live evidence",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "PR Steward GitLab report-only fixture 如何制造受控失败？",
+          "answer": "在 ai-studio 的 zj-loop/dogfood/pr-steward-fixture 下新增只在 merge_request_event 运行的确定性失败 job，明确 exit 1；fixture 只存在于 dogfood MR，不进入 master。",
+          "note": "失败来源稳定、无业务影响、可回滚；report-only 只读取 MR/head pipeline 并生成 evidence，不评论、不改 label、不创建 Issue。"
+        }
+      ],
+      "notes": "已完成本地第一刀：新增 provider-specific GitLab MR/head-pipeline report API 与 zj-loop-pr-steward gitlab-report CLI；只读 merge_requests/:iid，输出 zj-loop.gitlab_pr_steward_report.v1，失败 pipeline 分类为 candidate-fix-request，副作用字段固定为 false。Generated GitLab PR Steward fragment 写入 gitlab-pr-steward-report.json；core report tests、PR Steward regression tests、zj-loop-init 32项 bundle tests 通过。下一步是提交到 ai-studio 并创建 dogfood fixture MR 做真实 report-only evidence。"
+    },
+    "1-5-4-5-2": {
+      "id": "1-5-4-5-2",
+      "label": "PR Steward GitLab failed-check Issue Fix Request evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 21:00:00",
+    "updated": "2026-07-16 21:26:23",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

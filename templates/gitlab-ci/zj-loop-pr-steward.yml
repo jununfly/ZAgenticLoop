@@ -17,11 +17,21 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch pr-steward-report --source gitlab-merge-request --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID:-$CI_PIPELINE_ID}}}" --json > route-decision.json || true
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan pr-steward-report --root . --source gitlab-merge-request --signal-id "${ZJ_LOOP_SIGNAL_ID:-${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID:-$CI_PIPELINE_ID}}}" --json > consumer-plan.json || true
+    - |
+      mr_iid="${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID:-}}"
+      signal_id="${ZJ_LOOP_SIGNAL_ID:-${mr_iid:-$CI_PIPELINE_ID}}"
+      if [ -n "$mr_iid" ]; then
+        npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-pr-steward gitlab-report --project "$CI_PROJECT_PATH" --merge-request "$mr_iid" --signal-id "$signal_id" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out gitlab-pr-steward-report.json --json || true
+      else
+        printf '%s\n' '{"schema":"zj-loop.gitlab_pr_steward_report.v1","status":"blocked","reason":"merge-request-iid-required","side_effects_executed":false}' > gitlab-pr-steward-report.json
+      fi
     - cat route-decision.json
     - cat consumer-plan.json
+    - cat gitlab-pr-steward-report.json
   artifacts:
     when: always
     expire_in: 7 days
     paths:
       - route-decision.json
       - consumer-plan.json
+      - gitlab-pr-steward-report.json

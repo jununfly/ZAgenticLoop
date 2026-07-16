@@ -39,3 +39,4 @@ export * from './gitlab-issue-triage-transition-runner.js';
 export * from './gitlab-request-lifecycle.js';
 export * from './gitlab-dependency-sweeper-adapter.js';
 export * from './gitlab-dependency-sweeper-closeout.js';
+export * from './gitlab-pr-steward-report.js';

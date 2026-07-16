@@ -32,7 +32,10 @@ export async function executeGitLabDependencySweeperCloseout(input: {
   const parsed = parseIssueFixRequestComments([{ id: issue.iid ?? input.issueIid, body: String(issue.description ?? '') }])[0];
   const request = parsed?.validation.ok ? parsed.request : null;
   const binding = validateGitLabRequestSourceBinding({ request, projectPath: input.projectPath, requestId: input.requestId, consumerId: 'dependency-sweeper' });
-  if (!binding.ok || request?.status !== 'consumed') return blocked('request-source-mismatch');
+  if (!binding.ok) return blocked('request-source-mismatch', {
+    reason_detail: 'request-source-binding-invalid',
+    request_status: request?.status ?? null,
+  });
   const changesResponse = await fetchImpl(`${mrUrl}/changes`, { headers });
   if (!changesResponse.ok) return blocked('merge-request-changes-read-failed', { http_status: changesResponse.status });
   const changes = await changesResponse.json() as any;

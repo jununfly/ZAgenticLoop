@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 20:23:25
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 21:26:23
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,7 +40,10 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 已完成：1-5-4-4. Dependency Sweeper GitLab repair-MR live recovery evidence
+### 当前施工：1-5-4-5-1. PR Steward GitLab MR report-only live evidence
 
-ai-studio live evidence 已闭环：初始 MR !311 因混入 dogfood substrate 触发 `repair-scope-mismatch`，未执行副作用；随后从 `master` 创建干净 repair MR !312，branch `automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c`，仅更新 dependency fixture 的 `package.json` 与 `package-lock.json`。MR !312 合并后，closeout job `25980469` 删除新 repair branch、写入 closeout evidence 并关闭 carrier Issue #186；旧 !311 分支也已单独清理。固定确认短语、claim/verifier、provider-specific Commit/MR API、scope hard stop 和 guarded closeout 均获得真实 GitLab 证据。
+已完成本地第一刀：新增 provider-specific GitLab MR/head-pipeline report API 与 zj-loop-pr-steward gitlab-report CLI；只读 merge_requests/:iid，输出 zj-loop.gitlab_pr_steward_report.v1，失败 pipeline 分类为 candidate-fix-request，副作用字段固定为 false。Generated GitLab PR Steward fragment 写入 gitlab-pr-steward-report.json；core report tests、PR Steward regression tests、zj-loop-init 32项 bundle tests 通过。下一步是提交到 ai-studio 并创建 dogfood fixture MR 做真实 report-only evidence。
+
+**决策：**
+- Q: PR Steward GitLab report-only fixture 如何制造受控失败？ → 在 ai-studio 的 zj-loop/dogfood/pr-steward-fixture 下新增只在 merge_request_event 运行的确定性失败 job，明确 exit 1；fixture 只存在于 dogfood MR，不进入 master。 (失败来源稳定、无业务影响、可回滚；report-only 只读取 MR/head pipeline 并生成 evidence，不评论、不改 label、不创建 Issue。)
 <!-- ROADMAP_SECTION_END -->
