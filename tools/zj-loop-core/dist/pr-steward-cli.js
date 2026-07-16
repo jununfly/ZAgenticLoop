@@ -6,8 +6,40 @@ import { runRouteConsumerCli } from './route-consumer-cli.js';
 import { fetchGitLabPrStewardReport } from './gitlab-pr-steward-report.js';
 import { createGitLabPrStewardIssueFixRequest } from './gitlab-pr-steward-request.js';
 import { claimGitLabPrStewardIssueFixRequest } from './gitlab-pr-steward-claim.js';
+import { appendGitLabPrStewardEscalation } from './gitlab-pr-steward-escalation.js';
 const argv = process.argv.slice(2);
-if (argv[0] === 'gitlab-claim') {
+if (argv[0] === 'gitlab-escalation') {
+    process.exitCode = await runCli({
+        name: 'zj-loop-pr-steward', description: 'Append verifier-backed GitLab PR Steward escalation evidence to the claimed carrier.',
+        usage: 'zj-loop-pr-steward gitlab-escalation --project <group/project> --issue-iid <iid> --merge-request <iid> --request-id <id> --claim-id <id> --current-head-sha <sha> --reason <reason> [--api-url <url>] [--out <path>] [--json]',
+        options: [
+            { name: 'command', type: 'positional', description: 'Command', default: 'gitlab-escalation' },
+            { name: 'project', type: 'string', description: 'GitLab group/project path' }, { name: 'issue-iid', type: 'string', description: 'Carrier Issue IID' },
+            { name: 'merge-request', type: 'string', description: 'Source MR IID' }, { name: 'request-id', type: 'string', description: 'Issue Fix Request id' },
+            { name: 'claim-id', type: 'string', description: 'Claim id' }, { name: 'current-head-sha', type: 'string', description: 'Current source MR head SHA' },
+            { name: 'reason', type: 'string', description: 'Deterministic escalation reason' }, { name: 'api-url', type: 'string', description: 'GitLab API v4 base URL' },
+            { name: 'out', type: 'string', description: 'Write escalation result JSON to this path' }, { name: 'json', type: 'boolean', description: 'Print JSON output' },
+        ],
+        async handler({ io, options }) {
+            for (const name of ['project', 'issue-iid', 'merge-request', 'request-id', 'claim-id', 'current-head-sha', 'reason']) {
+                if (typeof options[name] !== 'string' || String(options[name]).trim() === '')
+                    throw new Error(`--${name} is required`);
+            }
+            const result = await appendGitLabPrStewardEscalation({
+                projectPath: String(options.project), issueIid: String(options['issue-iid']), mergeRequestIid: String(options['merge-request']),
+                requestId: String(options['request-id']), claimId: String(options['claim-id']), currentHeadSha: String(options['current-head-sha']), reason: String(options.reason),
+                token: process.env.GITLAB_TOKEN, apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined,
+            });
+            const text = `${JSON.stringify(result, null, 2)}\n`;
+            if (typeof options.out === 'string')
+                await writeFile(String(options.out), text);
+            if (options.json === true || typeof options.out !== 'string')
+                io.stdout(text.trimEnd());
+            return result.status === 'completed' ? 0 : 2;
+        },
+    }, argv);
+}
+else if (argv[0] === 'gitlab-claim') {
     process.exitCode = await runCli({
         name: 'zj-loop-pr-steward',
         description: 'Claim a GitLab PR Steward Issue Fix Request after source MR head verification.',
