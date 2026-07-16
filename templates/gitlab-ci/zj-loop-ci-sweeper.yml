@@ -101,6 +101,7 @@ zj_loop_ci_sweeper_consumer:
 
 zj_loop_ci_sweeper_closeout:
   stage: "zj-loop-recovery"
+  needs: []
   tags:
     - "__ZJ_LOOP_RUNNER_TAG__"
   image: "__ZJ_LOOP_GITLAB_IMAGE__"
