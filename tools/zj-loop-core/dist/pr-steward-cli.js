@@ -1,12 +1,48 @@
 #!/usr/bin/env node
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { buildPrStewardExecutionPlan, executePrStewardLiveRunner, readPrStewardIssueFixRequest, } from './pr-steward-runner.js';
 import { runCli } from './cli.js';
 import { runRouteConsumerCli } from './route-consumer-cli.js';
 import { fetchGitLabPrStewardReport } from './gitlab-pr-steward-report.js';
 import { createGitLabPrStewardIssueFixRequest } from './gitlab-pr-steward-request.js';
+import { claimGitLabPrStewardIssueFixRequest } from './gitlab-pr-steward-claim.js';
 const argv = process.argv.slice(2);
-if (argv[0] === 'gitlab-issue-fix-request') {
+if (argv[0] === 'gitlab-claim') {
+    process.exitCode = await runCli({
+        name: 'zj-loop-pr-steward',
+        description: 'Claim a GitLab PR Steward Issue Fix Request after source MR head verification.',
+        usage: 'zj-loop-pr-steward gitlab-claim --project <group/project> --issue-iid <iid> --merge-request <iid> --request-id <id> --claim-id <id> --current-head-sha <sha> [--api-url <url>] [--out <path>] [--json]',
+        options: [
+            { name: 'command', type: 'positional', description: 'Command', default: 'gitlab-claim' },
+            { name: 'project', type: 'string', description: 'GitLab group/project path' },
+            { name: 'issue-iid', type: 'string', description: 'Carrier Issue IID' },
+            { name: 'merge-request', type: 'string', description: 'Source MR IID' },
+            { name: 'request-id', type: 'string', description: 'Issue Fix Request id' },
+            { name: 'claim-id', type: 'string', description: 'Deterministic claim id' },
+            { name: 'current-head-sha', type: 'string', description: 'Current source MR head SHA' },
+            { name: 'api-url', type: 'string', description: 'GitLab API v4 base URL' },
+            { name: 'out', type: 'string', description: 'Write claim result JSON to this path' },
+            { name: 'json', type: 'boolean', description: 'Print JSON output' },
+        ],
+        async handler({ io, options }) {
+            for (const name of ['project', 'issue-iid', 'merge-request', 'request-id', 'claim-id', 'current-head-sha']) {
+                if (typeof options[name] !== 'string' || String(options[name]).trim() === '')
+                    throw new Error(`--${name} is required`);
+            }
+            const result = await claimGitLabPrStewardIssueFixRequest({
+                projectPath: String(options.project), issueIid: String(options['issue-iid']), mergeRequestIid: String(options['merge-request']), requestId: String(options['request-id']), claimId: String(options['claim-id']), currentHeadSha: String(options['current-head-sha']), token: process.env.GITLAB_TOKEN,
+                apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined,
+            });
+            const text = `${JSON.stringify(result, null, 2)}\n`;
+            if (typeof options.out === 'string')
+                await writeFile(String(options.out), text);
+            if (options.json === true || typeof options.out !== 'string')
+                io.stdout(text.trimEnd());
+            return result.status === 'completed' ? 0 : 2;
+        },
+    }, argv);
+}
+else if (argv[0] === 'gitlab-issue-fix-request') {
     process.exitCode = await runCli({
         name: 'zj-loop-pr-steward',
         description: 'Create a GitLab PR Steward Issue Fix Request after explicit confirmation.',
@@ -25,7 +61,7 @@ if (argv[0] === 'gitlab-issue-fix-request') {
                 if (typeof options[name] !== 'string' || String(options[name]).trim() === '')
                     throw new Error(`--${name} is required`);
             }
-            const report = JSON.parse(await (await import('node:fs/promises')).readFile(String(options.report), 'utf8'));
+            const report = JSON.parse(await readFile(String(options.report), 'utf8'));
             const result = await createGitLabPrStewardIssueFixRequest({
                 projectPath: String(options.project), report, token: process.env.GITLAB_TOKEN, confirmationPhrase: String(options.confirm),
                 apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined,
