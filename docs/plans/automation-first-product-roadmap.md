@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 20:08:01
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 20:23:25
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,7 +40,7 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-4-4-6. Dependency Sweeper GitLab repair-MR live dogfood evidence
+### 已完成：1-5-4-4. Dependency Sweeper GitLab repair-MR live recovery evidence
 
-ai-studio live evidence 已产生：pipeline 10515751，job 25977525，GitLab repair MR !311，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186b，request ifr_gitlab_dependency_fixture_yaml_20260716；Commit/MR API 成功，scope 仅 dependency fixture 两文件。待 human merge !311 后执行 Dependency-specific closeout 与 carrier lifecycle evidence。
+ai-studio live evidence 已闭环：初始 MR !311 因混入 dogfood substrate 触发 `repair-scope-mismatch`，未执行副作用；随后从 `master` 创建干净 repair MR !312，branch `automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c`，仅更新 dependency fixture 的 `package.json` 与 `package-lock.json`。MR !312 合并后，closeout job `25980469` 删除新 repair branch、写入 closeout evidence 并关闭 carrier Issue #186；旧 !311 分支也已单独清理。固定确认短语、claim/verifier、provider-specific Commit/MR API、scope hard stop 和 guarded closeout 均获得真实 GitLab 证据。
 <!-- ROADMAP_SECTION_END -->

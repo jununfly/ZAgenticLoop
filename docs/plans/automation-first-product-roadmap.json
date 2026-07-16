@@ -937,7 +937,7 @@
     "1-5-4-4": {
       "id": "1-5-4-4",
       "label": "GitLab Dependency Sweeper repair-MR live recovery evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [
@@ -989,6 +989,11 @@
           "q": "GitLab Dependency Sweeper live dogfood 使用哪个目标项目与变更边界？",
           "answer": "继续使用 mlive-dev/ai-studio；只在 zj-loop/dogfood/dependency-fixture 验证 yaml 2.8.0 -> 2.8.1，不修改 ai-studio 业务 package.json、package-lock.json 或业务源码",
           "note": "真实证据必须包含 GitLab Commit API、Dependency repair MR、human merge 前后的 lifecycle；fixture substrate 与业务依赖隔离。"
+        },
+        {
+          "q": "Dependency Sweeper 实装到用户项目时，merged repair-MR closeout 是否要求固定确认短语？",
+          "answer": "是；当前协议与用户项目统一要求 DELETE_MERGED_DEPENDENCY_SWEEPER_BRANCH_AND_CLOSE_CARRIER。安装包只提供确定性 closeout CLI；未来只有 Route Table 显式声明 auto-closeout capability 且全部前置条件满足时，才可免人工确认",
+          "note": "destructive side effects 不能因用户项目安装包而隐式放宽；confirmation location、required phrase 与 side effects 必须结构化输出。"
         }
       ],
       "notes": ""
@@ -1738,27 +1743,27 @@
     "1-5-4-4-6": {
       "id": "1-5-4-4-6",
       "label": "Dependency Sweeper GitLab repair-MR live dogfood evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-4",
       "children": [],
       "decisions": [],
-      "notes": "ai-studio live evidence 已产生：pipeline 10515751，job 25977525，GitLab repair MR !311，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186b，request ifr_gitlab_dependency_fixture_yaml_20260716；Commit/MR API 成功，scope 仅 dependency fixture 两文件。待 human merge !311 后执行 Dependency-specific closeout 与 carrier lifecycle evidence。"
+      "notes": "ai-studio live evidence 已闭环：初始 MR !311 因混入 dogfood substrate 触发 repair-scope-mismatch，未执行副作用；随后从 master 创建干净 repair MR !312，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c，source_ref=master，target_branch=master，仅更新 dependency fixture 的 package.json 与 package-lock.json。MR !312 合并后，closeout job 25980469 产出成功结果；旧 !311 分支与新 repair 分支均已清理。carrier Issue #186 的关闭记录归入 1-5-4-4-7。"
     },
     "1-5-4-4-7": {
       "id": "1-5-4-4-7",
       "label": "Dependency Sweeper human merge、closeout 与 carrier lifecycle evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-4",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "GitLab Dependency Sweeper closeout live evidence：MR !312 已合并；closeout job 25980469 使用固定确认短语 DELETE_MERGED_DEPENDENCY_SWEEPER_BRANCH_AND_CLOSE_CARRIER，删除 automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c，写入 closeout evidence 并关闭 carrier Issue #186；随后旧 MR !311 对应分支 automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186b 已单独删除。链路完成：fixture verifier -> provider-specific Commit/MR API -> human merge -> guarded closeout -> carrier lifecycle。"
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 20:08:01",
+    "updated": "2026-07-16 21:00:00",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
