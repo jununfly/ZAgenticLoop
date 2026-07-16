@@ -31,6 +31,7 @@ export async function createGitLabDependencySweeperRepairMr(input: {
   request: any;
   requestId: string;
   branch: string;
+  sourceRef?: string;
   targetBranch: string;
   commitMessage: string;
   title: string;
@@ -47,6 +48,7 @@ export async function createGitLabDependencySweeperRepairMr(input: {
       token: input.token,
     }),
     branch: input.branch,
+    source_ref: input.sourceRef ?? input.targetBranch,
     target_branch: input.targetBranch,
   };
   const blocked = (reason: string, extra: Record<string, unknown> = {}) => ({
@@ -88,8 +90,9 @@ export async function createGitLabDependencySweeperRepairMr(input: {
 
   const branchesUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: ['repository', 'branches'] });
   const branchUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: ['repository', 'branches', input.branch] });
-  const branchCreate = await postJson(fetchImpl, branchesUrl, headers, { branch: input.branch, ref: input.targetBranch });
-  if (!branchCreate.ok && branchCreate.status !== 400) return blocked('repair-branch-create-failed', { http_status: branchCreate.status });
+  const branchCreatePayload = { branch: input.branch, ref: input.sourceRef ?? input.targetBranch };
+  const branchCreate = await postJson(fetchImpl, branchesUrl, headers, branchCreatePayload);
+  if (!branchCreate.ok && branchCreate.status !== 400) return blocked('repair-branch-create-failed', { http_status: branchCreate.status, provider_endpoint: new URL(branchesUrl).pathname, request_summary: branchCreatePayload });
   let branchReady = false;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     let branchResponse;
@@ -100,8 +103,14 @@ export async function createGitLabDependencySweeperRepairMr(input: {
   }
   if (!branchReady) return blocked('repair-branch-not-ready');
   const commitsUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: ['repository', 'commits'] });
-  const commitResponse = await postJson(fetchImpl, commitsUrl, headers, { branch: input.branch, commit_message: input.commitMessage, actions: input.actions });
-  if (!commitResponse.ok) return blocked('repair-commit-create-failed', { http_status: commitResponse.status });
+  const commitPayload = { branch: input.branch, commit_message: input.commitMessage, actions: input.actions };
+  const commitResponse = await postJson(fetchImpl, commitsUrl, headers, commitPayload);
+  if (!commitResponse.ok) return blocked('repair-commit-create-failed', {
+    http_status: commitResponse.status,
+    provider_endpoint: new URL(commitsUrl).pathname,
+    request_summary: summarizeCommitRequest(commitPayload),
+    provider_error: await readResponseError(commitResponse),
+  });
   const mrResponse = await postJson(fetchImpl, mergeRequestsUrl, headers, {
     source_branch: input.branch,
     target_branch: input.targetBranch,
@@ -113,6 +122,32 @@ export async function createGitLabDependencySweeperRepairMr(input: {
   const mergeRequest = await mrResponse.json() as any;
   if (!Number.isInteger(Number(mergeRequest.iid))) return blocked('repair-mr-create-response-invalid');
   return completed(audit, 'created', mergeRequest);
+}
+
+function summarizeCommitRequest(payload: { branch: string; commit_message: string; actions: any[] }) {
+  return {
+    branch: payload.branch,
+    action_count: payload.actions.length,
+    actions: payload.actions.map((action) => ({
+      action: String(action.action ?? ''),
+      file_path: String(action.file_path ?? ''),
+      content_bytes: typeof action.content === 'string' ? Buffer.byteLength(action.content, 'utf8') : 0,
+    })),
+  };
+}
+
+async function readResponseError(response: { text?: () => Promise<string> }) {
+  if (typeof response.text !== 'function') return null;
+  try {
+    const raw = await response.text();
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === 'string') return parsed.slice(0, 300);
+    if (parsed && typeof parsed === 'object') return parsed.message ?? parsed.error ?? parsed.errors ?? null;
+    return raw.slice(0, 300);
+  } catch {
+    return null;
+  }
 }
 
 function completed(audit: Record<string, unknown>, outcome: 'created' | 'duplicate', mergeRequest: any) {
@@ -134,6 +169,6 @@ async function postJson(fetchImpl: typeof fetch, url: string, headers: Record<st
   try {
     return await fetchImpl(url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   } catch {
-    return { ok: false, status: 0, json: async () => ({}) };
+    return { ok: false, status: 0, json: async () => ({}), text: async () => '' };
   }
 }

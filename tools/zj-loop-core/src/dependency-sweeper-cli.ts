@@ -44,13 +44,14 @@ if (argv[0] === 'repair-plan') {
   process.exitCode = await runCli({
     name: 'zj-loop-dependency-sweeper',
     description: 'Create a GitLab Dependency Sweeper repair MR from verifier-generated Commit API actions.',
-    usage: 'zj-loop-dependency-sweeper gitlab-repair-mr --request <path> --actions <path> --project <group/project> --branch <branch> --target-branch <branch> --commit-message <message> --title <title> --description <body> [--api-url <url>] [--out <path>] [--json]',
+    usage: 'zj-loop-dependency-sweeper gitlab-repair-mr --request <path> --actions <path> --project <group/project> --branch <branch> --source-ref <ref> --target-branch <branch> --commit-message <message> --title <title> --description <body> [--api-url <url>] [--out <path>] [--json]',
     options: [
       { name: 'command', type: 'positional', description: 'Command', default: 'gitlab-repair-mr' },
       { name: 'request', type: 'string', description: 'Consumed Issue Fix Request JSON path' },
       { name: 'actions', type: 'string', description: 'Verifier-generated GitLab Commit API actions JSON path' },
       { name: 'project', type: 'string', description: 'GitLab group/project path' },
       { name: 'branch', type: 'string', description: 'Deterministic repair branch' },
+      { name: 'source-ref', type: 'string', description: 'Ref containing the verified fixture files' },
       { name: 'target-branch', type: 'string', description: 'Target branch' },
       { name: 'commit-message', type: 'string', description: 'Commit message' },
       { name: 'title', type: 'string', description: 'Merge Request title' },
@@ -60,7 +61,7 @@ if (argv[0] === 'repair-plan') {
       { name: 'json', type: 'boolean', description: 'Print structured result JSON' },
     ],
     async handler({ io, options }) {
-      for (const name of ['request', 'actions', 'project', 'branch', 'target-branch', 'commit-message', 'title', 'description']) {
+      for (const name of ['request', 'actions', 'project', 'branch', 'source-ref', 'target-branch', 'commit-message', 'title', 'description']) {
         if (typeof options[name] !== 'string' || String(options[name]).trim() === '') throw new Error(`--${name} is required`);
       }
       const request = JSON.parse(await readFile(String(options.request), 'utf8'));
@@ -71,6 +72,7 @@ if (argv[0] === 'repair-plan') {
         request,
         requestId: String(request.request_id ?? ''),
         branch: String(options.branch),
+        sourceRef: String(options['source-ref']),
         targetBranch: String(options['target-branch']),
         commitMessage: String(options['commit-message']),
         title: String(options.title),

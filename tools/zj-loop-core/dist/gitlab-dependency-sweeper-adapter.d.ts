@@ -8,6 +8,7 @@ export declare function createGitLabDependencySweeperRepairMr(input: {
     request: any;
     requestId: string;
     branch: string;
+    sourceRef?: string;
     targetBranch: string;
     commitMessage: string;
     title: string;
@@ -21,6 +22,7 @@ export declare function createGitLabDependencySweeperRepairMr(input: {
     reason: string;
     audit: {
         branch: string;
+        source_ref: string;
         target_branch: string;
         auth_source: string | null;
         consumer_id?: string | undefined;
