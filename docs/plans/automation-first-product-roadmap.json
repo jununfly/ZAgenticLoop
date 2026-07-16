@@ -1001,12 +1001,14 @@
     "1-5-4-5": {
       "id": "1-5-4-5",
       "label": "GitLab PR Steward MR report and fix-request evidence",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [
         "1-5-4-5-1",
-        "1-5-4-5-2"
+        "1-5-4-5-2",
+        "1-5-4-5-3",
+        "1-5-4-5-4"
       ],
       "decisions": [
         {
@@ -1018,6 +1020,11 @@
           "q": "PR Steward GitLab dogfood 使用什么 fixture？",
           "answer": "使用 ai-studio 中只影响 zj-loop/dogfood 的受控 CI failure MR；先完成 MR report-only live evidence，再推进 failed-check 到 Issue Fix Request，不触碰业务代码。",
           "note": "fixture 必须可回滚、可重复，report-only 不评论/改 label/创建 request；request-only 只消费 allowlisted failed-check evidence，并固定校验 project、MR IID、head SHA 与 route consumer binding。"
+        },
+        {
+          "q": "PR Steward GitLab report/request 完成后是否继续追踪 claim 与 repair 边界？",
+          "answer": "是；增加独立 claim/lifecycle 与 bounded repair/escalation 子节点，避免 report/request evidence 被误认为完整 consumer 链路。",
+          "note": "1-5-4-5 只有在 report、request、claim、verifier、repair/escalation evidence 全部完成后才可视为完整 GitLab PR Steward parity。"
         }
       ],
       "notes": ""
@@ -1805,11 +1812,31 @@
         }
       ],
       "notes": "GitLab PR Steward failed-check -> Issue Fix Request live evidence 已完成：ai-studio MR !313 的 fixture failure 经 report job 25981764/25983372 产出 candidate-fix-request；request job 25983342 在固定确认短语 CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST 下成功创建 carrier Issue #188，request_id=ifr_c05bebf77a8b。Route Table pr-steward-report 显式 enabled；source project、MR IID=313、head SHA、failed_jobs 与 request consumer binding 均由 adapter 校验；dedupe 与 confirmation-required 零写入测试通过。Issue #188 保持 opened，留给后续 claim 节点。"
+    },
+    "1-5-4-5-3": {
+      "id": "1-5-4-5-3",
+      "label": "PR Steward GitLab claim verifier 与 lifecycle evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab live evidence completed on ai-studio MR !313 at head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de. Report job 25983394 succeeded while fixture failure job 25983395 failed. Request job 25983402, with CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST, created carrier Issue #189 and request_id=ifr_31bf89f5f5e5. Claim job 25983403 consumed the new carrier with project, issue IID, request ID, claim ID, MR IID, and head SHA all fixed and matched; result outcome=claimed. Carrier Issue #189 contains the claim note after reread; MR !313 contains no claim-side note or other source-MR mutation. No repair MR or closeout was performed; Issue #189 remains open for the next bounded repair/escalation node."
+    },
+    "1-5-4-5-4": {
+      "id": "1-5-4-5-4",
+      "label": "PR Steward GitLab bounded repair MR 或 escalation evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 23:15:03",
+    "updated": "2026-07-16 23:27:47",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
