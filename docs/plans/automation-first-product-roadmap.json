@@ -1001,7 +1001,7 @@
     "1-5-4-5": {
       "id": "1-5-4-5",
       "label": "GitLab PR Steward MR report and fix-request evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [
@@ -1793,7 +1793,7 @@
     "1-5-4-5-2": {
       "id": "1-5-4-5-2",
       "label": "PR Steward GitLab failed-check Issue Fix Request evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-5",
       "children": [],
@@ -1804,12 +1804,12 @@
           "note": "确认位置为 GitLab 手动作业变量或 Codex 当前对话；缺失或不一致时零次 Issue API 写入并输出 confirmation-required。"
         }
       ],
-      "notes": "已完成本地 request-only adapter 与 fragment 手动作业：report eligibility、GitLab MR IID/head SHA/project/failed_jobs source binding、dedupe、固定确认 phrase 与零写入 hard stop。下一步更新 ai-studio tarball，在 MR !313 上执行真实 Issue Fix Request 创建 evidence。"
+      "notes": "GitLab PR Steward failed-check -> Issue Fix Request live evidence 已完成：ai-studio MR !313 的 fixture failure 经 report job 25981764/25983372 产出 candidate-fix-request；request job 25983342 在固定确认短语 CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST 下成功创建 carrier Issue #188，request_id=ifr_c05bebf77a8b。Route Table pr-steward-report 显式 enabled；source project、MR IID=313、head SHA、failed_jobs 与 request consumer binding 均由 adapter 校验；dedupe 与 confirmation-required 零写入测试通过。Issue #188 保持 opened，留给后续 claim 节点。"
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 21:48:04",
+    "updated": "2026-07-16 23:15:03",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
