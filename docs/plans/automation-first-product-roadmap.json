@@ -1001,7 +1001,7 @@
     "1-5-4-5": {
       "id": "1-5-4-5",
       "label": "GitLab PR Steward MR report and fix-request evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [
@@ -1027,7 +1027,7 @@
           "note": "1-5-4-5 只有在 report、request、claim、verifier、repair/escalation evidence 全部完成后才可视为完整 GitLab PR Steward parity。"
         }
       ],
-      "notes": ""
+      "notes": "GitLab PR Steward report, request, claim/verifier, and bounded escalation evidence are complete in ai-studio. Repair MR creation remains explicitly false for this evidence because no deterministic repair plan was supplied; this is the accepted escalation completion form and does not claim repair-MR support."
     },
     "1-5-4-6": {
       "id": "1-5-4-6",
@@ -1826,17 +1826,17 @@
     "1-5-4-5-4": {
       "id": "1-5-4-5-4",
       "label": "PR Steward GitLab bounded repair MR 或 escalation evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-5",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "GitLab live escalation evidence completed on ai-studio. Added provider-specific gitlab-escalation CLI and manual recovery job with explicit needs: [], so same-stage DAG blocking cannot prevent a bounded operator start. Job 25983856 in API pipeline 10517011 consumed Issue #189 claim identity (request_id=ifr_31bf89f5f5e5, claim_id=claim-pr-steward-313-92e140b8, MR !313, head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de), revalidated request/project/MR head, appended one structured pr-steward-escalation marker, reread it, and produced outcome=escalated with repair_mr_created=false. Carrier Issue #189 now contains exactly one escalation marker after the claim marker; source MR !313 was not mutated. The first run exposed a stale tarball and was fail-closed before any API write; refreshed bundle passed on retry."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 23:27:47",
+    "updated": "2026-07-16 23:46:49",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
