@@ -11,7 +11,7 @@ export function validateGitLabChangelogDraftActions(actions: any[], expectedFile
   if (!isSafeRepoPath(expectedFile)) errors.push('draft-file-invalid');
   if (!Array.isArray(actions) || actions.length !== 1) errors.push('draft-commit-actions-must-cover-exactly-one-file');
   const action = Array.isArray(actions) ? actions[0] : null;
-  if (action?.action !== 'update') errors.push('draft-commit-action-must-be-update');
+  if (!['create', 'update'].includes(String(action?.action ?? ''))) errors.push('draft-commit-action-must-be-create-or-update');
   if (action?.file_path !== expectedFile) errors.push('draft-commit-file-scope-mismatch');
   if (typeof action?.content !== 'string') errors.push('draft-commit-content-required');
   if (action?.encoding !== undefined && action.encoding !== 'text') errors.push('draft-commit-encoding-invalid');
