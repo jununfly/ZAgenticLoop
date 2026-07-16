@@ -1964,17 +1964,17 @@
     "1-5-4-6-4": {
       "id": "1-5-4-6-4",
       "label": "GitLab Changelog Drafter 独立 fragment 与 generated-bundle gate",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "GitLab fragment slice complete. Canonical and bundled changelog fragment now expose independent artifact, carrier, claim, and explicit draft-MR jobs; recovery jobs use needs: [] to avoid same-stage DAG blocking. Artifact job preserves signal -> zj-loop-dispatch -> draft-plan orchestration evidence, then emits provider-specific gitlab-changelog-draft-evidence. Generated bundle gate and zj-loop-init GitLab fragment tests pass; gate retains only pre-existing ci-sweeper configurable-stage warning."
     },
     "1-5-4-6-5": {
       "id": "1-5-4-6-5",
       "label": "ai-studio changelog draft fixture 与真实 draft-evidence dogfood",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
@@ -1984,7 +1984,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 00:44:24",
+    "updated": "2026-07-17 00:49:51",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
