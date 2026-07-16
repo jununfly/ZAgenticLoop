@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-15 21:59:05
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 19:02:49
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,10 +40,27 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-4-1. GitLab Roadmap activation branch and draft-MR contract
+### 当前施工：1. Automation-First Product Goal Roadmap
+
+先完成 1-1 的 completion contract；1-2 迁移并基线化当前事实；1-3 与 1-4 可在 contract 稳定后并行；1-5、1-6、1-7 依次收口 adapter、gates 和 release evidence。
 
 **决策：**
-- Q: Which credential may GitLab Roadmap Activation use for live branch/MR side effects? → Only GITLAB_TOKEN. (The generated GitLab workflow must not authorize live activation with CI_JOB_TOKEN; the core CLI and adapter use PRIVATE-TOKEN from GITLAB_TOKEN only.)
-- Q: What is the GitLab activation target branch source? → Use CI_DEFAULT_BRANCH from the target project. (This keeps self-managed GitLab projects such as ai-studio on master without a provider-specific hardcoded main fallback.)
-- Q: When may the GitLab activation workflow create a branch or draft MR? → Only an explicitly enabled Route Table route may reach the manual live job; the job then requires GITLAB_TOKEN and emits branch/MR evidence. (Route enablement remains separate from the generated user's default disabled route profile.)
+- Q: 架构目标与用户体验目标是否二选一？ → 两者必须同时满足，并在项目演进中动态保持一致。架构目标先进时应拉动用户体验补齐；用户体验落后时应作为稳定参考对象反向打磨架构确定性。 (参考动态规划思路：每个阶段都维护局部最优与全局目标的一致性，避免架构漂亮但体验不顺，或体验承诺超过架构事实。)
+- Q: 路线图应如何切成可执行 slices？ → 按同一真相面、核心派生、自动推进与Workspace、GitHub/GitLab适配、确定性gate/replay、reference dogfood/release 六条依赖线切分；每个叶子必须有明确接口、测试或dogfood证据，不能把中间报告误作完成。 (先完成可表达并可判定的 completion contract，后续 adapter 与用户体验工作才有共同完成标准。)
+
+**当前子树：**
+├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
+│   ... 5 more child nodes; run tree 1-1 --depth 2 for full view
+├── [x][Y+] 1-2. 当前 Route 能力与用户体验缺口盘点
+│   ... 3 more child nodes; run tree 1-2 --depth 2 for full view
+├── [x][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
+│   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
+├── [x][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
+│   ... 3 more child nodes; run tree 1-4 --depth 2 for full view
+├── [ ][Y+] 1-5. GitHub 与 GitLab 的 live 能力对齐
+│   ... 5 more child nodes; run tree 1-5 --depth 2 for full view
+├── [ ][Y+] 1-6. 确定性脚本 gate 与 replay 证据闭环
+│   ... 4 more child nodes; run tree 1-6 --depth 2 for full view
+└── [ ][Y+] 1-7. Dogfood 仪表盘与发布前完成判定
+    ... 4 more child nodes; run tree 1-7 --depth 2 for full view
 <!-- ROADMAP_SECTION_END -->

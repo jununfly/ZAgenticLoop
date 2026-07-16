@@ -796,7 +796,7 @@
     "1-5-4-1": {
       "id": "1-5-4-1",
       "label": "GitLab Roadmap activation branch and draft-MR contract",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [],
@@ -817,27 +817,122 @@
           "note": "Route enablement remains separate from the generated user's default disabled route profile."
         }
       ],
-      "notes": ""
+      "notes": "Completed with real GitLab live evidence after target MR !297 merged. Pipeline 10503931 manual job 25939406 ran on master with GITLAB_TOKEN, emitted execution-result.json schema zj-loop.gitlab_roadmap_activation_execution_result.v1, status=completed, target_branch=master, branch_name=zjal-act-issue-comment-gitlab-roadmap-activation, merge_request_iid=298, and merge_request_url=https://git.bilibili.co/mlive-dev/ai-studio/-/merge_requests/298. live_operations recorded create-branch status 201, find-merge-request status 200/count 0, and create-merge-request status 201. This evidence proves the GitLab branch/Draft-MR contract only; the manual run used default empty source issue/comment inputs (source issue 0), so it is not evidence of Issue #160 activation binding. The generated Draft MR remains the controlled closeout carrier for follow-up verification."
     },
     "1-5-4-2": {
       "id": "1-5-4-2",
       "label": "GitLab post-merge roadmap closeout execution evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "GitLab closeout dogfood 是否创建最小受控 MR 并绑定专用 carrier issue？",
+          "answer": "是，创建最小受控 MR；由 human 合并后执行 live closeout。",
+          "note": "MR 只承担 closeout 验证，不扩展产品功能；硬门槛是合法 post-merge contract、MR merged、删除唯一 zjal- 分支、追加 closeout evidence、关闭 carrier issue。"
+        },
+        {
+          "q": "GitLab closeout dogfood 是否使用独立 carrier issue，而不是复用 Issue #160？",
+          "answer": "是，创建新的专用 carrier issue。",
+          "note": "避免混淆 triage source issue、activation carrier 与 closeout carrier 生命周期；closeout 只能关闭 contract 指定的独立 carrier。"
+        },
+        {
+          "q": "GitLab closeout dogfood 的最小 MR 变更放在哪里？",
+          "answer": "新增 docs/plans/gitlab-roadmap-closeout-dogfood.md。",
+          "note": "只记录目的、contract 约束和待回填 evidence；不修改业务代码或 CI 逻辑。"
+        }
+      ],
+      "notes": "Completed with real GitLab live closeout evidence. MR !298 (merge commit 446280dde1b6b12d237c8c31076aa3ff5345641c) carried a valid zj-loop.post-merge-contract bound to carrier issue #161 and branch zjal-act-issue-comment-gitlab-roadmap-activation. First closeout attempt job 25940493 was correctly denied because the target Route Table had the route disabled; MR !300 enabled the route. The next run job 25940963 proved dispatch and contract metadata but remained dry-run and exposed that the fragment only invoked closeout-plan. MR !301 updated the GitLab fragment to invoke guarded live-closeout when an explicit MR IID is supplied and upload live-closeout-result.json. Final controlled pipeline 10504276 job 25941326 used MR IID 298, carrier 161, and review URL variables; route decision allowed, all executor guards passed, live-closeout-result.json reported status=executed and side_effects_executed=true, deleted the sole zjal- roadmap branch, and closed carrier issue #161. Final remote verification: issue #161 state=closed; branch lookup returned 404 Branch Not Found. This is live GitLab post-merge closeout evidence, not merely a dry-run."
     },
     "1-5-4-3": {
       "id": "1-5-4-3",
       "label": "GitLab CI Sweeper repair-MR live recovery evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-5-4-3-1",
+        "1-5-4-3-2",
+        "1-5-4-3-3",
+        "1-5-4-3-4",
+        "1-5-4-3-5",
+        "1-5-4-3-6",
+        "1-5-4-3-7"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab CI Sweeper live recovery dogfood 使用哪个目标项目？",
+          "answer": "继续使用 mlive-dev/ai-studio",
+          "note": "复用已验证的 GitLab token、Route Table、MR、live closeout 和 evidence 基础设施；受控 failure 必须最小且可回滚。"
+        },
+        {
+          "q": "GitLab CI Sweeper 的 Issue Fix Request carrier 采用什么载体？",
+          "answer": "创建独立 GitLab Issue Fix Request",
+          "note": "与 GitHub CI Sweeper 的独立 Issue carrier 对齐；不把 source pipeline、triage source issue 与 repair MR 生命周期混在一起。后续由 allowlisted CI Sweeper consumer claim 并创建 provider-aware repair MR。"
+        },
+        {
+          "q": "GitLab Issue Fix Request 创建后，如何触发独立 CI Sweeper Consumer？",
+          "answer": "由独立 consumer workflow 消费 carrier；report job 不直接创建 repair MR",
+          "note": "Issue Fix Request 创建与 repair MR 创建保持副作用边界分离；consumer 必须经过 request-level verifier、route-level allowlist 和 capability match。"
+        },
+        {
+          "q": "GitLab CI Sweeper Consumer 的触发与恢复方式是什么？",
+          "answer": "即时 dispatcher pipeline 为主，scheduled scan 作为漏触发 request 的恢复/补偿入口",
+          "note": "Issue 创建后由受控 API 触发独立 consumer pipeline 并传入 request issue IID；定时扫描只消费仍处于 requested/active 且未 claim 的 request，必须使用 dedupe 与 claim guard。"
+        },
+        {
+          "q": "GitLab CI Sweeper 即时 trigger、consumer claim 与 repair MR 使用什么权限来源？",
+          "answer": "只接受项目显式受控变量 GITLAB_TOKEN",
+          "note": "不回退 CI_JOB_TOKEN、GL_TOKEN 或 CLI token 参数；token 缺失、权限不足、变量不可回读时结构化 hard stop，零次 repair MR API 写入。即时与 scheduled recovery 共用同一权限边界。"
+        },
+        {
+          "q": "CI Sweeper Consumer claim 的最低 verifier 条件是什么？",
+          "answer": "只消费通过 structured Issue Fix Request、项目绑定、route allowlist、request verifier 与 capability match 的请求",
+          "note": "要求合法 zj-loop:issue-fix-request envelope、status=requested、requested_consumer=ci-sweeper、route request_kind=issue-fix-request、GitLab provider、source project 与当前项目一致、allowlisted verification gate、未进入 claim/failed/completed lifecycle；label 仅作可选索引，不能授权 claim。"
+        },
+        {
+          "q": "用户项目如何对齐 scripts/ci-validate-gates.sh？",
+          "answer": "语义对齐、脚本不复制",
+          "note": "scripts/ci-validate-gates.sh 继续作为 ZAgenticLoop 仓库 reference verifier；发布包提供确定性 zj-loop-ci-sweeper verifier API/CLI；用户项目通过显式 project gate allowlist 接入，不复制复杂仓库专用脚本，Agent 不运行时猜测 gate。"
+        },
+        {
+          "q": "project gate allowlist 放在哪里？",
+          "answer": "只放用户项目的 zj-loop/zj-loop-route-table.yaml",
+          "note": "作为 ci-sweeper route 的 guards/verifier 配置落点；不进入 patterns/registry.yaml，不复制 scripts/ci-validate-gates.sh，也不让 Agent 运行时猜测项目 gate。"
+        },
+        {
+          "q": "project gate allowlist 采用什么命令表示？",
+          "answer": "使用结构化 command/args/cwd 数组",
+          "note": "禁止 shell command 字符串、管道、重定向和命令替换；每个 gate 有稳定 id；repair MR 只能执行 request 与 Route Table allowlist 的交集，并输出 exit code、duration 与 artifact path。"
+        },
+        {
+          "q": "GitLab CI Sweeper 何时允许创建 repair MR？",
+          "answer": "仅在确定性 repair 后存在 scope 内实际 diff 且全部 required verifier gates 通过时创建",
+          "note": "claim 后在临时 branch 执行 request 与 Route Table allowlist 的 gate；空 diff、scope 越界、protected/denylisted 路径、任一 required gate 失败均不创建 MR，追加 structured failed evidence；retry 必须创建新 request。"
+        },
+        {
+          "q": "CI Sweeper claim 如何防止并发重复消费？",
+          "answer": "追加结构化 claim comment，再 re-read 选出唯一 winner",
+          "note": "claim comment 只追加不编辑，包含 request_id、consumer_id、claim_id、claimed_at、source_pipeline_id；re-read 后只有唯一有效 winner 可继续。其他 consumer 返回 duplicate；不确定写入只做一次 marker re-read，不重发。"
+        },
+        {
+          "q": "GitLab CI Sweeper repair MR 的 branch/commit/MR 如何创建？",
+          "answer": "采用 GitLab provider-specific API adapter，由 GITLAB_TOKEN 创建 branch、commit 与 MR",
+          "note": "branch 使用 automated/ci-sweeper-gitlab-<pipeline-id>-<request-hash>；commit/MR body 携带 Issue Fix Request、claim、repair 与 verifier evidence；不依赖 runner 配置 git remote 或 shell push，human merge 保持独立。"
+        },
+        {
+          "q": "GitLab Commit API adapter 是否只支持窄 action 子集？",
+          "answer": "协议层支持完整 action set，route/request 双层 allowlist 限制实际动作",
+          "note": "adapter 支持 create/update/delete/move/chmod，并可在显式 capability 下处理 base64 binary；symlink、submodule、默认 LFS 不支持。所有路径、大小、diff、删除、移动和权限变更都做确定性校验与低成本审计。"
+        },
+        {
+          "q": "CI Sweeper 默认允许哪些 GitLab Commit API actions？",
+          "answer": "create/update/delete/move/chmod；默认仅 UTF-8 文本",
+          "note": "binary 需 request 显式 capability；symlink、submodule、默认 LFS 拒绝；chmod 仅 100644/100755；delete/move/chmod 显式声明；action、路径、scope、大小和 diff 均经 route/request verifier。"
+        }
+      ],
+      "notes": "开始在 mlive-dev/ai-studio 验证 GitLab CI Sweeper repair-MR live recovery；先建立最小可回滚 CI failure，再验证 Issue Fix Request、Route Dispatcher、claim、repair MR、human merge 与 post-merge closeout。"
     },
     "1-5-4-4": {
       "id": "1-5-4-4",
@@ -1327,11 +1422,224 @@
         }
       ],
       "notes": "2026-07-15 ai-studio pinned-image dogfood: Web pipeline 10501751/job 25930669 created owned schedule 960, but schedule detail omitted variables and both variables endpoints returned 404; schedule fired but no source=schedule pipeline appeared. Human-session cleanup removed 960; normal schedule 957 remained unchanged. Follow-up implementation now performs a read-only preflight before any POST: it lists existing schedules then requires an existing schedule detail to expose variables as an array. This GitLab instance therefore returns blocked/schedule-probe-capability-blocked with operations=[] and CLI exit 2; no temporary schedule or cleanup is attempted. Verification: core build plus schedule-probe runner/CLI tests passed."
+    },
+    "1-5-4-3-1": {
+      "id": "1-5-4-3-1",
+      "label": "GitLab Issue Fix Request carrier API and dedupe",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented and tested GitLab Issue Fix Request carrier API in @jununfly/zj-loop-core. Added createGitLabCiSweeperIssueFixRequest and zj-loop-ci-sweeper gitlab-issue-fix-request CLI. Behavior: GITLAB_TOKEN-only auth, structured request validation, request_id search dedupe, independent GitLab Issue creation, one-read uncertain-write recovery, low-cost audit fields, no claim or repair-MR side effects. Verification: core build plus 21 targeted provider/contract/CI Sweeper tests passed."
+    },
+    "1-5-4-3-2": {
+      "id": "1-5-4-3-2",
+      "label": "CI Sweeper claim marker and lifecycle verifier",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented append-only GitLab CI Sweeper claim and lifecycle APIs. claimGitLabCiSweeperIssueFixRequest validates the structured Issue Fix Request and project binding, appends a deterministic claim marker, re-reads notes, and returns only the unique winner; duplicates/races do not proceed. appendGitLabCiSweeperLifecycleEvidence verifies the claim before appending running/completed/failed evidence. GITLAB_TOKEN-only auth and low-cost audit fields. Core build and 17 CI Sweeper tests passed."
+    },
+    "1-5-4-3-3": {
+      "id": "1-5-4-3-3",
+      "label": "Structured verifier and generated-substrate repair action gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented deterministic CI Sweeper verifier and repair action gates. Verifier intersects structured request command specs with Route Table verification_gate_allowlist; repair action gate enforces create/update/delete/move/chmod, repository-relative paths, route repair scope, and 100644/100755 chmod boundary. CI Sweeper request bodies now emit structured command arrays. Core build and 20 CI/contract tests passed."
+    },
+    "1-5-4-3-4": {
+      "id": "1-5-4-3-4",
+      "label": "GitLab Commit API branch commit and repair MR adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented and tested provider-specific GitLab branch, commit, and repair MR adapter with GITLAB_TOKEN-only auth, source-branch dedupe, deterministic action validation, fail-closed writes, and regression coverage."
+    },
+    "1-5-4-3-5": {
+      "id": "1-5-4-3-5",
+      "label": "Immediate consumer trigger and scheduled recovery workflow",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab CI Sweeper fragment now has a dedicated recovery stage, immediate on_failure execution, scheduled replay entry, explicit web manual fallback, carrier creation via GITLAB_TOKEN-only deterministic CLI, and always-uploaded structured carrier evidence. Generated YAML parser and init regression tests pass."
+    },
+    "1-5-4-3-6": {
+      "id": "1-5-4-3-6",
+      "label": "ai-studio generated-substrate drift fixture and live evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed with real GitLab dogfood in mlive-dev/ai-studio. The deterministic fixture zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml was the only repair scope; Issue Fix Request #185 consumed the fixture drift, created MR !309, and the repair MR was manually merged. Closeout deleted the automated/ci-sweeper-gitlab-10513928-64ffecc0 branch and closed carrier #185. No business files were touched."
+    },
+    "1-5-4-3-7": {
+      "id": "1-5-4-3-7",
+      "label": "Execution-ready CI Sweeper consumer claim verifier and repair MR boundary",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [
+        "1-5-4-3-7-1",
+        "1-5-4-3-7-2",
+        "1-5-4-3-7-3",
+        "1-5-4-3-7-4",
+        "1-5-4-3-7-5"
+      ],
+      "decisions": [
+        {
+          "q": "是否在完整 claim/verifier/repair-MR/human-merge/closeout evidence 通过前提升 ci-sweeper 为 execution-ready？",
+          "answer": "否，先实现并验证完整 consumer，证据闭环后再用固定确认短语提升",
+          "note": "实现完成不等于能力升级；保持 execution_ready=false，避免把代码存在误认为用户项目可自动修复。"
+        },
+        {
+          "q": "CI Sweeper signal 与 consumer 是否共用同一个 job/workflow？",
+          "answer": "分离：signal 只创建 carrier，独立 consumer 只消费显式 request",
+          "note": "避免 signal 自消费、职责混淆和自动循环；scheduled recovery 只做确定性发现后传入显式身份。"
+        },
+        {
+          "q": "CI Sweeper consumer 是否要求同时传入 issue_iid 与 request_id，并如何处理身份不一致？",
+          "answer": "必须同时传入并固定校验；缺失或不一致输出 request-source-mismatch，零次 API 写入",
+          "note": "固定 project、provider、consumer、request_id 与 Issue envelope 的绑定，禁止依赖标题、label 或最新 issue 猜测。"
+        },
+        {
+          "q": "claim 是否必须位于所有只读 verifier 之后、任何仓库写入之前？",
+          "answer": "必须；route/readiness、身份、request schema、consumer/provider/project、verification allowlist、repair action gate 全部通过后才 claim",
+          "note": "claim 是唯一消费权；verifier 失败不得留下无效 claim。claim 后再记录 running、执行 bounded repair，失败进入 terminal evidence。"
+        },
+        {
+          "q": "claim 后 repair/API/gate 失败是否自动重试？",
+          "answer": "否；追加 terminal failed/escalation evidence，retry 必须创建新 Issue Fix Request",
+          "note": "同一 request 不反复消费；source branch/MR 做 dedupe，human merge 保持独立。"
+        },
+        {
+          "q": "repair 失败或高风险时是否创建第二个 escalation issue？",
+          "answer": "默认不创建；原 Issue Fix Request 追加结构化 failed/escalation evidence，retry 使用新 request",
+          "note": "保持单一 carrier lifecycle truth，减少 issue 噪声；只有协议显式要求独立 escalation carrier 时才创建。"
+        },
+        {
+          "q": "Issue Fix Request 创建后如何触发独立 consumer pipeline？",
+          "answer": "主路径由受控 API 立即触发并显式传入 issue_iid 与 request_id；scheduled recovery 只作漏触发补偿",
+          "note": "consumer 不猜 issue；触发失败只记录 structured trigger evidence，不自动循环触发。"
+        },
+        {
+          "q": "consumer pipeline 使用哪个 ref？",
+          "answer": "固定 CI_DEFAULT_BRANCH；repair MR target branch 也固定 CI_DEFAULT_BRANCH",
+          "note": "consumer 使用稳定主线代码；source branch 只作为 evidence，不参与运行时 ref 猜测。"
+        },
+        {
+          "q": "consumer job 允许哪些 pipeline source？",
+          "answer": "仅 api、schedule、web；三者都必须显式传入 issue_iid 与 request_id，其他 source 不创建 consumer job",
+          "note": "避免普通业务 pipeline 自触发；缺失身份输出 request-source-mismatch，零次 API 写入。"
+        },
+        {
+          "q": "scheduled recovery 如何扫描并派生消费目标？",
+          "answer": "有界 deterministic scan：只读 open Issue 中合法 requested、未 claim、consumer=ci-sweeper 的 envelope，固定排序与 max_requests=30，派生显式 issue_iid+request_id 后消费",
+          "note": "不依赖 label、不无限扫描、不重复触发；超限输出结构化 next_steps。"
+        },
+        {
+          "q": "execution-ready dogfood 是否只允许修改 generated substrate，不触碰业务代码？",
+          "answer": "必须；只允许 zj-loop/ 与根 CI 生成物等 allowlisted scope，业务文件越界立即 hard stop",
+          "note": "验证 repair-MR 边界而不污染 ai-studio 业务逻辑；human merge 后再 closeout。"
+        },
+        {
+          "q": "repair_actions 是否必须由 deterministic planner 写入 request envelope，consumer 是否禁止自行猜动作？",
+          "answer": "必须；planner 产生 allowlisted actions，consumer 只验证执行；缺失时 repair-actions-missing，零 claim/仓库写入/MR",
+          "note": "LLM 不决定文件或动作；request envelope 是 repair authority。"
+        },
+        {
+          "q": "如何处理缺少 repair_actions 的 Issue #163？",
+          "answer": "保留为 negative boundary case，不编辑；新建带合法 repair_actions 的 request 做正向 dogfood",
+          "note": "#163 验证 repair-actions-missing 的零写入边界；新 request 验证完整 claim/verifier/repair MR。"
+        },
+        {
+          "q": "request-body 是否支持显式结构化 repair_actions 输入？",
+          "answer": "支持可选 --repair-actions <json>；不传保持普通 request，传入时在 carrier 生成前 deterministic 校验；不从自然语言推断",
+          "note": "#163 保持 negative case；新 request 复用同一确定性入口做正向 repair-MR dogfood。"
+        },
+        {
+          "q": "正向 dogfood 使用什么 generated substrate fixture？",
+          "answer": "使用 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml 专用文件，只允许其 create/update/repair，不触碰业务代码和主 CI workflow",
+          "note": "fixture 可控、可回滚，覆盖 action/path/scope/verifier/MR contract。"
+        },
+        {
+          "q": "正向 dogfood 的 repair_actions 是否固定为已有 fixture 的单个 update？",
+          "answer": "是，固定为对 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml 的 deterministic update",
+          "note": "验证真实 drift 修复，不验证无约束文件创建；content 必须进入 request envelope。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-4-3-7-1": {
+      "id": "1-5-4-3-7-1",
+      "label": "Deterministic repair_actions request-body contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Added optional structured --repair-actions JSON input to request-body and embedded validated actions in Issue Fix Request authority. Unsafe actions fail before carrier creation. Core build and 25 CI Sweeper tests pass."
+    },
+    "1-5-4-3-7-2": {
+      "id": "1-5-4-3-7-2",
+      "label": "GitLab consumer explicit identity preflight and trigger",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented explicit GitLab consumer job and deterministic core APIs/CLIs: gitlab-claim and gitlab-trigger-consumer. Consumer accepts only api/schedule/web with explicit issue_iid/request_id/claim_id, fixed CI_DEFAULT_BRANCH ref, needs: [] immediate entry, structured preflight, and no claim while execution_ready=false. Carrier-created signal path triggers one api consumer pipeline with explicit variables; consumer source cannot re-enter signal rules. Claim loads Route Table and runs verifier/action gates before any comment write. Core 27 CI tests, init 32 tests, and generated GitLab bundle parser gate pass."
+    },
+    "1-5-4-3-7-3": {
+      "id": "1-5-4-3-7-3",
+      "label": "CI Sweeper claim verifier lifecycle and bounded repair MR execution",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed with deterministic core tests and live GitLab evidence. The execution-ready consumer performed explicit issue_iid/request_id/claim_id preflight, won the append-only claim, passed the Route Table verifier and repair action scope gate, created bounded repair MR !309, and recorded lifecycle evidence. The dedicated GitLab CI Sweeper closeout path verifies the merged MR, matching request/carrier, automated/ci-sweeper-gitlab-* branch prefix, fixed confirmation phrase, then deletes the branch and closes the carrier."
+    },
+    "1-5-4-3-7-4": {
+      "id": "1-5-4-3-7-4",
+      "label": "ai-studio positive fixture live evidence and execution-ready promotion gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed with real ai-studio positive live evidence. Dogfood-only execution-ready promotion was applied; Issue Fix Request #185 (ifr_8534207a5fa5) triggered consumer pipeline 10513928, claim and verifier passed, repair MR !309 was created and manually merged, and closeout job 25973143 deleted branch automated/ci-sweeper-gitlab-10513928-64ffecc0, appended closeout evidence, and closed #185. This proves the bounded GitLab CI Sweeper repair-MR lifecycle without auto-merge or business-file scope expansion."
+    },
+    "1-5-4-3-7-5": {
+      "id": "1-5-4-3-7-5",
+      "label": "无 claim Issue Fix Request 孤儿 carrier 分类与清理",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [
+        {
+          "q": "无 claim 的 Issue Fix Request 是否可以仅凭标题批量关闭？",
+          "answer": "否；先做 report-only 分类，只关闭经过检查并明确完成或孤儿清理的 carrier",
+          "note": "本次 #163/#174/#175/#181 无 claim，#176 有历史 failed evidence；全部经检查后手工关闭，malformed/source-mismatch 不应直接自动关闭。"
+        }
+      ],
+      "notes": "Completed during GitLab dogfood cleanup. Verified #163, #174, #175, #176, and #181 are closed. Terminal failed carriers had explicit failure evidence; no-claim orphan carriers were manually closed after inspection. No remaining open orphan carriers from this cleanup set."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 21:59:05",
+    "updated": "2026-07-16 19:02:49",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
