@@ -40,5 +40,16 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-4-6-6. ai-studio GitLab Changelog draft-MR live dogfood and provider write evidence
+### 最近完成：1-5-4-6-1. GitLab Changelog Drafter draft-MR human merge、closeout 与 carrier lifecycle evidence
+
+**决策：**
+- Q: GitLab Changelog draft-MR closeout 如何授权？ → 必须使用固定确认短语 DELETE_MERGED_CHANGELOG_DRAFT_BRANCH_AND_CLOSE_CARRIER，且该授权独立于创建 draft-MR 的确认。 (closeout 的 branch 删除、closeout evidence 和 carrier 关闭均属于不可逆副作用。)
+- Q: GitLab Changelog draft-MR 的 closeout 判定条件是什么？ → 必须重新读取并验证 state=merged、merged_at、merge_commit_sha、source branch、target branch、request ID 与 carrier binding；任一不满足时零次 branch DELETE 或 carrier close 写入。 (CI 变量和人工描述不是 merge truth，provider 当前事实才是唯一依据。)
+- Q: GitLab Changelog draft-MR closeout 的操作顺序是什么？ → 固定为先追加并 reread closeout evidence，再删除 draft branch，最后关闭 carrier Issue；中途失败保留 carrier open并输出可恢复 structured escalation。 (先持久化 truth，再执行清理，避免 carrier 已关闭但 branch 未清理。)
+
+**完成证据：**
+- ai-studio artifact-only pipeline `10517165` / job `25984901`：`draft-evidence`，无 provider side effect。
+- ai-studio Draft MR `!314`：carrier `Issue #190`，request `cdr_gitlab_draft_mr_20260717`，claim `claim-changelog-190-0d93f89a`。
+- 未合并负向边界 pipeline `10517177` / job `25985177`：`merge-not-confirmed`，零 branch delete、零 carrier close。
+- 人工合并后 closeout pipeline `10517186` / job `25985270`：closeout evidence reread、branch 已删除、carrier `Issue #190` 已关闭。
 <!-- ROADMAP_SECTION_END -->
