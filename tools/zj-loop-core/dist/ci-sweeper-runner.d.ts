@@ -31,10 +31,13 @@ export declare function createGitLabCiSweeperIssueFixRequest(input: {
     status: string;
     reason: string;
     audit: {
-        project_path: string;
-        request_id: any;
         dedupe_key: any;
         auth_source: string | null;
+        consumer_id?: string | undefined;
+        claim_id?: string | undefined;
+        request_id?: string | undefined;
+        issue_iid?: number | undefined;
+        project_path: string;
     };
     issue: null;
 } | {
@@ -63,12 +66,12 @@ export declare function claimGitLabCiSweeperIssueFixRequest(input: {
     status: string;
     reason: string;
     audit: {
-        project_path: string;
-        issue_iid: number;
-        request_id: string;
-        claim_id: string;
-        consumer_id: string;
         auth_source: string | null;
+        consumer_id?: string | undefined;
+        claim_id?: string | undefined;
+        request_id?: string | undefined;
+        issue_iid?: number | undefined;
+        project_path: string;
     };
     claim: null;
 } | {
@@ -95,11 +98,12 @@ export declare function appendGitLabCiSweeperLifecycleEvidence(input: {
     status: string;
     reason: string;
     audit: {
-        project_path: string;
-        issue_iid: number;
-        request_id: string;
-        claim_id: string;
         auth_source: string | null;
+        consumer_id?: string | undefined;
+        claim_id?: string | undefined;
+        request_id?: string | undefined;
+        issue_iid?: number | undefined;
+        project_path: string;
     };
     lifecycle: null;
     http_status?: undefined;
@@ -109,11 +113,12 @@ export declare function appendGitLabCiSweeperLifecycleEvidence(input: {
     status: string;
     reason: string;
     audit: {
-        project_path: string;
-        issue_iid: number;
-        request_id: string;
-        claim_id: string;
         auth_source: string | null;
+        consumer_id?: string | undefined;
+        claim_id?: string | undefined;
+        request_id?: string | undefined;
+        issue_iid?: number | undefined;
+        project_path: string;
     };
     lifecycle: null;
     http_status: number;
@@ -123,11 +128,12 @@ export declare function appendGitLabCiSweeperLifecycleEvidence(input: {
     status: string;
     outcome: string;
     audit: {
-        project_path: string;
-        issue_iid: number;
-        request_id: string;
-        claim_id: string;
         auth_source: string | null;
+        consumer_id?: string | undefined;
+        claim_id?: string | undefined;
+        request_id?: string | undefined;
+        issue_iid?: number | undefined;
+        project_path: string;
     };
     lifecycle: {
         schema: string;
@@ -322,12 +328,12 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
         status: string;
         reason: string;
         audit: {
-            project_path: string;
-            issue_iid: number;
-            request_id: string;
-            claim_id: string;
-            consumer_id: string;
             auth_source: string | null;
+            consumer_id?: string | undefined;
+            claim_id?: string | undefined;
+            request_id?: string | undefined;
+            issue_iid?: number | undefined;
+            project_path: string;
         };
         claim: null;
     } | {
@@ -367,11 +373,12 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
         status: string;
         reason: string;
         audit: {
-            project_path: string;
-            issue_iid: number;
-            request_id: string;
-            claim_id: string;
             auth_source: string | null;
+            consumer_id?: string | undefined;
+            claim_id?: string | undefined;
+            request_id?: string | undefined;
+            issue_iid?: number | undefined;
+            project_path: string;
         };
         lifecycle: null;
         http_status?: undefined;
@@ -381,11 +388,12 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
         status: string;
         reason: string;
         audit: {
-            project_path: string;
-            issue_iid: number;
-            request_id: string;
-            claim_id: string;
             auth_source: string | null;
+            consumer_id?: string | undefined;
+            claim_id?: string | undefined;
+            request_id?: string | undefined;
+            issue_iid?: number | undefined;
+            project_path: string;
         };
         lifecycle: null;
         http_status: number;
@@ -395,11 +403,12 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
         status: string;
         outcome: string;
         audit: {
-            project_path: string;
-            issue_iid: number;
-            request_id: string;
-            claim_id: string;
             auth_source: string | null;
+            consumer_id?: string | undefined;
+            claim_id?: string | undefined;
+            request_id?: string | undefined;
+            issue_iid?: number | undefined;
+            project_path: string;
         };
         lifecycle: {
             schema: string;

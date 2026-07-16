@@ -940,7 +940,15 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
+      "children": [
+        "1-5-4-4-1",
+        "1-5-4-4-2",
+        "1-5-4-4-3",
+        "1-5-4-4-4",
+        "1-5-4-4-5",
+        "1-5-4-4-6",
+        "1-5-4-4-7"
+      ],
       "decisions": [
         {
           "q": "GitLab Dependency Sweeper 是否沿用 CI Sweeper 的 Issue Fix Request、claim/verifier、repair-MR 与 closeout 主链路？",
@@ -1661,11 +1669,81 @@
         }
       ],
       "notes": "Completed during GitLab dogfood cleanup. Verified #163, #174, #175, #176, and #181 are closed. Terminal failed carriers had explicit failure evidence; no-claim orphan carriers were manually closed after inspection. No remaining open orphan carriers from this cleanup set."
+    },
+    "1-5-4-4-1": {
+      "id": "1-5-4-4-1",
+      "label": "共享 GitLab request-lifecycle 原语接口与低成本审计字段",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "新增 tools/zj-loop-core/src/gitlab-request-lifecycle.ts：共享 GitLab lifecycle audit、source binding、结构化 marker 原语；已由 CI Sweeper 接入。验证：zj-loop-core build 通过，gitlab-request-lifecycle.test.mjs 与 ci-sweeper-runner.test.mjs 通过。"
+    },
+    "1-5-4-4-2": {
+      "id": "1-5-4-4-2",
+      "label": "共享 GitLab envelope/source binding、dedupe 与 claim winner re-read 测试",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "共享契约测试覆盖 provider/project/request/consumer source mismatch、低成本审计字段、marker 解析与坏 note fail-closed；CI Sweeper 原有 carrier/claim/lifecycle 回归测试全部通过。"
+    },
+    "1-5-4-4-3": {
+      "id": "1-5-4-4-3",
+      "label": "Dependency Sweeper fixture scope、版本升级与 verifier contract",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-4-4": {
+      "id": "1-5-4-4-4",
+      "label": "GitLab Dependency Sweeper provider-specific Commit/MR adapter",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-4-5": {
+      "id": "1-5-4-4-5",
+      "label": "Dependency Sweeper GitLab fragment 与 generated-bundle gate",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-4-6": {
+      "id": "1-5-4-4-6",
+      "label": "Dependency Sweeper GitLab repair-MR live dogfood evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-4-4-7": {
+      "id": "1-5-4-4-7",
+      "label": "Dependency Sweeper human merge、closeout 与 carrier lifecycle evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 19:13:20",
+    "updated": "2026-07-16 19:20:23",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

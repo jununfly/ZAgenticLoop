@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buildGitLabApiUrl, buildGitLabAuthHeaders, buildProviderIssueUrl, } from './providers.js';
 import { buildIssueFixRequestComment, ISSUE_FIX_REQUEST_SCHEMA, parseIssueFixRequestComments, } from './issue-fix-request-contract.js';
+import { buildGitLabLifecycleAudit, buildGitLabLifecycleMarker, parseGitLabLifecycleMarker, validateGitLabRequestSourceBinding, } from './gitlab-request-lifecycle.js';
 export const GITLAB_CI_SWEEPER_ISSUE_FIX_REQUEST_SCHEMA = 'zj-loop.gitlab_issue_fix_request_live.v1';
 export function buildCiSweeperIssueFixRequestBody(input) {
     const routeDecision = input.routeDecision ?? {};
@@ -96,10 +97,8 @@ export async function createGitLabCiSweeperIssueFixRequest(input) {
     const parsed = parseIssueFixRequestComments([{ id: null, body: input.requestBody }])[0];
     const request = parsed?.validation.ok ? parsed.request : null;
     const audit = {
-        project_path: input.projectPath,
-        request_id: request?.request_id ?? null,
+        ...buildGitLabLifecycleAudit({ projectPath: input.projectPath, requestId: request?.request_id, token: input.token }),
         dedupe_key: request?.dedupe_key ?? null,
-        auth_source: input.token ? 'GITLAB_TOKEN' : null,
     };
     const blocked = (reason, extra = {}) => ({
         schema: GITLAB_CI_SWEEPER_ISSUE_FIX_REQUEST_SCHEMA,
@@ -174,14 +173,14 @@ export async function createGitLabCiSweeperIssueFixRequest(input) {
 }
 export async function claimGitLabCiSweeperIssueFixRequest(input) {
     const fetchImpl = input.fetchImpl ?? globalThis.fetch;
-    const audit = {
-        project_path: input.projectPath,
-        issue_iid: Number(input.issueIid),
-        request_id: input.requestId,
-        claim_id: input.claimId,
-        consumer_id: input.consumerId ?? 'ci-sweeper',
-        auth_source: input.token ? 'GITLAB_TOKEN' : null,
-    };
+    const audit = buildGitLabLifecycleAudit({
+        projectPath: input.projectPath,
+        issueIid: input.issueIid,
+        requestId: input.requestId,
+        claimId: input.claimId,
+        consumerId: input.consumerId ?? 'ci-sweeper',
+        token: input.token,
+    });
     const blocked = (reason, extra = {}) => ({
         schema: 'zj-loop.gitlab_ci_sweeper_claim.v1',
         status: 'blocked',
@@ -216,11 +215,14 @@ export async function claimGitLabCiSweeperIssueFixRequest(input) {
     if (!request || request.route_decision?.target_consumer !== 'ci-sweeper' || request.route_decision?.request_kind !== 'issue-fix-request') {
         return blocked('issue-fix-request-invalid');
     }
-    if (request.source_signal?.provider !== 'gitlab' || String(request.subject?.repo ?? '') !== input.projectPath) {
-        return blocked('request-source-mismatch', { request_id: request.request_id });
-    }
-    if (request.request_id !== input.requestId)
-        return blocked('request-source-mismatch', { request_id: request.request_id, expected_request_id: input.requestId });
+    const sourceBinding = validateGitLabRequestSourceBinding({
+        request,
+        projectPath: input.projectPath,
+        requestId: input.requestId,
+        consumerId: input.consumerId ?? 'ci-sweeper',
+    });
+    if (!sourceBinding.ok)
+        return blocked(sourceBinding.reason ?? 'request-source-mismatch', { request_id: request.request_id });
     if (request.status !== 'requested')
         return blocked('request-not-requested', { request_id: request.request_id });
     if (input.route) {
@@ -261,7 +263,7 @@ export async function claimGitLabCiSweeperIssueFixRequest(input) {
         source_pipeline_id: input.sourcePipelineId,
         claimed_at: new Date().toISOString(),
     };
-    const body = `<!-- zj-loop:ci-sweeper-claim\n${JSON.stringify(claim)}\n-->\n\n### CI Sweeper Claim\n\n- request: \`${request.request_id}\`\n- consumer: \`${claim.consumer_id}\`\n- claim: \`${claim.claim_id}\`\n- source pipeline: \`${claim.source_pipeline_id}\``;
+    const body = `${buildGitLabLifecycleMarker('ci-sweeper-claim', claim)}\n\n### CI Sweeper Claim\n\n- request: \`${request.request_id}\`\n- consumer: \`${claim.consumer_id}\`\n- claim: \`${claim.claim_id}\`\n- source pipeline: \`${claim.source_pipeline_id}\``;
     try {
         const response = await fetchImpl(notesUrl, {
             method: 'POST',
@@ -297,7 +299,7 @@ export async function claimGitLabCiSweeperIssueFixRequest(input) {
 export async function appendGitLabCiSweeperLifecycleEvidence(input) {
     const fetchImpl = input.fetchImpl ?? globalThis.fetch;
     const headers = { ...buildGitLabAuthHeaders({ token: input.token }), 'User-Agent': 'zj-loop-ci-sweeper' };
-    const audit = { project_path: input.projectPath, issue_iid: Number(input.issueIid), request_id: input.requestId, claim_id: input.claimId, auth_source: input.token ? 'GITLAB_TOKEN' : null };
+    const audit = buildGitLabLifecycleAudit({ projectPath: input.projectPath, issueIid: input.issueIid, requestId: input.requestId, claimId: input.claimId, token: input.token });
     if (!input.token)
         return { schema: 'zj-loop.gitlab_ci_sweeper_lifecycle.v1', status: 'blocked', reason: 'gitlab-token-required', audit, lifecycle: null };
     if (!fetchImpl)
@@ -311,7 +313,7 @@ export async function appendGitLabCiSweeperLifecycleEvidence(input) {
     if (!claim)
         return { schema: 'zj-loop.gitlab_ci_sweeper_lifecycle.v1', status: 'blocked', reason: 'claim-not-found', audit, lifecycle: null };
     const lifecycle = { schema: 'zj-loop.gitlab_ci_sweeper_lifecycle.v1', request_id: input.requestId, claim_id: input.claimId, status: input.status, evidence: input.evidence ?? {}, recorded_at: new Date().toISOString() };
-    const body = `<!-- zj-loop:ci-sweeper-lifecycle\n${JSON.stringify(lifecycle)}\n-->\n\n### CI Sweeper Lifecycle\n\n- request: \`${input.requestId}\`\n- claim: \`${input.claimId}\`\n- status: **${input.status}**`;
+    const body = `${buildGitLabLifecycleMarker('ci-sweeper-lifecycle', lifecycle)}\n\n### CI Sweeper Lifecycle\n\n- request: \`${input.requestId}\`\n- claim: \`${input.claimId}\`\n- status: **${input.status}**`;
     const response = await fetchImpl(notesUrl, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
     if (!response.ok)
         return { schema: 'zj-loop.gitlab_ci_sweeper_lifecycle.v1', status: 'blocked', reason: 'lifecycle-write-failed', audit, lifecycle: null, http_status: response.status };
@@ -796,15 +798,7 @@ function normalizeScope(value) {
     return scope.endsWith('/') ? scope : `${scope}/`;
 }
 function parseCiSweeperClaim(note) {
-    const match = String(note?.body ?? '').match(/<!--\s*zj-loop:ci-sweeper-claim\s*\n([\s\S]*?)\n-->/);
-    if (!match)
-        return null;
-    try {
-        return JSON.parse(match[1]);
-    }
-    catch {
-        return null;
-    }
+    return parseGitLabLifecycleMarker(note, 'ci-sweeper-claim');
 }
 function claimDuplicateResult(audit, claim) {
     return { schema: 'zj-loop.gitlab_ci_sweeper_claim.v1', status: 'completed', outcome: 'duplicate', audit: { ...audit, request_id: claim.request_id }, claim };

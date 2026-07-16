@@ -36,3 +36,4 @@ export * from './workspace-closeout.js';
 export * from './workspace-evidence.js';
 export * from './triage-role-mapping.js';
 export * from './gitlab-issue-triage-transition-runner.js';
+export * from './gitlab-request-lifecycle.js';
