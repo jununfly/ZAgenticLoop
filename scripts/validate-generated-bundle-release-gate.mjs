@@ -217,6 +217,20 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
       source: 'GitLab template',
       body: gitlabTemplate,
     }));
+    if (workflowFile === 'zj-loop-dependency-sweeper.yml') {
+      const requiredMarkers = [
+        'zj_loop_dependency_sweeper_gitlab_repair_mr:',
+        'when: manual',
+        'zj-loop-dependency-sweeper gitlab-repair-mr',
+        '--request "$ZJ_LOOP_DEPENDENCY_REQUEST_JSON"',
+        '--actions "$ZJ_LOOP_DEPENDENCY_ACTIONS_JSON"',
+        'gitlab-repair-mr-result.json',
+      ];
+      for (const marker of requiredMarkers) {
+        if (!gitlabTemplate.includes(marker)) errors.push(`${workflowFile} is missing GitLab manual repair-MR marker: ${marker}`);
+      }
+      if (gitlabTemplate.includes('gh ')) errors.push(`${workflowFile} GitLab repair-MR fragment must not call gh`);
+    }
     if (workflowFile === 'zj-loop-changelog-drafter.yml' && gitlabTemplate.includes('live-draft')) {
       errors.push(`${workflowFile} GitLab template must not expose live-draft until GitLab live draft MR support is promoted`);
     }
