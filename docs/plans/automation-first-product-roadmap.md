@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 21:26:23
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 21:40:22
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,10 +40,13 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-4-5-1. PR Steward GitLab MR report-only live evidence
-
-已完成本地第一刀：新增 provider-specific GitLab MR/head-pipeline report API 与 zj-loop-pr-steward gitlab-report CLI；只读 merge_requests/:iid，输出 zj-loop.gitlab_pr_steward_report.v1，失败 pipeline 分类为 candidate-fix-request，副作用字段固定为 false。Generated GitLab PR Steward fragment 写入 gitlab-pr-steward-report.json；core report tests、PR Steward regression tests、zj-loop-init 32项 bundle tests 通过。下一步是提交到 ai-studio 并创建 dogfood fixture MR 做真实 report-only evidence。
+### 当前施工：1-5-4-5. GitLab PR Steward MR report and fix-request evidence
 
 **决策：**
-- Q: PR Steward GitLab report-only fixture 如何制造受控失败？ → 在 ai-studio 的 zj-loop/dogfood/pr-steward-fixture 下新增只在 merge_request_event 运行的确定性失败 job，明确 exit 1；fixture 只存在于 dogfood MR，不进入 master。 (失败来源稳定、无业务影响、可回滚；report-only 只读取 MR/head pipeline 并生成 evidence，不评论、不改 label、不创建 Issue。)
+- Q: GitLab PR Steward live evidence 是否作为 Dependency Sweeper 之后的下一条 provider parity 路线？ → 是；直接进入 GitLab PR Steward live evidence，复用已验证的 GitLab MR、Issue Fix Request、claim、scope verifier 与 closeout 基础设施，但保留 PR Steward 自己的 review/checks 语义和 provider-specific adapter。 (先完成 report/request 与 MR source binding 的最小真实链路，再推进 fix-request/claim/live repair；不把 Dependency Sweeper 的 dependency scope 逻辑泛化到 PR Steward。)
+- Q: PR Steward GitLab dogfood 使用什么 fixture？ → 使用 ai-studio 中只影响 zj-loop/dogfood 的受控 CI failure MR；先完成 MR report-only live evidence，再推进 failed-check 到 Issue Fix Request，不触碰业务代码。 (fixture 必须可回滚、可重复，report-only 不评论/改 label/创建 request；request-only 只消费 allowlisted failed-check evidence，并固定校验 project、MR IID、head SHA 与 route consumer binding。)
+
+**当前子树：**
+├── [x][Y+] 1-5-4-5-1. PR Steward GitLab MR report-only live evidence
+└── [ ][Y+] 1-5-4-5-2. PR Steward GitLab failed-check Issue Fix Request evidence
 <!-- ROADMAP_SECTION_END -->

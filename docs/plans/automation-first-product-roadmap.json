@@ -1777,7 +1777,7 @@
     "1-5-4-5-1": {
       "id": "1-5-4-5-1",
       "label": "PR Steward GitLab MR report-only live evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-5",
       "children": [],
@@ -1788,7 +1788,7 @@
           "note": "失败来源稳定、无业务影响、可回滚；report-only 只读取 MR/head pipeline 并生成 evidence，不评论、不改 label、不创建 Issue。"
         }
       ],
-      "notes": "已完成本地第一刀：新增 provider-specific GitLab MR/head-pipeline report API 与 zj-loop-pr-steward gitlab-report CLI；只读 merge_requests/:iid，输出 zj-loop.gitlab_pr_steward_report.v1，失败 pipeline 分类为 candidate-fix-request，副作用字段固定为 false。Generated GitLab PR Steward fragment 写入 gitlab-pr-steward-report.json；core report tests、PR Steward regression tests、zj-loop-init 32项 bundle tests 通过。下一步是提交到 ai-studio 并创建 dogfood fixture MR 做真实 report-only evidence。"
+      "notes": "GitLab PR Steward report-only live dogfood 已完成：ai-studio draft MR !313 使用 zj-loop/dogfood/pr-steward-fixture 的 merge_request_event 确定性失败 job。首次 pipeline 10516448 暴露 fixture script YAML 冒号解析错误并修复；pipeline 10516503 yaml_errors 为空，fixture job 25981408 真实 failed，Route Table 显式 enable pr-steward-report 后 route decision allowed。report job 25981481 重试读取已完成的 pipeline jobs，产出 gitlab-pr-steward-report.json：checks=failure、status=candidate-fix-request、failed_jobs=[zj_loop_pr_steward_fixture_failure]、side_effects_executed=false。验证了 GitLab pipeline 顶层 manual 时必须读取 jobs 汇总的 provider 差异；全程无评论、label、Issue 或 MR 写入。"
     },
     "1-5-4-5-2": {
       "id": "1-5-4-5-2",
@@ -1803,7 +1803,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-16 21:26:23",
+    "updated": "2026-07-16 21:40:22",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
