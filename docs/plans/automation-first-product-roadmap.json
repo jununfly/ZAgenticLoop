@@ -416,7 +416,7 @@
     "1-5-4": {
       "id": "1-5-4",
       "label": "GitLab branch MR review and closeout live adapter parity",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [
@@ -428,7 +428,7 @@
         "1-5-4-6"
       ],
       "decisions": [],
-      "notes": ""
+      "notes": "All six GitLab branch/MR review and closeout parity slices are complete: Roadmap Activation, Post-Merge Closeout, CI Sweeper, Dependency Sweeper, PR Steward, and Changelog Drafter. Each route has provider-specific lifecycle evidence or bounded escalation evidence in ai-studio; Changelog Drafter additionally completed draft-evidence, draft-MR, negative merge boundary, human merge, and positive closeout."
     },
     "1-5-5": {
       "id": "1-5-5",
@@ -1919,7 +1919,7 @@
     "1-5-4-6-1": {
       "id": "1-5-4-6-1",
       "label": "GitLab Changelog Drafter draft-MR human merge、closeout 与 carrier lifecycle evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
@@ -1940,7 +1940,7 @@
           "note": "先持久化 truth，再执行清理，避免 carrier 已关闭但 branch 未清理。"
         }
       ],
-      "notes": ""
+      "notes": "GitLab Changelog Drafter parity completed in ai-studio. Artifact-only evidence pipeline 10517165/job 25984901 produced outcome=draft-evidence with side_effects_executed=false. Explicit draft-MR path created carrier Issue #190, claim claim-changelog-190-0d93f89a, and draft MR !314 from branch automated/changelog-drafter-gitlab-cdr190-0d93f89a to master; only zj-loop/dogfood/changelog-draft.md was committed. Closeout negative boundary pipeline 10517177/job 25985177 returned merge-not-confirmed for opened !314 with zero side effects. After human merge, closeout pipeline 10517186/job 25985270 verified merged_at, merge_commit_sha, source/target branch, request and claim binding; appended and reread closeout evidence, confirmed the draft branch already deleted, and closed carrier Issue #190. All Changelog closeout side effects were explicit and auditable."
     },
     "1-5-4-6-2": {
       "id": "1-5-4-6-2",

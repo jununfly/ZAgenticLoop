@@ -27,7 +27,7 @@
 │   ├── [x][Y+] 1-5-1. Provider adapter completion evidence mapping
 │   ├── [x][Y+] 1-5-2. GitHub required-route live and recovery reference evidence
 │   ├── [x][Y+] 1-5-3. GitLab signal and request-carrier live adapter parity
-│   ├── [ ][Y+] 1-5-4. GitLab branch MR review and closeout live adapter parity
+│   ├── [x][Y+] 1-5-4. GitLab branch MR review and closeout live adapter parity
 │   └── [ ][Y+] 1-5-5. GitLab required-route reference dogfood
 ├── [ ][Y+] 1-6. 确定性脚本 gate 与 replay 证据闭环
 │   ├── [ ][Y+] 1-6-1. Architecture Integrity deterministic validation gate
