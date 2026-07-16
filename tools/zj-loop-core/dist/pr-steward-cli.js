@@ -4,8 +4,42 @@ import { buildPrStewardExecutionPlan, executePrStewardLiveRunner, readPrStewardI
 import { runCli } from './cli.js';
 import { runRouteConsumerCli } from './route-consumer-cli.js';
 import { fetchGitLabPrStewardReport } from './gitlab-pr-steward-report.js';
+import { createGitLabPrStewardIssueFixRequest } from './gitlab-pr-steward-request.js';
 const argv = process.argv.slice(2);
-if (argv[0] === 'gitlab-report') {
+if (argv[0] === 'gitlab-issue-fix-request') {
+    process.exitCode = await runCli({
+        name: 'zj-loop-pr-steward',
+        description: 'Create a GitLab PR Steward Issue Fix Request after explicit confirmation.',
+        usage: 'zj-loop-pr-steward gitlab-issue-fix-request --report <path> --project <group/project> --confirm <phrase> [--api-url <url>] [--out <path>] [--json]',
+        options: [
+            { name: 'command', type: 'positional', description: 'Command', default: 'gitlab-issue-fix-request' },
+            { name: 'report', type: 'string', description: 'Path to GitLab PR Steward report JSON' },
+            { name: 'project', type: 'string', description: 'GitLab group/project path' },
+            { name: 'confirm', type: 'string', description: 'Fixed Issue Fix Request confirmation phrase' },
+            { name: 'api-url', type: 'string', description: 'GitLab API v4 base URL' },
+            { name: 'out', type: 'string', description: 'Write result JSON to this path' },
+            { name: 'json', type: 'boolean', description: 'Print JSON output' },
+        ],
+        async handler({ io, options }) {
+            for (const name of ['report', 'project', 'confirm']) {
+                if (typeof options[name] !== 'string' || String(options[name]).trim() === '')
+                    throw new Error(`--${name} is required`);
+            }
+            const report = JSON.parse(await (await import('node:fs/promises')).readFile(String(options.report), 'utf8'));
+            const result = await createGitLabPrStewardIssueFixRequest({
+                projectPath: String(options.project), report, token: process.env.GITLAB_TOKEN, confirmationPhrase: String(options.confirm),
+                apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined,
+            });
+            const text = `${JSON.stringify(result, null, 2)}\n`;
+            if (typeof options.out === 'string')
+                await writeFile(String(options.out), text);
+            if (options.json === true || typeof options.out !== 'string')
+                io.stdout(text.trimEnd());
+            return result.status === 'completed' ? 0 : 2;
+        },
+    }, argv);
+}
+else if (argv[0] === 'gitlab-report') {
     process.exitCode = await runCli({
         name: 'zj-loop-pr-steward',
         description: 'Read a GitLab MR and its head pipeline into report-only evidence.',

@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 21:40:22
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-16 21:48:04
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,13 +40,10 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-4-5. GitLab PR Steward MR report and fix-request evidence
+### 当前施工：1-5-4-5-2. PR Steward GitLab failed-check Issue Fix Request evidence
+
+已完成本地 request-only adapter 与 fragment 手动作业：report eligibility、GitLab MR IID/head SHA/project/failed_jobs source binding、dedupe、固定确认 phrase 与零写入 hard stop。下一步更新 ai-studio tarball，在 MR !313 上执行真实 Issue Fix Request 创建 evidence。
 
 **决策：**
-- Q: GitLab PR Steward live evidence 是否作为 Dependency Sweeper 之后的下一条 provider parity 路线？ → 是；直接进入 GitLab PR Steward live evidence，复用已验证的 GitLab MR、Issue Fix Request、claim、scope verifier 与 closeout 基础设施，但保留 PR Steward 自己的 review/checks 语义和 provider-specific adapter。 (先完成 report/request 与 MR source binding 的最小真实链路，再推进 fix-request/claim/live repair；不把 Dependency Sweeper 的 dependency scope 逻辑泛化到 PR Steward。)
-- Q: PR Steward GitLab dogfood 使用什么 fixture？ → 使用 ai-studio 中只影响 zj-loop/dogfood 的受控 CI failure MR；先完成 MR report-only live evidence，再推进 failed-check 到 Issue Fix Request，不触碰业务代码。 (fixture 必须可回滚、可重复，report-only 不评论/改 label/创建 request；request-only 只消费 allowlisted failed-check evidence，并固定校验 project、MR IID、head SHA 与 route consumer binding。)
-
-**当前子树：**
-├── [x][Y+] 1-5-4-5-1. PR Steward GitLab MR report-only live evidence
-└── [ ][Y+] 1-5-4-5-2. PR Steward GitLab failed-check Issue Fix Request evidence
+- Q: PR Steward GitLab Issue Fix Request 的固定确认短语是什么？ → CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST (确认位置为 GitLab 手动作业变量或 Codex 当前对话；缺失或不一致时零次 Issue API 写入并输出 confirmation-required。)
 <!-- ROADMAP_SECTION_END -->
