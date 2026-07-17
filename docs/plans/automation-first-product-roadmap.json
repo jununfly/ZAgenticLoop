@@ -2444,12 +2444,12 @@
     "1-5-5-3-2-3": {
       "id": "1-5-5-3-2-3",
       "label": "GitLab Post-Merge closeout negative verifier matrix",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-2",
       "children": [],
       "decisions": [],
-      "notes": "Verified pre-merge unmerged and missing-confirmation hard stops; contract/identity mismatch matrix still pending."
+      "notes": "Negative matrix implemented and verified: unmerged, missing contract, wrong project, wrong carrier, wrong roadmap branch, dirty worktree, missing confirmation; targeted suite 19/19 and all refusals have zero actions/side effects."
     },
     "1-5-5-3-2-4": {
       "id": "1-5-5-3-2-4",
@@ -2474,7 +2474,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 16:04:57",
+    "updated": "2026-07-17 16:27:03",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

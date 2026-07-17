@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-17 16:04:57
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-17 16:27:03
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,7 +40,7 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-5-3-2-3. GitLab Post-Merge closeout negative verifier matrix
+### 当前施工：1-5-5-3-2-4. GitLab Post-Merge live cleanup and replay recovery
 
-Verified pre-merge unmerged and missing-confirmation hard stops; contract/identity mismatch matrix still pending.
+MR !321 merged live closeout succeeded: evidence written to Issue #194, branch already_deleted, carrier closed; explicit replay evidence pending.
 <!-- ROADMAP_SECTION_END -->
