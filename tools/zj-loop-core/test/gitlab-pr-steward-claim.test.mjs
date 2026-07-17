@@ -54,3 +54,23 @@ test('GitLab PR Steward claim refuses stale MR head before any note write', asyn
   assert.equal(result.reason, 'source-head-mismatch');
   assert.equal(writes, 0);
 });
+
+test('GitLab PR Steward claim refuses a different claim id for an existing claim', async () => {
+  let writes = 0;
+  const body = `<!-- zj-loop:issue-fix-request\n${JSON.stringify(request)}\n-->`;
+  const result = await claimGitLabPrStewardIssueFixRequest({
+    projectPath: 'group/project', issueIid: 188, mergeRequestIid: 313, requestId: 'ifr_1', claimId: 'claim-2', currentHeadSha: 'abc123', token: 'secret',
+    fetchImpl: async (url, options = {}) => {
+      if (options.method === 'POST') writes += 1;
+      if (url.endsWith('/issues/188')) return response(200, { iid: 188, description: body });
+      if (url.endsWith('/merge_requests/313')) return response(200, { iid: 313, sha: 'abc123', state: 'opened', target_branch: 'master' });
+      if (url.includes('/issues/188/notes?')) return response(200, [{ body: `<!-- zj-loop:pr-steward-claim\n${JSON.stringify({ request_id: 'ifr_1', claim_id: 'claim-1', consumer_id: 'pr-steward' })}\n-->` }]);
+      return response(404, {});
+    },
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.reason, 'claim-mismatch');
+  assert.equal(result.existing_claim_id, 'claim-1');
+  assert.equal(result.side_effects_executed, false);
+  assert.equal(writes, 0);
+});

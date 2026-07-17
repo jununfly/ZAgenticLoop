@@ -34,7 +34,10 @@ export async function claimGitLabPrStewardIssueFixRequest(input: {
   };
   const before = await readClaims();
   if (!before.response.ok) return blocked('claim-read-failed', { http_status: before.response.status });
-  if (before.claims.length > 0) return { schema: 'zj-loop.gitlab_pr_steward_claim.v1', status: 'completed', outcome: 'duplicate', audit, claim: before.claims[0], side_effects_executed: false };
+  if (before.claims.length > 0) {
+    if (before.claims[0].claim_id !== input.claimId) return blocked('claim-mismatch', { existing_claim_id: before.claims[0].claim_id });
+    return { schema: 'zj-loop.gitlab_pr_steward_claim.v1', status: 'completed', outcome: 'duplicate', audit, claim: before.claims[0], side_effects_executed: false };
+  }
   const claim = { schema: 'zj-loop.gitlab_pr_steward_claim.v1', request_id: request.request_id, claim_id: input.claimId, consumer_id: 'pr-steward', current_head_sha: input.currentHeadSha, status: 'claimed', claimed_at: new Date().toISOString() };
   const response = await fetchImpl(notesUrl, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ body: `${buildGitLabLifecycleMarker('pr-steward-claim', claim)}\n\n### PR Steward Claim\n\n- request: \`${request.request_id}\`\n- claim: \`${input.claimId}\`\n- MR: !${input.mergeRequestIid}` }) });
   if (!response.ok) return blocked('claim-write-failed', { http_status: response.status, side_effects_executed: true });
