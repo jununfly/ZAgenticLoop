@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-17 09:11:57
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-17 09:21:00
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -28,7 +28,7 @@
 │   ├── [x][Y+] 1-5-2. GitHub required-route live and recovery reference evidence
 │   ├── [x][Y+] 1-5-3. GitLab signal and request-carrier live adapter parity
 │   ├── [x][Y+] 1-5-4. GitLab branch MR review and closeout live adapter parity
-│   └── [ ][Y+] 1-5-5. GitLab required-route reference dogfood
+│   └── [~][Y+] 1-5-5. GitLab required-route reference dogfood
 ├── [ ][Y+] 1-6. 确定性脚本 gate 与 replay 证据闭环
 │   ├── [ ][Y+] 1-6-1. Architecture Integrity deterministic validation gate
 │   ├── [ ][Y+] 1-6-2. Evidence compatibility invalidation and stale-status derivation

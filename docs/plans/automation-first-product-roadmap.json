@@ -2143,12 +2143,38 @@
     "1-5-5-2": {
       "id": "1-5-5-2",
       "label": "GitLab explicit-on-demand required-route dogfood",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "explicit-on-demand required route 如何分开 dogfood？",
+          "answer": "分别验证 manual-smoke-report 与 roadmap-sliced-development：manual smoke 只生成 report artifact、无 provider write；Roadmap Activation 消费显式结构化 activation contract，创建受控 zjal-* branch/Draft MR artifact，禁止自动 merge，closeout 独立验证。两条路径各自要求 positive、negative/recovery 与 verification evidence，不能互相替代。",
+          "note": "手动 pipeline 的存在只证明 explicit-on-demand trigger，不证明另一路由的 contract、scope 或 completion form。"
+        },
+        {
+          "q": "Roadmap Activation explicit-on-demand 使用什么 dogfood fixture？",
+          "answer": "使用 ai-studio 专用最小可回滚 activation fixture，只影响 zj-loop/dogfood；source Issue/comment、activation request、target branch、MR IID 显式绑定；branch 固定 zjal-*；允许创建 Draft MR 但禁止自动 merge。历史 !298 只有 compatibility fingerprint 完全匹配才可复用，否则重新创建。negative 覆盖缺失 contract、非 zjal branch、source mismatch、disabled route，均零 provider write。",
+          "note": "避免把历史 branch/MR API 成功或非绑定 activation 误认为当前 explicit-on-demand completion。"
+        },
+        {
+          "q": "Roadmap Activation explicit-on-demand 的完成边界是否包含 merge？",
+          "answer": "不包含。positive completion 止于 explicit signal、activation contract、verifier、zjal-* branch 与 Draft MR/reviewable artifact；human merge 与 post-merge cleanup 属于独立 event-driven post-merge cell，并复用 1-5-4 的 closeout evidence。",
+          "note": "分离 review artifact 与 merge/closeout completion，避免一个 slice 被误解为全生命周期完成。"
+        },
+        {
+          "q": "explicit-on-demand 使用什么 GitLab signal 入口？",
+          "answer": "统一使用 GitLab Web pipeline 的显式结构化变量/contract artifact；manual-smoke 直接启动，roadmap-sliced-development 传入 activation contract JSON、source Issue IID、comment/request ID、target branch 等字段并验证 CI_PIPELINE_SOURCE=web 或明确 manual replay context。缺失/不一致输出 protocol_repair_request 或 request-source-mismatch，零 provider write；Issue/comment event 留给 event-driven slice。",
+          "note": "不把 Web pipeline 伪装成 GitLab Issue/MR event，保持 trigger mode 与 evidence truth 一致。"
+        },
+        {
+          "q": "GitLab Web pipeline 的 canonical protocol source 是什么？",
+          "answer": "统一使用 gitlab-web-pipeline；Job 验证 CI_PIPELINE_SOURCE=web 或明确 manual replay context，route dispatch、consumer plan 与 activation contract evidence 使用同一 source identity。gitlab-issue-note 只留给 event-driven slice。",
+          "note": "不把 Web pipeline 伪装成 Issue/comment event，保持 trigger mode 与 evidence truth 一致。"
+        }
+      ],
+      "notes": "Completed with real ai-studio GitLab Web evidence. Positive pipeline 10519067/job 25991688 on commit f893bcbd created the bound Draft MR !315 from zjal-act-191-19652349-gitlab-explicit-on-demand-dogfood to master, with Issue #191 and Note #19652349 carried in the contract; no merge or closeout was performed. Negative missing-Note binding pipeline 10519288/job 25992832 on commit a6d60fa9 returned execution-result status=refused with source-comment-id-required and no live_operations. Negative cross-Issue Note mismatch pipeline 10519607/job 25993405 returned source-comment-issue-or-id-mismatch and no live_operations. The earlier pre-fix negative run created invalid Draft MR !316; it is excluded from evidence and remains a human cleanup item."
     },
     "1-5-5-3": {
       "id": "1-5-5-3",
@@ -2183,7 +2209,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 09:11:57",
+    "updated": "2026-07-17 09:21:00",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
