@@ -99,6 +99,8 @@ test('post-merge closeout plan refuses unsafe executor contexts', () => {
   const dirty = buildPlan({ gitStatus: ' M README.md\n' });
   const wrongRepo = buildPlan({ currentRepo: 'other/repo' });
   const wrongCarrier = buildPlan({ expectedCarrierIssue: 40 });
+  const wrongBranch = buildPlan({ pr: { ...MERGED_PR, headRefName: 'zjal-other-branch' } });
+  const missingContract = buildPlan({ prBody: 'No closeout contract here.' });
 
   assert.equal(unmerged.status, 'refused');
   assert.ok(unmerged.refusals.some((refusal) => refusal.reason === 'PR must be merged'));
@@ -108,6 +110,14 @@ test('post-merge closeout plan refuses unsafe executor contexts', () => {
   assert.ok(wrongRepo.refusals.some((refusal) => refusal.guard === 'current-repository'));
   assert.equal(wrongCarrier.status, 'refused');
   assert.ok(wrongCarrier.refusals.some((refusal) => refusal.guard === 'expected-carrier-issue'));
+  assert.equal(wrongBranch.status, 'refused');
+  assert.ok(wrongBranch.refusals.length > 0);
+  assert.equal(missingContract.status, 'refused');
+  assert.ok(missingContract.refusals.some((refusal) => refusal.reason === 'missing post-merge contract'));
+  for (const refusalPlan of [unmerged, dirty, wrongRepo, wrongCarrier, wrongBranch, missingContract]) {
+    assert.deepEqual(refusalPlan.actions, []);
+    assert.equal(refusalPlan.side_effects_executed, false);
+  }
 });
 
 test('post-merge closeout normalizes GitLab MR metadata into closeout plans', () => {

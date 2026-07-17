@@ -2424,42 +2424,42 @@
     "1-5-5-3-2-1": {
       "id": "1-5-5-3-2-1",
       "label": "GitLab Post-Merge closeout fixture creation and contract",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "ai-studio MR !321 prepared: source zjal-gitlab-post-merge-closeout-dogfood, target master, carrier Issue #194, contract written and binding verified; MR remains opened."
     },
     "1-5-5-3-2-2": {
       "id": "1-5-5-3-2-2",
       "label": "GitLab Post-Merge native MR event report and plan",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "MR !321 merge_request_event closeout plan/live artifacts verified: current MR 321, zjal source, master target, carrier #194; pre-merge refusal only PR must be merged; zero side effects."
     },
     "1-5-5-3-2-3": {
       "id": "1-5-5-3-2-3",
       "label": "GitLab Post-Merge closeout negative verifier matrix",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-5-3-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Verified pre-merge unmerged and missing-confirmation hard stops; contract/identity mismatch matrix still pending."
     },
     "1-5-5-3-2-4": {
       "id": "1-5-5-3-2-4",
       "label": "GitLab Post-Merge live cleanup and replay recovery",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-5-3-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "MR !321 merged live closeout succeeded: evidence written to Issue #194, branch already_deleted, carrier closed; explicit replay evidence pending."
     },
     "1-5-5-3-2-5": {
       "id": "1-5-5-3-2-5",
@@ -2474,7 +2474,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 15:12:07",
+    "updated": "2026-07-17 16:04:57",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
