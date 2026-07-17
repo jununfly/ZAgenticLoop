@@ -131,7 +131,7 @@ function buildVariables(envelope: GitLabIssueNoteBridgeEnvelope, targetRoute: st
     targetRoute,
     envelopeRef,
   ];
-  if (values.some((value) => !value || value.length > 512) || !/^\d+$/.test(values[3]) || !/^\d+$/.test(values[4])) return null;
+  if (values.some((value) => !value || value.length > 512) || !/^\d+$/.test(values[3]) || !/^\d+$/.test(values[4]) || Number(values[3]) <= 0 || Number(values[4]) <= 0) return null;
   return VARIABLE_KEYS.map((key, index) => ({ key, value: values[index] }));
 }
 

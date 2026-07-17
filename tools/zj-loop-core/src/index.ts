@@ -49,3 +49,4 @@ export * from './gitlab-control-route-evidence.js';
 export * from './gitlab-issue-note-bridge.js';
 export * from './gitlab-issue-note-bridge-receipts.js';
 export * from './gitlab-issue-note-bridge-trigger.js';
+export * from './gitlab-issue-note-bridge-server.js';
