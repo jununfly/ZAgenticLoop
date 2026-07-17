@@ -26,7 +26,9 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-post-merge-closeout closeout-plan --provider gitlab --repo "$CI_PROJECT_PATH" --merge-request "${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID:-0}}" --review-url "${ZJ_LOOP_REVIEW_URL:-$CI_PROJECT_URL/-/merge_requests/${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID:-0}}}" --gitlab-api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --gitlab-job-token "${CI_JOB_TOKEN:-}" --carrier-issue "${ZJ_LOOP_CARRIER_ISSUE:-0}" --json > closeout-plan.json || true
     - |
       if [ -n "${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID:-}}" ]; then
-        npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-post-merge-closeout live-closeout --provider gitlab --repo "$CI_PROJECT_PATH" --merge-request "${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID}}" --gitlab-api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --gitlab-job-token "${CI_JOB_TOKEN:-}" --carrier-issue "${ZJ_LOOP_CARRIER_ISSUE:-0}" --confirm-live-cleanup "${ZJ_LOOP_CONFIRM_LIVE_CLEANUP:-}" --require-live-confirmation --json > live-closeout-result.json
+        confirm_args=""
+        if [ -n "${ZJ_LOOP_CONFIRM_LIVE_CLEANUP:-}" ]; then confirm_args="--confirm-live-cleanup ${ZJ_LOOP_CONFIRM_LIVE_CLEANUP}"; fi
+        npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-post-merge-closeout live-closeout --provider gitlab --repo "$CI_PROJECT_PATH" --merge-request "${ZJ_LOOP_MERGE_REQUEST_IID:-${CI_MERGE_REQUEST_IID}}" --gitlab-api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --gitlab-job-token "${CI_JOB_TOKEN:-}" --carrier-issue "${ZJ_LOOP_CARRIER_ISSUE:-0}" $confirm_args --require-live-confirmation --json > live-closeout-result.json
       else
         printf '%s\n' '{"schema":"zj-loop.post-merge-closeout.v1","status":"skipped","reason":"merge-request-iid-required","side_effects_executed":false}' > live-closeout-result.json
       fi
