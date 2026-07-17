@@ -238,6 +238,10 @@ test('Roadmap Activation GitLab execute refuses missing live token and unsafe br
     contractPlan: {
       provider: 'gitlab',
       activationRequestId: 'act-87-note',
+      sourceIssue: '87',
+      sourceCommentId: '4932786315',
+      sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+      sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
       branchName: 'feature/not-zjal',
       mrTitle: 'Roadmap Activation: GitLab full parity',
       mrContract: 'contract',
@@ -251,6 +255,36 @@ test('Roadmap Activation GitLab execute refuses missing live token and unsafe br
     'branch-prefix-must-be-zjal-',
     'gitlab-token-required-for-live-execution',
   ]);
+});
+
+test('Roadmap Activation GitLab live execution hard-stops missing source Note binding before API writes', async () => {
+  const calls = [];
+  const result = await executeGitLabRoadmapActivation({
+    live: true,
+    token: 'private-token',
+    fetchImpl: async (...args) => {
+      calls.push(args);
+      return { ok: true, status: 200, json: async () => ({}) };
+    },
+    projectPath: 'group/project',
+    targetBranch: 'main',
+    contractPlan: {
+      provider: 'gitlab',
+      activationRequestId: 'act-87-comment',
+      sourceIssue: '87',
+      sourceCommentId: '',
+      sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+      sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
+      branchName: 'zjal-act-87-comment-gitlab',
+      mrTitle: 'Roadmap Activation: missing Note',
+      mrContract: 'contract',
+    },
+  });
+
+  assert.equal(result.status, 'refused');
+  assert.equal(result.execution_allowed, false);
+  assert.deepEqual(result.refusals.map((item) => item.reason), ['source-comment-id-required']);
+  assert.equal(calls.length, 0);
 });
 
 test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLAB_TOKEN', async () => {
@@ -270,6 +304,10 @@ test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLA
     contractPlan: {
       provider: 'gitlab',
       activationRequestId: 'act-87-note',
+      sourceIssue: '87',
+      sourceCommentId: '4932786315',
+      sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+      sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
       branchName: 'zjal-act-87-note-gitlab',
       mrTitle: 'Roadmap Activation: GitLab full parity',
       mrContract: 'contract',
@@ -292,6 +330,10 @@ test('Roadmap Activation GitLab execute dry-run plans branch and MR operations',
     contractPlan: {
       provider: 'gitlab',
       activationRequestId: 'act-87-note',
+      sourceIssue: '87',
+      sourceCommentId: '4932786315',
+      sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+      sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
       branchName: 'zjal-act-87-note-gitlab',
       mrTitle: 'Roadmap Activation: GitLab full parity',
       mrContract: 'contract',
@@ -328,6 +370,10 @@ test('Roadmap Activation GitLab execute is idempotent by branch and updates exis
     contractPlan: {
       provider: 'gitlab',
       activationRequestId: 'act-87-note',
+      sourceIssue: '87',
+      sourceCommentId: '4932786315',
+      sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+      sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
       branchName: 'zjal-act-87-note-gitlab',
       mrTitle: 'Roadmap Activation: GitLab full parity',
       mrContract: 'contract',

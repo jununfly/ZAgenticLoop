@@ -320,6 +320,8 @@ export declare function buildRoadmapActivationReviewTitle(input: {
 export declare function buildRoadmapActivationReviewContract(input: {
     provider: RoadmapActivationReviewProvider;
     activationRequestId: string;
+    sourceIssue?: string | number;
+    sourceCommentId?: string | number;
     sourceIssueUrl: string;
     sourceCommentUrl: string;
     routeId?: string;
@@ -334,6 +336,8 @@ export declare function buildRoadmapActivationReviewContract(input: {
 }): string;
 export declare function buildRoadmapActivationPrContract(input: {
     activationRequestId: string;
+    sourceIssue?: string | number;
+    sourceCommentId?: string | number;
     sourceIssueUrl: string;
     sourceCommentUrl: string;
     routeId?: string;
