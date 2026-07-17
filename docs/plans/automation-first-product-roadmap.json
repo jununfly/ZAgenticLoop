@@ -2608,12 +2608,48 @@
     "1-5-5-3-3-3": {
       "id": "1-5-5-3-3-3",
       "label": "GitLab fixed API pipeline route trigger adapter",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "固定 API pipeline trigger 使用哪种 GitLab 凭据？",
+          "answer": "只使用独立变量 ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN，通过 PRIVATE-TOKEN 调用 GitLab /projects/:id/pipeline；不使用 CI_JOB_TOKEN、GITLAB_TOKEN 或 webhook 原始 secret fallback。缺失返回 trigger-token-required，零 API 写入；artifact 只记录 auth_source=ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN，不记录 token 值。",
+          "note": "bridge trigger credential 与 consumer provider-side write credential 分层隔离。"
+        },
+        {
+          "q": "固定 API pipeline ref 放在哪里、如何校验？",
+          "answer": "ref 只来自 Route Table 的 bridge route 配置，不接受 webhook 或调用者传入；每个 route 固定 route_id、project_path、pipeline_ref、target_route、allowed_event_type。trigger 前验证项目、route、ref 完全匹配；缺失、未知或不匹配返回 route-mismatch，零 API 调用；禁止 checkout ref、默认分支或动态 MR/source branch fallback。",
+          "note": "Route Table 是唯一 ref/route 真相源。"
+        },
+        {
+          "q": "API pipeline trigger 允许发送哪些变量？",
+          "answer": "仅发送 7 个 canonical string 变量：ZJ_LOOP_BRIDGE_EVENT_ID、ZJ_LOOP_BRIDGE_DEDUPE_KEY、ZJ_LOOP_BRIDGE_PROJECT_PATH、ZJ_LOOP_BRIDGE_ISSUE_IID、ZJ_LOOP_BRIDGE_NOTE_ID、ZJ_LOOP_BRIDGE_TARGET_ROUTE、ZJ_LOOP_BRIDGE_ENVELOPE_REF。Issue IID/Note ID 为正整数十进制字符串，其余字段非空且有长度限制；target_ref 由 Route Table 固定决定，不作为变量；禁止额外变量、完整 payload、token、用户可控 ref。校验失败返回 variable-contract-mismatch，零 API 调用。",
+          "note": "变量 contract 是 bridge 到固定 pipeline 的最小输入面。"
+        },
+        {
+          "q": "GitLab API trigger response 如何分类？",
+          "answer": "HTTP 201 且响应包含正整数 id、ref 与 Route Table 固定 ref 一致、web_url 属于当前项目时才为 triggered；明确 4xx/5xx 为 trigger-failed；网络错误、超时、响应解析失败或字段不可确认均为 trigger-uncertain；201 但 binding 不匹配为 trigger-response-mismatch，视为失败；artifact 只记录必要 pipeline ID/URL，不保存响应原文。",
+          "note": "provider response 必须经过 binding verifier，不能以 HTTP status 单独判成功。"
+        },
+        {
+          "q": "Route Table 的 enabled/maturity gate 如何约束 trigger？",
+          "answer": "route 必须存在、enabled、event predicate 匹配且至少达到 install-ready；execution-ready 仍由独立 promotion gate 控制，bridge 不自动提升。route disabled、未知或 provider support 不满足时返回 route-not-triggerable，并在任何 GitLab API 调用前拒绝；bridge 不修改 Route Table。",
+          "note": "trigger capability 与 trusted automation promotion 分层。"
+        },
+        {
+          "q": "GitLab API endpoint 与请求安全策略如何固定？",
+          "answer": "只调用 POST /projects/:encoded_project_path/pipeline；使用 PRIVATE-TOKEN: ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN 与 Content-Type: application/json；body 仅包含固定 ref 和 7 个白名单变量；API base 只能来自受控配置，不来自 webhook；禁止跟随 redirect，避免 token 泄露到其他 host；不自动重试，网络不确定直接记为 trigger-uncertain。",
+          "note": "bridge 只允许单一、可审计的 pipeline trigger API surface。"
+        },
+        {
+          "q": "trigger artifact 保存哪些字段？",
+          "answer": "新增统一 schema zj-loop.gitlab_issue_note_bridge_trigger.v1；只保存 status/reason、project、route、fixed ref、event_id、dedupe_key、envelope_ref、auth_source、variable_keys、成功时的 pipeline ID/URL、side_effects_executed、recovery 状态与 next steps、provider HTTP status；不保存 token 或 response body。",
+          "note": "artifact 是 trigger 审计 envelope，不是 provider response dump。"
+        }
+      ],
+      "notes": "Implemented fixed GitLab API pipeline trigger adapter in tools/zj-loop-core/src/gitlab-issue-note-bridge-trigger.ts. Uses only ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN, exact Route Table-style project/route/ref/event/maturity gates, seven canonical variables, POST /projects/:id/pipeline with manual redirect handling and no retry, and unified trigger artifact with success/failure/uncertain/response-mismatch classification. Added 3 focused trigger tests; combined bridge/receipt/cleanup/trigger suite passed 11 tests with build and git diff --check. This adapter is test-only/injected-fetch capable; real provider dogfood remains later slices."
     },
     "1-5-5-3-3-4": {
       "id": "1-5-5-3-3-4",
@@ -2638,7 +2674,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 17:32:36",
+    "updated": "2026-07-17 17:46:09",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
