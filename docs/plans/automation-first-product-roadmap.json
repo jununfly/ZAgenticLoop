@@ -436,8 +436,135 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1-5",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-5-1",
+        "1-5-5-2",
+        "1-5-5-3",
+        "1-5-5-4",
+        "1-5-5-5"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab required cell 的完成证据门槛是什么？",
+          "answer": "每个 applicable + required cell 必须同时具备 positive live evidence、negative/recovery evidence 与 deterministic verification；event-driven 与 scheduled 必须由对应真实触发模式证明，explicit-on-demand 才可用手动 pipeline，not-applicable 必须有语义理由。",
+          "note": "report-only 以 report artifact 作为 positive；手动运行不能冒充 scheduled 或 event-driven capability。"
+        },
+        {
+          "q": "human 与 ignore 是否需要专用 GitLab provider job？",
+          "answer": "纳入 GitLab required matrix，但采用协议级 GitLab evidence；真实 GitLab 来源信号进入 Route Decision，human 产出结构化 handoff/hard-stop，ignore 产出 route-decision/suppression artifact，均验证 GitLab provider binding 与零 provider side effect，不新增无意义 API job。",
+          "note": "control route 不是 GitLab API 写入 route，不能用伪造 job 冒充 provider capability。"
+        },
+        {
+          "q": "GitLab required-route reference installation 使用哪个项目？",
+          "answer": "只使用 mlive-dev/ai-studio 作为唯一 GitLab reference installation；复用其中兼容的既有 evidence，只在该项目补齐缺口。其他项目属于后续 installation completion，不纳入 1-5-5。",
+          "note": "ai-studio 已验证 Runner、Node image、GITLAB_TOKEN、schedule、Issue/MR 与 closeout 基础设施，减少无关环境变量。"
+        },
+        {
+          "q": "1-5-5 如何拆成可执行 slices？",
+          "answer": "按触发与语义族拆为五个子节点：control/report-only、explicit-on-demand、event-driven、scheduled、全矩阵 verifier/evidence index；父节点只有五个子节点全部完成后才完成。",
+          "note": "每个子节点记录 route IDs、positive/recovery/verification evidence；子节点完成不代表 GitLab required-route 全量完成。"
+        },
+        {
+          "q": "required route 如何唯一归属五个 slice？",
+          "answer": "每个 route 按真实 signal_initiation_mode 只归入一个 slice；human 与 ignore 作为唯一 control-route 例外归入 1-5-5-1；manual-smoke/roadmap 归 explicit-on-demand，Issue Triage/PR Steward/CI Sweeper/Post-Merge 归 event-driven，Daily Triage/Issue Backlog/Dependency/Changelog 归 scheduled，1-5-5-5 只做矩阵 verifier。",
+          "note": "优先触发模式，避免 report-only 与 scheduled/event-driven 双重归类造成重复或遗漏。"
+        },
+        {
+          "q": "已有 GitLab evidence 何时可以复用？",
+          "answer": "只有确定性 compatibility fingerprint 全部匹配时才复用：route/provider/project、fragment/template hash、core package 版本与 hash、signal initiation mode、adapter/verifier/artifact schema 版本及原 evidence 的 branch/config assumptions；相关变更使 evidence 标记 stale 并要求重跑，无关变更不使其失效。",
+          "note": "避免无意义重复 dogfood，同时禁止把历史成功结果直接当作当前 GitLab 全量能力。"
+        },
+        {
+          "q": "全矩阵 verifier 应新建 GitLab 专用评分器吗？",
+          "answer": "不新建；复用并扩展 zj-loop-doctor --completion、zj-loop.completion-alignment-ledger.v1、provider-parity gate 与 generated-bundle gate，补充 GitLab evidence compatibility fingerprint、矩阵索引与 stale 推导。",
+          "note": "Route Table 继续拥有 capability truth，doctor/ledger 拥有用户项目 completion truth，避免第二套 GitLab completion truth。"
+        },
+        {
+          "q": "GitLab matrix cell 如何表达未完成状态？",
+          "answer": "严格区分 complete、incomplete、blocked、stale、unsupported；不统一记为 incomplete，不做分数平均。每个非 complete cell 必须携带 owner、structured reason、evidence 状态、resume/next command，以及是否需要 Human 配置或授权。",
+          "note": "代码缺口、外部环境阻塞、fingerprint 失效和语义不适用是不同事实，不能让其他 Agent 误判为同一种待重试状态。"
+        },
+        {
+          "q": "report-only 与 control route 是否需要 recovery evidence？",
+          "answer": "必须需要；human/ignore/report route 分别验证结构化 human_handoff、suppression/route-decision 或 protocol_repair_request 等 stop/recovery artifact，并证明零 GitLab API 写入。",
+          "note": "无副作用不等于无需验证停止行为；GitLab 来源下的协议边界同样必须可回放。"
+        },
+        {
+          "q": "event-driven GitLab dogfood 使用什么 fixture？",
+          "answer": "所有 event-driven route 使用专用、可回滚、固定 binding 的 GitLab fixture：测试 Issue/label-state、测试 MR/IID/head SHA、generated-substrate CI failure、已合并 closeout MR/contract；每个 fixture 有 dedupe key、scope verifier 与 closeout，不触碰 ai-studio 业务逻辑。",
+          "note": "一次 fixture 成功只证明对应 route，不跨 route 泛化 evidence。"
+        },
+        {
+          "q": "scheduled GitLab route 如何产生真实 evidence？",
+          "answer": "每个 scheduled required route 使用 route-specific owned schedule、精确单分钟 cron、固定 target branch/project/job/artifact schema；schedule probe 验证 source=schedule、schedule ID、pipeline/job artifact 与时间窗口。schedule 生命周期必须有创建、更新、恢复、删除 evidence；schedule 961 仅保留为既有 schedule-probe evidence，不泛化为所有 route。",
+          "note": "禁止 */1；每个 schedule 只制造一次目标 evidence，避免重复 artifact 与噪声。"
+        },
+        {
+          "q": "scheduled route 是否默认允许 provider side effect？",
+          "answer": "否。scheduled pipeline 默认只运行 report/plan/preflight；Issue/MR/branch/label/commit 写入必须进入独立 recovery job，并要求显式 confirmation 或已验证的 route-specific trusted-automation capability。schedule 不隐式获得 GITLAB_TOKEN 写权限。",
+          "note": "trusted automation 若启用，必须单独记录 side-effect scope、变量来源、claim、verifier 与 recovery evidence。"
+        },
+        {
+          "q": "trusted automation 如何授权？",
+          "answer": "必须采用 route-specific、side-effect-scope-specific promotion；禁止全局 trusted automation 开关。每个 route 的 capability proof、promotion、项目变量和 runtime side-effect scope 独立校验，evidence stale 时自动降级 report-only/hard stop。",
+          "note": "避免一次项目变量授权意外打开所有 scheduled route。"
+        },
+        {
+          "q": "trusted automation promotion 使用什么确认短语？",
+          "answer": "使用独立固定短语 PROMOTE_GITLAB_TRUSTED_AUTOMATION_<route-id>；该短语只授权 capability promotion，不替代 runtime 项目变量，也不能扩大 route 或 side-effect scope。runtime variable 与 promotion evidence 必须同时有效，evidence stale 时即使变量仍存在也只能 hard stop。",
+          "note": "promotion phrase、runtime enablement、side-effect scope 三者分离，避免项目变量自带升级权限。"
+        },
+        {
+          "q": "reference validation completeness 与 runtime automation 是否共用一个阻塞状态？",
+          "answer": "不共用，采用双轴模型：1-5-5 的全矩阵证据用于 reference validation、发布能力声明与 doctor completion；低风险 report/artifact/plan/verification route 在安装后默认自动运行，不因矩阵其他 cell blocked/stale 而停摆。trusted automation promotion 只约束不可逆或业务影响的 provider side effect。",
+          "note": "避免全量验证工程把自动产品体验退化成逐 route 人工授权；reference gap 与 runtime stop 必须分离。"
+        },
+        {
+          "q": "runtime automation 默认策略使用什么风险模型？",
+          "answer": "复用 Route Table 既有 execution.mode、side_effect_level、guards.human_gate、completion_forms 与 route-specific trusted-automation guard；evidence/report/plan 默认自动，allowlisted request/claim 经 binding/dedupe/verifier 后默认自动，bounded branch/repair-MR/draft 遵循各 route 协议，merge/close/release/publish/业务 tracker mutation 保留 Human 或 route-specific trusted promotion。",
+          "note": "不新增全局 risk score，也不把所有 provider write 一刀切为 Human gate，避免不同 consumer 语义互相拖累。"
+        },
+        {
+          "q": "trusted automation 未满足时如何输出用户 handoff？",
+          "answer": "必须输出固定结构化 envelope：status=blocked、reason=trusted_automation_not_promoted 或 evidence_stale、side_effects_executed=false、route/provider/project/promotion scope、固定 confirmation phrase、structured next_steps command array；zj-loop-doctor JSON 为主 truth，人类摘要仅展示层。",
+          "note": "禁止普通自然语言求助；Codex Harness 可按 envelope resume，Human 只在真实 promotion boundary 授权一次。"
+        },
+        {
+          "q": "trusted automation promotion 使用什么 CLI 入口？",
+          "answer": "复用 zj-loop-route promotion-gate，新增 target=trusted-automation；命令显式接收 provider、project、scope，check-only 默认，--apply 仍需固定 phrase；不新建独立 trusted automation CLI。",
+          "note": "统一 promotion truth 与现有 execution-ready promotion，避免两套授权生命周期。"
+        },
+        {
+          "q": "trusted automation promotion state 属于哪里？",
+          "answer": "采用项目级 installation evidence overlay：Route Table 只声明允许的 trusted_automation scopes、gate 与 side-effect 上限；ai-studio 保存绑定 provider/project/route/scope/fingerprint 的 promotion evidence；zj-loop-doctor 将 policy 与项目 evidence 合并派生 runtime 状态，stale/mismatch 自动降级。不把单项目 promotion 写成全局 Route Table capability。",
+          "note": "trusted automation 是安装环境授权，不是 package 默认能力；保持 provider/project 隔离。"
+        },
+        {
+          "q": "trusted automation promotion evidence 如何保存？",
+          "answer": "统一保存为项目级低成本 JSON artifact：zj-loop/evidence/trusted-automation/<provider>/<route-id>.json，schema=zj-loop.trusted_automation_promotion.v1。只保存 provider/project/route/scope、policy与compatibility fingerprint、authority、promotion/revoke时间、scope与evidence refs；不保存 token、完整 GitLab response 或敏感 payload；doctor 扫描 raw artifact 并派生 runtime ledger。",
+          "note": "项目级 overlay 是 raw evidence，doctor ledger 是派生 truth，避免全局能力污染和第二套状态机。"
+        },
+        {
+          "q": "trusted automation 如何撤销或失效？",
+          "answer": "采用自动失效加显式撤销双通道：相关 fingerprint/policy/fragment/core/schema/project/branch/权限变化自动 status=stale 并停止副作用；maintainer 可通过 promotion-gate --target trusted-automation --revoke 与独立短语 REVOKE_GITLAB_TRUSTED_AUTOMATION_<route-id> 撤销；历史 evidence 保留，重新启用必须重新 promotion。",
+          "note": "删除或恢复项目变量不能伪造 promotion，也不能抹去历史审计。"
+        },
+        {
+          "q": "trusted promotion stale 或 revoked 后如何运行？",
+          "answer": "按 route 既有 side-effect policy 分层降级：evidence/report/plan 可继续并记录 promotion_stale；request/claim 仅在 route 已声明允许无 promotion 的 bounded automation 时继续，否则 structured hard stop；branch/commit/MR/Issue mutation 立即 hard stop 且 side_effects_executed=false；merge/close/release/publish 始终保留 Human boundary。",
+          "note": "不因高风险 promotion 状态把所有低风险自动路径全局停掉，也不让 stale promotion 继续产生 provider mutation。"
+        },
+        {
+          "q": "GitLab trusted runtime variable 如何绑定运行环境？",
+          "answer": "必须全部满足：变量只存在 ai-studio 项目配置；route-specific；值仅允许 enabled；job 校验 CI_PIPELINE_SOURCE=schedule 与 target branch allowlist；promotion evidence 的 project/route/scope/fingerprint 必须匹配；GITLAB_TOKEN 独立存在；Web/manual pipeline 即使读取变量也不得触发 trusted side effect。",
+          "note": "变量表示运行时选择，不获得 promotion 或扩大 side-effect scope。"
+        },
+        {
+          "q": "trusted runtime variable 谁可以配置或撤销？",
+          "answer": "只能由 Human maintainer 在 GitLab 项目设置中配置、修改或删除；Agent 不调用 Project Variables API，不自动恢复变量。Agent 只读取存在性与固定枚举状态，输出 variable_present/config binding 摘要；schedule preflight 发现缺失或撤销后自动降级。",
+          "note": "把项目授权保留在明确的人类配置边界，避免 Agent 通过变量 API 自我升级权限。"
+        }
+      ],
       "notes": ""
     },
     "1-6-1": {
@@ -1991,11 +2118,72 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-5-5-1": {
+      "id": "1-5-5-1",
+      "label": "GitLab control and report-only required-route dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "control-route slice 如何开始？",
+          "answer": "先 TDD 实现确定性 GitLab control-route evidence builder，覆盖 human/ignore；真实 GitLab 来源 envelope 进入 protocol builder 但不访问 GitLab API；positive 生成 human_handoff 或 suppression/route-decision artifact；unknown route、malformed source、attempted side effect 均输出 structured hard stop 且 side_effects_executed=false；复用 smoke/manual substrate 做 ai-studio dogfood，doctor/matrix ledger 索引 evidence。完成后才进入 1-5-5-2。",
+          "note": "不新增 provider API job；control route 的 GitLab applicability 由协议级 evidence 证明。"
+        },
+        {
+          "q": "control-route evidence 使用什么 envelope？",
+          "answer": "使用统一 schema zj-loop.gitlab_control_route_evidence.v1，包含 status、route_id、provider/project、GitLab protocol signal、outcome、side_effects_executed、route-specific artifact、recovery、verification、compatibility_fingerprint 与 next_steps；human artifact 必须是 zj-loop.human_handoff.v1，ignore artifact 必须是 suppression 形式的 zj-loop.route_decision.v1。",
+          "note": "统一机器协议避免 Agent 发明输出；route-specific artifact 保留 human/ignore 语义差异；不保存 token 或完整 GitLab response。"
+        }
+      ],
+      "notes": "Control/report-only GitLab dogfood completed in ai-studio. Core TDD added buildGitLabControlRouteEvidence and zj-loop-route control-evidence with unified zj-loop.gitlab_control_route_evidence.v1 envelope, human_handoff artifact for human, suppression route_decision artifact for ignore, deterministic fingerprint, GitLab source/project binding, and zero-side-effect hard stops. Core targeted tests, vendored tarball CLI, YAML/render gate passed. Positive ignore evidence: pipeline 10517909/job 25988452. Positive human-handoff evidence: pipeline 10517931/job 25988585. Negative attempted side-effect evidence: job 25988651 on commit df08f613; the job failed at the expected control boundary and uploaded gitlab-control-route-evidence.json with zero provider side effects. Existing audit L0 findings were report-only and did not fail smoke. Doctor/matrix ledger indexing remains in 1-5-5-5."
+    },
+    "1-5-5-2": {
+      "id": "1-5-5-2",
+      "label": "GitLab explicit-on-demand required-route dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-3": {
+      "id": "1-5-5-3",
+      "label": "GitLab event-driven required-route dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-4": {
+      "id": "1-5-5-4",
+      "label": "GitLab scheduled required-route dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-5": {
+      "id": "1-5-5-5",
+      "label": "GitLab required-route matrix verifier and evidence index",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 01:10:34",
+    "updated": "2026-07-17 09:11:57",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

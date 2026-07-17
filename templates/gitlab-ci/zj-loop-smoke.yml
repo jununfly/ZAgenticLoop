@@ -11,12 +11,17 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   allow_failure: false
   variables:
     ZJ_LOOP_SIGNAL_ID: ""
+    ZJ_LOOP_ORCHESTRATION_ID: ""
+    ZJ_LOOP_CONTROL_ROUTE: "ignore"
+    ZJ_LOOP_CONTROL_REASON: "controlled-suppression"
+    ZJ_LOOP_CONTROL_REQUESTED_SIDE_EFFECT: ""
     ZJ_LOOP_RUN_AUDIT: "1"
   script:
     - >-
       node -e "const fs = require('fs'); const major = Number(process.versions.node.split('.')[0]); const diagnostic = { schema: 'zj-loop.gitlab_smoke_environment_diagnostic.v1', node: process.version, npm: process.env.npm_config_user_agent || 'unknown', required_node: '>=18', supported: major >= 18, image_hint: 'Configure --gitlab-image with a Node 18+ image when supported=false.' }; fs.writeFileSync('environment-diagnostics.json', JSON.stringify(diagnostic, null, 2)); if (!diagnostic.supported) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch manual-smoke-report --source gitlab-manual-pipeline --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > route-decision.json
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan manual-smoke-report --source gitlab-manual-pipeline --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > consumer-plan.json || true
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route control-evidence "$ZJ_LOOP_CONTROL_ROUTE" --project "$CI_PROJECT_PATH" --orchestration "${ZJ_LOOP_ORCHESTRATION_ID:-smoke-${CI_PIPELINE_ID:-manual}}" --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --source gitlab-protocol --reason "$ZJ_LOOP_CONTROL_REASON" --requested-side-effect "${ZJ_LOOP_CONTROL_REQUESTED_SIDE_EFFECT:-}" --json > gitlab-control-route-evidence.json
     - if [ "${ZJ_LOOP_RUN_AUDIT:-1}" = "1" ]; then npx @jununfly/zj-loop-audit@0.1.6 . --suggest || echo "zj-loop-audit reported readiness gaps; smoke remains report-only"; else echo "Skipping zj-loop-audit because ZJ_LOOP_RUN_AUDIT=0"; fi
     - cat route-decision.json
     - cat consumer-plan.json
@@ -27,3 +32,4 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
       - route-decision.json
       - consumer-plan.json
       - environment-diagnostics.json
+      - gitlab-control-route-evidence.json

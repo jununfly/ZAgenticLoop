@@ -45,3 +45,4 @@ export * from './gitlab-pr-steward-claim.js';
 export * from './gitlab-pr-steward-escalation.js';
 export * from './gitlab-changelog-drafter-adapter.js';
 export * from './gitlab-changelog-drafter-closeout.js';
+export * from './gitlab-control-route-evidence.js';
