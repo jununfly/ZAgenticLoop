@@ -46,3 +46,5 @@ export * from './gitlab-pr-steward-escalation.js';
 export * from './gitlab-changelog-drafter-adapter.js';
 export * from './gitlab-changelog-drafter-closeout.js';
 export * from './gitlab-control-route-evidence.js';
+export * from './gitlab-issue-note-bridge.js';
+export * from './gitlab-issue-note-bridge-receipts.js';

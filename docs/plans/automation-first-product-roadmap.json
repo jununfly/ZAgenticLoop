@@ -2397,8 +2397,55 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1-5-5-3",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-5-3-3-1",
+        "1-5-5-3-3-2",
+        "1-5-5-3-3-3",
+        "1-5-5-3-3-4",
+        "1-5-5-3-3-5"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab Issue Note webhook bridge 放在哪里？",
+          "answer": "ZAgenticLoop provider adapter 独立 bridge",
+          "note": "bridge 校验 secret/project/event，持久化轻量 envelope 并触发固定 API pipeline；不直接写 Issue/Note/Branch/MR，ai-studio 不承载 bridge 逻辑。"
+        },
+        {
+          "q": "哪些 GitLab Issue Note 事件允许进入 bridge？",
+          "answer": "只允许固定 activation/request marker；只接受 Issue Note webhook。非匹配 Note、普通评论、业务讨论、label 变化全部记为 ignored/not_applicable，不触发 pipeline，不产生 provider side effect。",
+          "note": "事件 predicate 必须由 Route Table 验证，不能把所有 Issue Note 泛化为 roadmap activation。"
+        },
+        {
+          "q": "secret、project 或 event predicate 校验失败时如何处理？",
+          "answer": "统一输出结构化 hard-stop envelope：secret 失败为 unauthorized，project 不匹配为 project-mismatch，event 不允许为 event-not-allowed；失败不持久化完整 webhook payload，不触发 pipeline；只有合法事件写入 receipt。",
+          "note": "失败路径零 provider side effect；错误分类固定并可审计。"
+        },
+        {
+          "q": "Webhook envelope 保存哪些字段、保存在哪里？",
+          "answer": "只保存轻量字段：event_id、event_type、project_path、issue_iid、note_id、mr_iid（如适用）、source_url、target_route/ref、received_at、dedupe_key、auth_source、trigger_pipeline_id；不保存完整 GitLab payload 或 API response；receipt 写入 bridge 受控本地状态目录。",
+          "note": "字段集合服务于 receipt dedupe、路由审计与 trigger recovery。"
+        },
+        {
+          "q": "event_id 与 dedupe_key 如何生成、冲突如何处理？",
+          "answer": "event_id 优先使用 GitLab webhook 提供的唯一事件 ID，并按 project_path:event_id 做 receipt 去重；缺失 event_id 输出 event-id-required，不触发 pipeline。随后按稳定 dedupe_key 做 route-level 去重，已处理返回 duplicate；trigger 状态不确定返回 trigger-uncertain，禁止盲目重试，必须显式恢复。",
+          "note": "双层去重分别防止 webhook 重放与同一路由重复消费。"
+        },
+        {
+          "q": "固定 API pipeline 的 ref 与变量协议是什么？",
+          "answer": "bridge 只能触发预配置的 GitLab API pipeline ref；ref 与 route 的映射必须由 Route Table 固定校验，不接受 webhook 任意 ref。仅允许白名单变量 event_id、dedupe_key、project_path、issue_iid、note_id、target_route、envelope_ref；不传完整 payload 或 GITLAB_TOKEN，不直接执行 provider write。ref/变量校验失败返回 route-mismatch，零次 trigger/write。",
+          "note": "bridge 仅是受限 trigger adapter，consumer side effect 仍由固定 pipeline 的独立授权路径负责。"
+        },
+        {
+          "q": "trigger 成功、失败与不确定状态如何恢复？",
+          "answer": "API 明确成功时 receipt 为 triggered 并记录 pipeline ID；明确失败时为 trigger-failed，保留原因且不自动重试；超时或响应不可判定时为 trigger-uncertain，不重复触发。只有人工显式 resume，先查询既有 pipeline/receipt，确认不存在成功触发后才允许再次 trigger。",
+          "note": "恢复动作必须可审计、幂等且禁止盲目重试。"
+        },
+        {
+          "q": "真实 GitLab Issue Note webhook bridge 的 completion gate 是什么？",
+          "answer": "必须通过完整 live/recovery evidence 矩阵：合法 marker 正向触发并生成真实 pipeline ID；非匹配 Note、普通评论、label 变化均 ignored；secret/project/event 校验失败均 hard stop 且零 trigger；同一 webhook 重放返回 duplicate 且零重复 trigger；trigger-failed 与 trigger-uncertain 只能通过显式 resume 恢复；artifact 必须包含统一 envelope、dedupe receipt、route decision、trigger/recovery evidence；bridge 不执行 Issue、Note、Branch、MR 写操作。",
+          "note": "独立 ai-studio fixture；不能以 pipeline started 或单次 job succeeded 代替 completion。"
+        }
+      ],
       "notes": ""
     },
     "1-5-5-3-4": {
@@ -2491,11 +2538,107 @@
       "children": [],
       "decisions": [],
       "notes": "Completion gate passed: independent fixture/contract, native MR event, pre-merge hard stops, merged live cleanup, explicit confirmation, and same-pipeline replay evidence all recorded."
+    },
+    "1-5-5-3-3-1": {
+      "id": "1-5-5-3-3-1",
+      "label": "GitLab Issue Note bridge envelope validation adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented pure GitLab Issue Note bridge envelope validator in tools/zj-loop-core/src/gitlab-issue-note-bridge.ts. Validates trigger token, exact project binding (request and payload), Issue Hook/create/Issue predicate, event ID, fixed marker; emits lightweight envelope with stable dedupe key and zero provider side effects. Added 3 focused tests covering positive, ignored, and fail-closed cases. Targeted build/test and git diff --check passed; full core npm test reached all listed tests but did not exit cleanly due an existing open-handle hang after test output, so completion remains implementation-only pending later matrix/dogfood slices."
+    },
+    "1-5-5-3-3-2": {
+      "id": "1-5-5-3-3-2",
+      "label": "GitLab webhook receipt dedupe and explicit trigger recovery",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "GitLab webhook receipt 存储在哪里、如何写入？",
+          "answer": "存储于 z j-loop/evidence/gitlab-issue-note-bridge/ 下，按 receipts/<project-hash>/<event-id>.json 与 dedupe/<project-hash>/<dedupe-key>.json 分层；项目和 key 使用稳定 hash，避免路径泄露；采用临时文件写入后原子 rename；只保存轻量 envelope/status，不保存原始 webhook payload。",
+          "note": "receipt 与 dedupe record 均须可重放读取，且写入失败不得触发 provider side effect。"
+        },
+        {
+          "q": "Receipt 路径文字更正",
+          "answer": "路径固定为 zj-loop/evidence/gitlab-issue-note-bridge/，下分 receipts/<project-hash>/<event-id>.json 与 dedupe/<project-hash>/<dedupe-key>.json。",
+          "note": "更正上一条决策中的排版空格，设计不变。"
+        },
+        {
+          "q": "并发 webhook 如何确定 receipt/dedupe winner？",
+          "answer": "使用文件系统 exclusive create；同一 event_id 首次创建者为 winner。已有且 envelope fingerprint 一致返回 duplicate；同一 event_id 内容不一致返回 event-id-collision hard stop。route-level dedupe_key 已为 triggered/completed 返回 duplicate，trigger-uncertain 保持不确定，trigger-failed 保持失败，均禁止自动覆盖或重试；既有 receipt 永不覆盖。",
+          "note": "并发请求必须有确定 winner，避免最后写入者覆盖状态。"
+        },
+        {
+          "q": "receipt 状态机与恢复授权如何定义？",
+          "answer": "固定状态为 received、deduplicated、trigger-pending、triggered、trigger-failed、trigger-uncertain、recovery-pending。恢复必须同时提供 envelope_ref、event_id、dedupe_key 与固定确认短语 RESUME_GITLAB_ISSUE_NOTE_BRIDGE_TRIGGER；恢复前重新校验原 receipt、route/ref、项目绑定与既有 pipeline 状态，任一缺失或不一致都 hard stop 且零 trigger。",
+          "note": "恢复不是普通重试，必须是受审计的显式操作。"
+        },
+        {
+          "q": "receipt 保留与清理策略是什么？",
+          "answer": "triggered、trigger-failed、trigger-uncertain receipt 默认保留 90 天；recovery-pending 不自动过期。到期清理只删除本地 receipt，不影响 GitLab pipeline 或其他 provider 资源；清理为独立显式命令，默认 dry-run，执行需 PURGE_GITLAB_ISSUE_NOTE_BRIDGE_RECEIPTS；清理前生成汇总 evidence。",
+          "note": "dedupe 审计不能因普通自动清理而丢失。"
+        },
+        {
+          "q": "receipt 与 dedupe record 部分写入失败时如何处理？",
+          "answer": "采用 fail-closed 顺序：先 exclusive-create event receipt 为 received，再 exclusive-create dedupe record 为 deduplicated；任一步失败都不触发 pipeline，已创建的 receipt 标记 recovery-pending，输出 receipt-persistence-failed 并提供显式恢复命令；不回滚删除已创建记录，避免并发请求重新取得 winner；两者都成功后才进入 trigger-pending。",
+          "note": "持久化失败是可恢复状态，不是普通重试。"
+        },
+        {
+          "q": "dedupe record 保存哪些字段？",
+          "answer": "只保存 schema、project_hash、dedupe_key、envelope_ref、event_id、route_id、target_ref、status、created_at、updated_at、trigger_pipeline_id、fingerprint、recovery_attempts；不复制 Issue/Note 内容、完整 payload、token 或不必要 URL；fingerprint 仅用于 event_id 冲突检测，envelope_ref 指向轻量 receipt。",
+          "note": "dedupe record 是状态索引，不是第二份 webhook payload。"
+        },
+        {
+          "q": "显式 recovery 的次数上限是多少？",
+          "answer": "每个 event_id/dedupe_key 最多允许 1 次 resume trigger；若恢复后仍为 trigger-failed 或 trigger-uncertain，状态升级为 escalation-required；recovery_attempts>1 直接 hard stop，不再调用 GitLab API；必须由新的 webhook event_id/request 开始新的尝试。",
+          "note": "人工确认不等于无限重试，避免 provider-side duplicate trigger。"
+        },
+        {
+          "q": "trigger-pending 超时如何处理？",
+          "answer": "trigger-pending 超过 10 分钟标记为 trigger-uncertain；超时只读查询既有 pipeline/receipt，不自动再次 trigger。查到 pipeline ID 转为 triggered；确认没有 pipeline 则保持 trigger-uncertain，等待唯一一次显式 resume；查询失败保持 trigger-uncertain 并记录 provider-state-unknown。",
+          "note": "超时恢复必须先收敛 provider 状态，禁止猜测性重触发。"
+        }
+      ],
+      "notes": "Implemented GitLab Issue Note bridge receipt/dedupe store in tools/zj-loop-core/src/gitlab-issue-note-bridge-receipts.ts. Uses hashed receipts/dedupe paths, exclusive create winner selection, event collision detection, fail-closed two-record persistence, explicit recovery confirmation with one-attempt limit, 10-minute trigger-pending timeout classification, and 90-day dry-run/confirmed purge evidence. Added focused receipt, recovery, timeout, and cleanup tests; 8 targeted tests passed with build and git diff --check. Provider pipeline trigger remains the next slice; this code performs no provider trigger/write."
+    },
+    "1-5-5-3-3-3": {
+      "id": "1-5-5-3-3-3",
+      "label": "GitLab fixed API pipeline route trigger adapter",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-3-3-4": {
+      "id": "1-5-5-3-3-4",
+      "label": "GitLab Issue Note bridge negative and uncertain evidence matrix",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-3-3-5": {
+      "id": "1-5-5-3-3-5",
+      "label": "ai-studio GitLab Issue Note bridge live dogfood fixture",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 16:53:49",
+    "updated": "2026-07-17 17:32:36",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
