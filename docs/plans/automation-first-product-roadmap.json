@@ -2317,7 +2317,7 @@
     "1-5-5-3-2": {
       "id": "1-5-5-3-2",
       "label": "GitLab native MR event Post-Merge closeout lifecycle dogfood",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3",
       "children": [
@@ -2454,27 +2454,48 @@
     "1-5-5-3-2-4": {
       "id": "1-5-5-3-2-4",
       "label": "GitLab Post-Merge live cleanup and replay recovery",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-2",
       "children": [],
-      "decisions": [],
-      "notes": "MR !321 merged live closeout succeeded: evidence written to Issue #194, branch already_deleted, carrier closed; explicit replay evidence pending."
+      "decisions": [
+        {
+          "q": "同一 MR 合并后无法产生 native replay pipeline 时怎么办？",
+          "answer": "新增独立 replay-only fixture MR，不降低 completion gate",
+          "note": "replay fixture 只验证 evidence/branch/carrier 幂等；不创建新 MR、不改业务代码；完成后再进入 completion gate。"
+        },
+        {
+          "q": "replay-only fixture MR 的变更范围是什么？",
+          "answer": "允许必要 CI 模板修复，业务 fixture 只改一个专用 YAML 文件",
+          "note": "使用新的 zjal- source branch/target master；合并后不再推送；同一 native MR pipeline 先 live 后 Retry replay。"
+        },
+        {
+          "q": "replay-only fixture 是否使用新 identity？",
+          "answer": "是；新 MR、新 carrier Issue、新 contract/request identity",
+          "note": "首次 live 与 Retry replay 共用新 identity；不复用 !321/#194，不混淆 dedupe 或旧 branch 状态。"
+        },
+        {
+          "q": "replay-only fixture 如何创建和推进？",
+          "answer": "由 GitLab provider API/adapter 创建，Human 审阅并合并",
+          "note": "adapter 创建新 branch/commit/carrier/Draft MR/contract；合并后同一 native MR pipeline 先 live 后 Retry replay，禁止 Web 伪造。"
+        }
+      ],
+      "notes": "Replay job evidence complete for MR !322: already_written, already_deleted, already_closed; no duplicate writes and cleanup-done."
     },
     "1-5-5-3-2-5": {
       "id": "1-5-5-3-2-5",
       "label": "GitLab Post-Merge closeout evidence and completion gate",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Completion gate passed: independent fixture/contract, native MR event, pre-merge hard stops, merged live cleanup, explicit confirmation, and same-pipeline replay evidence all recorded."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 16:27:03",
+    "updated": "2026-07-17 16:53:49",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
