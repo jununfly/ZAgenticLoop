@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { buildGitLabIssueNoteBridgeEnvelope, triggerGitLabIssueNoteBridgePipeline } from '../dist/index.js';
 
 const envelope = buildGitLabIssueNoteBridgeEnvelope({
-  headers: { event: 'Issue Hook', eventId: 'matrix-event-1', triggerToken: 'webhook-secret' },
-  projectPath: 'group/project', expectedProjectPath: 'group/project', expectedTriggerToken: 'webhook-secret',
+  headers: { event: 'Issue Hook', eventId: 'matrix-event-1', webhookSecret: 'webhook-secret' },
+  projectPath: 'group/project', expectedProjectPath: 'group/project', expectedWebhookSecret: 'webhook-secret',
   route: { routeId: 'bridge-roadmap-activation', marker: '/zj-loop start roadmap-sliced-development', targetRoute: 'roadmap-sliced-development', targetRef: 'master' },
   payload: { object_kind: 'issue', project: { path_with_namespace: 'group/project' }, issue: { iid: 7 }, object_attributes: { id: 8, note: '/zj-loop start roadmap-sliced-development', noteable_type: 'Issue', noteable_iid: 7, action: 'create' } },
 }).envelope;

@@ -36,12 +36,12 @@ export function createGitLabIssueNoteBridgeServer(config) {
             headers: {
                 event: header(request, 'x-gitlab-event'),
                 eventId: header(request, 'x-gitlab-event-uuid'),
-                triggerToken: header(request, 'x-gitlab-token'),
+                webhookSecret: header(request, 'x-gitlab-token'),
             },
             payload,
             projectPath: config.projectPath,
             expectedProjectPath: config.projectPath,
-            expectedTriggerToken: config.token,
+            expectedWebhookSecret: config.webhookSecret,
             route: config.route,
             receivedAt: now,
         });
@@ -59,7 +59,7 @@ export function createGitLabIssueNoteBridgeServer(config) {
             return;
         }
         await updateGitLabIssueNoteBridgeReceipt({ root: config.root, projectPath: decision.envelope.project_path, eventId: decision.envelope.event_id, dedupeKey: decision.envelope.dedupe_key, status: 'trigger-pending', now });
-        const trigger = await triggerGitLabIssueNoteBridgePipeline({ config: config.triggerConfig, envelope: decision.envelope, envelopeRef: persisted.receipt_path, token: config.token, apiBaseUrl: config.apiBaseUrl, fetchImpl: config.fetchImpl });
+        const trigger = await triggerGitLabIssueNoteBridgePipeline({ config: config.triggerConfig, envelope: decision.envelope, envelopeRef: persisted.receipt_path, token: config.triggerToken, apiBaseUrl: config.apiBaseUrl, fetchImpl: config.fetchImpl });
         const finalStatus = trigger.status === 'triggered' ? 'triggered' : trigger.status === 'uncertain' ? 'trigger-uncertain' : trigger.status === 'failed' ? 'trigger-failed' : 'trigger-failed';
         await updateGitLabIssueNoteBridgeReceipt({ root: config.root, projectPath: decision.envelope.project_path, eventId: decision.envelope.event_id, dedupeKey: decision.envelope.dedupe_key, status: finalStatus, now, triggerPipelineId: trigger.pipeline?.id ?? null, recoveryReason: trigger.reason });
         writeJson(response, trigger.status === 'triggered' ? 202 : 502, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: trigger.status, side_effects_executed: trigger.side_effects_executed, receipt: { path: persisted.receipt_path, status: finalStatus }, trigger });

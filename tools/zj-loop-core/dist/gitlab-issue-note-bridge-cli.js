@@ -12,7 +12,8 @@ const routeId = required('ZJ_LOOP_BRIDGE_ROUTE_ID');
 const pipelineRef = required('ZJ_LOOP_BRIDGE_PIPELINE_REF');
 const targetRoute = required('ZJ_LOOP_BRIDGE_TARGET_ROUTE');
 const marker = required('ZJ_LOOP_BRIDGE_MARKER');
-const token = required('ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN');
+const webhookSecret = required('ZJ_LOOP_GITLAB_WEBHOOK_SECRET');
+const triggerToken = required('ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN');
 const server = createGitLabIssueNoteBridgeServer({
     projectPath,
     route: { routeId, marker, targetRoute, targetRef: pipelineRef },
@@ -25,7 +26,8 @@ const server = createGitLabIssueNoteBridgeServer({
         enabled: env.ZJ_LOOP_BRIDGE_ENABLED === 'true',
         maturity: env.ZJ_LOOP_BRIDGE_MATURITY?.trim() || 'install-ready',
     },
-    token,
+    webhookSecret,
+    triggerToken,
     root: env.ZJ_LOOP_BRIDGE_ROOT?.trim() || '.',
     apiBaseUrl: env.ZJ_LOOP_GITLAB_API_URL?.trim() || 'https://gitlab.com/api/v4',
 });

@@ -19,8 +19,8 @@ test('HTTP runtime validates the real webhook envelope, persists receipt, and tr
   const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-http-'));
   try {
     let pipelineCalls = 0;
-    const result = await withServer({ projectPath: 'group/project', route, triggerConfig, token: 'bridge-token', root, now: () => '2026-07-17T00:00:00.000Z', fetchImpl: async () => { pipelineCalls += 1; return { status: 201, async json() { return { id: 321, ref: 'master', web_url: 'https://git.example/group/project/-/pipelines/321' }; } }; } }, async (port) => {
-      const response = await fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-event-1', 'x-gitlab-token': 'bridge-token' }, body: JSON.stringify(payload) });
+      const result = await withServer({ projectPath: 'group/project', route, triggerConfig, webhookSecret: 'webhook-secret', triggerToken: 'api-token', root, now: () => '2026-07-17T00:00:00.000Z', fetchImpl: async (_url, init) => { pipelineCalls += 1; assert.equal(init.headers['PRIVATE-TOKEN'], 'api-token'); return { status: 201, async json() { return { id: 321, ref: 'master', web_url: 'https://git.example/group/project/-/pipelines/321' }; } }; } }, async (port) => {
+      const response = await fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-event-1', 'x-gitlab-token': 'webhook-secret' }, body: JSON.stringify(payload) });
       return { status: response.status, body: await response.json() };
     });
     assert.equal(result.status, 202);
@@ -34,7 +34,7 @@ test('HTTP runtime validates the real webhook envelope, persists receipt, and tr
 test('HTTP runtime exposes a side-effect-free health probe', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-http-'));
   try {
-    const result = await withServer({ projectPath: 'group/project', route, triggerConfig, token: 'bridge-token', root, fetchImpl: async () => { throw new Error('must not trigger'); } }, async (port) => {
+    const result = await withServer({ projectPath: 'group/project', route, triggerConfig, webhookSecret: 'webhook-secret', triggerToken: 'api-token', root, fetchImpl: async () => { throw new Error('must not trigger'); } }, async (port) => {
       const response = await fetch(`http://127.0.0.1:${port}/healthz`);
       return { status: response.status, body: await response.json() };
     });
@@ -48,8 +48,8 @@ test('HTTP runtime ignores ordinary Notes and blocks bad secrets without trigger
   const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-http-'));
   try {
     let pipelineCalls = 0;
-    const baseConfig = { projectPath: 'group/project', route, triggerConfig, token: 'bridge-token', root, fetchImpl: async () => { pipelineCalls += 1; throw new Error('must not trigger'); } };
-    const ordinary = await withServer(baseConfig, async (port) => fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-event-2', 'x-gitlab-token': 'bridge-token' }, body: JSON.stringify({ ...payload, object_attributes: { ...payload.object_attributes, note: 'ordinary discussion' } }) }));
+    const baseConfig = { projectPath: 'group/project', route, triggerConfig, webhookSecret: 'webhook-secret', triggerToken: 'api-token', root, fetchImpl: async () => { pipelineCalls += 1; throw new Error('must not trigger'); } };
+    const ordinary = await withServer(baseConfig, async (port) => fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-event-2', 'x-gitlab-token': 'webhook-secret' }, body: JSON.stringify({ ...payload, object_attributes: { ...payload.object_attributes, note: 'ordinary discussion' } }) }));
     assert.equal(ordinary.status, 200);
     const badSecret = await withServer(baseConfig, async (port) => fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-event-3', 'x-gitlab-token': 'wrong' }, body: JSON.stringify(payload) }));
     assert.equal(badSecret.status, 400);

@@ -10,10 +10,10 @@ const route = {
 };
 
 const base = {
-  headers: { event: 'Issue Hook', eventId: 'event-1', triggerToken: 'bridge-secret' },
+  headers: { event: 'Issue Hook', eventId: 'event-1', webhookSecret: 'webhook-secret' },
   projectPath: 'mlive-dev/ai-studio',
   expectedProjectPath: 'mlive-dev/ai-studio',
-  expectedTriggerToken: 'bridge-secret',
+  expectedWebhookSecret: 'webhook-secret',
   route,
   receivedAt: '2026-07-17T00:00:00.000Z',
   payload: {
@@ -48,10 +48,10 @@ test('accepts a fixed Issue Note marker and emits only a lightweight envelope', 
     target_ref: 'master',
     received_at: '2026-07-17T00:00:00.000Z',
     dedupe_key: 'gln_757de08c509451e7',
-    auth_source: 'GITLAB_BRIDGE_TRIGGER_TOKEN',
+    auth_source: 'GITLAB_WEBHOOK_SECRET',
     trigger_pipeline_id: null,
   });
-  assert.equal(JSON.stringify(result).includes('bridge-secret'), false);
+  assert.equal(JSON.stringify(result).includes('webhook-secret'), false);
   assert.equal(JSON.stringify(result).includes('roadmap-sliced-development'), true);
 });
 
@@ -70,7 +70,7 @@ test('ignores ordinary Issue Notes without provider side effects', () => {
 
 test('fails closed for authentication, project, event, event id, and payload mismatches', () => {
   const cases = [
-    [{ headers: { ...base.headers, triggerToken: 'wrong' } }, 'unauthorized'],
+    [{ headers: { ...base.headers, webhookSecret: 'wrong' } }, 'unauthorized'],
     [{ projectPath: 'other/project' }, 'project-mismatch'],
     [{ payload: { ...base.payload, project: { path_with_namespace: 'other/project' } } }, 'project-mismatch'],
     [{ headers: { ...base.headers, event: 'Merge Request Hook' } }, 'event-not-allowed'],

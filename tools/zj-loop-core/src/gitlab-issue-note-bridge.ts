@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA = 'zj-loop.gitlab_issue_note_bridge.v1';
 export const GITLAB_ISSUE_NOTE_EVENT = 'Issue Hook';
-export const GITLAB_BRIDGE_AUTH_SOURCE = 'GITLAB_BRIDGE_TRIGGER_TOKEN';
+export const GITLAB_BRIDGE_AUTH_SOURCE = 'GITLAB_WEBHOOK_SECRET';
 
 export type GitLabIssueNoteBridgeRoute = {
   routeId: string;
@@ -15,12 +15,12 @@ export type GitLabIssueNoteWebhookInput = {
   headers: {
     event?: string;
     eventId?: string;
-    triggerToken?: string;
+    webhookSecret?: string;
   };
   payload: unknown;
   projectPath: string;
   expectedProjectPath: string;
-  expectedTriggerToken?: string;
+  expectedWebhookSecret?: string;
   route: GitLabIssueNoteBridgeRoute;
   receivedAt?: string;
 };
@@ -73,7 +73,7 @@ export function buildGitLabIssueNoteBridgeEnvelope(input: GitLabIssueNoteWebhook
     envelope: null,
   });
 
-  if (!input.expectedTriggerToken || !tokensEqual(input.headers.triggerToken, input.expectedTriggerToken)) {
+  if (!input.expectedWebhookSecret || !tokensEqual(input.headers.webhookSecret, input.expectedWebhookSecret)) {
     return blocked('unauthorized');
   }
   if (!input.projectPath.trim() || input.projectPath !== input.expectedProjectPath) {

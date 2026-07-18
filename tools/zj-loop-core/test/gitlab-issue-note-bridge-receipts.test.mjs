@@ -13,10 +13,10 @@ import {
 } from '../dist/index.js';
 
 const envelope = buildGitLabIssueNoteBridgeEnvelope({
-  headers: { event: 'Issue Hook', eventId: 'event-receipt-1', triggerToken: 'secret' },
+  headers: { event: 'Issue Hook', eventId: 'event-receipt-1', webhookSecret: 'secret' },
   projectPath: 'mlive-dev/ai-studio',
   expectedProjectPath: 'mlive-dev/ai-studio',
-  expectedTriggerToken: 'secret',
+  expectedWebhookSecret: 'secret',
   route: { routeId: 'roadmap-activation-note', marker: '/zj-loop start roadmap-sliced-development', targetRoute: 'roadmap-sliced-development', targetRef: 'master' },
   receivedAt: '2026-07-17T00:00:00.000Z',
   payload: {

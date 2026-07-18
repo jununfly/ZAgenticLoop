@@ -8,7 +8,8 @@ export type GitLabIssueNoteBridgeServerConfig = {
     projectPath: string;
     route: GitLabIssueNoteBridgeRoute;
     triggerConfig: GitLabIssueNoteBridgeTriggerConfig;
-    token: string;
+    webhookSecret: string;
+    triggerToken: string;
     root?: string;
     apiBaseUrl?: string;
     maxBodyBytes?: number;

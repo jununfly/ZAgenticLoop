@@ -1,6 +1,6 @@
 export declare const GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA = "zj-loop.gitlab_issue_note_bridge.v1";
 export declare const GITLAB_ISSUE_NOTE_EVENT = "Issue Hook";
-export declare const GITLAB_BRIDGE_AUTH_SOURCE = "GITLAB_BRIDGE_TRIGGER_TOKEN";
+export declare const GITLAB_BRIDGE_AUTH_SOURCE = "GITLAB_WEBHOOK_SECRET";
 export type GitLabIssueNoteBridgeRoute = {
     routeId: string;
     marker: string;
@@ -11,12 +11,12 @@ export type GitLabIssueNoteWebhookInput = {
     headers: {
         event?: string;
         eventId?: string;
-        triggerToken?: string;
+        webhookSecret?: string;
     };
     payload: unknown;
     projectPath: string;
     expectedProjectPath: string;
-    expectedTriggerToken?: string;
+    expectedWebhookSecret?: string;
     route: GitLabIssueNoteBridgeRoute;
     receivedAt?: string;
 };
