@@ -44,3 +44,4 @@
 - [x] capability enum 固定为 `status: available|unavailable|blocked|unknown` 与 `planning_status: in_scope|deferred|completed|superseded`。
 - [x] 该 deferred gap 只阻塞 Webhook capability 和对应路线图节点，不阻塞其他产品功能发布；整体版本状态仍必须展示该 gap。
 - [x] agent 收到当前版本的 Webhook 请求时必须 hard stop：`status=unavailable`、`planning_status=deferred`、`side_effects_executed=false`，不调用 API、不自动降级。
+- [x] 对外声明固定为“GitLab Webhook Issue Triage 暂不可用（deferred）；其他产品功能正常”，不承诺具体上线日期。

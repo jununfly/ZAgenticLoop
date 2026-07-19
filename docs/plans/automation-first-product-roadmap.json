@@ -2535,6 +2535,11 @@
           "q": "当前版本收到 Webhook 请求时 agent 如何处理？",
           "answer": "返回 status=unavailable、planning_status=deferred、side_effects_executed=false 的结构化 hard stop，引用 docs/plans/known-gaps.md；不调用 GitLab API，也不自动降级为其他写入路径。",
           "note": "所有 agent 对 deferred capability 保持一致行为，避免把不可用能力转换成未授权的自动副作用。"
+        },
+        {
+          "q": "当前版本对外如何声明 GitLab Webhook？",
+          "answer": "声明 GitLab Webhook Issue Triage 暂不可用（deferred）；本版本不启用该能力，也不产生 GitLab provider write；其他产品功能正常，不承诺具体上线日期。",
+          "note": "能力声明必须与实现状态一致，避免 beta 或隐含可用性承诺。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -2792,7 +2797,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 11:50:34",
+    "updated": "2026-07-19 11:52:32",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
