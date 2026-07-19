@@ -45,3 +45,10 @@
 - [x] 该 deferred gap 只阻塞 Webhook capability 和对应路线图节点，不阻塞其他产品功能发布；整体版本状态仍必须展示该 gap。
 - [x] agent 收到当前版本的 Webhook 请求时必须 hard stop：`status=unavailable`、`planning_status=deferred`、`side_effects_executed=false`，不调用 API、不自动降级。
 - [x] 对外声明固定为“GitLab Webhook Issue Triage 暂不可用（deferred）；其他产品功能正常”，不承诺具体上线日期。
+- [x] Webhook 只作为独立 route-specific ledger cell，不污染其他 capability 状态。
+- [x] ledger route identity 固定为 `gitlab-issue-note-bridge`；不冒充 `issue-triage`、`issue-triage-action` 或 `issue-triage-transition`。
+- [x] Route Table 保留完整但 disabled 的 `gitlab-issue-note-bridge` 条目，声明 capabilities/verifiers，供 doctor/ledger 检查。
+- [x] route capability 分为 `declared_capabilities`、`verified_capabilities`、`verifiers`；当前 verified 集合为空，仅验证 route、disabled 和 zero-side-effect。
+- [x] bridge declared scope 仅包含 `webhook-envelope-validation`、`receipt-dedupe`、`fixed-api-trigger`；Issue Triage 与 provider write 不归 bridge。
+- [x] capability artifact 采用统一 `zj-loop.capability.v1` envelope 与 route-specific `zj-loop.gitlab_issue_note_bridge_capability.v1`。
+- [x] doctor 默认报告 deferred gap 并成功结束；仅严格 `--require-complete` 模式因该 route 未完成而失败。

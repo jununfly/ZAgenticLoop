@@ -2540,6 +2540,41 @@
           "q": "当前版本对外如何声明 GitLab Webhook？",
           "answer": "声明 GitLab Webhook Issue Triage 暂不可用（deferred）；本版本不启用该能力，也不产生 GitLab provider write；其他产品功能正常，不承诺具体上线日期。",
           "note": "能力声明必须与实现状态一致，避免 beta 或隐含可用性承诺。"
+        },
+        {
+          "q": "Webhook unavailable 状态是否影响其他 capability？",
+          "answer": "Webhook 只作为独立 route-specific ledger cell，status=unavailable、planning_status=deferred；只阻塞自身 route，不污染其他 capability 状态。",
+          "note": "doctor/ledger 严格按 route 计算，整体版本可显示 known gap，但其他功能正常发布。"
+        },
+        {
+          "q": "Webhook ledger cell 使用什么 route identity？",
+          "answer": "独立使用 gitlab-issue-note-bridge；issue-triage、issue-triage-action、issue-triage-transition 分别记录，bridge transport 不等于 Issue Triage capability。",
+          "note": "严格区分接入层、consumer 层和 provider write 层，避免 route 语义混淆。"
+        },
+        {
+          "q": "当前版本 Route Table 是否保留 Webhook route？",
+          "answer": "保留完整 gitlab-issue-note-bridge route 条目，但固定 enabled=false、status=unavailable、planning_status=deferred，并声明 capabilities/verifiers 供 doctor/ledger 检查。",
+          "note": "系统可见且明确知道该能力；禁用状态不能被误读为未设计或可用。"
+        },
+        {
+          "q": "Webhook route 的 capabilities/verifiers 如何表达？",
+          "answer": "分成 declared_capabilities、verified_capabilities、verifiers；当前 declared_capabilities 可列未来范围，verified_capabilities 为空，verifiers 只验证 route-table、disabled-state、zero-side-effect。",
+          "note": "声明未来范围不等于完成证据；当前 route 明确不可用且零 provider side effect。"
+        },
+        {
+          "q": "Webhook bridge declared capabilities 覆盖到哪一层？",
+          "answer": "只声明 webhook-envelope-validation、receipt-dedupe、fixed-api-trigger；Issue Triage 分析、transition 和 provider write 由独立 route 声明。",
+          "note": "Bridge、consumer、provider write 三层保持独立，避免接入能力被误读为业务自动化能力。"
+        },
+        {
+          "q": "disabled capability artifact 使用什么 schema？",
+          "answer": "采用统一 envelope zj-loop.capability.v1 与 route-specific artifact zj-loop.gitlab_issue_note_bridge_capability.v1；route artifact 包含 status、planning_status、enabled、provider_writes_allowed、declared/verified capabilities 和 verifiers。",
+          "note": "doctor/ledger 统一消费，bridge route 保持独立语义。"
+        },
+        {
+          "q": "doctor/ledger 遇到 deferred Webhook 时如何影响退出码？",
+          "answer": "默认生成完整 artifact 并成功结束，但明确记录 route deferred；仅 --require-complete 等严格模式因 route 未完成而失败。",
+          "note": "正常发布不被该缺口阻塞，严格模式仍防止版本被误报为全能力完成。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -2797,7 +2832,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 11:52:32",
+    "updated": "2026-07-19 16:32:27",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
