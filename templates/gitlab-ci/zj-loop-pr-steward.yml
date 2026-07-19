@@ -91,3 +91,32 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     expire_in: 7 days
     paths:
       - gitlab-pr-steward-claim-result.json
+
+zj_loop_mr_steward_verifier_scope:
+  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  needs: []
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "api"'
+      when: manual
+  variables:
+    ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_ISSUE: ""
+    ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_REQUEST: ""
+    ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_CLAIM: ""
+    ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_MR: ""
+    ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_HEAD_SHA: ""
+    ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE: ""
+    ZJ_LOOP_PR_STEWARD_VERIFIER_NAME: ""
+  script:
+    - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
+    - test -n "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_ISSUE" && test -n "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_REQUEST" && test -n "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_CLAIM" && test -n "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_MR" && test -n "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_HEAD_SHA" && test -n "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE" && test -n "$ZJ_LOOP_PR_STEWARD_VERIFIER_NAME"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-pr-steward gitlab-verifier-scope --project "$CI_PROJECT_PATH" --issue-iid "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_ISSUE" --merge-request "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_MR" --request-id "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_REQUEST" --claim-id "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_CLAIM" --current-head-sha "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE_HEAD_SHA" --requested-scope "$ZJ_LOOP_PR_STEWARD_VERIFIER_SCOPE" --requested-verifier "$ZJ_LOOP_PR_STEWARD_VERIFIER_NAME" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out gitlab-pr-steward-verifier-scope-result.json --json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - gitlab-pr-steward-verifier-scope-result.json
