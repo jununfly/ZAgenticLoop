@@ -2323,6 +2323,16 @@
           "q": "event-driven 的自动边界是否固定为 report 自动执行，而 request/claim/escalation 继续作为显式 gated recovery jobs？",
           "answer": "是。merge_request_event 自动执行 PR Steward report；request carrier 创建仍需固定确认短语，claim/verifier/escalation 使用显式 identity 和 gated recovery job。人工不启动 report，但 provider write 不绕过既有授权边界。",
           "note": "兼顾 event-driven 用户体验与已有 provider-write confirmation 协议，避免把自动化误解为无授权写入。"
+        },
+        {
+          "q": "剩余 PR Steward negative/recovery 在哪里验证？",
+          "answer": "在内网 mlive-dev/ai-studio 使用真实 GitLab pipeline 做受控 live 验证；只操作 fixture Issue/MR，不发布公网，不自动 merge。",
+          "note": "内网 provider evidence 允许周末继续；公网 Nyx/Caster 发布仍暂停。"
+        },
+        {
+          "q": "PR Steward 剩余 negative/recovery 的执行顺序是什么？",
+          "answer": "先 claim-id mismatch，再 verifier scope failure，最后使用正确 identity 执行 explicit recovery replay。",
+          "note": "先锁死 zero-write hard stop，再验证唯一允许的恢复路径；不盲目重试。"
         }
       ],
       "notes": "Native GitLab merge_request_event PR Steward positive lifecycle and negative evidence expanded. Draft MR !317 remains opened/draft with source branch codex/gitlab-pr-steward-event-dogfood, target master, head SHA 847b17e79a7fa93dfb1b19e1d72deac27901b7e5, and single-file fixture scope. Positive: pipeline 10519940 source=merge_request_event; report 25995053; request 25997942 created carrier Issue #192/request ifr_df77ffdb2fe0; claim 25995062 created claim claim-pr-steward-317-847b17e7; escalation 25998826 succeeded with repair_mr_created=false. Remote verification found no lifecycle marker in !317 and claim/escalation Notes #19654282/#19654459 in #192. Negative source-head mismatch job 25999095 returned blocked/source-head-mismatch with side_effects_executed=false. Duplicate request job 25999301 returned completed/duplicate with side_effects_executed=false. Request-source mismatch job 25999629 returned blocked/request-source-mismatch with side_effects_executed=false. Remaining negative/recovery cases include claim-id mismatch, verifier scope failure, and explicit recovery replay."
@@ -2875,7 +2885,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 17:03:01",
+    "updated": "2026-07-19 17:13:03",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
