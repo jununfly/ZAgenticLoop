@@ -2455,8 +2455,24 @@
       "mode": "exploit",
       "parent": "1-5-5-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "ai-studio-gitlab 与 ai-studio 的职责边界是什么？",
+          "answer": "ai-studio-gitlab 作为独立 GitLab Webhook 验证服务器/容器；ai-studio 作为主要开发、CI consumer、Issue Triage 集成项目。",
+          "note": "Webhook 基础设施与业务/consumer 项目分层；周末只做本地开发，工作日再做真实 provider 验证。"
+        },
+        {
+          "q": "真实 Issue Triage dogfood 的项目绑定是什么？",
+          "answer": "Issue Note 来源和目标 pipeline 都绑定 mlive-dev/ai-studio；bridge 服务部署在 mlive-dev/ai-studio-gitlab。",
+          "note": "服务托管项目与业务验证项目分离；bridge 的 project_path、API target 和 trigger token 绑定 ai-studio。"
+        },
+        {
+          "q": "GitLab Webhook Issue Triage 适配是否纳入本版本产品计划？",
+          "answer": "不纳入本版本；转移到 docs/plans/known-gaps.md checklist，作为后续版本待完善能力。",
+          "note": "保持本版本知行合一；已有 adapter、部署分支和本地测试只算探索性/基础设施准备，不算产品支持、trusted automation 或 live completion evidence。"
+        }
+      ],
+      "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
     },
     "1-5-5-3-5": {
       "id": "1-5-5-3-5",
@@ -2711,7 +2727,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-17 23:44:42",
+    "updated": "2026-07-19 11:23:48",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
