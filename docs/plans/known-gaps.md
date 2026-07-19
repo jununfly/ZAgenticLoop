@@ -31,3 +31,9 @@
 **当前版本结论：**
 
 本版本不声明支持 GitLab Webhook 驱动的 Issue Triage，不启用全自动 provider write，也不将已有探索性实现计入 `1-5-5-3-4` 完成证据。
+
+**发布策略：**
+
+- [x] 正常版本继续发布，其他产品功能不受影响。
+- [x] GitLab Webhook 对用户明确显示为 `disabled/unavailable`。
+- [x] 未完成本清单前，不启用 Webhook route、runtime secret 或 provider write。

@@ -2470,6 +2470,16 @@
           "q": "GitLab Webhook Issue Triage 适配是否纳入本版本产品计划？",
           "answer": "不纳入本版本；转移到 docs/plans/known-gaps.md checklist，作为后续版本待完善能力。",
           "note": "保持本版本知行合一；已有 adapter、部署分支和本地测试只算探索性/基础设施准备，不算产品支持、trusted automation 或 live completion evidence。"
+        },
+        {
+          "q": "GitLab Webhook Issue Triage 何时允许重新纳入版本路线图？",
+          "answer": "只有协议、negative/recovery matrix、真实 live evidence、promotion gate 全部完成，并经 Human 明确确认后，才重新纳入。",
+          "note": "known gap 不因核心代码或本地测试完成而提前回流；避免探索性实现被误读为产品结论。"
+        },
+        {
+          "q": "本版本发布时 GitLab Webhook 功能如何处理？",
+          "answer": "正常版本继续发布，但 Webhook 功能保持 disabled/unavailable；不启用 route、secret 或 provider write，其他功能正常。",
+          "note": "Webhook 是明确的 known gap，不影响其他产品功能；未完成 checklist 和 promotion gate 前不得对用户宣称可用。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -2727,7 +2737,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 11:23:48",
+    "updated": "2026-07-19 11:31:32",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
