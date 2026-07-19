@@ -640,6 +640,7 @@ test('GitLab CI Sweeper API adapter creates commit-backed repair MR from target 
     fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
       if (url.includes('/merge_requests?')) return response(200, []);
+      if (url.includes('/repository/files/')) return response(200, { content: Buffer.from('old\n').toString('base64') });
       if (url.endsWith('/repository/branches')) return response(201, { name: 'branch' });
       if (url.includes('/repository/branches/')) return response(200, { name: 'branch' });
       if (url.endsWith('/commits')) return response(201, { id: 'commit-sha' });
@@ -655,6 +656,30 @@ test('GitLab CI Sweeper API adapter creates commit-backed repair MR from target 
   const commitPayload = JSON.parse(calls.find((call) => call.url.endsWith('/commits')).init.body);
   assert.equal(commitPayload.start_branch, undefined);
   assert.equal(calls.filter((call) => call.init.method === 'POST').length, 3);
+});
+
+test('GitLab CI Sweeper API adapter refuses a repair action with no effective diff', async () => {
+  const calls = [];
+  const result = await createGitLabCiSweeperRepairMr({
+    projectPath: 'group/project',
+    token: 'secret-token',
+    branch: 'automated/ci-sweeper-gitlab-789-noop000',
+    targetBranch: 'master',
+    commitMessage: 'unused',
+    title: 'unused',
+    description: 'unused',
+    actions: [{ action: 'update', file_path: 'zj-loop/gitlab-ci/example.yml', content: 'same\n' }],
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url, init });
+      if (url.includes('/repository/files/')) return response(200, { content: Buffer.from('same\n').toString('base64') });
+      if (url.includes('/merge_requests?')) return response(200, []);
+      throw new Error(`unexpected url ${url}`);
+    },
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.reason, 'repair-no-effective-diff');
+  assert.equal(calls.filter((call) => call.init.method === 'POST').length, 0);
 });
 
 test('GitLab CI Sweeper API adapter returns duplicate for an existing source branch MR', async () => {

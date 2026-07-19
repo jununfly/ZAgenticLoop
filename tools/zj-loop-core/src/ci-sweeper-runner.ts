@@ -463,6 +463,16 @@ export async function createGitLabCiSweeperRepairMr(input: {
   if (!Array.isArray(input.actions) || input.actions.length === 0 || !validateGitLabCommitActions(input.actions)) return blocked('commit-actions-invalid');
   if (!fetchImpl) return blocked('gitlab-fetch-unavailable');
   const headers = { ...buildGitLabAuthHeaders({ token: input.token }), 'User-Agent': 'zj-loop-ci-sweeper' };
+  const effectiveDiff = await hasEffectiveGitLabRepairDiff({
+    projectPath: input.projectPath,
+    targetBranch: input.targetBranch,
+    actions: input.actions,
+    apiBaseUrl: input.apiBaseUrl,
+    headers,
+    fetchImpl,
+  });
+  if (effectiveDiff === false) return blocked('repair-no-effective-diff');
+  if (effectiveDiff === null) return blocked('repair-diff-read-failed');
   const mergeRequestsUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: 'merge_requests' });
   let existingResponse;
   try {
@@ -518,6 +528,45 @@ export async function createGitLabCiSweeperRepairMr(input: {
   const mergeRequest = await mrResponse.json() as any;
   if (!Number.isInteger(Number(mergeRequest.iid))) return blocked('repair-mr-create-response-invalid');
   return completedRepairMrResult(audit, 'created', mergeRequest);
+}
+
+async function hasEffectiveGitLabRepairDiff(input: {
+  projectPath: string;
+  targetBranch: string;
+  actions: any[];
+  apiBaseUrl?: string;
+  headers: Record<string, string>;
+  fetchImpl: typeof fetch;
+}): Promise<boolean | null> {
+  for (const action of input.actions) {
+    if (action.action === 'move' || action.action === 'chmod') return true;
+    const filePath = String(action.file_path ?? '');
+    const fileUrl = buildGitLabApiUrl({
+      apiBaseUrl: input.apiBaseUrl,
+      projectPath: input.projectPath,
+      path: ['repository', 'files', filePath],
+    });
+    let response;
+    try {
+      response = await input.fetchImpl(`${fileUrl}?ref=${encodeURIComponent(input.targetBranch)}`, { headers: input.headers });
+    } catch {
+      return null;
+    }
+    if (response.status === 404) {
+      if (action.action === 'delete') continue;
+      return true;
+    }
+    if (!response.ok) return null;
+    if (action.action === 'delete') return true;
+    if (action.action === 'create') continue;
+    const current = await response.json() as any;
+    const expected = action.encoding === 'base64'
+      ? Buffer.from(String(action.content ?? ''), 'base64').toString('utf8')
+      : String(action.content ?? '');
+    const actual = Buffer.from(String(current.content ?? ''), 'base64').toString('utf8');
+    if (actual !== expected) return true;
+  }
+  return false;
 }
 
 export async function triggerGitLabCiSweeperConsumerPipeline(input: {
