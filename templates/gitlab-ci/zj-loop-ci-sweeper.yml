@@ -100,11 +100,9 @@ zj_loop_ci_sweeper_consumer:
       - repair-execution-result.json
 
 zj_loop_ci_sweeper_closeout:
-  stage: "zj-loop-recovery"
+  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
   needs: []
-  tags:
-    - "__ZJ_LOOP_RUNNER_TAG__"
-  image: "__ZJ_LOOP_GITLAB_IMAGE__"
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   when: manual
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web"'

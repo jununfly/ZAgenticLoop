@@ -5,6 +5,7 @@
 
 stages:
   - __ZJ_LOOP_GITLAB_STAGE__
+  - __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
 
 include:
   - local: "zj-loop/gitlab-ci/zj-loop-smoke.yml"
@@ -17,3 +18,4 @@ include:
   - local: "zj-loop/gitlab-ci/zj-loop-roadmap-activation.yml"
   - local: "zj-loop/gitlab-ci/zj-loop-post-merge-cleanup.yml"
   - local: "zj-loop/gitlab-ci/zj-loop-schedule-probe.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-schedule-health-check.yml"

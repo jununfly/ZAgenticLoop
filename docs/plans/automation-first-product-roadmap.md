@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-19 17:13:03
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 01:17:18
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -51,4 +51,5 @@ Added independent node:http runtime and CLI entrypoint in tools/zj-loop-core/src
 - Q: 被触发的 API pipeline 必须证明什么？ → 使用固定 master ref 的专用 job zj_loop_gitlab_issue_note_bridge_receipt；只校验 CI_PIPELINE_SOURCE=api、7 个 bridge 变量与 Issue/Note/envelope binding，运行 route decision/consumer plan，生成统一 envelope/receipt/dedupe/trigger evidence artifact；不写 Issue/Note/Branch/MR，不执行业务修复或 promotion。只有 job 成功且 artifact binding 完整才算 positive evidence。 (API pipeline 是受限执行载体，不是 bridge 或业务 side-effect 层。)
 - Q: 真实 dogfood 的验证顺序是什么？ → 先运行错误 secret、非 Issue Hook、项目不匹配、非匹配 Note 等 zero-write negative cases；再发送合法 marker Note 验证唯一 positive pipeline；重放同一 webhook 验证 duplicate 且不创建第二个 pipeline；查询并下载 pipeline artifact 核对 event/Issue/Note/ref/route 全绑定；最后验证 recovery/uncertain fixture，禁止盲目重触发。 (先证明 hard stop，再执行唯一真实 provider trigger。)
 - Q: dogfood fixture 完成后的清理边界是什么？ → 保留 carrier Issue、marker Note、pipeline 与 artifacts 作为审计证据；不关闭 Issue、不删除 Note、不删除 pipeline；完成后禁用 Project Webhook，trigger token 由 Human 轮换/删除；清理动作不计入 positive evidence，若执行必须单独记录 cleanup evidence。 (fixture 生命周期与 bridge evidence 生命周期分离。)
+- Q: Webhook bridge live dogfood 暂不可用时下一步推进什么？ → 保持 1-5-5-3-3-5 deferred，不运行部署或线上验证；转向独立的 1-5-5-4 GitLab scheduled required-route dogfood。 (Webhook capability 仍 disabled/unavailable，不降低 live completion gate；本地 bridge 代码、部署材料和候选 endpoint 不计入 live evidence。)
 <!-- ROADMAP_SECTION_END -->

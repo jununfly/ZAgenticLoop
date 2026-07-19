@@ -2271,11 +2271,22 @@
     "1-5-5-4": {
       "id": "1-5-5-4",
       "label": "GitLab scheduled required-route dogfood",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-5",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-5-4-1",
+        "1-5-5-4-2",
+        "1-5-5-4-3",
+        "1-5-5-4-4"
+      ],
+      "decisions": [
+        {
+          "q": "scheduled required-route dogfood 如何拆分？",
+          "answer": "拆成四个 route-specific 子节点：Issue Backlog、Daily Triage、Dependency Sweeper、Changelog Drafter；每个子节点独立验证 source=schedule、positive、negative/recovery 和 artifact contract，不能跨 route 泛化 evidence。",
+          "note": "先推进 issue-backlog-triage，因为已有 GitLab schedule-health 基础和相关 scheduled evidence；不启用 provider write 或 trusted automation。"
+        }
+      ],
       "notes": ""
     },
     "1-5-5-5": {
@@ -2304,7 +2315,7 @@
     "1-5-5-3-1": {
       "id": "1-5-5-3-1",
       "label": "GitLab native MR event PR Steward escalation lifecycle dogfood",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3",
       "children": [],
@@ -2335,7 +2346,7 @@
           "note": "先锁死 zero-write hard stop，再验证唯一允许的恢复路径；不盲目重试。"
         }
       ],
-      "notes": "Native GitLab merge_request_event PR Steward positive lifecycle and negative evidence expanded. Draft MR !317 remains opened/draft with source branch codex/gitlab-pr-steward-event-dogfood, target master, head SHA 847b17e79a7fa93dfb1b19e1d72deac27901b7e5, and single-file fixture scope. Positive: pipeline 10519940 source=merge_request_event; report 25995053; request 25997942 created carrier Issue #192/request ifr_df77ffdb2fe0; claim 25995062 created claim claim-pr-steward-317-847b17e7; escalation 25998826 succeeded with repair_mr_created=false. Remote verification found no lifecycle marker in !317 and claim/escalation Notes #19654282/#19654459 in #192. Negative source-head mismatch job 25999095 returned blocked/source-head-mismatch with side_effects_executed=false. Duplicate request job 25999301 returned completed/duplicate with side_effects_executed=false. Request-source mismatch job 25999629 returned blocked/request-source-mismatch with side_effects_executed=false. Remaining negative/recovery cases include claim-id mismatch, verifier scope failure, and explicit recovery replay."
+      "notes": "Completed with real ai-studio merge_request_event evidence on Draft MR !317, source branch codex/gitlab-pr-steward-event-dogfood, target master, and current head 98de7e47866217482aaa617c70e81bbb2aff03d7. The original positive report/request/claim/escalation evidence remains recorded for the fixture; the refreshed request for the current head was pipeline job 26041828, creating carrier Issue #200 and request ifr_1de5b9433620. The refreshed claim was job 26041717 with claim claim-pr-steward-317-98de7e47. Negative claim-id mismatch evidence was job 26041391 with side_effects_executed=false. Verifier scope failure was job 26043031: requested scope source-mr-write, allowed scopes pull-request and failed-check-rollup, reason verifier-scope-mismatch, side_effects_executed=false. Explicit recovery replay was job 26041718, appending one escalation marker to carrier Issue #200 with outcome=escalated and repair_mr_created=false. No source MR mutation, repair MR, auto-merge, or public release occurred."
     },
     "1-5-5-3-2": {
       "id": "1-5-5-3-2",
@@ -2868,6 +2879,11 @@
           "q": "dogfood fixture 完成后的清理边界是什么？",
           "answer": "保留 carrier Issue、marker Note、pipeline 与 artifacts 作为审计证据；不关闭 Issue、不删除 Note、不删除 pipeline；完成后禁用 Project Webhook，trigger token 由 Human 轮换/删除；清理动作不计入 positive evidence，若执行必须单独记录 cleanup evidence。",
           "note": "fixture 生命周期与 bridge evidence 生命周期分离。"
+        },
+        {
+          "q": "Webhook bridge live dogfood 暂不可用时下一步推进什么？",
+          "answer": "保持 1-5-5-3-3-5 deferred，不运行部署或线上验证；转向独立的 1-5-5-4 GitLab scheduled required-route dogfood。",
+          "note": "Webhook capability 仍 disabled/unavailable，不降低 live completion gate；本地 bridge 代码、部署材料和候选 endpoint 不计入 live evidence。"
         }
       ],
       "notes": "Added independent node:http runtime and CLI entrypoint in tools/zj-loop-core/src/gitlab-issue-note-bridge-server.ts and gitlab-issue-note-bridge-cli.ts, plus GET /healthz for UAT-Caster probes. Runtime exposes only POST /gitlab/webhook/issue-note, chains validation→receipt/dedupe→fixed trigger, and never stores raw payload or accepts dynamic route/ref. Authorized local HTTP integration plus bridge matrix passed 17 tests with build and git diff --check. Local smoke and candidate endpoint probe were non-live only; real ai-studio live evidence still requires deployment, carrier Issue/Note IID, Project Webhook, and separately injected trigger token."
@@ -2881,11 +2897,87 @@
       "children": [],
       "decisions": [],
       "notes": "Implemented read-only gitlab-issue-note-bridge capability artifact and disabled Route Table entry. Added zj-loop-doctor --capability gitlab-issue-note-bridge; positive artifact is unavailable+deferred, enabled=false, provider_writes_allowed=false, verified_capabilities=[], side_effects_executed=false. Negative enabled/verified-capability mutation returns blocked before any provider call. Targeted route/doctor/completion/capability tests: 30 passing; full core suite emitted 292 passing subtests before the repository's existing open-handle hang, so full command did not exit cleanly. No GitLab API or external provider call."
+    },
+    "1-5-5-4-1": {
+      "id": "1-5-5-4-1",
+      "label": "GitLab scheduled Issue Backlog report evidence",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Issue Backlog scheduled evidence 首先使用哪个 schedule？",
+          "answer": "先只读检查并复用既有 GitLab schedule 957；只有 project、route、cron、ref、job、artifact path/schema fingerprint 全部匹配时才等待/验证真实 source=schedule pipeline。",
+          "note": "health check 不修改 schedule、不自动 play/enable、不使用 Web/API/manual pipeline 冒充 scheduled evidence；fingerprint 不匹配时输出 hard stop。"
+        },
+        {
+          "q": "schedule-health 只读检查在哪里执行？",
+          "answer": "在 mlive-dev/ai-studio 通过 GitLab 手动诊断 job 调用 zj-loop-doctor --provider gitlab --schedule-health；该 job 只读检查配置与执行窗口，不计为 source=schedule positive evidence。",
+          "note": "GITLAB_TOKEN 仅由 CI Secret 注入；doctor 不启用、play、修改或恢复 schedule；真实 positive 必须来自 schedule 957 自身。"
+        },
+        {
+          "q": "schedule-health configuration_missing 应如何处理？",
+          "answer": "先核验 mlive-dev/ai-studio 中 schedule 957 的实际存在性、active 状态和可读权限；若不存在或 ID 已变化，使用当前有效 schedule IID 重跑。",
+          "note": "configuration_missing/gitlab-api-unavailable 只表示 provider 查询层未完成，不计入 scheduled positive 或 negative evidence；不以 manual/API pipeline 替代 source=schedule。"
+        },
+        {
+          "q": "只有 schedule 961 时如何继续？",
+          "answer": "先核验 schedule 961 的 route/job/ref/artifact/schema fingerprint；全部匹配 issue-backlog-triage 后才将 health-check schedule ID 从 957 替换为 961。",
+          "note": "schedule 961 若仍是 schedule-probe，只能保留为 probe evidence，不能用于 Issue Backlog scheduled completion；不匹配时不运行伪 positive。"
+        },
+        {
+          "q": "schedule 961 health-check 结果如何解释？",
+          "answer": "配置层通过，schedule 961 active 且 route/job/artifact/schema binding 正确；当前 status=not_due，等待下一次真实 source=schedule 执行窗口后再检查 positive artifact。",
+          "note": "health-check artifact 26044534 只证明配置与窗口诊断成功，不算 scheduled positive；不提前标记子节点完成。"
+        },
+        {
+          "q": "schedule 961 更新后旧 scheduled pipeline 是否可复用？",
+          "answer": "不可复用。schedule 961 在 2026-07-20 00:53（Asia/Shanghai）更新后，必须等待更新后的下一次 source=schedule pipeline；当前 health-check 26046075 在 01:01 返回 not_due。",
+          "note": "pipeline 10530166 只能作为候选观察，不得作为更新后 schedule 的 positive evidence；下一窗口约为 2026-07-21 00:53，需过 grace 后重新检查。"
+        },
+        {
+          "q": "schedule 961 更新后的 scheduled pipeline 是否已产生候选 positive evidence？",
+          "answer": "是。master scheduled pipeline 10530206 在 schedule 961 更新后产生 issue-recommendations.json，schema、project、route 正确；consumer plan 保持 report-only，transition-result 为 trusted-automation-not-enabled，零 provider write。",
+          "note": "该 pipeline 仍需通过 schedule-health verifier 绑定 source=schedule、schedule.updated_at、job 和 artifact schema；在 health status=healthy 前不标记节点完成。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-4-2": {
+      "id": "1-5-5-4-2",
+      "label": "GitLab scheduled Daily Triage report evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-4-3": {
+      "id": "1-5-5-4-3",
+      "label": "GitLab scheduled Dependency Sweeper lifecycle evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-4-4": {
+      "id": "1-5-5-4-4",
+      "label": "GitLab scheduled Changelog Drafter report evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 17:13:03",
+    "updated": "2026-07-20 01:17:18",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

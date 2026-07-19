@@ -490,6 +490,9 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(ciSweeper, /issue-fix-request-result\.json/);
     assert.match(ciSweeper, /stage: "?zj-loop-recovery"?/);
     assert.match(ciSweeper, /when: on_failure/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper_failure:[\s\S]*CI_PIPELINE_SOURCE == "web"[\s\S]*when: manual/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper_failure:[\s\S]*CI_PIPELINE_SOURCE == "api"[\s\S]*when: manual/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper_recovery:[\s\S]*needs: \[\]/);
     assert.match(ciSweeper, /CI_PIPELINE_SOURCE == "schedule"/);
     assert.match(ciSweeper, /gitlab-issue-fix-request/);
     assert.match(ciSweeper, /issue-fix-request-carrier-result\.json/);
@@ -562,6 +565,15 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(scheduleProbe, /allow_failure: false/);
     assert.match(scheduleProbe, /zj-loop\.gitlab_schedule_probe_receipt\.v1/);
     assert.match(scheduleProbe, /schedule-probe-receipt\.json/);
+
+    const scheduleHealth = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-schedule-health-check.yml'), 'utf8');
+    assert.match(scheduleHealth, /zj_loop_schedule_health_check:/);
+    assert.match(scheduleHealth, /CI_PIPELINE_SOURCE == "web"/);
+    assert.match(scheduleHealth, /zj-loop-doctor --root \./);
+    assert.match(scheduleHealth, /--schedule-health/);
+    assert.match(scheduleHealth, /needs: \[\]/);
+    assert.match(scheduleHealth, /schedule-health-result\.json/);
+    assert.doesNotMatch(scheduleHealth, /zj-loop-schedule-probe start/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);

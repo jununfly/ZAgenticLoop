@@ -36,6 +36,7 @@ const GITLAB_CI_TEMPLATE_FILES = [
     'zj-loop-roadmap-activation.yml',
     'zj-loop-post-merge-cleanup.yml',
     'zj-loop-schedule-probe.yml',
+    'zj-loop-schedule-health-check.yml',
 ];
 const DEFAULT_GITLAB_STAGE = 'zj-loop';
 const DEFAULT_GITLAB_IMAGE = 'node:22';
@@ -685,6 +686,7 @@ async function upgradeRenderedTemplateFile(src, dest, dryRun, io, renderOptions 
 function renderWorkflowTemplate(template, options = {}) {
     const rendered = template
         .replace(/__ZJ_LOOP_GITLAB_STAGE__/g, yamlString(options.gitlabStage ?? DEFAULT_GITLAB_STAGE))
+        .replace(/__ZJ_LOOP_GITLAB_RECOVERY_STAGE__/g, yamlString(`${options.gitlabStage ?? DEFAULT_GITLAB_STAGE}-recovery`))
         .replace(/__ZJ_LOOP_GITLAB_IMAGE__/g, yamlString(options.gitlabImage ?? DEFAULT_GITLAB_IMAGE))
         .replace(/__ZJ_LOOP_CORE_PACKAGE__/g, options.gitlabCorePackage ?? DEFAULT_GITLAB_CORE_PACKAGE)
         .replace(/__ZJ_LOOP_GITLAB_TAGS__\n?/g, renderGitLabRunnerTags(options.gitlabRunnerTags ?? []));
