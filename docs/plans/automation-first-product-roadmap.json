@@ -2480,6 +2480,61 @@
           "q": "本版本发布时 GitLab Webhook 功能如何处理？",
           "answer": "正常版本继续发布，但 Webhook 功能保持 disabled/unavailable；不启用 route、secret 或 provider write，其他功能正常。",
           "note": "Webhook 是明确的 known gap，不影响其他产品功能；未完成 checklist 和 promotion gate 前不得对用户宣称可用。"
+        },
+        {
+          "q": "Webhook disabled/unavailable 如何对用户表达？",
+          "answer": "版本能力说明标记 unavailable；误调用 endpoint 返回稳定的 webhook-unavailable 结构化结果，并保证零 provider side effect。",
+          "note": "外部 GitLab 操作方和内部用户得到一致信号；unavailable 不被误判为网络故障或已启用能力。"
+        },
+        {
+          "q": "Webhook disabled 时 endpoint 返回什么协议？",
+          "answer": "返回 HTTP 200 和稳定 webhook-unavailable envelope，包含 schema、status、reason=webhook-unavailable、side_effects_executed=false。",
+          "note": "避免 GitLab 重试风暴，同时明确功能未启用；不触发 pipeline 或其他 provider side effect。"
+        },
+        {
+          "q": "当前版本如何技术性保证 Webhook disabled？",
+          "answer": "Route Table 将 Webhook route 固定为 enabled=false，运行时默认 disabled；未完成 promotion gate 前不得通过普通环境变量开启。",
+          "note": "disabled 是结构化、可检查、可审计状态；误注入 Secret 或误配置 Webhook 也不能自动启用。"
+        },
+        {
+          "q": "谁能重新开启 disabled Webhook？",
+          "answer": "只有 Human 明确批准的 promotion PR，在 known-gaps checklist 和 promotion gate 完成后修改 Route Table 并开启；Secret 注入本身不能开启。",
+          "note": "防止部署权限或环境变量绕过产品版本 gate；enabled 状态必须由版本化变更和 Human 审核控制。"
+        },
+        {
+          "q": "当前版本如何证明 Webhook disabled？",
+          "answer": "CI/doctor 生成结构化 capability artifact，记录 webhook.status=unavailable、enabled=false、provider_writes_allowed=false，并检查运行时配置。",
+          "note": "不可用状态本身必须有可审计证据，防止被误判为漏测或已启用。"
+        },
+        {
+          "q": "disabled capability artifact 是否当前版本实现？",
+          "answer": "当前版本实现只读的 disabled capability check/artifact；不实现 Webhook trigger、Issue Triage write 或线上 bridge。",
+          "note": "用零 provider side effect 的可验证能力保证 unavailable 不是口头声明，同时不把 Webhook 适配带回本版本。"
+        },
+        {
+          "q": "disabled capability artifact 由什么机制生成？",
+          "answer": "复用现有 doctor/ledger，增加 GitLab Webhook capability 行，记录 unavailable、enabled=false、provider_writes_allowed=false。",
+          "note": "所有 agent 使用同一份 capability 状态；不新增 Webhook 专用状态系统。"
+        },
+        {
+          "q": "doctor/ledger 如何区分不可用与延期？",
+          "answer": "使用两个固定维度：status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；status 与 planning_status 均由固定 enum 和 Route Table 校验。",
+          "note": "运行能力与版本计划状态严格分层，禁止用 incomplete 或平均评分替代。"
+        },
+        {
+          "q": "Webhook capability 与计划状态使用哪些固定 enum？",
+          "answer": "status 固定为 available|unavailable|blocked|unknown；planning_status 固定为 in_scope|deferred|completed|superseded。当前为 status=unavailable、planning_status=deferred。",
+          "note": "两个维度均由 Route Table 校验；禁止用 incomplete 或自由文本替代。"
+        },
+        {
+          "q": "deferred unavailable Webhook 是否阻塞其他产品发布？",
+          "answer": "只阻塞 GitLab Webhook capability 和对应路线图节点；不阻塞其他产品功能发布，但整体版本状态必须显示 deferred known gap，不能宣称全能力完成。",
+          "note": "保持正常产品发布与诚实能力声明并存；不做整体平均评分或静默忽略。"
+        },
+        {
+          "q": "当前版本收到 Webhook 请求时 agent 如何处理？",
+          "answer": "返回 status=unavailable、planning_status=deferred、side_effects_executed=false 的结构化 hard stop，引用 docs/plans/known-gaps.md；不调用 GitLab API，也不自动降级为其他写入路径。",
+          "note": "所有 agent 对 deferred capability 保持一致行为，避免把不可用能力转换成未授权的自动副作用。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -2737,7 +2792,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 11:31:32",
+    "updated": "2026-07-19 11:50:34",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

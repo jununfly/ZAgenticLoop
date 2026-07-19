@@ -37,3 +37,10 @@
 - [x] 正常版本继续发布，其他产品功能不受影响。
 - [x] GitLab Webhook 对用户明确显示为 `disabled/unavailable`。
 - [x] 未完成本清单前，不启用 Webhook route、runtime secret 或 provider write。
+- [x] 发布能力说明和 endpoint 都采用稳定的 `webhook-unavailable` 表达，且误调用始终零 provider side effect。
+- [x] Route Table 和运行时默认保持 `enabled=false`，普通环境变量不能绕过 promotion gate。
+- [x] 只有 Human 批准的 promotion PR 才能重新开启，Secret 注入本身不能启用。
+- [x] 当前版本只实现只读 capability check/artifact，证明 `status=unavailable`、`enabled=false`、`provider_writes_allowed=false`；不实现 trigger 或 provider write。
+- [x] capability enum 固定为 `status: available|unavailable|blocked|unknown` 与 `planning_status: in_scope|deferred|completed|superseded`。
+- [x] 该 deferred gap 只阻塞 Webhook capability 和对应路线图节点，不阻塞其他产品功能发布；整体版本状态仍必须展示该 gap。
+- [x] agent 收到当前版本的 Webhook 请求时必须 hard stop：`status=unavailable`、`planning_status=deferred`、`side_effects_executed=false`，不调用 API、不自动降级。
