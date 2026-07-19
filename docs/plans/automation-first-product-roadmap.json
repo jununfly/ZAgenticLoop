@@ -2575,6 +2575,26 @@
           "q": "doctor/ledger 遇到 deferred Webhook 时如何影响退出码？",
           "answer": "默认生成完整 artifact 并成功结束，但明确记录 route deferred；仅 --require-complete 等严格模式因 route 未完成而失败。",
           "note": "正常发布不被该缺口阻塞，严格模式仍防止版本被误报为全能力完成。"
+        },
+        {
+          "q": "Webhook capability artifact 记录哪些绑定信息？",
+          "answer": "记录 provider=gitlab、project_path=mlive-dev/ai-studio、route_id=gitlab-issue-note-bridge、status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；可记录 auth_source 名称，不记录 Secret、Token 或完整 payload。",
+          "note": "证明项目与 route 绑定且不泄露凭证；部署实验不被误当 live evidence。"
+        },
+        {
+          "q": "disabled capability check 覆盖哪些验证场景？",
+          "answer": "本地覆盖正常 disabled 配置、Route 缺失或 enum 非法、普通环境变量越权开启、所有场景 provider_writes_allowed=false；使用 fixture，不访问 GitLab。",
+          "note": "证明默认不可用、配置错误 fail-closed，周末不引入 provider side effect。"
+        },
+        {
+          "q": "disabled capability artifact 如何保存？",
+          "answer": "由 doctor/CI 每次动态生成并保存为 artifact/ledger 运行证据，不提交生成快照；Route Table 和 known-gaps 作为源配置。",
+          "note": "避免状态快照过期，同时保留每次运行的可审计证据。"
+        },
+        {
+          "q": "disabled capability artifact 保留多久？",
+          "answer": "默认保留 90 天，覆盖一个完整版本周期；只保留脱敏 capability 状态，不保存 Secret、Token 或完整 payload。",
+          "note": "支持版本回顾和 known-gap 审计，避免无限累积运行数据。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -2832,7 +2852,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 16:32:27",
+    "updated": "2026-07-19 16:43:52",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

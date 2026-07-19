@@ -52,3 +52,7 @@
 - [x] bridge declared scope 仅包含 `webhook-envelope-validation`、`receipt-dedupe`、`fixed-api-trigger`；Issue Triage 与 provider write 不归 bridge。
 - [x] capability artifact 采用统一 `zj-loop.capability.v1` envelope 与 route-specific `zj-loop.gitlab_issue_note_bridge_capability.v1`。
 - [x] doctor 默认报告 deferred gap 并成功结束；仅严格 `--require-complete` 模式因该 route 未完成而失败。
+- [x] artifact 只记录 provider/project/route 和 capability 状态，可记录 auth_source 名称；禁止记录 Secret、Token 或完整 payload。
+- [x] disabled check 本地覆盖正常配置、缺失/非法 Route、越权开启和 zero-write；不访问 GitLab。
+- [x] capability artifact 由 doctor/CI 动态生成并保存为运行证据，不提交生成快照。
+- [x] capability artifact 默认保留 90 天，覆盖一个完整版本周期；只保留脱敏状态。
