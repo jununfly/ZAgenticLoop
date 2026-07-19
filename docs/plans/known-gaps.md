@@ -56,3 +56,4 @@
 - [x] disabled check 本地覆盖正常配置、缺失/非法 Route、越权开启和 zero-write；不访问 GitLab。
 - [x] capability artifact 由 doctor/CI 动态生成并保存为运行证据，不提交生成快照。
 - [x] capability artifact 默认保留 90 天，覆盖一个完整版本周期；只保留脱敏状态。
+- [x] 只读 capability artifact 归入 doctor/ledger 与 control-evidence/matrix verifier，不打开 deferred 的 `1-5-5-3-4`。

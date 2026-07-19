@@ -2284,8 +2284,21 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1-5-5",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-5-5-1"
+      ],
+      "decisions": [
+        {
+          "q": "只读 Webhook capability artifact 归入哪里？",
+          "answer": "归入现有 doctor/ledger 与 control-evidence/matrix verifier slice，作为当前版本的 route-specific unavailable capability evidence；不打开 deferred 的 1-5-5-3-4。",
+          "note": "当前版本只验证 disabled/unavailable 状态和 zero-side-effect，不把 Webhook 适配重新纳入产品路线。"
+        },
+        {
+          "q": "只读 capability artifact 修改哪些仓库？",
+          "answer": "只修改 ZAgenticLoop 的 doctor/ledger、Route Table 和 matrix verifier；不修改 ai-studio 业务代码，也不修改 ai-studio-gitlab 部署服务。",
+          "note": "当前版本只记录和验证能力状态，避免 deferred Webhook 逻辑扩散到两个 GitLab 项目。"
+        }
+      ],
       "notes": ""
     },
     "1-5-5-3-1": {
@@ -2848,11 +2861,21 @@
         }
       ],
       "notes": "Added independent node:http runtime and CLI entrypoint in tools/zj-loop-core/src/gitlab-issue-note-bridge-server.ts and gitlab-issue-note-bridge-cli.ts, plus GET /healthz for UAT-Caster probes. Runtime exposes only POST /gitlab/webhook/issue-note, chains validation→receipt/dedupe→fixed trigger, and never stores raw payload or accepts dynamic route/ref. Authorized local HTTP integration plus bridge matrix passed 17 tests with build and git diff --check. Local smoke and candidate endpoint probe were non-live only; real ai-studio live evidence still requires deployment, carrier Issue/Note IID, Project Webhook, and separately injected trigger token."
+    },
+    "1-5-5-5-1": {
+      "id": "1-5-5-5-1",
+      "label": "GitLab Webhook unavailable capability doctor ledger verifier",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5-5",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented read-only gitlab-issue-note-bridge capability artifact and disabled Route Table entry. Added zj-loop-doctor --capability gitlab-issue-note-bridge; positive artifact is unavailable+deferred, enabled=false, provider_writes_allowed=false, verified_capabilities=[], side_effects_executed=false. Negative enabled/verified-capability mutation returns blocked before any provider call. Targeted route/doctor/completion/capability tests: 30 passing; full core suite emitted 292 passing subtests before the repository's existing open-handle hang, so full command did not exit cleanly. No GitLab API or external provider call."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 16:43:52",
+    "updated": "2026-07-19 17:02:04",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

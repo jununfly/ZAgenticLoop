@@ -889,3 +889,39 @@ routes:
     dedupe_window: "pr_number"
     failure_owner: "post-merge-cleanup"
     human_gate: "only when contract is missing, invalid, ambiguous, or asks for broader cleanup"
+
+disabled_dispatch_routes:
+  - route_id: "gitlab-issue-note-bridge"
+    enabled: false
+    request_kind: "report-only"
+    consumer: "gitlab-issue-note-bridge"
+    consumer_kind: "provider-adapter"
+    project_path: "mlive-dev/ai-studio"
+    capability_status: "unavailable"
+    planning_status: "deferred"
+    provider_writes_allowed: false
+    declared_capabilities:
+      - "webhook-envelope-validation"
+      - "receipt-dedupe"
+      - "fixed-api-trigger"
+    verified_capabilities: []
+    execution:
+      mode: "report-only"
+      side_effect_level: "evidence"
+      completion_forms: ["capability-unavailable"]
+    maturity:
+      protocol: "designed"
+      runner: "missing"
+    capabilities:
+      scopes: []
+      verifiers: ["route-table", "disabled-state", "zero-side-effect"]
+      max_side_effect_level: "evidence"
+    evidence_store: "zj-loop/doctor capability ledger"
+    guards:
+      side_effects_allowed: false
+      provider_writes_allowed: false
+    provider_support:
+      gitlab:
+        status: "blocked-with-follow-up"
+        reason: "webhook-unavailable"
+        follow_up: "Complete known-gaps checklist and Human-approved promotion gate"

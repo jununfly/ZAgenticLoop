@@ -4,12 +4,13 @@ import path from 'node:path';
 import { runCli } from './cli.js';
 import { buildCompletionAlignmentLedger } from './completion-alignment.js';
 import { buildLoopDoctorReport } from './doctor-runner.js';
+import { buildGitLabIssueNoteBridgeCapabilityArtifact } from './gitlab-issue-note-bridge-capability.js';
 import { inspectGitLabScheduleHealth } from './schedule-health-contract.js';
 import { DEFAULT_ROUTE_TABLE_PATH, loadRouteTable } from './route.js';
 const exitCode = await runCli({
     name: 'zj-loop-doctor',
     description: 'Replay ZAgenticLoop run state and summarize improvement signals.',
-    usage: 'zj-loop-doctor [--root <dir>] [--completion] [--require-complete] [--run <run_id>] [--orchestration <orchestration_id>] [--provider <provider> --subject <kind:id>] [--write-index <file>] [--emit-signal] [--format json|text]',
+    usage: 'zj-loop-doctor [--root <dir>] [--completion] [--capability <route_id>] [--require-complete] [--run <run_id>] [--orchestration <orchestration_id>] [--provider <provider> --subject <kind:id>] [--write-index <file>] [--emit-signal] [--format json|text]',
     options: [
         { name: 'root', type: 'string', description: 'Project root', default: '.' },
         { name: 'run', type: 'string', description: 'Replay a single run id' },
@@ -26,6 +27,7 @@ const exitCode = await runCli({
         { name: 'apiUrl', flag: 'api-url', type: 'string', description: 'Optional provider API URL' },
         { name: 'subject', type: 'string', description: 'Filter orchestration evidence by subject key, such as issue:123' },
         { name: 'completion', type: 'boolean', description: 'Derive the Completion Alignment Ledger' },
+        { name: 'capability', type: 'string', description: 'Emit a route-specific capability artifact' },
         { name: 'requireComplete', flag: 'require-complete', type: 'boolean', description: 'Exit nonzero unless every required completion cell is complete' },
         { name: 'writeIndex', flag: 'write-index', type: 'string', description: 'Write the derived evidence index/report to a file' },
         { name: 'emitSignal', flag: 'emit-signal', type: 'boolean', description: 'Include a Route Decision signal envelope in the report' },
@@ -33,6 +35,19 @@ const exitCode = await runCli({
     ],
     async handler({ io, options }) {
         const root = String(options.root ?? '.');
+        if (typeof options.capability === 'string') {
+            const table = await loadRouteTable(root);
+            const route = [...(table.routes ?? []), ...(table.disabled_dispatch_routes ?? [])].find((entry) => entry.route_id === options.capability);
+            if (!route)
+                throw new Error(`Unknown capability route: ${options.capability}`);
+            const artifact = options.capability === 'gitlab-issue-note-bridge'
+                ? buildGitLabIssueNoteBridgeCapabilityArtifact(route)
+                : null;
+            if (!artifact)
+                throw new Error(`Unsupported capability route: ${options.capability}`);
+            io.stdout(JSON.stringify(artifact, null, 2));
+            return artifact.verification.status === 'verified' ? 0 : 1;
+        }
         if (options.scheduleHealth === true) {
             if (options.provider !== 'gitlab')
                 throw new Error('--schedule-health currently requires --provider gitlab');
