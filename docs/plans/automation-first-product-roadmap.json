@@ -2281,7 +2281,7 @@
     "1-5-5-5": {
       "id": "1-5-5-5",
       "label": "GitLab required-route matrix verifier and evidence index",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5",
       "children": [
@@ -2865,7 +2865,7 @@
     "1-5-5-5-1": {
       "id": "1-5-5-5-1",
       "label": "GitLab Webhook unavailable capability doctor ledger verifier",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-5",
       "children": [],
@@ -2875,7 +2875,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-19 17:02:04",
+    "updated": "2026-07-19 17:03:01",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
