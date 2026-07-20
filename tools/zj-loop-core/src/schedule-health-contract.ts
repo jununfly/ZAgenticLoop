@@ -29,6 +29,11 @@ export function evaluateScheduleHealth(input: any) {
     if (pipeline.ref !== 'master') bindingErrors.push('pipeline.ref');
     if (bindingErrors.length > 0) return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
   }
+  if (target.route_id === 'dependency-sweeper') {
+    const bindingErrors = validateDependencySweeperArtifacts(target, pipeline);
+    if (pipeline.ref !== 'master') bindingErrors.push('pipeline.ref');
+    if (bindingErrors.length > 0) return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
+  }
   return {
     ...base,
     status: 'healthy',
@@ -104,6 +109,37 @@ function validateDailyTriageArtifacts(target: any, pipeline: any): string[] {
   if (consumerPlan?.validation?.valid !== true) errors.push('supporting_artifact.validation.valid');
   const nestedDecision = consumerPlan?.route_decision;
   if (!nestedDecision || JSON.stringify(nestedDecision) !== JSON.stringify(routeDecision)) errors.push('supporting_artifact.route_decision');
+  return errors;
+}
+
+function validateDependencySweeperArtifacts(target: any, pipeline: any): string[] {
+  const consumerPlan = pipeline.artifact_payload;
+  const routeDecision = pipeline.supporting_artifact_payload;
+  const errors: string[] = [];
+  if (!target.supporting_artifact || !target.supporting_artifact_schema) errors.push('supporting-artifact-target');
+  if (pipeline.artifact !== target.artifact) errors.push('artifact');
+  if (pipeline.artifact_schema !== target.artifact_schema) errors.push('artifact_schema');
+  if (pipeline.supporting_artifact !== target.supporting_artifact) errors.push('supporting_artifact');
+  if (pipeline.supporting_artifact_schema !== target.supporting_artifact_schema) errors.push('supporting_artifact_schema');
+  if (!consumerPlan || typeof consumerPlan !== 'object') errors.push('artifact_payload');
+  if (!routeDecision || typeof routeDecision !== 'object') errors.push('supporting_artifact_payload');
+  if (!consumerPlan || consumerPlan.schema !== 'zj-loop.consumer_run_plan.v1') errors.push('artifact.schema');
+  if (!routeDecision || routeDecision.schema !== 'zj-loop.route_decision.v1') errors.push('supporting_artifact.schema');
+  if (consumerPlan?.route_id !== target.route_id) errors.push('artifact.route_id');
+  if (consumerPlan?.consumer !== 'dependency-sweeper') errors.push('artifact.consumer');
+  if (consumerPlan?.consumer_kind !== 'fix-runner') errors.push('artifact.consumer_kind');
+  if (consumerPlan?.execution_mode !== 'claim-only') errors.push('artifact.execution_mode');
+  if (consumerPlan?.request_kind !== 'issue-fix-request') errors.push('artifact.request_kind');
+  if (consumerPlan?.status !== 'ready') errors.push('artifact.status');
+  if (consumerPlan?.execution_allowed !== true) errors.push('artifact.execution_allowed');
+  if (consumerPlan?.validation?.valid !== true) errors.push('artifact.validation.valid');
+  if (routeDecision?.route !== target.route_id) errors.push('supporting_artifact.route');
+  if (routeDecision?.request_kind !== 'issue-fix-request') errors.push('supporting_artifact.request_kind');
+  if (routeDecision?.target_consumer !== 'dependency-sweeper') errors.push('supporting_artifact.target_consumer');
+  if (routeDecision?.source !== 'gitlab-dependency') errors.push('supporting_artifact.source');
+  if (routeDecision?.allowed !== true) errors.push('supporting_artifact.allowed');
+  const nestedDecision = consumerPlan?.route_decision;
+  if (!nestedDecision || JSON.stringify(nestedDecision) !== JSON.stringify(routeDecision)) errors.push('artifact.route_decision');
   return errors;
 }
 

@@ -3134,7 +3134,43 @@
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "scheduled Dependency Sweeper 应验证哪种生命周期？",
+          "answer": "采用 A：只验证 scheduled plan/claim evidence，不执行 repair MR 或 closeout；scheduled job 保持 dry-run/claim-only，repair MR 与 closeout 继续人工手动、独立确认。",
+          "note": "符合 dependency-sweeper 的 claim-only、repair_allowed=false 和 GitLab dry-run-supported 约束，不产生 provider side effects。"
+        },
+        {
+          "q": "scheduled Dependency Sweeper 应绑定哪些 artifact？",
+          "answer": "采用 A：主 artifact 为 consumer-plan.json，schema=zj-loop.consumer_run_plan.v1；辅助 artifact 为 route-decision.json，schema=zj-loop.route_decision.v1；两者来自同一 zj_loop_dependency_sweeper job。",
+          "note": "scheduled evidence 验证真实 route/consumer plan 与 claim-only 边界，不伪造需要 Issue Fix Request 输入的 repair-plan.json。"
+        },
+        {
+          "q": "Dependency Sweeper 的字段级通过条件是什么？",
+          "answer": "采用 A：严格校验 route-decision 与 consumer-plan 的 schema、route、consumer、consumer_kind=fix-runner、execution_mode=claim-only、request_kind、status=ready、validation.valid 和嵌套 route decision；pipeline 必须 source=schedule、ref=master，job=zj_loop_dependency_sweeper，双 artifact 来自同一 job，且无 repair MR/分支/provider 写入结果。",
+          "note": "允许受限 claim-only 计划，但 fail closed 于 repair MR、分支创建、自动合并或其他 provider side effects。"
+        },
+        {
+          "q": "Dependency Sweeper 应使用哪个 Schedule？",
+          "answer": "采用 A：复用现有 schedule 961；同一 scheduled pipeline 可运行 Issue Backlog、Daily Triage 和 Dependency Sweeper，但每条 route 仍按 job、artifact、schema、pipeline source 和 execution contract 独立验证。",
+          "note": "共享 schedule 生命周期，不共享 route 证据；不能仅凭 schedule IID 放行。"
+        },
+        {
+          "q": "Dependency Sweeper scheduled evidence 缺失或出现副作用时如何处理？",
+          "answer": "采用 A：fail closed；任一 artifact 缺失、schema/route/consumer 漂移、execution_mode 非 claim-only，或出现 repair MR、分支、provider 写入痕迹时，整体不计为 positive evidence并输出结构化 negative evidence。",
+          "note": "关键验收目标是证明 GitLab Dependency Sweeper 没有越过 claim-only 和人工确认边界。"
+        },
+        {
+          "q": "Dependency Sweeper 的 schedule-health verifier 如何触发？",
+          "answer": "采用 A：真实 scheduled pipeline 完成后，由人工创建 source=web 的 pipeline 手动运行只读 verifier；verifier 只绑定 schedule 961 的 source=schedule producer pipeline，不把自身或 repair MR/closeout job 当作 scheduled evidence。",
+          "note": "与已完成的 Issue Backlog、Daily Triage 验证方式一致，保持 producer/verifier 分离。"
+        },
+        {
+          "q": "Dependency Sweeper 节点何时可以标记完成？",
+          "answer": "采用 A：完整 scheduled claim-only evidence gate；要求 schedule 961 active、source=schedule、ref=master、job=zj_loop_dependency_sweeper、同一 job 的 consumer-plan.json 主 artifact与route-decision.json supporting artifact严格绑定、claim-only/ready字段通过、health=healthy，且无 repair MR/分支/provider写入；repair MR/closeout继续人工确认。",
+          "note": "证明真实 scheduled Dependency Sweeper claim-only lifecycle，不以 job 成功或单一 route decision 替代完整证据。"
+        }
+      ],
       "notes": ""
     },
     "1-5-5-4-4": {
@@ -3419,7 +3455,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 00:29:35",
+    "updated": "2026-07-21 00:44:10",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
