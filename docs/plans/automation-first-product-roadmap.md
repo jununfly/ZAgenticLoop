@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 15:38:10
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 15:49:35
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -50,4 +50,15 @@
 - Q: schedule 961 health-check 结果如何解释？ → 配置层通过，schedule 961 active 且 route/job/artifact/schema binding 正确；当前 status=not_due，等待下一次真实 source=schedule 执行窗口后再检查 positive artifact。 (health-check artifact 26044534 只证明配置与窗口诊断成功，不算 scheduled positive；不提前标记子节点完成。)
 - Q: schedule 961 更新后旧 scheduled pipeline 是否可复用？ → 不可复用。schedule 961 在 2026-07-20 00:53（Asia/Shanghai）更新后，必须等待更新后的下一次 source=schedule pipeline；当前 health-check 26046075 在 01:01 返回 not_due。 (pipeline 10530166 只能作为候选观察，不得作为更新后 schedule 的 positive evidence；下一窗口约为 2026-07-21 00:53，需过 grace 后重新检查。)
 - Q: schedule 961 更新后的 scheduled pipeline 是否已产生候选 positive evidence？ → 是。master scheduled pipeline 10530206 在 schedule 961 更新后产生 issue-recommendations.json，schema、project、route 正确；consumer plan 保持 report-only，transition-result 为 trusted-automation-not-enabled，零 provider write。 (该 pipeline 仍需通过 schedule-health verifier 绑定 source=schedule、schedule.updated_at、job 和 artifact schema；在 health status=healthy 前不标记节点完成。)
+- Q: schedule 961 的候选 positive evidence 应如何收敛？ → 先运行 schedule-health verifier，绑定 schedule 961、pipeline 10530206、job、source=schedule、master ref 和 issue-recommendations.json schema；只有 verifier 返回 healthy 才完成节点。 (采用 A，避免只凭候选 pipeline 绕过 schedule 更新时间和执行窗口校验。)
+- Q: schedule-health verifier 应绑定哪个 scheduled job？ → 绑定 zj_loop_issue_triage；artifact 为 issue-recommendations.json，schema 为 zj-loop.issue_recommendations.v1，route 为 issue-backlog-triage。 (采用 A，确保 verifier 检查 Issue Backlog 主 artifact producer，而不是 daily triage 或 schedule probe。)
+- Q: scheduled pipeline 的有效时间窗口如何计算？ → 从 schedule 961 的 updated_at 按 cron 和时区推导下一次窗口，再加固定 grace；只有窗口后的 source=schedule pipeline 才算当前 evidence。 (采用 A，避免误收 schedule 更新前的旧 pipeline。)
+- Q: schedule-health 的固定 grace 时长是多少？ → 固定为 10 分钟；窗口由 schedule.updated_at、cron 和时区推导，pipeline 必须晚于窗口起点、schedule.updated_at，并在 grace 后检查。 (沿用现有 schedule-health-contract.ts 与测试契约，不引入 route-specific 覆盖。)
+- Q: scheduled Issue Backlog job 是否允许 provider 写入？ → 保持 report-only、零 provider write：只生成 issue-recommendations.json、route decision 和 consumer plan；不写 Issue、评论、label、assignment、Issue Fix Request 或 MR。 (采用 A，限定本节点为观察性 scheduled report evidence，不扩大为 trusted automation。)
+- Q: scheduled positive evidence 应保留哪些 artifact？ → 完整保留 schedule-health-result.json、route-decision.json、consumer-plan.json、issue-recommendations.json，以及对应 pipeline/job 元数据和下载链接。 (采用 A，确保后续可以复核 report 内容、route binding 和 artifact schema。)
+- Q: verifier 是否必须校验 artifact 内部 binding？ → 必须校验 artifact 内部 binding：project=mlive-dev/ai-studio、route=issue-backlog-triage、pipeline/job 与目标一致、source=schedule、report 状态为允许的 report-only 状态，且不包含 provider write 结果。 (采用 A，避免误收其他 route 的同 schema artifact。)
+- Q: artifact 缺少 report-only 证据或出现任一副作用标记时如何处理？ → fail-closed，不计为 positive evidence；必须存在并满足 provider=gitlab、project_path=mlive-dev/ai-studio、route=issue-backlog-triage、source=gitlab-issues-api，以及 side_effects.labels/comments/state/requests 全部为 false；缺失、非 false 或不匹配均返回结构化失败。 (采用 A，避免接受不完整或带副作用的 artifact。)
+- Q: schedule-health verifier 的失败结果应如何分类？ → 保持结构化分类：窗口未到时为 not_due；窗口后无 source=schedule pipeline 为 execution_missing；job/artifact 不存在为 artifact_missing；schema 或内部 binding 不匹配为 artifact_schema_invalid；均保留 negative evidence，不伪装为 healthy。 (采用 A，区分时间窗口未到、执行缺失和证据无效。)
+- Q: 1-5-5-4-1 何时可以标记完成？ → 通过完整 scheduled evidence gate：schedule 961 active 且 fingerprint 正确；schedule-health 返回 healthy；pipeline source=schedule 且晚于 updated_at 推导窗口和 10 分钟 grace；job=zj_loop_issue_triage；artifact=issue-recommendations.json；schema、project、route、source 和 side_effects 全部匹配；完整 artifacts 与 pipeline/job 链接保存；没有任何 provider write。 (采用 A，避免把 not_due 或单个 pipeline URL 误认为完整 scheduled positive evidence。)
+- Q: 当前 1-5-5-4-1 设计是否收敛，可以进入 verifier 实现和真实 schedule 验证？ → 是：按完整 scheduled evidence gate 实现/验证，不降低 report-only 和零 provider write 约束。 (采用 A，进入 verifier 实现阶段。)
 <!-- ROADMAP_SECTION_END -->

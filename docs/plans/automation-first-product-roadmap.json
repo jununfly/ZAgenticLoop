@@ -2982,6 +2982,61 @@
           "q": "schedule 961 更新后的 scheduled pipeline 是否已产生候选 positive evidence？",
           "answer": "是。master scheduled pipeline 10530206 在 schedule 961 更新后产生 issue-recommendations.json，schema、project、route 正确；consumer plan 保持 report-only，transition-result 为 trusted-automation-not-enabled，零 provider write。",
           "note": "该 pipeline 仍需通过 schedule-health verifier 绑定 source=schedule、schedule.updated_at、job 和 artifact schema；在 health status=healthy 前不标记节点完成。"
+        },
+        {
+          "q": "schedule 961 的候选 positive evidence 应如何收敛？",
+          "answer": "先运行 schedule-health verifier，绑定 schedule 961、pipeline 10530206、job、source=schedule、master ref 和 issue-recommendations.json schema；只有 verifier 返回 healthy 才完成节点。",
+          "note": "采用 A，避免只凭候选 pipeline 绕过 schedule 更新时间和执行窗口校验。"
+        },
+        {
+          "q": "schedule-health verifier 应绑定哪个 scheduled job？",
+          "answer": "绑定 zj_loop_issue_triage；artifact 为 issue-recommendations.json，schema 为 zj-loop.issue_recommendations.v1，route 为 issue-backlog-triage。",
+          "note": "采用 A，确保 verifier 检查 Issue Backlog 主 artifact producer，而不是 daily triage 或 schedule probe。"
+        },
+        {
+          "q": "scheduled pipeline 的有效时间窗口如何计算？",
+          "answer": "从 schedule 961 的 updated_at 按 cron 和时区推导下一次窗口，再加固定 grace；只有窗口后的 source=schedule pipeline 才算当前 evidence。",
+          "note": "采用 A，避免误收 schedule 更新前的旧 pipeline。"
+        },
+        {
+          "q": "schedule-health 的固定 grace 时长是多少？",
+          "answer": "固定为 10 分钟；窗口由 schedule.updated_at、cron 和时区推导，pipeline 必须晚于窗口起点、schedule.updated_at，并在 grace 后检查。",
+          "note": "沿用现有 schedule-health-contract.ts 与测试契约，不引入 route-specific 覆盖。"
+        },
+        {
+          "q": "scheduled Issue Backlog job 是否允许 provider 写入？",
+          "answer": "保持 report-only、零 provider write：只生成 issue-recommendations.json、route decision 和 consumer plan；不写 Issue、评论、label、assignment、Issue Fix Request 或 MR。",
+          "note": "采用 A，限定本节点为观察性 scheduled report evidence，不扩大为 trusted automation。"
+        },
+        {
+          "q": "scheduled positive evidence 应保留哪些 artifact？",
+          "answer": "完整保留 schedule-health-result.json、route-decision.json、consumer-plan.json、issue-recommendations.json，以及对应 pipeline/job 元数据和下载链接。",
+          "note": "采用 A，确保后续可以复核 report 内容、route binding 和 artifact schema。"
+        },
+        {
+          "q": "verifier 是否必须校验 artifact 内部 binding？",
+          "answer": "必须校验 artifact 内部 binding：project=mlive-dev/ai-studio、route=issue-backlog-triage、pipeline/job 与目标一致、source=schedule、report 状态为允许的 report-only 状态，且不包含 provider write 结果。",
+          "note": "采用 A，避免误收其他 route 的同 schema artifact。"
+        },
+        {
+          "q": "artifact 缺少 report-only 证据或出现任一副作用标记时如何处理？",
+          "answer": "fail-closed，不计为 positive evidence；必须存在并满足 provider=gitlab、project_path=mlive-dev/ai-studio、route=issue-backlog-triage、source=gitlab-issues-api，以及 side_effects.labels/comments/state/requests 全部为 false；缺失、非 false 或不匹配均返回结构化失败。",
+          "note": "采用 A，避免接受不完整或带副作用的 artifact。"
+        },
+        {
+          "q": "schedule-health verifier 的失败结果应如何分类？",
+          "answer": "保持结构化分类：窗口未到时为 not_due；窗口后无 source=schedule pipeline 为 execution_missing；job/artifact 不存在为 artifact_missing；schema 或内部 binding 不匹配为 artifact_schema_invalid；均保留 negative evidence，不伪装为 healthy。",
+          "note": "采用 A，区分时间窗口未到、执行缺失和证据无效。"
+        },
+        {
+          "q": "1-5-5-4-1 何时可以标记完成？",
+          "answer": "通过完整 scheduled evidence gate：schedule 961 active 且 fingerprint 正确；schedule-health 返回 healthy；pipeline source=schedule 且晚于 updated_at 推导窗口和 10 分钟 grace；job=zj_loop_issue_triage；artifact=issue-recommendations.json；schema、project、route、source 和 side_effects 全部匹配；完整 artifacts 与 pipeline/job 链接保存；没有任何 provider write。",
+          "note": "采用 A，避免把 not_due 或单个 pipeline URL 误认为完整 scheduled positive evidence。"
+        },
+        {
+          "q": "当前 1-5-5-4-1 设计是否收敛，可以进入 verifier 实现和真实 schedule 验证？",
+          "answer": "是：按完整 scheduled evidence gate 实现/验证，不降低 report-only 和零 provider write 约束。",
+          "note": "采用 A，进入 verifier 实现阶段。"
         }
       ],
       "notes": ""
@@ -3288,7 +3343,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 15:38:10",
+    "updated": "2026-07-20 15:49:35",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
