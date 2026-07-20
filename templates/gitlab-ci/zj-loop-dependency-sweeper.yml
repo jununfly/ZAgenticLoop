@@ -6,7 +6,13 @@
 zj_loop_dependency_sweeper:
   stage: __ZJ_LOOP_GITLAB_STAGE__
 __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
-  when: manual
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "api"'
+      when: manual
+    - when: never
   variables:
     ZJ_LOOP_SIGNAL_ID: ""
   script:
