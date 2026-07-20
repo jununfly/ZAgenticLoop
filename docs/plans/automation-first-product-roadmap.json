@@ -2118,7 +2118,7 @@
     "1-5-4-6-6": {
       "id": "1-5-4-6-6",
       "label": "ai-studio GitLab Changelog draft-MR live dogfood and provider write evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
@@ -2159,7 +2159,7 @@
           "note": "采用 A，进入 live dogfood 执行阶段，不降低既定 gate。"
         }
       ],
-      "notes": ""
+      "notes": "Live provider-write evidence completed on ai-studio master commit 017c516d with pipeline draft-MR job. Fresh request cdr_gitlab_live_20260720_02 created carrier Issue IID 962, claim claim-changelog-962-3b1d0298, and Draft MR !546 from automated/changelog-drafter-gitlab-cdr-gitlab-live-20260720-02 to master. gitlab-changelog-draft-mr-result.json returned outcome=created, draft=true, side_effects_executed=true. Provider diff against master is limited to zj-loop/dogfood/changelog-draft.md; no merge, release, closeout, or publish was performed. Previous HTTP 400 was fixed by detecting existing file and using GitLab update action."
     },
     "1-5-5-1": {
       "id": "1-5-5-1",
@@ -3288,7 +3288,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 12:49:50",
+    "updated": "2026-07-20 15:38:10",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
