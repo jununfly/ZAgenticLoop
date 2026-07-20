@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 12:49:50
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 15:49:35
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,14 +40,25 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-4-6-6. ai-studio GitLab Changelog draft-MR live dogfood and provider write evidence
+### 当前施工：1-5-5-4-1. GitLab scheduled Issue Backlog report evidence
 
 **决策：**
-- Q: 本次 live dogfood 使用哪种 fixture？ → 创建全新的独立 fixture：新建 request、carrier Issue、claim、automated/changelog-drafter-gitlab-* 分支、单文件 draft commit 和 draft MR；不合并、不执行 closeout、不发布。 (采用 A，避免复用历史 evidence，并完整验证新的 request 到 provider 写入链路。)
-- Q: 新的 draft MR 允许修改哪个文件？ → 只修改 zj-loop/dogfood/changelog-draft.md，保持单文件、可审计，并与业务代码和真实发布文件隔离。 (采用 A，避免 live dogfood 污染业务文件或真实发布内容。)
-- Q: draft MR 的分支与状态如何固定？ → source 使用唯一命名规则 automated/changelog-drafter-gitlab-<request-id>-<短标识>，target 固定为 master，只允许推送单文件 commit，MR 必须保持 Draft，不得自动合并。 (采用 A，确保 provider binding 稳定并避免误合并。)
-- Q: live dogfood 完成后如何处理 fixture？ → 保留 carrier Issue、claim Note、branch、commit、Draft MR 和 artifacts，不合并、不关闭、不删除；必要清理另行执行并单独记录。 (采用 A，保证 provider-write 事实可复核，清理不与 positive evidence 混淆。)
-- Q: carrier 与 draft MR 的授权如何分层？ → 使用两组独立固定确认短语：carrier 创建使用一组确认短语，claim/draft-MR 写入使用另一组确认短语；每一步单独校验，禁止跨阶段复用。 (采用 A，限制每一步的授权范围并避免 carrier 确认扩大为 branch/commit/MR 写入授权。)
-- Q: 本节点何时算完成？ → 通过完整 live provider-write gate：新 request、carrier Issue、claim Note、branch、single-file commit、Draft MR 均真实创建；source 命名和 target=master 正确；MR 保持 Draft；artifacts 完成 project/request/claim/branch/commit/MR binding；且未发生 merge、release、closeout 或其他非授权副作用。 (采用 A，不能把单个 MR URL 或 pipeline 成功误认为完整 live evidence。)
-- Q: 当前设计是否已经收敛，可以开始执行 live dogfood？ → 是：按既定 completion gate 执行；每个副作用阶段单独确认，执行后核对 provider 与 artifacts。 (采用 A，进入 live dogfood 执行阶段，不降低既定 gate。)
+- Q: Issue Backlog scheduled evidence 首先使用哪个 schedule？ → 先只读检查并复用既有 GitLab schedule 957；只有 project、route、cron、ref、job、artifact path/schema fingerprint 全部匹配时才等待/验证真实 source=schedule pipeline。 (health check 不修改 schedule、不自动 play/enable、不使用 Web/API/manual pipeline 冒充 scheduled evidence；fingerprint 不匹配时输出 hard stop。)
+- Q: schedule-health 只读检查在哪里执行？ → 在 mlive-dev/ai-studio 通过 GitLab 手动诊断 job 调用 zj-loop-doctor --provider gitlab --schedule-health；该 job 只读检查配置与执行窗口，不计为 source=schedule positive evidence。 (GITLAB_TOKEN 仅由 CI Secret 注入；doctor 不启用、play、修改或恢复 schedule；真实 positive 必须来自 schedule 957 自身。)
+- Q: schedule-health configuration_missing 应如何处理？ → 先核验 mlive-dev/ai-studio 中 schedule 957 的实际存在性、active 状态和可读权限；若不存在或 ID 已变化，使用当前有效 schedule IID 重跑。 (configuration_missing/gitlab-api-unavailable 只表示 provider 查询层未完成，不计入 scheduled positive 或 negative evidence；不以 manual/API pipeline 替代 source=schedule。)
+- Q: 只有 schedule 961 时如何继续？ → 先核验 schedule 961 的 route/job/ref/artifact/schema fingerprint；全部匹配 issue-backlog-triage 后才将 health-check schedule ID 从 957 替换为 961。 (schedule 961 若仍是 schedule-probe，只能保留为 probe evidence，不能用于 Issue Backlog scheduled completion；不匹配时不运行伪 positive。)
+- Q: schedule 961 health-check 结果如何解释？ → 配置层通过，schedule 961 active 且 route/job/artifact/schema binding 正确；当前 status=not_due，等待下一次真实 source=schedule 执行窗口后再检查 positive artifact。 (health-check artifact 26044534 只证明配置与窗口诊断成功，不算 scheduled positive；不提前标记子节点完成。)
+- Q: schedule 961 更新后旧 scheduled pipeline 是否可复用？ → 不可复用。schedule 961 在 2026-07-20 00:53（Asia/Shanghai）更新后，必须等待更新后的下一次 source=schedule pipeline；当前 health-check 26046075 在 01:01 返回 not_due。 (pipeline 10530166 只能作为候选观察，不得作为更新后 schedule 的 positive evidence；下一窗口约为 2026-07-21 00:53，需过 grace 后重新检查。)
+- Q: schedule 961 更新后的 scheduled pipeline 是否已产生候选 positive evidence？ → 是。master scheduled pipeline 10530206 在 schedule 961 更新后产生 issue-recommendations.json，schema、project、route 正确；consumer plan 保持 report-only，transition-result 为 trusted-automation-not-enabled，零 provider write。 (该 pipeline 仍需通过 schedule-health verifier 绑定 source=schedule、schedule.updated_at、job 和 artifact schema；在 health status=healthy 前不标记节点完成。)
+- Q: schedule 961 的候选 positive evidence 应如何收敛？ → 先运行 schedule-health verifier，绑定 schedule 961、pipeline 10530206、job、source=schedule、master ref 和 issue-recommendations.json schema；只有 verifier 返回 healthy 才完成节点。 (采用 A，避免只凭候选 pipeline 绕过 schedule 更新时间和执行窗口校验。)
+- Q: schedule-health verifier 应绑定哪个 scheduled job？ → 绑定 zj_loop_issue_triage；artifact 为 issue-recommendations.json，schema 为 zj-loop.issue_recommendations.v1，route 为 issue-backlog-triage。 (采用 A，确保 verifier 检查 Issue Backlog 主 artifact producer，而不是 daily triage 或 schedule probe。)
+- Q: scheduled pipeline 的有效时间窗口如何计算？ → 从 schedule 961 的 updated_at 按 cron 和时区推导下一次窗口，再加固定 grace；只有窗口后的 source=schedule pipeline 才算当前 evidence。 (采用 A，避免误收 schedule 更新前的旧 pipeline。)
+- Q: schedule-health 的固定 grace 时长是多少？ → 固定为 10 分钟；窗口由 schedule.updated_at、cron 和时区推导，pipeline 必须晚于窗口起点、schedule.updated_at，并在 grace 后检查。 (沿用现有 schedule-health-contract.ts 与测试契约，不引入 route-specific 覆盖。)
+- Q: scheduled Issue Backlog job 是否允许 provider 写入？ → 保持 report-only、零 provider write：只生成 issue-recommendations.json、route decision 和 consumer plan；不写 Issue、评论、label、assignment、Issue Fix Request 或 MR。 (采用 A，限定本节点为观察性 scheduled report evidence，不扩大为 trusted automation。)
+- Q: scheduled positive evidence 应保留哪些 artifact？ → 完整保留 schedule-health-result.json、route-decision.json、consumer-plan.json、issue-recommendations.json，以及对应 pipeline/job 元数据和下载链接。 (采用 A，确保后续可以复核 report 内容、route binding 和 artifact schema。)
+- Q: verifier 是否必须校验 artifact 内部 binding？ → 必须校验 artifact 内部 binding：project=mlive-dev/ai-studio、route=issue-backlog-triage、pipeline/job 与目标一致、source=schedule、report 状态为允许的 report-only 状态，且不包含 provider write 结果。 (采用 A，避免误收其他 route 的同 schema artifact。)
+- Q: artifact 缺少 report-only 证据或出现任一副作用标记时如何处理？ → fail-closed，不计为 positive evidence；必须存在并满足 provider=gitlab、project_path=mlive-dev/ai-studio、route=issue-backlog-triage、source=gitlab-issues-api，以及 side_effects.labels/comments/state/requests 全部为 false；缺失、非 false 或不匹配均返回结构化失败。 (采用 A，避免接受不完整或带副作用的 artifact。)
+- Q: schedule-health verifier 的失败结果应如何分类？ → 保持结构化分类：窗口未到时为 not_due；窗口后无 source=schedule pipeline 为 execution_missing；job/artifact 不存在为 artifact_missing；schema 或内部 binding 不匹配为 artifact_schema_invalid；均保留 negative evidence，不伪装为 healthy。 (采用 A，区分时间窗口未到、执行缺失和证据无效。)
+- Q: 1-5-5-4-1 何时可以标记完成？ → 通过完整 scheduled evidence gate：schedule 961 active 且 fingerprint 正确；schedule-health 返回 healthy；pipeline source=schedule 且晚于 updated_at 推导窗口和 10 分钟 grace；job=zj_loop_issue_triage；artifact=issue-recommendations.json；schema、project、route、source 和 side_effects 全部匹配；完整 artifacts 与 pipeline/job 链接保存；没有任何 provider write。 (采用 A，避免把 not_due 或单个 pipeline URL 误认为完整 scheduled positive evidence。)
+- Q: 当前 1-5-5-4-1 设计是否收敛，可以进入 verifier 实现和真实 schedule 验证？ → 是：按完整 scheduled evidence gate 实现/验证，不降低 report-only 和零 provider write 约束。 (采用 A，进入 verifier 实现阶段。)
 <!-- ROADMAP_SECTION_END -->

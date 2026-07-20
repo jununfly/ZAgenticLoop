@@ -18,6 +18,13 @@ export function evaluateScheduleHealth(input) {
         return result(base, 'artifact_missing', 'scheduled-artifact-missing');
     if (pipeline.artifact_schema !== target.artifact_schema)
         return result(base, 'artifact_schema_invalid', 'scheduled-artifact-schema-invalid');
+    if (target.route_id === 'issue-backlog-triage') {
+        const bindingErrors = validateIssueBacklogArtifact(target, pipeline);
+        if (pipeline.ref !== 'master')
+            bindingErrors.push('pipeline.ref');
+        if (bindingErrors.length > 0)
+            return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
+    }
     return {
         ...base,
         status: 'healthy',
@@ -29,6 +36,26 @@ export function evaluateScheduleHealth(input) {
         pipeline: { created_at: pipeline.created_at, source: pipeline.source },
         next_steps: [],
     };
+}
+function validateIssueBacklogArtifact(target, pipeline) {
+    const artifact = pipeline.artifact_payload;
+    const errors = [];
+    if (!artifact || typeof artifact !== 'object')
+        return ['artifact_payload'];
+    if (artifact.provider !== target.provider)
+        errors.push('artifact.provider');
+    if (artifact.project_path !== target.project)
+        errors.push('artifact.project_path');
+    if (artifact.route !== target.route_id)
+        errors.push('artifact.route');
+    if (artifact.source !== 'gitlab-issues-api')
+        errors.push('artifact.source');
+    const sideEffects = artifact.side_effects;
+    for (const key of ['labels', 'comments', 'state', 'requests']) {
+        if (!sideEffects || sideEffects[key] !== false)
+            errors.push(`artifact.side_effects.${key}`);
+    }
+    return errors;
 }
 function deriveExpectedWindow(schedule, now, expectedWithinMinutes) {
     if (!schedule)
@@ -97,7 +124,7 @@ export async function inspectGitLabScheduleHealth(input) {
     if (!artifactResponse.ok)
         return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: null }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
     const artifact = await artifactResponse.json();
-    return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
+    return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
 }
 function resolveGitLabCredentials(input) {
     if (typeof input.token === 'string' && input.token.length > 0) {

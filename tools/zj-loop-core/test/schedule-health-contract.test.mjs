@@ -4,6 +4,7 @@ import test from 'node:test';
 import { evaluateScheduleHealth, inspectGitLabScheduleHealth } from '../dist/schedule-health-contract.js';
 
 const target = { provider: 'gitlab', project: 'group/project', route_id: 'issue-backlog-triage', schedule_id: '957', job: 'zj_loop_issue_triage', artifact: 'issue-recommendations.json', artifact_schema: 'zj-loop.issue_recommendations.v1' };
+const reportArtifact = { schema: 'zj-loop.issue_recommendations.v1', provider: 'gitlab', project_path: 'group/project', route: 'issue-backlog-triage', source: 'gitlab-issues-api', side_effects: { labels: false, comments: false, state: false, requests: false } };
 
 test('schedule health is not_due before the expected window', () => {
   const result = evaluateScheduleHealth({ target, now: '2026-07-15T00:05:00Z', schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' } });
@@ -80,10 +81,12 @@ test('schedule health remains healthy between cron windows when current schedule
     },
     pipeline: {
       source: 'schedule',
+      ref: 'master',
       created_at: '2026-07-16T01:03:00Z',
       job: 'zj_loop_issue_triage',
       artifact: 'issue-recommendations.json',
       artifact_schema: 'zj-loop.issue_recommendations.v1',
+      artifact_payload: reportArtifact,
     },
   });
 
@@ -151,9 +154,15 @@ test('schedule health escalates when the expected window passes without a curren
   ]);
 });
 
-test('schedule health accepts only a current scheduled pipeline with the expected artifact schema', () => {
-  const result = evaluateScheduleHealth({ target, now: '2026-07-15T02:00:00Z', schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' }, pipeline: { source: 'schedule', created_at: '2026-07-15T01:01:00Z', job: 'zj_loop_issue_triage', artifact: 'issue-recommendations.json', artifact_schema: 'zj-loop.issue_recommendations.v1' } });
+test('schedule health accepts only a current scheduled pipeline with bound report-only artifact', () => {
+  const result = evaluateScheduleHealth({ target, now: '2026-07-15T02:00:00Z', schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' }, pipeline: { source: 'schedule', ref: 'master', created_at: '2026-07-15T01:01:00Z', job: 'zj_loop_issue_triage', artifact: 'issue-recommendations.json', artifact_schema: 'zj-loop.issue_recommendations.v1', artifact_payload: reportArtifact } });
   assert.equal(result.status, 'healthy');
+});
+
+test('schedule health rejects a report artifact with provider side effects', () => {
+  const result = evaluateScheduleHealth({ target, now: '2026-07-15T02:00:00Z', schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' }, pipeline: { source: 'schedule', ref: 'master', created_at: '2026-07-15T01:01:00Z', job: 'zj_loop_issue_triage', artifact: 'issue-recommendations.json', artifact_schema: 'zj-loop.issue_recommendations.v1', artifact_payload: { ...reportArtifact, side_effects: { ...reportArtifact.side_effects, comments: true } } } });
+  assert.equal(result.status, 'artifact_schema_invalid');
+  assert.deepEqual(result.artifact_errors, ['artifact.side_effects.comments']);
 });
 
 test('GitLab adapter reads schedule and latest scheduled pipeline without mutations', async () => {
@@ -187,7 +196,7 @@ test('GitLab adapter records the selected injected credential source without exp
 test('GitLab adapter validates the explicit job artifact schema', async () => {
   const result = await inspectGitLabScheduleHealth({ target, apiUrl: 'https://gitlab.example/api/v4', token: 'token', now: '2026-07-15T02:00:00Z', fetchImpl: async (url) => {
     const text = String(url);
-    const body = text.includes('pipeline_schedules/957') ? { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' } : text.includes('/pipelines?') ? [{ id: 42, source: 'schedule', created_at: '2026-07-15T01:01:00Z' }] : text.includes('/pipelines/42/jobs') ? [{ id: 7, name: 'zj_loop_issue_triage' }] : { schema: 'zj-loop.issue_recommendations.v1' };
+    const body = text.includes('pipeline_schedules/957') ? { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' } : text.includes('/pipelines?') ? [{ id: 42, source: 'schedule', ref: 'master', created_at: '2026-07-15T01:01:00Z' }] : text.includes('/pipelines/42/jobs') ? [{ id: 7, name: 'zj_loop_issue_triage' }] : reportArtifact;
     return { ok: true, async json() { return body; } };
   } });
   assert.equal(result.status, 'healthy');
