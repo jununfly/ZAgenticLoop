@@ -3169,6 +3169,11 @@
           "q": "Dependency Sweeper 节点何时可以标记完成？",
           "answer": "采用 A：完整 scheduled claim-only evidence gate；要求 schedule 961 active、source=schedule、ref=master、job=zj_loop_dependency_sweeper、同一 job 的 consumer-plan.json 主 artifact与route-decision.json supporting artifact严格绑定、claim-only/ready字段通过、health=healthy，且无 repair MR/分支/provider写入；repair MR/closeout继续人工确认。",
           "note": "证明真实 scheduled Dependency Sweeper claim-only lifecycle，不以 job 成功或单一 route decision 替代完整证据。"
+        },
+        {
+          "q": "是否启用并对齐 GitLab Dependency Sweeper Route？",
+          "answer": "采用 A：启用 dependency-sweeper 并对齐为 claim-only；保留 repair_allowed=false、auto_merge=false、GitLab dry-run-supported，scheduled job 只生成 route/consumer plan，不创建 repair MR、分支或 provider side effects。",
+          "note": "修复 route disabled 导致 scheduled producer 无法生成 consumer-plan 的问题，同时不开放 repair lifecycle。"
         }
       ],
       "notes": ""
@@ -3455,7 +3460,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 00:44:10",
+    "updated": "2026-07-21 01:28:42",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
