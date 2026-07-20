@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { buildChangelogDrafterExecutionPlan, executeChangelogDrafterLiveRunner, readChangelogDraftRequest, } from './changelog-drafter-runner.js';
 import { runCli } from './cli.js';
 import { runRouteConsumerCli } from './route-consumer-cli.js';
-import { createGitLabChangelogDraftCarrier, claimGitLabChangelogDraftCarrier, createGitLabChangelogDraftMr } from './gitlab-changelog-drafter-adapter.js';
+import { createGitLabChangelogDraftCarrier, claimGitLabChangelogDraftCarrier, createGitLabChangelogDraftMr, GITLAB_CHANGELOG_DRAFT_MR_CONFIRMATION } from './gitlab-changelog-drafter-adapter.js';
 import { closeGitLabChangelogDraft } from './gitlab-changelog-drafter-closeout.js';
 const argv = process.argv.slice(2);
 if (argv[0] === 'gitlab-closeout') {
@@ -114,8 +114,8 @@ else if (argv[0] === 'gitlab-draft-mr') {
                     throw new Error(`--${name} is required`);
             const request = await readChangelogDraftRequest(String(options.request));
             const confirm = String(options.confirm);
-            const result = confirm !== 'CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE'
-                ? { schema: 'zj-loop.gitlab_changelog_draft_mr.v1', status: 'blocked', reason: 'confirmation-required', side_effects_executed: false }
+            const result = confirm !== GITLAB_CHANGELOG_DRAFT_MR_CONFIRMATION
+                ? { schema: 'zj-loop.gitlab_changelog_draft_mr.v1', status: 'blocked', reason: 'confirmation-required', required_phrase: GITLAB_CHANGELOG_DRAFT_MR_CONFIRMATION, side_effects_executed: false }
                 : await createGitLabChangelogDraftMr({ projectPath: String(options.project), token: process.env.GITLAB_TOKEN, request, issueIid: String(options['issue-iid']), claimId: String(options['claim-id']), branch: String(options.branch), targetBranch: String(request.release_window.base_branch), draftFile: String(options['draft-file']), actions: [{ action: 'create', file_path: String(options['draft-file']), content: buildArtifactDraft(request), encoding: 'text' }], commitMessage: `Draft changelog ${request.release_window.until_ref}`, title: `Draft changelog ${request.release_window.since_ref}...${request.release_window.until_ref}`, description: `Post-merge contract for ${request.request_id}`, apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined });
             const text = `${JSON.stringify(result, null, 2)}\n`;
             if (typeof options.out === 'string')

@@ -4,7 +4,8 @@ import { buildGitLabLifecycleMarker, parseGitLabLifecycleMarker } from './gitlab
 export const CHANGELOG_CARRIER_SCHEMA = 'zj-loop.changelog_draft_request.v1';
 export const CHANGELOG_CLAIM_CONSUMER = 'changelog-drafter';
 export const CHANGELOG_DRAFT_BRANCH_PATTERN = /^automated\/changelog-drafter-gitlab-[a-z0-9-]+$/;
-const CONFIRMATION = 'CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE';
+export const GITLAB_CHANGELOG_CARRIER_CONFIRMATION = 'CREATE_CHANGELOG_DRAFT_CARRIER';
+export const GITLAB_CHANGELOG_DRAFT_MR_CONFIRMATION = 'CREATE_CHANGELOG_DRAFT_MR';
 
 export function validateGitLabChangelogDraftActions(actions: any[], expectedFile: string) {
   const errors: string[] = [];
@@ -21,7 +22,7 @@ export function validateGitLabChangelogDraftActions(actions: any[], expectedFile
 export async function createGitLabChangelogDraftCarrier(input: { projectPath: string; request: any; confirmationPhrase?: string; token?: string; apiBaseUrl?: string; fetchImpl?: typeof fetch }) {
   const audit = { project_path: input.projectPath, request_id: input.request?.request_id ?? null, auth_source: input.token ? 'GITLAB_TOKEN' : null };
   const blocked = (reason: string, extra: any = {}) => ({ schema: 'zj-loop.gitlab_changelog_draft_carrier.v1', status: 'blocked', reason, audit, issue: null, side_effects_executed: false, ...extra });
-  if (input.confirmationPhrase !== CONFIRMATION) return blocked('confirmation-required', { required_phrase: CONFIRMATION });
+  if (input.confirmationPhrase !== GITLAB_CHANGELOG_CARRIER_CONFIRMATION) return blocked('confirmation-required', { required_phrase: GITLAB_CHANGELOG_CARRIER_CONFIRMATION });
   if (!input.token) return blocked('gitlab-token-required');
   const validation = validateDraftRequest(input.request, input.projectPath);
   if (!validation.ok) return blocked('request-source-mismatch', { errors: validation.errors });

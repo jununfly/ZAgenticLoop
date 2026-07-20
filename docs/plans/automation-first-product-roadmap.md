@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 10:45:24
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 12:49:50
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,16 +40,14 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-5-3-3-5. ai-studio GitLab Issue Note bridge live dogfood fixture
-
-Added independent node:http runtime and CLI entrypoint in tools/zj-loop-core/src/gitlab-issue-note-bridge-server.ts and gitlab-issue-note-bridge-cli.ts, plus GET /healthz for UAT-Caster probes. Runtime exposes only POST /gitlab/webhook/issue-note, chains validation→receipt/dedupe→fixed trigger, and never stores raw payload or accepts dynamic route/ref. Authorized local HTTP integration plus bridge matrix passed 17 tests with build and git diff --check. Local smoke and candidate endpoint probe were non-live only; real ai-studio live evidence still requires deployment, carrier Issue/Note IID, Project Webhook, and separately injected trigger token.
+### 当前施工：1-5-4-6-6. ai-studio GitLab Changelog draft-MR live dogfood and provider write evidence
 
 **决策：**
-- Q: ai-studio live dogfood fixture 的边界是什么？ → 在 mlive-dev/ai-studio 创建独立 carrier Issue，不复用历史 Issue/MR；只添加一条固定 marker Note /zj-loop start roadmap-sliced-development；绑定项目、target route=roadmap-sliced-development、pipeline ref=master；只验证 webhook envelope→receipt/dedupe→API pipeline trigger；不创建/修改 Branch、MR、业务文件、Issue label/state；真实 provider write 仅限创建 pipeline，其余由 artifact 记录。 (最小 fixture 防止把历史 MR 或业务副作用误认为 bridge evidence。)
-- Q: carrier Issue 与 marker Note 如何产生？ → 由 Human 通过 GitLab Web UI 手动创建独立 carrier Issue 并添加唯一 marker Note；记录真实 issue_iid、note_id、Note URL；bridge 只消费 GitLab webhook 原始事件，event_id 必须来自 webhook header；bridge trigger token 只用于创建 pipeline，不用于创建 Issue/Note。 (positive evidence 必须是真实 Issue Note→webhook→bridge→pipeline 链路。)
-- Q: GitLab Project Webhook 如何配置？ → 使用 bridge 固定 HTTPS endpoint；Secret Token 为独立 ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN；只启用 Issues events，不启用 Push/Merge request/Tag/Job/Pipeline 等其他事件；bridge 校验 X-Gitlab-Event=Issue Hook、X-Gitlab-Event-UUID、project path 与 secret；配置变更只记录脱敏 audit，不算 positive evidence。 (Webhook predicate 与 Route Table predicate 双重收敛事件范围。)
-- Q: 被触发的 API pipeline 必须证明什么？ → 使用固定 master ref 的专用 job zj_loop_gitlab_issue_note_bridge_receipt；只校验 CI_PIPELINE_SOURCE=api、7 个 bridge 变量与 Issue/Note/envelope binding，运行 route decision/consumer plan，生成统一 envelope/receipt/dedupe/trigger evidence artifact；不写 Issue/Note/Branch/MR，不执行业务修复或 promotion。只有 job 成功且 artifact binding 完整才算 positive evidence。 (API pipeline 是受限执行载体，不是 bridge 或业务 side-effect 层。)
-- Q: 真实 dogfood 的验证顺序是什么？ → 先运行错误 secret、非 Issue Hook、项目不匹配、非匹配 Note 等 zero-write negative cases；再发送合法 marker Note 验证唯一 positive pipeline；重放同一 webhook 验证 duplicate 且不创建第二个 pipeline；查询并下载 pipeline artifact 核对 event/Issue/Note/ref/route 全绑定；最后验证 recovery/uncertain fixture，禁止盲目重触发。 (先证明 hard stop，再执行唯一真实 provider trigger。)
-- Q: dogfood fixture 完成后的清理边界是什么？ → 保留 carrier Issue、marker Note、pipeline 与 artifacts 作为审计证据；不关闭 Issue、不删除 Note、不删除 pipeline；完成后禁用 Project Webhook，trigger token 由 Human 轮换/删除；清理动作不计入 positive evidence，若执行必须单独记录 cleanup evidence。 (fixture 生命周期与 bridge evidence 生命周期分离。)
-- Q: Webhook bridge live dogfood 暂不可用时下一步推进什么？ → 保持 1-5-5-3-3-5 deferred，不运行部署或线上验证；转向独立的 1-5-5-4 GitLab scheduled required-route dogfood。 (Webhook capability 仍 disabled/unavailable，不降低 live completion gate；本地 bridge 代码、部署材料和候选 endpoint 不计入 live evidence。)
+- Q: 本次 live dogfood 使用哪种 fixture？ → 创建全新的独立 fixture：新建 request、carrier Issue、claim、automated/changelog-drafter-gitlab-* 分支、单文件 draft commit 和 draft MR；不合并、不执行 closeout、不发布。 (采用 A，避免复用历史 evidence，并完整验证新的 request 到 provider 写入链路。)
+- Q: 新的 draft MR 允许修改哪个文件？ → 只修改 zj-loop/dogfood/changelog-draft.md，保持单文件、可审计，并与业务代码和真实发布文件隔离。 (采用 A，避免 live dogfood 污染业务文件或真实发布内容。)
+- Q: draft MR 的分支与状态如何固定？ → source 使用唯一命名规则 automated/changelog-drafter-gitlab-<request-id>-<短标识>，target 固定为 master，只允许推送单文件 commit，MR 必须保持 Draft，不得自动合并。 (采用 A，确保 provider binding 稳定并避免误合并。)
+- Q: live dogfood 完成后如何处理 fixture？ → 保留 carrier Issue、claim Note、branch、commit、Draft MR 和 artifacts，不合并、不关闭、不删除；必要清理另行执行并单独记录。 (采用 A，保证 provider-write 事实可复核，清理不与 positive evidence 混淆。)
+- Q: carrier 与 draft MR 的授权如何分层？ → 使用两组独立固定确认短语：carrier 创建使用一组确认短语，claim/draft-MR 写入使用另一组确认短语；每一步单独校验，禁止跨阶段复用。 (采用 A，限制每一步的授权范围并避免 carrier 确认扩大为 branch/commit/MR 写入授权。)
+- Q: 本节点何时算完成？ → 通过完整 live provider-write gate：新 request、carrier Issue、claim Note、branch、single-file commit、Draft MR 均真实创建；source 命名和 target=master 正确；MR 保持 Draft；artifacts 完成 project/request/claim/branch/commit/MR binding；且未发生 merge、release、closeout 或其他非授权副作用。 (采用 A，不能把单个 MR URL 或 pipeline 成功误认为完整 live evidence。)
+- Q: 当前设计是否已经收敛，可以开始执行 live dogfood？ → 是：按既定 completion gate 执行；每个副作用阶段单独确认，执行后核对 provider 与 artifacts。 (采用 A，进入 live dogfood 执行阶段，不降低既定 gate。)
 <!-- ROADMAP_SECTION_END -->

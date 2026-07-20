@@ -35,3 +35,16 @@ test('GitLab draft-evidence CLI returns protocol repair for project mismatch', a
     assert.equal(JSON.parse(result.stdout).reason, 'protocol_repair_request');
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+test('GitLab draft-MR CLI requires its dedicated confirmation phrase', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-gitlab-changelog-cli-'));
+  try {
+    const requestPath = path.join(dir, 'request.json');
+    await writeFile(requestPath, JSON.stringify(request));
+    const result = spawnSync(process.execPath, [CLI, 'gitlab-draft-mr', '--request', requestPath, '--project', 'group/project', '--issue-iid', '7', '--claim-id', 'claim-7', '--draft-file', 'zj-loop/dogfood/changelog-draft.md', '--branch', 'automated/changelog-drafter-gitlab-cdr-cli-1', '--confirm', 'CREATE_CHANGELOG_DRAFT_CARRIER', '--json'], { encoding: 'utf8', env: { ...process.env, GITLAB_TOKEN: 'secret' } });
+    assert.equal(result.status, 2, result.stderr);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.reason, 'confirmation-required');
+    assert.equal(parsed.required_phrase, 'CREATE_CHANGELOG_DRAFT_MR');
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});

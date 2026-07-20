@@ -1,6 +1,8 @@
 export declare const CHANGELOG_CARRIER_SCHEMA = "zj-loop.changelog_draft_request.v1";
 export declare const CHANGELOG_CLAIM_CONSUMER = "changelog-drafter";
 export declare const CHANGELOG_DRAFT_BRANCH_PATTERN: RegExp;
+export declare const GITLAB_CHANGELOG_CARRIER_CONFIRMATION = "CREATE_CHANGELOG_DRAFT_CARRIER";
+export declare const GITLAB_CHANGELOG_DRAFT_MR_CONFIRMATION = "CREATE_CHANGELOG_DRAFT_MR";
 export declare function validateGitLabChangelogDraftActions(actions: any[], expectedFile: string): {
     ok: boolean;
     errors: string[];

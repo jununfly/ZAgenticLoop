@@ -5,9 +5,10 @@ import {
   createGitLabChangelogDraftCarrier,
   claimGitLabChangelogDraftCarrier,
   createGitLabChangelogDraftMr,
+  GITLAB_CHANGELOG_CARRIER_CONFIRMATION,
 } from '../dist/index.js';
 
-const CONFIRM = 'CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE';
+const CONFIRM = GITLAB_CHANGELOG_CARRIER_CONFIRMATION;
 const request = {
   schema: 'zj-loop.changelog_draft_request.v1', request_id: 'cdr_123', status: 'draft-request-candidate',
   dedupe_key: 'changelog:group/project:v1.0.0:v1.1.0',
@@ -24,6 +25,13 @@ test('GitLab Changelog carrier requires explicit confirmation and token', async 
   const result = await createGitLabChangelogDraftCarrier({ projectPath: 'group/project', request, confirmationPhrase: CONFIRM });
   assert.equal(result.status, 'blocked');
   assert.equal(result.reason, 'gitlab-token-required');
+});
+
+test('GitLab Changelog carrier rejects the draft-MR confirmation', async () => {
+  const result = await createGitLabChangelogDraftCarrier({ projectPath: 'group/project', request, confirmationPhrase: 'CREATE_CHANGELOG_DRAFT_MR', token: 'secret' });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.reason, 'confirmation-required');
+  assert.equal(result.required_phrase, GITLAB_CHANGELOG_CARRIER_CONFIRMATION);
 });
 
 test('GitLab Changelog Draft MR adapter refuses writes without a verified claim', async () => {

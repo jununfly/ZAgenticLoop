@@ -2122,7 +2122,43 @@
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "本次 live dogfood 使用哪种 fixture？",
+          "answer": "创建全新的独立 fixture：新建 request、carrier Issue、claim、automated/changelog-drafter-gitlab-* 分支、单文件 draft commit 和 draft MR；不合并、不执行 closeout、不发布。",
+          "note": "采用 A，避免复用历史 evidence，并完整验证新的 request 到 provider 写入链路。"
+        },
+        {
+          "q": "新的 draft MR 允许修改哪个文件？",
+          "answer": "只修改 zj-loop/dogfood/changelog-draft.md，保持单文件、可审计，并与业务代码和真实发布文件隔离。",
+          "note": "采用 A，避免 live dogfood 污染业务文件或真实发布内容。"
+        },
+        {
+          "q": "draft MR 的分支与状态如何固定？",
+          "answer": "source 使用唯一命名规则 automated/changelog-drafter-gitlab-<request-id>-<短标识>，target 固定为 master，只允许推送单文件 commit，MR 必须保持 Draft，不得自动合并。",
+          "note": "采用 A，确保 provider binding 稳定并避免误合并。"
+        },
+        {
+          "q": "live dogfood 完成后如何处理 fixture？",
+          "answer": "保留 carrier Issue、claim Note、branch、commit、Draft MR 和 artifacts，不合并、不关闭、不删除；必要清理另行执行并单独记录。",
+          "note": "采用 A，保证 provider-write 事实可复核，清理不与 positive evidence 混淆。"
+        },
+        {
+          "q": "carrier 与 draft MR 的授权如何分层？",
+          "answer": "使用两组独立固定确认短语：carrier 创建使用一组确认短语，claim/draft-MR 写入使用另一组确认短语；每一步单独校验，禁止跨阶段复用。",
+          "note": "采用 A，限制每一步的授权范围并避免 carrier 确认扩大为 branch/commit/MR 写入授权。"
+        },
+        {
+          "q": "本节点何时算完成？",
+          "answer": "通过完整 live provider-write gate：新 request、carrier Issue、claim Note、branch、single-file commit、Draft MR 均真实创建；source 命名和 target=master 正确；MR 保持 Draft；artifacts 完成 project/request/claim/branch/commit/MR binding；且未发生 merge、release、closeout 或其他非授权副作用。",
+          "note": "采用 A，不能把单个 MR URL 或 pipeline 成功误认为完整 live evidence。"
+        },
+        {
+          "q": "当前设计是否已经收敛，可以开始执行 live dogfood？",
+          "answer": "是：按既定 completion gate 执行；每个副作用阶段单独确认，执行后核对 provider 与 artifacts。",
+          "note": "采用 A，进入 live dogfood 执行阶段，不降低既定 gate。"
+        }
+      ],
       "notes": ""
     },
     "1-5-5-1": {
@@ -2851,7 +2887,7 @@
     "1-5-5-3-3-5": {
       "id": "1-5-5-3-3-5",
       "label": "ai-studio GitLab Issue Note bridge live dogfood fixture",
-      "status": "in_progress",
+      "status": "blocked",
       "mode": "exploit",
       "parent": "1-5-5-3-3",
       "children": [],
@@ -2892,7 +2928,7 @@
           "note": "Webhook capability 仍 disabled/unavailable，不降低 live completion gate；本地 bridge 代码、部署材料和候选 endpoint 不计入 live evidence。"
         }
       ],
-      "notes": "Added independent node:http runtime and CLI entrypoint in tools/zj-loop-core/src/gitlab-issue-note-bridge-server.ts and gitlab-issue-note-bridge-cli.ts, plus GET /healthz for UAT-Caster probes. Runtime exposes only POST /gitlab/webhook/issue-note, chains validation→receipt/dedupe→fixed trigger, and never stores raw payload or accepts dynamic route/ref. Authorized local HTTP integration plus bridge matrix passed 17 tests with build and git diff --check. Local smoke and candidate endpoint probe were non-live only; real ai-studio live evidence still requires deployment, carrier Issue/Note IID, Project Webhook, and separately injected trigger token."
+      "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
     },
     "1-5-5-5-1": {
       "id": "1-5-5-5-1",
@@ -3027,7 +3063,7 @@
     "1-5-5-6-2": {
       "id": "1-5-5-6-2",
       "label": "GitLab 自动 carrier 创建的显式开关与紧急熔断",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-6",
       "children": [
@@ -3078,7 +3114,7 @@
     "1-5-5-6-4": {
       "id": "1-5-5-6-4",
       "label": "Issue、MR 与 carrier 副作用速率限制和上限保护",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5-6",
       "children": [],
@@ -3087,9 +3123,99 @@
           "q": "副作用速率限制采用哪种额度模型？",
           "answer": "A：按项目 + route family + action 分开设置硬额度",
           "note": "同一 request 最多 1 个 carrier 和 1 个 repair MR；项目 10 分钟最多 5 个 carrier、1 小时最多 3 个 repair MR；超限拒绝并需人工恢复。"
+        },
+        {
+          "q": "额度规则是否允许写死在 Git 管理的代码/配置中？",
+          "answer": "是：硬额度、窗口和 action policy 写死在 Git 管理的代码/配置中；运行时消耗计数仍必须由共享状态层原子记录。",
+          "note": "禁止把可变计数伪装成静态配置；规则变更必须走代码评审。"
+        },
+        {
+          "q": "运行时速率限制状态采用什么共享载体？",
+          "answer": "B：GitLab API ledger Issue/评论，作为当前 GitLab dogfood 的共享状态载体；在并发原子性未被证明前，live 副作用保持受限。",
+          "note": "ledger 必须包含项目、route family、action、request、窗口、计数和可重放证据。"
+        },
+        {
+          "q": "GitLab ledger 的并发保护如何实现？",
+          "answer": "A：所有 producer、carrier、repair MR、closeout job 共享统一 resource_group，串行执行 ledger 读取、额度判断、事件追加、确认与副作用边界。",
+          "note": "优先保证硬上限正确性；未进入 resource_group 或 ledger reread 失败时 fail-closed。"
+        },
+        {
+          "q": "resource_group 的串行化粒度如何设定？",
+          "answer": "A：项目级单一 resource_group，例如 zj-loop-side-effects，所有 route family 与 action 共用。",
+          "note": "优先证明项目总额度与事故防护；后续必须有性能证据才能拆分。"
+        },
+        {
+          "q": "限流 ledger 使用哪种 Issue 身份绑定？",
+          "answer": "A：人工预先创建专用 ledger Issue，并由项目配置显式指定 IID；缺失、跨项目或 schema 不匹配时 fail-closed，禁止自动创建。",
+          "note": "ledger Issue 与 carrier Issue 分离，专门记录额度窗口、事件和 replay evidence。"
+        },
+        {
+          "q": "限流 ledger 使用哪种额度预留语义？",
+          "answer": "两阶段 reservation：provider 写入前追加 reservation，副作用成功后标记 committed；reservation 带 TTL；写入结果不确定时保留额度并 fail-closed，禁止立即重试。",
+          "note": "采用 A，避免超时重试造成重复副作用和额度突破。"
+        },
+        {
+          "q": "reservation 的 TTL 到期后如何处理？",
+          "answer": "按 action 设置 TTL，并允许到期回收：carrier reservation 15 分钟，repair MR reservation 2 小时；到期标记为 expired 并保留完整审计记录；provider 结果不确定时先由 reconciliation 检查，未确认前不得重试。",
+          "note": "采用 A，避免异常中断永久占用额度，同时避免不确定写入被错误重试。"
+        },
+        {
+          "q": "provider 写入结果不确定时，reconciliation 如何确认？",
+          "answer": "按 request_id + action 作为幂等键重新读取并确认：从 GitLab API 查询 carrier 或 repair MR；确认已存在则标记 reservation 为 committed，确认不存在才允许回收 reservation。",
+          "note": "采用 A，避免把响应丢失误判为未写入并重复创建副作用。"
+        },
+        {
+          "q": "发现相同幂等键但内容或目标不一致时，如何处理？",
+          "answer": "立即 fail-closed 并转人工：不复用、不覆盖、不创建新副作用；记录冲突证据，冻结该 request 的后续重试。",
+          "note": "采用 A，避免错误复用其他 request 的 Issue/MR，也避免额度突破。"
+        },
+        {
+          "q": "被 fail-closed 冻结的 request，人工恢复必须通过什么方式？",
+          "answer": "通过专用恢复命令和审计记录：人工提供固定确认短语；恢复命令校验 request、幂等键、冲突证据和当前 head，并在 ledger 追加 manual_recovery 事件后才解除冻结。",
+          "note": "采用 A，禁止通过直接改 ledger 或重新创建 request 绕过额度和冲突保护。"
+        },
+        {
+          "q": "ledger 的事件记录采用什么数据模型？",
+          "answer": "采用版本化、追加式事件模型：每条事件包含 schema、event_id、request_id、action、reservation_id、状态、时间、幂等键和证据；禁止覆盖历史事件，只允许追加状态转换。",
+          "note": "采用 A，确保 ledger 可审计、可校验并支持 reconciliation/replay。"
+        },
+        {
+          "q": "ledger 状态转换是否采用固定状态机？",
+          "answer": "采用固定状态机并拒绝非法转换：允许 reserved -> committed、reserved -> expired、reserved -> blocked；committed 不得回退，expired 不得直接变为 committed。",
+          "note": "采用 A，避免重复提交、并发错误和非法回退破坏额度账本。"
+        },
+        {
+          "q": "ledger 如何防止非规范内容伪造额度事件？",
+          "answer": "只接受受控 bot 写入的结构化事件：事件必须包含固定 marker、schema、版本、校验字段和 bot 身份；人工评论只作为说明，不能改变额度状态。",
+          "note": "采用 A，避免普通评论或人工编辑伪造额度状态。"
+        },
+        {
+          "q": "ledger 读取不完整或分页失败时如何处理？",
+          "answer": "fail-closed，禁止任何副作用：必须完成分页读取并校验事件链；缺页、超时、解析失败或权限不足时，拒绝 reservation 和 provider 写入，等待人工恢复。",
+          "note": "采用 A，避免部分读取低估已消耗额度或绕过冻结状态。"
+        },
+        {
+          "q": "遇到未在 Git 配置中声明的 route family 或 action 时如何处理？",
+          "answer": "拒绝并 fail-closed：未知 route/action 不得申请 reservation，也不得执行 provider 写入；输出明确的配置缺失证据，要求代码评审后再启用。",
+          "note": "采用 A，避免新流程默认获得未审核的副作用额度。"
+        },
+        {
+          "q": "Git 管理的额度配置变更何时生效？",
+          "answer": "随人工审核合并后的版本生效：配置包含版本号和 schema；运行只接受当前 commit 中完整且有效的配置，禁止运行时覆盖；配置变更必须经过 MR、CI 和人工审核。",
+          "note": "采用 A，保持 Git 审计、规则一致性和人工审核边界。"
+        },
+        {
+          "q": "限流与 ledger 实现必须通过哪些验证？",
+          "answer": "通过完整的正向与负向验证矩阵：额度内成功、同 request 重复申请、窗口超限、reservation TTL、provider 超时 reconciliation、幂等键冲突、非法状态转换、ledger 分页失败、未知 action、人工恢复，以及并发下不突破硬上限。",
+          "note": "采用 A，不能只验证 happy path；必须覆盖主要事故路径和真实 GitLab provider 边界。"
+        },
+        {
+          "q": "验证证据应如何保存？",
+          "answer": "采用结构化 artifact + ledger 关联：每次验证输出固定 schema 的 JSON artifact，包含 commit、配置版本、测试矩阵、pipeline/job、request 和 reservation ID；再将摘要关联到 ledger 或对应 Issue。",
+          "note": "采用 A，保证验证结果可机器校验、可审计并可重放。"
         }
       ],
-      "notes": ""
+      "notes": "开始探索跨 producer、carrier、consumer 与 repair MR 的共享速率限制状态与原子并发保护。"
     },
     "1-5-5-6-5": {
       "id": "1-5-5-6-5",
@@ -3146,17 +3272,23 @@
     "1-5-5-6-2-3": {
       "id": "1-5-5-6-2-3",
       "label": "ai-studio carrier 入口真实 dogfood 与零写入证据",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-6-2",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "真实 GitLab carrier dogfood 应如何接入目标项目？",
+          "answer": "A：创建专用 MR，绑定新 core vendor 包与生成模板，先运行 Web/API negative pipeline，确认零 Provider 写入后人工审核合并。",
+          "note": "不直接在现有分支临时修改，也不以静态检查替代真实 dogfood。"
+        }
+      ],
+      "notes": "Web/API negative dogfood、provider reread 与人工合并全部完成：MR !541 已由 Human 合并；Web 10532984 与 API 10533340 均无 carrier Issue，side_effects_executed=false。"
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 10:45:24",
+    "updated": "2026-07-20 12:49:50",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
