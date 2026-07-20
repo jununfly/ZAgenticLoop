@@ -3053,7 +3053,73 @@
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "Daily Triage scheduled evidence 使用哪一个 GitLab schedule？",
+          "answer": "采用 A：为 daily-triage-report 创建独立 schedule，专属验证 zj_loop_daily_triage 的 scheduled route evidence；不复用 Issue Backlog 的 schedule 961。",
+          "note": "保持每个 scheduled required route 的独立调度生命周期；目标仍是 master、report-only、零 provider write。"
+        },
+        {
+          "q": "Daily Triage 独立 schedule 的运行窗口是什么？",
+          "answer": "采用 A：每天运行，Asia/Shanghai 17:13，cron=13 17 * * *，target branch=master。",
+          "note": "与 Issue Backlog schedule 961 的 17:03 窗口错开，保留可区分的 pipeline、job 和 artifact 证据。"
+        },
+        {
+          "q": "Daily Triage scheduled evidence 应绑定哪些 artifact？",
+          "answer": "采用 C：同时绑定 route-decision.json 与 consumer-plan.json；分别校验 zj-loop.route_decision.v1 与 zj-loop.consumer_run_plan.v1，并要求两者的 route、source、consumer、readiness、execution mode 和 report-only 约束一致。",
+          "note": "Daily Triage 没有独立业务报告 artifact；单独绑定任一文件都会留下 dispatch 或 consumer plan 证据缺口，因此扩展 verifier 支持复合 artifact evidence。"
+        },
+        {
+          "q": "Daily Triage 复合 artifact 的字段级通过条件是什么？",
+          "answer": "采用 A：严格校验 route-decision 与 consumer-plan 的 schema、route/route_id、consumer、report-only request/execution mode、allowed/status、execution_allowed、validation.valid，并要求内嵌 route decision 一致；pipeline 仍须 source=schedule、ref=master 且无 provider side effects。",
+          "note": "避免只按文件存在或单一 status 放行错 route、错 consumer 或可执行模式漂移。"
+        },
+        {
+          "q": "Daily Triage 复合 artifact 如何传给 schedule-health verifier？",
+          "answer": "采用 A：保留主 artifact 与 schema 变量，并新增 supporting artifact 与 supporting schema 变量；两个 artifact 必须从同一 scheduled job 读取并一起通过字段级校验。",
+          "note": "避免 JSON 数组转义问题，也避免两个独立 health job 无法证明同一 pipeline/job 绑定。"
+        },
+        {
+          "q": "Daily Triage 独立 schedule 的 owner 应如何选择？",
+          "answer": "采用 A：使用项目级 CI 服务账号或长期维护账号作为 schedule owner，不使用个人账号或临时测试账号。",
+          "note": "保证 schedule 生命周期稳定，避免 owner 权限变化导致 scheduled evidence 中断。"
+        },
+        {
+          "q": "Daily Triage 复合 artifact 缺失或不一致时如何处理？",
+          "answer": "采用 A：fail closed；任一 artifact 缺失、下载失败、schema 错误、route/consumer 不一致或 report-only 字段不满足时，整体不计为 positive evidence，并输出结构化 negative evidence。",
+          "note": "复合证据必须两个 artifact 共同成立，不能用主 artifact 有效覆盖 supporting artifact 缺失。"
+        },
+        {
+          "q": "Daily Triage schedule-health verifier 如何触发？",
+          "answer": "采用 A：真实 scheduled pipeline 完成后，由人工创建 source=web 的 pipeline 手动运行只读 verifier；verifier 查询并绑定 source=schedule 的 producer pipeline，不把自身作为 scheduled evidence。",
+          "note": "避免 scheduled pipeline 内自验证时机不完整，也避免增加第二个 verifier schedule。"
+        },
+        {
+          "q": "Daily Triage 的施工顺序是什么？",
+          "answer": "采用 A：先实现并合并双 artifact verifier 与 CI 模板，再创建正式 schedule 并产生 source=schedule evidence。",
+          "note": "避免先产生无法回放的 scheduled pipeline；Web pipeline 只能做模板检查，不能替代真实 scheduled evidence。"
+        },
+        {
+          "q": "Daily Triage completion evidence 是否需要写入 zj-loop/STATE.md？",
+          "answer": "采用 A：保持 GitLab CI 完全 report-only，不修改仓库、不写入 STATE.md；本节点以 route-decision.json 与 consumer-plan.json 两个 artifact 作为 scheduled evidence。",
+          "note": "Route Table 的 STATE.md 是本地/工作流 report consumer 的 evidence store，不扩展为 scheduled CI 的写入目标。"
+        },
+        {
+          "q": "Daily Triage 独立 schedule 应如何命名？",
+          "answer": "采用 A：命名为 zj-loop-daily-triage-report；名称表达项目自动化、route 与 report-only 意图，IID 仅作为机器绑定字段。",
+          "note": "避免使用无语义的 IID 或无法区分 route 的短名称。"
+        },
+        {
+          "q": "Daily Triage schedule 应何时启用？",
+          "answer": "采用 A：verifier/CI 模板合并到 master 后立即启用 active schedule；cron=13 17 * * *，timezone=Asia/Shanghai，branch=master；首次 source=schedule pipeline 完成并经过 10 分钟 grace 后再运行 health replay。",
+          "note": "不使用 inactive、manual Play 或 Web pipeline 冒充正式 scheduled evidence。"
+        },
+        {
+          "q": "Daily Triage 节点何时可以标记完成？",
+          "answer": "采用 A：只有完整 scheduled evidence gate 通过才完成；要求独立 active schedule、长期 owner、cron=13 17 * * * Asia/Shanghai、master、source=schedule、zj_loop_daily_triage、同一 job 的双 artifact 严格绑定、health=healthy、完整链接和零 provider/仓库写入。",
+          "note": "与已完成的 Issue Backlog 节点保持同等 completion gate，不以 job 成功、schedule 创建或单一 artifact 代替完整证据。"
+        }
+      ],
       "notes": ""
     },
     "1-5-5-4-3": {
@@ -3348,7 +3414,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 17:25:33",
+    "updated": "2026-07-20 22:17:00",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

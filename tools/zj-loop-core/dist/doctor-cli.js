@@ -23,6 +23,8 @@ const exitCode = await runCli({
         { name: 'job', type: 'string', description: 'Scheduled job name for artifact lookup' },
         { name: 'artifact', type: 'string', description: 'Expected job artifact path' },
         { name: 'artifactSchema', flag: 'artifact-schema', type: 'string', description: 'Expected JSON artifact schema' },
+        { name: 'supportingArtifact', flag: 'supporting-artifact', type: 'string', description: 'Optional supporting job artifact path' },
+        { name: 'supportingArtifactSchema', flag: 'supporting-artifact-schema', type: 'string', description: 'Optional supporting JSON artifact schema' },
         { name: 'expectedWithinMinutes', flag: 'expected-within-minutes', type: 'string', description: 'Optional first scheduled execution window override in minutes' },
         { name: 'apiUrl', flag: 'api-url', type: 'string', description: 'Optional provider API URL' },
         { name: 'subject', type: 'string', description: 'Filter orchestration evidence by subject key, such as issue:123' },
@@ -60,7 +62,7 @@ const exitCode = await runCli({
             if (expectedWithinMinutes !== undefined && (!Number.isInteger(expectedWithinMinutes) || expectedWithinMinutes <= 0)) {
                 throw new Error('--expected-within-minutes must be a positive integer');
             }
-            const result = await inspectGitLabScheduleHealth({ target: { provider: 'gitlab', project: options.project, route_id: options.route, schedule_id: options.scheduleId, job: options.job, artifact: options.artifact, artifact_schema: options.artifactSchema }, apiUrl: options.apiUrl, expectedWithinMinutes });
+            const result = await inspectGitLabScheduleHealth({ target: { provider: 'gitlab', project: options.project, route_id: options.route, schedule_id: options.scheduleId, job: options.job, artifact: options.artifact, artifact_schema: options.artifactSchema, ...(options.supportingArtifact ? { supporting_artifact: options.supportingArtifact } : {}), ...(options.supportingArtifactSchema ? { supporting_artifact_schema: options.supportingArtifactSchema } : {}) }, apiUrl: options.apiUrl, expectedWithinMinutes });
             if (options.format === 'text') {
                 io.stdout(`schedule_health: ${result.status}`);
                 for (const step of result.next_steps)

@@ -17,10 +17,12 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     ZJ_LOOP_SCHEDULE_HEALTH_JOB: ""
     ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT: ""
     ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT_SCHEMA: ""
+    ZJ_LOOP_SCHEDULE_HEALTH_SUPPORTING_ARTIFACT: ""
+    ZJ_LOOP_SCHEDULE_HEALTH_SUPPORTING_ARTIFACT_SCHEMA: ""
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - test -n "$ZJ_LOOP_SCHEDULE_HEALTH_PROJECT" && test -n "$ZJ_LOOP_SCHEDULE_HEALTH_ROUTE" && test -n "$ZJ_LOOP_SCHEDULE_HEALTH_ID" && test -n "$ZJ_LOOP_SCHEDULE_HEALTH_JOB" && test -n "$ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT" && test -n "$ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT_SCHEMA"
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-doctor --root . --provider gitlab --schedule-health --project "$ZJ_LOOP_SCHEDULE_HEALTH_PROJECT" --route "$ZJ_LOOP_SCHEDULE_HEALTH_ROUTE" --schedule-id "$ZJ_LOOP_SCHEDULE_HEALTH_ID" --job "$ZJ_LOOP_SCHEDULE_HEALTH_JOB" --artifact "$ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT" --artifact-schema "$ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT_SCHEMA" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" > schedule-health-result.json
+    - supporting_artifact_args=""; if [ -n "${ZJ_LOOP_SCHEDULE_HEALTH_SUPPORTING_ARTIFACT:-}" ]; then test -n "${ZJ_LOOP_SCHEDULE_HEALTH_SUPPORTING_ARTIFACT_SCHEMA:-}"; supporting_artifact_args="--supporting-artifact ${ZJ_LOOP_SCHEDULE_HEALTH_SUPPORTING_ARTIFACT} --supporting-artifact-schema ${ZJ_LOOP_SCHEDULE_HEALTH_SUPPORTING_ARTIFACT_SCHEMA}"; fi; npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-doctor --root . --provider gitlab --schedule-health --project "$ZJ_LOOP_SCHEDULE_HEALTH_PROJECT" --route "$ZJ_LOOP_SCHEDULE_HEALTH_ROUTE" --schedule-id "$ZJ_LOOP_SCHEDULE_HEALTH_ID" --job "$ZJ_LOOP_SCHEDULE_HEALTH_JOB" --artifact "$ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT" --artifact-schema "$ZJ_LOOP_SCHEDULE_HEALTH_ARTIFACT_SCHEMA" $supporting_artifact_args --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" > schedule-health-result.json
   artifacts:
     when: always
     expire_in: 7 days

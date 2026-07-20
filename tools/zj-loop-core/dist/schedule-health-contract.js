@@ -6,7 +6,7 @@ export function evaluateScheduleHealth(input) {
     const now = new Date(input.now ?? Date.now());
     const graceMs = 10 * 60 * 1000;
     const expectedWindow = deriveExpectedWindow(schedule, now, input.expectedWithinMinutes);
-    const base = { schema: SCHEDULE_HEALTH_SCHEMA, target: { provider: target.provider, project: target.project, route_id: target.route_id, schedule_id: target.schedule_id, job: target.job, artifact: target.artifact, artifact_schema: target.artifact_schema }, audit: { schedule_active: schedule?.active === true, schedule_updated_at: schedule?.updated_at ?? null, next_run_at: schedule?.next_run_at ?? null, expected_within_minutes: input.expectedWithinMinutes ?? null, checked_at: now.toISOString(), ...(input.audit ?? {}) } };
+    const base = { schema: SCHEDULE_HEALTH_SCHEMA, target: { provider: target.provider, project: target.project, route_id: target.route_id, schedule_id: target.schedule_id, job: target.job, artifact: target.artifact, artifact_schema: target.artifact_schema, ...(target.supporting_artifact ? { supporting_artifact: target.supporting_artifact } : {}), ...(target.supporting_artifact_schema ? { supporting_artifact_schema: target.supporting_artifact_schema } : {}) }, audit: { schedule_active: schedule?.active === true, schedule_updated_at: schedule?.updated_at ?? null, next_run_at: schedule?.next_run_at ?? null, expected_within_minutes: input.expectedWithinMinutes ?? null, checked_at: now.toISOString(), ...(input.audit ?? {}) } };
     if (!schedule || schedule.active !== true || !expectedWindow)
         return result(base, 'configuration_missing', 'schedule-configuration-missing');
     const pipeline = input.pipeline;
@@ -22,6 +22,13 @@ export function evaluateScheduleHealth(input) {
         return result(base, 'artifact_schema_invalid', 'scheduled-artifact-schema-invalid');
     if (target.route_id === 'issue-backlog-triage') {
         const bindingErrors = validateIssueBacklogArtifact(target, pipeline);
+        if (pipeline.ref !== 'master')
+            bindingErrors.push('pipeline.ref');
+        if (bindingErrors.length > 0)
+            return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
+    }
+    if (target.route_id === 'daily-triage-report') {
+        const bindingErrors = validateDailyTriageArtifacts(target, pipeline);
         if (pipeline.ref !== 'master')
             bindingErrors.push('pipeline.ref');
         if (bindingErrors.length > 0)
@@ -80,6 +87,57 @@ function validateIssueBacklogArtifact(target, pipeline) {
         if (!sideEffects || sideEffects[key] !== false)
             errors.push(`artifact.side_effects.${key}`);
     }
+    return errors;
+}
+function validateDailyTriageArtifacts(target, pipeline) {
+    const routeDecision = pipeline.artifact_payload;
+    const consumerPlan = pipeline.supporting_artifact_payload;
+    const errors = [];
+    if (!target.supporting_artifact || !target.supporting_artifact_schema)
+        errors.push('supporting-artifact-target');
+    if (pipeline.artifact !== target.artifact)
+        errors.push('artifact');
+    if (pipeline.artifact_schema !== target.artifact_schema)
+        errors.push('artifact_schema');
+    if (pipeline.supporting_artifact !== target.supporting_artifact)
+        errors.push('supporting_artifact');
+    if (pipeline.supporting_artifact_schema !== target.supporting_artifact_schema)
+        errors.push('supporting_artifact_schema');
+    if (!routeDecision || typeof routeDecision !== 'object')
+        errors.push('artifact_payload');
+    if (!consumerPlan || typeof consumerPlan !== 'object')
+        errors.push('supporting_artifact_payload');
+    if (!routeDecision || routeDecision.schema !== 'zj-loop.route_decision.v1')
+        errors.push('artifact.schema');
+    if (!consumerPlan || consumerPlan.schema !== 'zj-loop.consumer_run_plan.v1')
+        errors.push('supporting_artifact.schema');
+    if (routeDecision?.route !== target.route_id)
+        errors.push('artifact.route');
+    if (routeDecision?.request_kind !== 'report-only')
+        errors.push('artifact.request_kind');
+    if (routeDecision?.target_consumer !== 'daily-triage')
+        errors.push('artifact.target_consumer');
+    if (routeDecision?.source !== 'gitlab-pipeline')
+        errors.push('artifact.source');
+    if (routeDecision?.allowed !== true)
+        errors.push('artifact.allowed');
+    if (consumerPlan?.route_id !== target.route_id)
+        errors.push('supporting_artifact.route_id');
+    if (consumerPlan?.consumer !== 'daily-triage')
+        errors.push('supporting_artifact.consumer');
+    if (consumerPlan?.execution_mode !== 'report-only')
+        errors.push('supporting_artifact.execution_mode');
+    if (consumerPlan?.request_kind !== 'report-only')
+        errors.push('supporting_artifact.request_kind');
+    if (consumerPlan?.status !== 'report-only')
+        errors.push('supporting_artifact.status');
+    if (consumerPlan?.execution_allowed !== false)
+        errors.push('supporting_artifact.execution_allowed');
+    if (consumerPlan?.validation?.valid !== true)
+        errors.push('supporting_artifact.validation.valid');
+    const nestedDecision = consumerPlan?.route_decision;
+    if (!nestedDecision || JSON.stringify(nestedDecision) !== JSON.stringify(routeDecision))
+        errors.push('supporting_artifact.route_decision');
     return errors;
 }
 function deriveExpectedWindow(schedule, now, expectedWithinMinutes) {
@@ -149,6 +207,13 @@ export async function inspectGitLabScheduleHealth(input) {
     if (!artifactResponse.ok)
         return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: null }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
     const artifact = await artifactResponse.json();
+    if (input.target.supporting_artifact) {
+        const supportingResponse = await fetchImpl(`${apiUrl}/projects/${project}/jobs/${job.id}/artifacts/${input.target.supporting_artifact}`, { headers });
+        if (!supportingResponse.ok)
+            return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact, supporting_artifact: null }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
+        const supportingArtifact = await supportingResponse.json();
+        return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact, supporting_artifact: input.target.supporting_artifact, supporting_artifact_schema: supportingArtifact.schema, supporting_artifact_payload: supportingArtifact }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
+    }
     return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
 }
 function resolveGitLabCredentials(input) {
@@ -185,6 +250,10 @@ function buildScheduleHealthReplayCommand(target, apiUrl, expectedWithinMinutes)
         '--artifact', String(target.artifact),
         '--artifact-schema', String(target.artifact_schema),
     ];
+    if (target.supporting_artifact)
+        command.push('--supporting-artifact', String(target.supporting_artifact));
+    if (target.supporting_artifact_schema)
+        command.push('--supporting-artifact-schema', String(target.supporting_artifact_schema));
     if (apiUrl)
         command.push('--api-url', apiUrl);
     if (Number.isInteger(expectedWithinMinutes) && Number(expectedWithinMinutes) > 0) {

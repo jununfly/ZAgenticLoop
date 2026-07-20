@@ -5,6 +5,9 @@ import { evaluateScheduleHealth, inspectGitLabScheduleHealth } from '../dist/sch
 
 const target = { provider: 'gitlab', project: 'group/project', route_id: 'issue-backlog-triage', schedule_id: '957', job: 'zj_loop_issue_triage', artifact: 'issue-recommendations.json', artifact_schema: 'zj-loop.issue_recommendations.v1' };
 const reportArtifact = { schema: 'zj-loop.issue_recommendations.v1', provider: 'gitlab', project_path: 'group/project', route: 'issue-backlog-triage', source: 'gitlab-issues-api', side_effects: { labels: false, comments: false, state: false, requests: false } };
+const dailyTarget = { provider: 'gitlab', project: 'group/project', route_id: 'daily-triage-report', schedule_id: '962', job: 'zj_loop_daily_triage', artifact: 'route-decision.json', artifact_schema: 'zj-loop.route_decision.v1', supporting_artifact: 'consumer-plan.json', supporting_artifact_schema: 'zj-loop.consumer_run_plan.v1' };
+const dailyRouteDecision = { schema: 'zj-loop.route_decision.v1', route: 'daily-triage-report', request_kind: 'report-only', target_consumer: 'daily-triage', source: 'gitlab-pipeline', allowed: true };
+const dailyConsumerPlan = { schema: 'zj-loop.consumer_run_plan.v1', route_id: 'daily-triage-report', consumer: 'daily-triage', execution_mode: 'report-only', request_kind: 'report-only', status: 'report-only', execution_allowed: false, validation: { valid: true }, route_decision: dailyRouteDecision };
 
 test('schedule health is not_due before the expected window', () => {
   const result = evaluateScheduleHealth({ target, now: '2026-07-15T00:05:00Z', schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' } });
@@ -89,6 +92,52 @@ test('schedule health keeps the first scheduled pipeline not_due during its grac
 
   assert.equal(result.status, 'not_due');
   assert.equal(result.expected_window.start, '2026-07-15T00:03:00.000Z');
+});
+
+test('schedule health validates Daily Triage dual artifacts from one first scheduled pipeline', () => {
+  const result = evaluateScheduleHealth({
+    target: dailyTarget,
+    now: '2026-07-15T00:14:00Z',
+    schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' },
+    pipeline: {
+      source: 'schedule',
+      ref: 'master',
+      created_at: '2026-07-15T00:03:00Z',
+      job: 'zj_loop_daily_triage',
+      artifact: 'route-decision.json',
+      artifact_schema: 'zj-loop.route_decision.v1',
+      artifact_payload: dailyRouteDecision,
+      supporting_artifact: 'consumer-plan.json',
+      supporting_artifact_schema: 'zj-loop.consumer_run_plan.v1',
+      supporting_artifact_payload: dailyConsumerPlan,
+    },
+  });
+
+  assert.equal(result.status, 'healthy');
+  assert.equal(result.target.supporting_artifact, 'consumer-plan.json');
+});
+
+test('schedule health rejects Daily Triage when the supporting artifact drifts', () => {
+  const result = evaluateScheduleHealth({
+    target: dailyTarget,
+    now: '2026-07-15T00:14:00Z',
+    schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' },
+    pipeline: {
+      source: 'schedule',
+      ref: 'master',
+      created_at: '2026-07-15T00:03:00Z',
+      job: 'zj_loop_daily_triage',
+      artifact: 'route-decision.json',
+      artifact_schema: 'zj-loop.route_decision.v1',
+      artifact_payload: dailyRouteDecision,
+      supporting_artifact: 'consumer-plan.json',
+      supporting_artifact_schema: 'zj-loop.consumer_run_plan.v1',
+      supporting_artifact_payload: { ...dailyConsumerPlan, execution_allowed: true },
+    },
+  });
+
+  assert.equal(result.status, 'artifact_schema_invalid');
+  assert.deepEqual(result.artifact_errors, ['supporting_artifact.execution_allowed']);
 });
 
 test('schedule health replay command preserves its explicit window override', () => {
@@ -243,4 +292,29 @@ test('GitLab adapter validates the explicit job artifact schema', async () => {
     return { ok: true, async json() { return body; } };
   } });
   assert.equal(result.status, 'healthy');
+});
+
+test('GitLab adapter reads and validates Daily Triage supporting artifact from the same job', async () => {
+  const result = await inspectGitLabScheduleHealth({
+    target: dailyTarget,
+    apiUrl: 'https://gitlab.example/api/v4',
+    token: 'token',
+    now: '2026-07-15T00:14:00Z',
+    fetchImpl: async (url) => {
+      const text = String(url);
+      const body = text.includes('pipeline_schedules/962')
+        ? { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' }
+        : text.includes('/pipelines?')
+          ? [{ id: 43, source: 'schedule', ref: 'master', created_at: '2026-07-15T00:03:00Z' }]
+          : text.includes('/pipelines/43/jobs')
+            ? [{ id: 8, name: 'zj_loop_daily_triage' }]
+            : text.includes('/artifacts/route-decision.json')
+              ? dailyRouteDecision
+              : dailyConsumerPlan;
+      return { ok: true, async json() { return body; } };
+    },
+  });
+
+  assert.equal(result.status, 'healthy');
+  assert.equal(result.target.supporting_artifact_schema, 'zj-loop.consumer_run_plan.v1');
 });
