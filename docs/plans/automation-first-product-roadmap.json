@@ -3049,7 +3049,7 @@
     "1-5-5-4-2": {
       "id": "1-5-5-4-2",
       "label": "GitLab scheduled Daily Triage report evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
@@ -3118,9 +3118,14 @@
           "q": "Daily Triage 节点何时可以标记完成？",
           "answer": "采用 A：只有完整 scheduled evidence gate 通过才完成；要求独立 active schedule、长期 owner、cron=13 17 * * * Asia/Shanghai、master、source=schedule、zj_loop_daily_triage、同一 job 的双 artifact 严格绑定、health=healthy、完整链接和零 provider/仓库写入。",
           "note": "与已完成的 Issue Backlog 节点保持同等 completion gate，不以 job 成功、schedule 创建或单一 artifact 代替完整证据。"
+        },
+        {
+          "q": "Daily Triage 是否必须使用独立 schedule？",
+          "answer": "调整为复用现有 schedule 961：同一 active schedule 同时运行 Issue Backlog 与 Daily Triage；通过 route、job、主 artifact 和 supporting artifact 的严格绑定区分两条 scheduled evidence，不能仅凭 schedule IID 放行。",
+          "note": "接受调度生命周期共享，但不降低 route/job/artifact/schema/ref/report-only completion gate；Daily Triage 仍需双 artifact 来自同一 zj_loop_daily_triage job。"
         }
       ],
-      "notes": ""
+      "notes": "完成 scheduled Daily Triage evidence gate。复用 schedule 961；schedule active；health status=healthy；schedule.updated_at=2026-07-21T00:03:01.688+08:00；scheduled pipeline created_at=2026-07-21T00:03:03.750+08:00，source=schedule；route=daily-triage-report；job=zj_loop_daily_triage；主 artifact=route-decision.json，schema=zj-loop.route_decision.v1；supporting artifact=consumer-plan.json，schema=zj-loop.consumer_run_plan.v1；双 artifact 来自同一 job，report-only 字段和零 provider/仓库写入约束满足。health artifact checked_at=2026-07-20T16:28:25.703Z。"
     },
     "1-5-5-4-3": {
       "id": "1-5-5-4-3",
@@ -3414,7 +3419,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 22:17:00",
+    "updated": "2026-07-21 00:29:35",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
