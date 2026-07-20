@@ -12,25 +12,102 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON: ""
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
-    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch changelog-drafter-report --source gitlab-release-window --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > route-decision.json
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch changelog-drafter-report --source gitlab-release-window --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > route-decision.json || true
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-consumer plan changelog-drafter-report --root . --source gitlab-release-window --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > consumer-plan.json || true
-    - if [ -n "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" ]; then printf '%s\n' "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json; fi
+    - if [ -n "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" ]; then printf '%s\n' "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json; else printf '%s\n' '{}' > changelog-draft-request.json; fi
     - >-
-      if [ -f changelog-draft-request.json ]; then node -e "const fs = require('fs'); const request = JSON.parse(fs.readFileSync('changelog-draft-request.json', 'utf8')); const signal = { schema: 'zj-loop.signal.v1', signal_id: process.env.ZJ_LOOP_SIGNAL_ID || process.env.CI_PIPELINE_ID || 'manual', source: 'workflow_dispatch', provider: 'gitlab', subject: { kind: 'local_goal', id: request.dedupe_key || 'changelog-draft-request' }, intent: 'draft_changelog', payload: { changelog_draft_request: request, draft_mode: 'evidence' } }; fs.writeFileSync('changelog-signal.json', JSON.stringify(signal, null, 2) + '\n');"; fi
-    - if [ -f changelog-signal.json ]; then npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-dispatch --signal changelog-signal.json --mode auto --format json > orchestration.json || true; fi
-    - >-
-      if [ -f orchestration.json ]; then node -e "const fs = require('fs'); const orchestration = JSON.parse(fs.readFileSync('orchestration.json', 'utf8')); const artifact = orchestration.review_artifact && orchestration.review_artifact.path; if (artifact && fs.existsSync(artifact)) fs.copyFileSync(artifact, 'draft-plan.json');"; fi
-    - cat route-decision.json
-    - cat consumer-plan.json
-    - if [ -f orchestration.json ]; then cat orchestration.json; fi
-    - if [ -f draft-plan.json ]; then cat draft-plan.json; fi
+      node -e "const fs = require('fs'); const request = JSON.parse(fs.readFileSync('changelog-draft-request.json', 'utf8')); const signal = { schema: 'zj-loop.signal.v1', signal_id: process.env.ZJ_LOOP_SIGNAL_ID || process.env.CI_PIPELINE_ID || 'manual', source: 'workflow_dispatch', provider: 'gitlab', subject: { kind: 'local_goal', id: request.dedupe_key || 'changelog-draft-request' }, intent: 'draft_changelog', payload: { changelog_draft_request: request, draft_mode: 'evidence' } }; fs.writeFileSync('changelog-signal.json', JSON.stringify(signal, null, 2) + '\n');"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-dispatch --signal changelog-signal.json --mode auto --format json > orchestration.json || true
+    - if [ -f orchestration.json ]; then cp orchestration.json draft-plan.json; fi
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-changelog-drafter gitlab-draft-evidence --request changelog-draft-request.json --project "$CI_PROJECT_PATH" --draft-file "${ZJ_LOOP_CHANGELOG_DRAFT_FILE:-docs/release-notes-draft.md}" --out gitlab-changelog-draft-evidence.json --json
   artifacts:
     when: always
     expire_in: 7 days
     paths:
+      - changelog-draft-request.json
       - route-decision.json
       - consumer-plan.json
-      - changelog-draft-request.json
       - changelog-signal.json
       - orchestration.json
       - draft-plan.json
+      - gitlab-changelog-draft-evidence.json
+
+zj_loop_changelog_drafter_carrier:
+  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
+  needs: []
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  when: manual
+  variables:
+    ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON: ""
+    ZJ_LOOP_CHANGELOG_CARRIER_CONFIRM: ""
+  script:
+    - if [ -n "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" ]; then printf '%s\n' "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json; else printf '%s\n' '{}' > changelog-draft-request.json; fi
+    - test -n "$ZJ_LOOP_CHANGELOG_CARRIER_CONFIRM"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-changelog-drafter gitlab-carrier --request changelog-draft-request.json --project "$CI_PROJECT_PATH" --confirm "$ZJ_LOOP_CHANGELOG_CARRIER_CONFIRM" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out gitlab-changelog-carrier-result.json --json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - gitlab-changelog-carrier-result.json
+
+zj_loop_changelog_drafter_claim:
+  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
+  needs: []
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  when: manual
+  variables:
+    ZJ_LOOP_CHANGELOG_CARRIER_ISSUE: ""
+    ZJ_LOOP_CHANGELOG_REQUEST_ID: ""
+    ZJ_LOOP_CHANGELOG_CLAIM_ID: ""
+  script:
+    - test -n "$ZJ_LOOP_CHANGELOG_CARRIER_ISSUE" && test -n "$ZJ_LOOP_CHANGELOG_REQUEST_ID" && test -n "$ZJ_LOOP_CHANGELOG_CLAIM_ID"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-changelog-drafter gitlab-claim --project "$CI_PROJECT_PATH" --issue-iid "$ZJ_LOOP_CHANGELOG_CARRIER_ISSUE" --request-id "$ZJ_LOOP_CHANGELOG_REQUEST_ID" --claim-id "$ZJ_LOOP_CHANGELOG_CLAIM_ID" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out gitlab-changelog-claim-result.json --json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - gitlab-changelog-claim-result.json
+
+zj_loop_changelog_drafter_draft_mr:
+  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
+  needs: []
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  when: manual
+  variables:
+    ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON: ""
+    ZJ_LOOP_CHANGELOG_CARRIER_ISSUE: ""
+    ZJ_LOOP_CHANGELOG_CLAIM_ID: ""
+    ZJ_LOOP_CHANGELOG_DRAFT_BRANCH: ""
+    ZJ_LOOP_CHANGELOG_DRAFT_FILE: "docs/release-notes-draft.md"
+    ZJ_LOOP_CHANGELOG_DRAFT_MR_CONFIRM: ""
+  script:
+    - if [ -n "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" ]; then printf '%s\n' "$ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON" > changelog-draft-request.json; else printf '%s\n' '{}' > changelog-draft-request.json; fi
+    - test -n "$ZJ_LOOP_CHANGELOG_CARRIER_ISSUE" && test -n "$ZJ_LOOP_CHANGELOG_CLAIM_ID" && test -n "$ZJ_LOOP_CHANGELOG_DRAFT_BRANCH" && test -n "$ZJ_LOOP_CHANGELOG_DRAFT_MR_CONFIRM"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-changelog-drafter gitlab-draft-mr --request changelog-draft-request.json --project "$CI_PROJECT_PATH" --issue-iid "$ZJ_LOOP_CHANGELOG_CARRIER_ISSUE" --claim-id "$ZJ_LOOP_CHANGELOG_CLAIM_ID" --draft-file "$ZJ_LOOP_CHANGELOG_DRAFT_FILE" --branch "$ZJ_LOOP_CHANGELOG_DRAFT_BRANCH" --confirm "$ZJ_LOOP_CHANGELOG_DRAFT_MR_CONFIRM" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out gitlab-changelog-draft-mr-result.json --json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - gitlab-changelog-draft-mr-result.json
+
+zj_loop_changelog_drafter_closeout:
+  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
+  needs: []
+__ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
+  when: manual
+  variables:
+    ZJ_LOOP_CHANGELOG_CLOSEOUT_MR: ""
+    ZJ_LOOP_CHANGELOG_CLOSEOUT_ISSUE: ""
+    ZJ_LOOP_CHANGELOG_CLOSEOUT_REQUEST: ""
+    ZJ_LOOP_CHANGELOG_CLOSEOUT_CLAIM: ""
+    ZJ_LOOP_CHANGELOG_CLOSEOUT_BRANCH: ""
+    ZJ_LOOP_CHANGELOG_CLOSEOUT_TARGET: ""
+    ZJ_LOOP_CHANGELOG_CLOSEOUT_CONFIRM: ""
+  script:
+    - test -n "$ZJ_LOOP_CHANGELOG_CLOSEOUT_MR" && test -n "$ZJ_LOOP_CHANGELOG_CLOSEOUT_ISSUE" && test -n "$ZJ_LOOP_CHANGELOG_CLOSEOUT_REQUEST" && test -n "$ZJ_LOOP_CHANGELOG_CLOSEOUT_CLAIM" && test -n "$ZJ_LOOP_CHANGELOG_CLOSEOUT_BRANCH" && test -n "$ZJ_LOOP_CHANGELOG_CLOSEOUT_TARGET" && test -n "$ZJ_LOOP_CHANGELOG_CLOSEOUT_CONFIRM"
+    - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-changelog-drafter gitlab-closeout --project "$CI_PROJECT_PATH" --merge-request "$ZJ_LOOP_CHANGELOG_CLOSEOUT_MR" --issue-iid "$ZJ_LOOP_CHANGELOG_CLOSEOUT_ISSUE" --request-id "$ZJ_LOOP_CHANGELOG_CLOSEOUT_REQUEST" --claim-id "$ZJ_LOOP_CHANGELOG_CLOSEOUT_CLAIM" --branch "$ZJ_LOOP_CHANGELOG_CLOSEOUT_BRANCH" --target-branch "$ZJ_LOOP_CHANGELOG_CLOSEOUT_TARGET" --confirm "$ZJ_LOOP_CHANGELOG_CLOSEOUT_CONFIRM" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out gitlab-changelog-closeout-result.json --json
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - gitlab-changelog-closeout-result.json

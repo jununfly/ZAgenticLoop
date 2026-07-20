@@ -85,12 +85,17 @@ if (argv[0] === 'closeout-plan') {
       { name: 'pr', type: 'string', description: 'Merged PR number' },
       { name: 'merge-request', type: 'string', description: 'Merged GitLab MR IID' },
       { name: 'repo', type: 'string', description: 'Expected owner/repo' },
+      { name: 'review-body', type: 'string', description: 'Provider review body containing the closeout contract' },
+      { name: 'review-body-file', type: 'string', description: 'File containing the provider review body' },
+      { name: 'source-branch', type: 'string', description: 'Provider review source branch' },
+      { name: 'target-branch', type: 'string', description: 'Provider review target branch' },
+      { name: 'merged', type: 'boolean', description: 'Mark explicit provider review metadata as merged' },
       { name: 'gitlab-api-url', type: 'string', description: 'GitLab API v4 base URL for MR metadata fetch and live cleanup' },
       { name: 'gitlab-token', type: 'string', description: 'GitLab PRIVATE-TOKEN for live cleanup' },
       { name: 'gitlab-job-token', type: 'string', description: 'GitLab JOB-TOKEN for live cleanup' },
       { name: 'carrier-issue', type: 'string', description: 'Expected activation carrier issue' },
       { name: 'confirm-live-cleanup', type: 'string', description: `Fallback phrase: ${LIVE_CLEANUP_CONFIRMATION_PHRASE}` },
-      { name: 'require-live-confirmation', type: 'boolean', description: 'Require the fixed phrase even when merged-PR contract authorization passes' },
+      { name: 'require-live-confirmation', type: 'boolean', description: 'Require the fixed phrase for destructive cleanup' },
       { name: 'out', type: 'string', description: 'Write JSON result to this path' },
       { name: 'json', type: 'boolean', description: 'Print JSON output' },
     ],
@@ -112,10 +117,24 @@ if (argv[0] === 'closeout-plan') {
           : undefined,
         live: true,
       });
-      const confirmationRequired =
-        options['require-live-confirmation'] === true || plan.confirmation.required === true;
+      const confirmationRequired = true;
       if (confirmationRequired && options['confirm-live-cleanup'] !== LIVE_CLEANUP_CONFIRMATION_PHRASE) {
-        throw new Error(`--confirm-live-cleanup must equal ${LIVE_CLEANUP_CONFIRMATION_PHRASE}`);
+        const result = {
+          ...plan,
+          status: 'skipped',
+          reason: 'confirmation-required',
+          side_effects_executed: false,
+          execution: {
+            status: 'skipped',
+            reason: 'confirmation-required',
+            steps: [],
+            next_steps: [`Provide the fixed phrase ${LIVE_CLEANUP_CONFIRMATION_PHRASE} and explicitly resume live closeout.`],
+          },
+        };
+        const text = `${JSON.stringify(result, null, 2)}\n`;
+        if (typeof options.out === 'string') await writeFile(options.out, text);
+        if (options.json === true || typeof options.out !== 'string') io.stdout(text.trimEnd());
+        return 1;
       }
       const result = await executePostMergeRoadmapCloseout(plan, provider === 'gitlab'
         ? {

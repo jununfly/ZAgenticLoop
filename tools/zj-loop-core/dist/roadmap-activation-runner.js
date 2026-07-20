@@ -419,6 +419,8 @@ export function buildRoadmapActivationReviewContract(input) {
         provider: input.provider,
         review_kind: reviewKind,
         activation_request_id: input.activationRequestId,
+        source_issue: input.sourceIssue ?? '',
+        source_comment_id: input.sourceCommentId ?? '',
         source_issue_url: input.sourceIssueUrl,
         source_comment_url: input.sourceCommentUrl,
         route_id: input.routeId ?? 'roadmap-sliced-development',
@@ -460,6 +462,8 @@ export function buildRoadmapActivationPrContract(input) {
     const contract = {
         schema: 'zj-loop.roadmap_activation_pr_contract.v1',
         activation_request_id: input.activationRequestId,
+        source_issue: input.sourceIssue ?? '',
+        source_comment_id: input.sourceCommentId ?? '',
         source_issue_url: input.sourceIssueUrl,
         source_comment_url: input.sourceCommentUrl,
         route_id: input.routeId ?? 'roadmap-sliced-development',
@@ -512,6 +516,8 @@ export async function executeGitLabRoadmapActivation(input) {
         refusals.push({ layer: 'project', reason: 'gitlab-project-path-required' });
     if (live && !token)
         refusals.push({ layer: 'credential', reason: 'gitlab-token-required-for-live-execution' });
+    if (live)
+        refusals.push(...validateGitLabRoadmapActivationSourceBinding(plan, projectPath));
     const baseResult = {
         schema: 'zj-loop.gitlab_roadmap_activation_execution_result.v1',
         provider: 'gitlab',
@@ -623,6 +629,41 @@ export async function executeGitLabRoadmapActivation(input) {
         merge_request_url: created.web_url ?? '',
         live_operations: liveOperations,
     };
+}
+function validateGitLabRoadmapActivationSourceBinding(plan, projectPath) {
+    const refusals = [];
+    const sourceIssue = String(plan.sourceIssue ?? plan.source_issue ?? '').trim();
+    const sourceCommentId = String(plan.sourceCommentId ?? plan.source_comment_id ?? '').trim();
+    const sourceIssueUrl = String(plan.sourceIssueUrl ?? plan.source_issue_url ?? '').trim();
+    const sourceCommentUrl = String(plan.sourceCommentUrl ?? plan.source_comment_url ?? '').trim();
+    if (!/^\d+$/.test(sourceIssue) || Number(sourceIssue) < 1) {
+        refusals.push({ layer: 'source-binding', reason: 'source-issue-iid-required' });
+    }
+    if (!/^\d+$/.test(sourceCommentId) || Number(sourceCommentId) < 1) {
+        refusals.push({ layer: 'source-binding', reason: 'source-comment-id-required' });
+    }
+    if (!sourceIssueUrl)
+        refusals.push({ layer: 'source-binding', reason: 'source-issue-url-required' });
+    if (!sourceCommentUrl)
+        refusals.push({ layer: 'source-binding', reason: 'source-comment-url-required' });
+    if (refusals.length > 0)
+        return refusals;
+    try {
+        const issueUrl = new URL(sourceIssueUrl);
+        const commentUrl = new URL(sourceCommentUrl);
+        const expectedIssuePath = `/-/issues/${sourceIssue}`;
+        const projectPrefix = `/${projectPath}`;
+        if (issueUrl.pathname !== `${projectPrefix}${expectedIssuePath}`) {
+            refusals.push({ layer: 'source-binding', reason: 'source-issue-project-or-iid-mismatch' });
+        }
+        if (commentUrl.pathname !== issueUrl.pathname || commentUrl.hash !== `#note_${sourceCommentId}`) {
+            refusals.push({ layer: 'source-binding', reason: 'source-comment-issue-or-id-mismatch' });
+        }
+    }
+    catch {
+        refusals.push({ layer: 'source-binding', reason: 'source-binding-url-invalid' });
+    }
+    return refusals;
 }
 function buildPostMergeCloseoutContractBlock(input) {
     return [

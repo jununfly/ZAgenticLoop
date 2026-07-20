@@ -462,7 +462,7 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
       assert.match(body, /zj-loop-generated: true/);
       assert.match(body, /zj-loop-template-version: 1/);
       assert.match(body, /zj-loop-template-hash: [a-f0-9]{16}/);
-      assert.match(body, /stage: "zj-loop"/);
+      assert.match(body, fragment === 'zj-loop-ci-sweeper.yml' ? /stage: "zj-loop-recovery"/ : /stage: "zj-loop"/);
       assert.match(body, /image: "node:22"/);
       assert.match(body, /ZJ Loop GitLab CI requires Node >=18/);
       assert.match(body, /--package @jununfly\/zj-loop-core@0\.1\.8/);
@@ -488,6 +488,26 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(ciSweeper, /--run-id "\$\{ZJ_LOOP_SIGNAL_ID:-\$\{CI_PIPELINE_ID:-manual\}\}"/);
     assert.match(ciSweeper, /issue-fix-request\.md/);
     assert.match(ciSweeper, /issue-fix-request-result\.json/);
+    assert.match(ciSweeper, /stage: "?zj-loop-recovery"?/);
+    assert.match(ciSweeper, /ZJ_LOOP_GITLAB_CARRIER_ENABLED: "false"/);
+    assert.match(ciSweeper, /ZJ_LOOP_GITLAB_CARRIER_CONFIRMATION: ""/);
+    assert.match(ciSweeper, /ZJ_LOOP_GITLAB_CARRIER_BREAKER_STATE: "armed"/);
+    assert.match(ciSweeper, /CREATE_GITLAB_CI_SWEEPER_CARRIER/);
+    assert.match(ciSweeper, /--pipeline-source/);
+    assert.match(ciSweeper, /--carrier-enabled/);
+    assert.match(ciSweeper, /--carrier-confirmation/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper:[\s\S]*CI_PIPELINE_SOURCE == "schedule"[\s\S]*when: never/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper_failure:[\s\S]*when: never/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper_recovery:[\s\S]*needs: \[\]/);
+    assert.doesNotMatch(ciSweeper, /zj_loop_ci_sweeper_consumer:[\s\S]*CI_PIPELINE_SOURCE == "schedule"/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper_consumer:[\s\S]*CI_PIPELINE_SOURCE == "api"[\s\S]*when: manual/);
+    assert.match(ciSweeper, /gitlab-issue-fix-request/);
+    assert.match(ciSweeper, /issue-fix-request-carrier-result\.json/);
+    assert.match(ciSweeper, /zj_loop_ci_sweeper_consumer:/);
+    assert.match(ciSweeper, /ZJ_LOOP_CI_SWEEPER_REQUEST_ISSUE_IID/);
+    assert.match(ciSweeper, /ZJ_LOOP_CI_SWEEPER_REQUEST_ID/);
+    assert.match(ciSweeper, /zj-loop-ci-sweeper gitlab-repair-mr/);
+    assert.match(ciSweeper, /consumer-preflight\.json/);
     assert.doesNotMatch(ciSweeper, /\.github\/workflows/);
     const issueTriage = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-issue-triage.yml'), 'utf8');
     assert.match(issueTriage, /zj-loop-route dispatch issue-backlog-triage/);
@@ -507,6 +527,7 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     const prSteward = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-pr-steward.yml'), 'utf8');
     assert.match(prSteward, /ZJ_LOOP_MERGE_REQUEST_IID: ""/);
     assert.match(prSteward, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}\}/);
+    assert.match(prSteward, /zj-loop-route dispatch pr-steward-report[^\n]*> route-decision\.json \|\| true/);
     const changelogDrafter = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-changelog-drafter.yml'), 'utf8');
     assert.match(changelogDrafter, /ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON: ""/);
     assert.match(changelogDrafter, /changelog-signal\.json/);
@@ -523,12 +544,14 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     const postMerge = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-post-merge-cleanup.yml'), 'utf8');
     assert.match(postMerge, /zj-loop-route dispatch post-merge-roadmap-closeout/);
     assert.match(postMerge, /zj-loop-post-merge-closeout closeout-plan --provider gitlab/);
+    assert.match(postMerge, /zj-loop-post-merge-closeout live-closeout --provider gitlab/);
     assert.match(postMerge, /closeout-plan\.json/);
+    assert.match(postMerge, /live-closeout-result\.json/);
     assert.match(postMerge, /ZJ_LOOP_TARGET_BRANCH: ""/);
-    assert.match(postMerge, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$CI_PIPELINE_ID\}\}/);
-    assert.match(postMerge, /--merge-request "\$\{ZJ_LOOP_MERGE_REQUEST_IID:-\$\{CI_MERGE_REQUEST_IID:-0\}\}"/);
+    assert.match(postMerge, /signal_id="\$CI_PIPELINE_ID"/);
+    assert.match(postMerge, /--merge-request "\$\{mr_iid:-0\}"/);
     assert.match(postMerge, /--gitlab-api-url "\$\{CI_API_V4_URL:-https:\/\/gitlab\.com\/api\/v4\}"/);
-    assert.match(postMerge, /--gitlab-job-token "\$\{CI_JOB_TOKEN:-\}"/);
+    assert.match(postMerge, /job_token_args=""/);
     assert.doesNotMatch(postMerge, /--review-body-file/);
     assert.doesNotMatch(postMerge, /--target-branch/);
     assert.doesNotMatch(postMerge, /ZJ_LOOP_LIVE_CLEANUP_CONFIRMATION/);
@@ -549,6 +572,15 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(scheduleProbe, /allow_failure: false/);
     assert.match(scheduleProbe, /zj-loop\.gitlab_schedule_probe_receipt\.v1/);
     assert.match(scheduleProbe, /schedule-probe-receipt\.json/);
+
+    const scheduleHealth = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-schedule-health-check.yml'), 'utf8');
+    assert.match(scheduleHealth, /zj_loop_schedule_health_check:/);
+    assert.match(scheduleHealth, /CI_PIPELINE_SOURCE == "web"/);
+    assert.match(scheduleHealth, /zj-loop-doctor --root \./);
+    assert.match(scheduleHealth, /--schedule-health/);
+    assert.match(scheduleHealth, /needs: \[\]/);
+    assert.match(scheduleHealth, /schedule-health-result\.json/);
+    assert.doesNotMatch(scheduleHealth, /zj-loop-schedule-probe start/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);

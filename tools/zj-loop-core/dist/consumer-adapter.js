@@ -319,6 +319,9 @@ async function runRoadmapActivationToContractPlan(input) {
         ?? deriveSourceIssueUrl(input.signal, repairsApplied);
     const sourceCommentUrl = stringPayload(input.signal.payload.source_comment_url)
         ?? stringPayload(input.signal.payload.activation_request_comment_url);
+    const sourceCommentId = input.signal.provider === 'gitlab'
+        ? deriveGitLabNoteId(sourceCommentUrl)
+        : undefined;
     if (!sourceIssueUrl) {
         return hardStopResult({
             input,
@@ -348,6 +351,7 @@ async function runRoadmapActivationToContractPlan(input) {
         activationRequestId,
         sourceIssueUrl,
         sourceCommentUrl,
+        sourceCommentId,
         branchName,
         sourceIssue,
         processRoadmapPath,
@@ -357,6 +361,10 @@ async function runRoadmapActivationToContractPlan(input) {
         provider,
         reviewKind: provider === 'gitlab' ? 'merge-request' : 'pull-request',
         activationRequestId,
+        sourceIssue,
+        sourceCommentId,
+        sourceIssueUrl,
+        sourceCommentUrl,
         branchName,
         reviewTitle,
         prTitle: provider === 'github' ? buildRoadmapActivationPrTitle({ title, sourceIssue }) : undefined,
@@ -424,6 +432,8 @@ function buildReviewContract(input) {
     if (input.provider === 'github') {
         return buildRoadmapActivationPrContract({
             activationRequestId: input.activationRequestId,
+            sourceIssue: input.sourceIssue,
+            sourceCommentId: input.sourceCommentId,
             sourceIssueUrl: input.sourceIssueUrl,
             sourceCommentUrl: input.sourceCommentUrl,
             branchName: input.branchName,
@@ -434,6 +444,8 @@ function buildReviewContract(input) {
     return buildRoadmapActivationReviewContract({
         provider: input.provider,
         activationRequestId: input.activationRequestId,
+        sourceIssue: input.sourceIssue,
+        sourceCommentId: input.sourceCommentId,
         sourceIssueUrl: input.sourceIssueUrl,
         sourceCommentUrl: input.sourceCommentUrl,
         branchName: input.branchName,
@@ -525,6 +537,17 @@ function deriveSourceIssueUrl(signal, repairsApplied) {
         return value;
     }
     return undefined;
+}
+function deriveGitLabNoteId(sourceCommentUrl) {
+    if (!sourceCommentUrl)
+        return undefined;
+    try {
+        const match = new URL(sourceCommentUrl).hash.match(/^#note_(\d+)$/);
+        return match?.[1];
+    }
+    catch {
+        return undefined;
+    }
 }
 async function executeGitHubRoadmapActivation(input) {
     const plan = input.contractPlan ?? {};

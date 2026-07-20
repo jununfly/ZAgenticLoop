@@ -8,6 +8,12 @@ export const DEFAULT_ROUTE_TABLE_PATH = 'zj-loop/zj-loop-route-table.yaml';
 export type RouteTableRoute = {
   route_id?: string;
   enabled?: boolean;
+  project_path?: string;
+  capability_status?: 'available' | 'unavailable' | 'blocked' | 'unknown' | string;
+  planning_status?: 'in_scope' | 'deferred' | 'completed' | 'superseded' | string;
+  provider_writes_allowed?: boolean;
+  declared_capabilities?: string[];
+  verified_capabilities?: string[];
   request_kind?: string;
   consumer?: string;
   consumer_kind?: string;

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -76,8 +76,8 @@ test('post-merge closeout dry-run plan requires contract and executor guards', (
   assert.equal(plan.kind, 'zj-loop.post-merge-roadmap-closeout-executor');
   assert.equal(plan.status, 'dry-run');
   assert.equal(plan.side_effects_executed, false);
-  assert.equal(plan.confirmation.required, false);
-  assert.equal(plan.confirmation.authorization_source, 'merged-pr-contract');
+  assert.equal(plan.confirmation.required, true);
+  assert.equal(plan.confirmation.authorization_source, 'fixed-phrase');
   assert.equal(plan.confirmation.required_phrase, LIVE_CLEANUP_CONFIRMATION_PHRASE);
   assert.deepEqual(plan.refusals, []);
   assert.deepEqual(
@@ -99,6 +99,8 @@ test('post-merge closeout plan refuses unsafe executor contexts', () => {
   const dirty = buildPlan({ gitStatus: ' M README.md\n' });
   const wrongRepo = buildPlan({ currentRepo: 'other/repo' });
   const wrongCarrier = buildPlan({ expectedCarrierIssue: 40 });
+  const wrongBranch = buildPlan({ pr: { ...MERGED_PR, headRefName: 'zjal-other-branch' } });
+  const missingContract = buildPlan({ prBody: 'No closeout contract here.' });
 
   assert.equal(unmerged.status, 'refused');
   assert.ok(unmerged.refusals.some((refusal) => refusal.reason === 'PR must be merged'));
@@ -108,6 +110,14 @@ test('post-merge closeout plan refuses unsafe executor contexts', () => {
   assert.ok(wrongRepo.refusals.some((refusal) => refusal.guard === 'current-repository'));
   assert.equal(wrongCarrier.status, 'refused');
   assert.ok(wrongCarrier.refusals.some((refusal) => refusal.guard === 'expected-carrier-issue'));
+  assert.equal(wrongBranch.status, 'refused');
+  assert.ok(wrongBranch.refusals.length > 0);
+  assert.equal(missingContract.status, 'refused');
+  assert.ok(missingContract.refusals.some((refusal) => refusal.reason === 'missing post-merge contract'));
+  for (const refusalPlan of [unmerged, dirty, wrongRepo, wrongCarrier, wrongBranch, missingContract]) {
+    assert.deepEqual(refusalPlan.actions, []);
+    assert.equal(refusalPlan.side_effects_executed, false);
+  }
 });
 
 test('post-merge closeout normalizes GitLab MR metadata into closeout plans', () => {
@@ -276,6 +286,13 @@ test('post-merge GitLab live execution deletes only contract branch and closes o
       assert.equal(init.method, 'DELETE');
       return { ok: true, status: 204, async json() { return {}; } };
     }
+    if (text.endsWith('/issues/39/notes?per_page=100')) {
+      return { ok: true, status: 200, async json() { return []; } };
+    }
+    if (text.endsWith('/issues/39/notes')) {
+      assert.equal(init.method, 'POST');
+      return { ok: true, status: 201, async json() { return { id: 1 }; } };
+    }
     if (text.endsWith('/issues/39')) {
       if (init.method === 'GET') return { ok: true, status: 200, async json() { return { state: 'opened' }; } };
       assert.equal(init.method, 'PUT');
@@ -293,17 +310,59 @@ test('post-merge GitLab live execution deletes only contract branch and closes o
 
   assert.equal(result.status, 'executed');
   assert.equal(result.side_effects_executed, true);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 5);
   assert.equal(calls[0].init.headers['PRIVATE-TOKEN'], 'token');
   assert.deepEqual(result.execution.steps.map((step) => [step.type, step.result]), [
+    ['append-evidence', 'written'],
     ['delete-branch', 'deleted'],
     ['close-carrier-issue', 'closed'],
   ]);
   assert.equal(result.runner_evidence.completion_form, 'cleanup-done');
   assert.equal(result.runner_evidence.status, 'completed');
-  assert.equal(result.runner_evidence.side_effects.actions[0].provider, 'gitlab');
-  assert.equal(result.runner_evidence.side_effects.actions[0].branch, 'zjal/post-merge-closeout-executor');
-  assert.equal(result.runner_evidence.side_effects.actions[1].issue, 39);
+  const branchAction = result.runner_evidence.side_effects.actions.find((action) => action.type === 'delete-branch');
+  const issueAction = result.runner_evidence.side_effects.actions.find((action) => action.type === 'close-carrier-issue');
+  assert.equal(branchAction.provider, 'gitlab');
+  assert.equal(branchAction.branch, 'zjal/post-merge-closeout-executor');
+  assert.equal(issueAction.issue, 39);
+});
+
+test('post-merge GitLab live execution does not duplicate closeout evidence on replay', async () => {
+  const mr = normalizeGitLabMrView({
+    iid: 9,
+    web_url: 'https://gitlab.com/group/project/-/merge_requests/9',
+    description: VALID_BODY,
+    state: 'merged',
+    source_branch: 'zjal/post-merge-closeout-executor',
+    target_branch: 'main',
+    project_path: 'group/project',
+  }, { expectedRepo: 'group/project' });
+  const plan = buildPostMergeRoadmapCloseoutExecutionPlan({
+    pr: mr,
+    prBody: mr.body,
+    expectedRepo: 'group/project',
+    currentRepo: 'group/project',
+    gitStatus: '',
+    expectedCarrierIssue: 39,
+    live: true,
+  });
+  const writes = [];
+  const fetchImpl = async (url, init = {}) => {
+    const text = String(url);
+    if (text.endsWith('/issues/39/notes?per_page=100')) return { ok: true, status: 200, async json() { return [{ body: 'kind: zj-loop.post-merge-closeout-executed\nroadmap_branch: zjal/post-merge-closeout-executor' }]; } };
+    if (text.endsWith('/issues/39/notes')) { writes.push(init.method); return { ok: true, status: 201, async json() { return {}; } }; }
+    if (text.includes('/repository/branches/')) return { ok: false, status: 404, async json() { return {}; }, async text() { return 'not found'; } };
+    if (text.endsWith('/issues/39')) return { ok: true, status: 200, async json() { return { state: 'closed' }; } };
+    throw new Error(`unexpected GitLab API URL: ${text}`);
+  };
+
+  const result = await executePostMergeRoadmapCloseout(plan, { fetchImpl, gitlabToken: 'token' });
+  assert.equal(result.status, 'executed');
+  assert.deepEqual(writes, []);
+  assert.deepEqual(result.execution.steps.map((step) => [step.type, step.result]), [
+    ['append-evidence', 'already_written'],
+    ['delete-branch', 'already_deleted'],
+    ['close-carrier-issue', 'already_closed'],
+  ]);
 });
 
 test('post-merge GitLab live execution treats missing branch and already closed carrier as completed', async () => {
@@ -327,6 +386,8 @@ test('post-merge GitLab live execution treats missing branch and already closed 
   });
   const fetchImpl = async (url) => {
     const text = String(url);
+    if (text.endsWith('/issues/39/notes?per_page=100')) return { ok: true, status: 200, async json() { return []; } };
+    if (text.endsWith('/issues/39/notes')) return { ok: true, status: 201, async json() { return { id: 1 }; } };
     if (text.includes('/repository/branches/')) return { ok: false, status: 404, async json() { return {}; }, async text() { return 'not found'; } };
     if (text.endsWith('/issues/39')) return { ok: true, status: 200, async json() { return { state: 'closed' }; } };
     throw new Error(`unexpected GitLab API URL: ${text}`);
@@ -339,6 +400,7 @@ test('post-merge GitLab live execution treats missing branch and already closed 
 
   assert.equal(result.status, 'executed');
   assert.deepEqual(result.execution.steps.map((step) => [step.type, step.result]), [
+    ['append-evidence', 'written'],
     ['delete-branch', 'already_deleted'],
     ['close-carrier-issue', 'already_closed'],
   ]);
@@ -370,10 +432,10 @@ test('post-merge dry-run evidence comment uses packaged command names', () => {
   assert.match(comment, /side_effects_executed: false/);
   assert.match(comment, /artifact: post-merge-roadmap-closeout-plan-41/);
   assert.match(comment, /zj-loop-post-merge-closeout live-closeout --pr 41 --repo jununfly\/ZAgenticLoop --carrier-issue 39/);
-  assert.doesNotMatch(comment, /--confirm-live-cleanup/);
-  assert.match(comment, /Live cleanup authorization/);
-  assert.match(comment, /Authorization source: merged-pr-contract/);
-  assert.match(comment, /Confirmation required: false/);
+  assert.match(comment, /--confirm-live-cleanup/);
+  assert.match(comment, /Confirmation required for live cleanup/);
+  assert.match(comment, /Authorization source: fixed-phrase/);
+  assert.match(comment, /Confirmation required: true/);
 });
 
 test('post-merge GitHub input collection normalizes PR and repository evidence', async () => {
@@ -452,6 +514,35 @@ test('post-merge closeout-plan CLI accepts explicit GitLab MR metadata', async (
     assert.equal(parsed.review.provider, 'gitlab');
     assert.equal(parsed.review.kind, 'merge-request');
     assert.equal(parsed.repository.expected, 'group/project');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('post-merge live-closeout CLI writes a structured confirmation hard stop', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'zj-loop-post-merge-confirmation-'));
+  const bodyPath = path.join(dir, 'mr-body.md');
+  const resultPath = path.join(dir, 'result.json');
+  await writeFile(bodyPath, VALID_BODY);
+  try {
+    const result = spawnSync(process.execPath, [
+      POST_MERGE_CLOSEOUT_CLI,
+      'live-closeout',
+      '--provider', 'gitlab',
+      '--repo', 'group/project',
+      '--merge-request', '9',
+      '--review-body-file', bodyPath,
+      '--carrier-issue', '39',
+      '--require-live-confirmation',
+      '--out', resultPath,
+      '--json',
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    const artifact = JSON.parse(await readFile(resultPath, 'utf8'));
+    assert.equal(artifact.status, 'skipped');
+    assert.equal(artifact.reason, 'confirmation-required');
+    assert.equal(artifact.side_effects_executed, false);
+    assert.deepEqual(artifact.execution.steps, []);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -369,8 +369,8 @@ function buildLiveCleanupConfirmation(
 ): PostMergeCloseoutPlan['confirmation'] {
   const review = reviewLabel(input.provider, input.reviewKind, input.reviewNumber);
   return {
-    required: !input.contractAuthorized,
-    authorization_source: input.contractAuthorized ? 'merged-pr-contract' : 'fixed-phrase',
+    required: true,
+    authorization_source: 'fixed-phrase',
     confirmation_location: confirmationLocationsFor(input.provider),
     required_phrase: LIVE_CLEANUP_CONFIRMATION_PHRASE,
     side_effects: [
@@ -380,9 +380,7 @@ function buildLiveCleanupConfirmation(
       `append closeout evidence to carrier issue #${input.carrierIssue ?? 'unknown'}`,
       `close carrier issue #${input.carrierIssue ?? 'unknown'}`,
     ],
-    why_required: input.contractAuthorized
-      ? `No extra confirmation is required: the merged ${review} contains a valid post-merge contract and all executor guards passed.`
-      : `Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable when merged ${review} contract authorization is unavailable.`,
+    why_required: `Live cleanup deletes a branch and closes an issue, so operator intent must be explicit and auditable even when merged ${review} contains a valid post-merge contract.`,
     audit_target: [
       `merged ${review}`,
       `carrier issue #${input.carrierIssue ?? 'unknown'}`,
@@ -601,6 +599,48 @@ async function executeGitLabPostMergeRoadmapCloseout(
   const issue = plan.carrier.issue;
   const steps: any[] = [];
 
+  if (!Number.isInteger(issue)) {
+    return buildSkippedCloseoutResult(plan, 'carrier-issue-required-for-gitlab-live-closeout', steps);
+  }
+
+  const closeIssueUrl = buildGitLabIssueApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath,
+    issue: Number(issue),
+  });
+  const issueProbeResponse = await fetchImpl(closeIssueUrl, {
+    method: 'GET',
+    headers,
+  });
+  if (!issueProbeResponse.ok) {
+    return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-carrier-issue-probe-failed', issueProbeResponse), steps);
+  }
+  const issueProbe = await issueProbeResponse.json();
+  const notesUrl = `${closeIssueUrl}/notes`;
+  const notesResponse = await fetchImpl(`${notesUrl}?per_page=100`, { method: 'GET', headers });
+  if (!notesResponse.ok) {
+    return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-closeout-evidence-probe-failed', notesResponse), steps);
+  }
+  const notes = await notesResponse.json() as any[];
+  const evidenceMarker = `roadmap_branch: ${branch}`;
+  const evidenceAlreadyWritten = notes.some((note) => {
+    const body = String(note?.body ?? '');
+    return body.includes('kind: zj-loop.post-merge-closeout-executed') && body.includes(evidenceMarker);
+  });
+  if (evidenceAlreadyWritten) {
+    steps.push({ name: 'append-gitlab-closeout-evidence', type: 'append-evidence', status: 'skipped', result: 'already_written', issue: Number(issue) });
+  } else {
+    const evidenceResponse = await fetchImpl(notesUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ body: buildCloseoutEvidenceComment(plan) }),
+    });
+    if (!evidenceResponse.ok) {
+      return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-closeout-evidence-write-failed', evidenceResponse), steps);
+    }
+    steps.push({ name: 'append-gitlab-closeout-evidence', type: 'append-evidence', status: 'ok', result: 'written', issue: Number(issue) });
+  }
+
   const deleteBranchUrl = buildGitLabBranchApiUrl({
     apiBaseUrl: input.apiBaseUrl,
     projectPath,
@@ -635,22 +675,6 @@ async function executeGitLabPostMergeRoadmapCloseout(
     return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-branch-delete-failed', deleteBranchResponse), steps);
   }
 
-  if (!Number.isInteger(issue)) {
-    return buildSkippedCloseoutResult(plan, 'carrier-issue-required-for-gitlab-live-closeout', steps);
-  }
-  const closeIssueUrl = buildGitLabIssueApiUrl({
-    apiBaseUrl: input.apiBaseUrl,
-    projectPath,
-    issue: Number(issue),
-  });
-  const issueProbeResponse = await fetchImpl(closeIssueUrl, {
-    method: 'GET',
-    headers,
-  });
-  if (!issueProbeResponse.ok) {
-    return buildSkippedCloseoutResult(plan, await gitLabFailureReason('gitlab-carrier-issue-probe-failed', issueProbeResponse), steps);
-  }
-  const issueProbe = await issueProbeResponse.json();
   if (issueProbe?.state === 'closed') {
     steps.push({
       name: 'close-gitlab-carrier-issue',

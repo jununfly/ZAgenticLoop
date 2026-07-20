@@ -57,6 +57,7 @@ function renderGitLabTemplate(template, options) {
     : ['  tags:', ...options.runnerTags.map((tag) => `    - ${yamlString(tag)}`), ''].join('\n');
   const rendered = template
     .replace(/__ZJ_LOOP_GITLAB_STAGE__/g, yamlString(options.stage))
+    .replace(/__ZJ_LOOP_GITLAB_RECOVERY_STAGE__/g, yamlString(`${options.stage}-recovery`))
     .replace(/__ZJ_LOOP_GITLAB_IMAGE__/g, yamlString(options.image))
     .replace(/__ZJ_LOOP_CORE_PACKAGE__/g, options.corePackage)
     .replace(/__ZJ_LOOP_GITLAB_TAGS__\n?/g, runnerTags);
@@ -209,7 +210,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
     if (!gitlabTemplate.includes('# zj-loop-generated: true')) {
       errors.push(`${gitlabTemplatePath} missing generated sentinel`);
     }
-    if (!gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_STAGE__')) {
+    if (!gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_STAGE__') && !gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__')) {
       errors.push(`${gitlabTemplatePath} missing configurable GitLab stage`);
     }
     errors.push(...validateChangelogDrafterWorkflowBoundary({
@@ -217,6 +218,20 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
       source: 'GitLab template',
       body: gitlabTemplate,
     }));
+    if (workflowFile === 'zj-loop-dependency-sweeper.yml') {
+      const requiredMarkers = [
+        'zj_loop_dependency_sweeper_gitlab_repair_mr:',
+        'when: manual',
+        'zj-loop-dependency-sweeper gitlab-repair-mr',
+        '--request "$ZJ_LOOP_DEPENDENCY_REQUEST_JSON"',
+        '--actions "$ZJ_LOOP_DEPENDENCY_ACTIONS_JSON"',
+        'gitlab-repair-mr-result.json',
+      ];
+      for (const marker of requiredMarkers) {
+        if (!gitlabTemplate.includes(marker)) errors.push(`${workflowFile} is missing GitLab manual repair-MR marker: ${marker}`);
+      }
+      if (gitlabTemplate.includes('gh ')) errors.push(`${workflowFile} GitLab repair-MR fragment must not call gh`);
+    }
     if (workflowFile === 'zj-loop-changelog-drafter.yml' && gitlabTemplate.includes('live-draft')) {
       errors.push(`${workflowFile} GitLab template must not expose live-draft until GitLab live draft MR support is promoted`);
     }

@@ -9,6 +9,7 @@ import {
   promoteRouteMaturity,
   setRouteEnabled,
 } from './route.js';
+import { buildGitLabControlRouteEvidence } from './gitlab-control-route-evidence.js';
 
 function optionValue(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
@@ -21,7 +22,7 @@ function hasFlag(args: string[], name: string): boolean {
 }
 
 function positionalAfterCommand(args: string[]): string | undefined {
-  const valueFlags = new Set(['--root', '--source', '--signal-id', '--confirm', '--reason', '--runner', '--target', '--orchestration']);
+  const valueFlags = new Set(['--root', '--source', '--signal-id', '--confirm', '--reason', '--runner', '--target', '--orchestration', '--project', '--scope', '--requested-side-effect']);
   for (let index = 1; index < args.length; index += 1) {
     const arg = args[index];
     if (valueFlags.has(arg)) {
@@ -39,6 +40,7 @@ function help(): string {
 Usage:
   zj-loop-route status [consumer-or-route] [--root <dir>] [--json]
   zj-loop-route dispatch <consumer-or-route> [--root <dir>] [--source <source>] [--signal-id <id>] [--json]
+  zj-loop-route control-evidence <human|ignore> --project <group/project> --orchestration <id> --signal-id <id> --source gitlab-protocol --reason <reason> [--requested-side-effect <level>] [--json]
   zj-loop-route enable <consumer-or-route> [--root <dir>] [--confirm <phrase>] [--reason <text>] [--json]
   zj-loop-route disable <consumer-or-route> [--root <dir>] [--json]
   zj-loop-route promote <consumer-or-route> --runner install-ready|execution-ready [--root <dir>] [--confirm <phrase>] [--json]
@@ -87,6 +89,23 @@ async function main(argv = process.argv.slice(2)) {
     });
     console.log(JSON.stringify(decision, null, 2));
     return decision.allowed ? 0 : 2;
+  }
+
+  if (command === 'control-evidence') {
+    const result = buildGitLabControlRouteEvidence({
+      projectPath: optionValue(argv, '--project') ?? '',
+      orchestrationId: optionValue(argv, '--orchestration') ?? '',
+      routeId: selector,
+      reason: optionValue(argv, '--reason') ?? '',
+      signal: {
+        source: optionValue(argv, '--source') ?? '',
+        signal_id: optionValue(argv, '--signal-id') ?? '',
+        project: optionValue(argv, '--project') ?? '',
+      },
+      requestedSideEffect: optionValue(argv, '--requested-side-effect'),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return result.status === 'completed' ? 0 : 2;
   }
 
   if (command === 'enable' || command === 'disable') {

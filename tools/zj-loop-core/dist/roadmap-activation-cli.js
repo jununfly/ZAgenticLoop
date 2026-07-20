@@ -147,13 +147,14 @@ else if (argv[0] === 'contract-plan') {
     process.exitCode = await runCli({
         name: 'zj-loop-roadmap-activation',
         description: 'Build deterministic Roadmap Activation branch, review title, and review contract evidence.',
-        usage: 'zj-loop-roadmap-activation contract-plan --activation-request-id <id> --source-issue-url <url> --source-comment-url <url> [--provider github|gitlab] [--title <title>] [--source-issue <n>] [--process-roadmap-path <path>] [--out <path>] [--json]',
+        usage: 'zj-loop-roadmap-activation contract-plan --activation-request-id <id> --source-issue-url <url> --source-comment-url <url> [--provider github|gitlab] [--title <title>] [--source-issue <n>] [--source-comment-id <n>] [--process-roadmap-path <path>] [--out <path>] [--json]',
         options: [
             { name: 'command', type: 'positional', description: 'Command', default: 'contract-plan' },
             { name: 'activation-request-id', type: 'string', description: 'Stable activation request id' },
             { name: 'provider', type: 'enum', description: 'Provider review surface', values: ['github', 'gitlab'], default: 'github' },
             { name: 'title', type: 'string', description: 'Roadmap PR short title' },
             { name: 'source-issue', type: 'string', description: 'Source issue number' },
+            { name: 'source-comment-id', type: 'string', description: 'Source GitLab Note ID' },
             { name: 'source-issue-url', type: 'string', description: 'Source provider issue URL' },
             { name: 'source-comment-url', type: 'string', description: 'Source provider issue comment/note URL' },
             { name: 'process-roadmap-path', type: 'string', description: 'Process roadmap path for closeout evidence' },
@@ -169,10 +170,13 @@ else if (argv[0] === 'contract-plan') {
             const provider = String(options.provider ?? 'github');
             const title = typeof options.title === 'string' ? options.title : undefined;
             const sourceIssue = typeof options['source-issue'] === 'string' ? options['source-issue'] : undefined;
+            const sourceCommentId = typeof options['source-comment-id'] === 'string' ? options['source-comment-id'] : undefined;
             const branchName = buildRoadmapActivationBranchName({ activationRequestId, title, sourceIssue });
             const reviewTitle = buildRoadmapActivationReviewTitle({ provider, title, sourceIssue });
             const reviewContract = provider === 'github' ? buildRoadmapActivationPrContract({
                 activationRequestId,
+                sourceIssue,
+                sourceCommentId,
                 sourceIssueUrl: String(options['source-issue-url']),
                 sourceCommentUrl: String(options['source-comment-url']),
                 branchName,
@@ -184,6 +188,8 @@ else if (argv[0] === 'contract-plan') {
             }) : buildRoadmapActivationReviewContract({
                 provider,
                 activationRequestId,
+                sourceIssue,
+                sourceCommentId,
                 sourceIssueUrl: String(options['source-issue-url']),
                 sourceCommentUrl: String(options['source-comment-url']),
                 branchName,
@@ -198,6 +204,10 @@ else if (argv[0] === 'contract-plan') {
                 provider,
                 reviewKind: provider === 'gitlab' ? 'merge-request' : 'pull-request',
                 activationRequestId,
+                sourceIssue,
+                sourceCommentId,
+                sourceIssueUrl: String(options['source-issue-url']),
+                sourceCommentUrl: String(options['source-comment-url']),
                 branchName,
                 reviewTitle,
                 prTitle: provider === 'github' ? buildRoadmapActivationPrTitle({ title, sourceIssue }) : undefined,

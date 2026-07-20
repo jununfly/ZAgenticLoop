@@ -416,7 +416,7 @@
     "1-5-4": {
       "id": "1-5-4",
       "label": "GitLab branch MR review and closeout live adapter parity",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [
@@ -428,7 +428,7 @@
         "1-5-4-6"
       ],
       "decisions": [],
-      "notes": ""
+      "notes": "All six GitLab branch/MR review and closeout parity slices are complete: Roadmap Activation, Post-Merge Closeout, CI Sweeper, Dependency Sweeper, PR Steward, and Changelog Drafter. Each route has provider-specific lifecycle evidence or bounded escalation evidence in ai-studio; Changelog Drafter additionally completed draft-evidence, draft-MR, negative merge boundary, human merge, and positive closeout."
     },
     "1-5-5": {
       "id": "1-5-5",
@@ -436,8 +436,141 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1-5",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-5-1",
+        "1-5-5-2",
+        "1-5-5-3",
+        "1-5-5-4",
+        "1-5-5-5",
+        "1-5-5-6"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab required cell 的完成证据门槛是什么？",
+          "answer": "每个 applicable + required cell 必须同时具备 positive live evidence、negative/recovery evidence 与 deterministic verification；event-driven 与 scheduled 必须由对应真实触发模式证明，explicit-on-demand 才可用手动 pipeline，not-applicable 必须有语义理由。",
+          "note": "report-only 以 report artifact 作为 positive；手动运行不能冒充 scheduled 或 event-driven capability。"
+        },
+        {
+          "q": "human 与 ignore 是否需要专用 GitLab provider job？",
+          "answer": "纳入 GitLab required matrix，但采用协议级 GitLab evidence；真实 GitLab 来源信号进入 Route Decision，human 产出结构化 handoff/hard-stop，ignore 产出 route-decision/suppression artifact，均验证 GitLab provider binding 与零 provider side effect，不新增无意义 API job。",
+          "note": "control route 不是 GitLab API 写入 route，不能用伪造 job 冒充 provider capability。"
+        },
+        {
+          "q": "GitLab required-route reference installation 使用哪个项目？",
+          "answer": "只使用 mlive-dev/ai-studio 作为唯一 GitLab reference installation；复用其中兼容的既有 evidence，只在该项目补齐缺口。其他项目属于后续 installation completion，不纳入 1-5-5。",
+          "note": "ai-studio 已验证 Runner、Node image、GITLAB_TOKEN、schedule、Issue/MR 与 closeout 基础设施，减少无关环境变量。"
+        },
+        {
+          "q": "1-5-5 如何拆成可执行 slices？",
+          "answer": "按触发与语义族拆为五个子节点：control/report-only、explicit-on-demand、event-driven、scheduled、全矩阵 verifier/evidence index；父节点只有五个子节点全部完成后才完成。",
+          "note": "每个子节点记录 route IDs、positive/recovery/verification evidence；子节点完成不代表 GitLab required-route 全量完成。"
+        },
+        {
+          "q": "required route 如何唯一归属五个 slice？",
+          "answer": "每个 route 按真实 signal_initiation_mode 只归入一个 slice；human 与 ignore 作为唯一 control-route 例外归入 1-5-5-1；manual-smoke/roadmap 归 explicit-on-demand，Issue Triage/PR Steward/CI Sweeper/Post-Merge 归 event-driven，Daily Triage/Issue Backlog/Dependency/Changelog 归 scheduled，1-5-5-5 只做矩阵 verifier。",
+          "note": "优先触发模式，避免 report-only 与 scheduled/event-driven 双重归类造成重复或遗漏。"
+        },
+        {
+          "q": "已有 GitLab evidence 何时可以复用？",
+          "answer": "只有确定性 compatibility fingerprint 全部匹配时才复用：route/provider/project、fragment/template hash、core package 版本与 hash、signal initiation mode、adapter/verifier/artifact schema 版本及原 evidence 的 branch/config assumptions；相关变更使 evidence 标记 stale 并要求重跑，无关变更不使其失效。",
+          "note": "避免无意义重复 dogfood，同时禁止把历史成功结果直接当作当前 GitLab 全量能力。"
+        },
+        {
+          "q": "全矩阵 verifier 应新建 GitLab 专用评分器吗？",
+          "answer": "不新建；复用并扩展 zj-loop-doctor --completion、zj-loop.completion-alignment-ledger.v1、provider-parity gate 与 generated-bundle gate，补充 GitLab evidence compatibility fingerprint、矩阵索引与 stale 推导。",
+          "note": "Route Table 继续拥有 capability truth，doctor/ledger 拥有用户项目 completion truth，避免第二套 GitLab completion truth。"
+        },
+        {
+          "q": "GitLab matrix cell 如何表达未完成状态？",
+          "answer": "严格区分 complete、incomplete、blocked、stale、unsupported；不统一记为 incomplete，不做分数平均。每个非 complete cell 必须携带 owner、structured reason、evidence 状态、resume/next command，以及是否需要 Human 配置或授权。",
+          "note": "代码缺口、外部环境阻塞、fingerprint 失效和语义不适用是不同事实，不能让其他 Agent 误判为同一种待重试状态。"
+        },
+        {
+          "q": "report-only 与 control route 是否需要 recovery evidence？",
+          "answer": "必须需要；human/ignore/report route 分别验证结构化 human_handoff、suppression/route-decision 或 protocol_repair_request 等 stop/recovery artifact，并证明零 GitLab API 写入。",
+          "note": "无副作用不等于无需验证停止行为；GitLab 来源下的协议边界同样必须可回放。"
+        },
+        {
+          "q": "event-driven GitLab dogfood 使用什么 fixture？",
+          "answer": "所有 event-driven route 使用专用、可回滚、固定 binding 的 GitLab fixture：测试 Issue/label-state、测试 MR/IID/head SHA、generated-substrate CI failure、已合并 closeout MR/contract；每个 fixture 有 dedupe key、scope verifier 与 closeout，不触碰 ai-studio 业务逻辑。",
+          "note": "一次 fixture 成功只证明对应 route，不跨 route 泛化 evidence。"
+        },
+        {
+          "q": "scheduled GitLab route 如何产生真实 evidence？",
+          "answer": "每个 scheduled required route 使用 route-specific owned schedule、精确单分钟 cron、固定 target branch/project/job/artifact schema；schedule probe 验证 source=schedule、schedule ID、pipeline/job artifact 与时间窗口。schedule 生命周期必须有创建、更新、恢复、删除 evidence；schedule 961 仅保留为既有 schedule-probe evidence，不泛化为所有 route。",
+          "note": "禁止 */1；每个 schedule 只制造一次目标 evidence，避免重复 artifact 与噪声。"
+        },
+        {
+          "q": "scheduled route 是否默认允许 provider side effect？",
+          "answer": "否。scheduled pipeline 默认只运行 report/plan/preflight；Issue/MR/branch/label/commit 写入必须进入独立 recovery job，并要求显式 confirmation 或已验证的 route-specific trusted-automation capability。schedule 不隐式获得 GITLAB_TOKEN 写权限。",
+          "note": "trusted automation 若启用，必须单独记录 side-effect scope、变量来源、claim、verifier 与 recovery evidence。"
+        },
+        {
+          "q": "trusted automation 如何授权？",
+          "answer": "必须采用 route-specific、side-effect-scope-specific promotion；禁止全局 trusted automation 开关。每个 route 的 capability proof、promotion、项目变量和 runtime side-effect scope 独立校验，evidence stale 时自动降级 report-only/hard stop。",
+          "note": "避免一次项目变量授权意外打开所有 scheduled route。"
+        },
+        {
+          "q": "trusted automation promotion 使用什么确认短语？",
+          "answer": "使用独立固定短语 PROMOTE_GITLAB_TRUSTED_AUTOMATION_<route-id>；该短语只授权 capability promotion，不替代 runtime 项目变量，也不能扩大 route 或 side-effect scope。runtime variable 与 promotion evidence 必须同时有效，evidence stale 时即使变量仍存在也只能 hard stop。",
+          "note": "promotion phrase、runtime enablement、side-effect scope 三者分离，避免项目变量自带升级权限。"
+        },
+        {
+          "q": "reference validation completeness 与 runtime automation 是否共用一个阻塞状态？",
+          "answer": "不共用，采用双轴模型：1-5-5 的全矩阵证据用于 reference validation、发布能力声明与 doctor completion；低风险 report/artifact/plan/verification route 在安装后默认自动运行，不因矩阵其他 cell blocked/stale 而停摆。trusted automation promotion 只约束不可逆或业务影响的 provider side effect。",
+          "note": "避免全量验证工程把自动产品体验退化成逐 route 人工授权；reference gap 与 runtime stop 必须分离。"
+        },
+        {
+          "q": "runtime automation 默认策略使用什么风险模型？",
+          "answer": "复用 Route Table 既有 execution.mode、side_effect_level、guards.human_gate、completion_forms 与 route-specific trusted-automation guard；evidence/report/plan 默认自动，allowlisted request/claim 经 binding/dedupe/verifier 后默认自动，bounded branch/repair-MR/draft 遵循各 route 协议，merge/close/release/publish/业务 tracker mutation 保留 Human 或 route-specific trusted promotion。",
+          "note": "不新增全局 risk score，也不把所有 provider write 一刀切为 Human gate，避免不同 consumer 语义互相拖累。"
+        },
+        {
+          "q": "trusted automation 未满足时如何输出用户 handoff？",
+          "answer": "必须输出固定结构化 envelope：status=blocked、reason=trusted_automation_not_promoted 或 evidence_stale、side_effects_executed=false、route/provider/project/promotion scope、固定 confirmation phrase、structured next_steps command array；zj-loop-doctor JSON 为主 truth，人类摘要仅展示层。",
+          "note": "禁止普通自然语言求助；Codex Harness 可按 envelope resume，Human 只在真实 promotion boundary 授权一次。"
+        },
+        {
+          "q": "trusted automation promotion 使用什么 CLI 入口？",
+          "answer": "复用 zj-loop-route promotion-gate，新增 target=trusted-automation；命令显式接收 provider、project、scope，check-only 默认，--apply 仍需固定 phrase；不新建独立 trusted automation CLI。",
+          "note": "统一 promotion truth 与现有 execution-ready promotion，避免两套授权生命周期。"
+        },
+        {
+          "q": "trusted automation promotion state 属于哪里？",
+          "answer": "采用项目级 installation evidence overlay：Route Table 只声明允许的 trusted_automation scopes、gate 与 side-effect 上限；ai-studio 保存绑定 provider/project/route/scope/fingerprint 的 promotion evidence；zj-loop-doctor 将 policy 与项目 evidence 合并派生 runtime 状态，stale/mismatch 自动降级。不把单项目 promotion 写成全局 Route Table capability。",
+          "note": "trusted automation 是安装环境授权，不是 package 默认能力；保持 provider/project 隔离。"
+        },
+        {
+          "q": "trusted automation promotion evidence 如何保存？",
+          "answer": "统一保存为项目级低成本 JSON artifact：zj-loop/evidence/trusted-automation/<provider>/<route-id>.json，schema=zj-loop.trusted_automation_promotion.v1。只保存 provider/project/route/scope、policy与compatibility fingerprint、authority、promotion/revoke时间、scope与evidence refs；不保存 token、完整 GitLab response 或敏感 payload；doctor 扫描 raw artifact 并派生 runtime ledger。",
+          "note": "项目级 overlay 是 raw evidence，doctor ledger 是派生 truth，避免全局能力污染和第二套状态机。"
+        },
+        {
+          "q": "trusted automation 如何撤销或失效？",
+          "answer": "采用自动失效加显式撤销双通道：相关 fingerprint/policy/fragment/core/schema/project/branch/权限变化自动 status=stale 并停止副作用；maintainer 可通过 promotion-gate --target trusted-automation --revoke 与独立短语 REVOKE_GITLAB_TRUSTED_AUTOMATION_<route-id> 撤销；历史 evidence 保留，重新启用必须重新 promotion。",
+          "note": "删除或恢复项目变量不能伪造 promotion，也不能抹去历史审计。"
+        },
+        {
+          "q": "trusted promotion stale 或 revoked 后如何运行？",
+          "answer": "按 route 既有 side-effect policy 分层降级：evidence/report/plan 可继续并记录 promotion_stale；request/claim 仅在 route 已声明允许无 promotion 的 bounded automation 时继续，否则 structured hard stop；branch/commit/MR/Issue mutation 立即 hard stop 且 side_effects_executed=false；merge/close/release/publish 始终保留 Human boundary。",
+          "note": "不因高风险 promotion 状态把所有低风险自动路径全局停掉，也不让 stale promotion 继续产生 provider mutation。"
+        },
+        {
+          "q": "GitLab trusted runtime variable 如何绑定运行环境？",
+          "answer": "必须全部满足：变量只存在 ai-studio 项目配置；route-specific；值仅允许 enabled；job 校验 CI_PIPELINE_SOURCE=schedule 与 target branch allowlist；promotion evidence 的 project/route/scope/fingerprint 必须匹配；GITLAB_TOKEN 独立存在；Web/manual pipeline 即使读取变量也不得触发 trusted side effect。",
+          "note": "变量表示运行时选择，不获得 promotion 或扩大 side-effect scope。"
+        },
+        {
+          "q": "trusted runtime variable 谁可以配置或撤销？",
+          "answer": "只能由 Human maintainer 在 GitLab 项目设置中配置、修改或删除；Agent 不调用 Project Variables API，不自动恢复变量。Agent 只读取存在性与固定枚举状态，输出 variable_present/config binding 摘要；schedule preflight 发现缺失或撤销后自动降级。",
+          "note": "把项目授权保留在明确的人类配置边界，避免 Agent 通过变量 API 自我升级权限。"
+        },
+        {
+          "q": "事故经验 TODO 应放在哪个路线图位置？",
+          "answer": "A：在 1-5-5 下新增 GitLab 自动化副作用安全回归父节点及子 TODO",
+          "note": "这些问题来自真实 required-route dogfood，应成为 GitLab 验证门禁，不回写为既有 CI Sweeper 功能已完成。"
+        }
+      ],
       "notes": ""
     },
     "1-6-1": {
@@ -796,7 +929,7 @@
     "1-5-4-1": {
       "id": "1-5-4-1",
       "label": "GitLab Roadmap activation branch and draft-MR contract",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [],
@@ -817,57 +950,310 @@
           "note": "Route enablement remains separate from the generated user's default disabled route profile."
         }
       ],
-      "notes": ""
+      "notes": "Completed with real GitLab live evidence after target MR !297 merged. Pipeline 10503931 manual job 25939406 ran on master with GITLAB_TOKEN, emitted execution-result.json schema zj-loop.gitlab_roadmap_activation_execution_result.v1, status=completed, target_branch=master, branch_name=zjal-act-issue-comment-gitlab-roadmap-activation, merge_request_iid=298, and merge_request_url=https://git.bilibili.co/mlive-dev/ai-studio/-/merge_requests/298. live_operations recorded create-branch status 201, find-merge-request status 200/count 0, and create-merge-request status 201. This evidence proves the GitLab branch/Draft-MR contract only; the manual run used default empty source issue/comment inputs (source issue 0), so it is not evidence of Issue #160 activation binding. The generated Draft MR remains the controlled closeout carrier for follow-up verification."
     },
     "1-5-4-2": {
       "id": "1-5-4-2",
       "label": "GitLab post-merge roadmap closeout execution evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "GitLab closeout dogfood 是否创建最小受控 MR 并绑定专用 carrier issue？",
+          "answer": "是，创建最小受控 MR；由 human 合并后执行 live closeout。",
+          "note": "MR 只承担 closeout 验证，不扩展产品功能；硬门槛是合法 post-merge contract、MR merged、删除唯一 zjal- 分支、追加 closeout evidence、关闭 carrier issue。"
+        },
+        {
+          "q": "GitLab closeout dogfood 是否使用独立 carrier issue，而不是复用 Issue #160？",
+          "answer": "是，创建新的专用 carrier issue。",
+          "note": "避免混淆 triage source issue、activation carrier 与 closeout carrier 生命周期；closeout 只能关闭 contract 指定的独立 carrier。"
+        },
+        {
+          "q": "GitLab closeout dogfood 的最小 MR 变更放在哪里？",
+          "answer": "新增 docs/plans/gitlab-roadmap-closeout-dogfood.md。",
+          "note": "只记录目的、contract 约束和待回填 evidence；不修改业务代码或 CI 逻辑。"
+        }
+      ],
+      "notes": "Completed with real GitLab live closeout evidence. MR !298 (merge commit 446280dde1b6b12d237c8c31076aa3ff5345641c) carried a valid zj-loop.post-merge-contract bound to carrier issue #161 and branch zjal-act-issue-comment-gitlab-roadmap-activation. First closeout attempt job 25940493 was correctly denied because the target Route Table had the route disabled; MR !300 enabled the route. The next run job 25940963 proved dispatch and contract metadata but remained dry-run and exposed that the fragment only invoked closeout-plan. MR !301 updated the GitLab fragment to invoke guarded live-closeout when an explicit MR IID is supplied and upload live-closeout-result.json. Final controlled pipeline 10504276 job 25941326 used MR IID 298, carrier 161, and review URL variables; route decision allowed, all executor guards passed, live-closeout-result.json reported status=executed and side_effects_executed=true, deleted the sole zjal- roadmap branch, and closed carrier issue #161. Final remote verification: issue #161 state=closed; branch lookup returned 404 Branch Not Found. This is live GitLab post-merge closeout evidence, not merely a dry-run."
     },
     "1-5-4-3": {
       "id": "1-5-4-3",
       "label": "GitLab CI Sweeper repair-MR live recovery evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-5-4-3-1",
+        "1-5-4-3-2",
+        "1-5-4-3-3",
+        "1-5-4-3-4",
+        "1-5-4-3-5",
+        "1-5-4-3-6",
+        "1-5-4-3-7"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab CI Sweeper live recovery dogfood 使用哪个目标项目？",
+          "answer": "继续使用 mlive-dev/ai-studio",
+          "note": "复用已验证的 GitLab token、Route Table、MR、live closeout 和 evidence 基础设施；受控 failure 必须最小且可回滚。"
+        },
+        {
+          "q": "GitLab CI Sweeper 的 Issue Fix Request carrier 采用什么载体？",
+          "answer": "创建独立 GitLab Issue Fix Request",
+          "note": "与 GitHub CI Sweeper 的独立 Issue carrier 对齐；不把 source pipeline、triage source issue 与 repair MR 生命周期混在一起。后续由 allowlisted CI Sweeper consumer claim 并创建 provider-aware repair MR。"
+        },
+        {
+          "q": "GitLab Issue Fix Request 创建后，如何触发独立 CI Sweeper Consumer？",
+          "answer": "由独立 consumer workflow 消费 carrier；report job 不直接创建 repair MR",
+          "note": "Issue Fix Request 创建与 repair MR 创建保持副作用边界分离；consumer 必须经过 request-level verifier、route-level allowlist 和 capability match。"
+        },
+        {
+          "q": "GitLab CI Sweeper Consumer 的触发与恢复方式是什么？",
+          "answer": "即时 dispatcher pipeline 为主，scheduled scan 作为漏触发 request 的恢复/补偿入口",
+          "note": "Issue 创建后由受控 API 触发独立 consumer pipeline 并传入 request issue IID；定时扫描只消费仍处于 requested/active 且未 claim 的 request，必须使用 dedupe 与 claim guard。"
+        },
+        {
+          "q": "GitLab CI Sweeper 即时 trigger、consumer claim 与 repair MR 使用什么权限来源？",
+          "answer": "只接受项目显式受控变量 GITLAB_TOKEN",
+          "note": "不回退 CI_JOB_TOKEN、GL_TOKEN 或 CLI token 参数；token 缺失、权限不足、变量不可回读时结构化 hard stop，零次 repair MR API 写入。即时与 scheduled recovery 共用同一权限边界。"
+        },
+        {
+          "q": "CI Sweeper Consumer claim 的最低 verifier 条件是什么？",
+          "answer": "只消费通过 structured Issue Fix Request、项目绑定、route allowlist、request verifier 与 capability match 的请求",
+          "note": "要求合法 zj-loop:issue-fix-request envelope、status=requested、requested_consumer=ci-sweeper、route request_kind=issue-fix-request、GitLab provider、source project 与当前项目一致、allowlisted verification gate、未进入 claim/failed/completed lifecycle；label 仅作可选索引，不能授权 claim。"
+        },
+        {
+          "q": "用户项目如何对齐 scripts/ci-validate-gates.sh？",
+          "answer": "语义对齐、脚本不复制",
+          "note": "scripts/ci-validate-gates.sh 继续作为 ZAgenticLoop 仓库 reference verifier；发布包提供确定性 zj-loop-ci-sweeper verifier API/CLI；用户项目通过显式 project gate allowlist 接入，不复制复杂仓库专用脚本，Agent 不运行时猜测 gate。"
+        },
+        {
+          "q": "project gate allowlist 放在哪里？",
+          "answer": "只放用户项目的 zj-loop/zj-loop-route-table.yaml",
+          "note": "作为 ci-sweeper route 的 guards/verifier 配置落点；不进入 patterns/registry.yaml，不复制 scripts/ci-validate-gates.sh，也不让 Agent 运行时猜测项目 gate。"
+        },
+        {
+          "q": "project gate allowlist 采用什么命令表示？",
+          "answer": "使用结构化 command/args/cwd 数组",
+          "note": "禁止 shell command 字符串、管道、重定向和命令替换；每个 gate 有稳定 id；repair MR 只能执行 request 与 Route Table allowlist 的交集，并输出 exit code、duration 与 artifact path。"
+        },
+        {
+          "q": "GitLab CI Sweeper 何时允许创建 repair MR？",
+          "answer": "仅在确定性 repair 后存在 scope 内实际 diff 且全部 required verifier gates 通过时创建",
+          "note": "claim 后在临时 branch 执行 request 与 Route Table allowlist 的 gate；空 diff、scope 越界、protected/denylisted 路径、任一 required gate 失败均不创建 MR，追加 structured failed evidence；retry 必须创建新 request。"
+        },
+        {
+          "q": "CI Sweeper claim 如何防止并发重复消费？",
+          "answer": "追加结构化 claim comment，再 re-read 选出唯一 winner",
+          "note": "claim comment 只追加不编辑，包含 request_id、consumer_id、claim_id、claimed_at、source_pipeline_id；re-read 后只有唯一有效 winner 可继续。其他 consumer 返回 duplicate；不确定写入只做一次 marker re-read，不重发。"
+        },
+        {
+          "q": "GitLab CI Sweeper repair MR 的 branch/commit/MR 如何创建？",
+          "answer": "采用 GitLab provider-specific API adapter，由 GITLAB_TOKEN 创建 branch、commit 与 MR",
+          "note": "branch 使用 automated/ci-sweeper-gitlab-<pipeline-id>-<request-hash>；commit/MR body 携带 Issue Fix Request、claim、repair 与 verifier evidence；不依赖 runner 配置 git remote 或 shell push，human merge 保持独立。"
+        },
+        {
+          "q": "GitLab Commit API adapter 是否只支持窄 action 子集？",
+          "answer": "协议层支持完整 action set，route/request 双层 allowlist 限制实际动作",
+          "note": "adapter 支持 create/update/delete/move/chmod，并可在显式 capability 下处理 base64 binary；symlink、submodule、默认 LFS 不支持。所有路径、大小、diff、删除、移动和权限变更都做确定性校验与低成本审计。"
+        },
+        {
+          "q": "CI Sweeper 默认允许哪些 GitLab Commit API actions？",
+          "answer": "create/update/delete/move/chmod；默认仅 UTF-8 文本",
+          "note": "binary 需 request 显式 capability；symlink、submodule、默认 LFS 拒绝；chmod 仅 100644/100755；delete/move/chmod 显式声明；action、路径、scope、大小和 diff 均经 route/request verifier。"
+        }
+      ],
+      "notes": "开始在 mlive-dev/ai-studio 验证 GitLab CI Sweeper repair-MR live recovery；先建立最小可回滚 CI failure，再验证 Issue Fix Request、Route Dispatcher、claim、repair MR、human merge 与 post-merge closeout。"
     },
     "1-5-4-4": {
       "id": "1-5-4-4",
       "label": "GitLab Dependency Sweeper repair-MR live recovery evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-5-4-4-1",
+        "1-5-4-4-2",
+        "1-5-4-4-3",
+        "1-5-4-4-4",
+        "1-5-4-4-5",
+        "1-5-4-4-6",
+        "1-5-4-4-7"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab Dependency Sweeper 是否沿用 CI Sweeper 的 Issue Fix Request、claim/verifier、repair-MR 与 closeout 主链路？",
+          "answer": "是；复用共享协议和已验证基础设施，保留 Dependency Sweeper 自己的 provider adapter、repair scope、verification gates 与 closeout contract",
+          "note": "目标是验证第二类 repair consumer，不能因复用 CI Sweeper 基础设施而把两个 route 的 capability、scope 或 evidence 语义混为一谈。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper dogfood 是否修改 ai-studio 业务依赖？",
+          "answer": "否；使用 zj-loop/dogfood 下的专用 npm fixture，并由 GitLab provider-specific Commit/MR API 创建 repair MR",
+          "note": "fixture 只验证 dependency repair-MR 协议、scope、verification 和 closeout，不改变目标项目业务 package.json；不能把 gh CLI 逻辑泛化为 GitLab adapter。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper dogfood 的 fixture 变更如何固定？",
+          "answer": "固定 zj-loop/dogfood/dependency-fixture 中 yaml 2.8.0 -> 2.8.1 的 patch 升级，更新 package.json 与 package-lock.json，并运行 fixture 内 npm ci 与测试 gate",
+          "note": "复用既有 yaml patch 升级先例；双文件 scope 可验证 manifest/lockfile 一致性，避免修改 ai-studio 业务依赖。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper 是否复用 CI Sweeper 的 route-specific repair command？",
+          "answer": "否；新增独立 dependency-sweeper GitLab repair-MR adapter/CLI，复用协议与 provider API 原语，但独立校验 dependency scope、版本升级和 verification evidence",
+          "note": "CI Sweeper 与 Dependency Sweeper 的 repair action 语义不同；共享抽象不能掩盖 route-specific capability。"
+        },
+        {
+          "q": "Issue Fix Request carrier/claim/lifecycle 是否提炼为共享 GitLab lifecycle 原语？",
+          "answer": "是；共享 envelope/source binding、dedupe、claim winner re-read、lifecycle evidence 与 audit 字段，CI/Dependency 保留各自 verifier、capability 和 repair scope",
+          "note": "共享的是确定性协议组件，不是泛 Git provider；route-specific 语义继续由各 consumer adapter 控制。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper adapter 是否由 verifier 生成固定 Commit API actions，adapter 只负责 provider API？",
+          "answer": "是；verifier 生成固定 package.json/package-lock.json actions，GitLab provider-specific adapter 只负责 branch、Commit API 与 MR API，不执行 shell/npm/git，也不复用 CI Sweeper repair command",
+          "note": "Dependency 语义、scope、版本与 verification 由独立 verifier 控制；adapter 只转换并提交已验证 actions，human merge 保持独立。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper fragment 是否加入独立 gitlab-repair-mr 手动作业？",
+          "answer": "是；仅消费显式 verifier-generated actions 与固定 request/source/branch/target 参数，默认 manual，不自动 claim、不自动启用 Route Table live side effects",
+          "note": "fragment 负责确定性入口和 artifact wiring；Dependency verifier 负责语义与 scope；adapter 负责 GitLab API。"
+        },
+        {
+          "q": "GitLab Dependency Sweeper live dogfood 使用哪个目标项目与变更边界？",
+          "answer": "继续使用 mlive-dev/ai-studio；只在 zj-loop/dogfood/dependency-fixture 验证 yaml 2.8.0 -> 2.8.1，不修改 ai-studio 业务 package.json、package-lock.json 或业务源码",
+          "note": "真实证据必须包含 GitLab Commit API、Dependency repair MR、human merge 前后的 lifecycle；fixture substrate 与业务依赖隔离。"
+        },
+        {
+          "q": "Dependency Sweeper 实装到用户项目时，merged repair-MR closeout 是否要求固定确认短语？",
+          "answer": "是；当前协议与用户项目统一要求 DELETE_MERGED_DEPENDENCY_SWEEPER_BRANCH_AND_CLOSE_CARRIER。安装包只提供确定性 closeout CLI；未来只有 Route Table 显式声明 auto-closeout capability 且全部前置条件满足时，才可免人工确认",
+          "note": "destructive side effects 不能因用户项目安装包而隐式放宽；confirmation location、required phrase 与 side effects 必须结构化输出。"
+        }
+      ],
       "notes": ""
     },
     "1-5-4-5": {
       "id": "1-5-4-5",
       "label": "GitLab PR Steward MR report and fix-request evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-5-4-5-1",
+        "1-5-4-5-2",
+        "1-5-4-5-3",
+        "1-5-4-5-4"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab PR Steward live evidence 是否作为 Dependency Sweeper 之后的下一条 provider parity 路线？",
+          "answer": "是；直接进入 GitLab PR Steward live evidence，复用已验证的 GitLab MR、Issue Fix Request、claim、scope verifier 与 closeout 基础设施，但保留 PR Steward 自己的 review/checks 语义和 provider-specific adapter。",
+          "note": "先完成 report/request 与 MR source binding 的最小真实链路，再推进 fix-request/claim/live repair；不把 Dependency Sweeper 的 dependency scope 逻辑泛化到 PR Steward。"
+        },
+        {
+          "q": "PR Steward GitLab dogfood 使用什么 fixture？",
+          "answer": "使用 ai-studio 中只影响 zj-loop/dogfood 的受控 CI failure MR；先完成 MR report-only live evidence，再推进 failed-check 到 Issue Fix Request，不触碰业务代码。",
+          "note": "fixture 必须可回滚、可重复，report-only 不评论/改 label/创建 request；request-only 只消费 allowlisted failed-check evidence，并固定校验 project、MR IID、head SHA 与 route consumer binding。"
+        },
+        {
+          "q": "PR Steward GitLab report/request 完成后是否继续追踪 claim 与 repair 边界？",
+          "answer": "是；增加独立 claim/lifecycle 与 bounded repair/escalation 子节点，避免 report/request evidence 被误认为完整 consumer 链路。",
+          "note": "1-5-4-5 只有在 report、request、claim、verifier、repair/escalation evidence 全部完成后才可视为完整 GitLab PR Steward parity。"
+        }
+      ],
+      "notes": "GitLab PR Steward report, request, claim/verifier, and bounded escalation evidence are complete in ai-studio. Repair MR creation remains explicitly false for this evidence because no deterministic repair plan was supplied; this is the accepted escalation completion form and does not claim repair-MR support."
     },
     "1-5-4-6": {
       "id": "1-5-4-6",
       "label": "GitLab Changelog Drafter draft artifact or draft-MR evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-5-4-6-1",
+        "1-5-4-6-2",
+        "1-5-4-6-3",
+        "1-5-4-6-4",
+        "1-5-4-6-5",
+        "1-5-4-6-6"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab Changelog Drafter 的默认完成形态是什么？",
+          "answer": "默认 draft-evidence，只有显式确认才创建 draft-MR。",
+          "note": "复用现有 promotion-gate 与 draft-consumer completion contract；GitLab provider-specific adapter 只在确认后执行 branch/commit/MR API。"
+        },
+        {
+          "q": "draft-evidence 的副作用边界是什么？",
+          "answer": "默认只生成并上传 CI artifact，不写入 tracked repository files；只有显式确认 draft-MR 才允许 GitLab branch/commit/MR API 写入。",
+          "note": "draft-plan.json 与 changelog-draft.md 是 review artifact；draft-MR 是独立的 provider-side effect path。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 如何获得 release window？",
+          "answer": "只消费显式且完整的 ZJ_LOOP_CHANGELOG_DRAFT_REQUEST_JSON；不自动猜测 since_ref、until_ref 或 release window。缺失或 repo/base_branch 不匹配时输出 protocol_repair_request 或 escalation，零次 draft-MR API 写入。",
+          "note": "结构化输入是协议边界；provider adapter 不替 Agent 推断发布范围。"
+        },
+        {
+          "q": "GitLab draft-evidence 是否要求 GITLAB_TOKEN？",
+          "answer": "不要求。draft-evidence 只生成 CI artifact；只有显式 draft-MR 才要求 GITLAB_TOKEN 并调用 GitLab branch/commit/MR API。",
+          "note": "token 绑定 provider-side write，不把无副作用的 artifact 生成误判为 live 授权。"
+        },
+        {
+          "q": "GitLab draft-MR 如何授权？",
+          "answer": "复用 CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE，但只有显式 draft_mode=pr 且确认短语匹配时才允许创建 MR；确认短语本身不能升级默认 draft-evidence。",
+          "note": "复用 promotion-gate 兼容协议，同时把 output mode 作为独立副作用边界。"
+        },
+        {
+          "q": "GitLab draft-MR 的 provider-side write 如何执行？",
+          "answer": "必须由 provider-specific GitLab Branch/Commit/Merge Request API 创建；目标分支严格取显式 release_window.base_branch，禁止 git push、gh 或分支推断。",
+          "note": "adapter 输出低成本 endpoint/payload 摘要与 MR lifecycle evidence，支持回放和审计。"
+        },
+        {
+          "q": "GitLab draft-MR 的文件 scope 如何固定？",
+          "answer": "只允许一个 repository-relative draft 文件，默认 docs/release-notes-draft.md；拒绝额外文件、绝对路径、路径穿越及 source MR 文件。",
+          "note": "Commit API actions 必须恰好覆盖该文件，adapter 在任何 provider write 前 fail-closed。"
+        },
+        {
+          "q": "GitLab draft-MR 的生命周期属性是什么？",
+          "answer": "始终以 Draft 状态创建，remove_source_branch=false，禁止 auto-merge；branch 使用确定性 automated/changelog-drafter-gitlab-<window-hash>，由独立 closeout 节点负责清理。",
+          "note": "draft-MR 是可审阅 artifact，不代表合并或发布完成。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 是否创建 carrier Issue？",
+          "answer": "是，但仅显式 draft-MR 路径创建一个独立且可去重的 carrier Issue；默认 draft-evidence 不创建 Issue。",
+          "note": "carrier 绑定 draft request、draft-MR、human merge 和 closeout；避免把 artifact completion 当作发布完成。"
+        },
+        {
+          "q": "Changelog Drafter carrier 使用什么协议？",
+          "answer": "使用 Changelog Drafter 专属结构化 schema（zj-loop.changelog_draft_request.v1）；复用 GitLab lifecycle 的 dedupe、claim、reread 原语，但不复用 issue-fix-request schema。",
+          "note": "draft-consumer 与 fix-runner 保持语义分离。"
+        },
+        {
+          "q": "GitLab Changelog draft-MR 何时允许 provider write？",
+          "answer": "必须先成功 claim 专属 Changelog carrier；claim、request、project、release_window.base_branch 或 source binding 任一失败时，零次 branch/commit/MR API 写入并输出结构化 hard stop。",
+          "note": "claim 是唯一消费权，provider write 只能发生在 verifier-backed claim 之后。"
+        },
+        {
+          "q": "GitLab Changelog Drafter dogfood 的 draft 文件放在哪里？",
+          "answer": "使用 ai-studio 的专用 zj-loop/dogfood/changelog-draft.md 单文件 fixture，不修改业务目录或真实 README/CHANGELOG。",
+          "note": "draft-MR 只验证 Commit/MR/closeout API，fixture 可回滚且不代表业务文件变更。"
+        },
+        {
+          "q": "GitLab Changelog Drafter artifact 保存什么？",
+          "answer": "只保存低成本审计字段与生成结果，包括 request id、repo、base/since/until refs、draft mode、file scope 和 provider operation summary；不保存完整 GitLab response、token 或敏感 payload。",
+          "note": "保持可回放、低成本、低泄露面的 evidence contract。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 的 truth 如何分层？",
+          "answer": "orchestration review artifact 是主 truth；draft-MR body 只承载 post-merge contract 与简短摘要，不承载完整 draft 内容或 provider response。",
+          "note": "保持 Codex Harness/Doctor 可回放，同时让 MR body 面向 human review 与 closeout。"
+        },
+        {
+          "q": "GitLab Changelog Drafter 的实现顺序是什么？",
+          "answer": "按 core adapter、CLI、GitLab fragment、ai-studio draft fixture dogfood、human merge closeout 的顺序执行 TDD。",
+          "note": "每个 slice 单独验证；draft-evidence、draft-MR、closeout 不互相冒充完成。"
+        }
+      ],
+      "notes": "Completed the full GitLab Changelog Drafter evidence chain: provider-specific carrier/claim/Commit/MR/closeout adapters; explicit draft-evidence and draft-MR CLI modes; generated fragment and bundle gates; real ai-studio artifact-only evidence; real Draft MR creation; human merge; negative merge-not-confirmed boundary; and positive closeout with reread evidence, branch cleanup, and carrier closure. The default remains draft-evidence; draft-MR and closeout retain separate explicit confirmations."
     },
     "1-3-2-1": {
       "id": "1-3-2-1",
@@ -1327,11 +1713,1582 @@
         }
       ],
       "notes": "2026-07-15 ai-studio pinned-image dogfood: Web pipeline 10501751/job 25930669 created owned schedule 960, but schedule detail omitted variables and both variables endpoints returned 404; schedule fired but no source=schedule pipeline appeared. Human-session cleanup removed 960; normal schedule 957 remained unchanged. Follow-up implementation now performs a read-only preflight before any POST: it lists existing schedules then requires an existing schedule detail to expose variables as an array. This GitLab instance therefore returns blocked/schedule-probe-capability-blocked with operations=[] and CLI exit 2; no temporary schedule or cleanup is attempted. Verification: core build plus schedule-probe runner/CLI tests passed."
+    },
+    "1-5-4-3-1": {
+      "id": "1-5-4-3-1",
+      "label": "GitLab Issue Fix Request carrier API and dedupe",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented and tested GitLab Issue Fix Request carrier API in @jununfly/zj-loop-core. Added createGitLabCiSweeperIssueFixRequest and zj-loop-ci-sweeper gitlab-issue-fix-request CLI. Behavior: GITLAB_TOKEN-only auth, structured request validation, request_id search dedupe, independent GitLab Issue creation, one-read uncertain-write recovery, low-cost audit fields, no claim or repair-MR side effects. Verification: core build plus 21 targeted provider/contract/CI Sweeper tests passed."
+    },
+    "1-5-4-3-2": {
+      "id": "1-5-4-3-2",
+      "label": "CI Sweeper claim marker and lifecycle verifier",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented append-only GitLab CI Sweeper claim and lifecycle APIs. claimGitLabCiSweeperIssueFixRequest validates the structured Issue Fix Request and project binding, appends a deterministic claim marker, re-reads notes, and returns only the unique winner; duplicates/races do not proceed. appendGitLabCiSweeperLifecycleEvidence verifies the claim before appending running/completed/failed evidence. GITLAB_TOKEN-only auth and low-cost audit fields. Core build and 17 CI Sweeper tests passed."
+    },
+    "1-5-4-3-3": {
+      "id": "1-5-4-3-3",
+      "label": "Structured verifier and generated-substrate repair action gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented deterministic CI Sweeper verifier and repair action gates. Verifier intersects structured request command specs with Route Table verification_gate_allowlist; repair action gate enforces create/update/delete/move/chmod, repository-relative paths, route repair scope, and 100644/100755 chmod boundary. CI Sweeper request bodies now emit structured command arrays. Core build and 20 CI/contract tests passed."
+    },
+    "1-5-4-3-4": {
+      "id": "1-5-4-3-4",
+      "label": "GitLab Commit API branch commit and repair MR adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented and tested provider-specific GitLab branch, commit, and repair MR adapter with GITLAB_TOKEN-only auth, source-branch dedupe, deterministic action validation, fail-closed writes, and regression coverage."
+    },
+    "1-5-4-3-5": {
+      "id": "1-5-4-3-5",
+      "label": "Immediate consumer trigger and scheduled recovery workflow",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab CI Sweeper fragment now has a dedicated recovery stage, immediate on_failure execution, scheduled replay entry, explicit web manual fallback, carrier creation via GITLAB_TOKEN-only deterministic CLI, and always-uploaded structured carrier evidence. Generated YAML parser and init regression tests pass."
+    },
+    "1-5-4-3-6": {
+      "id": "1-5-4-3-6",
+      "label": "ai-studio generated-substrate drift fixture and live evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed with real GitLab dogfood in mlive-dev/ai-studio. The deterministic fixture zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml was the only repair scope; Issue Fix Request #185 consumed the fixture drift, created MR !309, and the repair MR was manually merged. Closeout deleted the automated/ci-sweeper-gitlab-10513928-64ffecc0 branch and closed carrier #185. No business files were touched."
+    },
+    "1-5-4-3-7": {
+      "id": "1-5-4-3-7",
+      "label": "Execution-ready CI Sweeper consumer claim verifier and repair MR boundary",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3",
+      "children": [
+        "1-5-4-3-7-1",
+        "1-5-4-3-7-2",
+        "1-5-4-3-7-3",
+        "1-5-4-3-7-4",
+        "1-5-4-3-7-5"
+      ],
+      "decisions": [
+        {
+          "q": "是否在完整 claim/verifier/repair-MR/human-merge/closeout evidence 通过前提升 ci-sweeper 为 execution-ready？",
+          "answer": "否，先实现并验证完整 consumer，证据闭环后再用固定确认短语提升",
+          "note": "实现完成不等于能力升级；保持 execution_ready=false，避免把代码存在误认为用户项目可自动修复。"
+        },
+        {
+          "q": "CI Sweeper signal 与 consumer 是否共用同一个 job/workflow？",
+          "answer": "分离：signal 只创建 carrier，独立 consumer 只消费显式 request",
+          "note": "避免 signal 自消费、职责混淆和自动循环；scheduled recovery 只做确定性发现后传入显式身份。"
+        },
+        {
+          "q": "CI Sweeper consumer 是否要求同时传入 issue_iid 与 request_id，并如何处理身份不一致？",
+          "answer": "必须同时传入并固定校验；缺失或不一致输出 request-source-mismatch，零次 API 写入",
+          "note": "固定 project、provider、consumer、request_id 与 Issue envelope 的绑定，禁止依赖标题、label 或最新 issue 猜测。"
+        },
+        {
+          "q": "claim 是否必须位于所有只读 verifier 之后、任何仓库写入之前？",
+          "answer": "必须；route/readiness、身份、request schema、consumer/provider/project、verification allowlist、repair action gate 全部通过后才 claim",
+          "note": "claim 是唯一消费权；verifier 失败不得留下无效 claim。claim 后再记录 running、执行 bounded repair，失败进入 terminal evidence。"
+        },
+        {
+          "q": "claim 后 repair/API/gate 失败是否自动重试？",
+          "answer": "否；追加 terminal failed/escalation evidence，retry 必须创建新 Issue Fix Request",
+          "note": "同一 request 不反复消费；source branch/MR 做 dedupe，human merge 保持独立。"
+        },
+        {
+          "q": "repair 失败或高风险时是否创建第二个 escalation issue？",
+          "answer": "默认不创建；原 Issue Fix Request 追加结构化 failed/escalation evidence，retry 使用新 request",
+          "note": "保持单一 carrier lifecycle truth，减少 issue 噪声；只有协议显式要求独立 escalation carrier 时才创建。"
+        },
+        {
+          "q": "Issue Fix Request 创建后如何触发独立 consumer pipeline？",
+          "answer": "主路径由受控 API 立即触发并显式传入 issue_iid 与 request_id；scheduled recovery 只作漏触发补偿",
+          "note": "consumer 不猜 issue；触发失败只记录 structured trigger evidence，不自动循环触发。"
+        },
+        {
+          "q": "consumer pipeline 使用哪个 ref？",
+          "answer": "固定 CI_DEFAULT_BRANCH；repair MR target branch 也固定 CI_DEFAULT_BRANCH",
+          "note": "consumer 使用稳定主线代码；source branch 只作为 evidence，不参与运行时 ref 猜测。"
+        },
+        {
+          "q": "consumer job 允许哪些 pipeline source？",
+          "answer": "仅 api、schedule、web；三者都必须显式传入 issue_iid 与 request_id，其他 source 不创建 consumer job",
+          "note": "避免普通业务 pipeline 自触发；缺失身份输出 request-source-mismatch，零次 API 写入。"
+        },
+        {
+          "q": "scheduled recovery 如何扫描并派生消费目标？",
+          "answer": "有界 deterministic scan：只读 open Issue 中合法 requested、未 claim、consumer=ci-sweeper 的 envelope，固定排序与 max_requests=30，派生显式 issue_iid+request_id 后消费",
+          "note": "不依赖 label、不无限扫描、不重复触发；超限输出结构化 next_steps。"
+        },
+        {
+          "q": "execution-ready dogfood 是否只允许修改 generated substrate，不触碰业务代码？",
+          "answer": "必须；只允许 zj-loop/ 与根 CI 生成物等 allowlisted scope，业务文件越界立即 hard stop",
+          "note": "验证 repair-MR 边界而不污染 ai-studio 业务逻辑；human merge 后再 closeout。"
+        },
+        {
+          "q": "repair_actions 是否必须由 deterministic planner 写入 request envelope，consumer 是否禁止自行猜动作？",
+          "answer": "必须；planner 产生 allowlisted actions，consumer 只验证执行；缺失时 repair-actions-missing，零 claim/仓库写入/MR",
+          "note": "LLM 不决定文件或动作；request envelope 是 repair authority。"
+        },
+        {
+          "q": "如何处理缺少 repair_actions 的 Issue #163？",
+          "answer": "保留为 negative boundary case，不编辑；新建带合法 repair_actions 的 request 做正向 dogfood",
+          "note": "#163 验证 repair-actions-missing 的零写入边界；新 request 验证完整 claim/verifier/repair MR。"
+        },
+        {
+          "q": "request-body 是否支持显式结构化 repair_actions 输入？",
+          "answer": "支持可选 --repair-actions <json>；不传保持普通 request，传入时在 carrier 生成前 deterministic 校验；不从自然语言推断",
+          "note": "#163 保持 negative case；新 request 复用同一确定性入口做正向 repair-MR dogfood。"
+        },
+        {
+          "q": "正向 dogfood 使用什么 generated substrate fixture？",
+          "answer": "使用 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml 专用文件，只允许其 create/update/repair，不触碰业务代码和主 CI workflow",
+          "note": "fixture 可控、可回滚，覆盖 action/path/scope/verifier/MR contract。"
+        },
+        {
+          "q": "正向 dogfood 的 repair_actions 是否固定为已有 fixture 的单个 update？",
+          "answer": "是，固定为对 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml 的 deterministic update",
+          "note": "验证真实 drift 修复，不验证无约束文件创建；content 必须进入 request envelope。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-4-3-7-1": {
+      "id": "1-5-4-3-7-1",
+      "label": "Deterministic repair_actions request-body contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Added optional structured --repair-actions JSON input to request-body and embedded validated actions in Issue Fix Request authority. Unsafe actions fail before carrier creation. Core build and 25 CI Sweeper tests pass."
+    },
+    "1-5-4-3-7-2": {
+      "id": "1-5-4-3-7-2",
+      "label": "GitLab consumer explicit identity preflight and trigger",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented explicit GitLab consumer job and deterministic core APIs/CLIs: gitlab-claim and gitlab-trigger-consumer. Consumer accepts only api/schedule/web with explicit issue_iid/request_id/claim_id, fixed CI_DEFAULT_BRANCH ref, needs: [] immediate entry, structured preflight, and no claim while execution_ready=false. Carrier-created signal path triggers one api consumer pipeline with explicit variables; consumer source cannot re-enter signal rules. Claim loads Route Table and runs verifier/action gates before any comment write. Core 27 CI tests, init 32 tests, and generated GitLab bundle parser gate pass."
+    },
+    "1-5-4-3-7-3": {
+      "id": "1-5-4-3-7-3",
+      "label": "CI Sweeper claim verifier lifecycle and bounded repair MR execution",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed with deterministic core tests and live GitLab evidence. The execution-ready consumer performed explicit issue_iid/request_id/claim_id preflight, won the append-only claim, passed the Route Table verifier and repair action scope gate, created bounded repair MR !309, and recorded lifecycle evidence. The dedicated GitLab CI Sweeper closeout path verifies the merged MR, matching request/carrier, automated/ci-sweeper-gitlab-* branch prefix, fixed confirmation phrase, then deletes the branch and closes the carrier."
+    },
+    "1-5-4-3-7-4": {
+      "id": "1-5-4-3-7-4",
+      "label": "ai-studio positive fixture live evidence and execution-ready promotion gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [],
+      "notes": "Completed with real ai-studio positive live evidence. Dogfood-only execution-ready promotion was applied; Issue Fix Request #185 (ifr_8534207a5fa5) triggered consumer pipeline 10513928, claim and verifier passed, repair MR !309 was created and manually merged, and closeout job 25973143 deleted branch automated/ci-sweeper-gitlab-10513928-64ffecc0, appended closeout evidence, and closed #185. This proves the bounded GitLab CI Sweeper repair-MR lifecycle without auto-merge or business-file scope expansion."
+    },
+    "1-5-4-3-7-5": {
+      "id": "1-5-4-3-7-5",
+      "label": "无 claim Issue Fix Request 孤儿 carrier 分类与清理",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-3-7",
+      "children": [],
+      "decisions": [
+        {
+          "q": "无 claim 的 Issue Fix Request 是否可以仅凭标题批量关闭？",
+          "answer": "否；先做 report-only 分类，只关闭经过检查并明确完成或孤儿清理的 carrier",
+          "note": "本次 #163/#174/#175/#181 无 claim，#176 有历史 failed evidence；全部经检查后手工关闭，malformed/source-mismatch 不应直接自动关闭。"
+        }
+      ],
+      "notes": "Completed during GitLab dogfood cleanup. Verified #163, #174, #175, #176, and #181 are closed. Terminal failed carriers had explicit failure evidence; no-claim orphan carriers were manually closed after inspection. No remaining open orphan carriers from this cleanup set."
+    },
+    "1-5-4-4-1": {
+      "id": "1-5-4-4-1",
+      "label": "共享 GitLab request-lifecycle 原语接口与低成本审计字段",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "新增 tools/zj-loop-core/src/gitlab-request-lifecycle.ts：共享 GitLab lifecycle audit、source binding、结构化 marker 原语；已由 CI Sweeper 接入。验证：zj-loop-core build 通过，gitlab-request-lifecycle.test.mjs 与 ci-sweeper-runner.test.mjs 通过。"
+    },
+    "1-5-4-4-2": {
+      "id": "1-5-4-4-2",
+      "label": "共享 GitLab envelope/source binding、dedupe 与 claim winner re-read 测试",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "共享契约测试覆盖 provider/project/request/consumer source mismatch、低成本审计字段、marker 解析与坏 note fail-closed；CI Sweeper 原有 carrier/claim/lifecycle 回归测试全部通过。"
+    },
+    "1-5-4-4-3": {
+      "id": "1-5-4-4-3",
+      "label": "Dependency Sweeper fixture scope、版本升级与 verifier contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "新增 zj-loop/dogfood/dependency-fixture：固定 yaml 2.8.0 -> 2.8.1、dependencies、package.json/package-lock.json；新增确定性 fixture verifier，拒绝包名、版本、section、文件范围偏差。验证：fixture npm ci 与 npm test 通过；core build、fixture contract tests 与 dependency sweeper 回归通过。"
+    },
+    "1-5-4-4-4": {
+      "id": "1-5-4-4-4",
+      "label": "GitLab Dependency Sweeper provider-specific Commit/MR adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "新增 provider-specific GitLab Dependency Sweeper adapter 与 zj-loop-dependency-sweeper gitlab-repair-mr CLI。adapter 只调用 branch、repository/commits、merge_requests API，消费 verifier-generated actions；不执行 shell/npm/git，不调用 gh。source binding、action scope、branch pattern、duplicate MR 与零写入 hard stop 均有测试。core npm test 全量通过。"
+    },
+    "1-5-4-4-5": {
+      "id": "1-5-4-4-5",
+      "label": "Dependency Sweeper GitLab fragment 与 generated-bundle gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab Dependency Sweeper fragment 新增独立 manual gitlab-repair-mr job，要求显式 request/actions/project/branch/target/commit/MR 参数并上传 gitlab-repair-mr-result.json；不自动 claim 或启用 live side effects。canonical/bundled fragment 在 default 与 controlled runner-tags 变体均 YAML 解析通过且内容一致。aggregate generated-bundle gate 仍报告既有 CI Sweeper/Post-merge bundled drift，未混入本 slice。"
+    },
+    "1-5-4-4-6": {
+      "id": "1-5-4-4-6",
+      "label": "Dependency Sweeper GitLab repair-MR live dogfood evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "ai-studio live evidence 已闭环：初始 MR !311 因混入 dogfood substrate 触发 repair-scope-mismatch，未执行副作用；随后从 master 创建干净 repair MR !312，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c，source_ref=master，target_branch=master，仅更新 dependency fixture 的 package.json 与 package-lock.json。MR !312 合并后，closeout job 25980469 产出成功结果；旧 !311 分支与新 repair 分支均已清理。carrier Issue #186 的关闭记录归入 1-5-4-4-7。"
+    },
+    "1-5-4-4-7": {
+      "id": "1-5-4-4-7",
+      "label": "Dependency Sweeper human merge、closeout 与 carrier lifecycle evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-4",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab Dependency Sweeper closeout live evidence：MR !312 已合并；closeout job 25980469 使用固定确认短语 DELETE_MERGED_DEPENDENCY_SWEEPER_BRANCH_AND_CLOSE_CARRIER，删除 automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c，写入 closeout evidence 并关闭 carrier Issue #186；随后旧 MR !311 对应分支 automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186b 已单独删除。链路完成：fixture verifier -> provider-specific Commit/MR API -> human merge -> guarded closeout -> carrier lifecycle。"
+    },
+    "1-5-4-5-1": {
+      "id": "1-5-4-5-1",
+      "label": "PR Steward GitLab MR report-only live evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "PR Steward GitLab report-only fixture 如何制造受控失败？",
+          "answer": "在 ai-studio 的 zj-loop/dogfood/pr-steward-fixture 下新增只在 merge_request_event 运行的确定性失败 job，明确 exit 1；fixture 只存在于 dogfood MR，不进入 master。",
+          "note": "失败来源稳定、无业务影响、可回滚；report-only 只读取 MR/head pipeline 并生成 evidence，不评论、不改 label、不创建 Issue。"
+        }
+      ],
+      "notes": "GitLab PR Steward report-only live dogfood 已完成：ai-studio draft MR !313 使用 zj-loop/dogfood/pr-steward-fixture 的 merge_request_event 确定性失败 job。首次 pipeline 10516448 暴露 fixture script YAML 冒号解析错误并修复；pipeline 10516503 yaml_errors 为空，fixture job 25981408 真实 failed，Route Table 显式 enable pr-steward-report 后 route decision allowed。report job 25981481 重试读取已完成的 pipeline jobs，产出 gitlab-pr-steward-report.json：checks=failure、status=candidate-fix-request、failed_jobs=[zj_loop_pr_steward_fixture_failure]、side_effects_executed=false。验证了 GitLab pipeline 顶层 manual 时必须读取 jobs 汇总的 provider 差异；全程无评论、label、Issue 或 MR 写入。"
+    },
+    "1-5-4-5-2": {
+      "id": "1-5-4-5-2",
+      "label": "PR Steward GitLab failed-check Issue Fix Request evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "PR Steward GitLab Issue Fix Request 的固定确认短语是什么？",
+          "answer": "CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST",
+          "note": "确认位置为 GitLab 手动作业变量或 Codex 当前对话；缺失或不一致时零次 Issue API 写入并输出 confirmation-required。"
+        }
+      ],
+      "notes": "GitLab PR Steward failed-check -> Issue Fix Request live evidence 已完成：ai-studio MR !313 的 fixture failure 经 report job 25981764/25983372 产出 candidate-fix-request；request job 25983342 在固定确认短语 CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST 下成功创建 carrier Issue #188，request_id=ifr_c05bebf77a8b。Route Table pr-steward-report 显式 enabled；source project、MR IID=313、head SHA、failed_jobs 与 request consumer binding 均由 adapter 校验；dedupe 与 confirmation-required 零写入测试通过。Issue #188 保持 opened，留给后续 claim 节点。"
+    },
+    "1-5-4-5-3": {
+      "id": "1-5-4-5-3",
+      "label": "PR Steward GitLab claim verifier 与 lifecycle evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab live evidence completed on ai-studio MR !313 at head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de. Report job 25983394 succeeded while fixture failure job 25983395 failed. Request job 25983402, with CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST, created carrier Issue #189 and request_id=ifr_31bf89f5f5e5. Claim job 25983403 consumed the new carrier with project, issue IID, request ID, claim ID, MR IID, and head SHA all fixed and matched; result outcome=claimed. Carrier Issue #189 contains the claim note after reread; MR !313 contains no claim-side note or other source-MR mutation. No repair MR or closeout was performed; Issue #189 remains open for the next bounded repair/escalation node."
+    },
+    "1-5-4-5-4": {
+      "id": "1-5-4-5-4",
+      "label": "PR Steward GitLab bounded repair MR 或 escalation evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab live escalation evidence completed on ai-studio. Added provider-specific gitlab-escalation CLI and manual recovery job with explicit needs: [], so same-stage DAG blocking cannot prevent a bounded operator start. Job 25983856 in API pipeline 10517011 consumed Issue #189 claim identity (request_id=ifr_31bf89f5f5e5, claim_id=claim-pr-steward-313-92e140b8, MR !313, head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de), revalidated request/project/MR head, appended one structured pr-steward-escalation marker, reread it, and produced outcome=escalated with repair_mr_created=false. Carrier Issue #189 now contains exactly one escalation marker after the claim marker; source MR !313 was not mutated. The first run exposed a stale tarball and was fail-closed before any API write; refreshed bundle passed on retry."
+    },
+    "1-5-4-6-1": {
+      "id": "1-5-4-6-1",
+      "label": "GitLab Changelog Drafter draft-MR human merge、closeout 与 carrier lifecycle evidence",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "GitLab Changelog draft-MR closeout 如何授权？",
+          "answer": "必须使用固定确认短语 DELETE_MERGED_CHANGELOG_DRAFT_BRANCH_AND_CLOSE_CARRIER，且该授权独立于创建 draft-MR 的确认。",
+          "note": "closeout 的 branch 删除、closeout evidence 和 carrier 关闭均属于不可逆副作用。"
+        },
+        {
+          "q": "GitLab Changelog draft-MR 的 closeout 判定条件是什么？",
+          "answer": "必须重新读取并验证 state=merged、merged_at、merge_commit_sha、source branch、target branch、request ID 与 carrier binding；任一不满足时零次 branch DELETE 或 carrier close 写入。",
+          "note": "CI 变量和人工描述不是 merge truth，provider 当前事实才是唯一依据。"
+        },
+        {
+          "q": "GitLab Changelog draft-MR closeout 的操作顺序是什么？",
+          "answer": "固定为先追加并 reread closeout evidence，再删除 draft branch，最后关闭 carrier Issue；中途失败保留 carrier open并输出可恢复 structured escalation。",
+          "note": "先持久化 truth，再执行清理，避免 carrier 已关闭但 branch 未清理。"
+        }
+      ],
+      "notes": "GitLab Changelog Drafter parity completed in ai-studio. Artifact-only evidence pipeline 10517165/job 25984901 produced outcome=draft-evidence with side_effects_executed=false. Explicit draft-MR path created carrier Issue #190, claim claim-changelog-190-0d93f89a, and draft MR !314 from branch automated/changelog-drafter-gitlab-cdr190-0d93f89a to master; only zj-loop/dogfood/changelog-draft.md was committed. Closeout negative boundary pipeline 10517177/job 25985177 returned merge-not-confirmed for opened !314 with zero side effects. After human merge, closeout pipeline 10517186/job 25985270 verified merged_at, merge_commit_sha, source/target branch, request and claim binding; appended and reread closeout evidence, confirmed the draft branch already deleted, and closed carrier Issue #190. All Changelog closeout side effects were explicit and auditable."
+    },
+    "1-5-4-6-2": {
+      "id": "1-5-4-6-2",
+      "label": "GitLab Changelog carrier、claim 与 Commit/MR adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": "Core TDD slice complete. Added provider-specific GitLab Changelog carrier, claim winner reread, single safe repository-relative draft-file action validation, and Commit/MR adapter. Carrier requires explicit CREATE_CHANGELOG_DRAFT_PR_OR_EVIDENCE and GITLAB_TOKEN; draft MR requires a verified claim, explicit base branch, deterministic automated/changelog-drafter-gitlab-* branch, draft=true, remove_source_branch=false, and exactly one file action. Missing token, request/project mismatch, claim mismatch, unsafe scope, or invalid target fail closed before provider writes. Targeted adapter tests pass."
+    },
+    "1-5-4-6-3": {
+      "id": "1-5-4-6-3",
+      "label": "GitLab Changelog Drafter CLI 的 draft-evidence 与 draft-MR 模式",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": "TDD CLI slice complete. Added GitLab draft-evidence (no token, artifact-only), gitlab-carrier (fixed confirmation plus GITLAB_TOKEN), gitlab-claim, and gitlab-draft-mr (explicit confirmation, single-file scope, verified claim). Mismatch returns protocol_repair_request with exit 2 and no provider write. CLI and adapter regression tests pass."
+    },
+    "1-5-4-6-4": {
+      "id": "1-5-4-6-4",
+      "label": "GitLab Changelog Drafter 独立 fragment 与 generated-bundle gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": "GitLab fragment slice complete. Canonical and bundled changelog fragment now expose independent artifact, carrier, claim, and explicit draft-MR jobs; recovery jobs use needs: [] to avoid same-stage DAG blocking. Artifact job preserves signal -> zj-loop-dispatch -> draft-plan orchestration evidence, then emits provider-specific gitlab-changelog-draft-evidence. Generated bundle gate and zj-loop-init GitLab fragment tests pass; gate retains only pre-existing ci-sweeper configurable-stage warning."
+    },
+    "1-5-4-6-5": {
+      "id": "1-5-4-6-5",
+      "label": "ai-studio changelog draft fixture 与真实 draft-evidence dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [],
+      "notes": "Real ai-studio GitLab draft-evidence dogfood completed. Pipeline 10517165 job 25984901 ran on runner jinkela-k8s-runner-jscs-05 with explicit request cdr_gitlab_dogfood_20260717, repo mlive-dev/ai-studio, base_branch=master, since_ref=master, until_ref=codex/gitlab-changelog-drafter-live, and fixture summary. Artifacts included route-decision.json, consumer-plan.json, changelog-signal.json, orchestration.json, draft-plan.json, and gitlab-changelog-draft-evidence.json. Result outcome=draft-evidence and side_effects_executed=false; no GITLAB_TOKEN, carrier Issue, branch, commit, or MR side effect was used. Two fail-closed dogfood retries exposed and fixed runner tags, disabled-route report handling, and shell JSON quoting."
+    },
+    "1-5-4-6-6": {
+      "id": "1-5-4-6-6",
+      "label": "ai-studio GitLab Changelog draft-MR live dogfood and provider write evidence",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-4-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "本次 live dogfood 使用哪种 fixture？",
+          "answer": "创建全新的独立 fixture：新建 request、carrier Issue、claim、automated/changelog-drafter-gitlab-* 分支、单文件 draft commit 和 draft MR；不合并、不执行 closeout、不发布。",
+          "note": "采用 A，避免复用历史 evidence，并完整验证新的 request 到 provider 写入链路。"
+        },
+        {
+          "q": "新的 draft MR 允许修改哪个文件？",
+          "answer": "只修改 zj-loop/dogfood/changelog-draft.md，保持单文件、可审计，并与业务代码和真实发布文件隔离。",
+          "note": "采用 A，避免 live dogfood 污染业务文件或真实发布内容。"
+        },
+        {
+          "q": "draft MR 的分支与状态如何固定？",
+          "answer": "source 使用唯一命名规则 automated/changelog-drafter-gitlab-<request-id>-<短标识>，target 固定为 master，只允许推送单文件 commit，MR 必须保持 Draft，不得自动合并。",
+          "note": "采用 A，确保 provider binding 稳定并避免误合并。"
+        },
+        {
+          "q": "live dogfood 完成后如何处理 fixture？",
+          "answer": "保留 carrier Issue、claim Note、branch、commit、Draft MR 和 artifacts，不合并、不关闭、不删除；必要清理另行执行并单独记录。",
+          "note": "采用 A，保证 provider-write 事实可复核，清理不与 positive evidence 混淆。"
+        },
+        {
+          "q": "carrier 与 draft MR 的授权如何分层？",
+          "answer": "使用两组独立固定确认短语：carrier 创建使用一组确认短语，claim/draft-MR 写入使用另一组确认短语；每一步单独校验，禁止跨阶段复用。",
+          "note": "采用 A，限制每一步的授权范围并避免 carrier 确认扩大为 branch/commit/MR 写入授权。"
+        },
+        {
+          "q": "本节点何时算完成？",
+          "answer": "通过完整 live provider-write gate：新 request、carrier Issue、claim Note、branch、single-file commit、Draft MR 均真实创建；source 命名和 target=master 正确；MR 保持 Draft；artifacts 完成 project/request/claim/branch/commit/MR binding；且未发生 merge、release、closeout 或其他非授权副作用。",
+          "note": "采用 A，不能把单个 MR URL 或 pipeline 成功误认为完整 live evidence。"
+        },
+        {
+          "q": "当前设计是否已经收敛，可以开始执行 live dogfood？",
+          "answer": "是：按既定 completion gate 执行；每个副作用阶段单独确认，执行后核对 provider 与 artifacts。",
+          "note": "采用 A，进入 live dogfood 执行阶段，不降低既定 gate。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-1": {
+      "id": "1-5-5-1",
+      "label": "GitLab control and report-only required-route dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "control-route slice 如何开始？",
+          "answer": "先 TDD 实现确定性 GitLab control-route evidence builder，覆盖 human/ignore；真实 GitLab 来源 envelope 进入 protocol builder 但不访问 GitLab API；positive 生成 human_handoff 或 suppression/route-decision artifact；unknown route、malformed source、attempted side effect 均输出 structured hard stop 且 side_effects_executed=false；复用 smoke/manual substrate 做 ai-studio dogfood，doctor/matrix ledger 索引 evidence。完成后才进入 1-5-5-2。",
+          "note": "不新增 provider API job；control route 的 GitLab applicability 由协议级 evidence 证明。"
+        },
+        {
+          "q": "control-route evidence 使用什么 envelope？",
+          "answer": "使用统一 schema zj-loop.gitlab_control_route_evidence.v1，包含 status、route_id、provider/project、GitLab protocol signal、outcome、side_effects_executed、route-specific artifact、recovery、verification、compatibility_fingerprint 与 next_steps；human artifact 必须是 zj-loop.human_handoff.v1，ignore artifact 必须是 suppression 形式的 zj-loop.route_decision.v1。",
+          "note": "统一机器协议避免 Agent 发明输出；route-specific artifact 保留 human/ignore 语义差异；不保存 token 或完整 GitLab response。"
+        }
+      ],
+      "notes": "Control/report-only GitLab dogfood completed in ai-studio. Core TDD added buildGitLabControlRouteEvidence and zj-loop-route control-evidence with unified zj-loop.gitlab_control_route_evidence.v1 envelope, human_handoff artifact for human, suppression route_decision artifact for ignore, deterministic fingerprint, GitLab source/project binding, and zero-side-effect hard stops. Core targeted tests, vendored tarball CLI, YAML/render gate passed. Positive ignore evidence: pipeline 10517909/job 25988452. Positive human-handoff evidence: pipeline 10517931/job 25988585. Negative attempted side-effect evidence: job 25988651 on commit df08f613; the job failed at the expected control boundary and uploaded gitlab-control-route-evidence.json with zero provider side effects. Existing audit L0 findings were report-only and did not fail smoke. Doctor/matrix ledger indexing remains in 1-5-5-5."
+    },
+    "1-5-5-2": {
+      "id": "1-5-5-2",
+      "label": "GitLab explicit-on-demand required-route dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "explicit-on-demand required route 如何分开 dogfood？",
+          "answer": "分别验证 manual-smoke-report 与 roadmap-sliced-development：manual smoke 只生成 report artifact、无 provider write；Roadmap Activation 消费显式结构化 activation contract，创建受控 zjal-* branch/Draft MR artifact，禁止自动 merge，closeout 独立验证。两条路径各自要求 positive、negative/recovery 与 verification evidence，不能互相替代。",
+          "note": "手动 pipeline 的存在只证明 explicit-on-demand trigger，不证明另一路由的 contract、scope 或 completion form。"
+        },
+        {
+          "q": "Roadmap Activation explicit-on-demand 使用什么 dogfood fixture？",
+          "answer": "使用 ai-studio 专用最小可回滚 activation fixture，只影响 zj-loop/dogfood；source Issue/comment、activation request、target branch、MR IID 显式绑定；branch 固定 zjal-*；允许创建 Draft MR 但禁止自动 merge。历史 !298 只有 compatibility fingerprint 完全匹配才可复用，否则重新创建。negative 覆盖缺失 contract、非 zjal branch、source mismatch、disabled route，均零 provider write。",
+          "note": "避免把历史 branch/MR API 成功或非绑定 activation 误认为当前 explicit-on-demand completion。"
+        },
+        {
+          "q": "Roadmap Activation explicit-on-demand 的完成边界是否包含 merge？",
+          "answer": "不包含。positive completion 止于 explicit signal、activation contract、verifier、zjal-* branch 与 Draft MR/reviewable artifact；human merge 与 post-merge cleanup 属于独立 event-driven post-merge cell，并复用 1-5-4 的 closeout evidence。",
+          "note": "分离 review artifact 与 merge/closeout completion，避免一个 slice 被误解为全生命周期完成。"
+        },
+        {
+          "q": "explicit-on-demand 使用什么 GitLab signal 入口？",
+          "answer": "统一使用 GitLab Web pipeline 的显式结构化变量/contract artifact；manual-smoke 直接启动，roadmap-sliced-development 传入 activation contract JSON、source Issue IID、comment/request ID、target branch 等字段并验证 CI_PIPELINE_SOURCE=web 或明确 manual replay context。缺失/不一致输出 protocol_repair_request 或 request-source-mismatch，零 provider write；Issue/comment event 留给 event-driven slice。",
+          "note": "不把 Web pipeline 伪装成 GitLab Issue/MR event，保持 trigger mode 与 evidence truth 一致。"
+        },
+        {
+          "q": "GitLab Web pipeline 的 canonical protocol source 是什么？",
+          "answer": "统一使用 gitlab-web-pipeline；Job 验证 CI_PIPELINE_SOURCE=web 或明确 manual replay context，route dispatch、consumer plan 与 activation contract evidence 使用同一 source identity。gitlab-issue-note 只留给 event-driven slice。",
+          "note": "不把 Web pipeline 伪装成 Issue/comment event，保持 trigger mode 与 evidence truth 一致。"
+        }
+      ],
+      "notes": "Completed with real ai-studio GitLab Web evidence. Positive pipeline 10519067/job 25991688 on commit f893bcbd created the bound Draft MR !315 from zjal-act-191-19652349-gitlab-explicit-on-demand-dogfood to master, with Issue #191 and Note #19652349 carried in the contract; no merge or closeout was performed. Negative missing-Note binding pipeline 10519288/job 25992832 on commit a6d60fa9 returned execution-result status=refused with source-comment-id-required and no live_operations. Negative cross-Issue Note mismatch pipeline 10519607/job 25993405 returned source-comment-issue-or-id-mismatch and no live_operations. The earlier pre-fix negative run created invalid Draft MR !316; it is excluded from evidence and remains a human cleanup item."
+    },
+    "1-5-5-3": {
+      "id": "1-5-5-3",
+      "label": "GitLab event-driven required-route dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [
+        "1-5-5-3-1",
+        "1-5-5-3-2",
+        "1-5-5-3-3",
+        "1-5-5-3-4",
+        "1-5-5-3-5"
+      ],
+      "decisions": [
+        {
+          "q": "1-5-5-3 的 event-driven 入口是否固定为 GitLab 原生事件 source，禁止用 Web/API pipeline 伪造？",
+          "answer": "是。merge_request_event 固定覆盖 PR Steward/Post-Merge；Issue 或 Issue Note 原生事件覆盖 Issue Triage/CI Sweeper；gitlab-web-pipeline 只属于 1-5-5-2，不计入 event-driven evidence。每类事件必须记录真实 CI_PIPELINE_SOURCE 与 source IID/Note/MR IID。",
+          "note": "保持 trigger mode 与 evidence truth 一致，禁止把 Web/API replay 当作 event-driven completion。"
+        },
+        {
+          "q": "GitLab 缺少 issue_note_event pipeline source 时，是否允许 webhook bridge 触发 API pipeline？",
+          "answer": "允许，但严格分层。merge_request_event 直接作为原生 evidence；Issue/Note 路径以 GitLab webhook envelope 为主 truth，bridge 只能触发固定 consumer API pipeline，CI_PIPELINE_SOURCE=api 仅是执行载体，不得冒充原生事件。",
+          "note": "必须保留 webhook event ID、Issue IID、Note ID、request ID 和 project binding；任一缺失或不一致均 zero-write hard stop。"
+        },
+        {
+          "q": "Webhook bridge 应放在哪里？",
+          "answer": "放在 ZAgenticLoop 的 provider adapter 层，作为独立、无业务代码的 GitLab bridge；不放进 ai-studio 业务仓库，也不把 bridge 逻辑塞进 CI job。GitLab Project Webhook 只投递事件，bridge 校验 secret/project/event，再触发固定 API pipeline；provider side effects 仍由 consumer pipeline 的 claim/verifier 边界负责。",
+          "note": "bridge 不直接写 Issue、Note、Branch 或 MR；event ID 负责 dedupe，保留结构化 envelope。"
+        },
+        {
+          "q": "Webhook bridge 触发 API pipeline 是否使用独立最小权限 Pipeline Trigger Token，而不是复用 GITLAB_TOKEN？",
+          "answer": "是。GITLAB_TOKEN 仅供 consumer adapter 执行 Issue/Note/Branch/MR provider write；ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN 仅允许 bridge 触发固定 API pipeline。bridge 不接受任意 project/ref/job 参数，token 值不进入 evidence，只记录脱敏 auth_source。",
+          "note": "缺失 token、project/route/ref 不匹配时拒绝触发 pipeline。"
+        },
+        {
+          "q": "Webhook bridge 是否只保存低成本事件审计字段，不保存完整 GitLab webhook payload？",
+          "answer": "是。保留 event_id、event_type、project_path、Issue IID/Note ID/MR IID、source_url、target_route、target_ref、received_at、dedupe_key、auth_source、trigger_pipeline_id；原始 payload 只在内存中校验，不进入 artifact 或长期状态。",
+          "note": "保持与低成本 provider audit 原则一致，事件 envelope 可回放但不泄露完整 provider response。"
+        },
+        {
+          "q": "事件过滤是否只接受 route-specific allowlist，而不是所有 Issue/MR 事件都触发？",
+          "answer": "是。Issue Note 只接受固定 activation/request command marker；Merge Request 只接受目标状态变化和明确失败信号；其他更新、普通评论、标签变化默认 ignored/not_applicable，不触发 consumer。事件 predicate 必须由 Route Table 验证。",
+          "note": "避免 bridge 自行猜 route 语义，降低噪声和误消费风险。"
+        },
+        {
+          "q": "重复 webhook 投递是否以 event_id 去重，并在触发 API pipeline 前持久化 dedupe receipt？",
+          "answer": "是。相同 event_id 只保留第一条 receipt；不同 event_id 通过 route-level dedupe_key 做幂等判断。pipeline 触发结果未知时生成 trigger-uncertain evidence，禁止盲目重试，只能显式 resume/restore。receipt 只保存低成本字段和 pipeline ID。",
+          "note": "避免重复消费和不确定 provider/API 状态，保持事件桥可回放。"
+        },
+        {
+          "q": "event-driven 的完成边界是否按 route-specific completion form 判定，而不是 Webhook 收到或 API pipeline 启动就算完成？",
+          "answer": "是。PR Steward 要到 report/request、claim/verifier 和 escalation 或 repair-MR artifact；CI Sweeper 要到 Issue Fix Request、claim/verifier 和 bounded repair-MR artifact；Post-Merge 要到真实 MR 合并事件、contract verifier 与 branch/carrier closeout evidence；Issue Triage 要到真实 Note/Issue 事件与 transition verifier evidence。",
+          "note": "人工 merge、closeout、恢复分别遵守各 route contract，不能互相替代。"
+        },
+        {
+          "q": "dogfood 顺序是否先验证无需 webhook bridge 的原生 merge_request_event，再实现 Issue/Note webhook bridge？",
+          "answer": "是。先完成 merge_request_event 的 PR Steward report/request/claim/verifier，再完成 MR event 的 Post-Merge closeout；随后实现 Issue/Note webhook bridge，依次验证 Issue Triage 与 CI Sweeper，最后汇总 event-driven matrix evidence。",
+          "note": "先隔离 GitLab 原生事件能力，再引入 bridge 的 dedupe、trigger-uncertain 与 API pipeline 执行载体风险。"
+        },
+        {
+          "q": "原生 merge_request_event dogfood 是否创建独立最小 fixture MR，只修改 zj-loop/dogfood/pr-steward-fixture.yml，不复用 !315 或历史 MR？",
+          "answer": "是。使用独立 zjal-* 源分支、目标 master、单文件 fixture scope 和可控失败 check；显式绑定 MR IID、head SHA、source/target branch。失败时零次源 MR 写入，人工关闭/合并与 Post-Merge closeout 分开验证。",
+          "note": "避免 explicit-on-demand 与 event-driven evidence 串线，也避免触碰 ai-studio 业务逻辑。"
+        },
+        {
+          "q": "PR Steward event-driven dogfood 是否以结构化 escalation 作为正向 completion，而不创建第二个 repair MR？",
+          "answer": "是。验证完整 merge_request_event → report → request → claim → verifier → escalation；只创建独立 Issue Fix Request carrier，不写 source MR，不创建 repair MR。repair MR 作为后续增强证据，不阻塞 event-driven 基础能力完成。",
+          "note": "复用已验证 GitLab PR Steward escalation completion form，保持 source MR 与 carrier 隔离。"
+        },
+        {
+          "q": "PR Steward event-driven 正向 dogfood 是否允许自动创建独立 carrier Issue，并要求 carrier 与 source MR 完全隔离？",
+          "answer": "是。carrier 只能由固定 GITLAB_TOKEN 创建，body 绑定 project path、source MR IID、source head SHA、request ID、dedupe key；claim/verifier/escalation 只写 carrier，不写 source MR，不自动合并或关闭 source MR；carrier closeout 独立处理。",
+          "note": "保持 source review 与 request carrier 的 provider-side effect 边界清晰可回放。"
+        },
+        {
+          "q": "PR Steward event-driven negative/recovery 是否覆盖 source head SHA mismatch、request/project mismatch、claim mismatch、verifier scope failure 和重复 event dedupe？",
+          "answer": "全部覆盖。每个 case 输出结构化 hard stop 或 escalation；side_effects_executed=false，零次 source MR 写入和 repair MR 创建；重复 event 不创建第二个 carrier；recovery 只能显式 resume/restore，禁止自动重试。",
+          "note": "确保 event-driven evidence 不停留在 happy path，并验证消费权、scope 和恢复边界。"
+        },
+        {
+          "q": "event-driven GitLab CI 是否采用固定 DAG 编排，禁止在 rules 内配置 needs？",
+          "answer": "是。只有 CI_PIPELINE_SOURCE=merge_request_event 的原生 MR event job 进入；job 显式绑定 CI_MERGE_REQUEST_IID、CI_COMMIT_SHA、source/target branch；needs 只写在 job 顶层，事件入口立即运行，recovery 不被无关上级 job 阻塞。",
+          "note": "避免 GitLab YAML parser 错误和同 stage 隐式阻塞，保持 event identity 可回放。"
+        },
+        {
+          "q": "event-driven 是否按完整可验收的垂直功能拆分，避免第一刀被误解为整个 1-5-5-3 已完成？",
+          "answer": "是。1-5-5-3 拆成完整功能 slices：原生 MR event 的 PR Steward 生命周期、原生 MR event 的 Post-Merge closeout 生命周期、Issue/Note webhook bridge 协议与 dedupe、bridge 驱动的 Issue Triage 生命周期、bridge 驱动的 CI Sweeper 生命周期。每个 slice 都有独立 positive、negative/recovery 和 live evidence；父节点只有全部 slices 完成后才完成。",
+          "note": "第一刀只完成一个明确命名的垂直功能，roadmap 父节点保持 in_progress，禁止用局部 evidence 宣称完整 event-driven 能力。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-4": {
+      "id": "1-5-5-4",
+      "label": "GitLab scheduled required-route dogfood",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [
+        "1-5-5-4-1",
+        "1-5-5-4-2",
+        "1-5-5-4-3",
+        "1-5-5-4-4"
+      ],
+      "decisions": [
+        {
+          "q": "scheduled required-route dogfood 如何拆分？",
+          "answer": "拆成四个 route-specific 子节点：Issue Backlog、Daily Triage、Dependency Sweeper、Changelog Drafter；每个子节点独立验证 source=schedule、positive、negative/recovery 和 artifact contract，不能跨 route 泛化 evidence。",
+          "note": "先推进 issue-backlog-triage，因为已有 GitLab schedule-health 基础和相关 scheduled evidence；不启用 provider write 或 trusted automation。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-5": {
+      "id": "1-5-5-5",
+      "label": "GitLab required-route matrix verifier and evidence index",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [
+        "1-5-5-5-1"
+      ],
+      "decisions": [
+        {
+          "q": "只读 Webhook capability artifact 归入哪里？",
+          "answer": "归入现有 doctor/ledger 与 control-evidence/matrix verifier slice，作为当前版本的 route-specific unavailable capability evidence；不打开 deferred 的 1-5-5-3-4。",
+          "note": "当前版本只验证 disabled/unavailable 状态和 zero-side-effect，不把 Webhook 适配重新纳入产品路线。"
+        },
+        {
+          "q": "只读 capability artifact 修改哪些仓库？",
+          "answer": "只修改 ZAgenticLoop 的 doctor/ledger、Route Table 和 matrix verifier；不修改 ai-studio 业务代码，也不修改 ai-studio-gitlab 部署服务。",
+          "note": "当前版本只记录和验证能力状态，避免 deferred Webhook 逻辑扩散到两个 GitLab 项目。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-3-1": {
+      "id": "1-5-5-3-1",
+      "label": "GitLab native MR event PR Steward escalation lifecycle dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "1-5-5-3-1 的独立 fixture MR 是否保持 Draft，避免 event-driven dogfood 在人工验证前被误合并？",
+          "answer": "是。第一刀只验证 merge_request_event → PR Steward report → Issue Fix Request carrier → claim/verifier → structured escalation；不进入 MR merge 或 Post-Merge closeout，后者由 1-5-5-3-2 独立验证。",
+          "note": "保持 Draft 和 source MR 隔离，避免局部 event evidence 被误解为完整生命周期。"
+        },
+        {
+          "q": "PR Steward event job 是否在 merge_request_event 到达后自动进入 report，不设置人工启动闸门？",
+          "answer": "是。event 到达后自动 report；人工只负责创建/关闭 Draft fixture MR。request、claim、verifier、escalation 沿显式 identity 和安全 gate 继续；人工恢复只能使用独立 recovery job，不改变正向事件链自动性。",
+          "note": "这是 event-driven UX 的核心证明，避免手动启动伪装成自动能力。"
+        },
+        {
+          "q": "event-driven 的自动边界是否固定为 report 自动执行，而 request/claim/escalation 继续作为显式 gated recovery jobs？",
+          "answer": "是。merge_request_event 自动执行 PR Steward report；request carrier 创建仍需固定确认短语，claim/verifier/escalation 使用显式 identity 和 gated recovery job。人工不启动 report，但 provider write 不绕过既有授权边界。",
+          "note": "兼顾 event-driven 用户体验与已有 provider-write confirmation 协议，避免把自动化误解为无授权写入。"
+        },
+        {
+          "q": "剩余 PR Steward negative/recovery 在哪里验证？",
+          "answer": "在内网 mlive-dev/ai-studio 使用真实 GitLab pipeline 做受控 live 验证；只操作 fixture Issue/MR，不发布公网，不自动 merge。",
+          "note": "内网 provider evidence 允许周末继续；公网 Nyx/Caster 发布仍暂停。"
+        },
+        {
+          "q": "PR Steward 剩余 negative/recovery 的执行顺序是什么？",
+          "answer": "先 claim-id mismatch，再 verifier scope failure，最后使用正确 identity 执行 explicit recovery replay。",
+          "note": "先锁死 zero-write hard stop，再验证唯一允许的恢复路径；不盲目重试。"
+        }
+      ],
+      "notes": "Completed with real ai-studio merge_request_event evidence on Draft MR !317, source branch codex/gitlab-pr-steward-event-dogfood, target master, and current head 98de7e47866217482aaa617c70e81bbb2aff03d7. The original positive report/request/claim/escalation evidence remains recorded for the fixture; the refreshed request for the current head was pipeline job 26041828, creating carrier Issue #200 and request ifr_1de5b9433620. The refreshed claim was job 26041717 with claim claim-pr-steward-317-98de7e47. Negative claim-id mismatch evidence was job 26041391 with side_effects_executed=false. Verifier scope failure was job 26043031: requested scope source-mr-write, allowed scopes pull-request and failed-check-rollup, reason verifier-scope-mismatch, side_effects_executed=false. Explicit recovery replay was job 26041718, appending one escalation marker to carrier Issue #200 with outcome=escalated and repair_mr_created=false. No source MR mutation, repair MR, auto-merge, or public release occurred."
+    },
+    "1-5-5-3-2": {
+      "id": "1-5-5-3-2",
+      "label": "GitLab native MR event Post-Merge closeout lifecycle dogfood",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3",
+      "children": [
+        "1-5-5-3-2-1",
+        "1-5-5-3-2-2",
+        "1-5-5-3-2-3",
+        "1-5-5-3-2-4",
+        "1-5-5-3-2-5"
+      ],
+      "decisions": [
+        {
+          "q": "Post-Merge closeout 使用什么测试对象？",
+          "answer": "独立 GitLab fixture MR",
+          "note": "fixture 只修改 zj-loop/dogfood/post-merge-closeout-fixture.yml；不复用 !317 或历史 MR 作为完成证据。"
+        },
+        {
+          "q": "Post-Merge closeout 如何触发？",
+          "answer": "同一 merge_request_event pipeline 在 Human 合并后手动运行 closeout job",
+          "note": "合并前仅 report/plan；provider 侧复核 merged=true；禁止 Web/API pipeline 伪造 native MR event。"
+        },
+        {
+          "q": "Post-Merge contract 放在哪里并绑定哪些对象？",
+          "answer": "MR description 中的显式 contract；绑定 provider/project、MR、source/target、zjal- branch 和独立 carrier",
+          "note": "contract 缺失或任一绑定不一致时 hard stop，零次 branch/Issue 写入。"
+        },
+        {
+          "q": "有效 contract 是否可以免除 live closeout 确认？",
+          "answer": "不可以；仍必须固定确认短语 DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER",
+          "note": "contract 只限定可操作对象；branch 删除和 carrier 关闭仍需 Human 对本次不可逆副作用显式授权。"
+        },
+        {
+          "q": "negative boundary 覆盖哪些情况？",
+          "answer": "全部覆盖且每项零写入",
+          "note": "覆盖未合并、contract/项目/MR/branch/target/carrier 不一致、pending follow-up、确认缺失或错误、重复 closeout；均输出结构化 reason 和 side_effects_executed=false。"
+        },
+        {
+          "q": "成功 closeout 的副作用顺序是什么？",
+          "answer": "验证后追加 evidence，再删除远端 zjal- branch，最后关闭 carrier Issue",
+          "note": "guard 失败零写入；删除或关闭失败时保留可恢复的 evidence。"
+        },
+        {
+          "q": "closeout 重跑和部分完成如何恢复？",
+          "answer": "幂等恢复；already_deleted/already_closed 可继续，不确定响应输出 closeout-uncertain 并要求 Human resume/restore",
+          "note": "相同 marker 不重复写 evidence；禁止盲目重试。"
+        },
+        {
+          "q": "live closeout evidence 如何记录？",
+          "answer": "统一 envelope + GitLab route-specific artifact",
+          "note": "记录最小 provider audit、contract identity、guards、ordered steps、side_effects 和 replay 状态；不保存完整 payload/response。"
+        },
+        {
+          "q": "fixture MR 如何创建？",
+          "answer": "复用 GitLab Roadmap Activation provider adapter",
+          "note": "adapter 负责真实 branch/commit/Draft MR/carrier/contract；closeout slice 不重复实现创建逻辑。"
+        },
+        {
+          "q": "fixture 的 branch、target 和 scope 如何固定？",
+          "answer": "target=master；source=adapter 生成的 zjal-...；仅 post-merge-closeout fixture 文件",
+          "note": "不改业务/依赖/其他 route；carrier 独立且 closeout 前无 pending follow-up。"
+        },
+        {
+          "q": "何时将 Post-Merge closeout dogfood 标记完成？",
+          "answer": "仅完整 live/recovery 矩阵通过后",
+          "note": "需包含独立 fixture、native MR event、Human merge、全部 mismatch/confirmation/未合并 hard stop、正向 evidence→delete→close、幂等重跑和 uncertain resume；job 成功或 pipeline 启动不算完成。"
+        },
+        {
+          "q": "完整 completion gate 的要求是什么？",
+          "answer": "必须通过完整 live/recovery evidence 矩阵",
+          "note": "独立 fixture、native MR event、Human merge、全部 hard stop、正向 evidence→delete→close、幂等重跑、uncertain resume；不能以 job succeeded/pipeline started 代替。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-3-3": {
+      "id": "1-5-5-3-3",
+      "label": "GitLab Issue Note webhook bridge envelope dedupe and trigger recovery",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-3",
+      "children": [
+        "1-5-5-3-3-1",
+        "1-5-5-3-3-2",
+        "1-5-5-3-3-3",
+        "1-5-5-3-3-4",
+        "1-5-5-3-3-5"
+      ],
+      "decisions": [
+        {
+          "q": "GitLab Issue Note webhook bridge 放在哪里？",
+          "answer": "ZAgenticLoop provider adapter 独立 bridge",
+          "note": "bridge 校验 secret/project/event，持久化轻量 envelope 并触发固定 API pipeline；不直接写 Issue/Note/Branch/MR，ai-studio 不承载 bridge 逻辑。"
+        },
+        {
+          "q": "哪些 GitLab Issue Note 事件允许进入 bridge？",
+          "answer": "只允许固定 activation/request marker；只接受 Issue Note webhook。非匹配 Note、普通评论、业务讨论、label 变化全部记为 ignored/not_applicable，不触发 pipeline，不产生 provider side effect。",
+          "note": "事件 predicate 必须由 Route Table 验证，不能把所有 Issue Note 泛化为 roadmap activation。"
+        },
+        {
+          "q": "secret、project 或 event predicate 校验失败时如何处理？",
+          "answer": "统一输出结构化 hard-stop envelope：secret 失败为 unauthorized，project 不匹配为 project-mismatch，event 不允许为 event-not-allowed；失败不持久化完整 webhook payload，不触发 pipeline；只有合法事件写入 receipt。",
+          "note": "失败路径零 provider side effect；错误分类固定并可审计。"
+        },
+        {
+          "q": "Webhook envelope 保存哪些字段、保存在哪里？",
+          "answer": "只保存轻量字段：event_id、event_type、project_path、issue_iid、note_id、mr_iid（如适用）、source_url、target_route/ref、received_at、dedupe_key、auth_source、trigger_pipeline_id；不保存完整 GitLab payload 或 API response；receipt 写入 bridge 受控本地状态目录。",
+          "note": "字段集合服务于 receipt dedupe、路由审计与 trigger recovery。"
+        },
+        {
+          "q": "event_id 与 dedupe_key 如何生成、冲突如何处理？",
+          "answer": "event_id 优先使用 GitLab webhook 提供的唯一事件 ID，并按 project_path:event_id 做 receipt 去重；缺失 event_id 输出 event-id-required，不触发 pipeline。随后按稳定 dedupe_key 做 route-level 去重，已处理返回 duplicate；trigger 状态不确定返回 trigger-uncertain，禁止盲目重试，必须显式恢复。",
+          "note": "双层去重分别防止 webhook 重放与同一路由重复消费。"
+        },
+        {
+          "q": "固定 API pipeline 的 ref 与变量协议是什么？",
+          "answer": "bridge 只能触发预配置的 GitLab API pipeline ref；ref 与 route 的映射必须由 Route Table 固定校验，不接受 webhook 任意 ref。仅允许白名单变量 event_id、dedupe_key、project_path、issue_iid、note_id、target_route、envelope_ref；不传完整 payload 或 GITLAB_TOKEN，不直接执行 provider write。ref/变量校验失败返回 route-mismatch，零次 trigger/write。",
+          "note": "bridge 仅是受限 trigger adapter，consumer side effect 仍由固定 pipeline 的独立授权路径负责。"
+        },
+        {
+          "q": "trigger 成功、失败与不确定状态如何恢复？",
+          "answer": "API 明确成功时 receipt 为 triggered 并记录 pipeline ID；明确失败时为 trigger-failed，保留原因且不自动重试；超时或响应不可判定时为 trigger-uncertain，不重复触发。只有人工显式 resume，先查询既有 pipeline/receipt，确认不存在成功触发后才允许再次 trigger。",
+          "note": "恢复动作必须可审计、幂等且禁止盲目重试。"
+        },
+        {
+          "q": "真实 GitLab Issue Note webhook bridge 的 completion gate 是什么？",
+          "answer": "必须通过完整 live/recovery evidence 矩阵：合法 marker 正向触发并生成真实 pipeline ID；非匹配 Note、普通评论、label 变化均 ignored；secret/project/event 校验失败均 hard stop 且零 trigger；同一 webhook 重放返回 duplicate 且零重复 trigger；trigger-failed 与 trigger-uncertain 只能通过显式 resume 恢复；artifact 必须包含统一 envelope、dedupe receipt、route decision、trigger/recovery evidence；bridge 不执行 Issue、Note、Branch、MR 写操作。",
+          "note": "独立 ai-studio fixture；不能以 pipeline started 或单次 job succeeded 代替 completion。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-3-4": {
+      "id": "1-5-5-3-4",
+      "label": "GitLab bridged Issue Triage event-driven lifecycle dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "ai-studio-gitlab 与 ai-studio 的职责边界是什么？",
+          "answer": "ai-studio-gitlab 作为独立 GitLab Webhook 验证服务器/容器；ai-studio 作为主要开发、CI consumer、Issue Triage 集成项目。",
+          "note": "Webhook 基础设施与业务/consumer 项目分层；周末只做本地开发，工作日再做真实 provider 验证。"
+        },
+        {
+          "q": "真实 Issue Triage dogfood 的项目绑定是什么？",
+          "answer": "Issue Note 来源和目标 pipeline 都绑定 mlive-dev/ai-studio；bridge 服务部署在 mlive-dev/ai-studio-gitlab。",
+          "note": "服务托管项目与业务验证项目分离；bridge 的 project_path、API target 和 trigger token 绑定 ai-studio。"
+        },
+        {
+          "q": "GitLab Webhook Issue Triage 适配是否纳入本版本产品计划？",
+          "answer": "不纳入本版本；转移到 docs/plans/known-gaps.md checklist，作为后续版本待完善能力。",
+          "note": "保持本版本知行合一；已有 adapter、部署分支和本地测试只算探索性/基础设施准备，不算产品支持、trusted automation 或 live completion evidence。"
+        },
+        {
+          "q": "GitLab Webhook Issue Triage 何时允许重新纳入版本路线图？",
+          "answer": "只有协议、negative/recovery matrix、真实 live evidence、promotion gate 全部完成，并经 Human 明确确认后，才重新纳入。",
+          "note": "known gap 不因核心代码或本地测试完成而提前回流；避免探索性实现被误读为产品结论。"
+        },
+        {
+          "q": "本版本发布时 GitLab Webhook 功能如何处理？",
+          "answer": "正常版本继续发布，但 Webhook 功能保持 disabled/unavailable；不启用 route、secret 或 provider write，其他功能正常。",
+          "note": "Webhook 是明确的 known gap，不影响其他产品功能；未完成 checklist 和 promotion gate 前不得对用户宣称可用。"
+        },
+        {
+          "q": "Webhook disabled/unavailable 如何对用户表达？",
+          "answer": "版本能力说明标记 unavailable；误调用 endpoint 返回稳定的 webhook-unavailable 结构化结果，并保证零 provider side effect。",
+          "note": "外部 GitLab 操作方和内部用户得到一致信号；unavailable 不被误判为网络故障或已启用能力。"
+        },
+        {
+          "q": "Webhook disabled 时 endpoint 返回什么协议？",
+          "answer": "返回 HTTP 200 和稳定 webhook-unavailable envelope，包含 schema、status、reason=webhook-unavailable、side_effects_executed=false。",
+          "note": "避免 GitLab 重试风暴，同时明确功能未启用；不触发 pipeline 或其他 provider side effect。"
+        },
+        {
+          "q": "当前版本如何技术性保证 Webhook disabled？",
+          "answer": "Route Table 将 Webhook route 固定为 enabled=false，运行时默认 disabled；未完成 promotion gate 前不得通过普通环境变量开启。",
+          "note": "disabled 是结构化、可检查、可审计状态；误注入 Secret 或误配置 Webhook 也不能自动启用。"
+        },
+        {
+          "q": "谁能重新开启 disabled Webhook？",
+          "answer": "只有 Human 明确批准的 promotion PR，在 known-gaps checklist 和 promotion gate 完成后修改 Route Table 并开启；Secret 注入本身不能开启。",
+          "note": "防止部署权限或环境变量绕过产品版本 gate；enabled 状态必须由版本化变更和 Human 审核控制。"
+        },
+        {
+          "q": "当前版本如何证明 Webhook disabled？",
+          "answer": "CI/doctor 生成结构化 capability artifact，记录 webhook.status=unavailable、enabled=false、provider_writes_allowed=false，并检查运行时配置。",
+          "note": "不可用状态本身必须有可审计证据，防止被误判为漏测或已启用。"
+        },
+        {
+          "q": "disabled capability artifact 是否当前版本实现？",
+          "answer": "当前版本实现只读的 disabled capability check/artifact；不实现 Webhook trigger、Issue Triage write 或线上 bridge。",
+          "note": "用零 provider side effect 的可验证能力保证 unavailable 不是口头声明，同时不把 Webhook 适配带回本版本。"
+        },
+        {
+          "q": "disabled capability artifact 由什么机制生成？",
+          "answer": "复用现有 doctor/ledger，增加 GitLab Webhook capability 行，记录 unavailable、enabled=false、provider_writes_allowed=false。",
+          "note": "所有 agent 使用同一份 capability 状态；不新增 Webhook 专用状态系统。"
+        },
+        {
+          "q": "doctor/ledger 如何区分不可用与延期？",
+          "answer": "使用两个固定维度：status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；status 与 planning_status 均由固定 enum 和 Route Table 校验。",
+          "note": "运行能力与版本计划状态严格分层，禁止用 incomplete 或平均评分替代。"
+        },
+        {
+          "q": "Webhook capability 与计划状态使用哪些固定 enum？",
+          "answer": "status 固定为 available|unavailable|blocked|unknown；planning_status 固定为 in_scope|deferred|completed|superseded。当前为 status=unavailable、planning_status=deferred。",
+          "note": "两个维度均由 Route Table 校验；禁止用 incomplete 或自由文本替代。"
+        },
+        {
+          "q": "deferred unavailable Webhook 是否阻塞其他产品发布？",
+          "answer": "只阻塞 GitLab Webhook capability 和对应路线图节点；不阻塞其他产品功能发布，但整体版本状态必须显示 deferred known gap，不能宣称全能力完成。",
+          "note": "保持正常产品发布与诚实能力声明并存；不做整体平均评分或静默忽略。"
+        },
+        {
+          "q": "当前版本收到 Webhook 请求时 agent 如何处理？",
+          "answer": "返回 status=unavailable、planning_status=deferred、side_effects_executed=false 的结构化 hard stop，引用 docs/plans/known-gaps.md；不调用 GitLab API，也不自动降级为其他写入路径。",
+          "note": "所有 agent 对 deferred capability 保持一致行为，避免把不可用能力转换成未授权的自动副作用。"
+        },
+        {
+          "q": "当前版本对外如何声明 GitLab Webhook？",
+          "answer": "声明 GitLab Webhook Issue Triage 暂不可用（deferred）；本版本不启用该能力，也不产生 GitLab provider write；其他产品功能正常，不承诺具体上线日期。",
+          "note": "能力声明必须与实现状态一致，避免 beta 或隐含可用性承诺。"
+        },
+        {
+          "q": "Webhook unavailable 状态是否影响其他 capability？",
+          "answer": "Webhook 只作为独立 route-specific ledger cell，status=unavailable、planning_status=deferred；只阻塞自身 route，不污染其他 capability 状态。",
+          "note": "doctor/ledger 严格按 route 计算，整体版本可显示 known gap，但其他功能正常发布。"
+        },
+        {
+          "q": "Webhook ledger cell 使用什么 route identity？",
+          "answer": "独立使用 gitlab-issue-note-bridge；issue-triage、issue-triage-action、issue-triage-transition 分别记录，bridge transport 不等于 Issue Triage capability。",
+          "note": "严格区分接入层、consumer 层和 provider write 层，避免 route 语义混淆。"
+        },
+        {
+          "q": "当前版本 Route Table 是否保留 Webhook route？",
+          "answer": "保留完整 gitlab-issue-note-bridge route 条目，但固定 enabled=false、status=unavailable、planning_status=deferred，并声明 capabilities/verifiers 供 doctor/ledger 检查。",
+          "note": "系统可见且明确知道该能力；禁用状态不能被误读为未设计或可用。"
+        },
+        {
+          "q": "Webhook route 的 capabilities/verifiers 如何表达？",
+          "answer": "分成 declared_capabilities、verified_capabilities、verifiers；当前 declared_capabilities 可列未来范围，verified_capabilities 为空，verifiers 只验证 route-table、disabled-state、zero-side-effect。",
+          "note": "声明未来范围不等于完成证据；当前 route 明确不可用且零 provider side effect。"
+        },
+        {
+          "q": "Webhook bridge declared capabilities 覆盖到哪一层？",
+          "answer": "只声明 webhook-envelope-validation、receipt-dedupe、fixed-api-trigger；Issue Triage 分析、transition 和 provider write 由独立 route 声明。",
+          "note": "Bridge、consumer、provider write 三层保持独立，避免接入能力被误读为业务自动化能力。"
+        },
+        {
+          "q": "disabled capability artifact 使用什么 schema？",
+          "answer": "采用统一 envelope zj-loop.capability.v1 与 route-specific artifact zj-loop.gitlab_issue_note_bridge_capability.v1；route artifact 包含 status、planning_status、enabled、provider_writes_allowed、declared/verified capabilities 和 verifiers。",
+          "note": "doctor/ledger 统一消费，bridge route 保持独立语义。"
+        },
+        {
+          "q": "doctor/ledger 遇到 deferred Webhook 时如何影响退出码？",
+          "answer": "默认生成完整 artifact 并成功结束，但明确记录 route deferred；仅 --require-complete 等严格模式因 route 未完成而失败。",
+          "note": "正常发布不被该缺口阻塞，严格模式仍防止版本被误报为全能力完成。"
+        },
+        {
+          "q": "Webhook capability artifact 记录哪些绑定信息？",
+          "answer": "记录 provider=gitlab、project_path=mlive-dev/ai-studio、route_id=gitlab-issue-note-bridge、status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；可记录 auth_source 名称，不记录 Secret、Token 或完整 payload。",
+          "note": "证明项目与 route 绑定且不泄露凭证；部署实验不被误当 live evidence。"
+        },
+        {
+          "q": "disabled capability check 覆盖哪些验证场景？",
+          "answer": "本地覆盖正常 disabled 配置、Route 缺失或 enum 非法、普通环境变量越权开启、所有场景 provider_writes_allowed=false；使用 fixture，不访问 GitLab。",
+          "note": "证明默认不可用、配置错误 fail-closed，周末不引入 provider side effect。"
+        },
+        {
+          "q": "disabled capability artifact 如何保存？",
+          "answer": "由 doctor/CI 每次动态生成并保存为 artifact/ledger 运行证据，不提交生成快照；Route Table 和 known-gaps 作为源配置。",
+          "note": "避免状态快照过期，同时保留每次运行的可审计证据。"
+        },
+        {
+          "q": "disabled capability artifact 保留多久？",
+          "answer": "默认保留 90 天，覆盖一个完整版本周期；只保留脱敏 capability 状态，不保存 Secret、Token 或完整 payload。",
+          "note": "支持版本回顾和 known-gap 审计，避免无限累积运行数据。"
+        }
+      ],
+      "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
+    },
+    "1-5-5-3-5": {
+      "id": "1-5-5-3-5",
+      "label": "GitLab bridged CI Sweeper event-driven repair lifecycle dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-3-2-1": {
+      "id": "1-5-5-3-2-1",
+      "label": "GitLab Post-Merge closeout fixture creation and contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": "ai-studio MR !321 prepared: source zjal-gitlab-post-merge-closeout-dogfood, target master, carrier Issue #194, contract written and binding verified; MR remains opened."
+    },
+    "1-5-5-3-2-2": {
+      "id": "1-5-5-3-2-2",
+      "label": "GitLab Post-Merge native MR event report and plan",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": "MR !321 merge_request_event closeout plan/live artifacts verified: current MR 321, zjal source, master target, carrier #194; pre-merge refusal only PR must be merged; zero side effects."
+    },
+    "1-5-5-3-2-3": {
+      "id": "1-5-5-3-2-3",
+      "label": "GitLab Post-Merge closeout negative verifier matrix",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Negative matrix implemented and verified: unmerged, missing contract, wrong project, wrong carrier, wrong roadmap branch, dirty worktree, missing confirmation; targeted suite 19/19 and all refusals have zero actions/side effects."
+    },
+    "1-5-5-3-2-4": {
+      "id": "1-5-5-3-2-4",
+      "label": "GitLab Post-Merge live cleanup and replay recovery",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "同一 MR 合并后无法产生 native replay pipeline 时怎么办？",
+          "answer": "新增独立 replay-only fixture MR，不降低 completion gate",
+          "note": "replay fixture 只验证 evidence/branch/carrier 幂等；不创建新 MR、不改业务代码；完成后再进入 completion gate。"
+        },
+        {
+          "q": "replay-only fixture MR 的变更范围是什么？",
+          "answer": "允许必要 CI 模板修复，业务 fixture 只改一个专用 YAML 文件",
+          "note": "使用新的 zjal- source branch/target master；合并后不再推送；同一 native MR pipeline 先 live 后 Retry replay。"
+        },
+        {
+          "q": "replay-only fixture 是否使用新 identity？",
+          "answer": "是；新 MR、新 carrier Issue、新 contract/request identity",
+          "note": "首次 live 与 Retry replay 共用新 identity；不复用 !321/#194，不混淆 dedupe 或旧 branch 状态。"
+        },
+        {
+          "q": "replay-only fixture 如何创建和推进？",
+          "answer": "由 GitLab provider API/adapter 创建，Human 审阅并合并",
+          "note": "adapter 创建新 branch/commit/carrier/Draft MR/contract；合并后同一 native MR pipeline 先 live 后 Retry replay，禁止 Web 伪造。"
+        }
+      ],
+      "notes": "Replay job evidence complete for MR !322: already_written, already_deleted, already_closed; no duplicate writes and cleanup-done."
+    },
+    "1-5-5-3-2-5": {
+      "id": "1-5-5-3-2-5",
+      "label": "GitLab Post-Merge closeout evidence and completion gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Completion gate passed: independent fixture/contract, native MR event, pre-merge hard stops, merged live cleanup, explicit confirmation, and same-pipeline replay evidence all recorded."
+    },
+    "1-5-5-3-3-1": {
+      "id": "1-5-5-3-3-1",
+      "label": "GitLab Issue Note bridge envelope validation adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented pure GitLab Issue Note bridge envelope validator in tools/zj-loop-core/src/gitlab-issue-note-bridge.ts. Validates trigger token, exact project binding (request and payload), Issue Hook/create/Issue predicate, event ID, fixed marker; emits lightweight envelope with stable dedupe key and zero provider side effects. Added 3 focused tests covering positive, ignored, and fail-closed cases. Targeted build/test and git diff --check passed; full core npm test reached all listed tests but did not exit cleanly due an existing open-handle hang after test output, so completion remains implementation-only pending later matrix/dogfood slices."
+    },
+    "1-5-5-3-3-2": {
+      "id": "1-5-5-3-3-2",
+      "label": "GitLab webhook receipt dedupe and explicit trigger recovery",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "GitLab webhook receipt 存储在哪里、如何写入？",
+          "answer": "存储于 z j-loop/evidence/gitlab-issue-note-bridge/ 下，按 receipts/<project-hash>/<event-id>.json 与 dedupe/<project-hash>/<dedupe-key>.json 分层；项目和 key 使用稳定 hash，避免路径泄露；采用临时文件写入后原子 rename；只保存轻量 envelope/status，不保存原始 webhook payload。",
+          "note": "receipt 与 dedupe record 均须可重放读取，且写入失败不得触发 provider side effect。"
+        },
+        {
+          "q": "Receipt 路径文字更正",
+          "answer": "路径固定为 zj-loop/evidence/gitlab-issue-note-bridge/，下分 receipts/<project-hash>/<event-id>.json 与 dedupe/<project-hash>/<dedupe-key>.json。",
+          "note": "更正上一条决策中的排版空格，设计不变。"
+        },
+        {
+          "q": "并发 webhook 如何确定 receipt/dedupe winner？",
+          "answer": "使用文件系统 exclusive create；同一 event_id 首次创建者为 winner。已有且 envelope fingerprint 一致返回 duplicate；同一 event_id 内容不一致返回 event-id-collision hard stop。route-level dedupe_key 已为 triggered/completed 返回 duplicate，trigger-uncertain 保持不确定，trigger-failed 保持失败，均禁止自动覆盖或重试；既有 receipt 永不覆盖。",
+          "note": "并发请求必须有确定 winner，避免最后写入者覆盖状态。"
+        },
+        {
+          "q": "receipt 状态机与恢复授权如何定义？",
+          "answer": "固定状态为 received、deduplicated、trigger-pending、triggered、trigger-failed、trigger-uncertain、recovery-pending。恢复必须同时提供 envelope_ref、event_id、dedupe_key 与固定确认短语 RESUME_GITLAB_ISSUE_NOTE_BRIDGE_TRIGGER；恢复前重新校验原 receipt、route/ref、项目绑定与既有 pipeline 状态，任一缺失或不一致都 hard stop 且零 trigger。",
+          "note": "恢复不是普通重试，必须是受审计的显式操作。"
+        },
+        {
+          "q": "receipt 保留与清理策略是什么？",
+          "answer": "triggered、trigger-failed、trigger-uncertain receipt 默认保留 90 天；recovery-pending 不自动过期。到期清理只删除本地 receipt，不影响 GitLab pipeline 或其他 provider 资源；清理为独立显式命令，默认 dry-run，执行需 PURGE_GITLAB_ISSUE_NOTE_BRIDGE_RECEIPTS；清理前生成汇总 evidence。",
+          "note": "dedupe 审计不能因普通自动清理而丢失。"
+        },
+        {
+          "q": "receipt 与 dedupe record 部分写入失败时如何处理？",
+          "answer": "采用 fail-closed 顺序：先 exclusive-create event receipt 为 received，再 exclusive-create dedupe record 为 deduplicated；任一步失败都不触发 pipeline，已创建的 receipt 标记 recovery-pending，输出 receipt-persistence-failed 并提供显式恢复命令；不回滚删除已创建记录，避免并发请求重新取得 winner；两者都成功后才进入 trigger-pending。",
+          "note": "持久化失败是可恢复状态，不是普通重试。"
+        },
+        {
+          "q": "dedupe record 保存哪些字段？",
+          "answer": "只保存 schema、project_hash、dedupe_key、envelope_ref、event_id、route_id、target_ref、status、created_at、updated_at、trigger_pipeline_id、fingerprint、recovery_attempts；不复制 Issue/Note 内容、完整 payload、token 或不必要 URL；fingerprint 仅用于 event_id 冲突检测，envelope_ref 指向轻量 receipt。",
+          "note": "dedupe record 是状态索引，不是第二份 webhook payload。"
+        },
+        {
+          "q": "显式 recovery 的次数上限是多少？",
+          "answer": "每个 event_id/dedupe_key 最多允许 1 次 resume trigger；若恢复后仍为 trigger-failed 或 trigger-uncertain，状态升级为 escalation-required；recovery_attempts>1 直接 hard stop，不再调用 GitLab API；必须由新的 webhook event_id/request 开始新的尝试。",
+          "note": "人工确认不等于无限重试，避免 provider-side duplicate trigger。"
+        },
+        {
+          "q": "trigger-pending 超时如何处理？",
+          "answer": "trigger-pending 超过 10 分钟标记为 trigger-uncertain；超时只读查询既有 pipeline/receipt，不自动再次 trigger。查到 pipeline ID 转为 triggered；确认没有 pipeline 则保持 trigger-uncertain，等待唯一一次显式 resume；查询失败保持 trigger-uncertain 并记录 provider-state-unknown。",
+          "note": "超时恢复必须先收敛 provider 状态，禁止猜测性重触发。"
+        }
+      ],
+      "notes": "Implemented GitLab Issue Note bridge receipt/dedupe store in tools/zj-loop-core/src/gitlab-issue-note-bridge-receipts.ts. Uses hashed receipts/dedupe paths, exclusive create winner selection, event collision detection, fail-closed two-record persistence, explicit recovery confirmation with one-attempt limit, 10-minute trigger-pending timeout classification, and 90-day dry-run/confirmed purge evidence. Added focused receipt, recovery, timeout, and cleanup tests; 8 targeted tests passed with build and git diff --check. Provider pipeline trigger remains the next slice; this code performs no provider trigger/write."
+    },
+    "1-5-5-3-3-3": {
+      "id": "1-5-5-3-3-3",
+      "label": "GitLab fixed API pipeline route trigger adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "固定 API pipeline trigger 使用哪种 GitLab 凭据？",
+          "answer": "只使用独立变量 ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN，通过 PRIVATE-TOKEN 调用 GitLab /projects/:id/pipeline；不使用 CI_JOB_TOKEN、GITLAB_TOKEN 或 webhook 原始 secret fallback。缺失返回 trigger-token-required，零 API 写入；artifact 只记录 auth_source=ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN，不记录 token 值。",
+          "note": "bridge trigger credential 与 consumer provider-side write credential 分层隔离。"
+        },
+        {
+          "q": "固定 API pipeline ref 放在哪里、如何校验？",
+          "answer": "ref 只来自 Route Table 的 bridge route 配置，不接受 webhook 或调用者传入；每个 route 固定 route_id、project_path、pipeline_ref、target_route、allowed_event_type。trigger 前验证项目、route、ref 完全匹配；缺失、未知或不匹配返回 route-mismatch，零 API 调用；禁止 checkout ref、默认分支或动态 MR/source branch fallback。",
+          "note": "Route Table 是唯一 ref/route 真相源。"
+        },
+        {
+          "q": "API pipeline trigger 允许发送哪些变量？",
+          "answer": "仅发送 7 个 canonical string 变量：ZJ_LOOP_BRIDGE_EVENT_ID、ZJ_LOOP_BRIDGE_DEDUPE_KEY、ZJ_LOOP_BRIDGE_PROJECT_PATH、ZJ_LOOP_BRIDGE_ISSUE_IID、ZJ_LOOP_BRIDGE_NOTE_ID、ZJ_LOOP_BRIDGE_TARGET_ROUTE、ZJ_LOOP_BRIDGE_ENVELOPE_REF。Issue IID/Note ID 为正整数十进制字符串，其余字段非空且有长度限制；target_ref 由 Route Table 固定决定，不作为变量；禁止额外变量、完整 payload、token、用户可控 ref。校验失败返回 variable-contract-mismatch，零 API 调用。",
+          "note": "变量 contract 是 bridge 到固定 pipeline 的最小输入面。"
+        },
+        {
+          "q": "GitLab API trigger response 如何分类？",
+          "answer": "HTTP 201 且响应包含正整数 id、ref 与 Route Table 固定 ref 一致、web_url 属于当前项目时才为 triggered；明确 4xx/5xx 为 trigger-failed；网络错误、超时、响应解析失败或字段不可确认均为 trigger-uncertain；201 但 binding 不匹配为 trigger-response-mismatch，视为失败；artifact 只记录必要 pipeline ID/URL，不保存响应原文。",
+          "note": "provider response 必须经过 binding verifier，不能以 HTTP status 单独判成功。"
+        },
+        {
+          "q": "Route Table 的 enabled/maturity gate 如何约束 trigger？",
+          "answer": "route 必须存在、enabled、event predicate 匹配且至少达到 install-ready；execution-ready 仍由独立 promotion gate 控制，bridge 不自动提升。route disabled、未知或 provider support 不满足时返回 route-not-triggerable，并在任何 GitLab API 调用前拒绝；bridge 不修改 Route Table。",
+          "note": "trigger capability 与 trusted automation promotion 分层。"
+        },
+        {
+          "q": "GitLab API endpoint 与请求安全策略如何固定？",
+          "answer": "只调用 POST /projects/:encoded_project_path/pipeline；使用 PRIVATE-TOKEN: ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN 与 Content-Type: application/json；body 仅包含固定 ref 和 7 个白名单变量；API base 只能来自受控配置，不来自 webhook；禁止跟随 redirect，避免 token 泄露到其他 host；不自动重试，网络不确定直接记为 trigger-uncertain。",
+          "note": "bridge 只允许单一、可审计的 pipeline trigger API surface。"
+        },
+        {
+          "q": "trigger artifact 保存哪些字段？",
+          "answer": "新增统一 schema zj-loop.gitlab_issue_note_bridge_trigger.v1；只保存 status/reason、project、route、fixed ref、event_id、dedupe_key、envelope_ref、auth_source、variable_keys、成功时的 pipeline ID/URL、side_effects_executed、recovery 状态与 next steps、provider HTTP status；不保存 token 或 response body。",
+          "note": "artifact 是 trigger 审计 envelope，不是 provider response dump。"
+        }
+      ],
+      "notes": "Implemented fixed GitLab API pipeline trigger adapter in tools/zj-loop-core/src/gitlab-issue-note-bridge-trigger.ts. Uses only ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN, exact Route Table-style project/route/ref/event/maturity gates, seven canonical variables, POST /projects/:id/pipeline with manual redirect handling and no retry, and unified trigger artifact with success/failure/uncertain/response-mismatch classification. Added 3 focused trigger tests; combined bridge/receipt/cleanup/trigger suite passed 11 tests with build and git diff --check. This adapter is test-only/injected-fetch capable; real provider dogfood remains later slices."
+    },
+    "1-5-5-3-3-4": {
+      "id": "1-5-5-3-3-4",
+      "label": "GitLab Issue Note bridge negative and uncertain evidence matrix",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "负向与不确定 evidence matrix 覆盖哪些场景？",
+          "answer": "必须覆盖缺 token=trigger-token-required；route/ref/project/event mismatch 均零 API 调用；额外变量或非法 IID=variable-contract-mismatch；4xx/5xx=trigger-failed；网络异常/超时/坏 JSON=trigger-uncertain；201 response binding mismatch=trigger-response-mismatch；合法 201=唯一 triggered；artifact 不泄露 token、payload 或 response body。",
+          "note": "本矩阵是进入真实 ai-studio dogfood 前的本地 completion gate。"
+        }
+      ],
+      "notes": "Completed negative/uncertain evidence matrix. Added test/gitlab-issue-note-bridge-negative-matrix.test.mjs covering token, route, ref, project, event, variable/IID refusals with zero API calls; 4xx/5xx trigger-failed; non-201/bad JSON/network class trigger-uncertain; 201 binding mismatch; positive triggered; and artifact redaction. Combined bridge suite passed 14 tests with build and git diff --check. This is local evidence only; real ai-studio dogfood remains 1-5-5-3-3-5."
+    },
+    "1-5-5-3-3-5": {
+      "id": "1-5-5-3-3-5",
+      "label": "ai-studio GitLab Issue Note bridge live dogfood fixture",
+      "status": "blocked",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "ai-studio live dogfood fixture 的边界是什么？",
+          "answer": "在 mlive-dev/ai-studio 创建独立 carrier Issue，不复用历史 Issue/MR；只添加一条固定 marker Note /zj-loop start roadmap-sliced-development；绑定项目、target route=roadmap-sliced-development、pipeline ref=master；只验证 webhook envelope→receipt/dedupe→API pipeline trigger；不创建/修改 Branch、MR、业务文件、Issue label/state；真实 provider write 仅限创建 pipeline，其余由 artifact 记录。",
+          "note": "最小 fixture 防止把历史 MR 或业务副作用误认为 bridge evidence。"
+        },
+        {
+          "q": "carrier Issue 与 marker Note 如何产生？",
+          "answer": "由 Human 通过 GitLab Web UI 手动创建独立 carrier Issue 并添加唯一 marker Note；记录真实 issue_iid、note_id、Note URL；bridge 只消费 GitLab webhook 原始事件，event_id 必须来自 webhook header；bridge trigger token 只用于创建 pipeline，不用于创建 Issue/Note。",
+          "note": "positive evidence 必须是真实 Issue Note→webhook→bridge→pipeline 链路。"
+        },
+        {
+          "q": "GitLab Project Webhook 如何配置？",
+          "answer": "使用 bridge 固定 HTTPS endpoint；Secret Token 为独立 ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN；只启用 Issues events，不启用 Push/Merge request/Tag/Job/Pipeline 等其他事件；bridge 校验 X-Gitlab-Event=Issue Hook、X-Gitlab-Event-UUID、project path 与 secret；配置变更只记录脱敏 audit，不算 positive evidence。",
+          "note": "Webhook predicate 与 Route Table predicate 双重收敛事件范围。"
+        },
+        {
+          "q": "被触发的 API pipeline 必须证明什么？",
+          "answer": "使用固定 master ref 的专用 job zj_loop_gitlab_issue_note_bridge_receipt；只校验 CI_PIPELINE_SOURCE=api、7 个 bridge 变量与 Issue/Note/envelope binding，运行 route decision/consumer plan，生成统一 envelope/receipt/dedupe/trigger evidence artifact；不写 Issue/Note/Branch/MR，不执行业务修复或 promotion。只有 job 成功且 artifact binding 完整才算 positive evidence。",
+          "note": "API pipeline 是受限执行载体，不是 bridge 或业务 side-effect 层。"
+        },
+        {
+          "q": "真实 dogfood 的验证顺序是什么？",
+          "answer": "先运行错误 secret、非 Issue Hook、项目不匹配、非匹配 Note 等 zero-write negative cases；再发送合法 marker Note 验证唯一 positive pipeline；重放同一 webhook 验证 duplicate 且不创建第二个 pipeline；查询并下载 pipeline artifact 核对 event/Issue/Note/ref/route 全绑定；最后验证 recovery/uncertain fixture，禁止盲目重触发。",
+          "note": "先证明 hard stop，再执行唯一真实 provider trigger。"
+        },
+        {
+          "q": "dogfood fixture 完成后的清理边界是什么？",
+          "answer": "保留 carrier Issue、marker Note、pipeline 与 artifacts 作为审计证据；不关闭 Issue、不删除 Note、不删除 pipeline；完成后禁用 Project Webhook，trigger token 由 Human 轮换/删除；清理动作不计入 positive evidence，若执行必须单独记录 cleanup evidence。",
+          "note": "fixture 生命周期与 bridge evidence 生命周期分离。"
+        },
+        {
+          "q": "Webhook bridge live dogfood 暂不可用时下一步推进什么？",
+          "answer": "保持 1-5-5-3-3-5 deferred，不运行部署或线上验证；转向独立的 1-5-5-4 GitLab scheduled required-route dogfood。",
+          "note": "Webhook capability 仍 disabled/unavailable，不降低 live completion gate；本地 bridge 代码、部署材料和候选 endpoint 不计入 live evidence。"
+        }
+      ],
+      "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
+    },
+    "1-5-5-5-1": {
+      "id": "1-5-5-5-1",
+      "label": "GitLab Webhook unavailable capability doctor ledger verifier",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-5",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented read-only gitlab-issue-note-bridge capability artifact and disabled Route Table entry. Added zj-loop-doctor --capability gitlab-issue-note-bridge; positive artifact is unavailable+deferred, enabled=false, provider_writes_allowed=false, verified_capabilities=[], side_effects_executed=false. Negative enabled/verified-capability mutation returns blocked before any provider call. Targeted route/doctor/completion/capability tests: 30 passing; full core suite emitted 292 passing subtests before the repository's existing open-handle hang, so full command did not exit cleanly. No GitLab API or external provider call."
+    },
+    "1-5-5-4-1": {
+      "id": "1-5-5-4-1",
+      "label": "GitLab scheduled Issue Backlog report evidence",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Issue Backlog scheduled evidence 首先使用哪个 schedule？",
+          "answer": "先只读检查并复用既有 GitLab schedule 957；只有 project、route、cron、ref、job、artifact path/schema fingerprint 全部匹配时才等待/验证真实 source=schedule pipeline。",
+          "note": "health check 不修改 schedule、不自动 play/enable、不使用 Web/API/manual pipeline 冒充 scheduled evidence；fingerprint 不匹配时输出 hard stop。"
+        },
+        {
+          "q": "schedule-health 只读检查在哪里执行？",
+          "answer": "在 mlive-dev/ai-studio 通过 GitLab 手动诊断 job 调用 zj-loop-doctor --provider gitlab --schedule-health；该 job 只读检查配置与执行窗口，不计为 source=schedule positive evidence。",
+          "note": "GITLAB_TOKEN 仅由 CI Secret 注入；doctor 不启用、play、修改或恢复 schedule；真实 positive 必须来自 schedule 957 自身。"
+        },
+        {
+          "q": "schedule-health configuration_missing 应如何处理？",
+          "answer": "先核验 mlive-dev/ai-studio 中 schedule 957 的实际存在性、active 状态和可读权限；若不存在或 ID 已变化，使用当前有效 schedule IID 重跑。",
+          "note": "configuration_missing/gitlab-api-unavailable 只表示 provider 查询层未完成，不计入 scheduled positive 或 negative evidence；不以 manual/API pipeline 替代 source=schedule。"
+        },
+        {
+          "q": "只有 schedule 961 时如何继续？",
+          "answer": "先核验 schedule 961 的 route/job/ref/artifact/schema fingerprint；全部匹配 issue-backlog-triage 后才将 health-check schedule ID 从 957 替换为 961。",
+          "note": "schedule 961 若仍是 schedule-probe，只能保留为 probe evidence，不能用于 Issue Backlog scheduled completion；不匹配时不运行伪 positive。"
+        },
+        {
+          "q": "schedule 961 health-check 结果如何解释？",
+          "answer": "配置层通过，schedule 961 active 且 route/job/artifact/schema binding 正确；当前 status=not_due，等待下一次真实 source=schedule 执行窗口后再检查 positive artifact。",
+          "note": "health-check artifact 26044534 只证明配置与窗口诊断成功，不算 scheduled positive；不提前标记子节点完成。"
+        },
+        {
+          "q": "schedule 961 更新后旧 scheduled pipeline 是否可复用？",
+          "answer": "不可复用。schedule 961 在 2026-07-20 00:53（Asia/Shanghai）更新后，必须等待更新后的下一次 source=schedule pipeline；当前 health-check 26046075 在 01:01 返回 not_due。",
+          "note": "pipeline 10530166 只能作为候选观察，不得作为更新后 schedule 的 positive evidence；下一窗口约为 2026-07-21 00:53，需过 grace 后重新检查。"
+        },
+        {
+          "q": "schedule 961 更新后的 scheduled pipeline 是否已产生候选 positive evidence？",
+          "answer": "是。master scheduled pipeline 10530206 在 schedule 961 更新后产生 issue-recommendations.json，schema、project、route 正确；consumer plan 保持 report-only，transition-result 为 trusted-automation-not-enabled，零 provider write。",
+          "note": "该 pipeline 仍需通过 schedule-health verifier 绑定 source=schedule、schedule.updated_at、job 和 artifact schema；在 health status=healthy 前不标记节点完成。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-4-2": {
+      "id": "1-5-5-4-2",
+      "label": "GitLab scheduled Daily Triage report evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-4-3": {
+      "id": "1-5-5-4-3",
+      "label": "GitLab scheduled Dependency Sweeper lifecycle evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-4-4": {
+      "id": "1-5-5-4-4",
+      "label": "GitLab scheduled Changelog Drafter report evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-5-6": {
+      "id": "1-5-5-6",
+      "label": "GitLab 自动化副作用安全回归与事故防护",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5",
+      "children": [
+        "1-5-5-6-1",
+        "1-5-5-6-2",
+        "1-5-5-6-3",
+        "1-5-5-6-4",
+        "1-5-5-6-5",
+        "1-5-5-6-6"
+      ],
+      "decisions": [
+        {
+          "q": "事故防护 TODO 的完成门禁是否要求全部通过？",
+          "answer": "A：6 项全部完成后，才允许 GitLab 任一副作用路线重新进入 execution-ready",
+          "note": "保持既定 completion gate；端到端门禁、熔断、去重/no-op、速率限制、版本一致性与 replay 缺一不可。"
+        },
+        {
+          "q": "事故防护 TODO 的实施顺序是什么？",
+          "answer": "A：安全止血优先：1-5-5-6-2 → 1-5-5-6-4 → 1-5-5-6-5 → 1-5-5-6-1 → 1-5-5-6-3 → 1-5-5-6-6",
+          "note": "先关闭入口、限制洪泛并锁定版本，再做端到端协议与 no-op/去重，最后进行 replay 和零残留验收。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-6-1": {
+      "id": "1-5-5-6-1",
+      "label": "跨 producer、carrier、consumer 的端到端副作用完成门禁",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5-5-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "端到端副作用完成门禁必须覆盖哪些证据？",
+          "answer": "A：真实 GitLab + deterministic fixture 的完整正负矩阵",
+          "note": "自动路径必须证明零 provider 写入；Web 手动路径验证固定确认、单 carrier、单 claim、单 bounded repair MR；重复、空 diff、超额度全部 fail-closed。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-6-2": {
+      "id": "1-5-5-6-2",
+      "label": "GitLab 自动 carrier 创建的显式开关与紧急熔断",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-6",
+      "children": [
+        "1-5-5-6-2-1",
+        "1-5-5-6-2-2",
+        "1-5-5-6-2-3"
+      ],
+      "decisions": [
+        {
+          "q": "carrier 创建的默认策略是什么？",
+          "answer": "A：默认关闭，只允许带完整身份和固定确认的 Web 手动触发",
+          "note": "schedule、MR failure、API 自动触发全部拒绝；仅人工显式恢复允许创建 carrier。"
+        },
+        {
+          "q": "熔断器何时触发、如何恢复？",
+          "answer": "A：第一次检测到非 Web 手动 carrier 创建尝试就立即熔断，必须人工确认后恢复",
+          "note": "熔断期间只产出审计证据，不创建 Issue、MR 或评论；恢复必须显式人工确认。"
+        },
+        {
+          "q": "熔断器的作用域是什么？",
+          "answer": "A：按项目 + route family 统一熔断",
+          "note": "CI Sweeper 的 producer、carrier、consumer、repair MR、closeout 共用熔断状态；不误伤其他 GitLab route。"
+        },
+        {
+          "q": "第一个止血 TODO 的实现范围是什么？",
+          "answer": "A：同时修改 core 契约、GitLab generated template，并在 mlive-dev/ai-studio 做真实 dogfood",
+          "note": "本地逻辑、生成模板和目标项目必须一起验证，避免版本或入口漂移。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-6-3": {
+      "id": "1-5-5-6-3",
+      "label": "repair MR 有效 diff、跨 request 去重与空变更拒绝",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5-5-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "repair MR 的跨 request 去重规则是什么？",
+          "answer": "A：按项目 + route family + target branch + repair content digest 去重",
+          "note": "不同 pipeline/request 只要修复内容相同就复用已有 carrier/MR；内容不同才允许新 request。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-6-4": {
+      "id": "1-5-5-6-4",
+      "label": "Issue、MR 与 carrier 副作用速率限制和上限保护",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-5-5-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "副作用速率限制采用哪种额度模型？",
+          "answer": "A：按项目 + route family + action 分开设置硬额度",
+          "note": "同一 request 最多 1 个 carrier 和 1 个 repair MR；项目 10 分钟最多 5 个 carrier、1 小时最多 3 个 repair MR；超限拒绝并需人工恢复。"
+        },
+        {
+          "q": "额度规则是否允许写死在 Git 管理的代码/配置中？",
+          "answer": "是：硬额度、窗口和 action policy 写死在 Git 管理的代码/配置中；运行时消耗计数仍必须由共享状态层原子记录。",
+          "note": "禁止把可变计数伪装成静态配置；规则变更必须走代码评审。"
+        },
+        {
+          "q": "运行时速率限制状态采用什么共享载体？",
+          "answer": "B：GitLab API ledger Issue/评论，作为当前 GitLab dogfood 的共享状态载体；在并发原子性未被证明前，live 副作用保持受限。",
+          "note": "ledger 必须包含项目、route family、action、request、窗口、计数和可重放证据。"
+        },
+        {
+          "q": "GitLab ledger 的并发保护如何实现？",
+          "answer": "A：所有 producer、carrier、repair MR、closeout job 共享统一 resource_group，串行执行 ledger 读取、额度判断、事件追加、确认与副作用边界。",
+          "note": "优先保证硬上限正确性；未进入 resource_group 或 ledger reread 失败时 fail-closed。"
+        },
+        {
+          "q": "resource_group 的串行化粒度如何设定？",
+          "answer": "A：项目级单一 resource_group，例如 zj-loop-side-effects，所有 route family 与 action 共用。",
+          "note": "优先证明项目总额度与事故防护；后续必须有性能证据才能拆分。"
+        },
+        {
+          "q": "限流 ledger 使用哪种 Issue 身份绑定？",
+          "answer": "A：人工预先创建专用 ledger Issue，并由项目配置显式指定 IID；缺失、跨项目或 schema 不匹配时 fail-closed，禁止自动创建。",
+          "note": "ledger Issue 与 carrier Issue 分离，专门记录额度窗口、事件和 replay evidence。"
+        },
+        {
+          "q": "限流 ledger 使用哪种额度预留语义？",
+          "answer": "两阶段 reservation：provider 写入前追加 reservation，副作用成功后标记 committed；reservation 带 TTL；写入结果不确定时保留额度并 fail-closed，禁止立即重试。",
+          "note": "采用 A，避免超时重试造成重复副作用和额度突破。"
+        },
+        {
+          "q": "reservation 的 TTL 到期后如何处理？",
+          "answer": "按 action 设置 TTL，并允许到期回收：carrier reservation 15 分钟，repair MR reservation 2 小时；到期标记为 expired 并保留完整审计记录；provider 结果不确定时先由 reconciliation 检查，未确认前不得重试。",
+          "note": "采用 A，避免异常中断永久占用额度，同时避免不确定写入被错误重试。"
+        },
+        {
+          "q": "provider 写入结果不确定时，reconciliation 如何确认？",
+          "answer": "按 request_id + action 作为幂等键重新读取并确认：从 GitLab API 查询 carrier 或 repair MR；确认已存在则标记 reservation 为 committed，确认不存在才允许回收 reservation。",
+          "note": "采用 A，避免把响应丢失误判为未写入并重复创建副作用。"
+        },
+        {
+          "q": "发现相同幂等键但内容或目标不一致时，如何处理？",
+          "answer": "立即 fail-closed 并转人工：不复用、不覆盖、不创建新副作用；记录冲突证据，冻结该 request 的后续重试。",
+          "note": "采用 A，避免错误复用其他 request 的 Issue/MR，也避免额度突破。"
+        },
+        {
+          "q": "被 fail-closed 冻结的 request，人工恢复必须通过什么方式？",
+          "answer": "通过专用恢复命令和审计记录：人工提供固定确认短语；恢复命令校验 request、幂等键、冲突证据和当前 head，并在 ledger 追加 manual_recovery 事件后才解除冻结。",
+          "note": "采用 A，禁止通过直接改 ledger 或重新创建 request 绕过额度和冲突保护。"
+        },
+        {
+          "q": "ledger 的事件记录采用什么数据模型？",
+          "answer": "采用版本化、追加式事件模型：每条事件包含 schema、event_id、request_id、action、reservation_id、状态、时间、幂等键和证据；禁止覆盖历史事件，只允许追加状态转换。",
+          "note": "采用 A，确保 ledger 可审计、可校验并支持 reconciliation/replay。"
+        },
+        {
+          "q": "ledger 状态转换是否采用固定状态机？",
+          "answer": "采用固定状态机并拒绝非法转换：允许 reserved -> committed、reserved -> expired、reserved -> blocked；committed 不得回退，expired 不得直接变为 committed。",
+          "note": "采用 A，避免重复提交、并发错误和非法回退破坏额度账本。"
+        },
+        {
+          "q": "ledger 如何防止非规范内容伪造额度事件？",
+          "answer": "只接受受控 bot 写入的结构化事件：事件必须包含固定 marker、schema、版本、校验字段和 bot 身份；人工评论只作为说明，不能改变额度状态。",
+          "note": "采用 A，避免普通评论或人工编辑伪造额度状态。"
+        },
+        {
+          "q": "ledger 读取不完整或分页失败时如何处理？",
+          "answer": "fail-closed，禁止任何副作用：必须完成分页读取并校验事件链；缺页、超时、解析失败或权限不足时，拒绝 reservation 和 provider 写入，等待人工恢复。",
+          "note": "采用 A，避免部分读取低估已消耗额度或绕过冻结状态。"
+        },
+        {
+          "q": "遇到未在 Git 配置中声明的 route family 或 action 时如何处理？",
+          "answer": "拒绝并 fail-closed：未知 route/action 不得申请 reservation，也不得执行 provider 写入；输出明确的配置缺失证据，要求代码评审后再启用。",
+          "note": "采用 A，避免新流程默认获得未审核的副作用额度。"
+        },
+        {
+          "q": "Git 管理的额度配置变更何时生效？",
+          "answer": "随人工审核合并后的版本生效：配置包含版本号和 schema；运行只接受当前 commit 中完整且有效的配置，禁止运行时覆盖；配置变更必须经过 MR、CI 和人工审核。",
+          "note": "采用 A，保持 Git 审计、规则一致性和人工审核边界。"
+        },
+        {
+          "q": "限流与 ledger 实现必须通过哪些验证？",
+          "answer": "通过完整的正向与负向验证矩阵：额度内成功、同 request 重复申请、窗口超限、reservation TTL、provider 超时 reconciliation、幂等键冲突、非法状态转换、ledger 分页失败、未知 action、人工恢复，以及并发下不突破硬上限。",
+          "note": "采用 A，不能只验证 happy path；必须覆盖主要事故路径和真实 GitLab provider 边界。"
+        },
+        {
+          "q": "验证证据应如何保存？",
+          "answer": "采用结构化 artifact + ledger 关联：每次验证输出固定 schema 的 JSON artifact，包含 commit、配置版本、测试矩阵、pipeline/job、request 和 reservation ID；再将摘要关联到 ledger 或对应 Issue。",
+          "note": "采用 A，保证验证结果可机器校验、可审计并可重放。"
+        }
+      ],
+      "notes": "开始探索跨 producer、carrier、consumer 与 repair MR 的共享速率限制状态与原子并发保护。"
+    },
+    "1-5-5-6-5": {
+      "id": "1-5-5-6-5",
+      "label": "generated CI、vendor 包与目标项目版本一致性门禁",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5-5-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "版本一致性门禁要求绑定哪些证据？",
+          "answer": "A：绑定 checkout commit、vendor tarball SHA256、generated CI template hash 与目标项目实际引用路径",
+          "note": "任一版本或引用路径不一致都 fail-closed，禁止进入 GitLab 副作用路线。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-6-6": {
+      "id": "1-5-5-6-6",
+      "label": "GitLab 事故 replay、清理与零残留验收证据",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5-5-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "事故 replay 的零残留验收标准是什么？",
+          "answer": "A：真实 provider 查询全部归零，并保留可重放 artifact",
+          "note": "必须证明无开放无效 carrier Issue、无开放无效 repair MR、无残留自动 repair 分支、无重复 request/claim，且所有动作都有 provider reread 证据。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-6-2-1": {
+      "id": "1-5-5-6-2-1",
+      "label": "core 项目 route family 熔断与人工恢复契约",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-6-2",
+      "children": [],
+      "decisions": [],
+      "notes": "新增 gitlab-side-effect-gate core 契约：仅允许 pipeline_source=web、carrierEnabled=enabled、固定确认短语；非 Web 首次尝试返回 tripped 并要求持久化熔断，已熔断状态要求人工恢复；所有 blocked/tripped 结果 side_effects_executed=false。验证：npm run build；node --test test/gitlab-side-effect-gate.test.mjs（4/4）；git diff --check。"
+    },
+    "1-5-5-6-2-2": {
+      "id": "1-5-5-6-2-2",
+      "label": "generated GitLab template 默认关闭与入口负向门禁",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-6-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Canonical GitLab CI Sweeper template now disables schedule and on_failure automatic entries; carrier creation requires Web source, explicit enablement, fixed confirmation, armed breaker, and token. Core CLI/runner enforces the same gate. Init tests, core focused tests, generated bundle gate, sync check, and diff check pass."
+    },
+    "1-5-5-6-2-3": {
+      "id": "1-5-5-6-2-3",
+      "label": "ai-studio carrier 入口真实 dogfood 与零写入证据",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-6-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "真实 GitLab carrier dogfood 应如何接入目标项目？",
+          "answer": "A：创建专用 MR，绑定新 core vendor 包与生成模板，先运行 Web/API negative pipeline，确认零 Provider 写入后人工审核合并。",
+          "note": "不直接在现有分支临时修改，也不以静态检查替代真实 dogfood。"
+        }
+      ],
+      "notes": "Web/API negative dogfood、provider reread 与人工合并全部完成：MR !541 已由 Human 合并；Web 10532984 与 API 10533340 均无 carrier Issue，side_effects_executed=false。"
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-15 21:59:05",
+    "updated": "2026-07-20 12:49:50",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
