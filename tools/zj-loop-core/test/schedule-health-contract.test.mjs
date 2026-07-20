@@ -11,6 +11,10 @@ const dailyConsumerPlan = { schema: 'zj-loop.consumer_run_plan.v1', route_id: 'd
 const dependencyTarget = { provider: 'gitlab', project: 'group/project', route_id: 'dependency-sweeper', schedule_id: '961', job: 'zj_loop_dependency_sweeper', artifact: 'consumer-plan.json', artifact_schema: 'zj-loop.consumer_run_plan.v1', supporting_artifact: 'route-decision.json', supporting_artifact_schema: 'zj-loop.route_decision.v1' };
 const dependencyRouteDecision = { schema: 'zj-loop.route_decision.v1', route: 'dependency-sweeper', request_kind: 'issue-fix-request', target_consumer: 'dependency-sweeper', source: 'gitlab-dependency', allowed: true };
 const dependencyConsumerPlan = { schema: 'zj-loop.consumer_run_plan.v1', route_id: 'dependency-sweeper', consumer: 'dependency-sweeper', consumer_kind: 'fix-runner', execution_mode: 'claim-only', request_kind: 'issue-fix-request', status: 'ready', execution_allowed: true, validation: { valid: true }, route_decision: dependencyRouteDecision };
+const changelogTarget = { provider: 'gitlab', project: 'group/project', route_id: 'changelog-drafter-report', schedule_id: '961', job: 'zj_loop_changelog_drafter', artifact: 'gitlab-changelog-draft-evidence.json', artifact_schema: 'zj-loop.gitlab_changelog_draft_evidence.v1', supporting_artifact: 'route-decision.json', supporting_artifact_schema: 'zj-loop.route_decision.v1', supporting_artifact_2: 'consumer-plan.json', supporting_artifact_2_schema: 'zj-loop.consumer_run_plan.v1' };
+const changelogRouteDecision = { schema: 'zj-loop.route_decision.v1', route: 'changelog-drafter-report', request_kind: 'report-only', target_consumer: 'changelog-drafter', source: 'gitlab-release-window', allowed: true };
+const changelogConsumerPlan = { schema: 'zj-loop.consumer_run_plan.v1', route_id: 'changelog-drafter-report', consumer: 'changelog-drafter', execution_mode: 'report-only', request_kind: 'report-only', status: 'report-only', execution_allowed: false, validation: { valid: true }, route_decision: changelogRouteDecision };
+const changelogEvidence = { schema: 'zj-loop.gitlab_changelog_draft_evidence.v1', status: 'completed', outcome: 'draft-evidence', audit: { project_path: 'group/project', draft_mode: 'evidence', side_effects_executed: false, release_window: { repo: 'group/project', base_branch: 'master', since_ref: 'v1', until_ref: 'v2' } } };
 
 test('schedule health is not_due before the expected window', () => {
   const result = evaluateScheduleHealth({ target, now: '2026-07-15T00:05:00Z', schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' } });
@@ -391,4 +395,58 @@ test('GitLab adapter reads and validates Dependency Sweeper supporting artifact 
 
   assert.equal(result.status, 'healthy');
   assert.equal(result.target.artifact, 'consumer-plan.json');
+});
+
+test('schedule health validates Changelog Drafter triple artifacts from one scheduled job', () => {
+  const result = evaluateScheduleHealth({
+    target: changelogTarget,
+    now: '2026-07-15T00:14:00Z',
+    schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' },
+    pipeline: {
+      source: 'schedule', ref: 'master', created_at: '2026-07-15T00:03:00Z', job: 'zj_loop_changelog_drafter',
+      artifact: 'gitlab-changelog-draft-evidence.json', artifact_schema: 'zj-loop.gitlab_changelog_draft_evidence.v1', artifact_payload: changelogEvidence,
+      supporting_artifact: 'route-decision.json', supporting_artifact_schema: 'zj-loop.route_decision.v1', supporting_artifact_payload: changelogRouteDecision,
+      supporting_artifact_2: 'consumer-plan.json', supporting_artifact_2_schema: 'zj-loop.consumer_run_plan.v1', supporting_artifact_2_payload: changelogConsumerPlan,
+    },
+  });
+
+  assert.equal(result.status, 'healthy');
+  assert.equal(result.target.supporting_artifact_2, 'consumer-plan.json');
+});
+
+test('schedule health rejects Changelog Drafter evidence with release side effects', () => {
+  const result = evaluateScheduleHealth({
+    target: changelogTarget,
+    now: '2026-07-15T00:14:00Z',
+    schedule: { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' },
+    pipeline: {
+      source: 'schedule', ref: 'master', created_at: '2026-07-15T00:03:00Z', job: 'zj_loop_changelog_drafter',
+      artifact: 'gitlab-changelog-draft-evidence.json', artifact_schema: 'zj-loop.gitlab_changelog_draft_evidence.v1', artifact_payload: { ...changelogEvidence, audit: { ...changelogEvidence.audit, side_effects_executed: true } },
+      supporting_artifact: 'route-decision.json', supporting_artifact_schema: 'zj-loop.route_decision.v1', supporting_artifact_payload: changelogRouteDecision,
+      supporting_artifact_2: 'consumer-plan.json', supporting_artifact_2_schema: 'zj-loop.consumer_run_plan.v1', supporting_artifact_2_payload: changelogConsumerPlan,
+    },
+  });
+
+  assert.equal(result.status, 'artifact_schema_invalid');
+  assert.deepEqual(result.artifact_errors, ['artifact.audit.side_effects_executed']);
+});
+
+test('GitLab adapter reads and validates Changelog Drafter second supporting artifact from the same job', async () => {
+  const result = await inspectGitLabScheduleHealth({
+    target: changelogTarget,
+    apiUrl: 'https://gitlab.example/api/v4', token: 'token', now: '2026-07-15T00:14:00Z',
+    fetchImpl: async (url) => {
+      const text = String(url);
+      const body = text.includes('pipeline_schedules/961')
+        ? { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' }
+        : text.includes('/pipelines?') ? [{ id: 45, source: 'schedule', ref: 'master', created_at: '2026-07-15T00:03:00Z' }]
+          : text.includes('/pipelines/45/jobs') ? [{ id: 10, name: 'zj_loop_changelog_drafter' }]
+            : text.includes('/artifacts/gitlab-changelog-draft-evidence.json') ? changelogEvidence
+              : text.includes('/artifacts/route-decision.json') ? changelogRouteDecision : changelogConsumerPlan;
+      return { ok: true, async json() { return body; } };
+    },
+  });
+
+  assert.equal(result.status, 'healthy');
+  assert.equal(result.target.supporting_artifact_2_schema, 'zj-loop.consumer_run_plan.v1');
 });
