@@ -2943,7 +2943,7 @@
     "1-5-5-4-1": {
       "id": "1-5-5-4-1",
       "label": "GitLab scheduled Issue Backlog report evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
@@ -3044,7 +3044,7 @@
           "note": "修正 GitLab schedule API 缺少 cron 时把 next_run_at 误作首次窗口、导致首次真实自动运行被判 not_due 的问题；不接受 schedule 更新前的旧 pipeline。"
         }
       ],
-      "notes": ""
+      "notes": "完成 scheduled Issue Backlog evidence gate。schedule 961 active；health result status=healthy；schedule.updated_at=2026-07-20T17:03:01.600+08:00；scheduled pipeline created_at=2026-07-20T17:03:04.326+08:00，source=schedule；route=issue-backlog-triage；job=zj_loop_issue_triage；artifact=issue-recommendations.json；schema=zj-loop.issue_recommendations.v1；report-only side_effects 全为 false。health artifact checked_at=2026-07-20T09:24:01.688Z。"
     },
     "1-5-5-4-2": {
       "id": "1-5-5-4-2",
@@ -3348,7 +3348,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 17:09:44",
+    "updated": "2026-07-20 17:25:33",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
