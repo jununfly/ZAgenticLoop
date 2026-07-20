@@ -9,10 +9,12 @@ export function evaluateScheduleHealth(input) {
     const base = { schema: SCHEDULE_HEALTH_SCHEMA, target: { provider: target.provider, project: target.project, route_id: target.route_id, schedule_id: target.schedule_id, job: target.job, artifact: target.artifact, artifact_schema: target.artifact_schema }, audit: { schedule_active: schedule?.active === true, schedule_updated_at: schedule?.updated_at ?? null, next_run_at: schedule?.next_run_at ?? null, expected_within_minutes: input.expectedWithinMinutes ?? null, checked_at: now.toISOString(), ...(input.audit ?? {}) } };
     if (!schedule || schedule.active !== true || !expectedWindow)
         return result(base, 'configuration_missing', 'schedule-configuration-missing');
-    if (now.getTime() < expectedWindow.start.getTime() + graceMs)
-        return { ...base, status: 'not_due', expected_window: { start: expectedWindow.start.toISOString(), grace_minutes: 10 }, next_steps: [] };
     const pipeline = input.pipeline;
-    if (!pipeline || pipeline.source !== 'schedule' || new Date(pipeline.created_at).getTime() < new Date(schedule.updated_at).getTime() || new Date(pipeline.created_at).getTime() < expectedWindow.start.getTime())
+    const firstRunWindow = getFirstScheduledEvidenceWindow(schedule, pipeline, expectedWindow);
+    const activeWindow = firstRunWindow ? { ...expectedWindow, start: firstRunWindow } : expectedWindow;
+    if (now.getTime() < activeWindow.start.getTime() + graceMs)
+        return { ...base, status: 'not_due', expected_window: { start: activeWindow.start.toISOString(), grace_minutes: 10 }, next_steps: [] };
+    if (!pipeline || pipeline.source !== 'schedule' || new Date(pipeline.created_at).getTime() <= new Date(schedule.updated_at).getTime() || (!firstRunWindow && new Date(pipeline.created_at).getTime() < expectedWindow.start.getTime()))
         return result(base, 'execution_missing', 'scheduled-pipeline-missing');
     if (pipeline.job !== target.job || pipeline.artifact !== target.artifact)
         return result(base, 'artifact_missing', 'scheduled-artifact-missing');
@@ -29,13 +31,36 @@ export function evaluateScheduleHealth(input) {
         ...base,
         status: 'healthy',
         expected_window: {
-            start: expectedWindow.start.toISOString(),
-            ...(expectedWindow.nextStart ? { next_start: expectedWindow.nextStart.toISOString() } : {}),
+            start: activeWindow.start.toISOString(),
+            ...(activeWindow.nextStart ? { next_start: activeWindow.nextStart.toISOString() } : {}),
             grace_minutes: 10,
         },
         pipeline: { created_at: pipeline.created_at, source: pipeline.source },
         next_steps: [],
     };
+}
+function getFirstScheduledEvidenceWindow(schedule, pipeline, expectedWindow) {
+    if (!pipeline || pipeline.source !== 'schedule' || typeof schedule?.updated_at !== 'string' || typeof pipeline.created_at !== 'string')
+        return null;
+    const updatedAt = new Date(schedule.updated_at);
+    const createdAt = new Date(pipeline.created_at);
+    if (Number.isNaN(updatedAt.getTime()) || Number.isNaN(createdAt.getTime()) || createdAt.getTime() <= updatedAt.getTime())
+        return null;
+    let firstWindowStart = expectedWindow.start;
+    if (typeof schedule.cron === 'string') {
+        try {
+            firstWindowStart = CronExpressionParser.parse(schedule.cron, {
+                currentDate: updatedAt,
+                tz: schedule.cron_timezone ?? 'UTC',
+            }).next().toDate();
+        }
+        catch {
+            return null;
+        }
+    }
+    if (createdAt.getTime() >= firstWindowStart.getTime())
+        return null;
+    return createdAt;
 }
 function validateIssueBacklogArtifact(target, pipeline) {
     const artifact = pipeline.artifact_payload;

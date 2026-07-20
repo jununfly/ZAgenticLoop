@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 15:49:35
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-20 17:09:44
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -61,4 +61,5 @@
 - Q: schedule-health verifier 的失败结果应如何分类？ → 保持结构化分类：窗口未到时为 not_due；窗口后无 source=schedule pipeline 为 execution_missing；job/artifact 不存在为 artifact_missing；schema 或内部 binding 不匹配为 artifact_schema_invalid；均保留 negative evidence，不伪装为 healthy。 (采用 A，区分时间窗口未到、执行缺失和证据无效。)
 - Q: 1-5-5-4-1 何时可以标记完成？ → 通过完整 scheduled evidence gate：schedule 961 active 且 fingerprint 正确；schedule-health 返回 healthy；pipeline source=schedule 且晚于 updated_at 推导窗口和 10 分钟 grace；job=zj_loop_issue_triage；artifact=issue-recommendations.json；schema、project、route、source 和 side_effects 全部匹配；完整 artifacts 与 pipeline/job 链接保存；没有任何 provider write。 (采用 A，避免把 not_due 或单个 pipeline URL 误认为完整 scheduled positive evidence。)
 - Q: 当前 1-5-5-4-1 设计是否收敛，可以进入 verifier 实现和真实 schedule 验证？ → 是：按完整 scheduled evidence gate 实现/验证，不降低 report-only 和零 provider write 约束。 (采用 A，进入 verifier 实现阶段。)
+- Q: schedule 更新后首次真实 source=schedule pipeline 如何计算首个有效窗口？ → 采用 B：若 scheduled pipeline 的 created_at 晚于 schedule.updated_at，则以该 pipeline.created_at 作为首次证据窗口起点；仍要求固定 10 分钟 grace、source=schedule、master ref、目标 job/artifact/schema、完整 report-only binding 和 side_effects 全为 false。 (修正 GitLab schedule API 缺少 cron 时把 next_run_at 误作首次窗口、导致首次真实自动运行被判 not_due 的问题；不接受 schedule 更新前的旧 pipeline。)
 <!-- ROADMAP_SECTION_END -->

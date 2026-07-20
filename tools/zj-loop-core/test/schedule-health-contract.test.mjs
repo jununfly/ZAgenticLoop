@@ -48,6 +48,49 @@ test('schedule health accepts an explicit first-window override for controlled c
   assert.equal(result.expected_window.start, '2026-07-15T00:03:00.000Z');
 });
 
+test('schedule health accepts the first scheduled pipeline after a schedule update after its grace window', () => {
+  const result = evaluateScheduleHealth({
+    target,
+    now: '2026-07-15T00:14:00Z',
+    schedule: {
+      active: true,
+      updated_at: '2026-07-15T00:00:00Z',
+      next_run_at: '2026-07-15T01:00:00Z',
+    },
+    pipeline: {
+      source: 'schedule',
+      ref: 'master',
+      created_at: '2026-07-15T00:03:00Z',
+      job: 'zj_loop_issue_triage',
+      artifact: 'issue-recommendations.json',
+      artifact_schema: 'zj-loop.issue_recommendations.v1',
+      artifact_payload: reportArtifact,
+    },
+  });
+
+  assert.equal(result.status, 'healthy');
+  assert.equal(result.expected_window.start, '2026-07-15T00:03:00.000Z');
+});
+
+test('schedule health keeps the first scheduled pipeline not_due during its grace window', () => {
+  const result = evaluateScheduleHealth({
+    target,
+    now: '2026-07-15T00:12:00Z',
+    schedule: {
+      active: true,
+      updated_at: '2026-07-15T00:00:00Z',
+      next_run_at: '2026-07-15T01:00:00Z',
+    },
+    pipeline: {
+      source: 'schedule',
+      created_at: '2026-07-15T00:03:00Z',
+    },
+  });
+
+  assert.equal(result.status, 'not_due');
+  assert.equal(result.expected_window.start, '2026-07-15T00:03:00.000Z');
+});
+
 test('schedule health replay command preserves its explicit window override', () => {
   const result = evaluateScheduleHealth({
     target,

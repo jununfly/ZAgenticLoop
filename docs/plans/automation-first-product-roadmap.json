@@ -3037,6 +3037,11 @@
           "q": "当前 1-5-5-4-1 设计是否收敛，可以进入 verifier 实现和真实 schedule 验证？",
           "answer": "是：按完整 scheduled evidence gate 实现/验证，不降低 report-only 和零 provider write 约束。",
           "note": "采用 A，进入 verifier 实现阶段。"
+        },
+        {
+          "q": "schedule 更新后首次真实 source=schedule pipeline 如何计算首个有效窗口？",
+          "answer": "采用 B：若 scheduled pipeline 的 created_at 晚于 schedule.updated_at，则以该 pipeline.created_at 作为首次证据窗口起点；仍要求固定 10 分钟 grace、source=schedule、master ref、目标 job/artifact/schema、完整 report-only binding 和 side_effects 全为 false。",
+          "note": "修正 GitLab schedule API 缺少 cron 时把 next_run_at 误作首次窗口、导致首次真实自动运行被判 not_due 的问题；不接受 schedule 更新前的旧 pipeline。"
         }
       ],
       "notes": ""
@@ -3343,7 +3348,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 15:49:35",
+    "updated": "2026-07-20 17:09:44",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
