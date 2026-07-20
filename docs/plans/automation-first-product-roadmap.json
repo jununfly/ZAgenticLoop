@@ -3130,7 +3130,7 @@
     "1-5-5-4-3": {
       "id": "1-5-5-4-3",
       "label": "GitLab scheduled Dependency Sweeper lifecycle evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
@@ -3176,7 +3176,7 @@
           "note": "修复 route disabled 导致 scheduled producer 无法生成 consumer-plan 的问题，同时不开放 repair lifecycle。"
         }
       ],
-      "notes": ""
+      "notes": "完成 scheduled Dependency Sweeper claim-only evidence gate。复用 schedule 961；schedule active；health status=healthy；schedule.updated_at=2026-07-21T01:43:01.547+08:00；scheduled pipeline created_at=2026-07-21T01:43:07.166+08:00，source=schedule；route=dependency-sweeper；job=zj_loop_dependency_sweeper；主 artifact=consumer-plan.json，schema=zj-loop.consumer_run_plan.v1；supporting artifact=route-decision.json，schema=zj-loop.route_decision.v1；consumer plan 为 claim-only、ready、execution_allowed=true，route decision allowed=true；未创建 repair MR、分支或 provider side effects。health artifact checked_at=2026-07-20T17:55:13.308Z。"
     },
     "1-5-5-4-4": {
       "id": "1-5-5-4-4",
@@ -3460,7 +3460,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 01:28:42",
+    "updated": "2026-07-21 01:56:15",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
