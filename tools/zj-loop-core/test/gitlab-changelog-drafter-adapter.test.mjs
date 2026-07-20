@@ -49,6 +49,34 @@ test('GitLab Changelog Draft MR adapter refuses writes without a verified claim'
   assert.equal(result.reason, 'claim-not-found');
 });
 
+test('GitLab Changelog Draft MR updates an existing fixture file', async () => {
+  const requestDescription = '<!-- zj-loop:changelog-draft-request\n' + JSON.stringify(request) + '\n-->';
+  const claim = '<!-- zj-loop:changelog-draft-claim\n{"request_id":"cdr_123","claim_id":"claim-7","consumer_id":"changelog-drafter","status":"claimed"}\n-->';
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push({ url, init });
+    if (url.endsWith('/issues/7')) return new Response(JSON.stringify({ iid: 7, description: requestDescription }), { status: 200 });
+    if (url.includes('/issues/7/notes')) return new Response(JSON.stringify([{ body: claim }]), { status: 200 });
+    if (url.includes('/merge_requests?')) return new Response(JSON.stringify([]), { status: 200 });
+    if (url.endsWith('/repository/branches')) return new Response(JSON.stringify({ name: 'branch' }), { status: 201 });
+    if (url.includes('/repository/branches/')) return new Response(JSON.stringify({ name: 'branch' }), { status: 200 });
+    if (url.includes('/repository/files/')) return new Response(JSON.stringify({ file_name: 'changelog-draft.md' }), { status: 200 });
+    if (url.endsWith('/commits')) return new Response(JSON.stringify({ id: 'commit-sha' }), { status: 201 });
+    if (url.endsWith('/merge_requests')) return new Response(JSON.stringify({ iid: 8, web_url: 'https://git.example/group/project/-/merge_requests/8' }), { status: 201 });
+    throw new Error(url);
+  };
+  const result = await createGitLabChangelogDraftMr({
+    projectPath: 'group/project', token: 'secret', request, issueIid: 7, claimId: 'claim-7',
+    branch: 'automated/changelog-drafter-gitlab-abc123', targetBranch: 'master',
+    draftFile: 'zj-loop/dogfood/changelog-draft.md',
+    actions: [{ action: 'create', file_path: 'zj-loop/dogfood/changelog-draft.md', content: '# Draft' }],
+    commitMessage: 'Draft changelog', title: 'Draft changelog', description: 'post-merge contract', fetchImpl,
+  });
+  assert.equal(result.outcome, 'created');
+  const commitPayload = JSON.parse(calls.find((call) => call.url.endsWith('/commits')).init.body);
+  assert.equal(commitPayload.actions[0].action, 'update');
+});
+
 test('GitLab Changelog carrier claim writes one lifecycle marker and rereads winner', async () => {
   const calls = [];
   const description = '<!-- zj-loop:changelog-draft-request\n' + JSON.stringify(request) + '\n-->';
