@@ -24,6 +24,10 @@ export declare function createGitLabCiSweeperIssueFixRequest(input: {
     token?: string;
     title: string;
     requestBody: string;
+    pipelineSource?: string;
+    carrierEnabled?: string | boolean;
+    carrierConfirmation?: string;
+    breakerState?: 'armed' | 'tripped';
     apiBaseUrl?: string;
     fetchImpl?: typeof fetch;
 }): Promise<{

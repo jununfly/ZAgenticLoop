@@ -4,6 +4,7 @@ import path from 'node:path';
 import { buildGitLabApiUrl, buildGitLabAuthHeaders, buildProviderIssueUrl, } from './providers.js';
 import { buildIssueFixRequestComment, ISSUE_FIX_REQUEST_SCHEMA, parseIssueFixRequestComments, } from './issue-fix-request-contract.js';
 import { buildGitLabLifecycleAudit, buildGitLabLifecycleMarker, parseGitLabLifecycleMarker, validateGitLabRequestSourceBinding, } from './gitlab-request-lifecycle.js';
+import { buildGitLabCarrierSideEffectGate } from './gitlab-side-effect-gate.js';
 export const GITLAB_CI_SWEEPER_ISSUE_FIX_REQUEST_SCHEMA = 'zj-loop.gitlab_issue_fix_request_live.v1';
 export function buildCiSweeperIssueFixRequestBody(input) {
     const routeDecision = input.routeDecision ?? {};
@@ -108,6 +109,16 @@ export async function createGitLabCiSweeperIssueFixRequest(input) {
         issue: null,
         ...extra,
     });
+    const sideEffectGate = buildGitLabCarrierSideEffectGate({
+        projectPath: input.projectPath,
+        routeFamily: 'ci-sweeper',
+        pipelineSource: input.pipelineSource,
+        carrierEnabled: input.carrierEnabled,
+        confirmation: input.carrierConfirmation,
+        breakerState: input.breakerState,
+    });
+    if (sideEffectGate.status !== 'allowed')
+        return blocked(sideEffectGate.reason, { side_effect_gate: sideEffectGate });
     if (!input.token)
         return blocked('gitlab-token-required');
     if (!request || request.route_decision?.request_kind !== 'issue-fix-request') {

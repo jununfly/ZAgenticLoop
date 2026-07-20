@@ -57,6 +57,7 @@ function renderGitLabTemplate(template, options) {
     : ['  tags:', ...options.runnerTags.map((tag) => `    - ${yamlString(tag)}`), ''].join('\n');
   const rendered = template
     .replace(/__ZJ_LOOP_GITLAB_STAGE__/g, yamlString(options.stage))
+    .replace(/__ZJ_LOOP_GITLAB_RECOVERY_STAGE__/g, yamlString(`${options.stage}-recovery`))
     .replace(/__ZJ_LOOP_GITLAB_IMAGE__/g, yamlString(options.image))
     .replace(/__ZJ_LOOP_CORE_PACKAGE__/g, options.corePackage)
     .replace(/__ZJ_LOOP_GITLAB_TAGS__\n?/g, runnerTags);
@@ -209,7 +210,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
     if (!gitlabTemplate.includes('# zj-loop-generated: true')) {
       errors.push(`${gitlabTemplatePath} missing generated sentinel`);
     }
-    if (!gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_STAGE__')) {
+    if (!gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_STAGE__') && !gitlabTemplate.includes('stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__')) {
       errors.push(`${gitlabTemplatePath} missing configurable GitLab stage`);
     }
     errors.push(...validateChangelogDrafterWorkflowBoundary({

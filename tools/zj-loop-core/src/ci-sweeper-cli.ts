@@ -89,12 +89,16 @@ if (argv[0] === 'repair-plan') {
   process.exitCode = await runCli({
     name: 'zj-loop-ci-sweeper',
     description: 'Create or reuse a GitLab Issue Fix Request carrier.',
-    usage: 'zj-loop-ci-sweeper gitlab-issue-fix-request --request-body <path> --project <group/project> --title <title> [--api-url <url>] [--out <path>] [--json]',
+    usage: 'zj-loop-ci-sweeper gitlab-issue-fix-request --request-body <path> --project <group/project> --title <title> --pipeline-source <source> --carrier-enabled <true|false> --carrier-confirmation <phrase> [--breaker-state armed|tripped] [--api-url <url>] [--out <path>] [--json]',
     options: [
       { name: 'command', type: 'positional', description: 'Command', default: 'gitlab-issue-fix-request' },
       { name: 'request-body', type: 'string', description: 'Structured Issue Fix Request Markdown path' },
       { name: 'project', type: 'string', description: 'GitLab group/project path' },
       { name: 'title', type: 'string', description: 'GitLab Issue title' },
+      { name: 'pipeline-source', type: 'string', description: 'GitLab pipeline source' },
+      { name: 'carrier-enabled', type: 'string', description: 'Explicit carrier enablement' },
+      { name: 'carrier-confirmation', type: 'string', description: 'Fixed carrier confirmation phrase' },
+      { name: 'breaker-state', type: 'string', description: 'Persisted side-effect breaker state' },
       { name: 'api-url', type: 'string', description: 'GitLab API v4 base URL' },
       { name: 'out', type: 'string', description: 'Write structured result JSON to this path' },
       { name: 'json', type: 'boolean', description: 'Print structured result JSON' },
@@ -108,6 +112,10 @@ if (argv[0] === 'repair-plan') {
         token: process.env.GITLAB_TOKEN,
         title: String(options.title),
         requestBody: await readFile(String(options['request-body']), 'utf8'),
+        pipelineSource: typeof options['pipeline-source'] === 'string' ? String(options['pipeline-source']) : undefined,
+        carrierEnabled: typeof options['carrier-enabled'] === 'string' ? String(options['carrier-enabled']) : undefined,
+        carrierConfirmation: typeof options['carrier-confirmation'] === 'string' ? String(options['carrier-confirmation']) : undefined,
+        breakerState: options['breaker-state'] === 'tripped' ? 'tripped' : options['breaker-state'] === 'armed' ? 'armed' : undefined,
         apiBaseUrl: typeof options['api-url'] === 'string' ? String(options['api-url']) : undefined,
       });
       const text = `${JSON.stringify(result, null, 2)}\n`;

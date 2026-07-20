@@ -18,6 +18,7 @@ import {
   parseGitLabLifecycleMarker,
   validateGitLabRequestSourceBinding,
 } from './gitlab-request-lifecycle.js';
+import { buildGitLabCarrierSideEffectGate } from './gitlab-side-effect-gate.js';
 
 export const GITLAB_CI_SWEEPER_ISSUE_FIX_REQUEST_SCHEMA = 'zj-loop.gitlab_issue_fix_request_live.v1';
 
@@ -135,6 +136,10 @@ export async function createGitLabCiSweeperIssueFixRequest(input: {
   token?: string;
   title: string;
   requestBody: string;
+  pipelineSource?: string;
+  carrierEnabled?: string | boolean;
+  carrierConfirmation?: string;
+  breakerState?: 'armed' | 'tripped';
   apiBaseUrl?: string;
   fetchImpl?: typeof fetch;
 }) {
@@ -153,6 +158,16 @@ export async function createGitLabCiSweeperIssueFixRequest(input: {
     issue: null,
     ...extra,
   });
+
+  const sideEffectGate = buildGitLabCarrierSideEffectGate({
+    projectPath: input.projectPath,
+    routeFamily: 'ci-sweeper',
+    pipelineSource: input.pipelineSource,
+    carrierEnabled: input.carrierEnabled,
+    confirmation: input.carrierConfirmation,
+    breakerState: input.breakerState,
+  });
+  if (sideEffectGate.status !== 'allowed') return blocked(sideEffectGate.reason, { side_effect_gate: sideEffectGate });
 
   if (!input.token) return blocked('gitlab-token-required');
   if (!request || request.route_decision?.request_kind !== 'issue-fix-request') {

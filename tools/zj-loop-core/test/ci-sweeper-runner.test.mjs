@@ -236,6 +236,9 @@ test('GitLab CI Sweeper creates an independent Issue Fix Request carrier', async
     token: 'secret-token',
     title: '[Issue Fix Request] ci-sweeper: zj_loop_ci_sweeper 789',
     requestBody: gitlabRequestBody(),
+    pipelineSource: 'web',
+    carrierEnabled: 'true',
+    carrierConfirmation: 'CREATE_GITLAB_CI_SWEEPER_CARRIER',
     apiBaseUrl: 'https://git.example/api/v4',
     fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
@@ -263,6 +266,9 @@ test('GitLab CI Sweeper returns duplicate without creating a second carrier', as
     token: 'secret-token',
     title: 'duplicate request',
     requestBody: body,
+    pipelineSource: 'web',
+    carrierEnabled: 'true',
+    carrierConfirmation: 'CREATE_GITLAB_CI_SWEEPER_CARRIER',
     apiBaseUrl: 'https://git.example/api/v4',
     fetchImpl: async (url, init = {}) => {
       calls.push({ url, init });
@@ -282,6 +288,9 @@ test('GitLab CI Sweeper blocks carrier creation without GITLAB_TOKEN', async () 
     projectPath: 'group/project',
     title: 'blocked',
     requestBody: gitlabRequestBody(),
+    pipelineSource: 'web',
+    carrierEnabled: 'true',
+    carrierConfirmation: 'CREATE_GITLAB_CI_SWEEPER_CARRIER',
     fetchImpl: async () => { calls += 1; return response(200, []); },
   });
 
@@ -298,6 +307,9 @@ test('GitLab CI Sweeper recovers an uncertain carrier write by re-reading once',
     token: 'secret-token',
     title: 'uncertain request',
     requestBody: body,
+    pipelineSource: 'web',
+    carrierEnabled: 'true',
+    carrierConfirmation: 'CREATE_GITLAB_CI_SWEEPER_CARRIER',
     fetchImpl: async (url, init = {}) => {
       if (init.method === 'POST') throw new Error('connection reset after write');
       reads += 1;
@@ -413,6 +425,9 @@ test('zj-loop-ci-sweeper GitLab carrier CLI fails closed without GITLAB_TOKEN', 
       '--request-body', requestPath,
       '--project', 'group/project',
       '--title', 'Issue Fix Request',
+      '--pipeline-source', 'web',
+      '--carrier-enabled', 'true',
+      '--carrier-confirmation', 'CREATE_GITLAB_CI_SWEEPER_CARRIER',
       '--json',
     ], { encoding: 'utf8', env: { ...process.env, GITLAB_TOKEN: '' } });
     assert.equal(result.status, 2);

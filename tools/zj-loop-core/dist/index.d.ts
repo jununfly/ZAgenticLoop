@@ -52,3 +52,4 @@ export * from './gitlab-issue-note-bridge-receipts.js';
 export * from './gitlab-issue-note-bridge-trigger.js';
 export * from './gitlab-issue-note-bridge-server.js';
 export * from './gitlab-issue-note-bridge-capability.js';
+export * from './gitlab-side-effect-gate.js';

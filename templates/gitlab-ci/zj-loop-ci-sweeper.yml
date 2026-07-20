@@ -9,6 +9,9 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   variables:
     ZJ_LOOP_SIGNAL_ID: ""
     ZJ_LOOP_SOURCE_URL: "$CI_PIPELINE_URL"
+    ZJ_LOOP_GITLAB_CARRIER_ENABLED: "false"
+    ZJ_LOOP_GITLAB_CARRIER_CONFIRMATION: ""
+    ZJ_LOOP_GITLAB_CARRIER_BREAKER_STATE: "armed"
   script:
     - node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 18) { console.error('ZJ Loop GitLab CI requires Node >=18. Configure --gitlab-image with a Node 18+ image.'); process.exit(1); }"
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-route dispatch ci-sweeper --source gitlab-pipeline --signal-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --json > route-decision.json
@@ -16,10 +19,10 @@ __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
     - npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-ci-sweeper request-body --route-decision route-decision.json --repo "$CI_PROJECT_PATH" --provider gitlab --workflow "zj_loop_ci_sweeper" --run-id "${ZJ_LOOP_SIGNAL_ID:-${CI_PIPELINE_ID:-manual}}" --source-url "${ZJ_LOOP_SOURCE_URL:-$CI_PIPELINE_URL}" --out issue-fix-request.md --json > issue-fix-request-result.json || true
     - |
       route_allowed="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('route-decision.json','utf8')); process.stdout.write(String(p.allowed === true));")"
-      if [ "$route_allowed" = "true" ] && [ -s issue-fix-request.md ] && [ -n "${GITLAB_TOKEN:-}" ]; then
-        npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-ci-sweeper gitlab-issue-fix-request --request-body issue-fix-request.md --project "$CI_PROJECT_PATH" --title "[Issue Fix Request] ci-sweeper: ${CI_PIPELINE_ID}" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out issue-fix-request-carrier-result.json --json || true
+      if [ "$route_allowed" = "true" ] && [ -s issue-fix-request.md ] && [ "${CI_PIPELINE_SOURCE:-}" = "web" ] && [ "${ZJ_LOOP_GITLAB_CARRIER_ENABLED:-false}" = "true" ] && [ "${ZJ_LOOP_GITLAB_CARRIER_CONFIRMATION:-}" = "CREATE_GITLAB_CI_SWEEPER_CARRIER" ] && [ -n "${GITLAB_TOKEN:-}" ]; then
+        npx --yes --package __ZJ_LOOP_CORE_PACKAGE__ zj-loop-ci-sweeper gitlab-issue-fix-request --request-body issue-fix-request.md --project "$CI_PROJECT_PATH" --title "[Issue Fix Request] ci-sweeper: ${CI_PIPELINE_ID}" --pipeline-source "${CI_PIPELINE_SOURCE:-}" --carrier-enabled "${ZJ_LOOP_GITLAB_CARRIER_ENABLED:-false}" --carrier-confirmation "${ZJ_LOOP_GITLAB_CARRIER_CONFIRMATION:-}" --breaker-state "${ZJ_LOOP_GITLAB_CARRIER_BREAKER_STATE:-armed}" --api-url "${CI_API_V4_URL:-https://gitlab.com/api/v4}" --out issue-fix-request-carrier-result.json --json || true
       else
-        node -e "const fs=require('fs'); fs.writeFileSync('issue-fix-request-carrier-result.json', JSON.stringify({schema:'zj-loop.gitlab_ci_sweeper_carrier_trigger.v1', status:'skipped', reason: process.env.GITLAB_TOKEN ? 'route-not-allowed-or-request-body-missing' : 'gitlab-token-required', side_effects_executed:false}, null, 2));"
+        node -e "const fs=require('fs'); const reason=process.env.CI_PIPELINE_SOURCE !== 'web' ? 'web-pipeline-required' : process.env.ZJ_LOOP_GITLAB_CARRIER_ENABLED !== 'true' ? 'carrier-disabled-by-default' : process.env.ZJ_LOOP_GITLAB_CARRIER_CONFIRMATION !== 'CREATE_GITLAB_CI_SWEEPER_CARRIER' ? 'fixed-confirmation-required' : !process.env.GITLAB_TOKEN ? 'gitlab-token-required' : 'route-not-allowed-or-request-body-missing'; fs.writeFileSync('issue-fix-request-carrier-result.json', JSON.stringify({schema:'zj-loop.gitlab_ci_sweeper_carrier_trigger.v1', status:'skipped', reason, side_effects_executed:false}, null, 2));"
       fi
     - |
       node -e "const fs=require('fs'); const carrier=JSON.parse(fs.readFileSync('issue-fix-request-carrier-result.json','utf8')); const issue=carrier.issue; const shouldTrigger=carrier.status==='completed' && carrier.outcome==='created' && issue?.iid && carrier.audit?.request_id; const result={trigger:shouldTrigger?'pending':'skipped',reason:shouldTrigger?undefined:'carrier-not-created',issue_iid:issue?.iid??null,request_id:carrier.audit?.request_id??null}; fs.writeFileSync('consumer-trigger-input.json',JSON.stringify(result,null,2));"
@@ -47,16 +50,17 @@ zj_loop_ci_sweeper:
   extends: .zj_loop_ci_sweeper_common
   needs: []
   rules:
-    # Recovery path: a schedule can replay the same deterministic evidence path.
+    # Scheduled pipelines must never create carrier Issues.
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: manual
 
 zj_loop_ci_sweeper_failure:
   extends: .zj_loop_ci_sweeper_common
   rules:
-    # Immediate path: run after an earlier stage fails.
-    - when: on_failure
+    # Failure hooks are disabled until the side-effect safety gate is promoted.
+    - when: never
 
 zj_loop_ci_sweeper_recovery:
   extends: .zj_loop_ci_sweeper_common
@@ -73,7 +77,7 @@ zj_loop_ci_sweeper_consumer:
   needs: []
   rules:
     - if: '$CI_PIPELINE_SOURCE == "api" && $ZJ_LOOP_CI_SWEEPER_REQUEST_ISSUE_IID != "" && $ZJ_LOOP_CI_SWEEPER_REQUEST_ID != "" && $ZJ_LOOP_CI_SWEEPER_CLAIM_ID != ""'
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $ZJ_LOOP_CI_SWEEPER_REQUEST_ISSUE_IID != "" && $ZJ_LOOP_CI_SWEEPER_REQUEST_ID != "" && $ZJ_LOOP_CI_SWEEPER_CLAIM_ID != ""'
+      when: manual
     - if: '$CI_PIPELINE_SOURCE == "web" && $ZJ_LOOP_CI_SWEEPER_REQUEST_ISSUE_IID != "" && $ZJ_LOOP_CI_SWEEPER_REQUEST_ID != "" && $ZJ_LOOP_CI_SWEEPER_CLAIM_ID != ""'
       when: manual
   variables:
