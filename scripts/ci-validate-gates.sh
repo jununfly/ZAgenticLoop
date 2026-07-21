@@ -25,7 +25,14 @@ test -f templates/zj-loop-run-log.md.template || (echo "Missing zj-loop-run-log 
 test -f templates/zj-loop-budget.md.template || (echo "Missing zj-loop-budget template"; exit 1)
 echo "Templates present ✓"
 
-npm install --no-save yaml@2 ajv@8 zod@3 cron-parser@5
+npm install --no-save yaml@2 ajv@8 zod@3 cron-parser@5 typescript@5 @types/node@20
+
+# The release dependency is registry-backed, but this pre-publish repository gate
+# must still run against the checked-out workspace before infra 0.1.0 exists.
+mkdir -p tools/zj-loop-core/node_modules/@jununfly
+ln -sfn "$(pwd)/tools/zj-loop-gitlab-infra" tools/zj-loop-core/node_modules/@jununfly/zj-loop-gitlab-infra
+./node_modules/.bin/tsc -p tools/zj-loop-gitlab-infra/tsconfig.json
+./node_modules/.bin/tsc -p tools/zj-loop-core/tsconfig.json
 node scripts/validate-registry.mjs
 node scripts/check-zj-loop-init-sync.mjs
 node scripts/validate-release-workflows.mjs

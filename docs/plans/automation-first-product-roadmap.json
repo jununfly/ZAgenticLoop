@@ -3581,6 +3581,41 @@
           "q": "fake GitLab HTTP contract tests 最终结果是什么？",
           "answer": "已通过：5/5",
           "note": "Human 在本机执行 node --test test/gitlab-read-client.test.mjs；version/schedule/pipeline/job/artifact、URL 编码、认证 header、429/403 分类和归一化 provenance 均通过。"
+        },
+        {
+          "q": "GitLab infra tracer 的代码交付是否已合并？",
+          "answer": "已完成：GitHub PR #151 已由 Human 合并",
+          "note": "主分支交付门禁完成；真实 GitLab dogfood 仍必须基于合并后的 main/master 交付提交重新构建并验证。"
+        },
+        {
+          "q": "真实 dogfood 使用哪种 infra package 交付方式？",
+          "answer": "A：发布版本化 @jununfly/zj-loop-gitlab-infra package，并让 core 依赖已发布版本",
+          "note": "目标项目不使用 file:../ 本地依赖；先补 package publish/release gate，再用 registry 可解析版本做 dogfood。"
+        },
+        {
+          "q": "@jununfly/zj-loop-gitlab-infra 发布到哪个 registry？",
+          "answer": "A：npmjs 公共 registry",
+          "note": "沿用 @jununfly/zj-loop-core 的公共 npm 发布方式；目标 GitLab Runner 通过版本号解析，不依赖本地路径或私有网络。"
+        },
+        {
+          "q": "infra 与 core 的公开版本如何安排？",
+          "answer": "A：infra 0.1.0，core 0.1.9",
+          "note": "infra 首次公开发布；core 随后升级到 0.1.9 并改用 registry 依赖，避免复用已发布的 0.1.8。"
+        },
+        {
+          "q": "两个 package 如何发布？",
+          "answer": "A：合并一个 PR 后按依赖顺序发布",
+          "note": "先发布并验证 infra 0.1.0，再发布 core 0.1.9；不并行发布，避免 core 依赖尚未可解析。"
+        },
+        {
+          "q": "版本化 infra package 发布迁移当前状态是什么？",
+          "answer": "代码已完成，待 Human 按顺序发布",
+          "note": "infra 0.1.0 已纳入 release universe，core 目标版本 0.1.9，file 依赖已迁移；release workflow、锁文件、模板 pin 和 release-ready gate 已更新。npm 发布与目标 GitLab dogfood 仍是外部步骤。"
+        },
+        {
+          "q": "PR 153 validate job 失败的根因与修复是什么？",
+          "answer": "根因：pre-publish validate gate 未建立 workspace infra 依赖，且 init 测试仍锁定 core 0.1.8；修复：CI 显式构建 infra/core 并建立临时 workspace link，init 默认值与断言统一到 core 0.1.9",
+          "note": "原始 GitHub job 88591337785 失败于 @jununfly/zj-loop-gitlab-infra ERR_MODULE_NOT_FOUND；本地 bash scripts/ci-validate-gates.sh 修复后通过，zj-loop-init 32/32 通过。"
         }
       ],
       "notes": ""
@@ -3588,7 +3623,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 15:17:02",
+    "updated": "2026-07-21 17:34:53",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

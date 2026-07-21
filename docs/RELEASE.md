@@ -1,9 +1,10 @@
 # Release playbook — npm packages
 
-This repo has seven release-managed public npm packages from `tools/`:
+This repo has eight release-managed public npm packages from `tools/`:
 
 | Package | Directory | Release tag |
 |---------|-----------|-------------|
+| `@jununfly/zj-loop-gitlab-infra` | `tools/zj-loop-gitlab-infra` | `zj-loop-gitlab-infra-v*` |
 | `@jununfly/zj-loop-core` | `tools/zj-loop-core` | `zj-loop-core-v*` |
 | `@jununfly/zj-loop-audit` | `tools/zj-loop-audit` | `zj-loop-audit-v*` |
 | `@jununfly/zj-loop-init` | `tools/zj-loop-init` | `zj-loop-init-v*` |
@@ -35,6 +36,7 @@ Publisher** → **GitHub Actions**:
 
 | Package | Repository | Workflow filename |
 |---------|--------------|-------------------|
+| `@jununfly/zj-loop-gitlab-infra` | `jununfly/ZAgenticLoop` | `release-zj-loop-gitlab-infra.yml` |
 | `@jununfly/zj-loop-core` | `jununfly/ZAgenticLoop` | `release-zj-loop-core.yml` |
 | `@jununfly/zj-loop-audit` | `jununfly/ZAgenticLoop` | `release-zj-loop-audit.yml` |
 | `@jununfly/zj-loop-init` | `jununfly/ZAgenticLoop` | `release-zj-loop-init.yml` |
@@ -113,7 +115,7 @@ publish artifact tracking/generation policy together.
 Release-managed packages may temporarily depend on the shared core package
 through local monorepo paths during development:
 
-- `@jununfly/zj-loop-core -> @jununfly/zj-loop-gitlab-infra (file:../zj-loop-gitlab-infra)`
+- `@jununfly/zj-loop-core -> @jununfly/zj-loop-gitlab-infra` is a published registry dependency.
 - `@jununfly/zj-loop-audit -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 - `@jununfly/zj-loop-init -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 - `@jununfly/zj-loop-cost -> @jununfly/zj-loop-core (file:../zj-loop-core)`
@@ -144,6 +146,16 @@ registry-resolvable on the official npm registry:
 - `@jununfly/zj-loop-sync@0.1.0`
 - `@jununfly/zj-loop-mcp-server@0.1.0`
 - `@jununfly/zj-goal-audit@0.1.0`
+
+The GitLab infra tracer release is a separate ordered migration:
+
+1. merge the PR containing `@jununfly/zj-loop-gitlab-infra@0.1.0` and
+   `@jununfly/zj-loop-core@0.1.9`
+2. publish `zj-loop-gitlab-infra-v0.1.0`
+3. verify `npm view @jununfly/zj-loop-gitlab-infra@0.1.0 version --registry https://registry.npmjs.org`
+4. publish `zj-loop-core-v0.1.9`
+5. update the target GitLab project to use `@jununfly/zj-loop-core@0.1.9`
+   and run the read-only Schedule Health dogfood
 
 Smoke tests used `--registry https://registry.npmjs.org` because npm mirrors
 can lag immediately after a first publish.
@@ -273,7 +285,7 @@ migration must verify both `package.json` and `package-lock.json`.
 For the current core version, dependent packages use
 `@jununfly/zj-loop-core: ^0.1.0`. In npm semver, `^0.1.0`
 accepts compatible `0.1.x` patches but not `0.2.0`, which is appropriate while
-core is still pre-1.0. The first-release publish order was:
+core is still pre-1.0. The historical first-release publish order was:
 
 1. publish `@jununfly/zj-loop-core`
 2. regenerate each dependent package lockfile against the registry dependency
