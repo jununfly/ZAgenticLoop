@@ -3230,6 +3230,11 @@
           "q": "Changelog 的两个 supporting artifact 如何传给 health verifier？",
           "answer": "采用 A：保留 supporting_artifact/supporting_artifact_schema，并新增 supporting_artifact_2/supporting_artifact_2_schema 变量；三个 artifact 必须从同一 zj_loop_changelog_drafter job 读取并一起校验。",
           "note": "避免 JSON 数组转义问题，也避免三个独立 health job 无法证明同一 job 绑定。"
+        },
+        {
+          "q": "scheduled Changelog 的 release window request 如何生成？",
+          "answer": "采用 A：scheduled job 在未提供显式 request JSON 时，根据 CI_PROJECT_PATH、CI_DEFAULT_BRANCH、CI_COMMIT_BEFORE_SHA、CI_COMMIT_SHA 和 CI_PIPELINE_ID 自动生成 draft-request-candidate；显式 request 仍优先使用。",
+          "note": "避免固定 JSON 过期或重复，确保每次 scheduled evidence 都绑定当前 master commit 窗口。"
         }
       ],
       "notes": ""
@@ -3506,7 +3511,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 02:08:56",
+    "updated": "2026-07-21 10:56:38",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
