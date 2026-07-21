@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-ci-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 671a15fb8a2623fe
+# zj-loop-template-hash: 4218f91826ed2b5a
 
 name: ZJ Loop CI Sweeper
 
@@ -26,7 +26,12 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Verify ZJ Loop version consistency
-        run: npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json
+        run: |
+          if npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+            exit 0
+          fi
+          test -f tools/zj-loop-core/dist/version-consistency-cli.js
+          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json
 
       - name: Upload ZJ Loop version consistency evidence
         if: always()
