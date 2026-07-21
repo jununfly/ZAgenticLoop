@@ -1,0 +1,31 @@
+{
+  "name": "@jununfly/zj-loop-gitlab-infra",
+  "version": "0.1.0",
+  "description": "Versioned, read-only GitLab provider infrastructure for ZJ Loop routes.",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "zj-loop-gitlab-infra": "./dist/cli.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test test/gitlab-read-client.test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "engines": { "node": ">=18" },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["zagenticloop", "gitlab", "provider-adapter", "infrastructure"],
+  "author": "Jununfly",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jununfly/ZAgenticLoop.git",
+    "directory": "tools/zj-loop-gitlab-infra"
+  }
+}

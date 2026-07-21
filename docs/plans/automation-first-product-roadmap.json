@@ -442,7 +442,8 @@
         "1-5-5-3",
         "1-5-5-4",
         "1-5-5-5",
-        "1-5-5-6"
+        "1-5-5-6",
+        "1-5-5-7"
       ],
       "decisions": [
         {
@@ -569,6 +570,11 @@
           "q": "事故经验 TODO 应放在哪个路线图位置？",
           "answer": "A：在 1-5-5 下新增 GitLab 自动化副作用安全回归父节点及子 TODO",
           "note": "这些问题来自真实 required-route dogfood，应成为 GitLab 验证门禁，不回写为既有 CI Sweeper 功能已完成。"
+        },
+        {
+          "q": "GitLab pipeline/job 等公共实现是否抽取为独立 infra adapter 层？",
+          "answer": "采用 A：创建独立的 @jununfly/zj-loop-gitlab-infra package，先放在 ZAgenticLoop monorepo；以 provider-neutral contract 为中心，提供 GitLab resource adapters、capability matrix、versioned templates、JSON CLI、normalized responses、error taxonomy、provenance/evidence 和 drift check。第一阶段只读能力为 schedule-read、pipeline-read、job-read、artifact-read，先迁移 Schedule Health，保留 inspectGitLabScheduleHealth 兼容 facade；之后按共享能力批次迁移其他 route，写操作最后处理。",
+          "note": "集中一次验证 GitLab 版本与公共 pipeline/job/artifact 行为，route 只验证自身业务契约；版本或项目绑定不满足时 fail-closed。"
         }
       ],
       "notes": ""
@@ -3507,11 +3513,27 @@
         }
       ],
       "notes": "Web/API negative dogfood、provider reread 与人工合并全部完成：MR !541 已由 Human 合并；Web 10532984 与 API 10533340 均无 carrier Issue，side_effects_executed=false。"
+    },
+    "1-5-5-7": {
+      "id": "1-5-5-7",
+      "label": "GitLab Infra Adapter 首个只读 Schedule Health tracer bullet",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Schedule Health tracer bullet 的首个完成门禁是什么？",
+          "answer": "采用 A：独立 infra package 可构建并锁版本；zj-loop.gitlab-infra.v1 contract 与 capability manifest 存在；schedule-read、pipeline-read、job-read、artifact-read 通过 fake GitLab HTTP contract tests；至少一个真实 GitLab 版本完成 dogfood；生成 provenance 与内容寻址 evidence；现有 inspectGitLabScheduleHealth facade 改用 infra；现有 doctor CLI、变量和 artifact schema 不变；GitLab CI template 带 package/version/template hash provenance 与 drift check；Schedule Health 不再直接持有 GitLab API 访问。",
+          "note": "Tracer bullet 只做只读能力，禁止 pipeline trigger、Issue/MR、comment、branch、schedule 修改和 webhook。"
+        }
+      ],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 10:56:38",
+    "updated": "2026-07-21 13:52:23",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
