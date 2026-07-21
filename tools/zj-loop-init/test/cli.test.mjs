@@ -481,6 +481,10 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(smoke, /\$\{ZJ_LOOP_SIGNAL_ID:-\$\{CI_PIPELINE_ID:-manual\}\}/);
     assert.match(smoke, /ZJ_LOOP_RUN_AUDIT: "1"/);
     assert.match(smoke, /Skipping zj-loop-audit because ZJ_LOOP_RUN_AUDIT=0/);
+    const scheduleHealth = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-schedule-health-check.yml'), 'utf8');
+    assert.match(scheduleHealth, /zj-loop-gitlab-infra-contract: zj-loop\.gitlab-infra\.v1/);
+    assert.match(scheduleHealth, /zj-loop-gitlab-infra-package: @jununfly\/zj-loop-gitlab-infra/);
+    assert.match(scheduleHealth, /zj-loop-gitlab-infra-version: 0\.1\.0/);
     const ciSweeper = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-ci-sweeper.yml'), 'utf8');
     assert.match(ciSweeper, /zj-loop-ci-sweeper request-body/);
     assert.match(ciSweeper, /--provider gitlab/);
@@ -573,14 +577,18 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     assert.match(scheduleProbe, /zj-loop\.gitlab_schedule_probe_receipt\.v1/);
     assert.match(scheduleProbe, /schedule-probe-receipt\.json/);
 
-    const scheduleHealth = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-schedule-health-check.yml'), 'utf8');
     assert.match(scheduleHealth, /zj_loop_schedule_health_check:/);
     assert.match(scheduleHealth, /CI_PIPELINE_SOURCE == "web"/);
+    assert.match(scheduleHealth, /ZJ_LOOP_SCHEDULE_HEALTH_CONFIG_JSON: ""/);
+    assert.match(scheduleHealth, /schedule-health-config\.env/);
     assert.match(scheduleHealth, /zj-loop-doctor --root \./);
     assert.match(scheduleHealth, /--schedule-health/);
     assert.match(scheduleHealth, /needs: \[\]/);
     assert.match(scheduleHealth, /schedule-health-result\.json/);
     assert.doesNotMatch(scheduleHealth, /zj-loop-schedule-probe start/);
+    assert.match(scheduleHealth, /zj-loop-gitlab-infra-contract: zj-loop\.gitlab-infra\.v1/);
+    assert.match(scheduleHealth, /zj-loop-gitlab-infra-package: @jununfly\/zj-loop-gitlab-infra/);
+    assert.match(scheduleHealth, /zj-loop-gitlab-infra-version: 0\.1\.0/);
 
     const routeTable = await readFile(path.join(dir, 'zj-loop', 'zj-loop-route-table.yaml'), 'utf8');
     assert.match(routeTable, /route_id: "manual-smoke-report"/);

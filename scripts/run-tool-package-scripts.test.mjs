@@ -16,6 +16,7 @@ test('TOOL_PACKAGES keeps root tool gate coverage explicit', () => {
     TOOL_PACKAGES.map((toolPackage) => toolPackage.id),
     [
       'zj-loop-core',
+      'zj-loop-gitlab-infra',
       'zj-loop-audit',
       'zj-loop-init',
       'zj-loop-cost',

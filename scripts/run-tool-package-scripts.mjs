@@ -7,6 +7,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const TOOL_PACKAGES = [
   { id: 'zj-loop-core', directory: 'tools/zj-loop-core', role: 'zj-loop', gates: ['root'] },
+  { id: 'zj-loop-gitlab-infra', directory: 'tools/zj-loop-gitlab-infra', role: 'zj-loop', gates: ['root'] },
   { id: 'zj-loop-audit', directory: 'tools/zj-loop-audit', role: 'zj-loop', gates: ['root'] },
   { id: 'zj-loop-init', directory: 'tools/zj-loop-init', role: 'zj-loop', gates: ['root', 'validate'] },
   { id: 'zj-loop-cost', directory: 'tools/zj-loop-cost', role: 'zj-loop', gates: ['root'] },

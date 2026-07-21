@@ -16,6 +16,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-core.yml',
     tagPattern: 'zj-loop-core-v*',
     provenancePublishing: true,
+    knownLocalFileDependencies: ['@jununfly/zj-loop-gitlab-infra'],
   },
   {
     id: 'zj-loop-audit',

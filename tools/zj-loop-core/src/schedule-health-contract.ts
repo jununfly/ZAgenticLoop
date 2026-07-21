@@ -1,4 +1,5 @@
 import { CronExpressionParser } from 'cron-parser';
+import { GitLabInfraError, GitLabReadClient } from '@jununfly/zj-loop-gitlab-infra';
 
 export const SCHEDULE_HEALTH_SCHEMA = 'zj-loop.schedule_health.v1';
 
@@ -232,40 +233,58 @@ export async function inspectGitLabScheduleHealth(input: any) {
   const apiUrl = String(input.apiUrl ?? process.env.CI_API_V4_URL ?? 'https://gitlab.com/api/v4').replace(/\/$/, '');
   const credentials = resolveGitLabCredentials(input);
   if (!credentials) return result({ schema: SCHEDULE_HEALTH_SCHEMA, target: input.target, audit: { api_url: apiUrl, auth_source: null } }, 'configuration_missing', 'gitlab-token-missing');
-  const fetchImpl = input.fetchImpl ?? globalThis.fetch;
-  const project = encodeURIComponent(input.target.project);
-  const headers = { 'PRIVATE-TOKEN': credentials.token };
-  const [scheduleResponse, pipelinesResponse] = await Promise.all([
-    fetchImpl(`${apiUrl}/projects/${project}/pipeline_schedules/${input.target.schedule_id}`, { headers }),
-    fetchImpl(`${apiUrl}/projects/${project}/pipelines?source=schedule&per_page=20`, { headers }),
-  ]);
-  if (!scheduleResponse.ok || !pipelinesResponse.ok) return result({ schema: SCHEDULE_HEALTH_SCHEMA, target: input.target, audit: { api_url: apiUrl, auth_source: credentials.source } }, 'configuration_missing', 'gitlab-api-unavailable');
-  const [schedule, pipelines] = await Promise.all([scheduleResponse.json(), pipelinesResponse.json()]);
-  const pipeline = Array.isArray(pipelines) ? pipelines[0] : null;
-  const audit = { api_url: apiUrl, auth_source: credentials.source };
+  const client = new GitLabReadClient({ apiUrl, projectPath: input.target.project, token: credentials.token, tokenSource: credentials.source, fetchImpl: input.fetchImpl });
+  let capability;
+  try {
+    capability = await client.preflight();
+  } catch (error) {
+    return result({ schema: SCHEDULE_HEALTH_SCHEMA, target: input.target, audit: { api_url: apiUrl, auth_source: credentials.source, infra_error: infraError(error) } }, 'configuration_missing', 'gitlab-api-unavailable');
+  }
+  const audit = { api_url: apiUrl, auth_source: credentials.source, infra_provenance: capability.provenance };
+  if (capability.status !== 'ready') return result({ schema: SCHEDULE_HEALTH_SCHEMA, target: input.target, audit }, 'configuration_missing', 'gitlab-capability-unverified');
+  let schedule;
+  let pipelines;
+  try {
+    [schedule, pipelines] = await Promise.all([client.readSchedule(input.target.schedule_id), client.listScheduledPipelines()]);
+  } catch (error) {
+    return result({ schema: SCHEDULE_HEALTH_SCHEMA, target: input.target, audit: { ...audit, infra_error: infraError(error) } }, 'configuration_missing', 'gitlab-api-unavailable');
+  }
+  const pipeline = pipelines[0] ?? null;
   if (!pipeline) return evaluateScheduleHealth({ target: input.target, schedule, pipeline: null, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
-  const jobsResponse = await fetchImpl(`${apiUrl}/projects/${project}/pipelines/${pipeline.id}/jobs`, { headers });
-  if (!jobsResponse.ok) return result({ schema: SCHEDULE_HEALTH_SCHEMA, target: input.target, audit: { api_url: apiUrl, auth_source: credentials.source } }, 'artifact_missing', 'gitlab-job-query-failed');
-  const job = (await jobsResponse.json()).find((candidate: any) => candidate.name === input.target.job);
+  let jobs;
+  try {
+    jobs = await client.listPipelineJobs(pipeline.id);
+  } catch (error) {
+    return result({ schema: SCHEDULE_HEALTH_SCHEMA, target: input.target, audit: { ...audit, infra_error: infraError(error) } }, 'artifact_missing', 'gitlab-job-query-failed');
+  }
+  const job = jobs.find((candidate) => candidate.name === input.target.job);
   if (!job) return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: null }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
-  const artifactResponse = await fetchImpl(`${apiUrl}/projects/${project}/jobs/${job.id}/artifacts/${input.target.artifact}`, { headers });
-  if (!artifactResponse.ok) return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: null }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
-  const artifact = await artifactResponse.json();
-  const enrichedPipeline: any = { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact };
+  let artifact;
+  try {
+    artifact = await client.readJobArtifact(job.id, input.target.artifact);
+  } catch {
+    return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: null }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
+  }
+  const enrichedPipeline: any = { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact.payload };
   for (const suffix of ['', '_2']) {
     const artifactPath = input.target[`supporting_artifact${suffix}`];
     if (!artifactPath) continue;
-    const supportingResponse = await fetchImpl(`${apiUrl}/projects/${project}/jobs/${job.id}/artifacts/${artifactPath}`, { headers });
-    if (!supportingResponse.ok) {
+    try {
+      const supportingArtifact = await client.readJobArtifact(job.id, artifactPath);
+      enrichedPipeline[`supporting_artifact${suffix}`] = artifactPath;
+      enrichedPipeline[`supporting_artifact${suffix}_schema`] = supportingArtifact.schema;
+      enrichedPipeline[`supporting_artifact${suffix}_payload`] = supportingArtifact.payload;
+    } catch {
       enrichedPipeline[`supporting_artifact${suffix}`] = null;
       return evaluateScheduleHealth({ target: input.target, schedule, pipeline: enrichedPipeline, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
     }
-    const supportingArtifact = await supportingResponse.json();
-    enrichedPipeline[`supporting_artifact${suffix}`] = artifactPath;
-    enrichedPipeline[`supporting_artifact${suffix}_schema`] = supportingArtifact.schema;
-    enrichedPipeline[`supporting_artifact${suffix}_payload`] = supportingArtifact;
   }
   return evaluateScheduleHealth({ target: input.target, schedule, pipeline: enrichedPipeline, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
+}
+
+function infraError(error: unknown) {
+  if (error instanceof GitLabInfraError) return { code: error.code, ...(error.status ? { status: error.status } : {}) };
+  return { code: 'provider-contract-mismatch' };
 }
 
 function resolveGitLabCredentials(input: any): { token: string; source: string } | null {

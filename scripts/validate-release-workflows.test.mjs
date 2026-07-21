@@ -25,7 +25,7 @@ test('RELEASE_PACKAGES captures release-managed npm packages', () => {
       knownLocalFileDependencies: releasePackage.knownLocalFileDependencies ?? [],
     })),
     [
-      { packageName: '@jununfly/zj-loop-core', generatedAtRelease: [], knownLocalFileDependencies: [] },
+      { packageName: '@jununfly/zj-loop-core', generatedAtRelease: [], knownLocalFileDependencies: ['@jununfly/zj-loop-gitlab-infra'] },
       {
         packageName: '@jununfly/zj-loop-audit',
         generatedAtRelease: [],
@@ -85,6 +85,7 @@ test('known local file dependencies are explicit release blockers', () => {
     .map((releasePackage) => releasePackage.packageName);
 
   assert.deepEqual(blockers, [
+    '@jununfly/zj-loop-core',
     '@jununfly/zj-loop-audit',
     '@jununfly/zj-loop-init',
     '@jununfly/zj-loop-cost',
@@ -93,8 +94,8 @@ test('known local file dependencies are explicit release blockers', () => {
   ]);
 });
 
-test('release-ready mode passes after local file dependencies are migrated', async () => {
+test('release-ready mode blocks while local file dependencies remain', async () => {
   await withEnv('ZJ_LOOP_RELEASE_READY', '1', async () => {
-    await assert.doesNotReject(() => validateReleaseWorkflows());
+    await assert.rejects(() => validateReleaseWorkflows(), /zj-loop-gitlab-infra/);
   });
 });

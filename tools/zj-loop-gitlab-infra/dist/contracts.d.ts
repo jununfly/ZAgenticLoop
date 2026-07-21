@@ -1,0 +1,65 @@
+export declare const GITLAB_INFRA_CONTRACT: "zj-loop.gitlab-infra.v1";
+export declare const GITLAB_INFRA_VERSION: "0.1.0";
+export declare const READ_CAPABILITIES: readonly ["schedule-read", "pipeline-read", "job-read", "artifact-read"];
+export type ReadCapability = (typeof READ_CAPABILITIES)[number];
+export type InfraErrorCode = 'auth-failed' | 'permission-denied' | 'not-found' | 'rate-limited' | 'transient-network' | 'provider-contract-mismatch' | 'response-shape-invalid';
+export interface GitLabInfraConfig {
+    apiUrl: string;
+    projectPath: string;
+    token?: string;
+    tokenSource?: string;
+    fetchImpl?: typeof fetch;
+}
+export interface GitLabVersion {
+    version: string | null;
+    revision: string | null;
+}
+export interface InfraProvenance {
+    contract: typeof GITLAB_INFRA_CONTRACT;
+    infra_version: typeof GITLAB_INFRA_VERSION;
+    gitlab_version: string | null;
+    project_path: string;
+    capabilities: ReadCapability[];
+}
+export interface NormalizedSchedule {
+    id: number;
+    active: boolean;
+    updated_at: string | null;
+    next_run_at: string | null;
+    cron: string | null;
+    cron_timezone: string | null;
+}
+export interface NormalizedPipeline {
+    id: number;
+    source: string;
+    ref: string;
+    sha: string | null;
+    status: string | null;
+    created_at: string | null;
+    web_url: string | null;
+}
+export interface NormalizedJob {
+    id: number;
+    name: string;
+    status: string | null;
+    ref: string | null;
+    pipeline_id: number | null;
+    web_url: string | null;
+}
+export interface ArtifactRead {
+    schema?: string;
+    payload: unknown;
+    provenance: InfraProvenance;
+}
+export interface CapabilityResult {
+    schema: 'zj-loop.gitlab_infra_capability.v1';
+    status: 'ready' | 'blocked';
+    version: GitLabVersion;
+    provenance: InfraProvenance;
+    capabilities: ReadCapability[];
+    errors: Array<{
+        code: InfraErrorCode;
+        message: string;
+        status?: number;
+    }>;
+}
