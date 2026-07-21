@@ -3526,6 +3526,11 @@
           "q": "Schedule Health tracer bullet 的首个完成门禁是什么？",
           "answer": "采用 A：独立 infra package 可构建并锁版本；zj-loop.gitlab-infra.v1 contract 与 capability manifest 存在；schedule-read、pipeline-read、job-read、artifact-read 通过 fake GitLab HTTP contract tests；至少一个真实 GitLab 版本完成 dogfood；生成 provenance 与内容寻址 evidence；现有 inspectGitLabScheduleHealth facade 改用 infra；现有 doctor CLI、变量和 artifact schema 不变；GitLab CI template 带 package/version/template hash provenance 与 drift check；Schedule Health 不再直接持有 GitLab API 访问。",
           "note": "Tracer bullet 只做只读能力，禁止 pipeline trigger、Issue/MR、comment、branch、schedule 修改和 webhook。"
+        },
+        {
+          "q": "Schedule Health facade 是否已接入 GitLab infra？",
+          "answer": "已完成第一条 RED-GREEN：inspectGitLabScheduleHealth 通过 @jununfly/zj-loop-gitlab-infra 的 GitLabReadClient 读取 version、schedule、scheduled pipelines、jobs 和 artifacts；保留现有 CLI、变量、artifact schema 与健康状态语义，并在 audit.infra_provenance 记录 contract/version/GitLab version/project/capabilities。",
+          "note": "提交 c19ab0e；infra contract tests 3/3、Schedule Health tests 25/25、zj-loop-core 全量测试通过。真实 GitLab dogfood、fake HTTP server 与 template provenance/drift 仍是后续门禁。"
         }
       ],
       "notes": ""
@@ -3533,7 +3538,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 13:52:23",
+    "updated": "2026-07-21 14:14:32",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
