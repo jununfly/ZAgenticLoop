@@ -3611,6 +3611,11 @@
           "q": "版本化 infra package 发布迁移当前状态是什么？",
           "answer": "代码已完成，待 Human 按顺序发布",
           "note": "infra 0.1.0 已纳入 release universe，core 目标版本 0.1.9，file 依赖已迁移；release workflow、锁文件、模板 pin 和 release-ready gate 已更新。npm 发布与目标 GitLab dogfood 仍是外部步骤。"
+        },
+        {
+          "q": "PR 153 validate job 失败的根因与修复是什么？",
+          "answer": "根因：pre-publish validate gate 未建立 workspace infra 依赖，且 init 测试仍锁定 core 0.1.8；修复：CI 显式构建 infra/core 并建立临时 workspace link，init 默认值与断言统一到 core 0.1.9",
+          "note": "原始 GitHub job 88591337785 失败于 @jununfly/zj-loop-gitlab-infra ERR_MODULE_NOT_FOUND；本地 bash scripts/ci-validate-gates.sh 修复后通过，zj-loop-init 32/32 通过。"
         }
       ],
       "notes": ""
@@ -3618,7 +3623,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 17:07:11",
+    "updated": "2026-07-21 17:34:53",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
