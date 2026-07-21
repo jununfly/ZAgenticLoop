@@ -22,7 +22,7 @@ test('preflight and read resources normalize GitLab responses with provenance', 
   assert.equal((await client.listScheduledPipelines())[0].id, 42);
   assert.equal((await client.listPipelineJobs(42))[0].pipeline_id, 42);
   assert.equal((await client.readJobArtifact(7, 'evidence.json')).schema, 'example.v1');
-  assert.equal(calls.filter((url) => url.endsWith('/version')).length, 2);
+  assert.equal(calls.filter((url) => url.endsWith('/version')).length, 1);
 });
 
 test('provider errors are classified without exposing tokens', async () => {

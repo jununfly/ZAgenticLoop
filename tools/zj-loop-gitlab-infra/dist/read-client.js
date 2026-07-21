@@ -6,6 +6,7 @@ export class GitLabReadClient {
     token;
     tokenSource;
     fetchImpl;
+    versionPromise;
     constructor(config) {
         this.apiUrl = config.apiUrl.replace(/\/$/, '');
         this.project = config.projectPath;
@@ -14,8 +15,14 @@ export class GitLabReadClient {
         this.fetchImpl = config.fetchImpl ?? globalThis.fetch;
     }
     async readVersion() {
+        this.versionPromise ??= this.readVersionOnce();
+        return this.versionPromise;
+    }
+    async readVersionOnce() {
         const response = await this.request('/version');
-        const body = asRecord(response.body);
+        if (!response.body || typeof response.body !== 'object' || Array.isArray(response.body))
+            return { version: null, revision: null };
+        const body = response.body;
         return { version: stringOrNull(body.version), revision: stringOrNull(body.revision) };
     }
     async preflight(required = [...READ_CAPABILITIES]) {
@@ -28,7 +35,7 @@ export class GitLabReadClient {
     async readSchedule(scheduleId) {
         const body = asRecord((await this.request(`/projects/${this.projectId()}/pipeline_schedules/${encodeURIComponent(String(scheduleId))}`)).body);
         return {
-            id: numberRequired(body.id, 'schedule.id'),
+            id: numberOrNull(body.id) ?? Number(scheduleId),
             active: body.active === true,
             updated_at: stringOrNull(body.updated_at),
             next_run_at: stringOrNull(body.next_run_at),
@@ -87,7 +94,7 @@ function normalizePipeline(value) {
 }
 function normalizeJob(value) {
     const body = asRecord(value);
-    const pipeline = asRecord(body.pipeline);
+    const pipeline = body.pipeline && typeof body.pipeline === 'object' && !Array.isArray(body.pipeline) ? body.pipeline : {};
     return { id: numberRequired(body.id, 'job.id'), name: stringRequired(body.name, 'job.name'), status: stringOrNull(body.status), ref: stringOrNull(body.ref), pipeline_id: numberOrNull(body.pipeline_id ?? pipeline.id), web_url: stringOrNull(body.web_url) };
 }
 function asRecord(value) { if (!value || typeof value !== 'object' || Array.isArray(value))

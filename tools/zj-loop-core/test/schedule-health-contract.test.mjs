@@ -320,7 +320,7 @@ test('GitLab adapter reads schedule and latest scheduled pipeline without mutati
   assert.equal(result.status, 'execution_missing');
   assert.equal(result.audit.auth_source, 'injected');
   assert.deepEqual(result.next_steps[0].command.slice(-2), ['--api-url', 'https://gitlab.example/api/v4']);
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test('GitLab adapter records the selected injected credential source without exposing its value', async () => {
@@ -345,6 +345,31 @@ test('GitLab adapter validates the explicit job artifact schema', async () => {
     return { ok: true, async json() { return body; } };
   } });
   assert.equal(result.status, 'healthy');
+});
+
+test('GitLab schedule health records the infra provenance of a healthy read', async () => {
+  const result = await inspectGitLabScheduleHealth({ target, apiUrl: 'https://gitlab.example/api/v4', token: 'token', now: '2026-07-15T02:00:00Z', fetchImpl: async (url) => {
+    const text = String(url);
+    const body = text.endsWith('/version')
+      ? { version: '16.11.8', revision: 'abc123' }
+      : text.includes('pipeline_schedules/957')
+        ? { active: true, updated_at: '2026-07-15T00:00:00Z', next_run_at: '2026-07-15T01:00:00Z' }
+        : text.includes('/pipelines?')
+          ? [{ id: 42, source: 'schedule', ref: 'master', created_at: '2026-07-15T01:01:00Z' }]
+          : text.includes('/pipelines/42/jobs')
+            ? [{ id: 7, name: 'zj_loop_issue_triage' }]
+            : reportArtifact;
+    return { ok: true, async json() { return body; } };
+  } });
+
+  assert.equal(result.status, 'healthy');
+  assert.deepEqual(result.audit.infra_provenance, {
+    contract: 'zj-loop.gitlab-infra.v1',
+    infra_version: '0.1.0',
+    gitlab_version: '16.11.8',
+    project_path: 'group/project',
+    capabilities: ['schedule-read', 'pipeline-read', 'job-read', 'artifact-read'],
+  });
 });
 
 test('GitLab adapter reads and validates Daily Triage supporting artifact from the same job', async () => {

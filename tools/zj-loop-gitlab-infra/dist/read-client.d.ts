@@ -5,8 +5,10 @@ export declare class GitLabReadClient {
     private readonly token?;
     private readonly tokenSource;
     private readonly fetchImpl;
+    private versionPromise?;
     constructor(config: GitLabInfraConfig);
     readVersion(): Promise<GitLabVersion>;
+    private readVersionOnce;
     preflight(required?: ReadCapability[]): Promise<CapabilityResult>;
     readSchedule(scheduleId: string | number): Promise<NormalizedSchedule>;
     listScheduledPipelines(): Promise<NormalizedPipeline[]>;
