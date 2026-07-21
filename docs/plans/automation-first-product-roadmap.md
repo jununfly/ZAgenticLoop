@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-21 18:14:28
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-21 23:58:30
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,14 +40,18 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-5-4. GitLab scheduled required-route dogfood
+### 当前施工：1-5-5-6. GitLab 自动化副作用安全回归与事故防护
 
 **决策：**
-- Q: scheduled required-route dogfood 如何拆分？ → 拆成四个 route-specific 子节点：Issue Backlog、Daily Triage、Dependency Sweeper、Changelog Drafter；每个子节点独立验证 source=schedule、positive、negative/recovery 和 artifact contract，不能跨 route 泛化 evidence。 (先推进 issue-backlog-triage，因为已有 GitLab schedule-health 基础和相关 scheduled evidence；不启用 provider write 或 trusted automation。)
+- Q: 事故防护 TODO 的完成门禁是否要求全部通过？ → A：6 项全部完成后，才允许 GitLab 任一副作用路线重新进入 execution-ready (保持既定 completion gate；端到端门禁、熔断、去重/no-op、速率限制、版本一致性与 replay 缺一不可。)
+- Q: 事故防护 TODO 的实施顺序是什么？ → A：安全止血优先：1-5-5-6-2 → 1-5-5-6-4 → 1-5-5-6-5 → 1-5-5-6-1 → 1-5-5-6-3 → 1-5-5-6-6 (先关闭入口、限制洪泛并锁定版本，再做端到端协议与 no-op/去重，最后进行 replay 和零残留验收。)
 
 **当前子树：**
-├── [x][Y+] 1-5-5-4-1. GitLab scheduled Issue Backlog report evidence
-├── [x][Y+] 1-5-5-4-2. GitLab scheduled Daily Triage report evidence
-├── [x][Y+] 1-5-5-4-3. GitLab scheduled Dependency Sweeper lifecycle evidence
-└── [ ][Y+] 1-5-5-4-4. GitLab scheduled Changelog Drafter report evidence
+├── [ ][X+] 1-5-5-6-1. 跨 producer、carrier、consumer 的端到端副作用完成门禁
+├── [x][Y+] 1-5-5-6-2. GitLab 自动 carrier 创建的显式开关与紧急熔断
+│   ... 3 more child nodes; run tree 1-5-5-6-2 --depth 2 for full view
+├── [ ][X+] 1-5-5-6-3. repair MR 有效 diff、跨 request 去重与空变更拒绝
+├── [x][X+] 1-5-5-6-4. Issue、MR 与 carrier 副作用速率限制和上限保护
+├── [ ][X+] 1-5-5-6-5. generated CI、vendor 包与目标项目版本一致性门禁
+└── [ ][X+] 1-5-5-6-6. GitLab 事故 replay、清理与零残留验收证据
 <!-- ROADMAP_SECTION_END -->
