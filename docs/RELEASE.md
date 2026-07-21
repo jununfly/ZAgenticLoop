@@ -113,6 +113,7 @@ publish artifact tracking/generation policy together.
 Release-managed packages may temporarily depend on the shared core package
 through local monorepo paths during development:
 
+- `@jununfly/zj-loop-core -> @jununfly/zj-loop-gitlab-infra (file:../zj-loop-gitlab-infra)`
 - `@jununfly/zj-loop-audit -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 - `@jununfly/zj-loop-init -> @jununfly/zj-loop-core (file:../zj-loop-core)`
 - `@jununfly/zj-loop-cost -> @jununfly/zj-loop-core (file:../zj-loop-core)`
