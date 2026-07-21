@@ -2,7 +2,6 @@
   "name": "@jununfly/zj-loop-gitlab-infra",
   "version": "0.1.0",
   "description": "Versioned, read-only GitLab provider infrastructure for ZJ Loop routes.",
-  "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,5 +26,8 @@
     "type": "git",
     "url": "git+https://github.com/jununfly/ZAgenticLoop.git",
     "directory": "tools/zj-loop-gitlab-infra"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

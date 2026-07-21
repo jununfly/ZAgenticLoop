@@ -1,13 +1,13 @@
-name: Release zj-loop-core
+name: Release zj-loop-gitlab-infra
 
 on:
   push:
     tags:
-      - 'zj-loop-core-v*'
+      - 'zj-loop-gitlab-infra-v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g. zj-loop-core-v0.1.9)'
+        description: 'Tag to publish (e.g. zj-loop-gitlab-infra-v0.1.0)'
         required: true
         type: string
 
@@ -28,20 +28,20 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
-          cache-dependency-path: tools/zj-loop-core/package-lock.json
+          cache-dependency-path: tools/zj-loop-gitlab-infra/package-lock.json
 
       - name: Ensure npm supports provenance publishing
         run: npm install -g npm@10.9.8
 
       - name: Install, build, test
-        working-directory: tools/zj-loop-core
+        working-directory: tools/zj-loop-gitlab-infra
         run: |
           npm ci
           npm run build
           npm test
 
       - name: Publish to npm
-        working-directory: tools/zj-loop-core
+        working-directory: tools/zj-loop-gitlab-infra
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

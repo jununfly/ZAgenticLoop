@@ -10,13 +10,21 @@ const execFileAsync = promisify(execFile);
 
 export const RELEASE_PACKAGES = [
   {
+    id: 'zj-loop-gitlab-infra',
+    packageName: '@jununfly/zj-loop-gitlab-infra',
+    directory: 'tools/zj-loop-gitlab-infra',
+    workflow: '.github/workflows/release-zj-loop-gitlab-infra.yml',
+    tagPattern: 'zj-loop-gitlab-infra-v*',
+    provenancePublishing: true,
+  },
+  {
     id: 'zj-loop-core',
     packageName: '@jununfly/zj-loop-core',
     directory: 'tools/zj-loop-core',
     workflow: '.github/workflows/release-zj-loop-core.yml',
     tagPattern: 'zj-loop-core-v*',
     provenancePublishing: true,
-    knownLocalFileDependencies: ['@jununfly/zj-loop-gitlab-infra'],
+    knownLocalFileDependencies: [],
   },
   {
     id: 'zj-loop-audit',

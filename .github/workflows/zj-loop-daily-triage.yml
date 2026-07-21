@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-daily-triage
 # zj-loop-template-version: 1
-# zj-loop-template-hash: b2922476dcb744ff
+# zj-loop-template-hash: ec5da7f901a94edf
 
 name: ZJ Loop Daily Triage
 
@@ -29,7 +29,7 @@ jobs:
 
       - name: Report-only route evidence
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-route dispatch daily-triage-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.8 zj-loop-consumer plan daily-triage-report --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-route dispatch daily-triage-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-consumer plan daily-triage-report --json > consumer-plan.json || true
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
