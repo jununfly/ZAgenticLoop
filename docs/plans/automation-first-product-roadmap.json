@@ -3616,6 +3616,11 @@
           "q": "PR 153 validate job 失败的根因与修复是什么？",
           "answer": "根因：pre-publish validate gate 未建立 workspace infra 依赖，且 init 测试仍锁定 core 0.1.8；修复：CI 显式构建 infra/core 并建立临时 workspace link，init 默认值与断言统一到 core 0.1.9",
           "note": "原始 GitHub job 88591337785 失败于 @jununfly/zj-loop-gitlab-infra ERR_MODULE_NOT_FOUND；本地 bash scripts/ci-validate-gates.sh 修复后通过，zj-loop-init 32/32 通过。"
+        },
+        {
+          "q": "core 0.1.9 release workflow 的 integrity 失败如何处理？",
+          "answer": "修复锁文件为 npm 已发布 infra 0.1.0 tarball 的实际 integrity，并在 PR 154 中等待 Human 合并后重跑 core release",
+          "note": "原 workflow 在 npm ci 报 EINTEGRITY；npm view 返回的 dist.integrity 已核对，修复后本地 npm ci、Schedule Health 25/25、release-ready 均通过。"
         }
       ],
       "notes": ""
@@ -3623,7 +3628,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 17:34:53",
+    "updated": "2026-07-21 18:14:28",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
