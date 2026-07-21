@@ -576,6 +576,8 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
     const scheduleHealth = await readFile(path.join(dir, 'zj-loop', 'gitlab-ci', 'zj-loop-schedule-health-check.yml'), 'utf8');
     assert.match(scheduleHealth, /zj_loop_schedule_health_check:/);
     assert.match(scheduleHealth, /CI_PIPELINE_SOURCE == "web"/);
+    assert.match(scheduleHealth, /ZJ_LOOP_SCHEDULE_HEALTH_CONFIG_JSON: ""/);
+    assert.match(scheduleHealth, /schedule-health-config\.env/);
     assert.match(scheduleHealth, /zj-loop-doctor --root \./);
     assert.match(scheduleHealth, /--schedule-health/);
     assert.match(scheduleHealth, /needs: \[\]/);
