@@ -206,11 +206,11 @@ test('owned GitLab schedule probe runs start through scheduled evidence and guar
       nowFn: () => new Date('2026-07-15T07:12:00Z'),
       fetchImpl: async (url, init = {}) => {
         const text = String(url);
-        if (text.includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
         if (init.method === 'DELETE') return { ok: true, async json() { return {}; } };
         if (text.includes('/pipelines/2/jobs?')) return { ok: true, async json() { return [{ id: 3, name: 'zj_loop_schedule_probe_receipt', status: 'success' }]; } };
         if (text.includes('/jobs/3/artifacts/')) return { ok: true, async text() { return JSON.stringify({ schema: 'zj-loop.gitlab_schedule_probe_receipt.v1', probe_id: 'probe-20260715T071100000Z', pipeline_id: '2', project: 'group/project', ref: 'main', source: 'schedule' }); } };
+        if (text.includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (text.endsWith('/pipelines/2')) return { ok: true, async json() { pipelineQueries += 1; return { id: 2, source: 'schedule', ref: 'main', created_at: '2026-07-15T07:14:00Z' }; } };
         return { ok: true, async json() { return { id: 99, description: `zj-loop.schedule_probe.v1:probe-20260715T071100000Z`, ref: 'main', cron: '14 15 * * *', cron_timezone: 'Asia/Shanghai', variables: [{ key: 'ZJ_LOOP_SCHEDULE_PROBE_ID', value: 'probe-20260715T071100000Z', variable_type: 'env_var' }], last_pipeline: { id: 2 } }; } };
       },
@@ -233,11 +233,11 @@ test('owned GitLab schedule probe exposes persisted arm state for signal-safe cl
       token: 'token', apiUrl: 'https://gitlab.example/api/v4', now: '2026-07-15T07:11:00Z', nowFn: () => new Date('2026-07-15T07:12:00Z'),
       onArmed: (state) => { armedState = state; },
       fetchImpl: async (url, init = {}) => {
-        if (String(url).includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
         if (init.method === 'DELETE') return { ok: true, async json() { return {}; } };
         if (String(url).includes('/pipelines/2/jobs?')) return { ok: true, async json() { return [{ id: 3, name: 'zj_loop_schedule_probe_receipt', status: 'success' }]; } };
         if (String(url).includes('/jobs/3/artifacts/')) return { ok: true, async text() { return JSON.stringify({ schema: 'zj-loop.gitlab_schedule_probe_receipt.v1', probe_id: 'probe-20260715T071100000Z', pipeline_id: '2', project: 'group/project', ref: 'main', source: 'schedule' }); } };
+        if (String(url).includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (String(url).endsWith('/pipelines/2')) return { ok: true, async json() { return { id: 2, source: 'schedule', ref: 'main', created_at: '2026-07-15T07:14:00Z' }; } };
         return { ok: true, async json() { return { id: 99, description: 'zj-loop.schedule_probe.v1:probe-20260715T071100000Z', ref: 'main', cron: '14 07 * * *', cron_timezone: 'UTC', variables: [{ key: 'ZJ_LOOP_SCHEDULE_PROBE_ID', value: 'probe-20260715T071100000Z', variable_type: 'env_var' }], last_pipeline: { id: 2 } }; } };
       },
@@ -258,8 +258,8 @@ test('owned GitLab schedule probe stops polling on cancellation without competin
       onArmed: () => controller.abort(),
       fetchImpl: async (url, init = {}) => {
         calls.push({ url: String(url), init });
-        if (String(url).includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         if (init.method === 'POST') return { ok: true, async json() { return { id: 99 }; } };
+        if (String(url).includes('?per_page=100')) return { ok: true, async json() { return [{ id: 97 }]; } };
         return { ok: true, async json() { return { id: 99, description: 'zj-loop.schedule_probe.v1:probe-20260715T071100000Z', ref: 'main', cron: '14 07 * * *', cron_timezone: 'UTC', variables: [{ key: 'ZJ_LOOP_SCHEDULE_PROBE_ID', value: 'probe-20260715T071100000Z', variable_type: 'env_var' }] }; } };
       },
     });
