@@ -91,8 +91,9 @@ const GITLAB_CI_TEMPLATE_FILES = [
 ] as const;
 const DEFAULT_GITLAB_STAGE = 'zj-loop';
 const DEFAULT_GITLAB_IMAGE = 'node:22';
-const DEFAULT_GITLAB_CORE_PACKAGE = '@jununfly/zj-loop-core@0.1.9';
-const GITLAB_VENDOR_TARBALL_PROBE = 'zj-loop/vendor/jununfly-zj-loop-core-0.1.7.tgz';
+const DEFAULT_GITLAB_CORE_PACKAGE = '@jununfly/zj-loop-core@0.1.10';
+const GITLAB_VENDOR_TARBALL_PROBE = 'zj-loop/vendor/jununfly-zj-loop-core-0.1.10.tgz';
+const VERSION_LOCK_PATH = 'zj-loop/version-lock.json';
 
 async function loadRegistry() {
   return loadPatternRegistry({
@@ -316,6 +317,7 @@ async function handleAddArtifacts(
         await scaffoldRouteTable(defaultPattern, targetDir, templatesRoot, dryRun, io);
       }
       await copyGitHubActionsBundle(targetDir, templatesRoot, dryRun, force, io);
+      await writeVersionLock(targetDir, gitlabCorePackageForLock(DEFAULT_GITLAB_CORE_PACKAGE), dryRun, io);
     }
 
     if (artifact === 'gitlab-ci') {
@@ -329,8 +331,8 @@ async function handleAddArtifacts(
   }
 
   io.stdout(`\n=== Next steps ===
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${targetDir}
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${targetDir} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
   Review any created or overwritten policy/catalog files before committing.
 `);
@@ -386,6 +388,55 @@ async function hasGlabMention(targetDir: string): Promise<boolean> {
   return false;
 }
 
+function gitlabCorePackageForLock(source: string): string {
+  return source.trim();
+}
+
+function coreVersionFromSource(source: string): string {
+  const match = source.match(/@(?<version>\d+\.\d+\.\d+)(?:$|["'])/) ?? source.match(/-core-(?<version>\d+\.\d+\.\d+)\.tgz$/);
+  if (!match?.groups?.version) throw new Error(`Cannot derive core version from package source: ${source}`);
+  return match.groups.version;
+}
+
+async function writeVersionLock(targetDir: string, coreSource: string, dryRun: boolean, io: CliIo) {
+  const generatedFiles: Record<string, { path: string; sha256: string; template_hash?: string }> = {};
+  const candidates = [
+    ...GITHUB_ACTIONS_WORKFLOW_TEMPLATES.map((file) => path.join('.github', 'workflows', file)),
+    ...GITLAB_CI_TEMPLATE_FILES.map((file) => path.join('zj-loop', 'gitlab-ci', file)),
+    '.gitlab-ci.yml',
+  ];
+  for (const relativePath of candidates) {
+    const absolutePath = path.join(targetDir, relativePath);
+    if (!(await exists(absolutePath))) continue;
+    const content = await readFile(absolutePath, 'utf8');
+    generatedFiles[relativePath] = {
+      path: relativePath,
+      sha256: createHash('sha256').update(content).digest('hex'),
+      ...(extractWorkflowTemplateHash(content) ? { template_hash: extractWorkflowTemplateHash(content)! } : {}),
+    };
+  }
+  const normalizedSource = coreSource.startsWith('./') ? coreSource.slice(2) : coreSource;
+  const lock: Record<string, unknown> = {
+    schema: 'zj-loop.version-lock.v1',
+    core: { package: '@jununfly/zj-loop-core', version: coreVersionFromSource(coreSource), source: normalizedSource },
+    generated_files: generatedFiles,
+  };
+  if (coreSource.startsWith('./')) {
+    const vendorAbsolute = path.join(targetDir, normalizedSource);
+    if (await exists(vendorAbsolute)) {
+      lock.vendor = { path: normalizedSource, sha256: createHash('sha256').update(await readFile(vendorAbsolute)).digest('hex') };
+    }
+  }
+  const destination = path.join(targetDir, VERSION_LOCK_PATH);
+  if (dryRun) {
+    io.stdout(`  would write: ${VERSION_LOCK_PATH}`);
+    return;
+  }
+  await mkdir(path.dirname(destination), { recursive: true });
+  await writeFile(destination, `${JSON.stringify(lock, null, 2)}\n`);
+  io.stdout(`  wrote: ${VERSION_LOCK_PATH}`);
+}
+
 async function copyGitHubActionsBundle(
   targetDir: string,
   templatesRoot: string,
@@ -407,6 +458,7 @@ async function copyGitHubActionsBundle(
       force,
       io,
       `review .github/workflows/${file} or rerun with --force to overwrite intentionally`,
+      { provider: 'github' },
     );
   }
 }
@@ -540,7 +592,7 @@ async function upgradeGitHubActionsBundle(
       io.stderr(`  missing template: ${src}`);
       continue;
     }
-    const nextBody = renderWorkflowTemplate(await readFile(src, 'utf8'));
+    const nextBody = renderWorkflowTemplate(await readFile(src, 'utf8'), { provider: 'github' });
     const nextHash = extractWorkflowTemplateHash(nextBody);
     if (!(await exists(dest))) {
       if (dryRun) {
@@ -576,11 +628,13 @@ async function upgradeGitHubActionsBundle(
     }
   }
 
+  await writeVersionLock(targetDir, DEFAULT_GITLAB_CORE_PACKAGE, dryRun, io);
+
   io.stdout(`\n=== Next steps ===
   Review .github/workflows/*.bak files if any were created.
   Route Table enablement is preserved; rerun first-run planning to review current automation intent.
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${targetDir}
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${targetDir} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
   `);
   return 0;
@@ -649,10 +703,11 @@ async function upgradeGitLabCiBundle(
 === Next steps ===
   Review zj-loop/gitlab-ci/*.bak files if any were created.
   Route Table enablement is preserved; rerun first-run planning to review current automation intent.
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${targetDir}
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${targetDir} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${targetDir}
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${targetDir} --json
   npx @jununfly/zj-loop-audit ${targetDir} --suggest
 `);
+  await writeVersionLock(targetDir, gitlabCorePackage, dryRun, io);
   return 0;
 }
 
@@ -840,15 +895,15 @@ function recommendedRouteCommands(): Array<{ label: string; command: string }> {
   return [
     {
       label: 'Inspect route status before enabling side effects',
-      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-route status',
+      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-route status',
     },
     {
       label: 'Enable roadmap activation only when appropriate',
-      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"',
+      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-route enable roadmap-sliced-development --confirm "enable roadmap-sliced-development side effects"',
     },
     {
       label: 'Disable a route without a confirmation phrase',
-      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-route disable roadmap-sliced-development',
+      command: 'npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-route disable roadmap-sliced-development',
     },
   ];
 }
@@ -905,6 +960,7 @@ async function upgradeRenderedTemplateFile(
 }
 
 type WorkflowRenderOptions = {
+  provider?: 'github' | 'gitlab';
   gitlabStage?: string;
   gitlabRunnerTags?: string[];
   gitlabImage?: string;
@@ -912,12 +968,25 @@ type WorkflowRenderOptions = {
 };
 
 function renderWorkflowTemplate(template: string, options: WorkflowRenderOptions = {}): string {
-  const rendered = template
+  let rendered = template
     .replace(/__ZJ_LOOP_GITLAB_STAGE__/g, yamlString(options.gitlabStage ?? DEFAULT_GITLAB_STAGE))
     .replace(/__ZJ_LOOP_GITLAB_RECOVERY_STAGE__/g, yamlString(`${options.gitlabStage ?? DEFAULT_GITLAB_STAGE}-recovery`))
     .replace(/__ZJ_LOOP_GITLAB_IMAGE__/g, yamlString(options.gitlabImage ?? DEFAULT_GITLAB_IMAGE))
     .replace(/__ZJ_LOOP_CORE_PACKAGE__/g, options.gitlabCorePackage ?? DEFAULT_GITLAB_CORE_PACKAGE)
     .replace(/__ZJ_LOOP_GITLAB_TAGS__\n?/g, renderGitLabRunnerTags(options.gitlabRunnerTags ?? []));
+  if (options.provider === 'github') {
+    rendered = rendered.replace(
+      /(^\s*- uses: actions\/checkout@[^\n]+$)/gm,
+      '$1\n\n      - name: Verify ZJ Loop version consistency\n        run: |\n          if npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then\n            exit 0\n          fi\n          test -f tools/zj-loop-core/dist/version-consistency-cli.js\n          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json\n\n      - name: Upload ZJ Loop version consistency evidence\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: zj-loop-version-consistency\n          path: version-consistency-result.json',
+    );
+  }
+  if (options.provider === 'gitlab') {
+    rendered = rendered.replace(
+      /^  script:\n/gm,
+      `  before_script:\n    - >-\n      if npx --yes --package ${options.gitlabCorePackage ?? DEFAULT_GITLAB_CORE_PACKAGE} zj-loop-version-consistency --root . --provider gitlab --out version-consistency-result.json --json; then exit 0; fi; test -f tools/zj-loop-core/dist/version-consistency-cli.js; node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider gitlab --out version-consistency-result.json --json\n  script:\n`,
+    );
+    rendered = rendered.replace(/^    paths:\n/gm, '    paths:\n      - version-consistency-result.json\n');
+  }
   const hash = workflowTemplateHash(rendered);
   return rendered.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${hash}`);
 }
@@ -1470,8 +1539,8 @@ npm run lint
   }
 
   commandIo.stdout(`\n=== Next steps ===
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${target === '.' ? '.' : target}
-  npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-first-run plan --root ${target === '.' ? '.' : target} --json
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${target === '.' ? '.' : target}
+  npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-first-run plan --root ${target === '.' ? '.' : target} --json
   npx @jununfly/zj-loop-audit ${target === '.' ? '.' : target} --suggest
   npx @jununfly/zj-loop-cost --pattern ${pattern}
   First loop command (${tool}):
@@ -1512,7 +1581,7 @@ Options:
                   Comma-separated runner tags rendered into generated GitLab CI jobs
   --gitlab-image  Image rendered into generated GitLab CI jobs (default: node:22)
   --gitlab-core-package
-                  Package source rendered into generated GitLab npx --package calls (default: @jununfly/zj-loop-core@0.1.9)
+                  Package source rendered into generated GitLab npx --package calls (default: @jununfly/zj-loop-core@0.1.10)
   --json          Print deterministic install_summary JSON instead of human text
   --dry-run       Print actions without copying
   -h, --help      This help

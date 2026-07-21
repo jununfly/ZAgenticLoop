@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-ci-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 9b764c8685b1b4ab
+# zj-loop-template-hash: 4218f91826ed2b5a
 
 name: ZJ Loop CI Sweeper
 
@@ -25,6 +25,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify ZJ Loop version consistency
+        run: |
+          if npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+            exit 0
+          fi
+          test -f tools/zj-loop-core/dist/version-consistency-cli.js
+          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json
+
+      - name: Upload ZJ Loop version consistency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zj-loop-version-consistency
+          path: version-consistency-result.json
+
       - name: CI sweeper route evidence
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -34,12 +49,12 @@ jobs:
         run: |
           printf '## ZJ Loop CI Sweeper\n\n' >> "$GITHUB_STEP_SUMMARY"
           printf 'Signal: workflow failure or manual smoke for `ci-sweeper`.\n\n' >> "$GITHUB_STEP_SUMMARY"
-          npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-route dispatch ci-sweeper --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-ci-sweeper plan --json > consumer-plan.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-ci-sweeper repair-plan --json > repair-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-route dispatch ci-sweeper --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-ci-sweeper plan --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-ci-sweeper repair-plan --json > repair-plan.json || true
           ROUTE_ALLOWED="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('route-decision.json','utf8')); process.stdout.write(String(p.allowed === true))")"
           if [ "$ROUTE_ALLOWED" = "true" ]; then
-            npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-ci-sweeper request-body \
+            npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-ci-sweeper request-body \
               --route-decision route-decision.json \
               --repo "${{ github.repository }}" \
               --workflow "$WORKFLOW_NAME" \

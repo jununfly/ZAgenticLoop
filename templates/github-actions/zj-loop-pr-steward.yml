@@ -33,7 +33,7 @@ on:
       core_package:
         description: 'Core package spec; use ./tools/zj-loop-core for unreleased repo dogfood'
         required: false
-        default: '@jununfly/zj-loop-core@0.1.9'
+        default: '@jununfly/zj-loop-core@0.1.10'
 
 permissions:
   contents: write
@@ -57,7 +57,7 @@ jobs:
           REPAIR_COMMAND: ${{ inputs.repair_command }}
           REPAIR_FILES: ${{ inputs.repair_files }}
           CONFIRM_LIVE_REPAIR: ${{ inputs.confirm_live_repair }}
-          ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.9' }}
+          ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.10' }}
         run: |
           npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-route dispatch pr-steward-report --json > route-decision.json || true
           npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-consumer plan pr-steward-report --json > consumer-plan.json || true

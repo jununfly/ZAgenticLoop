@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-changelog-drafter
 # zj-loop-template-version: 1
-# zj-loop-template-hash: e5fcfbbb7645ade7
+# zj-loop-template-hash: a81bc6ed669db111
 
 name: ZJ Loop Changelog Drafter
 
@@ -23,7 +23,7 @@ on:
       core_package:
         description: 'Core package spec; use ./tools/zj-loop-core for unreleased repo dogfood'
         required: false
-        default: '@jununfly/zj-loop-core@0.1.9'
+        default: '@jununfly/zj-loop-core@0.1.10'
   push:
     tags: ['v*']
 
@@ -37,6 +37,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Verify ZJ Loop version consistency
+        run: |
+          if npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+            exit 0
+          fi
+          test -f tools/zj-loop-core/dist/version-consistency-cli.js
+          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json
+
+      - name: Upload ZJ Loop version consistency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zj-loop-version-consistency
+          path: version-consistency-result.json
         with:
           fetch-depth: 0
 
@@ -49,7 +64,7 @@ jobs:
           CHANGELOG_DRAFT_REQUEST_JSON: ${{ inputs.changelog_draft_request_json }}
           DRAFT_MODE: ${{ inputs.draft_mode }}
           CONFIRM_LIVE_DRAFT: ${{ inputs.confirm_live_draft }}
-          ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.9' }}
+          ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.10' }}
         run: |
           npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-route dispatch changelog-drafter-report --json > route-decision.json || true
           npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-consumer plan changelog-drafter-report --json > consumer-plan.json || true

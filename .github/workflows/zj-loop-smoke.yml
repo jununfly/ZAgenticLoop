@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-smoke
 # zj-loop-template-version: 1
-# zj-loop-template-hash: f7084cd40aacdb27
+# zj-loop-template-hash: fb3e41ea095e8dcf
 
 name: ZJ Loop Smoke
 
@@ -17,14 +17,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify ZJ Loop version consistency
+        run: |
+          if npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+            exit 0
+          fi
+          test -f tools/zj-loop-core/dist/version-consistency-cli.js
+          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json
+
+      - name: Upload ZJ Loop version consistency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zj-loop-version-consistency
+          path: version-consistency-result.json
+
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
 
       - name: Smoke route decision
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
-          npx --yes --package @jununfly/zj-loop-core@0.1.9 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
 
