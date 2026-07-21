@@ -2,6 +2,9 @@
 # zj-loop-template-id: gitlab-ci/zj-loop-schedule-health-check
 # zj-loop-template-version: 1
 # zj-loop-template-hash: generated-by-zj-loop-init
+# zj-loop-gitlab-infra-contract: zj-loop.gitlab-infra.v1
+# zj-loop-gitlab-infra-package: @jununfly/zj-loop-gitlab-infra
+# zj-loop-gitlab-infra-version: 0.1.0
 
 zj_loop_schedule_health_check:
   stage: __ZJ_LOOP_GITLAB_STAGE__

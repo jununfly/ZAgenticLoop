@@ -3531,6 +3531,56 @@
           "q": "Schedule Health facade 是否已接入 GitLab infra？",
           "answer": "已完成第一条 RED-GREEN：inspectGitLabScheduleHealth 通过 @jununfly/zj-loop-gitlab-infra 的 GitLabReadClient 读取 version、schedule、scheduled pipelines、jobs 和 artifacts；保留现有 CLI、变量、artifact schema 与健康状态语义，并在 audit.infra_provenance 记录 contract/version/GitLab version/project/capabilities。",
           "note": "提交 c19ab0e；infra contract tests 3/3、Schedule Health tests 25/25、zj-loop-core 全量测试通过。真实 GitLab dogfood、fake HTTP server 与 template provenance/drift 仍是后续门禁。"
+        },
+        {
+          "q": "下一步如何验证 GitLab infra 的真实 HTTP 边界？",
+          "answer": "采用 A：先用本地 fake GitLab HTTP server 验证四项只读能力；测试真实 URL/path encoding、认证 header、version/schedule/pipeline/job/artifact 响应、HTTP status 错误分类和 normalized/provenance 输出，再进入 template provenance/drift 与真实 GitLab dogfood。",
+          "note": "fetch 注入测试保留为快速 unit contract；HTTP server test 负责 provider boundary。"
+        },
+        {
+          "q": "fake GitLab HTTP server contract tests 当前结果是什么？",
+          "answer": "代码已补齐，但本地沙箱未执行通过；需在允许监听本地端口的本机或 GitLab CI runner 中验证",
+          "note": "新增 node:http server 覆盖 URL 编码、PRIVATE-TOKEN、version/schedule/pipeline/job/artifact、429/403；当前环境 listen EPERM，不能把它记为通过。"
+        },
+        {
+          "q": "GitLab template provenance 与 drift gate 当前状态是什么？",
+          "answer": "已完成：Schedule Health 模板记录 infra contract、package、version，并沿用 template hash drift gate",
+          "note": "templates/gitlab-ci/zj-loop-schedule-health-check.yml 已新增三项 provenance；zj-loop-init 32/32、generated bundle release gate、init sync 均通过。"
+        },
+        {
+          "q": "fake GitLab HTTP contract tests 在哪里执行？",
+          "answer": "A：本机执行",
+          "note": "本机允许临时监听 127.0.0.1；当前 Codex 沙箱不具备该权限，因此由 Human 在本机运行完整测试。"
+        },
+        {
+          "q": "真实 GitLab dogfood 绑定哪个目标？",
+          "answer": "A：git.bilibili.co 上的 mlive-dev/ai-studio，Schedule 961",
+          "note": "复用既有项目、Runner、Schedule Health 和 GitLab 访问环境；只读 adapter 仍需独立记录 infra provenance。"
+        },
+        {
+          "q": "真实 dogfood 使用什么执行入口？",
+          "answer": "A：复用现有 zj_loop_schedule_health_check job",
+          "note": "不新增 CI job；通过现有 schedule-health 入口验证 infra adapter，同时保持 CLI、变量、job 名和 artifact schema 兼容。"
+        },
+        {
+          "q": "真实 dogfood 的通过标准是什么？",
+          "answer": "A：完整只读链路通过",
+          "note": "Schedule 961、scheduled pipeline、job、artifact 均读取成功；结果含 audit.infra_provenance；确认无 GitLab 写操作；保留 pipeline/job/artifact 证据。"
+        },
+        {
+          "q": "真实 dogfood 应基于哪个代码版本？",
+          "answer": "A：合并到 master 后的交付提交",
+          "note": "先完成本机 fake HTTP contract tests，再提交并由 Human 合并；合并后的 master commit 才作为 Schedule 961 dogfood 输入。"
+        },
+        {
+          "q": "提交 MR 前如何处理 fake HTTP contract tests？",
+          "answer": "A：Human 先在本机运行并确认通过",
+          "note": "HTTP server tests 通过后再提交和推送；当前 Codex 沙箱无法监听本地端口，不能代替本机验证。"
+        },
+        {
+          "q": "fake GitLab HTTP contract tests 最终结果是什么？",
+          "answer": "已通过：5/5",
+          "note": "Human 在本机执行 node --test test/gitlab-read-client.test.mjs；version/schedule/pipeline/job/artifact、URL 编码、认证 header、429/403 分类和归一化 provenance 均通过。"
         }
       ],
       "notes": ""
@@ -3538,7 +3588,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-21 14:14:32",
+    "updated": "2026-07-21 15:17:02",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
