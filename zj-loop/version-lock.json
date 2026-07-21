@@ -1,0 +1,55 @@
+{
+  "schema": "zj-loop.version-lock.v1",
+  "core": {
+    "package": "@jununfly/zj-loop-core",
+    "version": "0.1.10",
+    "source": "@jununfly/zj-loop-core@0.1.10"
+  },
+  "generated_files": {
+    ".github/workflows/zj-loop-smoke.yml": {
+      "path": ".github/workflows/zj-loop-smoke.yml",
+      "sha256": "0e86bf2563fd1de8d9bc98ee86f15d53d87cf8ddfb17d4e5b5b215a26f787cfa",
+      "template_hash": "40977ee011818f87"
+    },
+    ".github/workflows/zj-loop-daily-triage.yml": {
+      "path": ".github/workflows/zj-loop-daily-triage.yml",
+      "sha256": "b9e8a974369404614f53a8dba4fe85ec22173185b021f0f351c7febf2c649406",
+      "template_hash": "510f95ca37db3674"
+    },
+    ".github/workflows/zj-loop-ci-sweeper.yml": {
+      "path": ".github/workflows/zj-loop-ci-sweeper.yml",
+      "sha256": "c3efb9595813b75fb94061ad6d556dbe11b49e89d588a4459266c4b9ed64273e",
+      "template_hash": "671a15fb8a2623fe"
+    },
+    ".github/workflows/zj-loop-pr-steward.yml": {
+      "path": ".github/workflows/zj-loop-pr-steward.yml",
+      "sha256": "2f3b61a005038ccd0769df13626d1730b8eac740489234d5fbd95eb7addafb02",
+      "template_hash": "c95fd5f4f0a89081"
+    },
+    ".github/workflows/zj-loop-issue-triage.yml": {
+      "path": ".github/workflows/zj-loop-issue-triage.yml",
+      "sha256": "7486a2d968490dafbd1d2e6ac6f700986e0b9d664ccce466fdb70b279e4f4b32",
+      "template_hash": "48ea4d1336c08070"
+    },
+    ".github/workflows/zj-loop-dependency-sweeper.yml": {
+      "path": ".github/workflows/zj-loop-dependency-sweeper.yml",
+      "sha256": "8937e8efc78c687bb8c702bbbfdfc72723f9ebf28af78eeccca8dba4bc66cfcf",
+      "template_hash": "379f0eff3e166f04"
+    },
+    ".github/workflows/zj-loop-changelog-drafter.yml": {
+      "path": ".github/workflows/zj-loop-changelog-drafter.yml",
+      "sha256": "c39cc6cde2d23e2ac498ac12fc63aa6dd2c24111e8de093e3bf59b1a6206beb5",
+      "template_hash": "948af6755f4dfdf9"
+    },
+    ".github/workflows/zj-loop-roadmap-activation.yml": {
+      "path": ".github/workflows/zj-loop-roadmap-activation.yml",
+      "sha256": "e004411f8d5a7b8372a8372f69635263c2f1016ac9005961429185436d75f35d",
+      "template_hash": "066617933ec9e761"
+    },
+    ".github/workflows/zj-loop-post-merge-cleanup.yml": {
+      "path": ".github/workflows/zj-loop-post-merge-cleanup.yml",
+      "sha256": "90436f77bd1d86136e0770f20faab27c35e6fa4a1f71eaec1723e10dd94269ab",
+      "template_hash": "71dcad6ecb9edf26"
+    }
+  }
+}

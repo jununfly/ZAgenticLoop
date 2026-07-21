@@ -150,11 +150,11 @@ registry-resolvable on the official npm registry:
 The GitLab infra tracer release is a separate ordered migration:
 
 1. merge the PR containing `@jununfly/zj-loop-gitlab-infra@0.1.0` and
-   `@jununfly/zj-loop-core@0.1.9`
+   `@jununfly/zj-loop-core@0.1.10`
 2. publish `zj-loop-gitlab-infra-v0.1.0`
 3. verify `npm view @jununfly/zj-loop-gitlab-infra@0.1.0 version --registry https://registry.npmjs.org`
-4. publish `zj-loop-core-v0.1.9`
-5. update the target GitLab project to use `@jununfly/zj-loop-core@0.1.9`
+4. publish `zj-loop-core-v0.1.10`
+5. update the target GitLab project to use `@jununfly/zj-loop-core@0.1.10`
    and run the read-only Schedule Health dogfood
 
 Smoke tests used `--registry https://registry.npmjs.org` because npm mirrors
