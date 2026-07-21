@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 00:58:35
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 02:01:16
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,19 +40,18 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-5-6-5. generated CI、vendor 包与目标项目版本一致性门禁
-
-已完成实现首个 vertical slice：core 新增 zj-loop-version-consistency CLI 与 version-consistency-result.v1，校验 version-lock、core 版本、生成文件 hash、模板 hash、实际引用和 vendor SHA256；init 在 GitHub/GitLab bundle 安装/升级时生成 zj-loop/version-lock.json，并在生成 job 前置执行 gate、上传 evidence。core 0.1.10/npm tests 340 passing；init tests 32 passing；generated bundle gate、provider parity gate、真实本地 GitHub version check healthy。剩余：发布 core 0.1.10，目标 ai-studio 通过 MR 更新并完成正常/漂移负向 dogfood。
+### 当前施工：1-5-5-6. GitLab 自动化副作用安全回归与事故防护
 
 **决策：**
-- Q: 版本一致性门禁要求绑定哪些证据？ → A：绑定 checkout commit、vendor tarball SHA256、generated CI template hash 与目标项目实际引用路径 (任一版本或引用路径不一致都 fail-closed，禁止进入 GitLab 副作用路线。)
-- Q: 生成 CI、vendor 包与目标项目版本的唯一真相源是什么？ → 采用 A：由仓库中的单一版本清单统一生成；记录 core 版本、vendor tarball 路径、SHA256 与生成模板 hash，初始化器、模板和审计器统一读取，不一致时 fail-closed。 (避免 0.1.7、0.1.8、0.1.9 等版本在生成器、模板、vendor 和目标项目中漂移。)
-- Q: 目标项目如何证明实际运行版本与版本清单一致？ → 采用 A：目标项目提交 zj-loop/version-lock.json，记录 core 包版本、vendor tarball 相对路径、SHA256、生成模板 hash 和期望 CI 引用；CI 启动阶段校验 checkout、vendor、模板和实际命令参数，不一致时 fail-closed。 (防止目标项目手动修改 YAML、替换 vendor 包或切换旧分支后仍进入副作用流水线。)
-- Q: 版本锁定校验失败时阻断哪些 job？ → 采用 A：所有 ZJ Loop job 在最前置阶段统一失败，包括 report-only、health、carrier、claim、repair、closeout；先输出结构化 version-drift evidence，再阻止后续 route 执行。 (避免旧版本产出的 report 或 health 被误认为当前版本正向证据，也避免任何副作用路径绕过版本门禁。)
-- Q: 版本升级流程如何授权？ → 采用 A：单个 PR/MR 原子更新版本清单、vendor tarball、SHA256、生成模板、初始化器默认值和测试；本仓库门禁通过后，目标项目通过独立 MR 更新 version-lock.json，人工合并后才允许新版本进入目标项目。 (禁止只改版本号或只替换 vendor，确保 core、生成 CI、初始化器和目标项目的升级边界一致且可审计。)
-- Q: 版本一致性门禁的完成验证范围是什么？ → 采用 A：全量生成器回归、版本漂移负向测试和一个真实目标项目验证；覆盖所有生成模板的版本引用、vendor SHA256、version-lock 校验，并验证旧版本、错误 hash、错误路径、模板漂移均 fail-closed；最后在 mlive-dev/ai-studio 验证正常配置与人为漂移配置。 (既证明本仓库生成逻辑，也证明真实 GitLab 目标项目不会带着漂移版本进入 route。)
-- Q: 版本一致性校验应输出什么 evidence？ → 采用 A：新增统一 version-consistency-result.json；包含 schema、status、checkout SHA、core package/version、vendor path/SHA256、template hash、version-lock hash、expected/observed 对比、failure reason、pipeline/job provenance 和 side_effects_executed=false；每个 ZJ job 上传，失败状态为 blocked。 (让 health verifier、审计器和 replay 能稳定消费版本门禁结果，避免把版本可信度混入 route-decision 语义或依赖日志解析。)
-- Q: 版本一致性门禁的 provider 覆盖范围是什么？ → 采用 A：GitHub 与 GitLab 的全部生成 CI 一次覆盖；共享 version-lock.json、version-consistency-result.json 和校验逻辑，避免只修复 GitLab 后 GitHub 保留同类版本漂移。 (生成器、目标项目和审计器保持跨 provider 一致的 fail-closed 版本边界。)
-- Q: core 0.1.10 的发布顺序如何执行？ → 采用 A：先创建 PR，由 Human 合并；合并后发布 core 0.1.10，再更新 ai-studio。 (符合原子升级和人工授权边界，目标项目只引用已合并且已发布的版本。)
-- Q: core 0.1.10 合并后的发布入口是什么？ → 采用 A：合并到默认分支后创建 zj-loop-core-v0.1.10 tag，由 tag 自动触发 release workflow；workflow checkout 精确 tag 后执行 npm ci、build、全量测试和 npm provenance publish。 (发布包严格绑定已审查且已合并的提交，避免从浮动默认分支发布或误选旧 tag。)
+- Q: 事故防护 TODO 的完成门禁是否要求全部通过？ → A：6 项全部完成后，才允许 GitLab 任一副作用路线重新进入 execution-ready (保持既定 completion gate；端到端门禁、熔断、去重/no-op、速率限制、版本一致性与 replay 缺一不可。)
+- Q: 事故防护 TODO 的实施顺序是什么？ → A：安全止血优先：1-5-5-6-2 → 1-5-5-6-4 → 1-5-5-6-5 → 1-5-5-6-1 → 1-5-5-6-3 → 1-5-5-6-6 (先关闭入口、限制洪泛并锁定版本，再做端到端协议与 no-op/去重，最后进行 replay 和零残留验收。)
+
+**当前子树：**
+├── [ ][X+] 1-5-5-6-1. 跨 producer、carrier、consumer 的端到端副作用完成门禁
+├── [x][Y+] 1-5-5-6-2. GitLab 自动 carrier 创建的显式开关与紧急熔断
+│   ... 3 more child nodes; run tree 1-5-5-6-2 --depth 2 for full view
+├── [ ][X+] 1-5-5-6-3. repair MR 有效 diff、跨 request 去重与空变更拒绝
+├── [x][X+] 1-5-5-6-4. Issue、MR 与 carrier 副作用速率限制和上限保护
+├── [x][X+] 1-5-5-6-5. generated CI、vendor 包与目标项目版本一致性门禁
+└── [ ][X+] 1-5-5-6-6. GitLab 事故 replay、清理与零残留验收证据
 <!-- ROADMAP_SECTION_END -->

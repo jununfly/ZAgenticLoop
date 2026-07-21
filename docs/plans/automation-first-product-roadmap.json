@@ -3464,7 +3464,7 @@
     "1-5-5-6-5": {
       "id": "1-5-5-6-5",
       "label": "generated CI、vendor 包与目标项目版本一致性门禁",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5-6",
       "children": [],
@@ -3520,7 +3520,7 @@
           "note": "发布包严格绑定已审查且已合并的提交，避免从浮动默认分支发布或误选旧 tag。"
         }
       ],
-      "notes": "已完成实现首个 vertical slice：core 新增 zj-loop-version-consistency CLI 与 version-consistency-result.v1，校验 version-lock、core 版本、生成文件 hash、模板 hash、实际引用和 vendor SHA256；init 在 GitHub/GitLab bundle 安装/升级时生成 zj-loop/version-lock.json，并在生成 job 前置执行 gate、上传 evidence。core 0.1.10/npm tests 340 passing；init tests 32 passing；generated bundle gate、provider parity gate、真实本地 GitHub version check healthy。剩余：发布 core 0.1.10，目标 ai-studio 通过 MR 更新并完成正常/漂移负向 dogfood。"
+      "notes": "已完成 core 0.1.10 发布、GitLab ai-studio MR !565 合并、Schedule 961 正常 healthy 验证与 version-lock 人为漂移负向验证：原始配置 healthy；将 core version-lock 临时改为 0.1.9 后返回 blocked/version-drift，退出码 2，side_effects_executed=false。"
     },
     "1-5-5-6-6": {
       "id": "1-5-5-6-6",
@@ -3693,7 +3693,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 00:58:35",
+    "updated": "2026-07-22 02:01:16",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
