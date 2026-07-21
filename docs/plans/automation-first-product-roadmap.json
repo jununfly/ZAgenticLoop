@@ -2943,7 +2943,7 @@
     "1-5-5-4-1": {
       "id": "1-5-5-4-1",
       "label": "GitLab scheduled Issue Backlog report evidence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
@@ -3037,29 +3037,146 @@
           "q": "当前 1-5-5-4-1 设计是否收敛，可以进入 verifier 实现和真实 schedule 验证？",
           "answer": "是：按完整 scheduled evidence gate 实现/验证，不降低 report-only 和零 provider write 约束。",
           "note": "采用 A，进入 verifier 实现阶段。"
+        },
+        {
+          "q": "schedule 更新后首次真实 source=schedule pipeline 如何计算首个有效窗口？",
+          "answer": "采用 B：若 scheduled pipeline 的 created_at 晚于 schedule.updated_at，则以该 pipeline.created_at 作为首次证据窗口起点；仍要求固定 10 分钟 grace、source=schedule、master ref、目标 job/artifact/schema、完整 report-only binding 和 side_effects 全为 false。",
+          "note": "修正 GitLab schedule API 缺少 cron 时把 next_run_at 误作首次窗口、导致首次真实自动运行被判 not_due 的问题；不接受 schedule 更新前的旧 pipeline。"
         }
       ],
-      "notes": ""
+      "notes": "完成 scheduled Issue Backlog evidence gate。schedule 961 active；health result status=healthy；schedule.updated_at=2026-07-20T17:03:01.600+08:00；scheduled pipeline created_at=2026-07-20T17:03:04.326+08:00，source=schedule；route=issue-backlog-triage；job=zj_loop_issue_triage；artifact=issue-recommendations.json；schema=zj-loop.issue_recommendations.v1；report-only side_effects 全为 false。health artifact checked_at=2026-07-20T09:24:01.688Z。"
     },
     "1-5-5-4-2": {
       "id": "1-5-5-4-2",
       "label": "GitLab scheduled Daily Triage report evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Daily Triage scheduled evidence 使用哪一个 GitLab schedule？",
+          "answer": "采用 A：为 daily-triage-report 创建独立 schedule，专属验证 zj_loop_daily_triage 的 scheduled route evidence；不复用 Issue Backlog 的 schedule 961。",
+          "note": "保持每个 scheduled required route 的独立调度生命周期；目标仍是 master、report-only、零 provider write。"
+        },
+        {
+          "q": "Daily Triage 独立 schedule 的运行窗口是什么？",
+          "answer": "采用 A：每天运行，Asia/Shanghai 17:13，cron=13 17 * * *，target branch=master。",
+          "note": "与 Issue Backlog schedule 961 的 17:03 窗口错开，保留可区分的 pipeline、job 和 artifact 证据。"
+        },
+        {
+          "q": "Daily Triage scheduled evidence 应绑定哪些 artifact？",
+          "answer": "采用 C：同时绑定 route-decision.json 与 consumer-plan.json；分别校验 zj-loop.route_decision.v1 与 zj-loop.consumer_run_plan.v1，并要求两者的 route、source、consumer、readiness、execution mode 和 report-only 约束一致。",
+          "note": "Daily Triage 没有独立业务报告 artifact；单独绑定任一文件都会留下 dispatch 或 consumer plan 证据缺口，因此扩展 verifier 支持复合 artifact evidence。"
+        },
+        {
+          "q": "Daily Triage 复合 artifact 的字段级通过条件是什么？",
+          "answer": "采用 A：严格校验 route-decision 与 consumer-plan 的 schema、route/route_id、consumer、report-only request/execution mode、allowed/status、execution_allowed、validation.valid，并要求内嵌 route decision 一致；pipeline 仍须 source=schedule、ref=master 且无 provider side effects。",
+          "note": "避免只按文件存在或单一 status 放行错 route、错 consumer 或可执行模式漂移。"
+        },
+        {
+          "q": "Daily Triage 复合 artifact 如何传给 schedule-health verifier？",
+          "answer": "采用 A：保留主 artifact 与 schema 变量，并新增 supporting artifact 与 supporting schema 变量；两个 artifact 必须从同一 scheduled job 读取并一起通过字段级校验。",
+          "note": "避免 JSON 数组转义问题，也避免两个独立 health job 无法证明同一 pipeline/job 绑定。"
+        },
+        {
+          "q": "Daily Triage 独立 schedule 的 owner 应如何选择？",
+          "answer": "采用 A：使用项目级 CI 服务账号或长期维护账号作为 schedule owner，不使用个人账号或临时测试账号。",
+          "note": "保证 schedule 生命周期稳定，避免 owner 权限变化导致 scheduled evidence 中断。"
+        },
+        {
+          "q": "Daily Triage 复合 artifact 缺失或不一致时如何处理？",
+          "answer": "采用 A：fail closed；任一 artifact 缺失、下载失败、schema 错误、route/consumer 不一致或 report-only 字段不满足时，整体不计为 positive evidence，并输出结构化 negative evidence。",
+          "note": "复合证据必须两个 artifact 共同成立，不能用主 artifact 有效覆盖 supporting artifact 缺失。"
+        },
+        {
+          "q": "Daily Triage schedule-health verifier 如何触发？",
+          "answer": "采用 A：真实 scheduled pipeline 完成后，由人工创建 source=web 的 pipeline 手动运行只读 verifier；verifier 查询并绑定 source=schedule 的 producer pipeline，不把自身作为 scheduled evidence。",
+          "note": "避免 scheduled pipeline 内自验证时机不完整，也避免增加第二个 verifier schedule。"
+        },
+        {
+          "q": "Daily Triage 的施工顺序是什么？",
+          "answer": "采用 A：先实现并合并双 artifact verifier 与 CI 模板，再创建正式 schedule 并产生 source=schedule evidence。",
+          "note": "避免先产生无法回放的 scheduled pipeline；Web pipeline 只能做模板检查，不能替代真实 scheduled evidence。"
+        },
+        {
+          "q": "Daily Triage completion evidence 是否需要写入 zj-loop/STATE.md？",
+          "answer": "采用 A：保持 GitLab CI 完全 report-only，不修改仓库、不写入 STATE.md；本节点以 route-decision.json 与 consumer-plan.json 两个 artifact 作为 scheduled evidence。",
+          "note": "Route Table 的 STATE.md 是本地/工作流 report consumer 的 evidence store，不扩展为 scheduled CI 的写入目标。"
+        },
+        {
+          "q": "Daily Triage 独立 schedule 应如何命名？",
+          "answer": "采用 A：命名为 zj-loop-daily-triage-report；名称表达项目自动化、route 与 report-only 意图，IID 仅作为机器绑定字段。",
+          "note": "避免使用无语义的 IID 或无法区分 route 的短名称。"
+        },
+        {
+          "q": "Daily Triage schedule 应何时启用？",
+          "answer": "采用 A：verifier/CI 模板合并到 master 后立即启用 active schedule；cron=13 17 * * *，timezone=Asia/Shanghai，branch=master；首次 source=schedule pipeline 完成并经过 10 分钟 grace 后再运行 health replay。",
+          "note": "不使用 inactive、manual Play 或 Web pipeline 冒充正式 scheduled evidence。"
+        },
+        {
+          "q": "Daily Triage 节点何时可以标记完成？",
+          "answer": "采用 A：只有完整 scheduled evidence gate 通过才完成；要求独立 active schedule、长期 owner、cron=13 17 * * * Asia/Shanghai、master、source=schedule、zj_loop_daily_triage、同一 job 的双 artifact 严格绑定、health=healthy、完整链接和零 provider/仓库写入。",
+          "note": "与已完成的 Issue Backlog 节点保持同等 completion gate，不以 job 成功、schedule 创建或单一 artifact 代替完整证据。"
+        },
+        {
+          "q": "Daily Triage 是否必须使用独立 schedule？",
+          "answer": "调整为复用现有 schedule 961：同一 active schedule 同时运行 Issue Backlog 与 Daily Triage；通过 route、job、主 artifact 和 supporting artifact 的严格绑定区分两条 scheduled evidence，不能仅凭 schedule IID 放行。",
+          "note": "接受调度生命周期共享，但不降低 route/job/artifact/schema/ref/report-only completion gate；Daily Triage 仍需双 artifact 来自同一 zj_loop_daily_triage job。"
+        }
+      ],
+      "notes": "完成 scheduled Daily Triage evidence gate。复用 schedule 961；schedule active；health status=healthy；schedule.updated_at=2026-07-21T00:03:01.688+08:00；scheduled pipeline created_at=2026-07-21T00:03:03.750+08:00，source=schedule；route=daily-triage-report；job=zj_loop_daily_triage；主 artifact=route-decision.json，schema=zj-loop.route_decision.v1；supporting artifact=consumer-plan.json，schema=zj-loop.consumer_run_plan.v1；双 artifact 来自同一 job，report-only 字段和零 provider/仓库写入约束满足。health artifact checked_at=2026-07-20T16:28:25.703Z。"
     },
     "1-5-5-4-3": {
       "id": "1-5-5-4-3",
       "label": "GitLab scheduled Dependency Sweeper lifecycle evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "scheduled Dependency Sweeper 应验证哪种生命周期？",
+          "answer": "采用 A：只验证 scheduled plan/claim evidence，不执行 repair MR 或 closeout；scheduled job 保持 dry-run/claim-only，repair MR 与 closeout 继续人工手动、独立确认。",
+          "note": "符合 dependency-sweeper 的 claim-only、repair_allowed=false 和 GitLab dry-run-supported 约束，不产生 provider side effects。"
+        },
+        {
+          "q": "scheduled Dependency Sweeper 应绑定哪些 artifact？",
+          "answer": "采用 A：主 artifact 为 consumer-plan.json，schema=zj-loop.consumer_run_plan.v1；辅助 artifact 为 route-decision.json，schema=zj-loop.route_decision.v1；两者来自同一 zj_loop_dependency_sweeper job。",
+          "note": "scheduled evidence 验证真实 route/consumer plan 与 claim-only 边界，不伪造需要 Issue Fix Request 输入的 repair-plan.json。"
+        },
+        {
+          "q": "Dependency Sweeper 的字段级通过条件是什么？",
+          "answer": "采用 A：严格校验 route-decision 与 consumer-plan 的 schema、route、consumer、consumer_kind=fix-runner、execution_mode=claim-only、request_kind、status=ready、validation.valid 和嵌套 route decision；pipeline 必须 source=schedule、ref=master，job=zj_loop_dependency_sweeper，双 artifact 来自同一 job，且无 repair MR/分支/provider 写入结果。",
+          "note": "允许受限 claim-only 计划，但 fail closed 于 repair MR、分支创建、自动合并或其他 provider side effects。"
+        },
+        {
+          "q": "Dependency Sweeper 应使用哪个 Schedule？",
+          "answer": "采用 A：复用现有 schedule 961；同一 scheduled pipeline 可运行 Issue Backlog、Daily Triage 和 Dependency Sweeper，但每条 route 仍按 job、artifact、schema、pipeline source 和 execution contract 独立验证。",
+          "note": "共享 schedule 生命周期，不共享 route 证据；不能仅凭 schedule IID 放行。"
+        },
+        {
+          "q": "Dependency Sweeper scheduled evidence 缺失或出现副作用时如何处理？",
+          "answer": "采用 A：fail closed；任一 artifact 缺失、schema/route/consumer 漂移、execution_mode 非 claim-only，或出现 repair MR、分支、provider 写入痕迹时，整体不计为 positive evidence并输出结构化 negative evidence。",
+          "note": "关键验收目标是证明 GitLab Dependency Sweeper 没有越过 claim-only 和人工确认边界。"
+        },
+        {
+          "q": "Dependency Sweeper 的 schedule-health verifier 如何触发？",
+          "answer": "采用 A：真实 scheduled pipeline 完成后，由人工创建 source=web 的 pipeline 手动运行只读 verifier；verifier 只绑定 schedule 961 的 source=schedule producer pipeline，不把自身或 repair MR/closeout job 当作 scheduled evidence。",
+          "note": "与已完成的 Issue Backlog、Daily Triage 验证方式一致，保持 producer/verifier 分离。"
+        },
+        {
+          "q": "Dependency Sweeper 节点何时可以标记完成？",
+          "answer": "采用 A：完整 scheduled claim-only evidence gate；要求 schedule 961 active、source=schedule、ref=master、job=zj_loop_dependency_sweeper、同一 job 的 consumer-plan.json 主 artifact与route-decision.json supporting artifact严格绑定、claim-only/ready字段通过、health=healthy，且无 repair MR/分支/provider写入；repair MR/closeout继续人工确认。",
+          "note": "证明真实 scheduled Dependency Sweeper claim-only lifecycle，不以 job 成功或单一 route decision 替代完整证据。"
+        },
+        {
+          "q": "是否启用并对齐 GitLab Dependency Sweeper Route？",
+          "answer": "采用 A：启用 dependency-sweeper 并对齐为 claim-only；保留 repair_allowed=false、auto_merge=false、GitLab dry-run-supported，scheduled job 只生成 route/consumer plan，不创建 repair MR、分支或 provider side effects。",
+          "note": "修复 route disabled 导致 scheduled producer 无法生成 consumer-plan 的问题，同时不开放 repair lifecycle。"
+        }
+      ],
+      "notes": "完成 scheduled Dependency Sweeper claim-only evidence gate。复用 schedule 961；schedule active；health status=healthy；schedule.updated_at=2026-07-21T01:43:01.547+08:00；scheduled pipeline created_at=2026-07-21T01:43:07.166+08:00，source=schedule；route=dependency-sweeper；job=zj_loop_dependency_sweeper；主 artifact=consumer-plan.json，schema=zj-loop.consumer_run_plan.v1；supporting artifact=route-decision.json，schema=zj-loop.route_decision.v1；consumer plan 为 claim-only、ready、execution_allowed=true，route decision allowed=true；未创建 repair MR、分支或 provider side effects。health artifact checked_at=2026-07-20T17:55:13.308Z。"
     },
     "1-5-5-4-4": {
       "id": "1-5-5-4-4",
@@ -3068,7 +3185,58 @@
       "mode": "exploit",
       "parent": "1-5-5-4",
       "children": [],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "scheduled Changelog Drafter 应验证哪种生命周期？",
+          "answer": "采用 A：只运行 report-only draft evidence；scheduled job 生成 route decision、consumer plan 和 changelog draft evidence，不创建 carrier Issue、claim、Draft MR 或 closeout。",
+          "note": "保持 changelog-drafter-report 的 human review boundary 与所有 changelog/release side-effect guards=false。"
+        },
+        {
+          "q": "scheduled Changelog Drafter 的主 evidence artifact 是什么？",
+          "answer": "待确认",
+          "note": "需要在 route decision、consumer plan 与 gitlab-changelog-draft-evidence 之间选择严格的主/辅 artifact 绑定。"
+        },
+        {
+          "q": "scheduled Changelog Drafter 的主 evidence artifact 是什么？",
+          "answer": "采用 A：主 artifact 为 gitlab-changelog-draft-evidence.json，schema=zj-loop.gitlab_changelog_draft_evidence.v1；route-decision.json 与 consumer-plan.json 作为 supporting artifacts，三者必须来自同一 scheduled job。",
+          "note": "主 artifact 必须证明真实 draft evidence 且 side_effects_executed=false，辅证据负责绑定 route 与 consumer plan。"
+        },
+        {
+          "q": "Changelog scheduled evidence 的字段级通过条件是什么？",
+          "answer": "采用 A：严格校验 gitlab-changelog-draft-evidence、route-decision、consumer-plan 的 schema、status/outcome、project、route、consumer、release window、report-only execution 和 side_effects=false；三者同一 job，pipeline source=schedule、ref=master。",
+          "note": "防止只凭 schema 或 draft 文件存在放行 release window、route 或 side-effect 漂移。"
+        },
+        {
+          "q": "Changelog Drafter 应使用哪个 Schedule？",
+          "answer": "采用 A：复用现有 schedule 961；同一 scheduled pipeline 可运行多个 report-only producer，但 Changelog 证据仍按 job、route、artifact、release window 和 side-effect contract 独立验证。",
+          "note": "共享 schedule 生命周期，不共享 route 证据，不以 schedule IID 单独放行。"
+        },
+        {
+          "q": "Changelog scheduled evidence 缺失或出现发布副作用时如何处理？",
+          "answer": "采用 A：fail closed；任一 artifact 缺失、schema/route/consumer/release window 漂移，或 side_effects_executed 非 false 时，整体不计为 positive evidence并输出结构化 negative evidence。",
+          "note": "scheduled Changelog 的核心是证明可观察但不可发布，不允许用 warning 覆盖 release/tag/package/Draft MR side effects。"
+        },
+        {
+          "q": "Changelog 的 schedule-health verifier 如何触发？",
+          "answer": "采用 A：真实 scheduled pipeline 完成后，由人工创建 source=web 的 pipeline 手动运行只读 verifier；只绑定 schedule 961 的 source=schedule Changelog producer，不把 carrier、claim、Draft MR 或 closeout job 当作 scheduled evidence。",
+          "note": "与已完成的 Issue Backlog、Daily Triage、Dependency Sweeper 节点保持相同 producer/verifier 分离模式。"
+        },
+        {
+          "q": "Changelog Drafter 节点何时可以标记完成？",
+          "answer": "采用 A：完整 scheduled report-only evidence gate；要求 schedule 961 active、source=schedule、master、job=zj_loop_changelog_drafter、同一 job 的 gitlab-changelog-draft-evidence 主 artifact与route-decision/consumer-plan两个 supporting artifacts、release window/project/status/outcome匹配、side_effects_executed=false、route/consumer report-only、health=healthy，且无 carrier/claim/Draft MR/tag/release/package publish/closeout side effects。",
+          "note": "与前三个 scheduled route 保持同等 completion gate，不以 job 成功或单一 route decision 代替完整 Changelog report evidence。"
+        },
+        {
+          "q": "Changelog 的两个 supporting artifact 如何传给 health verifier？",
+          "answer": "采用 A：保留 supporting_artifact/supporting_artifact_schema，并新增 supporting_artifact_2/supporting_artifact_2_schema 变量；三个 artifact 必须从同一 zj_loop_changelog_drafter job 读取并一起校验。",
+          "note": "避免 JSON 数组转义问题，也避免三个独立 health job 无法证明同一 job 绑定。"
+        },
+        {
+          "q": "scheduled Changelog 的 release window request 如何生成？",
+          "answer": "采用 A：scheduled job 在未提供显式 request JSON 时，根据 CI_PROJECT_PATH、CI_DEFAULT_BRANCH、CI_COMMIT_BEFORE_SHA、CI_COMMIT_SHA 和 CI_PIPELINE_ID 自动生成 draft-request-candidate；显式 request 仍优先使用。",
+          "note": "避免固定 JSON 过期或重复，确保每次 scheduled evidence 都绑定当前 master commit 窗口。"
+        }
+      ],
       "notes": ""
     },
     "1-5-5-6": {
@@ -3343,7 +3511,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-20 15:49:35",
+    "updated": "2026-07-21 10:56:38",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

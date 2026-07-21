@@ -921,7 +921,13 @@ disabled_dispatch_routes:
       side_effects_allowed: false
       provider_writes_allowed: false
     provider_support:
+      github:
+        status: "blocked-with-follow-up"
+        evidence: ["follow-up:gitlab-issue-note-bridge:provider-specific-gitlab-only"]
+        reason: "gitlab-webhook-adapter-only"
+        follow_up: "Keep disabled until a provider-specific adapter is intentionally designed"
       gitlab:
         status: "blocked-with-follow-up"
+        evidence: ["follow-up:gitlab-issue-note-bridge:webhook-unavailable"]
         reason: "webhook-unavailable"
         follow_up: "Complete known-gaps checklist and Human-approved promotion gate"

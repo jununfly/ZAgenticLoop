@@ -6,13 +6,15 @@ export function evaluateScheduleHealth(input) {
     const now = new Date(input.now ?? Date.now());
     const graceMs = 10 * 60 * 1000;
     const expectedWindow = deriveExpectedWindow(schedule, now, input.expectedWithinMinutes);
-    const base = { schema: SCHEDULE_HEALTH_SCHEMA, target: { provider: target.provider, project: target.project, route_id: target.route_id, schedule_id: target.schedule_id, job: target.job, artifact: target.artifact, artifact_schema: target.artifact_schema }, audit: { schedule_active: schedule?.active === true, schedule_updated_at: schedule?.updated_at ?? null, next_run_at: schedule?.next_run_at ?? null, expected_within_minutes: input.expectedWithinMinutes ?? null, checked_at: now.toISOString(), ...(input.audit ?? {}) } };
+    const base = { schema: SCHEDULE_HEALTH_SCHEMA, target: { provider: target.provider, project: target.project, route_id: target.route_id, schedule_id: target.schedule_id, job: target.job, artifact: target.artifact, artifact_schema: target.artifact_schema, ...(target.supporting_artifact ? { supporting_artifact: target.supporting_artifact } : {}), ...(target.supporting_artifact_schema ? { supporting_artifact_schema: target.supporting_artifact_schema } : {}), ...(target.supporting_artifact_2 ? { supporting_artifact_2: target.supporting_artifact_2 } : {}), ...(target.supporting_artifact_2_schema ? { supporting_artifact_2_schema: target.supporting_artifact_2_schema } : {}) }, audit: { schedule_active: schedule?.active === true, schedule_updated_at: schedule?.updated_at ?? null, next_run_at: schedule?.next_run_at ?? null, expected_within_minutes: input.expectedWithinMinutes ?? null, checked_at: now.toISOString(), ...(input.audit ?? {}) } };
     if (!schedule || schedule.active !== true || !expectedWindow)
         return result(base, 'configuration_missing', 'schedule-configuration-missing');
-    if (now.getTime() < expectedWindow.start.getTime() + graceMs)
-        return { ...base, status: 'not_due', expected_window: { start: expectedWindow.start.toISOString(), grace_minutes: 10 }, next_steps: [] };
     const pipeline = input.pipeline;
-    if (!pipeline || pipeline.source !== 'schedule' || new Date(pipeline.created_at).getTime() < new Date(schedule.updated_at).getTime() || new Date(pipeline.created_at).getTime() < expectedWindow.start.getTime())
+    const firstRunWindow = getFirstScheduledEvidenceWindow(schedule, pipeline, expectedWindow);
+    const activeWindow = firstRunWindow ? { ...expectedWindow, start: firstRunWindow } : expectedWindow;
+    if (now.getTime() < activeWindow.start.getTime() + graceMs)
+        return { ...base, status: 'not_due', expected_window: { start: activeWindow.start.toISOString(), grace_minutes: 10 }, next_steps: [] };
+    if (!pipeline || pipeline.source !== 'schedule' || new Date(pipeline.created_at).getTime() <= new Date(schedule.updated_at).getTime() || (!firstRunWindow && new Date(pipeline.created_at).getTime() < expectedWindow.start.getTime()))
         return result(base, 'execution_missing', 'scheduled-pipeline-missing');
     if (pipeline.job !== target.job || pipeline.artifact !== target.artifact)
         return result(base, 'artifact_missing', 'scheduled-artifact-missing');
@@ -25,17 +27,61 @@ export function evaluateScheduleHealth(input) {
         if (bindingErrors.length > 0)
             return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
     }
+    if (target.route_id === 'daily-triage-report') {
+        const bindingErrors = validateDailyTriageArtifacts(target, pipeline);
+        if (pipeline.ref !== 'master')
+            bindingErrors.push('pipeline.ref');
+        if (bindingErrors.length > 0)
+            return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
+    }
+    if (target.route_id === 'dependency-sweeper') {
+        const bindingErrors = validateDependencySweeperArtifacts(target, pipeline);
+        if (pipeline.ref !== 'master')
+            bindingErrors.push('pipeline.ref');
+        if (bindingErrors.length > 0)
+            return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
+    }
+    if (target.route_id === 'changelog-drafter-report') {
+        const bindingErrors = validateChangelogArtifacts(target, pipeline);
+        if (pipeline.ref !== 'master')
+            bindingErrors.push('pipeline.ref');
+        if (bindingErrors.length > 0)
+            return { ...result(base, 'artifact_schema_invalid', 'scheduled-artifact-binding-invalid'), artifact_errors: bindingErrors };
+    }
     return {
         ...base,
         status: 'healthy',
         expected_window: {
-            start: expectedWindow.start.toISOString(),
-            ...(expectedWindow.nextStart ? { next_start: expectedWindow.nextStart.toISOString() } : {}),
+            start: activeWindow.start.toISOString(),
+            ...(activeWindow.nextStart ? { next_start: activeWindow.nextStart.toISOString() } : {}),
             grace_minutes: 10,
         },
         pipeline: { created_at: pipeline.created_at, source: pipeline.source },
         next_steps: [],
     };
+}
+function getFirstScheduledEvidenceWindow(schedule, pipeline, expectedWindow) {
+    if (!pipeline || pipeline.source !== 'schedule' || typeof schedule?.updated_at !== 'string' || typeof pipeline.created_at !== 'string')
+        return null;
+    const updatedAt = new Date(schedule.updated_at);
+    const createdAt = new Date(pipeline.created_at);
+    if (Number.isNaN(updatedAt.getTime()) || Number.isNaN(createdAt.getTime()) || createdAt.getTime() <= updatedAt.getTime())
+        return null;
+    let firstWindowStart = expectedWindow.start;
+    if (typeof schedule.cron === 'string') {
+        try {
+            firstWindowStart = CronExpressionParser.parse(schedule.cron, {
+                currentDate: updatedAt,
+                tz: schedule.cron_timezone ?? 'UTC',
+            }).next().toDate();
+        }
+        catch {
+            return null;
+        }
+    }
+    if (createdAt.getTime() >= firstWindowStart.getTime())
+        return null;
+    return createdAt;
 }
 function validateIssueBacklogArtifact(target, pipeline) {
     const artifact = pipeline.artifact_payload;
@@ -55,6 +101,188 @@ function validateIssueBacklogArtifact(target, pipeline) {
         if (!sideEffects || sideEffects[key] !== false)
             errors.push(`artifact.side_effects.${key}`);
     }
+    return errors;
+}
+function validateDailyTriageArtifacts(target, pipeline) {
+    const routeDecision = pipeline.artifact_payload;
+    const consumerPlan = pipeline.supporting_artifact_payload;
+    const errors = [];
+    if (!target.supporting_artifact || !target.supporting_artifact_schema)
+        errors.push('supporting-artifact-target');
+    if (pipeline.artifact !== target.artifact)
+        errors.push('artifact');
+    if (pipeline.artifact_schema !== target.artifact_schema)
+        errors.push('artifact_schema');
+    if (pipeline.supporting_artifact !== target.supporting_artifact)
+        errors.push('supporting_artifact');
+    if (pipeline.supporting_artifact_schema !== target.supporting_artifact_schema)
+        errors.push('supporting_artifact_schema');
+    if (!routeDecision || typeof routeDecision !== 'object')
+        errors.push('artifact_payload');
+    if (!consumerPlan || typeof consumerPlan !== 'object')
+        errors.push('supporting_artifact_payload');
+    if (!routeDecision || routeDecision.schema !== 'zj-loop.route_decision.v1')
+        errors.push('artifact.schema');
+    if (!consumerPlan || consumerPlan.schema !== 'zj-loop.consumer_run_plan.v1')
+        errors.push('supporting_artifact.schema');
+    if (routeDecision?.route !== target.route_id)
+        errors.push('artifact.route');
+    if (routeDecision?.request_kind !== 'report-only')
+        errors.push('artifact.request_kind');
+    if (routeDecision?.target_consumer !== 'daily-triage')
+        errors.push('artifact.target_consumer');
+    if (routeDecision?.source !== 'gitlab-pipeline')
+        errors.push('artifact.source');
+    if (routeDecision?.allowed !== true)
+        errors.push('artifact.allowed');
+    if (consumerPlan?.route_id !== target.route_id)
+        errors.push('supporting_artifact.route_id');
+    if (consumerPlan?.consumer !== 'daily-triage')
+        errors.push('supporting_artifact.consumer');
+    if (consumerPlan?.execution_mode !== 'report-only')
+        errors.push('supporting_artifact.execution_mode');
+    if (consumerPlan?.request_kind !== 'report-only')
+        errors.push('supporting_artifact.request_kind');
+    if (consumerPlan?.status !== 'report-only')
+        errors.push('supporting_artifact.status');
+    if (consumerPlan?.execution_allowed !== false)
+        errors.push('supporting_artifact.execution_allowed');
+    if (consumerPlan?.validation?.valid !== true)
+        errors.push('supporting_artifact.validation.valid');
+    const nestedDecision = consumerPlan?.route_decision;
+    if (!nestedDecision || JSON.stringify(nestedDecision) !== JSON.stringify(routeDecision))
+        errors.push('supporting_artifact.route_decision');
+    return errors;
+}
+function validateDependencySweeperArtifacts(target, pipeline) {
+    const consumerPlan = pipeline.artifact_payload;
+    const routeDecision = pipeline.supporting_artifact_payload;
+    const errors = [];
+    if (!target.supporting_artifact || !target.supporting_artifact_schema)
+        errors.push('supporting-artifact-target');
+    if (pipeline.artifact !== target.artifact)
+        errors.push('artifact');
+    if (pipeline.artifact_schema !== target.artifact_schema)
+        errors.push('artifact_schema');
+    if (pipeline.supporting_artifact !== target.supporting_artifact)
+        errors.push('supporting_artifact');
+    if (pipeline.supporting_artifact_schema !== target.supporting_artifact_schema)
+        errors.push('supporting_artifact_schema');
+    if (!consumerPlan || typeof consumerPlan !== 'object')
+        errors.push('artifact_payload');
+    if (!routeDecision || typeof routeDecision !== 'object')
+        errors.push('supporting_artifact_payload');
+    if (!consumerPlan || consumerPlan.schema !== 'zj-loop.consumer_run_plan.v1')
+        errors.push('artifact.schema');
+    if (!routeDecision || routeDecision.schema !== 'zj-loop.route_decision.v1')
+        errors.push('supporting_artifact.schema');
+    if (consumerPlan?.route_id !== target.route_id)
+        errors.push('artifact.route_id');
+    if (consumerPlan?.consumer !== 'dependency-sweeper')
+        errors.push('artifact.consumer');
+    if (consumerPlan?.consumer_kind !== 'fix-runner')
+        errors.push('artifact.consumer_kind');
+    if (consumerPlan?.execution_mode !== 'claim-only')
+        errors.push('artifact.execution_mode');
+    if (consumerPlan?.request_kind !== 'issue-fix-request')
+        errors.push('artifact.request_kind');
+    if (consumerPlan?.status !== 'ready')
+        errors.push('artifact.status');
+    if (consumerPlan?.execution_allowed !== true)
+        errors.push('artifact.execution_allowed');
+    if (consumerPlan?.validation?.valid !== true)
+        errors.push('artifact.validation.valid');
+    if (routeDecision?.route !== target.route_id)
+        errors.push('supporting_artifact.route');
+    if (routeDecision?.request_kind !== 'issue-fix-request')
+        errors.push('supporting_artifact.request_kind');
+    if (routeDecision?.target_consumer !== 'dependency-sweeper')
+        errors.push('supporting_artifact.target_consumer');
+    if (routeDecision?.source !== 'gitlab-dependency')
+        errors.push('supporting_artifact.source');
+    if (routeDecision?.allowed !== true)
+        errors.push('supporting_artifact.allowed');
+    const nestedDecision = consumerPlan?.route_decision;
+    if (!nestedDecision || JSON.stringify(nestedDecision) !== JSON.stringify(routeDecision))
+        errors.push('artifact.route_decision');
+    return errors;
+}
+function validateChangelogArtifacts(target, pipeline) {
+    const evidence = pipeline.artifact_payload;
+    const routeDecision = pipeline.supporting_artifact_payload;
+    const consumerPlan = pipeline.supporting_artifact_2_payload;
+    const errors = [];
+    if (!target.supporting_artifact || !target.supporting_artifact_schema || !target.supporting_artifact_2 || !target.supporting_artifact_2_schema)
+        errors.push('supporting-artifact-target');
+    if (pipeline.artifact !== target.artifact)
+        errors.push('artifact');
+    if (pipeline.artifact_schema !== target.artifact_schema)
+        errors.push('artifact_schema');
+    if (pipeline.supporting_artifact !== target.supporting_artifact)
+        errors.push('supporting_artifact');
+    if (pipeline.supporting_artifact_schema !== target.supporting_artifact_schema)
+        errors.push('supporting_artifact_schema');
+    if (pipeline.supporting_artifact_2 !== target.supporting_artifact_2)
+        errors.push('supporting_artifact_2');
+    if (pipeline.supporting_artifact_2_schema !== target.supporting_artifact_2_schema)
+        errors.push('supporting_artifact_2_schema');
+    if (!evidence || typeof evidence !== 'object')
+        errors.push('artifact_payload');
+    if (!routeDecision || typeof routeDecision !== 'object')
+        errors.push('supporting_artifact_payload');
+    if (!consumerPlan || typeof consumerPlan !== 'object')
+        errors.push('supporting_artifact_2_payload');
+    if (!evidence || evidence.schema !== 'zj-loop.gitlab_changelog_draft_evidence.v1')
+        errors.push('artifact.schema');
+    if (!routeDecision || routeDecision.schema !== 'zj-loop.route_decision.v1')
+        errors.push('supporting_artifact.schema');
+    if (!consumerPlan || consumerPlan.schema !== 'zj-loop.consumer_run_plan.v1')
+        errors.push('supporting_artifact_2.schema');
+    if (evidence?.status !== 'completed')
+        errors.push('artifact.status');
+    if (evidence?.outcome !== 'draft-evidence')
+        errors.push('artifact.outcome');
+    if (evidence?.audit?.project_path !== target.project)
+        errors.push('artifact.audit.project_path');
+    if (evidence?.audit?.draft_mode !== 'evidence')
+        errors.push('artifact.audit.draft_mode');
+    if (evidence?.audit?.side_effects_executed !== false)
+        errors.push('artifact.audit.side_effects_executed');
+    const window = evidence?.audit?.release_window;
+    if (window?.repo !== target.project)
+        errors.push('artifact.audit.release_window.repo');
+    if (window?.base_branch !== 'master')
+        errors.push('artifact.audit.release_window.base_branch');
+    if (!window?.since_ref)
+        errors.push('artifact.audit.release_window.since_ref');
+    if (!window?.until_ref)
+        errors.push('artifact.audit.release_window.until_ref');
+    if (routeDecision?.route !== target.route_id)
+        errors.push('supporting_artifact.route');
+    if (routeDecision?.request_kind !== 'report-only')
+        errors.push('supporting_artifact.request_kind');
+    if (routeDecision?.target_consumer !== 'changelog-drafter')
+        errors.push('supporting_artifact.target_consumer');
+    if (routeDecision?.source !== 'gitlab-release-window')
+        errors.push('supporting_artifact.source');
+    if (routeDecision?.allowed !== true)
+        errors.push('supporting_artifact.allowed');
+    if (consumerPlan?.route_id !== target.route_id)
+        errors.push('supporting_artifact_2.route_id');
+    if (consumerPlan?.consumer !== 'changelog-drafter')
+        errors.push('supporting_artifact_2.consumer');
+    if (consumerPlan?.execution_mode !== 'report-only')
+        errors.push('supporting_artifact_2.execution_mode');
+    if (consumerPlan?.request_kind !== 'report-only')
+        errors.push('supporting_artifact_2.request_kind');
+    if (consumerPlan?.status !== 'report-only')
+        errors.push('supporting_artifact_2.status');
+    if (consumerPlan?.execution_allowed !== false)
+        errors.push('supporting_artifact_2.execution_allowed');
+    if (consumerPlan?.validation?.valid !== true)
+        errors.push('supporting_artifact_2.validation.valid');
+    if (!consumerPlan?.route_decision || JSON.stringify(consumerPlan.route_decision) !== JSON.stringify(routeDecision))
+        errors.push('supporting_artifact_2.route_decision');
     return errors;
 }
 function deriveExpectedWindow(schedule, now, expectedWithinMinutes) {
@@ -124,7 +352,22 @@ export async function inspectGitLabScheduleHealth(input) {
     if (!artifactResponse.ok)
         return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: null }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
     const artifact = await artifactResponse.json();
-    return evaluateScheduleHealth({ target: input.target, schedule, pipeline: { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact }, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
+    const enrichedPipeline = { ...pipeline, job: job.name, artifact: input.target.artifact, artifact_schema: artifact.schema, artifact_payload: artifact };
+    for (const suffix of ['', '_2']) {
+        const artifactPath = input.target[`supporting_artifact${suffix}`];
+        if (!artifactPath)
+            continue;
+        const supportingResponse = await fetchImpl(`${apiUrl}/projects/${project}/jobs/${job.id}/artifacts/${artifactPath}`, { headers });
+        if (!supportingResponse.ok) {
+            enrichedPipeline[`supporting_artifact${suffix}`] = null;
+            return evaluateScheduleHealth({ target: input.target, schedule, pipeline: enrichedPipeline, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
+        }
+        const supportingArtifact = await supportingResponse.json();
+        enrichedPipeline[`supporting_artifact${suffix}`] = artifactPath;
+        enrichedPipeline[`supporting_artifact${suffix}_schema`] = supportingArtifact.schema;
+        enrichedPipeline[`supporting_artifact${suffix}_payload`] = supportingArtifact;
+    }
+    return evaluateScheduleHealth({ target: input.target, schedule, pipeline: enrichedPipeline, now: input.now, audit, expectedWithinMinutes: input.expectedWithinMinutes });
 }
 function resolveGitLabCredentials(input) {
     if (typeof input.token === 'string' && input.token.length > 0) {
@@ -160,6 +403,14 @@ function buildScheduleHealthReplayCommand(target, apiUrl, expectedWithinMinutes)
         '--artifact', String(target.artifact),
         '--artifact-schema', String(target.artifact_schema),
     ];
+    if (target.supporting_artifact)
+        command.push('--supporting-artifact', String(target.supporting_artifact));
+    if (target.supporting_artifact_schema)
+        command.push('--supporting-artifact-schema', String(target.supporting_artifact_schema));
+    if (target.supporting_artifact_2)
+        command.push('--supporting-artifact-2', String(target.supporting_artifact_2));
+    if (target.supporting_artifact_2_schema)
+        command.push('--supporting-artifact-2-schema', String(target.supporting_artifact_2_schema));
     if (apiUrl)
         command.push('--api-url', apiUrl);
     if (Number.isInteger(expectedWithinMinutes) && Number(expectedWithinMinutes) > 0) {

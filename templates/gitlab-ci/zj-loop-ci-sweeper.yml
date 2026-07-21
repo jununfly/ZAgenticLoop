@@ -4,7 +4,7 @@
 # zj-loop-template-hash: generated-by-zj-loop-init
 
 .zj_loop_ci_sweeper_common:
-  stage: __ZJ_LOOP_GITLAB_RECOVERY_STAGE__
+  stage: __ZJ_LOOP_GITLAB_STAGE__
 __ZJ_LOOP_GITLAB_TAGS__  image: __ZJ_LOOP_GITLAB_IMAGE__
   variables:
     ZJ_LOOP_SIGNAL_ID: ""
