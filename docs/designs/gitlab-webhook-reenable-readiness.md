@@ -44,6 +44,12 @@ The same owner supplies the TLS Secret reference and sanitized Ingress
 provenance. ZAgenticLoop does not create infrastructure or choose a cluster
 suffix.
 
+Real infrastructure evidence is private by policy. Hostnames, TLS Secret
+names, Ingress manifests, provider URLs, project paths, pipeline IDs, and
+fixture identities belong in the closed test project or a private audit
+system. The public repository may contain only this contract, sanitized
+schemas, and an opaque evidence reference.
+
 ## Credential Boundary
 
 Two independent runtime secrets are required:
@@ -88,9 +94,12 @@ The following gates are required in order:
       certificate for the `example-group/gitlab-webhook-test-fork` test fork.
 - [ ] The assigned hostname follows
       `zj-loop-gitlab-bridge.<internal-test-domain>` and is recorded in
-      sanitized deployment provenance.
+      private deployment evidence store.
 - [ ] The test-environment owner records the TLS Secret reference and Ingress
-      provenance without exposing certificate material or Secret values.
+      provenance in the private store without exposing certificate material or
+      Secret values.
+- [ ] The public completion record contains only the evidence schema and an
+      opaque private evidence reference.
 - [ ] The bridge deployment is reachable through that Ingress without any
       public listener.
 - [ ] `/healthz` returns `zj-loop.gitlab_issue_note_bridge_health.v1` without
