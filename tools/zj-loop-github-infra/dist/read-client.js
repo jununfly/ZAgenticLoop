@@ -69,7 +69,7 @@ export class GitHubReadClient {
         throw new GitHubInfraError('response-shape-invalid', 'GitHub response was not valid JSON', response.status);
     } return { body, status: response.status }; }
     async requestUrl(url, binary) { let response; try {
-        response = await this.fetchImpl(url, { headers: { Accept: 'application/zip', 'X-GitHub-Api-Version': GITHUB_API_VERSION, 'User-Agent': `zj-loop-github-infra/${GITHUB_INFRA_VERSION}`, ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) } });
+        response = await this.fetchImpl(url, { headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': GITHUB_API_VERSION, 'User-Agent': `zj-loop-github-infra/${GITHUB_INFRA_VERSION}`, ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) } });
     }
     catch {
         throw new GitHubInfraError('transient-network', 'GitHub artifact request failed before receiving a response');
