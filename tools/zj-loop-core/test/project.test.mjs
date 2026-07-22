@@ -87,7 +87,7 @@ test('collectProjectEvidenceFacts detects GitLab provider facts without GitHub w
     await mkdir(path.join(root, '.git'), { recursive: true });
     await writeFile(
       path.join(root, '.git', 'config'),
-      '[remote "origin"]\n\turl = git@git.bilibili.co:team/project.git\n',
+      '[remote "origin"]\n\turl = git@git.example.invalid:team/project.git\n',
     );
     await writeFile(path.join(root, '.gitlab-ci.yml'), 'stages: []\n');
     await writeFile(path.join(root, 'README.md'), 'Use glab issue note for issue notes.\n');

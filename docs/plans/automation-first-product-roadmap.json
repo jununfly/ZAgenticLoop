@@ -428,7 +428,7 @@
         "1-5-4-6"
       ],
       "decisions": [],
-      "notes": "All six GitLab branch/MR review and closeout parity slices are complete: Roadmap Activation, Post-Merge Closeout, CI Sweeper, Dependency Sweeper, PR Steward, and Changelog Drafter. Each route has provider-specific lifecycle evidence or bounded escalation evidence in ai-studio; Changelog Drafter additionally completed draft-evidence, draft-MR, negative merge boundary, human merge, and positive closeout."
+      "notes": "All six GitLab branch/MR review and closeout parity slices are complete: Roadmap Activation, Post-Merge Closeout, CI Sweeper, Dependency Sweeper, PR Steward, and Changelog Drafter. Each route has provider-specific lifecycle evidence or bounded escalation evidence in product-project; Changelog Drafter additionally completed draft-evidence, draft-MR, negative merge boundary, human merge, and positive closeout."
     },
     "1-5-5": {
       "id": "1-5-5",
@@ -458,8 +458,8 @@
         },
         {
           "q": "GitLab required-route reference installation 使用哪个项目？",
-          "answer": "只使用 mlive-dev/ai-studio 作为唯一 GitLab reference installation；复用其中兼容的既有 evidence，只在该项目补齐缺口。其他项目属于后续 installation completion，不纳入 1-5-5。",
-          "note": "ai-studio 已验证 Runner、Node image、GITLAB_TOKEN、schedule、Issue/MR 与 closeout 基础设施，减少无关环境变量。"
+          "answer": "只使用 example-group/product-project 作为唯一 GitLab reference installation；复用其中兼容的既有 evidence，只在该项目补齐缺口。其他项目属于后续 installation completion，不纳入 1-5-5。",
+          "note": "product-project 已验证 Runner、Node image、GITLAB_TOKEN、schedule、Issue/MR 与 closeout 基础设施，减少无关环境变量。"
         },
         {
           "q": "1-5-5 如何拆成可执行 slices？",
@@ -493,7 +493,7 @@
         },
         {
           "q": "event-driven GitLab dogfood 使用什么 fixture？",
-          "answer": "所有 event-driven route 使用专用、可回滚、固定 binding 的 GitLab fixture：测试 Issue/label-state、测试 MR/IID/head SHA、generated-substrate CI failure、已合并 closeout MR/contract；每个 fixture 有 dedupe key、scope verifier 与 closeout，不触碰 ai-studio 业务逻辑。",
+          "answer": "所有 event-driven route 使用专用、可回滚、固定 binding 的 GitLab fixture：测试 Issue/label-state、测试 MR/IID/head SHA、generated-substrate CI failure、已合并 closeout MR/contract；每个 fixture 有 dedupe key、scope verifier 与 closeout，不触碰 product-project 业务逻辑。",
           "note": "一次 fixture 成功只证明对应 route，不跨 route 泛化 evidence。"
         },
         {
@@ -538,7 +538,7 @@
         },
         {
           "q": "trusted automation promotion state 属于哪里？",
-          "answer": "采用项目级 installation evidence overlay：Route Table 只声明允许的 trusted_automation scopes、gate 与 side-effect 上限；ai-studio 保存绑定 provider/project/route/scope/fingerprint 的 promotion evidence；zj-loop-doctor 将 policy 与项目 evidence 合并派生 runtime 状态，stale/mismatch 自动降级。不把单项目 promotion 写成全局 Route Table capability。",
+          "answer": "采用项目级 installation evidence overlay：Route Table 只声明允许的 trusted_automation scopes、gate 与 side-effect 上限；product-project 保存绑定 provider/project/route/scope/fingerprint 的 promotion evidence；zj-loop-doctor 将 policy 与项目 evidence 合并派生 runtime 状态，stale/mismatch 自动降级。不把单项目 promotion 写成全局 Route Table capability。",
           "note": "trusted automation 是安装环境授权，不是 package 默认能力；保持 provider/project 隔离。"
         },
         {
@@ -558,7 +558,7 @@
         },
         {
           "q": "GitLab trusted runtime variable 如何绑定运行环境？",
-          "answer": "必须全部满足：变量只存在 ai-studio 项目配置；route-specific；值仅允许 enabled；job 校验 CI_PIPELINE_SOURCE=schedule 与 target branch allowlist；promotion evidence 的 project/route/scope/fingerprint 必须匹配；GITLAB_TOKEN 独立存在；Web/manual pipeline 即使读取变量也不得触发 trusted side effect。",
+          "answer": "必须全部满足：变量只存在 product-project 项目配置；route-specific；值仅允许 enabled；job 校验 CI_PIPELINE_SOURCE=schedule 与 target branch allowlist；promotion evidence 的 project/route/scope/fingerprint 必须匹配；GITLAB_TOKEN 独立存在；Web/manual pipeline 即使读取变量也不得触发 trusted side effect。",
           "note": "变量表示运行时选择，不获得 promotion 或扩大 side-effect scope。"
         },
         {
@@ -948,7 +948,7 @@
         {
           "q": "What is the GitLab activation target branch source?",
           "answer": "Use CI_DEFAULT_BRANCH from the target project.",
-          "note": "This keeps self-managed GitLab projects such as ai-studio on master without a provider-specific hardcoded main fallback."
+          "note": "This keeps self-managed GitLab projects such as product-project on master without a provider-specific hardcoded main fallback."
         },
         {
           "q": "When may the GitLab activation workflow create a branch or draft MR?",
@@ -956,7 +956,7 @@
           "note": "Route enablement remains separate from the generated user's default disabled route profile."
         }
       ],
-      "notes": "Completed with real GitLab live evidence after target MR !297 merged. Pipeline 10503931 manual job 25939406 ran on master with GITLAB_TOKEN, emitted execution-result.json schema zj-loop.gitlab_roadmap_activation_execution_result.v1, status=completed, target_branch=master, branch_name=zjal-act-issue-comment-gitlab-roadmap-activation, merge_request_iid=298, and merge_request_url=https://git.bilibili.co/mlive-dev/ai-studio/-/merge_requests/298. live_operations recorded create-branch status 201, find-merge-request status 200/count 0, and create-merge-request status 201. This evidence proves the GitLab branch/Draft-MR contract only; the manual run used default empty source issue/comment inputs (source issue 0), so it is not evidence of Issue #160 activation binding. The generated Draft MR remains the controlled closeout carrier for follow-up verification."
+      "notes": "Completed with real GitLab live evidence after target MR !297 merged. Pipeline 10503931 manual job 25939406 ran on master with GITLAB_TOKEN, emitted execution-result.json schema zj-loop.gitlab_roadmap_activation_execution_result.v1, status=completed, target_branch=master, branch_name=zjal-act-issue-comment-gitlab-roadmap-activation, merge_request_iid=298, and merge_request_url=https://git.example.invalid/example-group/product-project/-/merge_requests/298. live_operations recorded create-branch status 201, find-merge-request status 200/count 0, and create-merge-request status 201. This evidence proves the GitLab branch/Draft-MR contract only; the manual run used default empty source issue/comment inputs (source issue 0), so it is not evidence of Issue #160 activation binding. The generated Draft MR remains the controlled closeout carrier for follow-up verification."
     },
     "1-5-4-2": {
       "id": "1-5-4-2",
@@ -1002,7 +1002,7 @@
       "decisions": [
         {
           "q": "GitLab CI Sweeper live recovery dogfood 使用哪个目标项目？",
-          "answer": "继续使用 mlive-dev/ai-studio",
+          "answer": "继续使用 example-group/product-project",
           "note": "复用已验证的 GitLab token、Route Table、MR、live closeout 和 evidence 基础设施；受控 failure 必须最小且可回滚。"
         },
         {
@@ -1071,7 +1071,7 @@
           "note": "binary 需 request 显式 capability；symlink、submodule、默认 LFS 拒绝；chmod 仅 100644/100755；delete/move/chmod 显式声明；action、路径、scope、大小和 diff 均经 route/request verifier。"
         }
       ],
-      "notes": "开始在 mlive-dev/ai-studio 验证 GitLab CI Sweeper repair-MR live recovery；先建立最小可回滚 CI failure，再验证 Issue Fix Request、Route Dispatcher、claim、repair MR、human merge 与 post-merge closeout。"
+      "notes": "开始在 example-group/product-project 验证 GitLab CI Sweeper repair-MR live recovery；先建立最小可回滚 CI failure，再验证 Issue Fix Request、Route Dispatcher、claim、repair MR、human merge 与 post-merge closeout。"
     },
     "1-5-4-4": {
       "id": "1-5-4-4",
@@ -1095,14 +1095,14 @@
           "note": "目标是验证第二类 repair consumer，不能因复用 CI Sweeper 基础设施而把两个 route 的 capability、scope 或 evidence 语义混为一谈。"
         },
         {
-          "q": "GitLab Dependency Sweeper dogfood 是否修改 ai-studio 业务依赖？",
+          "q": "GitLab Dependency Sweeper dogfood 是否修改 product-project 业务依赖？",
           "answer": "否；使用 zj-loop/dogfood 下的专用 npm fixture，并由 GitLab provider-specific Commit/MR API 创建 repair MR",
           "note": "fixture 只验证 dependency repair-MR 协议、scope、verification 和 closeout，不改变目标项目业务 package.json；不能把 gh CLI 逻辑泛化为 GitLab adapter。"
         },
         {
           "q": "GitLab Dependency Sweeper dogfood 的 fixture 变更如何固定？",
           "answer": "固定 zj-loop/dogfood/dependency-fixture 中 yaml 2.8.0 -> 2.8.1 的 patch 升级，更新 package.json 与 package-lock.json，并运行 fixture 内 npm ci 与测试 gate",
-          "note": "复用既有 yaml patch 升级先例；双文件 scope 可验证 manifest/lockfile 一致性，避免修改 ai-studio 业务依赖。"
+          "note": "复用既有 yaml patch 升级先例；双文件 scope 可验证 manifest/lockfile 一致性，避免修改 product-project 业务依赖。"
         },
         {
           "q": "GitLab Dependency Sweeper 是否复用 CI Sweeper 的 route-specific repair command？",
@@ -1126,7 +1126,7 @@
         },
         {
           "q": "GitLab Dependency Sweeper live dogfood 使用哪个目标项目与变更边界？",
-          "answer": "继续使用 mlive-dev/ai-studio；只在 zj-loop/dogfood/dependency-fixture 验证 yaml 2.8.0 -> 2.8.1，不修改 ai-studio 业务 package.json、package-lock.json 或业务源码",
+          "answer": "继续使用 example-group/product-project；只在 zj-loop/dogfood/dependency-fixture 验证 yaml 2.8.0 -> 2.8.1，不修改 product-project 业务 package.json、package-lock.json 或业务源码",
           "note": "真实证据必须包含 GitLab Commit API、Dependency repair MR、human merge 前后的 lifecycle；fixture substrate 与业务依赖隔离。"
         },
         {
@@ -1157,7 +1157,7 @@
         },
         {
           "q": "PR Steward GitLab dogfood 使用什么 fixture？",
-          "answer": "使用 ai-studio 中只影响 zj-loop/dogfood 的受控 CI failure MR；先完成 MR report-only live evidence，再推进 failed-check 到 Issue Fix Request，不触碰业务代码。",
+          "answer": "使用 product-project 中只影响 zj-loop/dogfood 的受控 CI failure MR；先完成 MR report-only live evidence，再推进 failed-check 到 Issue Fix Request，不触碰业务代码。",
           "note": "fixture 必须可回滚、可重复，report-only 不评论/改 label/创建 request；request-only 只消费 allowlisted failed-check evidence，并固定校验 project、MR IID、head SHA 与 route consumer binding。"
         },
         {
@@ -1166,7 +1166,7 @@
           "note": "1-5-4-5 只有在 report、request、claim、verifier、repair/escalation evidence 全部完成后才可视为完整 GitLab PR Steward parity。"
         }
       ],
-      "notes": "GitLab PR Steward report, request, claim/verifier, and bounded escalation evidence are complete in ai-studio. Repair MR creation remains explicitly false for this evidence because no deterministic repair plan was supplied; this is the accepted escalation completion form and does not claim repair-MR support."
+      "notes": "GitLab PR Steward report, request, claim/verifier, and bounded escalation evidence are complete in product-project. Repair MR creation remains explicitly false for this evidence because no deterministic repair plan was supplied; this is the accepted escalation completion form and does not claim repair-MR support."
     },
     "1-5-4-6": {
       "id": "1-5-4-6",
@@ -1240,7 +1240,7 @@
         },
         {
           "q": "GitLab Changelog Drafter dogfood 的 draft 文件放在哪里？",
-          "answer": "使用 ai-studio 的专用 zj-loop/dogfood/changelog-draft.md 单文件 fixture，不修改业务目录或真实 README/CHANGELOG。",
+          "answer": "使用 product-project 的专用 zj-loop/dogfood/changelog-draft.md 单文件 fixture，不修改业务目录或真实 README/CHANGELOG。",
           "note": "draft-MR 只验证 Commit/MR/closeout API，fixture 可回滚且不代表业务文件变更。"
         },
         {
@@ -1255,11 +1255,11 @@
         },
         {
           "q": "GitLab Changelog Drafter 的实现顺序是什么？",
-          "answer": "按 core adapter、CLI、GitLab fragment、ai-studio draft fixture dogfood、human merge closeout 的顺序执行 TDD。",
+          "answer": "按 core adapter、CLI、GitLab fragment、product-project draft fixture dogfood、human merge closeout 的顺序执行 TDD。",
           "note": "每个 slice 单独验证；draft-evidence、draft-MR、closeout 不互相冒充完成。"
         }
       ],
-      "notes": "Completed the full GitLab Changelog Drafter evidence chain: provider-specific carrier/claim/Commit/MR/closeout adapters; explicit draft-evidence and draft-MR CLI modes; generated fragment and bundle gates; real ai-studio artifact-only evidence; real Draft MR creation; human merge; negative merge-not-confirmed boundary; and positive closeout with reread evidence, branch cleanup, and carrier closure. The default remains draft-evidence; draft-MR and closeout retain separate explicit confirmations."
+      "notes": "Completed the full GitLab Changelog Drafter evidence chain: provider-specific carrier/claim/Commit/MR/closeout adapters; explicit draft-evidence and draft-MR CLI modes; generated fragment and bundle gates; real product-project artifact-only evidence; real Draft MR creation; human merge; negative merge-not-confirmed boundary; and positive closeout with reread evidence, branch cleanup, and carrier closure. The default remains draft-evidence; draft-MR and closeout retain separate explicit confirmations."
     },
     "1-3-2-1": {
       "id": "1-3-2-1",
@@ -1652,8 +1652,8 @@
           "note": "completed 保持 0；escalated 可见 result 后以 2 失败；SIGINT/SIGTERM 保持 130/143。这样 shell、job 状态与 artifact 的事实一致。"
         },
         {
-          "q": "GitLab image 的通用默认与 ai-studio dogfood 应如何分层？",
-          "answer": "发布 bundle 继续默认 node:22；ai-studio dogfood 显式 pin hub.bilibili.co/nyx-compile/bilibili-nodejs-debian12@sha256:1d9b33a6a995d34ba57623a66f60c7564fbe41180bb53d49e82bc01770196290。",
+          "q": "GitLab image 的通用默认与 product-project dogfood 应如何分层？",
+          "answer": "发布 bundle 继续默认 node:22；product-project dogfood 显式 pin hub.bilibili.co/nyx-compile/bilibili-nodejs-debian12@sha256:1d9b33a6a995d34ba57623a66f60c7564fbe41180bb53d49e82bc01770196290。",
           "note": "通用默认保持跨项目可移植；target project 用 zj-loop-init --gitlab-image 传入自身可达镜像。Node 22.21.1 digest 避免 Docker Hub 不可达与 tag 漂移。"
         },
         {
@@ -1662,7 +1662,7 @@
           "note": "API 临时失败仅记录低成本计数并有界重试，不延长 deadline；cleanup 漂移或失败保留 state 并 escalated，不自动重试。pipeline、receipt、cleanup 组成同一有界事务。"
         }
       ],
-      "notes": "2026-07-15 ai-studio live dogfood: deployed fresh core/init tarballs to zjal-gitlab-yaml-folded-script-fix with runner tag jinkela-k8s-runner-jscs-05 and reachable internal Node image. Probe job 25926933 created owned schedule 959; GitLab consumed the schedule but produced no source=schedule pipeline before deadline. Artifact recorded scheduled-pipeline-missing with poll_errors=0, while guarded cleanup removed 959 and state recorded cleanup_outcome=cleaned. Existing schedule 957 was unchanged."
+      "notes": "2026-07-15 product-project live dogfood: deployed fresh core/init tarballs to zjal-gitlab-yaml-folded-script-fix with runner tag jinkela-k8s-runner-jscs-05 and reachable internal Node image. Probe job 25926933 created owned schedule 959; GitLab consumed the schedule but produced no source=schedule pipeline before deadline. Artifact recorded scheduled-pipeline-missing with poll_errors=0, while guarded cleanup removed 959 and state recorded cleanup_outcome=cleaned. Existing schedule 957 was unchanged."
     },
     "1-5-3-1-5-2-3-1": {
       "id": "1-5-3-1-5-2-3-1",
@@ -1706,7 +1706,7 @@
     },
     "1-5-3-1-5-2-3-5": {
       "id": "1-5-3-1-5-2-3-5",
-      "label": "Pinned-image ai-studio tarball dogfood with receipt and cleanup evidence",
+      "label": "Pinned-image product-project tarball dogfood with receipt and cleanup evidence",
       "status": "completed",
       "mode": "exploit",
       "parent": "1-5-3-1-5-2-3",
@@ -1718,7 +1718,7 @@
           "note": "Schedule variable identity is mandatory. The deterministic preflight performs only GET requests and refuses with schedule-probe-capability-blocked plus no operations; it does not weaken identity or fall back to manual cleanup."
         }
       ],
-      "notes": "2026-07-15 ai-studio pinned-image dogfood: Web pipeline 10501751/job 25930669 created owned schedule 960, but schedule detail omitted variables and both variables endpoints returned 404; schedule fired but no source=schedule pipeline appeared. Human-session cleanup removed 960; normal schedule 957 remained unchanged. Follow-up implementation now performs a read-only preflight before any POST: it lists existing schedules then requires an existing schedule detail to expose variables as an array. This GitLab instance therefore returns blocked/schedule-probe-capability-blocked with operations=[] and CLI exit 2; no temporary schedule or cleanup is attempted. Verification: core build plus schedule-probe runner/CLI tests passed."
+      "notes": "2026-07-15 product-project pinned-image dogfood: Web pipeline 10501751/job 25930669 created owned schedule 960, but schedule detail omitted variables and both variables endpoints returned 404; schedule fired but no source=schedule pipeline appeared. Human-session cleanup removed 960; normal schedule 957 remained unchanged. Follow-up implementation now performs a read-only preflight before any POST: it lists existing schedules then requires an existing schedule detail to expose variables as an array. This GitLab instance therefore returns blocked/schedule-probe-capability-blocked with operations=[] and CLI exit 2; no temporary schedule or cleanup is attempted. Verification: core build plus schedule-probe runner/CLI tests passed."
     },
     "1-5-4-3-1": {
       "id": "1-5-4-3-1",
@@ -1772,13 +1772,13 @@
     },
     "1-5-4-3-6": {
       "id": "1-5-4-3-6",
-      "label": "ai-studio generated-substrate drift fixture and live evidence",
+      "label": "product-project generated-substrate drift fixture and live evidence",
       "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-3",
       "children": [],
       "decisions": [],
-      "notes": "Completed with real GitLab dogfood in mlive-dev/ai-studio. The deterministic fixture zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml was the only repair scope; Issue Fix Request #185 consumed the fixture drift, created MR !309, and the repair MR was manually merged. Closeout deleted the automated/ci-sweeper-gitlab-10513928-64ffecc0 branch and closed carrier #185. No business files were touched."
+      "notes": "Completed with real GitLab dogfood in example-group/product-project. The deterministic fixture zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml was the only repair scope; Issue Fix Request #185 consumed the fixture drift, created MR !309, and the repair MR was manually merged. Closeout deleted the automated/ci-sweeper-gitlab-10513928-64ffecc0 branch and closed carrier #185. No business files were touched."
     },
     "1-5-4-3-7": {
       "id": "1-5-4-3-7",
@@ -1847,7 +1847,7 @@
         {
           "q": "execution-ready dogfood 是否只允许修改 generated substrate，不触碰业务代码？",
           "answer": "必须；只允许 zj-loop/ 与根 CI 生成物等 allowlisted scope，业务文件越界立即 hard stop",
-          "note": "验证 repair-MR 边界而不污染 ai-studio 业务逻辑；human merge 后再 closeout。"
+          "note": "验证 repair-MR 边界而不污染 product-project 业务逻辑；human merge 后再 closeout。"
         },
         {
           "q": "repair_actions 是否必须由 deterministic planner 写入 request envelope，consumer 是否禁止自行猜动作？",
@@ -1909,13 +1909,13 @@
     },
     "1-5-4-3-7-4": {
       "id": "1-5-4-3-7-4",
-      "label": "ai-studio positive fixture live evidence and execution-ready promotion gate",
+      "label": "product-project positive fixture live evidence and execution-ready promotion gate",
       "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-3-7",
       "children": [],
       "decisions": [],
-      "notes": "Completed with real ai-studio positive live evidence. Dogfood-only execution-ready promotion was applied; Issue Fix Request #185 (ifr_8534207a5fa5) triggered consumer pipeline 10513928, claim and verifier passed, repair MR !309 was created and manually merged, and closeout job 25973143 deleted branch automated/ci-sweeper-gitlab-10513928-64ffecc0, appended closeout evidence, and closed #185. This proves the bounded GitLab CI Sweeper repair-MR lifecycle without auto-merge or business-file scope expansion."
+      "notes": "Completed with real product-project positive live evidence. Dogfood-only execution-ready promotion was applied; Issue Fix Request #185 (ifr_8534207a5fa5) triggered consumer pipeline 10513928, claim and verifier passed, repair MR !309 was created and manually merged, and closeout job 25973143 deleted branch automated/ci-sweeper-gitlab-10513928-64ffecc0, appended closeout evidence, and closed #185. This proves the bounded GitLab CI Sweeper repair-MR lifecycle without auto-merge or business-file scope expansion."
     },
     "1-5-4-3-7-5": {
       "id": "1-5-4-3-7-5",
@@ -1991,7 +1991,7 @@
       "parent": "1-5-4-4",
       "children": [],
       "decisions": [],
-      "notes": "ai-studio live evidence 已闭环：初始 MR !311 因混入 dogfood substrate 触发 repair-scope-mismatch，未执行副作用；随后从 master 创建干净 repair MR !312，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c，source_ref=master，target_branch=master，仅更新 dependency fixture 的 package.json 与 package-lock.json。MR !312 合并后，closeout job 25980469 产出成功结果；旧 !311 分支与新 repair 分支均已清理。carrier Issue #186 的关闭记录归入 1-5-4-4-7。"
+      "notes": "product-project live evidence 已闭环：初始 MR !311 因混入 dogfood substrate 触发 repair-scope-mismatch，未执行副作用；随后从 master 创建干净 repair MR !312，branch automated/dependency-sweeper-gitlab-yaml-2-8-1-dogfood186c，source_ref=master，target_branch=master，仅更新 dependency fixture 的 package.json 与 package-lock.json。MR !312 合并后，closeout job 25980469 产出成功结果；旧 !311 分支与新 repair 分支均已清理。carrier Issue #186 的关闭记录归入 1-5-4-4-7。"
     },
     "1-5-4-4-7": {
       "id": "1-5-4-4-7",
@@ -2013,11 +2013,11 @@
       "decisions": [
         {
           "q": "PR Steward GitLab report-only fixture 如何制造受控失败？",
-          "answer": "在 ai-studio 的 zj-loop/dogfood/pr-steward-fixture 下新增只在 merge_request_event 运行的确定性失败 job，明确 exit 1；fixture 只存在于 dogfood MR，不进入 master。",
+          "answer": "在 product-project 的 zj-loop/dogfood/pr-steward-fixture 下新增只在 merge_request_event 运行的确定性失败 job，明确 exit 1；fixture 只存在于 dogfood MR，不进入 master。",
           "note": "失败来源稳定、无业务影响、可回滚；report-only 只读取 MR/head pipeline 并生成 evidence，不评论、不改 label、不创建 Issue。"
         }
       ],
-      "notes": "GitLab PR Steward report-only live dogfood 已完成：ai-studio draft MR !313 使用 zj-loop/dogfood/pr-steward-fixture 的 merge_request_event 确定性失败 job。首次 pipeline 10516448 暴露 fixture script YAML 冒号解析错误并修复；pipeline 10516503 yaml_errors 为空，fixture job 25981408 真实 failed，Route Table 显式 enable pr-steward-report 后 route decision allowed。report job 25981481 重试读取已完成的 pipeline jobs，产出 gitlab-pr-steward-report.json：checks=failure、status=candidate-fix-request、failed_jobs=[zj_loop_pr_steward_fixture_failure]、side_effects_executed=false。验证了 GitLab pipeline 顶层 manual 时必须读取 jobs 汇总的 provider 差异；全程无评论、label、Issue 或 MR 写入。"
+      "notes": "GitLab PR Steward report-only live dogfood 已完成：product-project draft MR !313 使用 zj-loop/dogfood/pr-steward-fixture 的 merge_request_event 确定性失败 job。首次 pipeline 10516448 暴露 fixture script YAML 冒号解析错误并修复；pipeline 10516503 yaml_errors 为空，fixture job 25981408 真实 failed，Route Table 显式 enable pr-steward-report 后 route decision allowed。report job 25981481 重试读取已完成的 pipeline jobs，产出 gitlab-pr-steward-report.json：checks=failure、status=candidate-fix-request、failed_jobs=[zj_loop_pr_steward_fixture_failure]、side_effects_executed=false。验证了 GitLab pipeline 顶层 manual 时必须读取 jobs 汇总的 provider 差异；全程无评论、label、Issue 或 MR 写入。"
     },
     "1-5-4-5-2": {
       "id": "1-5-4-5-2",
@@ -2033,7 +2033,7 @@
           "note": "确认位置为 GitLab 手动作业变量或 Codex 当前对话；缺失或不一致时零次 Issue API 写入并输出 confirmation-required。"
         }
       ],
-      "notes": "GitLab PR Steward failed-check -> Issue Fix Request live evidence 已完成：ai-studio MR !313 的 fixture failure 经 report job 25981764/25983372 产出 candidate-fix-request；request job 25983342 在固定确认短语 CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST 下成功创建 carrier Issue #188，request_id=ifr_c05bebf77a8b。Route Table pr-steward-report 显式 enabled；source project、MR IID=313、head SHA、failed_jobs 与 request consumer binding 均由 adapter 校验；dedupe 与 confirmation-required 零写入测试通过。Issue #188 保持 opened，留给后续 claim 节点。"
+      "notes": "GitLab PR Steward failed-check -> Issue Fix Request live evidence 已完成：product-project MR !313 的 fixture failure 经 report job 25981764/25983372 产出 candidate-fix-request；request job 25983342 在固定确认短语 CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST 下成功创建 carrier Issue #188，request_id=ifr_c05bebf77a8b。Route Table pr-steward-report 显式 enabled；source project、MR IID=313、head SHA、failed_jobs 与 request consumer binding 均由 adapter 校验；dedupe 与 confirmation-required 零写入测试通过。Issue #188 保持 opened，留给后续 claim 节点。"
     },
     "1-5-4-5-3": {
       "id": "1-5-4-5-3",
@@ -2043,7 +2043,7 @@
       "parent": "1-5-4-5",
       "children": [],
       "decisions": [],
-      "notes": "GitLab live evidence completed on ai-studio MR !313 at head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de. Report job 25983394 succeeded while fixture failure job 25983395 failed. Request job 25983402, with CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST, created carrier Issue #189 and request_id=ifr_31bf89f5f5e5. Claim job 25983403 consumed the new carrier with project, issue IID, request ID, claim ID, MR IID, and head SHA all fixed and matched; result outcome=claimed. Carrier Issue #189 contains the claim note after reread; MR !313 contains no claim-side note or other source-MR mutation. No repair MR or closeout was performed; Issue #189 remains open for the next bounded repair/escalation node."
+      "notes": "GitLab live evidence completed on product-project MR !313 at head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de. Report job 25983394 succeeded while fixture failure job 25983395 failed. Request job 25983402, with CONFIRM_PR_STEWARD_ISSUE_FIX_REQUEST, created carrier Issue #189 and request_id=ifr_31bf89f5f5e5. Claim job 25983403 consumed the new carrier with project, issue IID, request ID, claim ID, MR IID, and head SHA all fixed and matched; result outcome=claimed. Carrier Issue #189 contains the claim note after reread; MR !313 contains no claim-side note or other source-MR mutation. No repair MR or closeout was performed; Issue #189 remains open for the next bounded repair/escalation node."
     },
     "1-5-4-5-4": {
       "id": "1-5-4-5-4",
@@ -2053,7 +2053,7 @@
       "parent": "1-5-4-5",
       "children": [],
       "decisions": [],
-      "notes": "GitLab live escalation evidence completed on ai-studio. Added provider-specific gitlab-escalation CLI and manual recovery job with explicit needs: [], so same-stage DAG blocking cannot prevent a bounded operator start. Job 25983856 in API pipeline 10517011 consumed Issue #189 claim identity (request_id=ifr_31bf89f5f5e5, claim_id=claim-pr-steward-313-92e140b8, MR !313, head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de), revalidated request/project/MR head, appended one structured pr-steward-escalation marker, reread it, and produced outcome=escalated with repair_mr_created=false. Carrier Issue #189 now contains exactly one escalation marker after the claim marker; source MR !313 was not mutated. The first run exposed a stale tarball and was fail-closed before any API write; refreshed bundle passed on retry."
+      "notes": "GitLab live escalation evidence completed on product-project. Added provider-specific gitlab-escalation CLI and manual recovery job with explicit needs: [], so same-stage DAG blocking cannot prevent a bounded operator start. Job 25983856 in API pipeline 10517011 consumed Issue #189 claim identity (request_id=ifr_31bf89f5f5e5, claim_id=claim-pr-steward-313-92e140b8, MR !313, head 92e140b8d802a83c3fca0cc8df72f6c26ccfd7de), revalidated request/project/MR head, appended one structured pr-steward-escalation marker, reread it, and produced outcome=escalated with repair_mr_created=false. Carrier Issue #189 now contains exactly one escalation marker after the claim marker; source MR !313 was not mutated. The first run exposed a stale tarball and was fail-closed before any API write; refreshed bundle passed on retry."
     },
     "1-5-4-6-1": {
       "id": "1-5-4-6-1",
@@ -2079,7 +2079,7 @@
           "note": "先持久化 truth，再执行清理，避免 carrier 已关闭但 branch 未清理。"
         }
       ],
-      "notes": "GitLab Changelog Drafter parity completed in ai-studio. Artifact-only evidence pipeline 10517165/job 25984901 produced outcome=draft-evidence with side_effects_executed=false. Explicit draft-MR path created carrier Issue #190, claim claim-changelog-190-0d93f89a, and draft MR !314 from branch automated/changelog-drafter-gitlab-cdr190-0d93f89a to master; only zj-loop/dogfood/changelog-draft.md was committed. Closeout negative boundary pipeline 10517177/job 25985177 returned merge-not-confirmed for opened !314 with zero side effects. After human merge, closeout pipeline 10517186/job 25985270 verified merged_at, merge_commit_sha, source/target branch, request and claim binding; appended and reread closeout evidence, confirmed the draft branch already deleted, and closed carrier Issue #190. All Changelog closeout side effects were explicit and auditable."
+      "notes": "GitLab Changelog Drafter parity completed in product-project. Artifact-only evidence pipeline 10517165/job 25984901 produced outcome=draft-evidence with side_effects_executed=false. Explicit draft-MR path created carrier Issue #190, claim claim-changelog-190-0d93f89a, and draft MR !314 from branch automated/changelog-drafter-gitlab-cdr190-0d93f89a to master; only zj-loop/dogfood/changelog-draft.md was committed. Closeout negative boundary pipeline 10517177/job 25985177 returned merge-not-confirmed for opened !314 with zero side effects. After human merge, closeout pipeline 10517186/job 25985270 verified merged_at, merge_commit_sha, source/target branch, request and claim binding; appended and reread closeout evidence, confirmed the draft branch already deleted, and closed carrier Issue #190. All Changelog closeout side effects were explicit and auditable."
     },
     "1-5-4-6-2": {
       "id": "1-5-4-6-2",
@@ -2113,17 +2113,17 @@
     },
     "1-5-4-6-5": {
       "id": "1-5-4-6-5",
-      "label": "ai-studio changelog draft fixture 与真实 draft-evidence dogfood",
+      "label": "product-project changelog draft fixture 与真实 draft-evidence dogfood",
       "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-6",
       "children": [],
       "decisions": [],
-      "notes": "Real ai-studio GitLab draft-evidence dogfood completed. Pipeline 10517165 job 25984901 ran on runner jinkela-k8s-runner-jscs-05 with explicit request cdr_gitlab_dogfood_20260717, repo mlive-dev/ai-studio, base_branch=master, since_ref=master, until_ref=codex/gitlab-changelog-drafter-live, and fixture summary. Artifacts included route-decision.json, consumer-plan.json, changelog-signal.json, orchestration.json, draft-plan.json, and gitlab-changelog-draft-evidence.json. Result outcome=draft-evidence and side_effects_executed=false; no GITLAB_TOKEN, carrier Issue, branch, commit, or MR side effect was used. Two fail-closed dogfood retries exposed and fixed runner tags, disabled-route report handling, and shell JSON quoting."
+      "notes": "Real product-project GitLab draft-evidence dogfood completed. Pipeline 10517165 job 25984901 ran on runner jinkela-k8s-runner-jscs-05 with explicit request cdr_gitlab_dogfood_20260717, repo example-group/product-project, base_branch=master, since_ref=master, until_ref=codex/gitlab-changelog-drafter-live, and fixture summary. Artifacts included route-decision.json, consumer-plan.json, changelog-signal.json, orchestration.json, draft-plan.json, and gitlab-changelog-draft-evidence.json. Result outcome=draft-evidence and side_effects_executed=false; no GITLAB_TOKEN, carrier Issue, branch, commit, or MR side effect was used. Two fail-closed dogfood retries exposed and fixed runner tags, disabled-route report handling, and shell JSON quoting."
     },
     "1-5-4-6-6": {
       "id": "1-5-4-6-6",
-      "label": "ai-studio GitLab Changelog draft-MR live dogfood and provider write evidence",
+      "label": "product-project GitLab Changelog draft-MR live dogfood and provider write evidence",
       "status": "completed",
       "mode": "exploit",
       "parent": "1-5-4-6",
@@ -2165,7 +2165,7 @@
           "note": "采用 A，进入 live dogfood 执行阶段，不降低既定 gate。"
         }
       ],
-      "notes": "Live provider-write evidence completed on ai-studio master commit 017c516d with pipeline draft-MR job. Fresh request cdr_gitlab_live_20260720_02 created carrier Issue IID 962, claim claim-changelog-962-3b1d0298, and Draft MR !546 from automated/changelog-drafter-gitlab-cdr-gitlab-live-20260720-02 to master. gitlab-changelog-draft-mr-result.json returned outcome=created, draft=true, side_effects_executed=true. Provider diff against master is limited to zj-loop/dogfood/changelog-draft.md; no merge, release, closeout, or publish was performed. Previous HTTP 400 was fixed by detecting existing file and using GitLab update action."
+      "notes": "Live provider-write evidence completed on product-project master commit 017c516d with pipeline draft-MR job. Fresh request cdr_gitlab_live_20260720_02 created carrier Issue IID 962, claim claim-changelog-962-3b1d0298, and Draft MR !546 from automated/changelog-drafter-gitlab-cdr-gitlab-live-20260720-02 to master. gitlab-changelog-draft-mr-result.json returned outcome=created, draft=true, side_effects_executed=true. Provider diff against master is limited to zj-loop/dogfood/changelog-draft.md; no merge, release, closeout, or publish was performed. Previous HTTP 400 was fixed by detecting existing file and using GitLab update action."
     },
     "1-5-5-1": {
       "id": "1-5-5-1",
@@ -2177,7 +2177,7 @@
       "decisions": [
         {
           "q": "control-route slice 如何开始？",
-          "answer": "先 TDD 实现确定性 GitLab control-route evidence builder，覆盖 human/ignore；真实 GitLab 来源 envelope 进入 protocol builder 但不访问 GitLab API；positive 生成 human_handoff 或 suppression/route-decision artifact；unknown route、malformed source、attempted side effect 均输出 structured hard stop 且 side_effects_executed=false；复用 smoke/manual substrate 做 ai-studio dogfood，doctor/matrix ledger 索引 evidence。完成后才进入 1-5-5-2。",
+          "answer": "先 TDD 实现确定性 GitLab control-route evidence builder，覆盖 human/ignore；真实 GitLab 来源 envelope 进入 protocol builder 但不访问 GitLab API；positive 生成 human_handoff 或 suppression/route-decision artifact；unknown route、malformed source、attempted side effect 均输出 structured hard stop 且 side_effects_executed=false；复用 smoke/manual substrate 做 product-project dogfood，doctor/matrix ledger 索引 evidence。完成后才进入 1-5-5-2。",
           "note": "不新增 provider API job；control route 的 GitLab applicability 由协议级 evidence 证明。"
         },
         {
@@ -2186,7 +2186,7 @@
           "note": "统一机器协议避免 Agent 发明输出；route-specific artifact 保留 human/ignore 语义差异；不保存 token 或完整 GitLab response。"
         }
       ],
-      "notes": "Control/report-only GitLab dogfood completed in ai-studio. Core TDD added buildGitLabControlRouteEvidence and zj-loop-route control-evidence with unified zj-loop.gitlab_control_route_evidence.v1 envelope, human_handoff artifact for human, suppression route_decision artifact for ignore, deterministic fingerprint, GitLab source/project binding, and zero-side-effect hard stops. Core targeted tests, vendored tarball CLI, YAML/render gate passed. Positive ignore evidence: pipeline 10517909/job 25988452. Positive human-handoff evidence: pipeline 10517931/job 25988585. Negative attempted side-effect evidence: job 25988651 on commit df08f613; the job failed at the expected control boundary and uploaded gitlab-control-route-evidence.json with zero provider side effects. Existing audit L0 findings were report-only and did not fail smoke. Doctor/matrix ledger indexing remains in 1-5-5-5."
+      "notes": "Control/report-only GitLab dogfood completed in product-project. Core TDD added buildGitLabControlRouteEvidence and zj-loop-route control-evidence with unified zj-loop.gitlab_control_route_evidence.v1 envelope, human_handoff artifact for human, suppression route_decision artifact for ignore, deterministic fingerprint, GitLab source/project binding, and zero-side-effect hard stops. Core targeted tests, vendored tarball CLI, YAML/render gate passed. Positive ignore evidence: pipeline 10517909/job 25988452. Positive human-handoff evidence: pipeline 10517931/job 25988585. Negative attempted side-effect evidence: job 25988651 on commit df08f613; the job failed at the expected control boundary and uploaded gitlab-control-route-evidence.json with zero provider side effects. Existing audit L0 findings were report-only and did not fail smoke. Doctor/matrix ledger indexing remains in 1-5-5-5."
     },
     "1-5-5-2": {
       "id": "1-5-5-2",
@@ -2203,7 +2203,7 @@
         },
         {
           "q": "Roadmap Activation explicit-on-demand 使用什么 dogfood fixture？",
-          "answer": "使用 ai-studio 专用最小可回滚 activation fixture，只影响 zj-loop/dogfood；source Issue/comment、activation request、target branch、MR IID 显式绑定；branch 固定 zjal-*；允许创建 Draft MR 但禁止自动 merge。历史 !298 只有 compatibility fingerprint 完全匹配才可复用，否则重新创建。negative 覆盖缺失 contract、非 zjal branch、source mismatch、disabled route，均零 provider write。",
+          "answer": "使用 product-project 专用最小可回滚 activation fixture，只影响 zj-loop/dogfood；source Issue/comment、activation request、target branch、MR IID 显式绑定；branch 固定 zjal-*；允许创建 Draft MR 但禁止自动 merge。历史 !298 只有 compatibility fingerprint 完全匹配才可复用，否则重新创建。negative 覆盖缺失 contract、非 zjal branch、source mismatch、disabled route，均零 provider write。",
           "note": "避免把历史 branch/MR API 成功或非绑定 activation 误认为当前 explicit-on-demand completion。"
         },
         {
@@ -2222,7 +2222,7 @@
           "note": "不把 Web pipeline 伪装成 Issue/comment event，保持 trigger mode 与 evidence truth 一致。"
         }
       ],
-      "notes": "Completed with real ai-studio GitLab Web evidence. Positive pipeline 10519067/job 25991688 on commit f893bcbd created the bound Draft MR !315 from zjal-act-191-19652349-gitlab-explicit-on-demand-dogfood to master, with Issue #191 and Note #19652349 carried in the contract; no merge or closeout was performed. Negative missing-Note binding pipeline 10519288/job 25992832 on commit a6d60fa9 returned execution-result status=refused with source-comment-id-required and no live_operations. Negative cross-Issue Note mismatch pipeline 10519607/job 25993405 returned source-comment-issue-or-id-mismatch and no live_operations. The earlier pre-fix negative run created invalid Draft MR !316; it is excluded from evidence and remains a human cleanup item."
+      "notes": "Completed with real product-project GitLab Web evidence. Positive pipeline 10519067/job 25991688 on commit f893bcbd created the bound Draft MR !315 from zjal-act-191-19652349-gitlab-explicit-on-demand-dogfood to master, with Issue #191 and Note #19652349 carried in the contract; no merge or closeout was performed. Negative missing-Note binding pipeline 10519288/job 25992832 on commit a6d60fa9 returned execution-result status=refused with source-comment-id-required and no live_operations. Negative cross-Issue Note mismatch pipeline 10519607/job 25993405 returned source-comment-issue-or-id-mismatch and no live_operations. The earlier pre-fix negative run created invalid Draft MR !316; it is excluded from evidence and remains a human cleanup item."
     },
     "1-5-5-3": {
       "id": "1-5-5-3",
@@ -2250,7 +2250,7 @@
         },
         {
           "q": "Webhook bridge 应放在哪里？",
-          "answer": "放在 ZAgenticLoop 的 provider adapter 层，作为独立、无业务代码的 GitLab bridge；不放进 ai-studio 业务仓库，也不把 bridge 逻辑塞进 CI job。GitLab Project Webhook 只投递事件，bridge 校验 secret/project/event，再触发固定 API pipeline；provider side effects 仍由 consumer pipeline 的 claim/verifier 边界负责。",
+          "answer": "放在 ZAgenticLoop 的 provider adapter 层，作为独立、无业务代码的 GitLab bridge；不放进 product-project 业务仓库，也不把 bridge 逻辑塞进 CI job。GitLab Project Webhook 只投递事件，bridge 校验 secret/project/event，再触发固定 API pipeline；provider side effects 仍由 consumer pipeline 的 claim/verifier 边界负责。",
           "note": "bridge 不直接写 Issue、Note、Branch 或 MR；event ID 负责 dedupe，保留结构化 envelope。"
         },
         {
@@ -2286,7 +2286,7 @@
         {
           "q": "原生 merge_request_event dogfood 是否创建独立最小 fixture MR，只修改 zj-loop/dogfood/pr-steward-fixture.yml，不复用 !315 或历史 MR？",
           "answer": "是。使用独立 zjal-* 源分支、目标 master、单文件 fixture scope 和可控失败 check；显式绑定 MR IID、head SHA、source/target branch。失败时零次源 MR 写入，人工关闭/合并与 Post-Merge closeout 分开验证。",
-          "note": "避免 explicit-on-demand 与 event-driven evidence 串线，也避免触碰 ai-studio 业务逻辑。"
+          "note": "避免 explicit-on-demand 与 event-driven evidence 串线，也避免触碰 product-project 业务逻辑。"
         },
         {
           "q": "PR Steward event-driven dogfood 是否以结构化 escalation 作为正向 completion，而不创建第二个 repair MR？",
@@ -2359,7 +2359,7 @@
         },
         {
           "q": "只读 capability artifact 修改哪些仓库？",
-          "answer": "只修改 ZAgenticLoop 的 doctor/ledger、Route Table 和 matrix verifier；不修改 ai-studio 业务代码，也不修改 ai-studio-gitlab 部署服务。",
+          "answer": "只修改 ZAgenticLoop 的 doctor/ledger、Route Table 和 matrix verifier；不修改 product-project 业务代码，也不修改 gitlab-webhook-test-fork 部署服务。",
           "note": "当前版本只记录和验证能力状态，避免 deferred Webhook 逻辑扩散到两个 GitLab 项目。"
         }
       ],
@@ -2390,7 +2390,7 @@
         },
         {
           "q": "剩余 PR Steward negative/recovery 在哪里验证？",
-          "answer": "在内网 mlive-dev/ai-studio 使用真实 GitLab pipeline 做受控 live 验证；只操作 fixture Issue/MR，不发布公网，不自动 merge。",
+          "answer": "在内网 example-group/product-project 使用真实 GitLab pipeline 做受控 live 验证；只操作 fixture Issue/MR，不发布公网，不自动 merge。",
           "note": "内网 provider evidence 允许周末继续；公网 Nyx/Caster 发布仍暂停。"
         },
         {
@@ -2399,7 +2399,7 @@
           "note": "先锁死 zero-write hard stop，再验证唯一允许的恢复路径；不盲目重试。"
         }
       ],
-      "notes": "Completed with real ai-studio merge_request_event evidence on Draft MR !317, source branch codex/gitlab-pr-steward-event-dogfood, target master, and current head 98de7e47866217482aaa617c70e81bbb2aff03d7. The original positive report/request/claim/escalation evidence remains recorded for the fixture; the refreshed request for the current head was pipeline job 26041828, creating carrier Issue #200 and request ifr_1de5b9433620. The refreshed claim was job 26041717 with claim claim-pr-steward-317-98de7e47. Negative claim-id mismatch evidence was job 26041391 with side_effects_executed=false. Verifier scope failure was job 26043031: requested scope source-mr-write, allowed scopes pull-request and failed-check-rollup, reason verifier-scope-mismatch, side_effects_executed=false. Explicit recovery replay was job 26041718, appending one escalation marker to carrier Issue #200 with outcome=escalated and repair_mr_created=false. No source MR mutation, repair MR, auto-merge, or public release occurred."
+      "notes": "Completed with real product-project merge_request_event evidence on Draft MR !317, source branch codex/gitlab-pr-steward-event-dogfood, target master, and current head 98de7e47866217482aaa617c70e81bbb2aff03d7. The original positive report/request/claim/escalation evidence remains recorded for the fixture; the refreshed request for the current head was pipeline job 26041828, creating carrier Issue #200 and request ifr_1de5b9433620. The refreshed claim was job 26041717 with claim claim-pr-steward-317-98de7e47. Negative claim-id mismatch evidence was job 26041391 with side_effects_executed=false. Verifier scope failure was job 26043031: requested scope source-mr-write, allowed scopes pull-request and failed-check-rollup, reason verifier-scope-mismatch, side_effects_executed=false. Explicit recovery replay was job 26041718, appending one escalation marker to carrier Issue #200 with outcome=escalated and repair_mr_created=false. No source MR mutation, repair MR, auto-merge, or public release occurred."
     },
     "1-5-5-3-2": {
       "id": "1-5-5-3-2",
@@ -2495,7 +2495,7 @@
         {
           "q": "GitLab Issue Note webhook bridge 放在哪里？",
           "answer": "ZAgenticLoop provider adapter 独立 bridge",
-          "note": "bridge 校验 secret/project/event，持久化轻量 envelope 并触发固定 API pipeline；不直接写 Issue/Note/Branch/MR，ai-studio 不承载 bridge 逻辑。"
+          "note": "bridge 校验 secret/project/event，持久化轻量 envelope 并触发固定 API pipeline；不直接写 Issue/Note/Branch/MR，product-project 不承载 bridge 逻辑。"
         },
         {
           "q": "哪些 GitLab Issue Note 事件允许进入 bridge？",
@@ -2530,7 +2530,7 @@
         {
           "q": "真实 GitLab Issue Note webhook bridge 的 completion gate 是什么？",
           "answer": "必须通过完整 live/recovery evidence 矩阵：合法 marker 正向触发并生成真实 pipeline ID；非匹配 Note、普通评论、label 变化均 ignored；secret/project/event 校验失败均 hard stop 且零 trigger；同一 webhook 重放返回 duplicate 且零重复 trigger；trigger-failed 与 trigger-uncertain 只能通过显式 resume 恢复；artifact 必须包含统一 envelope、dedupe receipt、route decision、trigger/recovery evidence；bridge 不执行 Issue、Note、Branch、MR 写操作。",
-          "note": "独立 ai-studio fixture；不能以 pipeline started 或单次 job succeeded 代替 completion。"
+          "note": "独立 product-project fixture；不能以 pipeline started 或单次 job succeeded 代替 completion。"
         }
       ],
       "notes": ""
@@ -2544,14 +2544,14 @@
       "children": [],
       "decisions": [
         {
-          "q": "ai-studio-gitlab 与 ai-studio 的职责边界是什么？",
-          "answer": "ai-studio-gitlab 作为独立 GitLab Webhook 验证服务器/容器；ai-studio 作为主要开发、CI consumer、Issue Triage 集成项目。",
+          "q": "gitlab-webhook-test-fork 与 product-project 的职责边界是什么？",
+          "answer": "gitlab-webhook-test-fork 作为独立 GitLab Webhook 验证服务器/容器；product-project 作为主要开发、CI consumer、Issue Triage 集成项目。",
           "note": "Webhook 基础设施与业务/consumer 项目分层；周末只做本地开发，工作日再做真实 provider 验证。"
         },
         {
           "q": "真实 Issue Triage dogfood 的项目绑定是什么？",
-          "answer": "Issue Note 来源和目标 pipeline 都绑定 mlive-dev/ai-studio；bridge 服务部署在 mlive-dev/ai-studio-gitlab。",
-          "note": "服务托管项目与业务验证项目分离；bridge 的 project_path、API target 和 trigger token 绑定 ai-studio。"
+          "answer": "Issue Note 来源和目标 pipeline 都绑定 example-group/product-project；bridge 服务部署在 example-group/gitlab-webhook-test-fork。",
+          "note": "服务托管项目与业务验证项目分离；bridge 的 project_path、API target 和 trigger token 绑定 product-project。"
         },
         {
           "q": "GitLab Webhook Issue Triage 适配是否纳入本版本产品计划？",
@@ -2665,7 +2665,7 @@
         },
         {
           "q": "Webhook capability artifact 记录哪些绑定信息？",
-          "answer": "记录 provider=gitlab、project_path=mlive-dev/ai-studio、route_id=gitlab-issue-note-bridge、status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；可记录 auth_source 名称，不记录 Secret、Token 或完整 payload。",
+          "answer": "记录 provider=gitlab、project_path=example-group/product-project、route_id=gitlab-issue-note-bridge、status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；可记录 auth_source 名称，不记录 Secret、Token 或完整 payload。",
           "note": "证明项目与 route 绑定且不泄露凭证；部署实验不被误当 live evidence。"
         },
         {
@@ -2686,17 +2686,17 @@
         {
           "q": "重新开启 GitLab Webhook 的第一步是什么？",
           "answer": "A：先提交 Webhook re-enable readiness PR，补齐版本、owner、项目绑定、Secret 分离、固定 endpoint/ref 与 health check；保持 enabled=false",
-          "note": "当前没有可用 ai-studio-gitlab deployment；准备 PR 不产生 GitLab provider side effect，待 Human review 后再部署与 promotion。"
+          "note": "当前没有可用 gitlab-webhook-test-fork deployment；准备 PR 不产生 GitLab provider side effect，待 Human review 后再部署与 promotion。"
         },
         {
           "q": "GitLab Webhook live fixture 使用哪个项目边界？",
-          "answer": "A：只在 mlive-dev/ai-studio-gitlab 内网测试 fork 与其 bridge deployment 上验证；mlive-dev/ai-studio 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline",
-          "note": "ai-studio 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。"
+          "answer": "A：只在 example-group/gitlab-webhook-test-fork 内网测试 fork 与其 bridge deployment 上验证；example-group/product-project 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline",
+          "note": "product-project 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。"
         },
         {
           "q": "测试 fork 的 HTTPS bridge 如何承载？",
           "answer": "A：复用内网现有 Ingress，分配固定私有 DNS 与 TLS",
-          "note": "不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 ai-studio-gitlab 测试 fork。"
+          "note": "不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 gitlab-webhook-test-fork 测试 fork。"
         },
         {
           "q": "测试 Ingress 的私有 DNS 如何分配？",
@@ -2705,8 +2705,13 @@
         },
         {
           "q": "真实测试 hostname 与 TLS 证据由谁提供？",
-          "answer": "A：由 ai-studio-gitlab 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据",
+          "answer": "A：由 gitlab-webhook-test-fork 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据",
           "note": "ZAgenticLoop 不自行指定或创建基础设施；仓库只验证脱敏 provenance 与固定路径绑定。"
+        },
+        {
+          "q": "公开 ZAgenticLoop 如何记录闭源 GitLab 项目证据？",
+          "answer": "A：全量使用公开占位符，移除真实项目名、内部域名、Issue/MR/Pipeline 与环境绑定；真实证据只保存在闭源项目或受控外部审计系统",
+          "note": "源码、测试、模板、路线图和公开文档均不得出现 product project 或测试 fork 的真实身份；协议行为用 example-group/product-project 等占位符验证。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -2729,7 +2734,7 @@
       "parent": "1-5-5-3-2",
       "children": [],
       "decisions": [],
-      "notes": "ai-studio MR !321 prepared: source zjal-gitlab-post-merge-closeout-dogfood, target master, carrier Issue #194, contract written and binding verified; MR remains opened."
+      "notes": "product-project MR !321 prepared: source zjal-gitlab-post-merge-closeout-dogfood, target master, carrier Issue #194, contract written and binding verified; MR remains opened."
     },
     "1-5-5-3-2-2": {
       "id": "1-5-5-3-2-2",
@@ -2915,22 +2920,22 @@
         {
           "q": "负向与不确定 evidence matrix 覆盖哪些场景？",
           "answer": "必须覆盖缺 token=trigger-token-required；route/ref/project/event mismatch 均零 API 调用；额外变量或非法 IID=variable-contract-mismatch；4xx/5xx=trigger-failed；网络异常/超时/坏 JSON=trigger-uncertain；201 response binding mismatch=trigger-response-mismatch；合法 201=唯一 triggered；artifact 不泄露 token、payload 或 response body。",
-          "note": "本矩阵是进入真实 ai-studio dogfood 前的本地 completion gate。"
+          "note": "本矩阵是进入真实 product-project dogfood 前的本地 completion gate。"
         }
       ],
-      "notes": "Completed negative/uncertain evidence matrix. Added test/gitlab-issue-note-bridge-negative-matrix.test.mjs covering token, route, ref, project, event, variable/IID refusals with zero API calls; 4xx/5xx trigger-failed; non-201/bad JSON/network class trigger-uncertain; 201 binding mismatch; positive triggered; and artifact redaction. Combined bridge suite passed 14 tests with build and git diff --check. This is local evidence only; real ai-studio dogfood remains 1-5-5-3-3-5."
+      "notes": "Completed negative/uncertain evidence matrix. Added test/gitlab-issue-note-bridge-negative-matrix.test.mjs covering token, route, ref, project, event, variable/IID refusals with zero API calls; 4xx/5xx trigger-failed; non-201/bad JSON/network class trigger-uncertain; 201 binding mismatch; positive triggered; and artifact redaction. Combined bridge suite passed 14 tests with build and git diff --check. This is local evidence only; real product-project dogfood remains 1-5-5-3-3-5."
     },
     "1-5-5-3-3-5": {
       "id": "1-5-5-3-3-5",
-      "label": "ai-studio GitLab Issue Note bridge live dogfood fixture",
+      "label": "product-project GitLab Issue Note bridge live dogfood fixture",
       "status": "blocked",
       "mode": "exploit",
       "parent": "1-5-5-3-3",
       "children": [],
       "decisions": [
         {
-          "q": "ai-studio live dogfood fixture 的边界是什么？",
-          "answer": "在 mlive-dev/ai-studio 创建独立 carrier Issue，不复用历史 Issue/MR；只添加一条固定 marker Note /zj-loop start roadmap-sliced-development；绑定项目、target route=roadmap-sliced-development、pipeline ref=master；只验证 webhook envelope→receipt/dedupe→API pipeline trigger；不创建/修改 Branch、MR、业务文件、Issue label/state；真实 provider write 仅限创建 pipeline，其余由 artifact 记录。",
+          "q": "product-project live dogfood fixture 的边界是什么？",
+          "answer": "在 example-group/product-project 创建独立 carrier Issue，不复用历史 Issue/MR；只添加一条固定 marker Note /zj-loop start roadmap-sliced-development；绑定项目、target route=roadmap-sliced-development、pipeline ref=master；只验证 webhook envelope→receipt/dedupe→API pipeline trigger；不创建/修改 Branch、MR、业务文件、Issue label/state；真实 provider write 仅限创建 pipeline，其余由 artifact 记录。",
           "note": "最小 fixture 防止把历史 MR 或业务副作用误认为 bridge evidence。"
         },
         {
@@ -2991,12 +2996,12 @@
         },
         {
           "q": "schedule-health 只读检查在哪里执行？",
-          "answer": "在 mlive-dev/ai-studio 通过 GitLab 手动诊断 job 调用 zj-loop-doctor --provider gitlab --schedule-health；该 job 只读检查配置与执行窗口，不计为 source=schedule positive evidence。",
+          "answer": "在 example-group/product-project 通过 GitLab 手动诊断 job 调用 zj-loop-doctor --provider gitlab --schedule-health；该 job 只读检查配置与执行窗口，不计为 source=schedule positive evidence。",
           "note": "GITLAB_TOKEN 仅由 CI Secret 注入；doctor 不启用、play、修改或恢复 schedule；真实 positive 必须来自 schedule 957 自身。"
         },
         {
           "q": "schedule-health configuration_missing 应如何处理？",
-          "answer": "先核验 mlive-dev/ai-studio 中 schedule 957 的实际存在性、active 状态和可读权限；若不存在或 ID 已变化，使用当前有效 schedule IID 重跑。",
+          "answer": "先核验 example-group/product-project 中 schedule 957 的实际存在性、active 状态和可读权限；若不存在或 ID 已变化，使用当前有效 schedule IID 重跑。",
           "note": "configuration_missing/gitlab-api-unavailable 只表示 provider 查询层未完成，不计入 scheduled positive 或 negative evidence；不以 manual/API pipeline 替代 source=schedule。"
         },
         {
@@ -3051,12 +3056,12 @@
         },
         {
           "q": "verifier 是否必须校验 artifact 内部 binding？",
-          "answer": "必须校验 artifact 内部 binding：project=mlive-dev/ai-studio、route=issue-backlog-triage、pipeline/job 与目标一致、source=schedule、report 状态为允许的 report-only 状态，且不包含 provider write 结果。",
+          "answer": "必须校验 artifact 内部 binding：project=example-group/product-project、route=issue-backlog-triage、pipeline/job 与目标一致、source=schedule、report 状态为允许的 report-only 状态，且不包含 provider write 结果。",
           "note": "采用 A，避免误收其他 route 的同 schema artifact。"
         },
         {
           "q": "artifact 缺少 report-only 证据或出现任一副作用标记时如何处理？",
-          "answer": "fail-closed，不计为 positive evidence；必须存在并满足 provider=gitlab、project_path=mlive-dev/ai-studio、route=issue-backlog-triage、source=gitlab-issues-api，以及 side_effects.labels/comments/state/requests 全部为 false；缺失、非 false 或不匹配均返回结构化失败。",
+          "answer": "fail-closed，不计为 positive evidence；必须存在并满足 provider=gitlab、project_path=example-group/product-project、route=issue-backlog-triage、source=gitlab-issues-api，以及 side_effects.labels/comments/state/requests 全部为 false；缺失、非 false 或不匹配均返回结构化失败。",
           "note": "采用 A，避免接受不完整或带副作用的 artifact。"
         },
         {
@@ -3383,12 +3388,12 @@
         },
         {
           "q": "provider adapter 接入顺序是什么？",
-          "answer": "A：先接 GitLab report-only adapter，复用 zj-loop-gitlab-infra 的 pipeline/job/artifact/provenance 读取能力，在 mlive-dev/ai-studio 验证；随后用同一 completion evidence contract 做 GitHub parity。",
+          "answer": "A：先接 GitLab report-only adapter，复用 zj-loop-gitlab-infra 的 pipeline/job/artifact/provenance 读取能力，在 example-group/product-project 验证；随后用同一 completion evidence contract 做 GitHub parity。",
           "note": "当前真实验证对象是 GitLab，且已有稳定 read-only infra，最快验证完整链路且不打开写入副作用。"
         },
         {
           "q": "GitLab dogfood 如何获得包含新 adapter 的 core 版本？",
-          "answer": "A：先在 GitHub 创建 PR，合并后发布 @jununfly/zj-loop-core@0.1.11；再让 ai-studio 通过独立 MR 更新版本锁与 CI 引用，最后运行 report-only dogfood。",
+          "answer": "A：先在 GitHub 创建 PR，合并后发布 @jununfly/zj-loop-core@0.1.11；再让 product-project 通过独立 MR 更新版本锁与 CI 引用，最后运行 report-only dogfood。",
           "note": "0.1.10 不包含 completion evidence adapter；正式发布链路才能验证版本锁、生成 CI 与目标项目一致性。"
         },
         {
@@ -3583,7 +3588,7 @@
         },
         {
           "q": "第一个止血 TODO 的实现范围是什么？",
-          "answer": "A：同时修改 core 契约、GitLab generated template，并在 mlive-dev/ai-studio 做真实 dogfood",
+          "answer": "A：同时修改 core 契约、GitLab generated template，并在 example-group/product-project 做真实 dogfood",
           "note": "本地逻辑、生成模板和目标项目必须一起验证，避免版本或入口漂移。"
         }
       ],
@@ -3751,7 +3756,7 @@
         },
         {
           "q": "版本一致性门禁的完成验证范围是什么？",
-          "answer": "采用 A：全量生成器回归、版本漂移负向测试和一个真实目标项目验证；覆盖所有生成模板的版本引用、vendor SHA256、version-lock 校验，并验证旧版本、错误 hash、错误路径、模板漂移均 fail-closed；最后在 mlive-dev/ai-studio 验证正常配置与人为漂移配置。",
+          "answer": "采用 A：全量生成器回归、版本漂移负向测试和一个真实目标项目验证；覆盖所有生成模板的版本引用、vendor SHA256、version-lock 校验，并验证旧版本、错误 hash、错误路径、模板漂移均 fail-closed；最后在 example-group/product-project 验证正常配置与人为漂移配置。",
           "note": "既证明本仓库生成逻辑，也证明真实 GitLab 目标项目不会带着漂移版本进入 route。"
         },
         {
@@ -3766,7 +3771,7 @@
         },
         {
           "q": "core 0.1.10 的发布顺序如何执行？",
-          "answer": "采用 A：先创建 PR，由 Human 合并；合并后发布 core 0.1.10，再更新 ai-studio。",
+          "answer": "采用 A：先创建 PR，由 Human 合并；合并后发布 core 0.1.10，再更新 product-project。",
           "note": "符合原子升级和人工授权边界，目标项目只引用已合并且已发布的版本。"
         },
         {
@@ -3775,7 +3780,7 @@
           "note": "发布包严格绑定已审查且已合并的提交，避免从浮动默认分支发布或误选旧 tag。"
         }
       ],
-      "notes": "已完成 core 0.1.10 发布、GitLab ai-studio MR !565 合并、Schedule 961 正常 healthy 验证与 version-lock 人为漂移负向验证：原始配置 healthy；将 core version-lock 临时改为 0.1.9 后返回 blocked/version-drift，退出码 2，side_effects_executed=false。"
+      "notes": "已完成 core 0.1.10 发布、GitLab product-project MR !565 合并、Schedule 961 正常 healthy 验证与 version-lock 人为漂移负向验证：原始配置 healthy；将 core version-lock 临时改为 0.1.9 后返回 blocked/version-drift，退出码 2，side_effects_executed=false。"
     },
     "1-5-5-6-6": {
       "id": "1-5-5-6-6",
@@ -3825,7 +3830,7 @@
     },
     "1-5-5-6-2-3": {
       "id": "1-5-5-6-2-3",
-      "label": "ai-studio carrier 入口真实 dogfood 与零写入证据",
+      "label": "product-project carrier 入口真实 dogfood 与零写入证据",
       "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-6-2",
@@ -3879,7 +3884,7 @@
         },
         {
           "q": "真实 GitLab dogfood 绑定哪个目标？",
-          "answer": "A：git.bilibili.co 上的 mlive-dev/ai-studio，Schedule 961",
+          "answer": "A：git.example.invalid 上的 example-group/product-project，Schedule 961",
           "note": "复用既有项目、Runner、Schedule Health 和 GitLab 访问环境；只读 adapter 仍需独立记录 infra provenance。"
         },
         {
@@ -3953,7 +3958,7 @@
           "note": "pipeline source=schedule；job=zj_loop_schedule_health_check；target route=daily-triage-report、job=zj_loop_daily_triage、route-decision.json 与 consumer-plan.json schema 绑定通过；audit.infra_provenance.contract=zj-loop.gitlab-infra.v1、infra_version=0.1.0、GitLab=14.10.5-jh、capabilities=schedule-read,pipeline-read,job-read,artifact-read；无 provider write。"
         }
       ],
-      "notes": "真实只读 dogfood 已完成：git.bilibili.co/mlive-dev/ai-studio 的 Schedule 961，scheduled pipeline 10552615，健康检查 artifact status=healthy，证明发布的 GitLab infra adapter 0.1.0 已通过真实 GitLab 14.10.5-jh 的 schedule/pipeline/job/artifact 读取链路。验证后已将临时 cron 25 20 * * * 恢复为 36 01 * * *，Schedule 保持 active。"
+      "notes": "真实只读 dogfood 已完成：git.example.invalid/example-group/product-project 的 Schedule 961，scheduled pipeline 10552615，健康检查 artifact status=healthy，证明发布的 GitLab infra adapter 0.1.0 已通过真实 GitLab 14.10.5-jh 的 schedule/pipeline/job/artifact 读取链路。验证后已将临时 cron 25 20 * * * 恢复为 36 01 * * *，Schedule 保持 active。"
     },
     "1-5-5-6-6-1": {
       "id": "1-5-5-6-6-1",
@@ -3999,18 +4004,18 @@
     },
     "1-5-5-6-6-4": {
       "id": "1-5-5-6-6-4",
-      "label": "ai-studio GitLab 真实 carrier、repair MR、branch 与 claim 零残留审计",
+      "label": "product-project GitLab 真实 carrier、repair MR、branch 与 claim 零残留审计",
       "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-6-6",
       "children": [],
       "decisions": [],
-      "notes": "Real ai-studio incident cleanup and zero-residue audit completed. Pipeline 10559519 rerun job 26152795 succeeded with artifact incident-zero-residue-audit.json. Final status=healthy: open_carrier_issues=0, open_repair_mrs=0, repair_branches=0, duplicate_requests=0, duplicate_claims=0. provider_writes=0 and side_effects_executed=false. Cleanup used fixed confirmation phrase CONFIRM_GITLAB_INCIDENT_CLEANUP; all automated ci-sweeper repair branches and the explicitly confirmed dependency-sweeper branch were removed."
+      "notes": "Real product-project incident cleanup and zero-residue audit completed. Pipeline 10559519 rerun job 26152795 succeeded with artifact incident-zero-residue-audit.json. Final status=healthy: open_carrier_issues=0, open_repair_mrs=0, repair_branches=0, duplicate_requests=0, duplicate_claims=0. provider_writes=0 and side_effects_executed=false. Cleanup used fixed confirmation phrase CONFIRM_GITLAB_INCIDENT_CLEANUP; all automated ci-sweeper repair branches and the explicitly confirmed dependency-sweeper branch were removed."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 17:02:48",
+    "updated": "2026-07-22 17:10:27",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

@@ -5,7 +5,7 @@ import { buildGitLabIssueNoteBridgeCapabilityArtifact } from '../dist/index.js';
 const validRoute = {
   route_id: 'gitlab-issue-note-bridge',
   enabled: false,
-  project_path: 'mlive-dev/ai-studio',
+  project_path: 'example-group/product-project',
   capability_status: 'unavailable',
   planning_status: 'deferred',
   provider_writes_allowed: false,
@@ -20,7 +20,7 @@ test('builds a disabled route capability artifact without provider effects', () 
     schema: 'zj-loop.capability.v1',
     route_artifact_schema: 'zj-loop.gitlab_issue_note_bridge_capability.v1',
     provider: 'gitlab',
-    project_path: 'mlive-dev/ai-studio',
+    project_path: 'example-group/product-project',
     route_id: 'gitlab-issue-note-bridge',
     status: 'unavailable',
     planning_status: 'deferred',

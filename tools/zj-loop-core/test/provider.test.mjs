@@ -50,14 +50,14 @@ test('parseGitRemoteRepository normalizes GitHub, GitLab, and self-managed GitLa
   );
 
   assert.deepEqual(
-    parseGitRemoteRepository('ssh://git@git.bilibili.co/team/platform/project.git', { providerHint: 'gitlab' }),
+    parseGitRemoteRepository('ssh://git@git.example.invalid/team/platform/project.git', { providerHint: 'gitlab' }),
     {
       provider: 'gitlab',
-      host: 'git.bilibili.co',
+      host: 'git.example.invalid',
       ownerPath: 'team/platform',
       name: 'project',
       slug: 'team/platform/project',
-      remoteUrl: 'ssh://git@git.bilibili.co/team/platform/project.git',
+      remoteUrl: 'ssh://git@git.example.invalid/team/platform/project.git',
     },
   );
 });

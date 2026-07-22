@@ -1,7 +1,7 @@
 import type { RouteTableRoute } from './route.js';
 export declare const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_SCHEMA = "zj-loop.gitlab_issue_note_bridge_capability.v1";
 export declare const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_ROUTE_ID = "gitlab-issue-note-bridge";
-export declare const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_PROJECT = "mlive-dev/ai-studio";
+export declare const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_PROJECT = "example-group/product-project";
 export type GitLabIssueNoteBridgeCapabilityArtifact = {
     schema: 'zj-loop.capability.v1';
     route_artifact_schema: typeof GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_SCHEMA;

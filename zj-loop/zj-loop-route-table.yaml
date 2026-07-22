@@ -896,7 +896,7 @@ disabled_dispatch_routes:
     request_kind: "report-only"
     consumer: "gitlab-issue-note-bridge"
     consumer_kind: "provider-adapter"
-    project_path: "mlive-dev/ai-studio"
+    project_path: "example-group/product-project"
     capability_status: "unavailable"
     planning_status: "deferred"
     provider_writes_allowed: false

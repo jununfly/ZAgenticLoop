@@ -13,9 +13,9 @@
 
 **范围边界：**
 
-- `mlive-dev/ai-studio-gitlab` 是内网测试环境中部署的
-  `mlive-dev/ai-studio` fork 副本，专门承载 bridge 与 live fixture 验证。
-- `mlive-dev/ai-studio` 是实际线上产品且有真实用户；开发验证不得创建
+- `example-group/gitlab-webhook-test-fork` 是内网测试环境中部署的
+  `example-group/product-project` fork 副本，专门承载 bridge 与 live fixture 验证。
+- `example-group/product-project` 是实际线上产品且有真实用户；开发验证不得创建
   fixture、配置 Webhook 或触发 API pipeline，后续生产安装必须单独审批。
 - 周末不执行 UAT-Caster、Webhook、真实 pipeline 或其他线上变更。
 - 已存在的 ZAgenticLoop bridge 代码、vendor 包、部署分支和本地测试属于探索性/基础设施准备，不代表本能力已发布。
