@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-issue-triage
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 2a0d2d607af2db66
+# zj-loop-template-hash: 10739f938acd9c36
 
 name: ZJ Loop Issue Triage
 
@@ -38,7 +38,7 @@ jobs:
 
       - name: Verify ZJ Loop version consistency
         run: |
-          if npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+          if npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
             exit 0
           fi
           test -f tools/zj-loop-core/dist/version-consistency-cli.js
@@ -58,11 +58,11 @@ jobs:
           TRIAGE_TRANSITION_REQUEST_JSON: ${{ inputs.triage_transition_request_json }}
           TRIAGE_TRANSITION_CONFIRMATION: ${{ inputs.triage_transition_confirmation }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-route dispatch issue-backlog-triage --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-consumer plan issue-backlog-triage --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-route dispatch issue-backlog-triage --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-consumer plan issue-backlog-triage --json > consumer-plan.json || true
           if [ -n "$TRIAGE_ACTION_REQUEST_JSON" ]; then
             printf '%s\n' "$TRIAGE_ACTION_REQUEST_JSON" > triage-action-request.json
-            npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-issue-triage-action action-plan \
+            npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-issue-triage-action action-plan \
               --request triage-action-request.json \
               --json > action-plan.json || true
             cat action-plan.json >> "$GITHUB_STEP_SUMMARY"
@@ -80,13 +80,13 @@ jobs:
               cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
-            npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-issue-triage-transition confirm-plan \
+            npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-issue-triage-transition confirm-plan \
               --request triage-transition-request.json \
               --confirmation-phrase "$TRIAGE_TRANSITION_CONFIRMATION" \
               --json > transition-plan.json || true
             cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
             if jq -e '.decision.status == "confirmed" and .confirmed_transition.issue_fix_request != null' transition-plan.json >/dev/null; then
-              npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-issue-triage-transition request-body \
+              npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-issue-triage-transition request-body \
                 --transition-plan transition-plan.json \
                 --out issue-fix-request-body.md \
                 --title-out issue-fix-request-title.txt \
