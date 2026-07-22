@@ -7,6 +7,7 @@ import { evaluateRuntimePreflight, RuntimePreflightResult } from './preflight.js
 import { findRoute, loadRouteTable } from './route.js';
 import { WorkspaceRouteDecisionRecord, writeWorkspaceRouteDecision } from './workspace-route-decision.js';
 import { buildHumanHandoff, HumanHandoff } from './human-handoff.js';
+import { buildCompletionEvidence, CompletionEvidenceRecord } from './completion-evidence.js';
 
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 
@@ -86,6 +87,7 @@ export type OrchestrationEnvelope = {
     next_steps: string[];
   };
   human_handoff: HumanHandoff | null;
+  completion_evidence?: CompletionEvidenceRecord;
   storage: {
     path: string;
   };
@@ -133,12 +135,12 @@ export async function dispatchSignal(input: {
   const storagePath = getOrchestrationPath(orchestrationId);
   const existing = await readExistingOrchestration({ root, storagePath });
   if (existing && mode === 'resume') {
-    return withAutomaticProgressionTrace({
+    return withCompletionEvidence(withAutomaticProgressionTrace({
       ...existing,
       status: 'resume',
       resumes: existing.orchestration_id,
       updated_at: now,
-    });
+    }));
   }
   if (existing && mode === 'execute') {
     const route = await loadRouteStatus(root, existing.consumer_run_plan.route_id);
@@ -177,8 +179,9 @@ export async function dispatchSignal(input: {
           ? buildHandoff({ orchestrationId: existing.orchestration_id, preflightResult })
           : null,
       };
-      await writeOrchestrationEnvelope({ root, envelope: updated });
-      return updated;
+      const completed = withCompletionEvidence(updated);
+      await writeOrchestrationEnvelope({ root, envelope: completed });
+      return completed;
     }
     const consumerAdapterResult = await runConsumerLiveSideEffects({
       root,
@@ -211,8 +214,9 @@ export async function dispatchSignal(input: {
         ? buildHandoff({ orchestrationId: existing.orchestration_id, consumerAdapterResult })
         : null,
     };
-    await writeOrchestrationEnvelope({ root, envelope: updated });
-    return updated;
+    const completed = withCompletionEvidence(updated);
+    await writeOrchestrationEnvelope({ root, envelope: completed });
+    return completed;
   }
   if (!existing && mode === 'execute') {
     const consumerRunPlan = await buildConsumerRunPlan({
@@ -275,16 +279,17 @@ export async function dispatchSignal(input: {
         path: storagePath,
       },
     };
-    await writeOrchestrationEnvelope({ root, envelope });
-    return envelope;
+    const completed = withCompletionEvidence(envelope);
+    await writeOrchestrationEnvelope({ root, envelope: completed });
+    return completed;
   }
   if (existing && mode !== 'resume') {
-    return withAutomaticProgressionTrace({
+    return withCompletionEvidence(withAutomaticProgressionTrace({
       ...existing,
       status: 'duplicate',
       duplicate_of: existing.orchestration_id,
       updated_at: now,
-    });
+    }));
   }
 
   const consumerRunPlan = await buildConsumerRunPlan({
@@ -368,8 +373,64 @@ export async function dispatchSignal(input: {
     },
   };
 
-  await writeOrchestrationEnvelope({ root, envelope });
-  return envelope;
+  const completed = withCompletionEvidence(envelope);
+  await writeOrchestrationEnvelope({ root, envelope: completed });
+  return completed;
+}
+
+function withCompletionEvidence(envelope: OrchestrationEnvelope): OrchestrationEnvelope {
+  const payload = envelope.signal.payload ?? {};
+  const requestId = stringValue(payload.request_id)
+    ?? stringValue(payload.activation_request_id)
+    ?? envelope.signal.signal_id;
+  const currentHeadSha = stringValue(payload.current_head_sha)
+    ?? stringValue(payload.head_sha)
+    ?? stringValue(payload.checkout_sha)
+    ?? 'not-applicable';
+  const evidenceRefs = [
+    { kind: 'orchestration', path: envelope.storage.path },
+    ...(envelope.review_artifact.path ? [{ kind: envelope.review_artifact.kind, path: envelope.review_artifact.path }] : []),
+  ];
+  return {
+    ...envelope,
+    completion_evidence: buildCompletionEvidence({
+      orchestrationId: envelope.orchestration_id,
+      signalId: envelope.signal.signal_id,
+      routeId: envelope.consumer_run_plan.route_id,
+      requestId,
+      carrier: {
+        kind: envelope.carrier_plan.carrier_kind,
+        id: envelope.carrier_plan.source_subject.id,
+        ...(envelope.carrier_plan.source_subject.url ? { url: envelope.carrier_plan.source_subject.url } : {}),
+      },
+      consumerId: envelope.consumer_run_plan.consumer,
+      currentHeadSha,
+      status: envelope.status === 'superseded' ? 'hard_stopped' : envelope.status,
+      reviewArtifact: envelope.review_artifact.path || envelope.review_artifact.kind
+        ? { kind: envelope.review_artifact.kind, ...(envelope.review_artifact.path ? { path: envelope.review_artifact.path } : {}) }
+        : null,
+      stopReason: envelope.stop_signal?.reason ?? null,
+      resumeAnchor: envelope.resumes ?? null,
+      evidenceRefs,
+      provenance: {
+        provider: envelope.signal.provider,
+        project: stringValue(payload.project) ?? stringValue(payload.repo) ?? null,
+        pipeline_id: stringValue(payload.pipeline_id) ?? null,
+        job_id: stringValue(payload.job_id) ?? null,
+        commit: currentHeadSha,
+        ref: stringValue(payload.ref) ?? null,
+        orchestration_id: envelope.orchestration_id,
+        subject_kind: envelope.signal.subject.kind,
+        subject_id: envelope.signal.subject.id,
+      },
+      sideEffectsExecuted: false,
+      duplicateOf: envelope.duplicate_of,
+    }),
+  };
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
 export async function resumeOrchestration(input: {

@@ -46,7 +46,7 @@ function workflowTemplateHash(text) {
 function renderWorkflowTemplate(template) {
   const withGate = template.replace(
     /(^\s*- uses: actions\/checkout@[^\n]+$)/gm,
-    '$1\n\n      - name: Verify ZJ Loop version consistency\n        run: |\n          if npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then\n            exit 0\n          fi\n          test -f tools/zj-loop-core/dist/version-consistency-cli.js\n          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json\n\n      - name: Upload ZJ Loop version consistency evidence\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: zj-loop-version-consistency\n          path: version-consistency-result.json',
+    '$1\n\n      - name: Verify ZJ Loop version consistency\n        run: |\n          if npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then\n            exit 0\n          fi\n          test -f tools/zj-loop-core/dist/version-consistency-cli.js\n          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json\n\n      - name: Upload ZJ Loop version consistency evidence\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: zj-loop-version-consistency\n          path: version-consistency-result.json',
   );
   return withGate.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${workflowTemplateHash(withGate)}`);
 }
