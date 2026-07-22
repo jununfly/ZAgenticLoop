@@ -2227,7 +2227,7 @@
     "1-5-5-3": {
       "id": "1-5-5-3",
       "label": "GitLab event-driven required-route dogfood",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-5",
       "children": [
@@ -2312,6 +2312,11 @@
           "q": "event-driven 是否按完整可验收的垂直功能拆分，避免第一刀被误解为整个 1-5-5-3 已完成？",
           "answer": "是。1-5-5-3 拆成完整功能 slices：原生 MR event 的 PR Steward 生命周期、原生 MR event 的 Post-Merge closeout 生命周期、Issue/Note webhook bridge 协议与 dedupe、bridge 驱动的 Issue Triage 生命周期、bridge 驱动的 CI Sweeper 生命周期。每个 slice 都有独立 positive、negative/recovery 和 live evidence；父节点只有全部 slices 完成后才完成。",
           "note": "第一刀只完成一个明确命名的垂直功能，roadmap 父节点保持 in_progress，禁止用局部 evidence 宣称完整 event-driven 能力。"
+        },
+        {
+          "q": "Issue Note bridge 暂不可用时下一步推进什么？",
+          "answer": "A：保持 webhook live dogfood deferred，推进 GitLab bridged Issue Triage event-driven lifecycle dogfood",
+          "note": "缺少可访问 HTTPS bridge endpoint；不部署、不伪造 live evidence，先验证已有 bridged Issue Triage 协议与负向/恢复闭环。"
         }
       ],
       "notes": ""
@@ -2533,7 +2538,7 @@
     "1-5-5-3-4": {
       "id": "1-5-5-3-4",
       "label": "GitLab bridged Issue Triage event-driven lifecycle dogfood",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-5-3",
       "children": [],
@@ -2677,6 +2682,11 @@
           "q": "disabled capability artifact 保留多久？",
           "answer": "默认保留 90 天，覆盖一个完整版本周期；只保留脱敏 capability 状态，不保存 Secret、Token 或完整 payload。",
           "note": "支持版本回顾和 known-gap 审计，避免无限累积运行数据。"
+        },
+        {
+          "q": "重新开启 GitLab Webhook 的第一步是什么？",
+          "answer": "A：先提交 Webhook re-enable readiness PR，补齐版本、owner、项目绑定、Secret 分离、固定 endpoint/ref 与 health check；保持 enabled=false",
+          "note": "当前没有可用 ai-studio-gitlab deployment；准备 PR 不产生 GitLab provider side effect，待 Human review 后再部署与 promotion。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -3980,7 +3990,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 16:27:51",
+    "updated": "2026-07-22 16:39:21",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

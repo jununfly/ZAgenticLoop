@@ -6,6 +6,11 @@
 
 **状态：** Deferred from current version
 
+**准备契约：** 参见
+[`docs/designs/gitlab-webhook-reenable-readiness.md`](../designs/gitlab-webhook-reenable-readiness.md)。
+该文档只固定下一版本的绑定、凭据边界、endpoint 路径和 promotion gates；
+不会启用 route，也不构成 live evidence。
+
 **范围边界：**
 
 - `mlive-dev/ai-studio-gitlab` 仅作为独立 Webhook bridge 的验证服务器/容器。
