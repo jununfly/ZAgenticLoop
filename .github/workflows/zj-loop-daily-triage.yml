@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-daily-triage
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 16120ff47f3050c6
+# zj-loop-template-hash: 40167f0889f7fdbf
 
 name: ZJ Loop Daily Triage
 
@@ -24,7 +24,7 @@ jobs:
 
       - name: Verify ZJ Loop version consistency
         run: |
-          if npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+          if npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
             exit 0
           fi
           test -f tools/zj-loop-core/dist/version-consistency-cli.js
@@ -44,7 +44,7 @@ jobs:
 
       - name: Report-only route evidence
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-route dispatch daily-triage-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.10 zj-loop-consumer plan daily-triage-report --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-route dispatch daily-triage-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-consumer plan daily-triage-report --json > consumer-plan.json || true
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

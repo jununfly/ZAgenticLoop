@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 02:34:37
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 11:22:52
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -42,7 +42,7 @@
 
 ### 当前施工：1-5-5-6-1. 跨 producer、carrier、consumer 的端到端副作用完成门禁
 
-已完成 core completion_evidence.v1 schema/validator/CLI，并将 completion_evidence 接入现有 orchestration 的 planned、hard_stopped、executed_to_review_artifact、duplicate、resume 结果；validator 校验完整身份链、外部 provider provenance、review artifact、resume/duplicate 约束与 report-only side_effects_executed=false。core 全量 340 项、新增 completion evidence 9 项与 dispatch 31 项测试通过。待完成：真实 GitHub/GitLab adapter provenance 接线、provider:none replay 与 GitLab report-only dogfood。
+已完成 core completion_evidence.v1 schema/validator/CLI、orchestration 接入与 GitLab read-only adapter；完成 core 0.1.11 release-prep：同步 package/lock、zj-loop-init 默认版本、GitHub generated templates/workflows、version-lock 与 release/bundle gates。验证：core 340 项、新增 completion evidence 9 项、GitLab adapter 2 项、dispatch 31 项、init 32 项通过；provider parity、generated bundle release gate、version consistency healthy（0.1.11）通过。待人工合并 release PR、发布 npm 0.1.11，再更新 ai-studio MR 做 report-only dogfood。
 
 **决策：**
 - Q: 端到端副作用完成门禁必须覆盖哪些证据？ → A：真实 GitLab + deterministic fixture 的完整正负矩阵 (自动路径必须证明零 provider 写入；Web 手动路径验证固定确认、单 carrier、单 claim、单 bounded repair MR；重复、空 diff、超额度全部 fail-closed。)
@@ -56,4 +56,6 @@
 - Q: 统一 completion evidence 使用什么 schema？ → A：新增 zj-loop.completion_evidence.v1，至少包含 orchestration_id、signal_id、route_id、request_id、carrier、consumer_id、current_head_sha、status、review_artifact、stop_reason、side_effects_executed、evidence_refs、resume_anchor、provenance；由 core 做 schema、身份、状态和副作用语义校验。 (避免不同 route 的完成语义无法统一消费。)
 - Q: provider adapter 向统一门禁提供哪些证据？ → A：提供结构化 adapter provenance：provider、project/repository、pipeline/workflow ID 与 URL、job/check ID 与 URL、commit/ref/head SHA、artifact 名称/schema/下载引用、API/infra capability 版本、读取时间与认证来源类型；core 只验证语义和绑定关系，不解析日志文本。 (仅凭 URL 或日志文本不足以证明 artifact、commit 与当前 request 的绑定。)
 - Q: 端到端完成门禁的验收测试覆盖什么范围？ → A：覆盖 core schema/validator 单元测试、全部负向矩阵 replay、GitHub adapter contract/parity、GitLab adapter contract/parity、provider:none 本地 replay、GitLab 目标项目一次 report-only dogfood，以及所有失败路径无副作用验证。 (证明共享 core、双 provider adapter 与真实 GitLab evidence 的契约一致。)
+- Q: provider adapter 接入顺序是什么？ → A：先接 GitLab report-only adapter，复用 zj-loop-gitlab-infra 的 pipeline/job/artifact/provenance 读取能力，在 mlive-dev/ai-studio 验证；随后用同一 completion evidence contract 做 GitHub parity。 (当前真实验证对象是 GitLab，且已有稳定 read-only infra，最快验证完整链路且不打开写入副作用。)
+- Q: GitLab dogfood 如何获得包含新 adapter 的 core 版本？ → A：先在 GitHub 创建 PR，合并后发布 @jununfly/zj-loop-core@0.1.11；再让 ai-studio 通过独立 MR 更新版本锁与 CI 引用，最后运行 report-only dogfood。 (0.1.10 不包含 completion evidence adapter；正式发布链路才能验证版本锁、生成 CI 与目标项目一致性。)
 <!-- ROADMAP_SECTION_END -->
