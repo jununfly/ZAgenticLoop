@@ -1,7 +1,9 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA = 'zj-loop.gitlab_issue_note_bridge.v1';
-export const GITLAB_ISSUE_NOTE_EVENT = 'Issue Hook';
+export const GITLAB_ISSUE_NOTE_EVENT = 'Note Hook';
+export const GITLAB_ISSUE_NOTE_LEGACY_EVENT = 'Issue Hook';
+export const GITLAB_ISSUE_NOTE_EVENTS = [GITLAB_ISSUE_NOTE_EVENT, GITLAB_ISSUE_NOTE_LEGACY_EVENT] as const;
 export const GITLAB_BRIDGE_AUTH_SOURCE = 'GITLAB_WEBHOOK_SECRET';
 
 export type GitLabIssueNoteBridgeRoute = {
@@ -28,7 +30,7 @@ export type GitLabIssueNoteWebhookInput = {
 export type GitLabIssueNoteBridgeEnvelope = {
   schema: typeof GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA;
   event_id: string;
-  event_type: typeof GITLAB_ISSUE_NOTE_EVENT;
+  event_type: (typeof GITLAB_ISSUE_NOTE_EVENTS)[number];
   project_path: string;
   issue_iid: number;
   note_id: number;
@@ -79,7 +81,7 @@ export function buildGitLabIssueNoteBridgeEnvelope(input: GitLabIssueNoteWebhook
   if (!input.projectPath.trim() || input.projectPath !== input.expectedProjectPath) {
     return blocked('project-mismatch');
   }
-  if (input.headers.event !== GITLAB_ISSUE_NOTE_EVENT) {
+  if (!isGitLabIssueNoteEvent(input.headers.event)) {
     return blocked('event-not-allowed');
   }
   if (!input.headers.eventId?.trim()) {
@@ -126,7 +128,7 @@ export function buildGitLabIssueNoteBridgeEnvelope(input: GitLabIssueNoteWebhook
     envelope: {
       schema: GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA,
       event_id: input.headers.eventId,
-      event_type: GITLAB_ISSUE_NOTE_EVENT,
+      event_type: input.headers.event,
       project_path: input.projectPath,
       issue_iid: issueIid,
       note_id: noteId,
@@ -140,6 +142,10 @@ export function buildGitLabIssueNoteBridgeEnvelope(input: GitLabIssueNoteWebhook
       trigger_pipeline_id: null,
     },
   };
+}
+
+function isGitLabIssueNoteEvent(event: string | undefined): event is (typeof GITLAB_ISSUE_NOTE_EVENTS)[number] {
+  return event !== undefined && GITLAB_ISSUE_NOTE_EVENTS.includes(event as (typeof GITLAB_ISSUE_NOTE_EVENTS)[number]);
 }
 
 function positiveInteger(value: unknown): number | null {

@@ -1,6 +1,8 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 export const GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA = 'zj-loop.gitlab_issue_note_bridge.v1';
-export const GITLAB_ISSUE_NOTE_EVENT = 'Issue Hook';
+export const GITLAB_ISSUE_NOTE_EVENT = 'Note Hook';
+export const GITLAB_ISSUE_NOTE_LEGACY_EVENT = 'Issue Hook';
+export const GITLAB_ISSUE_NOTE_EVENTS = [GITLAB_ISSUE_NOTE_EVENT, GITLAB_ISSUE_NOTE_LEGACY_EVENT];
 export const GITLAB_BRIDGE_AUTH_SOURCE = 'GITLAB_WEBHOOK_SECRET';
 export function buildGitLabIssueNoteBridgeEnvelope(input) {
     const blocked = (reason) => ({
@@ -16,7 +18,7 @@ export function buildGitLabIssueNoteBridgeEnvelope(input) {
     if (!input.projectPath.trim() || input.projectPath !== input.expectedProjectPath) {
         return blocked('project-mismatch');
     }
-    if (input.headers.event !== GITLAB_ISSUE_NOTE_EVENT) {
+    if (!isGitLabIssueNoteEvent(input.headers.event)) {
         return blocked('event-not-allowed');
     }
     if (!input.headers.eventId?.trim()) {
@@ -58,7 +60,7 @@ export function buildGitLabIssueNoteBridgeEnvelope(input) {
         envelope: {
             schema: GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA,
             event_id: input.headers.eventId,
-            event_type: GITLAB_ISSUE_NOTE_EVENT,
+            event_type: input.headers.event,
             project_path: input.projectPath,
             issue_iid: issueIid,
             note_id: noteId,
@@ -72,6 +74,9 @@ export function buildGitLabIssueNoteBridgeEnvelope(input) {
             trigger_pipeline_id: null,
         },
     };
+}
+function isGitLabIssueNoteEvent(event) {
+    return event !== undefined && GITLAB_ISSUE_NOTE_EVENTS.includes(event);
 }
 function positiveInteger(value) {
     const parsed = typeof value === 'number' ? value : Number(value);

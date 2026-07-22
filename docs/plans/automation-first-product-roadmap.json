@@ -2977,6 +2977,46 @@
           "q": "Webhook bridge live dogfood 暂不可用时下一步推进什么？",
           "answer": "保持 1-5-5-3-3-5 deferred，不运行部署或线上验证；转向独立的 1-5-5-4 GitLab scheduled required-route dogfood。",
           "note": "Webhook capability 仍 disabled/unavailable，不降低 live completion gate；本地 bridge 代码、部署材料和候选 endpoint 不计入 live evidence。"
+        },
+        {
+          "q": "线上 negative probe 结果是什么？",
+          "answer": "A：阻塞；公开 Webhook 路径仍命中旧产品 webhook handler，错误 Secret、缺失 Secret 与重复请求均返回旧 success envelope，未返回 bridge negative envelope，不能进入正向 fixture。",
+          "note": "保持 bridge route disabled；先修复 Ingress/gateway 到独立 bridge 的映射，再重跑 zero-write negative matrix。记录不包含项目内部身份。"
+        },
+        {
+          "q": "如何修复公开 Webhook 路由？",
+          "answer": "采用主应用内部代理：POST /api/v1/gitlab/webhook 仅转发到同容器 bridge 的 /gitlab/webhook/issue-note；主应用不再返回旧 success envelope，GET 不作为 Webhook 探测入口。",
+          "note": "提交已推送，等待目标服务发布后重跑 negative matrix；不进入正向 fixture。"
+        },
+        {
+          "q": "路由修复后的线上 negative probe 结果是什么？",
+          "answer": "A：路由已进入主应用代理，但独立 bridge 未监听，Webhook 返回 HTTP 502 reason=bridge-unavailable；healthz 仍为 HTTP 200；错误 Secret、缺失 Secret 与重复请求均 side_effects_executed=false。",
+          "note": "下一步只补齐 bridge 运行时部署与 Secret 注入，确认 bridge healthz 后再重跑 negative matrix；禁止正向 fixture。"
+        },
+        {
+          "q": "运行时 Secret 注入后的线上 negative probe 结果是什么？",
+          "answer": "A：健康检查 HTTP 200；错误 Secret、缺失 Secret、重复错误请求均返回 bridge HTTP envelope，status=blocked、reason=unauthorized、side_effects_executed=false、HTTP 400。",
+          "note": "bridge 已具备安全拒绝能力；下一步使用合法 Secret 但非匹配 marker/非目标事件做零副作用验证，仍禁止正向 fixture。"
+        },
+        {
+          "q": "合法 Secret 下的非匹配 Note 结果是什么？",
+          "answer": "A：carrier Issue #1 的普通评论已产生 webhook 输入；项目流水线列表保持为空，没有新 pipeline，未观察到 bridge provider 副作用。",
+          "note": "negative matrix 的非匹配 marker 分支通过；下一步只允许一次合法 marker 正向 fixture，并绑定 Issue #1、Note、pipeline ref 和 route。"
+        },
+        {
+          "q": "正向 marker 为什么没有产生 pipeline？",
+          "answer": "A：Webhook 已补启用评论事件，但 Hook 指向的 UAT 服务仍是旧版本；UAT /healthz 与 /api/v1/gitlab/webhook/issue-note 均返回 404，最新 bridge 代理提交尚未发布到该入口。",
+          "note": "先将最新 master 提交发布到 Hook 指向的 UAT 应用；发布后确认 healthz 和 invalid-secret，再只添加一条新的正向 marker。"
+        },
+        {
+          "q": "最新构建元数据与线上行为是否一致？",
+          "answer": "A：不一致；发布记录显示提交 e69ff142，但 UAT /gitlab-server/ping 可用而新增 /healthz 与 /api/v1/gitlab/webhook/issue-note 仍 404，运行实例未加载该提交的有效 dist 路由或流量未切换。",
+          "note": "检查并修正 Caster 发布阶段的 pnpm build 与实例重启/流量切换；修复前禁止重复 marker。"
+        },
+        {
+          "q": "Webhook 目标域名如何与已发布实例绑定？",
+          "answer": "A：将 Project Hook URL 从 UAT 域名切换为已验证返回 bridge health/unauthorized envelope 的已发布域名，并保留 Issue 与 Note 事件、SSL 和 Secret 配置。",
+          "note": "Hook 页面已显示新 URL；不重复发送旧 marker，等待后续受控正向验证。"
         }
       ],
       "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
@@ -4025,7 +4065,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 17:23:39",
+    "updated": "2026-07-22 20:32:41",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
