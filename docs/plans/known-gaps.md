@@ -13,8 +13,10 @@
 
 **范围边界：**
 
-- `mlive-dev/ai-studio-gitlab` 仅作为独立 Webhook bridge 的验证服务器/容器。
-- `mlive-dev/ai-studio` 承载主要代码、CI consumer、Issue Triage 和最终业务验证。
+- `mlive-dev/ai-studio-gitlab` 是内网测试环境中部署的
+  `mlive-dev/ai-studio` fork 副本，专门承载 bridge 与 live fixture 验证。
+- `mlive-dev/ai-studio` 是实际线上产品且有真实用户；开发验证不得创建
+  fixture、配置 Webhook 或触发 API pipeline，后续生产安装必须单独审批。
 - 周末不执行 UAT-Caster、Webhook、真实 pipeline 或其他线上变更。
 - 已存在的 ZAgenticLoop bridge 代码、vendor 包、部署分支和本地测试属于探索性/基础设施准备，不代表本能力已发布。
 
@@ -24,7 +26,7 @@
 - [ ] 独立 bridge 只校验固定 project、Issue Hook、event ID、secret 和 marker。
 - [ ] webhook secret 与 pipeline trigger token 分离，并通过运行时 Secret 注入。
 - [ ] bridge 只触发固定 `master` API pipeline，不接受 webhook 提供的任意 project/ref/route。
-- [ ] `CI_PIPELINE_SOURCE=api` 的 Issue Triage consumer 入口接入 `ai-studio`，并生成统一 envelope、receipt、dedupe、route 和 trigger artifacts。
+- [ ] `CI_PIPELINE_SOURCE=api` 的 Issue Triage consumer 入口接入测试 fork，并生成统一 envelope、receipt、dedupe、route 和 trigger artifacts；生产项目不参与开发验证。
 - [ ] 默认路径保持 report-only；Issue 状态/标签写入必须有独立、可审计的显式确认。
 - [ ] 完成错误 secret、项目不匹配、事件不允许、普通 Note、非匹配 marker 的 zero-write 矩阵。
 - [ ] 完成 webhook 重放 duplicate、trigger-failed、trigger-uncertain 和显式 recovery 矩阵。
