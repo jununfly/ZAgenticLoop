@@ -2692,6 +2692,11 @@
           "q": "GitLab Webhook live fixture 使用哪个项目边界？",
           "answer": "A：只在 mlive-dev/ai-studio-gitlab 内网测试 fork 与其 bridge deployment 上验证；mlive-dev/ai-studio 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline",
           "note": "ai-studio 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。"
+        },
+        {
+          "q": "测试 fork 的 HTTPS bridge 如何承载？",
+          "answer": "A：复用内网现有 Ingress，分配固定私有 DNS 与 TLS",
+          "note": "不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 ai-studio-gitlab 测试 fork。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -3995,7 +4000,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 16:47:11",
+    "updated": "2026-07-22 16:53:09",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
