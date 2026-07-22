@@ -2697,6 +2697,11 @@
           "q": "测试 fork 的 HTTPS bridge 如何承载？",
           "answer": "A：复用内网现有 Ingress，分配固定私有 DNS 与 TLS",
           "note": "不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 ai-studio-gitlab 测试 fork。"
+        },
+        {
+          "q": "测试 Ingress 的私有 DNS 如何分配？",
+          "answer": "A：沿用测试集群现有域名规范，由基础设施 owner 分配固定 zj-loop-gitlab-bridge.<internal-test-domain> hostname",
+          "note": "代码库不写入未确认的真实域名；hostname、TLS 证书和 Ingress 配置由测试环境 owner 提供并在部署 evidence 中绑定。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -4000,7 +4005,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 16:53:09",
+    "updated": "2026-07-22 16:58:19",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

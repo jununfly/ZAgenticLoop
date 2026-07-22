@@ -36,6 +36,11 @@ private DNS name and TLS certificate. No public endpoint or new public
 service is part of this readiness scope. The Ingress may expose only
 `/gitlab/webhook/issue-note` and `/healthz` for the test fork.
 
+The hostname follows the test-cluster convention:
+`zj-loop-gitlab-bridge.<internal-test-domain>`. The infrastructure owner must
+replace `<internal-test-domain>` with the existing private suffix in deployment
+evidence; this repository does not invent or commit an unverified hostname.
+
 ## Credential Boundary
 
 Two independent runtime secrets are required:
@@ -78,6 +83,9 @@ The following gates are required in order:
 - [ ] Infrastructure owner and version target confirmed.
 - [ ] Existing internal Ingress is assigned a fixed private DNS name and TLS
       certificate for the `mlive-dev/ai-studio-gitlab` test fork.
+- [ ] The assigned hostname follows
+      `zj-loop-gitlab-bridge.<internal-test-domain>` and is recorded in
+      sanitized deployment provenance.
 - [ ] The bridge deployment is reachable through that Ingress without any
       public listener.
 - [ ] `/healthz` returns `zj-loop.gitlab_issue_note_bridge_health.v1` without
