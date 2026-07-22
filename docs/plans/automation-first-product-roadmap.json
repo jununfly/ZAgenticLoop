@@ -3571,6 +3571,11 @@
           "q": "repair MR 的跨 request 去重规则是什么？",
           "answer": "A：按项目 + route family + target branch + repair content digest 去重",
           "note": "不同 pipeline/request 只要修复内容相同就复用已有 carrier/MR；内容不同才允许新 request。"
+        },
+        {
+          "q": "repair MR 的统一安全门禁如何覆盖多条路径？",
+          "answer": "A：共享 core 原语 + 三条 GitLab repair-MR 路径回归矩阵",
+          "note": "统一按 project + route family + target branch + repair content digest 去重；重复复用已有 MR，空 diff、跨 request 重复和内容不一致全部 fail-closed。"
         }
       ],
       "notes": ""
@@ -3913,7 +3918,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 15:03:15",
+    "updated": "2026-07-22 15:08:37",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

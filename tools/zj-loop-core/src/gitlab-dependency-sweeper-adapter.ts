@@ -6,6 +6,7 @@ import {
   buildGitLabLifecycleAudit,
   validateGitLabRequestSourceBinding,
 } from './gitlab-request-lifecycle.js';
+import { buildGitLabRepairDedupeMarker, findGitLabRepairMr, hasEffectiveGitLabRepairDiff } from './gitlab-repair-safety.js';
 
 const BRANCH_PATTERN = /^automated\/dependency-sweeper-gitlab-[a-z0-9-]+$/;
 const DEFAULT_EXPECTED_FILES = ['package.json', 'package-lock.json'];
@@ -78,15 +79,12 @@ export async function createGitLabDependencySweeperRepairMr(input: {
   if (!fetchImpl) return blocked('gitlab-fetch-unavailable');
   const headers = { ...buildGitLabAuthHeaders({ token: input.token }), 'User-Agent': 'zj-loop-dependency-sweeper' };
   const mergeRequestsUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: 'merge_requests' });
-  let existingResponse;
-  try {
-    existingResponse = await fetchImpl(`${mergeRequestsUrl}?state=opened&source_branch=${encodeURIComponent(input.branch)}&per_page=100`, { headers });
-  } catch {
-    return blocked('repair-mr-dedupe-read-failed');
-  }
-  if (!existingResponse.ok) return blocked('repair-mr-dedupe-read-failed', { http_status: existingResponse.status });
-  const existing = (await existingResponse.json() as any[])[0];
-  if (existing) return completed(audit, 'duplicate', existing);
+  const dedupe = await findGitLabRepairMr({ projectPath: input.projectPath, routeFamily: 'dependency-sweeper', targetBranch: input.targetBranch, actions: input.actions, branch: input.branch, apiBaseUrl: input.apiBaseUrl, headers, fetchImpl });
+  if (!dedupe.ok) return blocked(dedupe.reason, 'status' in dedupe ? { http_status: dedupe.status } : {});
+  if (dedupe.existing) return completed({ ...audit, repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest }, 'duplicate', dedupe.existing);
+  const effectiveDiff = await hasEffectiveGitLabRepairDiff({ projectPath: input.projectPath, targetBranch: input.targetBranch, actions: input.actions, apiBaseUrl: input.apiBaseUrl, headers, fetchImpl });
+  if (effectiveDiff === false) return blocked('repair-no-effective-diff', { repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest });
+  if (effectiveDiff === null) return blocked('repair-diff-read-failed', { repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest });
 
   const branchesUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: ['repository', 'branches'] });
   const branchUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: ['repository', 'branches', input.branch] });
@@ -115,13 +113,13 @@ export async function createGitLabDependencySweeperRepairMr(input: {
     source_branch: input.branch,
     target_branch: input.targetBranch,
     title: input.title,
-    description: input.description,
+    description: `${input.description}\n\n${buildGitLabRepairDedupeMarker({ key: dedupe.dedupe.key, digest: dedupe.dedupe.digest, routeFamily: 'dependency-sweeper' })}`,
     remove_source_branch: false,
   });
   if (!mrResponse.ok) return blocked('repair-mr-create-failed', { http_status: mrResponse.status });
   const mergeRequest = await mrResponse.json() as any;
   if (!Number.isInteger(Number(mergeRequest.iid))) return blocked('repair-mr-create-response-invalid');
-  return completed(audit, 'created', mergeRequest);
+  return completed({ ...audit, repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest }, 'created', mergeRequest);
 }
 
 function summarizeCommitRequest(payload: { branch: string; commit_message: string; actions: any[] }) {
