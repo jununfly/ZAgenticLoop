@@ -2,8 +2,8 @@
   "schema": "zj-loop.version-lock.v1",
   "core": {
     "package": "@jununfly/zj-loop-core",
-    "version": "0.1.13",
-    "source": "@jununfly/zj-loop-core@0.1.13"
+    "version": "0.1.14",
+    "source": "@jununfly/zj-loop-core@0.1.14"
   },
   "generated_files": {
     ".github/workflows/zj-loop-smoke.yml": {

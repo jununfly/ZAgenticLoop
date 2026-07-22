@@ -66,6 +66,18 @@ test('accepts GitLab Note Hook events emitted for issue comments', () => {
   assert.equal(result.side_effects_executed, false);
 });
 
+test('accepts real GitLab Note Hook payloads without an action field', () => {
+  const { action: _action, ...realNoteAttributes } = base.payload.object_attributes;
+  const result = buildGitLabIssueNoteBridgeEnvelope({
+    ...base,
+    headers: { ...base.headers, event: 'Note Hook', eventId: 'real-note-event-1' },
+    payload: { ...base.payload, object_kind: 'note', object_attributes: realNoteAttributes },
+  });
+  assert.equal(result.status, 'accepted');
+  assert.equal(result.envelope?.event_type, 'Note Hook');
+  assert.equal(result.side_effects_executed, false);
+});
+
 test('ignores ordinary Issue Notes without provider side effects', () => {
   const result = buildGitLabIssueNoteBridgeEnvelope({
     ...base,

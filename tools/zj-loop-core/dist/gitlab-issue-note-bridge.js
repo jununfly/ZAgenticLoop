@@ -29,9 +29,12 @@ export function buildGitLabIssueNoteBridgeEnvelope(input) {
         return blocked('project-mismatch');
     }
     const attributes = payload?.object_attributes;
+    const actionIsValid = input.headers.event === GITLAB_ISSUE_NOTE_EVENT
+        ? attributes?.action === undefined || attributes.action === 'create'
+        : attributes?.action === 'create';
     if (!['note', 'issue'].includes(String(payload?.object_kind))
         || attributes?.noteable_type !== 'Issue'
-        || attributes.action !== 'create') {
+        || !actionIsValid) {
         return blocked('issue-note-invalid');
     }
     const issueIid = positiveInteger(attributes.noteable_iid ?? payload.issue?.iid);
