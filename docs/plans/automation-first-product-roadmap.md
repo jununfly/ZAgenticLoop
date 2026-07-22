@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 15:52:29
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 16:27:51
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,15 +40,27 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-5-6-6. GitLab 事故 replay、清理与零残留验收证据
+### 当前施工：1. Automation-First Product Goal Roadmap
+
+先完成 1-1 的 completion contract；1-2 迁移并基线化当前事实；1-3 与 1-4 可在 contract 稳定后并行；1-5、1-6、1-7 依次收口 adapter、gates 和 release evidence。
 
 **决策：**
-- Q: 事故 replay 的零残留验收标准是什么？ → A：真实 provider 查询全部归零，并保留可重放 artifact (必须证明无开放无效 carrier Issue、无开放无效 repair MR、无残留自动 repair 分支、无重复 request/claim，且所有动作都有 provider reread 证据。)
-- Q: 事故 replay 的清理阶段是否自动执行 provider 删除？ → A：先只读审计，再人工授权清理 (先 deterministic fixture replay，再用 GitLab read-only 查询确认 Issue/MR/branch/request/claim 零残留；残留只生成结构化 cleanup plan，不自动删除或关闭。)
+- Q: 架构目标与用户体验目标是否二选一？ → 两者必须同时满足，并在项目演进中动态保持一致。架构目标先进时应拉动用户体验补齐；用户体验落后时应作为稳定参考对象反向打磨架构确定性。 (参考动态规划思路：每个阶段都维护局部最优与全局目标的一致性，避免架构漂亮但体验不顺，或体验承诺超过架构事实。)
+- Q: 路线图应如何切成可执行 slices？ → 按同一真相面、核心派生、自动推进与Workspace、GitHub/GitLab适配、确定性gate/replay、reference dogfood/release 六条依赖线切分；每个叶子必须有明确接口、测试或dogfood证据，不能把中间报告误作完成。 (先完成可表达并可判定的 completion contract，后续 adapter 与用户体验工作才有共同完成标准。)
 
 **当前子树：**
-├── [x][Y+] 1-5-5-6-6-1. GitLab 历史副作用事故 deterministic replay corpus
-├── [x][Y+] 1-5-5-6-6-2. GitLab carrier、repair MR 与 branch 零残留只读审计
-├── [x][Y+] 1-5-5-6-6-3. GitLab 事故结构化 cleanup plan 与人工恢复锚点
-└── [!][Y+] 1-5-5-6-6-4. ai-studio GitLab 真实 carrier、repair MR、branch 与 claim 零残留审计
+├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
+│   ... 5 more child nodes; run tree 1-1 --depth 2 for full view
+├── [x][Y+] 1-2. 当前 Route 能力与用户体验缺口盘点
+│   ... 3 more child nodes; run tree 1-2 --depth 2 for full view
+├── [x][Y+] 1-3. 默认自动执行到 review artifact 或 hard stop
+│   ... 4 more child nodes; run tree 1-3 --depth 2 for full view
+├── [x][Y+] 1-4. 结构化 stop signal 与 human handoff 体验
+│   ... 3 more child nodes; run tree 1-4 --depth 2 for full view
+├── [ ][Y+] 1-5. GitHub 与 GitLab 的 live 能力对齐
+│   ... 5 more child nodes; run tree 1-5 --depth 2 for full view
+├── [ ][Y+] 1-6. 确定性脚本 gate 与 replay 证据闭环
+│   ... 4 more child nodes; run tree 1-6 --depth 2 for full view
+└── [ ][Y+] 1-7. Dogfood 仪表盘与发布前完成判定
+    ... 4 more child nodes; run tree 1-7 --depth 2 for full view
 <!-- ROADMAP_SECTION_END -->
