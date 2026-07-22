@@ -23,7 +23,7 @@ const server = createGitLabIssueNoteBridgeServer({
     routeId,
     pipelineRef,
     targetRoute,
-    allowedEventType: env.ZJ_LOOP_BRIDGE_ALLOWED_EVENT_TYPE?.trim() || 'Issue Hook',
+    allowedEventType: env.ZJ_LOOP_BRIDGE_ALLOWED_EVENT_TYPE?.trim() || 'Note Hook',
     enabled: env.ZJ_LOOP_BRIDGE_ENABLED === 'true',
     maturity: env.ZJ_LOOP_BRIDGE_MATURITY?.trim() || 'install-ready',
   },

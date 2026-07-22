@@ -29,7 +29,7 @@ jobs:
 
       - name: Report-only route evidence
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-route dispatch daily-triage-report --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-consumer plan daily-triage-report --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-route dispatch daily-triage-report --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-consumer plan daily-triage-report --json > consumer-plan.json || true
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"

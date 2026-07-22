@@ -1,5 +1,7 @@
 export declare const GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA = "zj-loop.gitlab_issue_note_bridge.v1";
-export declare const GITLAB_ISSUE_NOTE_EVENT = "Issue Hook";
+export declare const GITLAB_ISSUE_NOTE_EVENT = "Note Hook";
+export declare const GITLAB_ISSUE_NOTE_LEGACY_EVENT = "Issue Hook";
+export declare const GITLAB_ISSUE_NOTE_EVENTS: readonly ["Note Hook", "Issue Hook"];
 export declare const GITLAB_BRIDGE_AUTH_SOURCE = "GITLAB_WEBHOOK_SECRET";
 export type GitLabIssueNoteBridgeRoute = {
     routeId: string;
@@ -23,7 +25,7 @@ export type GitLabIssueNoteWebhookInput = {
 export type GitLabIssueNoteBridgeEnvelope = {
     schema: typeof GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA;
     event_id: string;
-    event_type: typeof GITLAB_ISSUE_NOTE_EVENT;
+    event_type: (typeof GITLAB_ISSUE_NOTE_EVENTS)[number];
     project_path: string;
     issue_iid: number;
     note_id: number;
