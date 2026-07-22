@@ -32,6 +32,10 @@ test('real HTTP boundary encodes project paths, sends auth, and reads all resour
     if (request.url === '/api/v4/projects/group%2Fproject/pipelines?source=schedule&per_page=20') return sendJson(response, 200, [{ id: 42, source: 'schedule', ref: 'master', sha: 'deadbeef', status: 'success', created_at: '2026-07-21T01:00:00Z', web_url: 'https://gitlab.example/pipelines/42' }]);
     if (request.url === '/api/v4/projects/group%2Fproject/pipelines/42/jobs') return sendJson(response, 200, [{ id: 7, name: 'zj_loop_changelog_drafter', status: 'success', ref: 'master', pipeline: { id: 42 }, web_url: 'https://gitlab.example/jobs/7' }]);
     if (request.url === '/api/v4/projects/group%2Fproject/jobs/7/artifacts/evidence.json') return sendJson(response, 200, { schema: 'example.v1', status: 'completed' });
+    if (request.url === '/api/v4/projects/group%2Fproject/issues?state=opened&per_page=100') return sendJson(response, 200, [{ iid: 11, state: 'opened', title: 'carrier', description: '<!-- zj-loop:issue-fix-request -->', web_url: 'https://gitlab.example/issues/11' }]);
+    if (request.url === '/api/v4/projects/group%2Fproject/merge_requests?state=opened&per_page=100') return sendJson(response, 200, [{ iid: 12, state: 'opened', title: 'repair', description: '<!-- zj-loop:repair-dedupe -->', source_branch: 'automated/repair', target_branch: 'main', web_url: 'https://gitlab.example/mrs/12' }]);
+    if (request.url === '/api/v4/projects/group%2Fproject/repository/branches?per_page=100') return sendJson(response, 200, [{ name: 'automated/repair', web_url: 'https://gitlab.example/branches/repair', commit: { id: 'deadbeef' } }]);
+    if (request.url === '/api/v4/projects/group%2Fproject/issues/11/notes?per_page=100') return sendJson(response, 200, [{ id: 21, body: '<!-- zj-loop:claim -->', created_at: '2026-07-21T00:00:00Z', noteable_url: 'https://gitlab.example/issues/11' }]);
     sendJson(response, 404, { message: 'unexpected path' });
   }, async (apiUrl) => {
     const client = new GitLabReadClient({ apiUrl, projectPath: 'group/project', token: 'secret-token' });
@@ -41,8 +45,12 @@ test('real HTTP boundary encodes project paths, sends auth, and reads all resour
     assert.equal((await client.listScheduledPipelines())[0].id, 42);
     assert.equal((await client.listPipelineJobs(42))[0].pipeline_id, 42);
     assert.equal((await client.readJobArtifact(7, 'evidence.json')).schema, 'example.v1');
+    assert.equal((await client.listIssues())[0].iid, 11);
+    assert.equal((await client.listMergeRequests())[0].iid, 12);
+    assert.equal((await client.listBranches())[0].commit_sha, 'deadbeef');
+    assert.equal((await client.listIssueNotes(11))[0].id, 21);
   });
-  assert.equal(requests.length, 5);
+  assert.equal(requests.length, 9);
   for (const request of requests) {
     assert.equal(request.method, 'GET');
     assert.equal(request.token, 'secret-token');

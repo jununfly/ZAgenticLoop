@@ -10,7 +10,7 @@ async function main() {
     }
     const client = new GitLabReadClient({ apiUrl: value('--api-url') ?? process.env.CI_API_V4_URL ?? 'https://gitlab.com/api/v4', projectPath: value('--project') ?? process.env.CI_PROJECT_PATH ?? '', token: process.env.GITLAB_TOKEN, tokenSource: process.env.GITLAB_TOKEN ? 'GITLAB_TOKEN' : 'none' });
     if (command === 'preflight') {
-        console.log(JSON.stringify(await client.preflight((value('--capabilities') ?? 'schedule-read,pipeline-read,job-read,artifact-read').split(',')), null, 2));
+        console.log(JSON.stringify(await client.preflight((value('--capabilities') ?? 'schedule-read,pipeline-read,job-read,artifact-read,issue-read,merge-request-read,branch-read,note-read').split(',')), null, 2));
         return;
     }
     throw new Error(`Unknown command: ${command}`);

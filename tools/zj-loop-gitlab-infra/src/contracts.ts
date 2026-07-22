@@ -1,11 +1,15 @@
 export const GITLAB_INFRA_CONTRACT = 'zj-loop.gitlab-infra.v1' as const;
-export const GITLAB_INFRA_VERSION = '0.1.0' as const;
+export const GITLAB_INFRA_VERSION = '0.1.1' as const;
 
 export const READ_CAPABILITIES = [
   'schedule-read',
   'pipeline-read',
   'job-read',
   'artifact-read',
+  'issue-read',
+  'merge-request-read',
+  'branch-read',
+  'note-read',
 ] as const;
 
 export type ReadCapability = (typeof READ_CAPABILITIES)[number];
@@ -72,6 +76,11 @@ export interface ArtifactRead {
   payload: unknown;
   provenance: InfraProvenance;
 }
+
+export interface NormalizedIssue { iid: number; state: string | null; title: string | null; description: string | null; web_url: string | null; }
+export interface NormalizedMergeRequest { iid: number; state: string | null; title: string | null; description: string | null; source_branch: string | null; target_branch: string | null; web_url: string | null; }
+export interface NormalizedBranch { name: string; web_url: string | null; commit_sha: string | null; }
+export interface NormalizedNote { id: number; body: string; created_at: string | null; web_url: string | null; }
 
 export interface CapabilityResult {
   schema: 'zj-loop.gitlab_infra_capability.v1';
