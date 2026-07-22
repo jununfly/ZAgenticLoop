@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-dependency-sweeper
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 2adc206a3de6fe13
+# zj-loop-template-hash: 6988ca77ae910e46
 
 name: ZJ Loop Dependency Sweeper
 
@@ -21,7 +21,7 @@ on:
       core_package:
         description: 'Core package spec; use ./tools/zj-loop-core for unreleased repo dogfood'
         required: false
-        default: '@jununfly/zj-loop-core@0.1.14'
+        default: '@jununfly/zj-loop-core@0.1.15'
 
 permissions:
   contents: write
@@ -36,7 +36,7 @@ jobs:
 
       - name: Verify ZJ Loop version consistency
         run: |
-          if npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+          if npx --yes --package @jununfly/zj-loop-core@0.1.15 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
             exit 0
           fi
           test -f tools/zj-loop-core/dist/version-consistency-cli.js
@@ -63,7 +63,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_FIX_REQUEST_JSON: ${{ inputs.issue_fix_request_json }}
           CONFIRM_LIVE_REPAIR: ${{ inputs.confirm_live_repair }}
-          ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.14' }}
+          ZJ_LOOP_CORE_PACKAGE: ${{ inputs.core_package || '@jununfly/zj-loop-core@0.1.15' }}
         run: |
           npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-route dispatch dependency-sweeper --json > route-decision.json || true
           npx --yes --package "$ZJ_LOOP_CORE_PACKAGE" zj-loop-dependency-sweeper plan --json > consumer-plan.json || true

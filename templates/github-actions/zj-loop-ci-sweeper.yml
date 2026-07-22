@@ -34,12 +34,12 @@ jobs:
         run: |
           printf '## ZJ Loop CI Sweeper\n\n' >> "$GITHUB_STEP_SUMMARY"
           printf 'Signal: workflow failure or manual smoke for `ci-sweeper`.\n\n' >> "$GITHUB_STEP_SUMMARY"
-          npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-route dispatch ci-sweeper --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-ci-sweeper plan --json > consumer-plan.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-ci-sweeper repair-plan --json > repair-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.15 zj-loop-route dispatch ci-sweeper --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.15 zj-loop-ci-sweeper plan --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.15 zj-loop-ci-sweeper repair-plan --json > repair-plan.json || true
           ROUTE_ALLOWED="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('route-decision.json','utf8')); process.stdout.write(String(p.allowed === true))")"
           if [ "$ROUTE_ALLOWED" = "true" ]; then
-            npx --yes --package @jununfly/zj-loop-core@0.1.14 zj-loop-ci-sweeper request-body \
+            npx --yes --package @jununfly/zj-loop-core@0.1.15 zj-loop-ci-sweeper request-body \
               --route-decision route-decision.json \
               --repo "${{ github.repository }}" \
               --workflow "$WORKFLOW_NAME" \
