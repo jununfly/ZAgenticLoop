@@ -3970,17 +3970,17 @@
     "1-5-5-6-6-4": {
       "id": "1-5-5-6-6-4",
       "label": "ai-studio GitLab 真实 carrier、repair MR、branch 与 claim 零残留审计",
-      "status": "pending",
+      "status": "blocked",
       "mode": "exploit",
       "parent": "1-5-5-6-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Real ai-studio read-only audit completed in GitLab pipeline 10559375 / job 26150725. Result artifact: incident-zero-residue-audit.json. Observed 5 open carrier Issues (#200, #193, #192, #189, #188), 0 open repair MRs, 99 automated ci-sweeper repair branches, 0 duplicate requests, 0 duplicate claims. provider_writes=0 and side_effects_executed=false. Cleanup remains human-confirmation gated."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 15:32:01",
+    "updated": "2026-07-22 15:52:29",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

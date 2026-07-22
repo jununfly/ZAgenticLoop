@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 15:32:01
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 15:52:29
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -50,5 +50,5 @@
 ├── [x][Y+] 1-5-5-6-6-1. GitLab 历史副作用事故 deterministic replay corpus
 ├── [x][Y+] 1-5-5-6-6-2. GitLab carrier、repair MR 与 branch 零残留只读审计
 ├── [x][Y+] 1-5-5-6-6-3. GitLab 事故结构化 cleanup plan 与人工恢复锚点
-└── [ ][Y+] 1-5-5-6-6-4. ai-studio GitLab 真实 carrier、repair MR、branch 与 claim 零残留审计
+└── [!][Y+] 1-5-5-6-6-4. ai-studio GitLab 真实 carrier、repair MR、branch 与 claim 零残留审计
 <!-- ROADMAP_SECTION_END -->
