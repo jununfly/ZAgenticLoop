@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { link, mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, open, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 export const GITLAB_ISSUE_NOTE_BRIDGE_RECEIPT_SCHEMA = 'zj-loop.gitlab_issue_note_bridge_receipt.v1';
 export const GITLAB_ISSUE_NOTE_BRIDGE_DEDUPE_SCHEMA = 'zj-loop.gitlab_issue_note_bridge_dedupe.v1';
@@ -182,13 +182,16 @@ export function fingerprintEnvelope(envelope) {
 }
 async function writeExclusiveJson(target, value) {
     await mkdir(path.dirname(target), { recursive: true });
-    const temporary = `${target}.${randomUUID()}.tmp`;
-    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx' });
+    const handle = await open(target, 'wx');
     try {
-        await link(temporary, target);
+        await handle.writeFile(`${JSON.stringify(value, null, 2)}\n`);
+    }
+    catch (error) {
+        await unlink(target).catch(() => undefined);
+        throw error;
     }
     finally {
-        await unlink(temporary).catch(() => undefined);
+        await handle.close();
     }
 }
 async function writeAtomicJson(target, value) {
