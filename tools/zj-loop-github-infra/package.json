@@ -1,6 +1,6 @@
 {
   "name": "@jununfly/zj-loop-github-infra",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Versioned, read-only GitHub provider infrastructure for ZJ Loop routes.",
   "type": "module",
   "main": "dist/index.js",
