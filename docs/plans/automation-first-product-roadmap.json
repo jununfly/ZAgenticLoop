@@ -2702,6 +2702,11 @@
           "q": "测试 Ingress 的私有 DNS 如何分配？",
           "answer": "A：沿用测试集群现有域名规范，由基础设施 owner 分配固定 zj-loop-gitlab-bridge.<internal-test-domain> hostname",
           "note": "代码库不写入未确认的真实域名；hostname、TLS 证书和 Ingress 配置由测试环境 owner 提供并在部署 evidence 中绑定。"
+        },
+        {
+          "q": "真实测试 hostname 与 TLS 证据由谁提供？",
+          "answer": "A：由 ai-studio-gitlab 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据",
+          "note": "ZAgenticLoop 不自行指定或创建基础设施；仓库只验证脱敏 provenance 与固定路径绑定。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -4005,7 +4010,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 16:58:19",
+    "updated": "2026-07-22 17:02:48",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

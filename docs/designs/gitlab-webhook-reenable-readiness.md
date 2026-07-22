@@ -40,6 +40,9 @@ The hostname follows the test-cluster convention:
 `zj-loop-gitlab-bridge.<internal-test-domain>`. The infrastructure owner must
 replace `<internal-test-domain>` with the existing private suffix in deployment
 evidence; this repository does not invent or commit an unverified hostname.
+The same owner supplies the TLS Secret reference and sanitized Ingress
+provenance. ZAgenticLoop does not create infrastructure or choose a cluster
+suffix.
 
 ## Credential Boundary
 
@@ -86,6 +89,8 @@ The following gates are required in order:
 - [ ] The assigned hostname follows
       `zj-loop-gitlab-bridge.<internal-test-domain>` and is recorded in
       sanitized deployment provenance.
+- [ ] The test-environment owner records the TLS Secret reference and Ingress
+      provenance without exposing certificate material or Secret values.
 - [ ] The bridge deployment is reachable through that Ingress without any
       public listener.
 - [ ] `/healthz` returns `zj-loop.gitlab_issue_note_bridge_health.v1` without
