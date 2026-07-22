@@ -2,7 +2,7 @@ import type { RouteTableRoute } from './route.js';
 
 export const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_SCHEMA = 'zj-loop.gitlab_issue_note_bridge_capability.v1';
 export const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_ROUTE_ID = 'gitlab-issue-note-bridge';
-export const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_PROJECT = 'mlive-dev/ai-studio';
+export const GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_PROJECT = 'example-group/product-project';
 
 const DECLARED_CAPABILITIES = ['webhook-envelope-validation', 'receipt-dedupe', 'fixed-api-trigger'] as const;
 const VERIFIERS = ['route-table', 'disabled-state', 'zero-side-effect'] as const;
@@ -31,7 +31,7 @@ export function buildGitLabIssueNoteBridgeCapabilityArtifact(route: RouteTableRo
   const verifiers = stringList(route.capabilities?.verifiers);
   const errors = [
     route.route_id !== GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_ROUTE_ID ? 'route_id must be gitlab-issue-note-bridge' : null,
-    route.project_path !== GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_PROJECT ? 'project_path must be mlive-dev/ai-studio' : null,
+    route.project_path !== GITLAB_ISSUE_NOTE_BRIDGE_CAPABILITY_PROJECT ? 'project_path must be example-group/product-project' : null,
     route.enabled !== false ? 'route must be disabled' : null,
     route.capability_status !== 'unavailable' ? 'capability_status must be unavailable' : null,
     route.planning_status !== 'deferred' ? 'planning_status must be deferred' : null,

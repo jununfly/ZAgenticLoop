@@ -14,14 +14,14 @@ import {
 
 const envelope = buildGitLabIssueNoteBridgeEnvelope({
   headers: { event: 'Issue Hook', eventId: 'event-receipt-1', webhookSecret: 'secret' },
-  projectPath: 'mlive-dev/ai-studio',
-  expectedProjectPath: 'mlive-dev/ai-studio',
+  projectPath: 'example-group/product-project',
+  expectedProjectPath: 'example-group/product-project',
   expectedWebhookSecret: 'secret',
   route: { routeId: 'roadmap-activation-note', marker: '/zj-loop start roadmap-sliced-development', targetRoute: 'roadmap-sliced-development', targetRef: 'master' },
   receivedAt: '2026-07-17T00:00:00.000Z',
   payload: {
     object_kind: 'issue',
-    project: { path_with_namespace: 'mlive-dev/ai-studio' },
+    project: { path_with_namespace: 'example-group/product-project' },
     issue: { iid: 42 },
     object_attributes: { id: 99, note: '/zj-loop start roadmap-sliced-development', noteable_type: 'Issue', noteable_iid: 42, action: 'create' },
   },

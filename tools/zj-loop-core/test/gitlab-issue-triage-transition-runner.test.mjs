@@ -17,15 +17,15 @@ const ROUTE = {
 
 function request() {
   return buildRecommendedTriageTransitionFixture({
-    source: { tracker: 'gitlab', repo: 'mlive-dev/ai-studio', issue: 160, issue_url: 'https://git.bilibili.co/mlive-dev/ai-studio/-/issues/160', scan_window: 'open-issues:last-24h' },
-    dedupe_key: 'issue-backlog-triage:mlive-dev/ai-studio:160:ready-for-agent:test',
+    source: { tracker: 'gitlab', repo: 'example-group/product-project', issue: 160, issue_url: 'https://git.example.invalid/example-group/product-project/-/issues/160', scan_window: 'open-issues:last-24h' },
+    dedupe_key: 'issue-backlog-triage:example-group/product-project:160:ready-for-agent:test',
   });
 }
 
 test('GitLab transition refuses cross-project requests before any Notes API call', async () => {
   let calls = 0;
   const result = await executeGitLabIssueTriageTransition({
-    projectPath: 'mlive-dev/ai-studio', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.bilibili.co/api/v4', route: ROUTE,
+    projectPath: 'example-group/product-project', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.example.invalid/api/v4', route: ROUTE,
     request: { ...request(), source: { ...request().source, repo: 'other/project' } }, fetchImpl: async () => { calls += 1; throw new Error('unexpected'); },
   });
   assert.equal(result.status, 'blocked');
@@ -36,11 +36,11 @@ test('GitLab transition refuses cross-project requests before any Notes API call
 test('GitLab transition creates a source Issue Fix Request note with low-cost evidence', async () => {
   const calls = [];
   const result = await executeGitLabIssueTriageTransition({
-    projectPath: 'mlive-dev/ai-studio', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.bilibili.co/api/v4', route: ROUTE,
+    projectPath: 'example-group/product-project', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.example.invalid/api/v4', route: ROUTE,
     request: request(), actorPermission: 'maintainer', command: request().confirm_command, confirmationPhrase: 'CONFIRM_TRIAGE_TRANSITION',
     fetchImpl: async (url, init = {}) => {
       calls.push({ url: String(url), init });
-      if (init.method === 'POST') return { ok: true, status: 201, async json() { return { id: 88, web_url: 'https://git.bilibili.co/mlive-dev/ai-studio/-/issues/160#note_88', body: JSON.parse(init.body).body }; } };
+      if (init.method === 'POST') return { ok: true, status: 201, async json() { return { id: 88, web_url: 'https://git.example.invalid/example-group/product-project/-/issues/160#note_88', body: JSON.parse(init.body).body }; } };
       return { ok: true, status: 200, async json() { return []; } };
     },
   });
@@ -57,7 +57,7 @@ test('GitLab transition returns duplicate without posting a second note', async 
   const body = buildIssueTriageTransitionIssueFixRequestBody({ issueFixRequest: base.confirmed_transition.issue_fix_request, triageComment: base.confirmed_transition.triage_comment });
   let postCount = 0;
   const result = await executeGitLabIssueTriageTransition({
-    projectPath: 'mlive-dev/ai-studio', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.bilibili.co/api/v4', route: ROUTE,
+    projectPath: 'example-group/product-project', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.example.invalid/api/v4', route: ROUTE,
     request: request(), actorPermission: 'maintainer', command: request().confirm_command, confirmationPhrase: 'CONFIRM_TRIAGE_TRANSITION',
     fetchImpl: async (url, init = {}) => {
       if (init.method === 'POST') postCount += 1;
@@ -71,7 +71,7 @@ test('GitLab transition returns duplicate without posting a second note', async 
 
 test('trusted GitLab transition requires schedule context and explicit enablement', async () => {
   const result = await executeGitLabIssueTriageTransition({
-    projectPath: 'mlive-dev/ai-studio', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.bilibili.co/api/v4', route: ROUTE,
+    projectPath: 'example-group/product-project', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.example.invalid/api/v4', route: ROUTE,
     request: request(), confirmationMode: 'trusted-automation', confirmationAuthority: 'trusted-workflow', pipelineSource: 'web', trustedAutomationEnabled: 'enabled',
   });
   assert.equal(result.status, 'blocked');
@@ -83,7 +83,7 @@ test('trusted GitLab transition recovers an uncertain write by reading the marke
   const body = buildIssueTriageTransitionIssueFixRequestBody({ issueFixRequest: base.confirmed_transition.issue_fix_request, triageComment: base.confirmed_transition.triage_comment });
   let reads = 0;
   const result = await executeGitLabIssueTriageTransition({
-    projectPath: 'mlive-dev/ai-studio', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.bilibili.co/api/v4', route: ROUTE,
+    projectPath: 'example-group/product-project', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.example.invalid/api/v4', route: ROUTE,
     request: request(), confirmationMode: 'trusted-automation', confirmationAuthority: 'trusted-workflow', pipelineSource: 'schedule', trustedAutomationEnabled: 'enabled',
     fetchImpl: async (url, init = {}) => {
       if (init.method === 'POST') throw new Error('write-timeout');
@@ -100,7 +100,7 @@ test('GitLab transition replays a response mismatch and preserves the created no
   const body = buildIssueTriageTransitionIssueFixRequestBody({ issueFixRequest: base.confirmed_transition.issue_fix_request, triageComment: base.confirmed_transition.triage_comment });
   let reads = 0;
   const result = await executeGitLabIssueTriageTransition({
-    projectPath: 'mlive-dev/ai-studio', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.bilibili.co/api/v4', route: ROUTE,
+    projectPath: 'example-group/product-project', issueIid: 160, token: 'token', apiBaseUrl: 'https://git.example.invalid/api/v4', route: ROUTE,
     request: request(), confirmationMode: 'trusted-automation', confirmationAuthority: 'trusted-workflow', pipelineSource: 'schedule', trustedAutomationEnabled: 'enabled',
     fetchImpl: async (url, init = {}) => {
       if (init.method === 'POST') return { ok: true, status: 201, async json() { return { id: 19639888, body: 'normalized-by-gitlab' }; } };
@@ -111,5 +111,5 @@ test('GitLab transition replays a response mismatch and preserves the created no
   assert.equal(result.status, 'completed', JSON.stringify(result));
   assert.equal(result.outcome, 'recovered-duplicate');
   assert.equal(result.note.id, '19639888');
-  assert.equal(result.note.url, 'https://git.bilibili.co/mlive-dev/ai-studio/-/issues/160#note_19639888');
+  assert.equal(result.note.url, 'https://git.example.invalid/example-group/product-project/-/issues/160#note_19639888');
 });

@@ -7,12 +7,12 @@ import { buildGitLabControlRouteEvidence } from '../dist/index.js';
 const CLI = fileURLToPath(new URL('../dist/route-cli.js', import.meta.url));
 
 const base = {
-  projectPath: 'mlive-dev/ai-studio',
+  projectPath: 'example-group/product-project',
   orchestrationId: 'orch_gitlab_control_1',
   signal: {
     source: 'gitlab-protocol',
     signal_id: 'sig-control-1',
-    project: 'mlive-dev/ai-studio',
+    project: 'example-group/product-project',
   },
 };
 
@@ -27,7 +27,7 @@ test('GitLab human control route emits unified evidence with human handoff artif
   assert.equal(result.status, 'completed');
   assert.equal(result.route_id, 'human');
   assert.equal(result.provider, 'gitlab');
-  assert.equal(result.project, 'mlive-dev/ai-studio');
+  assert.equal(result.project, 'example-group/product-project');
   assert.equal(result.outcome, 'human-handoff');
   assert.equal(result.side_effects_executed, false);
   assert.equal(result.artifact.schema, 'zj-loop.human_handoff.v1');
@@ -94,7 +94,7 @@ test('zj-loop-route control-evidence CLI emits the unified artifact', () => {
     'control-evidence',
     'ignore',
     '--project',
-    'mlive-dev/ai-studio',
+    'example-group/product-project',
     '--orchestration',
     'orch_cli_control_1',
     '--signal-id',

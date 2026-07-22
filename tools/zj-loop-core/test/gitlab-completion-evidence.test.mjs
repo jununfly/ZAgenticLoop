@@ -35,7 +35,7 @@ test('GitLab read-only adapter maps pipeline, job, artifact, and infra provenanc
       contract: 'zj-loop.gitlab-infra.v1',
       infra_version: '0.1.0',
       gitlab_version: '14.10.5-jh',
-      project_path: 'mlive-dev/ai-studio',
+      project_path: 'example-group/product-project',
       capabilities: ['pipeline-read', 'job-read', 'artifact-read'],
     },
   });
@@ -62,7 +62,7 @@ test('GitLab read-only adapter hard-stops when the artifact is missing', () => {
     pipeline: { id: 10553918, source: 'schedule', ref: 'master', sha: 'abc123', status: 'success', created_at: '2026-07-22T01:43:02.162+08:00', web_url: null },
     job: { id: 26132173, name: 'zj_loop_changelog_drafter', status: 'success', ref: 'master', pipeline_id: 10553918, web_url: null },
     artifact: null,
-    infraProvenance: { contract: 'zj-loop.gitlab-infra.v1', infra_version: '0.1.0', gitlab_version: '14.10.5-jh', project_path: 'mlive-dev/ai-studio', capabilities: ['pipeline-read', 'job-read'] },
+    infraProvenance: { contract: 'zj-loop.gitlab-infra.v1', infra_version: '0.1.0', gitlab_version: '14.10.5-jh', project_path: 'example-group/product-project', capabilities: ['pipeline-read', 'job-read'] },
   });
 
   const result = validateCompletionEvidence(evidence);

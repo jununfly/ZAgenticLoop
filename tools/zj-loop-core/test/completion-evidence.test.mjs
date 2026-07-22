@@ -19,7 +19,7 @@ const base = {
   resume_anchor: 'orch_123',
   provenance: {
     provider: 'gitlab',
-    project: 'mlive-dev/ai-studio',
+    project: 'example-group/product-project',
     pipeline_id: '10553918',
     job_id: '26131971',
     commit: 'abc123',
@@ -95,7 +95,7 @@ test('completion evidence allows an explicitly authorized side-effect result', (
 test('completion evidence rejects incomplete external provider provenance', () => {
   const result = validateCompletionEvidence({
     ...base,
-    provenance: { provider: 'gitlab', project: 'mlive-dev/ai-studio', commit: 'abc123' },
+    provenance: { provider: 'gitlab', project: 'example-group/product-project', commit: 'abc123' },
   });
 
   assert.equal(result.ok, false);

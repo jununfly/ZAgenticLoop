@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 17:02:48
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 17:10:27
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -45,8 +45,8 @@
 Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied.
 
 **决策：**
-- Q: ai-studio-gitlab 与 ai-studio 的职责边界是什么？ → ai-studio-gitlab 作为独立 GitLab Webhook 验证服务器/容器；ai-studio 作为主要开发、CI consumer、Issue Triage 集成项目。 (Webhook 基础设施与业务/consumer 项目分层；周末只做本地开发，工作日再做真实 provider 验证。)
-- Q: 真实 Issue Triage dogfood 的项目绑定是什么？ → Issue Note 来源和目标 pipeline 都绑定 mlive-dev/ai-studio；bridge 服务部署在 mlive-dev/ai-studio-gitlab。 (服务托管项目与业务验证项目分离；bridge 的 project_path、API target 和 trigger token 绑定 ai-studio。)
+- Q: gitlab-webhook-test-fork 与 product-project 的职责边界是什么？ → gitlab-webhook-test-fork 作为独立 GitLab Webhook 验证服务器/容器；product-project 作为主要开发、CI consumer、Issue Triage 集成项目。 (Webhook 基础设施与业务/consumer 项目分层；周末只做本地开发，工作日再做真实 provider 验证。)
+- Q: 真实 Issue Triage dogfood 的项目绑定是什么？ → Issue Note 来源和目标 pipeline 都绑定 example-group/product-project；bridge 服务部署在 example-group/gitlab-webhook-test-fork。 (服务托管项目与业务验证项目分离；bridge 的 project_path、API target 和 trigger token 绑定 product-project。)
 - Q: GitLab Webhook Issue Triage 适配是否纳入本版本产品计划？ → 不纳入本版本；转移到 docs/plans/known-gaps.md checklist，作为后续版本待完善能力。 (保持本版本知行合一；已有 adapter、部署分支和本地测试只算探索性/基础设施准备，不算产品支持、trusted automation 或 live completion evidence。)
 - Q: GitLab Webhook Issue Triage 何时允许重新纳入版本路线图？ → 只有协议、negative/recovery matrix、真实 live evidence、promotion gate 全部完成，并经 Human 明确确认后，才重新纳入。 (known gap 不因核心代码或本地测试完成而提前回流；避免探索性实现被误读为产品结论。)
 - Q: 本版本发布时 GitLab Webhook 功能如何处理？ → 正常版本继续发布，但 Webhook 功能保持 disabled/unavailable；不启用 route、secret 或 provider write，其他功能正常。 (Webhook 是明确的 known gap，不影响其他产品功能；未完成 checklist 和 promotion gate 前不得对用户宣称可用。)
@@ -69,13 +69,14 @@ Deferred from current version. Track GitLab Webhook Issue Triage adaptation in d
 - Q: Webhook bridge declared capabilities 覆盖到哪一层？ → 只声明 webhook-envelope-validation、receipt-dedupe、fixed-api-trigger；Issue Triage 分析、transition 和 provider write 由独立 route 声明。 (Bridge、consumer、provider write 三层保持独立，避免接入能力被误读为业务自动化能力。)
 - Q: disabled capability artifact 使用什么 schema？ → 采用统一 envelope zj-loop.capability.v1 与 route-specific artifact zj-loop.gitlab_issue_note_bridge_capability.v1；route artifact 包含 status、planning_status、enabled、provider_writes_allowed、declared/verified capabilities 和 verifiers。 (doctor/ledger 统一消费，bridge route 保持独立语义。)
 - Q: doctor/ledger 遇到 deferred Webhook 时如何影响退出码？ → 默认生成完整 artifact 并成功结束，但明确记录 route deferred；仅 --require-complete 等严格模式因 route 未完成而失败。 (正常发布不被该缺口阻塞，严格模式仍防止版本被误报为全能力完成。)
-- Q: Webhook capability artifact 记录哪些绑定信息？ → 记录 provider=gitlab、project_path=mlive-dev/ai-studio、route_id=gitlab-issue-note-bridge、status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；可记录 auth_source 名称，不记录 Secret、Token 或完整 payload。 (证明项目与 route 绑定且不泄露凭证；部署实验不被误当 live evidence。)
+- Q: Webhook capability artifact 记录哪些绑定信息？ → 记录 provider=gitlab、project_path=example-group/product-project、route_id=gitlab-issue-note-bridge、status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；可记录 auth_source 名称，不记录 Secret、Token 或完整 payload。 (证明项目与 route 绑定且不泄露凭证；部署实验不被误当 live evidence。)
 - Q: disabled capability check 覆盖哪些验证场景？ → 本地覆盖正常 disabled 配置、Route 缺失或 enum 非法、普通环境变量越权开启、所有场景 provider_writes_allowed=false；使用 fixture，不访问 GitLab。 (证明默认不可用、配置错误 fail-closed，周末不引入 provider side effect。)
 - Q: disabled capability artifact 如何保存？ → 由 doctor/CI 每次动态生成并保存为 artifact/ledger 运行证据，不提交生成快照；Route Table 和 known-gaps 作为源配置。 (避免状态快照过期，同时保留每次运行的可审计证据。)
 - Q: disabled capability artifact 保留多久？ → 默认保留 90 天，覆盖一个完整版本周期；只保留脱敏 capability 状态，不保存 Secret、Token 或完整 payload。 (支持版本回顾和 known-gap 审计，避免无限累积运行数据。)
-- Q: 重新开启 GitLab Webhook 的第一步是什么？ → A：先提交 Webhook re-enable readiness PR，补齐版本、owner、项目绑定、Secret 分离、固定 endpoint/ref 与 health check；保持 enabled=false (当前没有可用 ai-studio-gitlab deployment；准备 PR 不产生 GitLab provider side effect，待 Human review 后再部署与 promotion。)
-- Q: GitLab Webhook live fixture 使用哪个项目边界？ → A：只在 mlive-dev/ai-studio-gitlab 内网测试 fork 与其 bridge deployment 上验证；mlive-dev/ai-studio 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline (ai-studio 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。)
-- Q: 测试 fork 的 HTTPS bridge 如何承载？ → A：复用内网现有 Ingress，分配固定私有 DNS 与 TLS (不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 ai-studio-gitlab 测试 fork。)
+- Q: 重新开启 GitLab Webhook 的第一步是什么？ → A：先提交 Webhook re-enable readiness PR，补齐版本、owner、项目绑定、Secret 分离、固定 endpoint/ref 与 health check；保持 enabled=false (当前没有可用 gitlab-webhook-test-fork deployment；准备 PR 不产生 GitLab provider side effect，待 Human review 后再部署与 promotion。)
+- Q: GitLab Webhook live fixture 使用哪个项目边界？ → A：只在 example-group/gitlab-webhook-test-fork 内网测试 fork 与其 bridge deployment 上验证；example-group/product-project 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline (product-project 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。)
+- Q: 测试 fork 的 HTTPS bridge 如何承载？ → A：复用内网现有 Ingress，分配固定私有 DNS 与 TLS (不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 gitlab-webhook-test-fork 测试 fork。)
 - Q: 测试 Ingress 的私有 DNS 如何分配？ → A：沿用测试集群现有域名规范，由基础设施 owner 分配固定 zj-loop-gitlab-bridge.<internal-test-domain> hostname (代码库不写入未确认的真实域名；hostname、TLS 证书和 Ingress 配置由测试环境 owner 提供并在部署 evidence 中绑定。)
-- Q: 真实测试 hostname 与 TLS 证据由谁提供？ → A：由 ai-studio-gitlab 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据 (ZAgenticLoop 不自行指定或创建基础设施；仓库只验证脱敏 provenance 与固定路径绑定。)
+- Q: 真实测试 hostname 与 TLS 证据由谁提供？ → A：由 gitlab-webhook-test-fork 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据 (ZAgenticLoop 不自行指定或创建基础设施；仓库只验证脱敏 provenance 与固定路径绑定。)
+- Q: 公开 ZAgenticLoop 如何记录闭源 GitLab 项目证据？ → A：全量使用公开占位符，移除真实项目名、内部域名、Issue/MR/Pipeline 与环境绑定；真实证据只保存在闭源项目或受控外部审计系统 (源码、测试、模板、路线图和公开文档均不得出现 product project 或测试 fork 的真实身份；协议行为用 example-group/product-project 等占位符验证。)
 <!-- ROADMAP_SECTION_END -->

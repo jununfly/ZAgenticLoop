@@ -8,24 +8,24 @@ disabled and unavailable until the gates in this document are satisfied.
 This is the re-enable contract for the next package release after `0.1.11`,
 proposed as `0.1.12`. The owners are:
 
-- Product and runtime approval: `mlive-dev/ai-studio` maintainers
+- Product and runtime approval: `example-group/product-project` maintainers
 - Provider adapter and protocol: ZAgenticLoop maintainers
-- Bridge deployment and HTTPS ownership: `mlive-dev/ai-studio-gitlab` test-environment owner
+- Bridge deployment and HTTPS ownership: `example-group/gitlab-webhook-test-fork` test-environment owner
 
 The reference installation is fixed to:
 
 | Field | Value |
 | --- | --- |
-| Bridge deployment | Internal HTTPS deployment of the `mlive-dev/ai-studio-gitlab` test fork |
-| Live fixture project | `mlive-dev/ai-studio-gitlab` |
-| Production project | `mlive-dev/ai-studio` (protected; no fixture or Webhook) |
+| Bridge deployment | Internal HTTPS deployment of the `example-group/gitlab-webhook-test-fork` test fork |
+| Live fixture project | `example-group/gitlab-webhook-test-fork` |
+| Production project | `example-group/product-project` (protected; no fixture or Webhook) |
 | Route | `gitlab-issue-note-bridge` |
 | Target ref | `master` in the test fork |
 | Webhook path | `/gitlab/webhook/issue-note` |
 | Health path | `/healthz` |
 | Webhook event | `Issue Hook` only |
 
-`mlive-dev/ai-studio` is the real product project with active users. It must
+`example-group/product-project` is the real product project with active users. It must
 not be used to create a fixture Issue or Note, configure a Webhook, or trigger
 an API pipeline during development validation. The deployment host is
 intentionally a required test-environment input. It must be assigned before
@@ -66,8 +66,8 @@ checks fail:
 1. HTTPS host and `/healthz` are reachable and return the bridge health schema.
 2. `X-Gitlab-Event` is exactly `Issue Hook`.
 3. `X-Gitlab-Event-UUID` is present and becomes the receipt identity.
-4. The payload project is exactly `mlive-dev/ai-studio-gitlab` for the live
-   fixture; a production payload from `mlive-dev/ai-studio` is rejected by the
+4. The payload project is exactly `example-group/gitlab-webhook-test-fork` for the live
+   fixture; a production payload from `example-group/product-project` is rejected by the
    test bridge.
 5. The note is the route marker configured for `gitlab-issue-note-bridge`.
 6. The route maps only to the test fork's `master`; webhook input cannot
@@ -85,7 +85,7 @@ The following gates are required in order:
 
 - [ ] Infrastructure owner and version target confirmed.
 - [ ] Existing internal Ingress is assigned a fixed private DNS name and TLS
-      certificate for the `mlive-dev/ai-studio-gitlab` test fork.
+      certificate for the `example-group/gitlab-webhook-test-fork` test fork.
 - [ ] The assigned hostname follows
       `zj-loop-gitlab-bridge.<internal-test-domain>` and is recorded in
       sanitized deployment provenance.
