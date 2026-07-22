@@ -1,0 +1,44 @@
+name: Release zj-loop-github-infra
+
+on:
+  push:
+    tags:
+      - 'zj-loop-github-infra-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. zj-loop-github-infra-v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: tools/zj-loop-github-infra/package-lock.json
+
+      - name: Ensure npm supports provenance publishing
+        run: npm install -g npm@10.9.8
+
+      - name: Install, build, test
+        working-directory: tools/zj-loop-github-infra
+        run: npm ci && npm test
+
+      - name: Publish to npm
+        working-directory: tools/zj-loop-github-infra
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

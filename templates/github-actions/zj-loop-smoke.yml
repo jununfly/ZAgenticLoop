@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-smoke
 # zj-loop-template-version: 1
-# zj-loop-template-hash: generated-by-zj-loop-init
+# zj-loop-template-hash: 98208c6f2eeacf90
 
 name: ZJ Loop Smoke
 
@@ -27,6 +27,32 @@ jobs:
           npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build canonical completion evidence
+        env:
+          ZJ_LOOP_PROJECT: ${{ github.repository }}
+          ZJ_LOOP_RUN_ID: ${{ github.run_id }}
+          ZJ_LOOP_JOB: ${{ github.job }}
+          ZJ_LOOP_SHA: ${{ github.sha }}
+          ZJ_LOOP_REF: ${{ github.ref_name }}
+          ZJ_LOOP_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node -e "const fs=require('fs'); const e=process.env; fs.writeFileSync('smoke-signal.json', JSON.stringify({schema:'zj-loop.signal.v1',signal_id:e.ZJ_LOOP_RUN_ID,source:'workflow_dispatch',provider:'github',subject:{kind:'local_goal',id:'manual-smoke-report',url:e.ZJ_LOOP_URL},intent:'triage',payload:{route_id:'manual-smoke-report',request_id:'smoke-'+e.ZJ_LOOP_RUN_ID,project:e.ZJ_LOOP_PROJECT,pipeline_id:e.ZJ_LOOP_RUN_ID,job_id:e.ZJ_LOOP_JOB,head_sha:e.ZJ_LOOP_SHA,ref:e.ZJ_LOOP_REF}}, null, 2));"
+          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-dispatch --root . --signal smoke-signal.json --mode auto --format json > orchestration.json
+          node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync('orchestration.json','utf8')); if(!o.completion_evidence) throw new Error('orchestration did not emit completion evidence'); fs.writeFileSync('completion-evidence.json', JSON.stringify(o.completion_evidence,null,2)+'\\n');"
+          npx --yes --package @jununfly/zj-loop-core@0.1.11 zj-loop-completion-evidence --evidence completion-evidence.json --out completion-evidence-validation.json --json
+
+      - name: Upload canonical completion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zj-loop-completion-evidence
+          path: |
+            completion-evidence.json
+            completion-evidence-validation.json
+            orchestration.json
+            smoke-signal.json
+          if-no-files-found: ignore
 
       - name: Audit installed loop readiness
         run: npx @jununfly/zj-loop-audit@0.1.6 . --suggest

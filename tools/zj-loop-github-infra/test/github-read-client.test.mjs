@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import test from 'node:test';
+import { GitHubInfraError, GitHubReadClient, readJsonFromZip } from '../dist/index.js';
+import { zipSync } from 'fflate';
+
+const response = (body, status = 200, headers = {}) => ({ ok: status >= 200 && status < 300, status, headers: new Headers(headers), async json() { return body; }, async arrayBuffer() { return body; } });
+const run = { id: 42, name: 'ZJ Loop Smoke', workflow_id: 7, event: 'workflow_dispatch', status: 'completed', conclusion: 'success', head_sha: 'deadbeef', head_branch: 'main', html_url: 'https://github.com/example/repo/actions/runs/42' };
+const job = { id: 9, name: 'smoke', status: 'completed', conclusion: 'success', head_sha: 'deadbeef', run_id: 42, check_run_url: 'https://api.github.com/repos/example%2Frepo/check-runs/9', html_url: 'https://github.com/example/repo/actions/runs/42/job/9' };
+const artifact = { id: 11, name: 'zj-loop-completion-evidence', expired: false, size_in_bytes: 100, workflow_run: { id: 42 }, archive_download_url: 'https://api.github.com/repos/example%2Frepo/actions/artifacts/11/zip' };
+
+test('read client sends GitHub API headers and normalizes a complete provenance chain', async () => {
+  const requests = []; const zip = zipSync({ 'completion-evidence.json': new TextEncoder().encode(JSON.stringify({ schema: 'zj-loop.completion_evidence.v1', status: 'planned' })) });
+  const client = new GitHubReadClient({ apiUrl: 'https://api.github.test', repository: 'example/repo', token: 'secret', fetchImpl: async (url, init) => { requests.push({ url: String(url), headers: init.headers }); if (String(url).endsWith('/actions/runs/42')) return response(run); if (String(url).endsWith('/actions/runs/42/jobs')) return response({ jobs: [job] }); if (String(url).endsWith('/check-runs/9')) return response({ id: 9, name: 'smoke', status: 'completed', conclusion: 'success', head_sha: 'deadbeef', html_url: 'https://github.com/checks/9' }); if (String(url).endsWith('/actions/runs/42/artifacts')) return response({ artifacts: [artifact] }); if (String(url).endsWith('/actions/artifacts/11/zip')) return response(zip); if (String(url).endsWith('/commits/deadbeef')) return response({ sha: 'deadbeef', html_url: 'https://github.com/commit/deadbeef' }); if (String(url).endsWith('/git/ref/heads%2Fmain')) return response({ ref: 'refs/heads/main', object: { sha: 'deadbeef', type: 'commit' } }); if (String(url).endsWith('/repos/example/repo')) return response({ id: 1 }); throw new Error(`unexpected ${url}`); } });
+  const result = await client.readProvenance({ runId: 42, workflowName: 'ZJ Loop Smoke', jobName: 'smoke', artifactName: 'zj-loop-completion-evidence', artifactPath: 'completion-evidence.json', expectedHeadSha: 'deadbeef', ref: 'main' });
+  assert.equal(result.status, 'ready', JSON.stringify(result)); assert.equal(result.provenance?.job_id, 9); assert.equal(result.evidence?.schema, 'zj-loop.completion_evidence.v1'); assert.equal(requests[0].headers.Authorization, 'Bearer secret'); assert.equal(requests[0].headers['X-GitHub-Api-Version'], '2022-11-28');
+});
+
+test('provenance fails closed on SHA drift and does not expose token', async () => { const client = new GitHubReadClient({ repository: 'example/repo', token: 'secret-token', fetchImpl: async (url) => String(url).endsWith('/actions/runs/42') ? response({ ...run, head_sha: 'other' }) : response({}) }); const result = await client.readProvenance({ runId: 42, workflowName: 'ZJ Loop Smoke', jobName: 'smoke', artifactName: 'artifact', artifactPath: 'evidence.json', expectedHeadSha: 'deadbeef', ref: 'main' }); assert.equal(result.status, 'blocked'); assert.equal(result.errors[0].code, 'provider-contract-mismatch'); assert.doesNotMatch(JSON.stringify(result), /secret-token/); });
+
+test('repository paths are validated as owner/repository', async () => { const client = new GitHubReadClient({ repository: 'invalid', fetchImpl: async () => response({}) }); await assert.rejects(() => client.preflight(), (error) => error instanceof GitHubInfraError && error.code === 'provider-contract-mismatch'); });
+
+test('ZIP reader rejects unsafe, duplicate, oversized, and invalid evidence', () => { const limits = { maxArchiveBytes: 100000, maxUncompressedBytes: 1000, maxEntryBytes: 1000, maxEntries: 10 }; assert.throws(() => readJsonFromZip(zipSync({ '../escape.json': new TextEncoder().encode('{}') }), '../escape.json', limits), (e) => e instanceof GitHubInfraError && e.code === 'artifact-invalid'); assert.throws(() => readJsonFromZip(zipSync({ 'evidence.json': new TextEncoder().encode('bad') }), 'evidence.json', limits), (e) => e instanceof GitHubInfraError && e.code === 'artifact-invalid'); });

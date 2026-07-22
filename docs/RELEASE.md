@@ -5,6 +5,7 @@ This repo has eight release-managed public npm packages from `tools/`:
 | Package | Directory | Release tag |
 |---------|-----------|-------------|
 | `@jununfly/zj-loop-gitlab-infra` | `tools/zj-loop-gitlab-infra` | `zj-loop-gitlab-infra-v*` |
+| `@jununfly/zj-loop-github-infra` | `tools/zj-loop-github-infra` | `zj-loop-github-infra-v*` |
 | `@jununfly/zj-loop-core` | `tools/zj-loop-core` | `zj-loop-core-v*` |
 | `@jununfly/zj-loop-audit` | `tools/zj-loop-audit` | `zj-loop-audit-v*` |
 | `@jununfly/zj-loop-init` | `tools/zj-loop-init` | `zj-loop-init-v*` |
@@ -37,6 +38,7 @@ Publisher** → **GitHub Actions**:
 | Package | Repository | Workflow filename |
 |---------|--------------|-------------------|
 | `@jununfly/zj-loop-gitlab-infra` | `jununfly/ZAgenticLoop` | `release-zj-loop-gitlab-infra.yml` |
+| `@jununfly/zj-loop-github-infra` | `jununfly/ZAgenticLoop` | `release-zj-loop-github-infra.yml` |
 | `@jununfly/zj-loop-core` | `jununfly/ZAgenticLoop` | `release-zj-loop-core.yml` |
 | `@jununfly/zj-loop-audit` | `jununfly/ZAgenticLoop` | `release-zj-loop-audit.yml` |
 | `@jununfly/zj-loop-init` | `jununfly/ZAgenticLoop` | `release-zj-loop-init.yml` |
@@ -239,7 +241,7 @@ git tag zj-goal-audit-v0.1.0
 git push origin zj-goal-audit-v0.1.0
 ```
 
-Workflows: `.github/workflows/release-zj-loop-core.yml`, `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-zj-loop-sync.yml`, `.github/workflows/release-zj-loop-mcp-server.yml`, `.github/workflows/release-zj-goal-audit.yml`.
+Workflows: `.github/workflows/release-zj-loop-core.yml`, `.github/workflows/release-zj-loop-gitlab-infra.yml`, `.github/workflows/release-zj-loop-github-infra.yml`, `.github/workflows/release-zj-loop-audit.yml`, `.github/workflows/release-zj-loop-init.yml`, `.github/workflows/release-zj-loop-cost.yml`, `.github/workflows/release-zj-loop-sync.yml`, `.github/workflows/release-zj-loop-mcp-server.yml`, `.github/workflows/release-zj-goal-audit.yml`.
 
 ## Verify after publish
 
