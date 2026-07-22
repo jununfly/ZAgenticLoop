@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 16:58:19
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 17:02:48
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -77,4 +77,5 @@ Deferred from current version. Track GitLab Webhook Issue Triage adaptation in d
 - Q: GitLab Webhook live fixture 使用哪个项目边界？ → A：只在 mlive-dev/ai-studio-gitlab 内网测试 fork 与其 bridge deployment 上验证；mlive-dev/ai-studio 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline (ai-studio 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。)
 - Q: 测试 fork 的 HTTPS bridge 如何承载？ → A：复用内网现有 Ingress，分配固定私有 DNS 与 TLS (不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 ai-studio-gitlab 测试 fork。)
 - Q: 测试 Ingress 的私有 DNS 如何分配？ → A：沿用测试集群现有域名规范，由基础设施 owner 分配固定 zj-loop-gitlab-bridge.<internal-test-domain> hostname (代码库不写入未确认的真实域名；hostname、TLS 证书和 Ingress 配置由测试环境 owner 提供并在部署 evidence 中绑定。)
+- Q: 真实测试 hostname 与 TLS 证据由谁提供？ → A：由 ai-studio-gitlab 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据 (ZAgenticLoop 不自行指定或创建基础设施；仓库只验证脱敏 provenance 与固定路径绑定。)
 <!-- ROADMAP_SECTION_END -->
