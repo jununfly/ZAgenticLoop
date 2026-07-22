@@ -8,8 +8,8 @@
   "generated_files": {
     ".github/workflows/zj-loop-smoke.yml": {
       "path": ".github/workflows/zj-loop-smoke.yml",
-      "sha256": "69f864459058b7fcbe9c83c66e5bf9bb5bea4306f157dde6cae17de49d490901",
-      "template_hash": "34f8495ae44e637a"
+      "sha256": "67da1f1ea315a266bed9557068c8adaa79cde8072f3e5e464e537e2c598e51fd",
+      "template_hash": "98208c6f2eeacf90"
     },
     ".github/workflows/zj-loop-daily-triage.yml": {
       "path": ".github/workflows/zj-loop-daily-triage.yml",

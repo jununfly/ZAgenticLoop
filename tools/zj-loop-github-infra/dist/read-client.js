@@ -1,0 +1,91 @@
+import { DEFAULT_ARTIFACT_LIMITS, GITHUB_API_VERSION, GITHUB_INFRA_CONTRACT, GITHUB_INFRA_VERSION, READ_CAPABILITIES } from './contracts.js';
+import { classifyHttpStatus, GitHubInfraError } from './errors.js';
+import { readJsonFromZip } from './zip.js';
+export class GitHubReadClient {
+    apiUrl;
+    repository;
+    token;
+    tokenSource;
+    fetchImpl;
+    limits = { ...DEFAULT_ARTIFACT_LIMITS };
+    constructor(config) { this.apiUrl = (config.apiUrl ?? 'https://api.github.com').replace(/\/$/, ''); this.repository = config.repository; this.token = config.token; this.tokenSource = config.tokenSource ?? (config.token ? 'injected' : 'none'); this.fetchImpl = config.fetchImpl ?? globalThis.fetch; Object.assign(this.limits, config.limits ?? {}); }
+    async preflight(required = [...READ_CAPABILITIES]) { const capabilities = required.filter((v) => READ_CAPABILITIES.includes(v)); const errors = required.length === capabilities.length ? [] : [{ code: 'provider-contract-mismatch', message: 'Unsupported GitHub infra capability requested' }]; const warnings = this.token ? [] : ['anonymous GitHub API access is rate-limit constrained']; if (!errors.length) {
+        await this.request(`/repos/${this.repo()}`);
+    } return { schema: 'zj-loop.github_infra_capability.v1', status: errors.length ? 'blocked' : 'ready', warnings, capabilities, auth_source: this.tokenSource, api_version: GITHUB_API_VERSION, errors }; }
+    async readWorkflowRun(runId) { const b = asRecord((await this.request(`/repos/${this.repo()}/actions/runs/${encodeURIComponent(String(runId))}`)).body); return { id: numberRequired(b.id, 'run.id'), name: stringRequired(b.name, 'run.name'), workflow_id: numberOrNull(b.workflow_id), event: stringOrNull(b.event), status: stringOrNull(b.status), conclusion: stringOrNull(b.conclusion), head_sha: stringRequired(b.head_sha, 'run.head_sha'), head_branch: stringOrNull(b.head_branch), html_url: stringOrNull(b.html_url) }; }
+    async listJobs(runId) { const b = await this.request(`/repos/${this.repo()}/actions/runs/${encodeURIComponent(String(runId))}/jobs`); const body = asRecord(b.body); if (!Array.isArray(body.jobs))
+        throw new GitHubInfraError('response-shape-invalid', 'GitHub jobs response must contain jobs array'); return body.jobs.map(normalizeJob); }
+    async readCheck(checkId) { const b = asRecord((await this.request(`/repos/${this.repo()}/check-runs/${encodeURIComponent(String(checkId))}`)).body); return { id: numberRequired(b.id, 'check.id'), name: stringRequired(b.name, 'check.name'), status: stringOrNull(b.status), conclusion: stringOrNull(b.conclusion), head_sha: stringOrNull(b.head_sha), html_url: stringOrNull(b.html_url) }; }
+    async listArtifacts(runId) { const b = asRecord((await this.request(`/repos/${this.repo()}/actions/runs/${encodeURIComponent(String(runId))}/artifacts`)).body); if (!Array.isArray(b.artifacts))
+        throw new GitHubInfraError('response-shape-invalid', 'GitHub artifacts response must contain artifacts array'); return b.artifacts.map(normalizeArtifact); }
+    async readCommit(ref) { const b = asRecord((await this.request(`/repos/${this.repo()}/commits/${encodeURIComponent(ref)}`)).body); return { sha: stringRequired(b.sha, 'commit.sha'), html_url: stringOrNull(b.html_url) }; }
+    async readRef(ref) { const value = ref.startsWith('refs/') ? ref.slice(5) : ref.includes('/') ? ref : `heads/${ref}`; const b = asRecord((await this.request(`/repos/${this.repo()}/git/ref/${encodeURIComponent(value)}`)).body); const object = asRecord(b.object); return { ref: stringRequired(b.ref, 'ref.ref'), sha: stringRequired(object.sha, 'ref.object.sha'), object_type: stringOrNull(object.type) }; }
+    async readArtifact(runId, artifactName, artifactPath) { const artifact = (await this.listArtifacts(runId)).filter((x) => x.name === artifactName && x.workflow_run_id === Number(runId)); if (artifact.length !== 1)
+        throw new GitHubInfraError('artifact-invalid', artifact.length === 0 ? 'Requested artifact was not found for workflow run' : 'Requested artifact name is not unique for workflow run'); const selected = artifact[0]; if (selected.expired)
+        throw new GitHubInfraError('artifact-invalid', 'Requested artifact is expired'); const response = await this.requestUrl(selected.archive_download_url, true); if (response.byteLength > this.limits.maxArchiveBytes)
+        throw new GitHubInfraError('artifact-limit-exceeded', 'GitHub artifact archive exceeds maxArchiveBytes'); const parsed = readJsonFromZip(response, artifactPath, this.limits); const run = await this.readWorkflowRun(runId); return { ...parsed, name: selected.name, path: artifactPath, provenance: { contract: GITHUB_INFRA_CONTRACT, infra_version: GITHUB_INFRA_VERSION, api_version: GITHUB_API_VERSION, repository: this.repository, workflow_id: run.workflow_id ?? 0, run_id: run.id, job_id: 0, job_name: '', artifact_id: selected.id, artifact_name: selected.name, artifact_path: artifactPath, head_sha: run.head_sha, ref: run.head_branch ?? '', auth_source: this.tokenSource } }; }
+    async readProvenance(input) { try {
+        const run = await this.readWorkflowRun(input.runId);
+        if (run.name !== input.workflowName || run.head_sha !== input.expectedHeadSha || run.head_branch !== input.ref || run.status !== 'completed' || run.conclusion !== 'success')
+            throw new GitHubInfraError('provider-contract-mismatch', 'Workflow run identity or conclusion mismatch');
+        const jobs = (await this.listJobs(run.id)).filter((x) => x.name === input.jobName);
+        if (jobs.length !== 1)
+            throw new GitHubInfraError('provider-contract-mismatch', 'Workflow job name is missing or not unique');
+        const job = jobs[0];
+        if (job.status !== 'completed' || job.conclusion !== 'success' || job.head_sha !== input.expectedHeadSha)
+            throw new GitHubInfraError('provider-contract-mismatch', 'Workflow job is not successful or head SHA mismatches');
+        if (!job.check_run_url)
+            throw new GitHubInfraError('provider-contract-mismatch', 'Workflow job has no check run');
+        const check = await this.readCheck(checkIdFromUrl(job.check_run_url));
+        if (check.conclusion !== 'success' || (check.head_sha && check.head_sha !== input.expectedHeadSha))
+            throw new GitHubInfraError('provider-contract-mismatch', 'Check conclusion or head SHA mismatches');
+        const artifact = (await this.listArtifacts(run.id)).filter((x) => x.name === input.artifactName && x.workflow_run_id === run.id);
+        if (artifact.length !== 1 || artifact[0].expired)
+            throw new GitHubInfraError('artifact-invalid', 'Artifact is missing, duplicated, or expired');
+        const evidence = await this.readArtifact(run.id, input.artifactName, input.artifactPath);
+        const commit = await this.readCommit(input.expectedHeadSha);
+        const ref = await this.readRef(input.ref);
+        if (commit.sha !== input.expectedHeadSha || ref.sha !== input.expectedHeadSha)
+            throw new GitHubInfraError('provider-contract-mismatch', 'Commit/ref SHA mismatch');
+        const provenance = { ...evidence.provenance, job_id: job.id, job_name: job.name, head_sha: input.expectedHeadSha, ref: input.ref };
+        return { schema: 'zj-loop.github_infra_provenance.v1', status: 'ready', side_effects_executed: false, run, job, check, artifact: artifact[0], commit, ref, evidence: { ...evidence, provenance }, provenance, errors: [] };
+    }
+    catch (error) {
+        const e = error instanceof GitHubInfraError ? error : new GitHubInfraError('transient-network', 'GitHub provenance read failed');
+        return { schema: 'zj-loop.github_infra_provenance.v1', status: 'blocked', side_effects_executed: false, run: null, job: null, check: null, artifact: null, commit: null, ref: null, evidence: null, provenance: null, errors: [{ code: e.code, message: e.message, ...(e.status ? { status: e.status } : {}) }] };
+    } }
+    repo() { const parts = this.repository.split('/'); if (parts.length !== 2 || parts.some((part) => !part))
+        throw new GitHubInfraError('provider-contract-mismatch', 'repository must be owner/repository'); return parts.map(encodeURIComponent).join('/'); }
+    async request(path) { let response; try {
+        response = await this.fetchImpl(`${this.apiUrl}${path}`, { headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': GITHUB_API_VERSION, 'User-Agent': `zj-loop-github-infra/${GITHUB_INFRA_VERSION}`, ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) } });
+    }
+    catch {
+        throw new GitHubInfraError('transient-network', 'GitHub request failed before receiving a response');
+    } if (!response.ok)
+        throw new GitHubInfraError(classifyHttpStatus(response.status), `GitHub request failed with HTTP ${response.status}`, response.status, Number(response.headers.get('retry-after') ?? '') || undefined); let body; try {
+        body = await response.json();
+    }
+    catch {
+        throw new GitHubInfraError('response-shape-invalid', 'GitHub response was not valid JSON', response.status);
+    } return { body, status: response.status }; }
+    async requestUrl(url, binary) { let response; try {
+        response = await this.fetchImpl(url, { headers: { Accept: 'application/zip', 'X-GitHub-Api-Version': GITHUB_API_VERSION, 'User-Agent': `zj-loop-github-infra/${GITHUB_INFRA_VERSION}`, ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) } });
+    }
+    catch {
+        throw new GitHubInfraError('transient-network', 'GitHub artifact request failed before receiving a response');
+    } if (!response.ok)
+        throw new GitHubInfraError(classifyHttpStatus(response.status), `GitHub artifact request failed with HTTP ${response.status}`, response.status); return new Uint8Array(await response.arrayBuffer()); }
+}
+function normalizeJob(value) { const b = asRecord(value); return { id: numberRequired(b.id, 'job.id'), name: stringRequired(b.name, 'job.name'), status: stringOrNull(b.status), conclusion: stringOrNull(b.conclusion), head_sha: stringRequired(b.head_sha, 'job.head_sha'), run_id: numberOrNull(b.run_id), check_run_url: stringOrNull(b.check_run_url), html_url: stringOrNull(b.html_url) }; }
+function normalizeArtifact(value) { const b = asRecord(value); return { id: numberRequired(b.id, 'artifact.id'), name: stringRequired(b.name, 'artifact.name'), expired: b.expired === true, size_in_bytes: numberRequired(b.size_in_bytes, 'artifact.size_in_bytes'), workflow_run_id: numberOrNull(asRecordOrNull(b.workflow_run)?.id), archive_download_url: stringRequired(b.archive_download_url, 'artifact.archive_download_url') }; }
+function asRecord(value) { if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new GitHubInfraError('response-shape-invalid', 'GitHub response must be an object'); return value; }
+function asRecordOrNull(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : null; }
+function numberRequired(value, field) { if (typeof value !== 'number' || !Number.isInteger(value))
+    throw new GitHubInfraError('response-shape-invalid', `GitHub response missing numeric ${field}`); return value; }
+function numberOrNull(value) { return typeof value === 'number' && Number.isInteger(value) ? value : null; }
+function stringRequired(value, field) { if (typeof value !== 'string' || !value)
+    throw new GitHubInfraError('response-shape-invalid', `GitHub response missing string ${field}`); return value; }
+function stringOrNull(value) { return typeof value === 'string' ? value : null; }
+function checkIdFromUrl(value) { const match = value.match(/\/(\d+)$/); if (!match)
+    throw new GitHubInfraError('provider-contract-mismatch', 'Workflow job check_run_url has no numeric check id'); return Number(match[1]); }

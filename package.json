@@ -36,6 +36,7 @@
     "check:zj-loop-init": "node scripts/check-zj-loop-init-sync.mjs",
     "test:zj-loop-core": "cd tools/zj-loop-core && npm test",
     "test:zj-loop-gitlab-infra": "cd tools/zj-loop-gitlab-infra && npm test",
+    "test:zj-loop-github-infra": "cd tools/zj-loop-github-infra && npm test",
     "test:zj-loop-audit": "cd tools/zj-loop-audit && npm test",
     "test:zj-loop-init": "cd tools/zj-loop-init && npm test",
     "test:zj-loop-cost": "cd tools/zj-loop-cost && npm test",

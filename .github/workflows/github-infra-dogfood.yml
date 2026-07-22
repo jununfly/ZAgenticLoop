@@ -1,0 +1,101 @@
+name: GitHub Infra Dogfood
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'owner/repository to inspect'
+        required: true
+        type: string
+      run_id:
+        description: 'Exact GitHub Actions workflow run ID'
+        required: true
+        type: string
+      workflow_name:
+        description: 'Exact workflow name'
+        required: true
+        type: string
+      job_name:
+        description: 'Exact successful job name'
+        required: true
+        type: string
+      artifact_name:
+        description: 'Exact artifact name'
+        required: true
+        type: string
+      artifact_path:
+        description: 'Exact JSON path inside the artifact ZIP'
+        required: true
+        type: string
+      expected_head_sha:
+        description: 'Expected workflow/job/commit/ref SHA'
+        required: true
+        type: string
+      ref:
+        description: 'Expected branch or tag name'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: tools/zj-loop-github-infra/package-lock.json
+
+      - name: Install GitHub infra
+        run: npm install --prefix tools/zj-loop-github-infra --omit=dev
+
+      - name: Read-only GitHub provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ inputs.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+          WORKFLOW_NAME: ${{ inputs.workflow_name }}
+          JOB_NAME: ${{ inputs.job_name }}
+          ARTIFACT_NAME: ${{ inputs.artifact_name }}
+          ARTIFACT_PATH: ${{ inputs.artifact_path }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          REF: ${{ inputs.ref }}
+        run: |
+          set +e
+          node tools/zj-loop-github-infra/dist/cli.js provenance \
+            --repository "$REPOSITORY" \
+            --run-id "$RUN_ID" \
+            --workflow-name "$WORKFLOW_NAME" \
+            --job-name "$JOB_NAME" \
+            --artifact-name "$ARTIFACT_NAME" \
+            --artifact-path "$ARTIFACT_PATH" \
+            --expected-head-sha "$EXPECTED_HEAD_SHA" \
+            --ref "$REF" \
+            --token "$GH_TOKEN" \
+            --out github-infra-provenance-result.json
+          exit_code=$?
+          printf '%s\n' "$exit_code" > github-infra-exit-code.txt
+          exit 0
+
+      - name: Upload read-only provenance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-infra-provenance-${{ github.run_id }}
+          path: |
+            github-infra-provenance-result.json
+            github-infra-exit-code.txt
+          if-no-files-found: ignore
+
+      - name: Enforce provenance result
+        if: always()
+        run: |
+          test "$(cat github-infra-exit-code.txt 2>/dev/null || printf 2)" = 0

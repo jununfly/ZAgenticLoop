@@ -1,0 +1,32 @@
+import { writeFile } from 'node:fs/promises';
+import { GitHubReadClient } from './read-client.js';
+const value = (name) => { const i = process.argv.indexOf(`--${name}`); return i >= 0 ? process.argv[i + 1] : undefined; };
+const required = (name) => { const v = value(name); if (!v)
+    throw new Error(`--${name} is required`); return v; };
+export async function runCli() { try {
+    const command = process.argv[2];
+    const client = () => new GitHubReadClient({ apiUrl: value('api-url'), repository: required('repository'), token: value('token') ?? process.env.GITHUB_TOKEN, tokenSource: value('token') ? 'argument' : process.env.GITHUB_TOKEN ? 'GITHUB_TOKEN' : 'none' });
+    let output;
+    if (command === 'preflight')
+        output = await client().preflight();
+    else if (command === 'workflow-run')
+        output = await client().readWorkflowRun(required('run-id'));
+    else if (command === 'job')
+        output = (await client().listJobs(required('run-id'))).filter((x) => x.name === required('job-name'));
+    else if (command === 'artifact')
+        output = await client().readArtifact(required('run-id'), required('artifact-name'), required('artifact-path'));
+    else if (command === 'provenance')
+        output = await client().readProvenance({ runId: Number(required('run-id')), workflowName: required('workflow-name'), jobName: required('job-name'), artifactName: required('artifact-name'), artifactPath: required('artifact-path'), expectedHeadSha: required('expected-head-sha'), ref: required('ref') });
+    else
+        throw new Error('command must be preflight, workflow-run, job, artifact, or provenance');
+    const rendered = JSON.stringify(output, null, 2);
+    const out = value('out');
+    if (out)
+        await writeFile(out, `${rendered}\n`);
+    process.stdout.write(`${rendered}\n`);
+    return command === 'provenance' && output.status === 'blocked' ? 2 : 0;
+}
+catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    return 2;
+} }

@@ -27,6 +27,14 @@ export const RELEASE_PACKAGES = [
     knownLocalFileDependencies: [],
   },
   {
+    id: 'zj-loop-github-infra',
+    packageName: '@jununfly/zj-loop-github-infra',
+    directory: 'tools/zj-loop-github-infra',
+    workflow: '.github/workflows/release-zj-loop-github-infra.yml',
+    tagPattern: 'zj-loop-github-infra-v*',
+    provenancePublishing: true,
+  },
+  {
     id: 'zj-loop-audit',
     packageName: '@jununfly/zj-loop-audit',
     directory: 'tools/zj-loop-audit',

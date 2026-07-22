@@ -27,6 +27,7 @@ test('RELEASE_PACKAGES captures release-managed npm packages', () => {
     [
       { packageName: '@jununfly/zj-loop-gitlab-infra', generatedAtRelease: [], knownLocalFileDependencies: [] },
       { packageName: '@jununfly/zj-loop-core', generatedAtRelease: [], knownLocalFileDependencies: [] },
+      { packageName: '@jununfly/zj-loop-github-infra', generatedAtRelease: [], knownLocalFileDependencies: [] },
       {
         packageName: '@jununfly/zj-loop-audit',
         generatedAtRelease: [],
