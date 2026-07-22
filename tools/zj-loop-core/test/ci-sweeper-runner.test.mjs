@@ -20,6 +20,8 @@ import {
   formatCommandStep,
   getCiSweeperPackageBuildPlan,
   parseIssueFixRequestComments,
+  buildGitLabRepairDedupeKey,
+  buildGitLabRepairDedupeMarker,
 } from '../dist/index.js';
 
 
@@ -717,6 +719,26 @@ test('GitLab CI Sweeper API adapter returns duplicate for an existing source bra
   assert.equal(result.status, 'completed');
   assert.equal(result.outcome, 'duplicate');
   assert.equal(result.merge_request.iid, 5);
+  assert.equal(writes, 0);
+});
+
+test('GitLab CI Sweeper reuses an open repair MR across requests with the same repair digest', async () => {
+  const actions = [{ action: 'update', file_path: 'zj-loop/example.yml', content: 'fixed\n' }];
+  const dedupe = buildGitLabRepairDedupeKey({ projectPath: 'group/project', routeFamily: 'ci-sweeper', targetBranch: 'master', actions });
+  let writes = 0;
+  const result = await createGitLabCiSweeperRepairMr({
+    projectPath: 'group/project', token: 'secret-token', branch: 'automated/ci-sweeper-gitlab-790-other', targetBranch: 'master',
+    commitMessage: 'unused', title: 'unused', description: 'unused', actions,
+    fetchImpl: async (url, init = {}) => {
+      if (init.method === 'POST') writes += 1;
+      if (url.includes('/merge_requests?')) return response(200, [{ iid: 7, web_url: 'https://git.example/group/project/-/merge_requests/7', description: buildGitLabRepairDedupeMarker({ ...dedupe, routeFamily: 'ci-sweeper' }), source_branch: 'automated/ci-sweeper-gitlab-789-old', target_branch: 'master' }]);
+      throw new Error(`unexpected url ${url}`);
+    },
+  });
+  assert.equal(result.status, 'completed');
+  assert.equal(result.outcome, 'duplicate');
+  assert.equal(result.merge_request.iid, 7);
+  assert.equal(result.audit.repair_content_digest, dedupe.digest);
   assert.equal(writes, 0);
 });
 

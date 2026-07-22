@@ -48,6 +48,7 @@ test('GitLab Dependency Sweeper adapter creates branch, API commit, and MR only'
     fetchImpl: async (url, options = {}) => {
       calls.push([url, options]);
       if (url.includes('/merge_requests?')) return response(200, []);
+      if (url.includes('/repository/files/')) return response(200, { content: Buffer.from('old\n').toString('base64') });
       if (url.includes('/repository/branches/')) return response(200, { name: 'branch' });
       if (url.endsWith('/repository/branches')) return response(201, { name: 'branch' });
       if (url.endsWith('/repository/commits')) return response(201, { id: 'commit-1' });
@@ -65,14 +66,16 @@ test('GitLab Dependency Sweeper adapter creates branch, API commit, and MR only'
   assert.equal(result.outcome, 'created');
   assert.equal(result.merge_request.iid, 12);
   assert.deepEqual(calls.map(([url, options]) => `${options.method ?? 'GET'} ${url.split('/api/v4')[1]}`), [
-    'GET /projects/group%2Fproject/merge_requests?state=opened&source_branch=automated%2Fdependency-sweeper-gitlab-yaml-2-8-1-ab12cd34&per_page=100',
+    'GET /projects/group%2Fproject/merge_requests?state=opened&per_page=100',
+    'GET /projects/group%2Fproject/repository/files/package.json?ref=main',
     'POST /projects/group%2Fproject/repository/branches',
     'GET /projects/group%2Fproject/repository/branches/automated%2Fdependency-sweeper-gitlab-yaml-2-8-1-ab12cd34',
     'POST /projects/group%2Fproject/repository/commits',
     'POST /projects/group%2Fproject/merge_requests',
   ]);
   assert.equal(calls.some(([, options]) => JSON.stringify(options.body ?? '').includes('gh')), false);
-  assert.deepEqual(JSON.parse(calls[3][1].body).actions, actions());
+  const commitCall = calls.find(([url]) => url.endsWith('/commits'));
+  assert.deepEqual(JSON.parse(commitCall[1].body).actions, actions());
 });
 
 test('GitLab Dependency Sweeper adapter fails closed before API writes on source or action mismatch', async () => {
@@ -90,4 +93,23 @@ test('GitLab Dependency Sweeper adapter fails closed before API writes on source
   assert.equal(writes, 0);
 
   assert.equal(validateGitLabDependencySweeperCommitActions([{ action: 'update', file_path: 'README.md', content: 'x' }]).ok, false);
+});
+
+test('GitLab Dependency Sweeper rejects an empty repair without provider writes', async () => {
+  let writes = 0;
+  const same = actions().map((action) => ({ ...action, content: action.file_path === 'package.json' ? action.content : action.content }));
+  const fetchImpl = async (url, options = {}) => {
+    if (options.method && options.method !== 'GET') writes += 1;
+    if (url.includes('/merge_requests?')) return response(200, []);
+    if (url.includes('/repository/files/package.json')) return response(200, { content: Buffer.from(same[0].content).toString('base64') });
+    if (url.includes('/repository/files/package-lock.json')) return response(200, { content: Buffer.from(same[1].content).toString('base64') });
+    throw new Error(`unexpected url ${url}`);
+  };
+  const result = await createGitLabDependencySweeperRepairMr({
+    projectPath: 'group/project', token: 'secret', request: request(), requestId: 'ifr_dependency_gitlab_1',
+    branch: 'automated/dependency-sweeper-gitlab-yaml-2-8-1-noop', targetBranch: 'main', commitMessage: 'x', title: 'x', description: 'x', actions: same, fetchImpl,
+  });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.reason, 'repair-no-effective-diff');
+  assert.equal(writes, 0);
 });

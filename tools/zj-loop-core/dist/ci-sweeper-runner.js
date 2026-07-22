@@ -5,6 +5,7 @@ import { buildGitLabApiUrl, buildGitLabAuthHeaders, buildProviderIssueUrl, } fro
 import { buildIssueFixRequestComment, ISSUE_FIX_REQUEST_SCHEMA, parseIssueFixRequestComments, } from './issue-fix-request-contract.js';
 import { buildGitLabLifecycleAudit, buildGitLabLifecycleMarker, parseGitLabLifecycleMarker, validateGitLabRequestSourceBinding, } from './gitlab-request-lifecycle.js';
 import { buildGitLabCarrierSideEffectGate } from './gitlab-side-effect-gate.js';
+import { buildGitLabRepairDedupeMarker, findGitLabRepairMr, hasEffectiveGitLabRepairDiff } from './gitlab-repair-safety.js';
 export const GITLAB_CI_SWEEPER_ISSUE_FIX_REQUEST_SCHEMA = 'zj-loop.gitlab_issue_fix_request_live.v1';
 export function buildCiSweeperIssueFixRequestBody(input) {
     const routeDecision = input.routeDecision ?? {};
@@ -428,31 +429,17 @@ export async function createGitLabCiSweeperRepairMr(input) {
     if (!fetchImpl)
         return blocked('gitlab-fetch-unavailable');
     const headers = { ...buildGitLabAuthHeaders({ token: input.token }), 'User-Agent': 'zj-loop-ci-sweeper' };
-    const effectiveDiff = await hasEffectiveGitLabRepairDiff({
-        projectPath: input.projectPath,
-        targetBranch: input.targetBranch,
-        actions: input.actions,
-        apiBaseUrl: input.apiBaseUrl,
-        headers,
-        fetchImpl,
-    });
-    if (effectiveDiff === false)
-        return blocked('repair-no-effective-diff');
-    if (effectiveDiff === null)
-        return blocked('repair-diff-read-failed');
     const mergeRequestsUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: 'merge_requests' });
-    let existingResponse;
-    try {
-        existingResponse = await fetchImpl(`${mergeRequestsUrl}?state=opened&source_branch=${encodeURIComponent(input.branch)}&per_page=100`, { headers });
-    }
-    catch {
-        return blocked('repair-mr-dedupe-read-failed');
-    }
-    if (!existingResponse.ok)
-        return blocked('repair-mr-dedupe-read-failed', { http_status: existingResponse.status });
-    const existing = (await existingResponse.json())[0];
-    if (existing)
-        return completedRepairMrResult(audit, 'duplicate', existing);
+    const dedupe = await findGitLabRepairMr({ projectPath: input.projectPath, routeFamily: 'ci-sweeper', targetBranch: input.targetBranch, actions: input.actions, branch: input.branch, apiBaseUrl: input.apiBaseUrl, headers, fetchImpl });
+    if (!dedupe.ok)
+        return blocked(dedupe.reason, 'status' in dedupe ? { http_status: dedupe.status } : {});
+    if (dedupe.existing)
+        return completedRepairMrResult({ ...audit, repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest }, 'duplicate', dedupe.existing);
+    const effectiveDiff = await hasEffectiveGitLabRepairDiff({ projectPath: input.projectPath, targetBranch: input.targetBranch, actions: input.actions, apiBaseUrl: input.apiBaseUrl, headers, fetchImpl });
+    if (effectiveDiff === false)
+        return blocked('repair-no-effective-diff', { repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest });
+    if (effectiveDiff === null)
+        return blocked('repair-diff-read-failed', { repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest });
     const branchesUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: ['repository', 'branches'] });
     const branchUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath: input.projectPath, path: ['repository', 'branches', input.branch] });
     const branchCreateResponse = await postGitLabJson(fetchImpl, branchesUrl, headers, { branch: input.branch, ref: input.targetBranch });
@@ -496,7 +483,7 @@ export async function createGitLabCiSweeperRepairMr(input) {
         source_branch: input.branch,
         target_branch: input.targetBranch,
         title: input.title,
-        description: input.description,
+        description: `${input.description}\n\n${buildGitLabRepairDedupeMarker({ key: dedupe.dedupe.key, digest: dedupe.dedupe.digest, routeFamily: 'ci-sweeper' })}`,
         remove_source_branch: false,
     });
     if (!mrResponse.ok)
@@ -504,45 +491,7 @@ export async function createGitLabCiSweeperRepairMr(input) {
     const mergeRequest = await mrResponse.json();
     if (!Number.isInteger(Number(mergeRequest.iid)))
         return blocked('repair-mr-create-response-invalid');
-    return completedRepairMrResult(audit, 'created', mergeRequest);
-}
-async function hasEffectiveGitLabRepairDiff(input) {
-    for (const action of input.actions) {
-        if (action.action === 'move' || action.action === 'chmod')
-            return true;
-        const filePath = String(action.file_path ?? '');
-        const fileUrl = buildGitLabApiUrl({
-            apiBaseUrl: input.apiBaseUrl,
-            projectPath: input.projectPath,
-            path: ['repository', 'files', filePath],
-        });
-        let response;
-        try {
-            response = await input.fetchImpl(`${fileUrl}?ref=${encodeURIComponent(input.targetBranch)}`, { headers: input.headers });
-        }
-        catch {
-            return null;
-        }
-        if (response.status === 404) {
-            if (action.action === 'delete')
-                continue;
-            return true;
-        }
-        if (!response.ok)
-            return null;
-        if (action.action === 'delete')
-            return true;
-        if (action.action === 'create')
-            continue;
-        const current = await response.json();
-        const expected = action.encoding === 'base64'
-            ? Buffer.from(String(action.content ?? ''), 'base64').toString('utf8')
-            : String(action.content ?? '');
-        const actual = Buffer.from(String(current.content ?? ''), 'base64').toString('utf8');
-        if (actual !== expected)
-            return true;
-    }
-    return false;
+    return completedRepairMrResult({ ...audit, repair_dedupe_key: dedupe.dedupe.key, repair_content_digest: dedupe.dedupe.digest }, 'created', mergeRequest);
 }
 export async function triggerGitLabCiSweeperConsumerPipeline(input) {
     const fetchImpl = input.fetchImpl ?? globalThis.fetch;
