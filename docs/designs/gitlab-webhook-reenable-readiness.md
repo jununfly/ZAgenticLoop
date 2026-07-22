@@ -31,6 +31,11 @@ an API pipeline during development validation. The deployment host is
 intentionally a required test-environment input. It must be assigned before
 promotion; no placeholder host may be configured in a GitLab Project Webhook.
 
+The selected hosting model is the existing internal Ingress with a fixed
+private DNS name and TLS certificate. No public endpoint or new public
+service is part of this readiness scope. The Ingress may expose only
+`/gitlab/webhook/issue-note` and `/healthz` for the test fork.
+
 ## Credential Boundary
 
 Two independent runtime secrets are required:
@@ -71,8 +76,10 @@ identity, fixed route/ref, and created pipeline ID.
 The following gates are required in order:
 
 - [ ] Infrastructure owner and version target confirmed.
-- [ ] Dedicated HTTPS deployment exists in the internal test environment for
-      the `mlive-dev/ai-studio-gitlab` fork.
+- [ ] Existing internal Ingress is assigned a fixed private DNS name and TLS
+      certificate for the `mlive-dev/ai-studio-gitlab` test fork.
+- [ ] The bridge deployment is reachable through that Ingress without any
+      public listener.
 - [ ] `/healthz` returns `zj-loop.gitlab_issue_note_bridge_health.v1` without
       provider writes.
 - [ ] Two secrets are injected independently at runtime.
