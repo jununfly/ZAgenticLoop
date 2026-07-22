@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 17:18:35
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 17:23:39
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -80,4 +80,5 @@ Deferred from current version. Track GitLab Webhook Issue Triage adaptation in d
 - Q: 真实测试 hostname 与 TLS 证据由谁提供？ → A：由 gitlab-webhook-test-fork 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据 (ZAgenticLoop 不自行指定或创建基础设施；仓库只验证脱敏 provenance 与固定路径绑定。)
 - Q: 公开 ZAgenticLoop 如何记录闭源 GitLab 项目证据？ → A：全量使用公开占位符，移除真实项目名、内部域名、Issue/MR/Pipeline 与环境绑定；真实证据只保存在闭源项目或受控外部审计系统 (源码、测试、模板、路线图和公开文档均不得出现 product project 或测试 fork 的真实身份；协议行为用 example-group/product-project 等占位符验证。)
 - Q: 真实测试环境基础设施 evidence 保存在哪里？ → A：只保存在闭源测试项目或私有审计系统；公开 ZAgenticLoop 只保存脱敏 schema 与引用编号 (公开仓库不得记录真实 hostname、TLS Secret、Ingress 配置、项目路径、provider URL 或 live pipeline identity。)
+- Q: 实际测试 Ingress/TLS 配置由谁执行？ → A：由闭源测试环境基础设施 owner 执行，并只向公开项目提供脱敏 opaque evidence reference (ZAgenticLoop 不接触 Secret、真实 hostname 或私有 provider response；公开仓库只记录协议与验证结果。)
 <!-- ROADMAP_SECTION_END -->
