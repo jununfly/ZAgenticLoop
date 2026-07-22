@@ -3,6 +3,7 @@ import { ConsumerAdapterResult } from './consumer-adapter.js';
 import { RuntimePreflightResult } from './preflight.js';
 import { WorkspaceRouteDecisionRecord } from './workspace-route-decision.js';
 import { HumanHandoff } from './human-handoff.js';
+import { CompletionEvidenceRecord } from './completion-evidence.js';
 export type DispatchMode = 'auto' | 'plan-only' | 'execute' | 'resume';
 export type SignalEnvelope = {
     schema: 'zj-loop.signal.v1';
@@ -71,6 +72,7 @@ export type OrchestrationEnvelope = {
         next_steps: string[];
     };
     human_handoff: HumanHandoff | null;
+    completion_evidence?: CompletionEvidenceRecord;
     storage: {
         path: string;
     };
