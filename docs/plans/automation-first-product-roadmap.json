@@ -2717,6 +2717,11 @@
           "q": "真实测试环境基础设施 evidence 保存在哪里？",
           "answer": "A：只保存在闭源测试项目或私有审计系统；公开 ZAgenticLoop 只保存脱敏 schema 与引用编号",
           "note": "公开仓库不得记录真实 hostname、TLS Secret、Ingress 配置、项目路径、provider URL 或 live pipeline identity。"
+        },
+        {
+          "q": "实际测试 Ingress/TLS 配置由谁执行？",
+          "answer": "A：由闭源测试环境基础设施 owner 执行，并只向公开项目提供脱敏 opaque evidence reference",
+          "note": "ZAgenticLoop 不接触 Secret、真实 hostname 或私有 provider response；公开仓库只记录协议与验证结果。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -4020,7 +4025,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 17:18:35",
+    "updated": "2026-07-22 17:23:39",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
