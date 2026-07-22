@@ -15,6 +15,7 @@ import {
   buildRoadmapActivationPrTitle,
   buildRoadmapActivationReviewContract,
   buildRoadmapActivationReviewTitle,
+  buildGitLabRoadmapActivationArtifactPath,
   classifyRoadmapActivationLifecycleTransition,
   dispatchRoadmapActivationCommand,
   executeGitLabRoadmapActivation,
@@ -287,12 +288,52 @@ test('Roadmap Activation GitLab live execution hard-stops missing source Note bi
   assert.equal(calls.length, 0);
 });
 
+test('Roadmap Activation artifact path rejects unsafe activation request ids', () => {
+  assert.equal(buildGitLabRoadmapActivationArtifactPath('act-87-note'), 'zj-loop/orchestrations/act-87-note/roadmap-activation.json');
+  assert.equal(buildGitLabRoadmapActivationArtifactPath('../secrets'), null);
+  assert.equal(buildGitLabRoadmapActivationArtifactPath('act/87'), null);
+});
+
+test('Roadmap Activation GitLab execute refuses an edited artifact without provider writes', async () => {
+  const calls = [];
+  const result = await executeGitLabRoadmapActivation({
+    live: true,
+    token: 'private-token',
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+      if (String(url).includes('/repository/branches/')) return { ok: true, status: 200, json: async () => ({}) };
+      if (String(url).includes('/repository/files/')) return { ok: true, status: 200, json: async () => ({ content: Buffer.from('{"schema":"manual-edit"}').toString('base64') }) };
+      return { ok: false, status: 500, json: async () => ({}) };
+    },
+    projectPath: 'group/project',
+    targetBranch: 'main',
+    contractPlan: {
+      schema: 'zj-loop.roadmap_activation_contract_plan.v1',
+      provider: 'gitlab',
+      activationRequestId: 'act-87-note',
+      sourceIssue: '87',
+      sourceCommentId: '4932786315',
+      sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+      sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
+      branchName: 'zjal-act-87-note-gitlab',
+      mrTitle: 'Roadmap Activation: conflict',
+      mrContract: 'contract',
+    },
+  });
+
+  assert.equal(result.status, 'refused');
+  assert.equal(result.reason, 'artifact-conflict');
+  assert.equal(calls.some((call) => call.options.method === 'POST' || call.options.method === 'PUT'), false);
+});
+
 test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLAB_TOKEN', async () => {
   const calls = [];
   const fetchImpl = async (url, options = {}) => {
     calls.push({ url: String(url), options });
     if (String(url).includes('/repository/branches/')) return { ok: false, status: 404, json: async () => ({}) };
     if (String(url).endsWith('/repository/branches')) return { ok: true, status: 201, json: async () => ({ name: 'zjal-act-87-note-gitlab' }) };
+    if (String(url).includes('/repository/files/')) return { ok: false, status: 404, json: async () => ({}) };
+    if (String(url).endsWith('/repository/commits')) return { ok: true, status: 201, json: async () => ({ id: 'commit-1' }) };
     if (String(url).includes('/merge_requests?')) return { ok: true, status: 200, json: async () => [] };
     if (String(url).endsWith('/merge_requests')) return { ok: true, status: 201, json: async () => ({ iid: 12, web_url: 'https://gitlab.com/group/project/-/merge_requests/12' }) };
     return { ok: false, status: 500, json: async () => ({}) };
@@ -302,6 +343,7 @@ test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLA
     token: 'private-token',
     fetchImpl,
     contractPlan: {
+      schema: 'zj-loop.roadmap_activation_contract_plan.v1',
       provider: 'gitlab',
       activationRequestId: 'act-87-note',
       sourceIssue: '87',
@@ -320,6 +362,12 @@ test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLA
   assert.equal(result.merge_request_iid, 12);
   assert.equal(result.target_branch, 'master');
   assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/repository/branches')), true);
+  const commitCall = calls.find((call) => call.options.method === 'POST' && call.url.endsWith('/repository/commits'));
+  assert.ok(commitCall);
+  const commitPayload = JSON.parse(commitCall.options.body);
+  assert.equal(commitPayload.actions[0].action, 'create');
+  assert.equal(commitPayload.actions[0].file_path, 'zj-loop/orchestrations/act-87-note/roadmap-activation.json');
+  assert.equal(JSON.parse(commitPayload.actions[0].content).schema, 'zj-loop.roadmap_activation_contract_plan.v1');
   assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')), true);
   assert.equal(calls.filter((call) => call.options.headers?.['PRIVATE-TOKEN'] === 'private-token').length, calls.length);
   assert.match(JSON.parse(calls.find((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')).options.body).title, /^Draft:/);
@@ -347,6 +395,7 @@ test('Roadmap Activation GitLab execute dry-run plans branch and MR operations',
   assert.equal(result.execution_allowed, false);
   assert.deepEqual(result.operations.map((item) => item.kind), [
     'find-or-create-branch',
+    'commit-activation-artifact',
     'find-or-create-merge-request',
     'update-merge-request-description',
   ]);
@@ -357,6 +406,8 @@ test('Roadmap Activation GitLab execute is idempotent by branch and updates exis
   const fetchImpl = async (url, options = {}) => {
     calls.push({ url: String(url), options });
     if (String(url).includes('/repository/branches/')) return { ok: true, status: 200, json: async () => ({}) };
+    if (String(url).includes('/repository/files/')) return { ok: false, status: 404, json: async () => ({}) };
+    if (String(url).endsWith('/repository/commits')) return { ok: true, status: 201, json: async () => ({ id: 'commit-1' }) };
     if (String(url).includes('/merge_requests?')) {
       return { ok: true, status: 200, json: async () => [{ iid: 9, web_url: 'https://gitlab.com/group/project/-/merge_requests/9' }] };
     }
