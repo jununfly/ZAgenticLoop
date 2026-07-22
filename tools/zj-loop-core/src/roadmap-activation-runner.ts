@@ -632,10 +632,13 @@ export async function executeGitLabRoadmapActivation(input: {
   const live = input.live === true;
   const token = String(input.token ?? '');
   const refusals: any[] = [];
+  const activationRequestId = String(plan.activationRequestId ?? plan.activation_request_id ?? '').trim();
+  const artifactPath = buildGitLabRoadmapActivationArtifactPath(activationRequestId);
 
   if (provider !== 'gitlab') refusals.push({ layer: 'provider', reason: 'contract-plan-provider-is-not-gitlab' });
   if (!branchName.startsWith('zjal-')) refusals.push({ layer: 'branch', reason: 'branch-prefix-must-be-zjal-' });
   if (!projectPath) refusals.push({ layer: 'project', reason: 'gitlab-project-path-required' });
+  if (!artifactPath) refusals.push({ layer: 'artifact', reason: 'activation-artifact-path-invalid' });
   if (live && !token) refusals.push({ layer: 'credential', reason: 'gitlab-token-required-for-live-execution' });
   if (live) refusals.push(...validateGitLabRoadmapActivationSourceBinding(plan, projectPath));
 
@@ -643,7 +646,7 @@ export async function executeGitLabRoadmapActivation(input: {
     schema: 'zj-loop.gitlab_roadmap_activation_execution_result.v1',
     provider: 'gitlab',
     dry_run: !live,
-    activation_request_id: String(plan.activationRequestId ?? plan.activation_request_id ?? ''),
+    activation_request_id: activationRequestId,
     project_path: projectPath,
     branch_name: branchName,
     target_branch: targetBranch,
@@ -651,9 +654,11 @@ export async function executeGitLabRoadmapActivation(input: {
     draft,
     mr_title: String(plan.mrTitle ?? plan.reviewTitle ?? `Roadmap Activation: ${branchName}`),
     mr_description: String(plan.mrContract ?? plan.reviewContract ?? ''),
+    artifact_path: artifactPath,
     refusals,
     operations: [
       { kind: 'find-or-create-branch', branch: branchName, target: targetBranch },
+      { kind: 'commit-activation-artifact', path: artifactPath },
       { kind: 'find-or-create-merge-request', source_branch: branchName, target_branch: targetBranch },
       { kind: 'update-merge-request-description', source_branch: branchName },
     ],
@@ -668,6 +673,7 @@ export async function executeGitLabRoadmapActivation(input: {
 
   const fetcher = input.fetchImpl ?? fetch;
   const headers = buildGitLabAuthHeaders({ token });
+  const artifactFilePath = artifactPath ?? '';
   const branchUrl = buildGitLabBranchApiUrl({
     apiBaseUrl: input.apiBaseUrl,
     projectPath,
@@ -694,6 +700,49 @@ export async function executeGitLabRoadmapActivation(input: {
     if (!branchFound.ok) {
       return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: liveOperations };
     }
+  }
+
+  const artifactUrl = buildGitLabApiUrl({
+    apiBaseUrl: input.apiBaseUrl,
+    projectPath,
+    path: ['repository', 'files', artifactFilePath],
+  });
+  let artifactRead;
+  try {
+    artifactRead = await fetcher(`${artifactUrl}?ref=${encodeURIComponent(branchName)}`, { headers });
+  } catch {
+    return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: 0 }] };
+  }
+  if (![200, 404].includes(artifactRead.status)) {
+    return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: artifactRead.status }] };
+  }
+
+  const artifactContent = `${JSON.stringify(plan, null, 2)}\n`;
+  let artifactAction: 'create' | 'update' | null = artifactRead.status === 404 ? 'create' : 'update';
+  if (artifactRead.status === 200) {
+    try {
+      const existing = await artifactRead.json() as any;
+      const existingContent = Buffer.from(String(existing.content ?? ''), 'base64').toString('utf8');
+      if (!sameJson(existingContent, artifactContent)) {
+        return { ...baseResult, status: 'refused', reason: 'artifact-conflict', execution_allowed: false, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: artifactRead.status }] };
+      }
+      artifactAction = null;
+    } catch {
+      return { ...baseResult, status: 'refused', reason: 'artifact-conflict', execution_allowed: false, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: artifactRead.status }] };
+    }
+  }
+
+  if (artifactAction) {
+    const commitUrl = buildGitLabApiUrl({ apiBaseUrl: input.apiBaseUrl, projectPath, path: ['repository', 'commits'] });
+    const commitResponse = await postGitLabJson(fetcher, commitUrl, headers, {
+      branch: branchName,
+      commit_message: `Roadmap activation contract ${activationRequestId}`,
+      actions: [{ action: artifactAction, file_path: artifactPath, content: artifactContent }],
+    });
+    liveOperations.push({ kind: 'commit-activation-artifact', action: artifactAction, status: commitResponse.status, path: artifactFilePath });
+    if (!commitResponse.ok) return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: liveOperations };
+  } else {
+    liveOperations.push({ kind: 'activation-artifact-unchanged', status: artifactRead.status, path: artifactFilePath });
   }
 
   const mrQuery = new URLSearchParams({ state: 'opened', source_branch: branchName }).toString();
@@ -754,6 +803,35 @@ export async function executeGitLabRoadmapActivation(input: {
     merge_request_url: created.web_url ?? '',
     live_operations: liveOperations,
   };
+}
+
+export function buildGitLabRoadmapActivationArtifactPath(activationRequestId: string) {
+  const value = String(activationRequestId ?? '').trim();
+  return /^[a-z0-9][a-z0-9-]*$/i.test(value)
+    ? `zj-loop/orchestrations/${value}/roadmap-activation.json`
+    : null;
+}
+
+function sameJson(left: string, right: string) {
+  try {
+    return JSON.stringify(sortJson(JSON.parse(left))) === JSON.stringify(sortJson(JSON.parse(right)));
+  } catch {
+    return false;
+  }
+}
+
+function sortJson(value: any): any {
+  if (Array.isArray(value)) return value.map(sortJson);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortJson(value[key])]));
+  return value;
+}
+
+async function postGitLabJson(fetcher: typeof fetch, url: string, headers: Record<string, string>, payload: any) {
+  try {
+    return await fetcher(url, { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+  } catch {
+    return { ok: false, status: 0 } as Response;
+  }
 }
 
 function validateGitLabRoadmapActivationSourceBinding(plan: any, projectPath: string) {

@@ -373,11 +373,20 @@ export declare function executeGitLabRoadmapActivation(input: {
     draft: boolean;
     mr_title: string;
     mr_description: string;
+    artifact_path: string | null;
     refusals: any[];
     operations: ({
         kind: string;
         branch: string;
         target: string;
+        path?: undefined;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        path: string | null;
+        branch?: undefined;
+        target?: undefined;
         source_branch?: undefined;
         target_branch?: undefined;
     } | {
@@ -386,11 +395,13 @@ export declare function executeGitLabRoadmapActivation(input: {
         target_branch: string;
         branch?: undefined;
         target?: undefined;
+        path?: undefined;
     } | {
         kind: string;
         source_branch: string;
         branch?: undefined;
         target?: undefined;
+        path?: undefined;
         target_branch?: undefined;
     })[];
 } | {
@@ -408,11 +419,20 @@ export declare function executeGitLabRoadmapActivation(input: {
     draft: boolean;
     mr_title: string;
     mr_description: string;
+    artifact_path: string | null;
     refusals: any[];
     operations: ({
         kind: string;
         branch: string;
         target: string;
+        path?: undefined;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        path: string | null;
+        branch?: undefined;
+        target?: undefined;
         source_branch?: undefined;
         target_branch?: undefined;
     } | {
@@ -421,11 +441,60 @@ export declare function executeGitLabRoadmapActivation(input: {
         target_branch: string;
         branch?: undefined;
         target?: undefined;
+        path?: undefined;
     } | {
         kind: string;
         source_branch: string;
         branch?: undefined;
         target?: undefined;
+        path?: undefined;
+        target_branch?: undefined;
+    })[];
+} | {
+    status: string;
+    reason: string;
+    execution_allowed: boolean;
+    live_operations: any[];
+    schema: string;
+    provider: string;
+    dry_run: boolean;
+    activation_request_id: string;
+    project_path: string;
+    branch_name: string;
+    target_branch: string;
+    review_kind: string;
+    draft: boolean;
+    mr_title: string;
+    mr_description: string;
+    artifact_path: string | null;
+    refusals: any[];
+    operations: ({
+        kind: string;
+        branch: string;
+        target: string;
+        path?: undefined;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        path: string | null;
+        branch?: undefined;
+        target?: undefined;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        target_branch: string;
+        branch?: undefined;
+        target?: undefined;
+        path?: undefined;
+    } | {
+        kind: string;
+        source_branch: string;
+        branch?: undefined;
+        target?: undefined;
+        path?: undefined;
         target_branch?: undefined;
     })[];
 } | {
@@ -445,11 +514,20 @@ export declare function executeGitLabRoadmapActivation(input: {
     draft: boolean;
     mr_title: string;
     mr_description: string;
+    artifact_path: string | null;
     refusals: any[];
     operations: ({
         kind: string;
         branch: string;
         target: string;
+        path?: undefined;
+        source_branch?: undefined;
+        target_branch?: undefined;
+    } | {
+        kind: string;
+        path: string | null;
+        branch?: undefined;
+        target?: undefined;
         source_branch?: undefined;
         target_branch?: undefined;
     } | {
@@ -458,14 +536,17 @@ export declare function executeGitLabRoadmapActivation(input: {
         target_branch: string;
         branch?: undefined;
         target?: undefined;
+        path?: undefined;
     } | {
         kind: string;
         source_branch: string;
         branch?: undefined;
         target?: undefined;
+        path?: undefined;
         target_branch?: undefined;
     })[];
 }>;
+export declare function buildGitLabRoadmapActivationArtifactPath(activationRequestId: string): string | null;
 export declare function buildRoadmapBoundedSlicePack(input: {
     activationRequestId: string;
     roadmapPath: string;
