@@ -29,7 +29,7 @@ export function buildGitLabIssueNoteBridgeEnvelope(input) {
         return blocked('project-mismatch');
     }
     const attributes = payload?.object_attributes;
-    if (payload?.object_kind !== 'issue'
+    if (!['note', 'issue'].includes(String(payload?.object_kind))
         || attributes?.noteable_type !== 'Issue'
         || attributes.action !== 'create') {
         return blocked('issue-note-invalid');

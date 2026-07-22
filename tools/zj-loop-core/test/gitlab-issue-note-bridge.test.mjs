@@ -59,6 +59,7 @@ test('accepts GitLab Note Hook events emitted for issue comments', () => {
   const result = buildGitLabIssueNoteBridgeEnvelope({
     ...base,
     headers: { ...base.headers, event: 'Note Hook', eventId: 'note-event-1' },
+    payload: { ...base.payload, object_kind: 'note' },
   });
   assert.equal(result.status, 'accepted');
   assert.equal(result.envelope?.event_type, 'Note Hook');

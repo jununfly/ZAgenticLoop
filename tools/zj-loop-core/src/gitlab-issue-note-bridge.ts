@@ -94,7 +94,7 @@ export function buildGitLabIssueNoteBridgeEnvelope(input: GitLabIssueNoteWebhook
   }
   const attributes = payload?.object_attributes;
   if (
-    payload?.object_kind !== 'issue'
+    !['note', 'issue'].includes(String(payload?.object_kind))
     || attributes?.noteable_type !== 'Issue'
     || attributes.action !== 'create'
   ) {
