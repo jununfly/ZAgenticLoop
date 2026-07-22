@@ -1,4 +1,4 @@
-import { type ArtifactRead, type CapabilityResult, type GitLabInfraConfig, type GitLabVersion, type NormalizedJob, type NormalizedPipeline, type NormalizedSchedule, type ReadCapability } from './contracts.js';
+import { type ArtifactRead, type CapabilityResult, type GitLabInfraConfig, type GitLabVersion, type NormalizedJob, type NormalizedIssue, type NormalizedMergeRequest, type NormalizedBranch, type NormalizedNote, type NormalizedPipeline, type NormalizedSchedule, type ReadCapability } from './contracts.js';
 export declare class GitLabReadClient {
     private readonly apiUrl;
     private readonly project;
@@ -14,6 +14,18 @@ export declare class GitLabReadClient {
     listScheduledPipelines(): Promise<NormalizedPipeline[]>;
     listPipelineJobs(pipelineId: string | number): Promise<NormalizedJob[]>;
     readJobArtifact(jobId: string | number, artifactPath: string): Promise<ArtifactRead>;
+    listIssues(query?: {
+        state?: string;
+        search?: string;
+    }): Promise<NormalizedIssue[]>;
+    listMergeRequests(query?: {
+        state?: string;
+        search?: string;
+    }): Promise<NormalizedMergeRequest[]>;
+    listBranches(query?: {
+        search?: string;
+    }): Promise<NormalizedBranch[]>;
+    listIssueNotes(issueIid: string | number): Promise<NormalizedNote[]>;
     private request;
     private projectId;
     private provenance;

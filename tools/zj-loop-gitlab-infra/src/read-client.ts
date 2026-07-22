@@ -8,6 +8,10 @@ import {
   type GitLabVersion,
   type InfraProvenance,
   type NormalizedJob,
+  type NormalizedIssue,
+  type NormalizedMergeRequest,
+  type NormalizedBranch,
+  type NormalizedNote,
   type NormalizedPipeline,
   type NormalizedSchedule,
   type ReadCapability,
@@ -83,6 +87,36 @@ export class GitLabReadClient {
     return { schema: stringOrUndefined((payload as Record<string, unknown>).schema), payload, provenance };
   }
 
+  async listIssues(query: { state?: string; search?: string } = {}): Promise<NormalizedIssue[]> {
+    const params = new URLSearchParams({ state: query.state ?? 'opened', per_page: '100' });
+    if (query.search) params.set('search', query.search);
+    const body = await this.request(`/projects/${this.projectId()}/issues?${params}`);
+    if (!Array.isArray(body.body)) throw new GitLabInfraError('response-shape-invalid', 'GitLab issues response must be an array');
+    return body.body.map(normalizeIssue);
+  }
+
+  async listMergeRequests(query: { state?: string; search?: string } = {}): Promise<NormalizedMergeRequest[]> {
+    const params = new URLSearchParams({ state: query.state ?? 'opened', per_page: '100' });
+    if (query.search) params.set('search', query.search);
+    const body = await this.request(`/projects/${this.projectId()}/merge_requests?${params}`);
+    if (!Array.isArray(body.body)) throw new GitLabInfraError('response-shape-invalid', 'GitLab merge requests response must be an array');
+    return body.body.map(normalizeMergeRequest);
+  }
+
+  async listBranches(query: { search?: string } = {}): Promise<NormalizedBranch[]> {
+    const params = new URLSearchParams({ per_page: '100' });
+    if (query.search) params.set('search', query.search);
+    const body = await this.request(`/projects/${this.projectId()}/repository/branches?${params}`);
+    if (!Array.isArray(body.body)) throw new GitLabInfraError('response-shape-invalid', 'GitLab branches response must be an array');
+    return body.body.map(normalizeBranch);
+  }
+
+  async listIssueNotes(issueIid: string | number): Promise<NormalizedNote[]> {
+    const body = await this.request(`/projects/${this.projectId()}/issues/${encodeURIComponent(String(issueIid))}/notes?per_page=100`);
+    if (!Array.isArray(body.body)) throw new GitLabInfraError('response-shape-invalid', 'GitLab issue notes response must be an array');
+    return body.body.map(normalizeNote);
+  }
+
   private async request(path: string): Promise<{ body: unknown; status: number }> {
     let response: Response;
     try {
@@ -113,6 +147,11 @@ function normalizeJob(value: unknown): NormalizedJob {
   const pipeline = body.pipeline && typeof body.pipeline === 'object' && !Array.isArray(body.pipeline) ? body.pipeline as Record<string, unknown> : {};
   return { id: numberRequired(body.id, 'job.id'), name: stringRequired(body.name, 'job.name'), status: stringOrNull(body.status), ref: stringOrNull(body.ref), pipeline_id: numberOrNull(body.pipeline_id ?? pipeline.id), web_url: stringOrNull(body.web_url) };
 }
+
+function normalizeIssue(value: unknown): NormalizedIssue { const body = asRecord(value); return { iid: numberRequired(body.iid, 'issue.iid'), state: stringOrNull(body.state), title: stringOrNull(body.title), description: stringOrNull(body.description), web_url: stringOrNull(body.web_url) }; }
+function normalizeMergeRequest(value: unknown): NormalizedMergeRequest { const body = asRecord(value); return { iid: numberRequired(body.iid, 'merge_request.iid'), state: stringOrNull(body.state), title: stringOrNull(body.title), description: stringOrNull(body.description), source_branch: stringOrNull(body.source_branch), target_branch: stringOrNull(body.target_branch), web_url: stringOrNull(body.web_url) }; }
+function normalizeBranch(value: unknown): NormalizedBranch { const body = asRecord(value); const commit = body.commit && typeof body.commit === 'object' && !Array.isArray(body.commit) ? body.commit as Record<string, unknown> : {}; return { name: stringRequired(body.name, 'branch.name'), web_url: stringOrNull(body.web_url), commit_sha: stringOrNull(commit.id ?? commit.sha) }; }
+function normalizeNote(value: unknown): NormalizedNote { const body = asRecord(value); return { id: numberRequired(body.id, 'note.id'), body: stringRequired(body.body, 'note.body'), created_at: stringOrNull(body.created_at), web_url: stringOrNull(body.noteable_url ?? body.web_url) }; }
 
 function asRecord(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new GitLabInfraError('response-shape-invalid', 'GitLab response must be an object'); return value as Record<string, unknown>; }
 function numberRequired(value: unknown, field: string): number { if (typeof value !== 'number' || !Number.isFinite(value)) throw new GitLabInfraError('response-shape-invalid', `GitLab response missing numeric ${field}`); return value; }

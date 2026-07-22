@@ -64,6 +64,39 @@ export class GitLabReadClient {
         const provenance = this.provenance(version.version, [...READ_CAPABILITIES]);
         return { schema: stringOrUndefined(payload.schema), payload, provenance };
     }
+    async listIssues(query = {}) {
+        const params = new URLSearchParams({ state: query.state ?? 'opened', per_page: '100' });
+        if (query.search)
+            params.set('search', query.search);
+        const body = await this.request(`/projects/${this.projectId()}/issues?${params}`);
+        if (!Array.isArray(body.body))
+            throw new GitLabInfraError('response-shape-invalid', 'GitLab issues response must be an array');
+        return body.body.map(normalizeIssue);
+    }
+    async listMergeRequests(query = {}) {
+        const params = new URLSearchParams({ state: query.state ?? 'opened', per_page: '100' });
+        if (query.search)
+            params.set('search', query.search);
+        const body = await this.request(`/projects/${this.projectId()}/merge_requests?${params}`);
+        if (!Array.isArray(body.body))
+            throw new GitLabInfraError('response-shape-invalid', 'GitLab merge requests response must be an array');
+        return body.body.map(normalizeMergeRequest);
+    }
+    async listBranches(query = {}) {
+        const params = new URLSearchParams({ per_page: '100' });
+        if (query.search)
+            params.set('search', query.search);
+        const body = await this.request(`/projects/${this.projectId()}/repository/branches?${params}`);
+        if (!Array.isArray(body.body))
+            throw new GitLabInfraError('response-shape-invalid', 'GitLab branches response must be an array');
+        return body.body.map(normalizeBranch);
+    }
+    async listIssueNotes(issueIid) {
+        const body = await this.request(`/projects/${this.projectId()}/issues/${encodeURIComponent(String(issueIid))}/notes?per_page=100`);
+        if (!Array.isArray(body.body))
+            throw new GitLabInfraError('response-shape-invalid', 'GitLab issue notes response must be an array');
+        return body.body.map(normalizeNote);
+    }
     async request(path) {
         let response;
         try {
@@ -97,6 +130,10 @@ function normalizeJob(value) {
     const pipeline = body.pipeline && typeof body.pipeline === 'object' && !Array.isArray(body.pipeline) ? body.pipeline : {};
     return { id: numberRequired(body.id, 'job.id'), name: stringRequired(body.name, 'job.name'), status: stringOrNull(body.status), ref: stringOrNull(body.ref), pipeline_id: numberOrNull(body.pipeline_id ?? pipeline.id), web_url: stringOrNull(body.web_url) };
 }
+function normalizeIssue(value) { const body = asRecord(value); return { iid: numberRequired(body.iid, 'issue.iid'), state: stringOrNull(body.state), title: stringOrNull(body.title), description: stringOrNull(body.description), web_url: stringOrNull(body.web_url) }; }
+function normalizeMergeRequest(value) { const body = asRecord(value); return { iid: numberRequired(body.iid, 'merge_request.iid'), state: stringOrNull(body.state), title: stringOrNull(body.title), description: stringOrNull(body.description), source_branch: stringOrNull(body.source_branch), target_branch: stringOrNull(body.target_branch), web_url: stringOrNull(body.web_url) }; }
+function normalizeBranch(value) { const body = asRecord(value); const commit = body.commit && typeof body.commit === 'object' && !Array.isArray(body.commit) ? body.commit : {}; return { name: stringRequired(body.name, 'branch.name'), web_url: stringOrNull(body.web_url), commit_sha: stringOrNull(commit.id ?? commit.sha) }; }
+function normalizeNote(value) { const body = asRecord(value); return { id: numberRequired(body.id, 'note.id'), body: stringRequired(body.body, 'note.body'), created_at: stringOrNull(body.created_at), web_url: stringOrNull(body.noteable_url ?? body.web_url) }; }
 function asRecord(value) { if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new GitLabInfraError('response-shape-invalid', 'GitLab response must be an object'); return value; }
 function numberRequired(value, field) { if (typeof value !== 'number' || !Number.isFinite(value))

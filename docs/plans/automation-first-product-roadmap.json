@@ -3750,15 +3750,25 @@
     "1-5-5-6-6": {
       "id": "1-5-5-6-6",
       "label": "GitLab 事故 replay、清理与零残留验收证据",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "explore",
       "parent": "1-5-5-6",
-      "children": [],
+      "children": [
+        "1-5-5-6-6-1",
+        "1-5-5-6-6-2",
+        "1-5-5-6-6-3",
+        "1-5-5-6-6-4"
+      ],
       "decisions": [
         {
           "q": "事故 replay 的零残留验收标准是什么？",
           "answer": "A：真实 provider 查询全部归零，并保留可重放 artifact",
           "note": "必须证明无开放无效 carrier Issue、无开放无效 repair MR、无残留自动 repair 分支、无重复 request/claim，且所有动作都有 provider reread 证据。"
+        },
+        {
+          "q": "事故 replay 的清理阶段是否自动执行 provider 删除？",
+          "answer": "A：先只读审计，再人工授权清理",
+          "note": "先 deterministic fixture replay，再用 GitLab read-only 查询确认 Issue/MR/branch/request/claim 零残留；残留只生成结构化 cleanup plan，不自动删除或关闭。"
         }
       ],
       "notes": ""
@@ -3914,11 +3924,63 @@
         }
       ],
       "notes": "真实只读 dogfood 已完成：git.bilibili.co/mlive-dev/ai-studio 的 Schedule 961，scheduled pipeline 10552615，健康检查 artifact status=healthy，证明发布的 GitLab infra adapter 0.1.0 已通过真实 GitLab 14.10.5-jh 的 schedule/pipeline/job/artifact 读取链路。验证后已将临时 cron 25 20 * * * 恢复为 36 01 * * *，Schedule 保持 active。"
+    },
+    "1-5-5-6-6-1": {
+      "id": "1-5-5-6-6-1",
+      "label": "GitLab 历史副作用事故 deterministic replay corpus",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-6-6",
+      "children": [],
+      "decisions": [],
+      "notes": "Deterministic replay script scripts/gitlab-incident-replay.mjs and tests cover cross-request same-digest MR reuse, empty repair diff blocked before write, route-family digest isolation, and zero-residue fixture audit. Result: 3 scenarios passed, provider_writes=0, side_effects_executed=false, cleanup plan requires confirmation."
+    },
+    "1-5-5-6-6-2": {
+      "id": "1-5-5-6-6-2",
+      "label": "GitLab carrier、repair MR 与 branch 零残留只读审计",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-6-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "零残留审计的平台读取边界是什么？",
+          "answer": "A：扩展 GitLab infra 只读 capability 面",
+          "note": "新增 issue-read、merge-request-read、branch-read、note-read；incident audit 不直接复制 GitLab API 调用，只消费 infra 标准化结果与 provenance。"
+        }
+      ],
+      "notes": "GitLab infra 0.1.1 adds issue-read, merge-request-read, branch-read, and note-read with normalized resources and provenance. scripts/gitlab-zero-residue-audit.mjs consumes only these read APIs, classifies open carrier/MR/branch/duplicate request/claim residue, and emits confirmation-required cleanup actions without writes. Tests: audit 2/2, infra 5/5, release gate 8/8."
+    },
+    "1-5-5-6-6-3": {
+      "id": "1-5-5-6-6-3",
+      "label": "GitLab 事故结构化 cleanup plan 与人工恢复锚点",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-6-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "cleanup plan 的人工恢复锚点采用什么粒度？",
+          "answer": "A：每个资源独立身份、read-before-write、固定确认短语与 resume_id",
+          "note": "每个 Issue/MR/branch/duplicate request/claim 独立恢复；任一资源 reread 失败只跳过该资源，不批量扩大清理范围。"
+        }
+      ],
+      "notes": "scripts/gitlab-zero-residue-audit.mjs now emits per-resource cleanup actions with deterministic resume_id, read_before_write and provider_reread_required preconditions, fixed phrase CONFIRM_GITLAB_INCIDENT_CLEANUP, and confirmation-required resume anchors. No provider writes are executed."
+    },
+    "1-5-5-6-6-4": {
+      "id": "1-5-5-6-6-4",
+      "label": "ai-studio GitLab 真实 carrier、repair MR、branch 与 claim 零残留审计",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5-5-6-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 15:18:41",
+    "updated": "2026-07-22 15:32:01",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
