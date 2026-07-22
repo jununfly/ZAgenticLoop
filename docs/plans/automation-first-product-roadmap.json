@@ -3291,7 +3291,7 @@
     "1-5-5-6-1": {
       "id": "1-5-5-6-1",
       "label": "跨 producer、carrier、consumer 的端到端副作用完成门禁",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5-6",
       "children": [],
@@ -3522,7 +3522,7 @@
           "note": "一次审阅完整契约；合并后再单独确认 tag/npm 发布，保持人工发布边界。"
         }
       ],
-      "notes": "已完成 core completion_evidence.v1 schema/validator/CLI、orchestration 接入与 GitLab read-only adapter；完成 core 0.1.11 release-prep：同步 package/lock、zj-loop-init 默认版本、GitHub generated templates/workflows、version-lock 与 release/bundle gates。验证：core 340 项、新增 completion evidence 9 项、GitLab adapter 2 项、dispatch 31 项、init 32 项通过；provider parity、generated bundle release gate、version consistency healthy（0.1.11）通过。待人工合并 release PR、发布 npm 0.1.11，再更新 ai-studio MR 做 report-only dogfood。"
+      "notes": "GitHub infra 0.1.1 发布后，使用 Smoke run 29898717456 / job 88854433026 / SHA aeadd2d82d46a600b57a782bfbf714470f7cf67a 完成只读 GitHub parity dogfood；dogfood run 29898759138 / job 88854563722 成功，workflow/job/check/artifact/commit/ref 绑定通过，side_effects_executed=false。"
     },
     "1-5-5-6-2": {
       "id": "1-5-5-6-2",
@@ -3913,7 +3913,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 14:16:17",
+    "updated": "2026-07-22 15:03:15",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
