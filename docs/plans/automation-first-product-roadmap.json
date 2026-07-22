@@ -3562,7 +3562,7 @@
     "1-5-5-6-3": {
       "id": "1-5-5-6-3",
       "label": "repair MR 有效 diff、跨 request 去重与空变更拒绝",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5-6",
       "children": [],
@@ -3578,7 +3578,7 @@
           "note": "统一按 project + route family + target branch + repair content digest 去重；重复复用已有 MR，空 diff、跨 request 重复和内容不一致全部 fail-closed。"
         }
       ],
-      "notes": ""
+      "notes": "PR #164 merged at 6a40db6. Shared GitLab repair safety gate now computes project + route family + target branch + action digest, reuses matching opened MR markers across CI/Dependency Sweeper requests, and rejects empty repairs before provider writes. Core 342 tests, generated bundle, provider parity, release workflow gates passed."
     },
     "1-5-5-6-4": {
       "id": "1-5-5-6-4",
@@ -3918,7 +3918,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 15:08:37",
+    "updated": "2026-07-22 15:18:41",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

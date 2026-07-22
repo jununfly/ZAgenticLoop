@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 15:08:37
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 15:18:41
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -50,7 +50,7 @@
 ├── [x][X+] 1-5-5-6-1. 跨 producer、carrier、consumer 的端到端副作用完成门禁
 ├── [x][Y+] 1-5-5-6-2. GitLab 自动 carrier 创建的显式开关与紧急熔断
 │   ... 3 more child nodes; run tree 1-5-5-6-2 --depth 2 for full view
-├── [ ][X+] 1-5-5-6-3. repair MR 有效 diff、跨 request 去重与空变更拒绝
+├── [x][X+] 1-5-5-6-3. repair MR 有效 diff、跨 request 去重与空变更拒绝
 ├── [x][X+] 1-5-5-6-4. Issue、MR 与 carrier 副作用速率限制和上限保护
 ├── [x][X+] 1-5-5-6-5. generated CI、vendor 包与目标项目版本一致性门禁
 └── [ ][X+] 1-5-5-6-6. GitLab 事故 replay、清理与零残留验收证据
