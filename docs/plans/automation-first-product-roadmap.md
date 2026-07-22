@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 16:39:21
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 16:47:11
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -74,4 +74,5 @@ Deferred from current version. Track GitLab Webhook Issue Triage adaptation in d
 - Q: disabled capability artifact 如何保存？ → 由 doctor/CI 每次动态生成并保存为 artifact/ledger 运行证据，不提交生成快照；Route Table 和 known-gaps 作为源配置。 (避免状态快照过期，同时保留每次运行的可审计证据。)
 - Q: disabled capability artifact 保留多久？ → 默认保留 90 天，覆盖一个完整版本周期；只保留脱敏 capability 状态，不保存 Secret、Token 或完整 payload。 (支持版本回顾和 known-gap 审计，避免无限累积运行数据。)
 - Q: 重新开启 GitLab Webhook 的第一步是什么？ → A：先提交 Webhook re-enable readiness PR，补齐版本、owner、项目绑定、Secret 分离、固定 endpoint/ref 与 health check；保持 enabled=false (当前没有可用 ai-studio-gitlab deployment；准备 PR 不产生 GitLab provider side effect，待 Human review 后再部署与 promotion。)
+- Q: GitLab Webhook live fixture 使用哪个项目边界？ → A：只在 mlive-dev/ai-studio-gitlab 内网测试 fork 与其 bridge deployment 上验证；mlive-dev/ai-studio 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline (ai-studio 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。)
 <!-- ROADMAP_SECTION_END -->
