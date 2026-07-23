@@ -318,6 +318,14 @@ The lifecycle is fixed:
 - a release candidate fails when any required cell is `incomplete`, `blocked`,
   `stale`, or `unsupported`
 
+`npm run test:release-candidate-audit` emits the current read-only complete
+matrix and separates upstream gate failures from cell-level blockers. The
+routine development gate remains report-compatible while the release operator
+uses `npm run check:release-candidate` (`--strict`) to fail a candidate unless
+every applicable required cell is complete. `not-applicable-with-reason` cells
+are excluded from the required-cell denominator but remain visible in the
+derived matrix.
+
 Docs and release notes must never claim a higher execution mode, maturity, or
 adapter support level than the current derived ledger and Route Table evidence
 prove.

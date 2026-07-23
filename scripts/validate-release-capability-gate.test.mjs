@@ -107,6 +107,71 @@ test('release capability gate fails explicit current truth blocks that drift fro
   }
 });
 
+test('release capability gate catches capability claims in the surrounding route section', async () => {
+  const fixture = await makeReleaseCapabilityFixture();
+  try {
+    const docPath = path.join(fixture, 'docs', 'designs', 'user-project-execution-ready-bundle.md');
+    await writeFile(docPath, [
+      await readFile(docPath, 'utf8'),
+      '',
+      '## Issue Triage Transition',
+      '',
+      '`issue-triage-transition` is the request-only route.',
+      'This route is execution-ready as a request-only bridge.',
+    ].join('\n'));
+
+    const result = await validateReleaseCapabilityGate(fixture);
+
+    assert.ok(result.errors.some((error) =>
+      error.includes('docs/designs/user-project-execution-ready-bundle.md') &&
+      error.includes('issue-triage-transition') &&
+      error.includes('execution-ready') &&
+      error.includes('install-ready')
+    ));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+test('release capability gate rejects unscoped global completion claims', async () => {
+  const fixture = await makeReleaseCapabilityFixture();
+  try {
+    const docPath = path.join(fixture, 'README.md');
+    await writeFile(docPath, [
+      await readFile(docPath, 'utf8'),
+      '',
+      'All consumers are live and complete.',
+    ].join('\n'));
+
+    const result = await validateReleaseCapabilityGate(fixture);
+
+    assert.ok(result.errors.some((error) =>
+      error.includes('README.md') &&
+      error.includes('unscoped global capability claim')
+    ));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+test('release capability gate requires every claim document to name its truth source', async () => {
+  const fixture = await makeReleaseCapabilityFixture();
+  try {
+    const docPath = path.join(fixture, 'README.md');
+    const text = await readFile(docPath, 'utf8');
+    await writeFile(docPath, text.replace(/route/gi, 'path'));
+
+    const result = await validateReleaseCapabilityGate(fixture);
+
+    assert.ok(result.errors.some((error) =>
+      error.includes('README.md') &&
+      error.includes('must reference Route Table truth')
+    ));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
 test('release capability gate CLI emits JSON ledger for automation', async () => {
   const { stdout } = await execFileAsync('node', ['scripts/validate-release-capability-gate.mjs', '--json'], {
     cwd: ROOT,

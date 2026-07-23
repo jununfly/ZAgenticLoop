@@ -83,6 +83,27 @@ node scripts/dependency-sweeper-claim-e2e-replay.mjs > /tmp/dependency-sweeper-c
 node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-backlog-triage-e2e-replay.test.mjs scripts/issue-triage-transition-e2e-replay.test.mjs scripts/issue-triage-action-runner.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-live-runner.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-live-runner.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-live-runner.test.mjs scripts/write-file-once.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs scripts/roadmap-handoff-gate.test.mjs scripts/protocol-terminology-gate.test.mjs scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs scripts/validate-post-merge-closeout-workflow.test.mjs
 node scripts/protocol-terminology-gate.mjs
 
+CURRENT_GATE="architecture integrity"
+
+node --test scripts/validate-architecture-integrity-gate.test.mjs
+node scripts/validate-architecture-integrity-gate.mjs
+
+CURRENT_GATE="completion delta"
+
+node --test scripts/validate-workflow-history.test.mjs
+node --test scripts/validate-completion-delta-gate.test.mjs
+node scripts/validate-completion-delta-gate.mjs --base-ref HEAD^ --require-baseline
+
+CURRENT_GATE="completion replay corpus"
+
+node --test scripts/completion-alignment-replay.test.mjs
+node scripts/completion-alignment-replay.mjs
+
+CURRENT_GATE="reference installation fixtures"
+
+node --test scripts/reference-installation-fixtures.test.mjs
+node scripts/reference-installation-fixtures.mjs
+
 CURRENT_GATE="tool package tests"
 
 node scripts/run-tool-package-scripts.mjs test --gate=validate --install

@@ -89,6 +89,11 @@ workflow checks, and drift detection against its own patterns and tooling.
 The reference case explains the configuration sources, state files, workflow
 flow, gates, and current automation boundaries: [Dogfood reference case](docs/designs/dogfood-reference-case.md).
 
+Capability claims in this README and the linked user-project guides are bounded
+by the derived release capability ledger from the Route Table. A route is not
+execution-ready or live merely because its package, workflow, or dogfood path
+exists.
+
 ## Install And Run
 
 The short path is:

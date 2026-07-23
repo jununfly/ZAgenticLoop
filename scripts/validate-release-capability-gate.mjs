@@ -259,27 +259,44 @@ async function validateDocumentCapabilityClaims({ root, routes, errors }) {
 
   for (const relativePath of DOC_CAPABILITY_CLAIM_FILES) {
     const text = await readText(path.join(root, relativePath));
+    validateDocumentTruthSource({ relativePath, text, errors });
     const lines = text.split(/\r?\n/);
     lines.forEach((line, index) => {
-      validateRouteSpecificClaimLine({ relativePath, line, lineNumber: index + 1, routeAliases, errors });
+      validateRouteSpecificClaimLine({ relativePath, line, lineNumber: index + 1, lines, routeAliases, errors });
       validatePublicProductClaimLine({ relativePath, line, lineNumber: index + 1, hasExecutionReadyRoute, errors });
+      validateGlobalCapabilityClaimLine({ relativePath, line, lineNumber: index + 1, errors });
     });
     validateExplicitTruthBlocks({ relativePath, lines, routeAliases, errors });
   }
 }
 
-function validateRouteSpecificClaimLine({ relativePath, line, lineNumber, routeAliases, errors }) {
-  const claimedLevel = line.includes('user-project-ready')
+function validateDocumentTruthSource({ relativePath, text, errors }) {
+  if (!/route\s+table/i.test(text)) {
+    errors.push(`${relativePath}: capability claims must reference Route Table truth`);
+  }
+  if (!/(release[-_ ]capability|release capability ledger|zj-loop\.release_capability_ledger)/i.test(text)) {
+    errors.push(`${relativePath}: capability claims must reference the derived release capability ledger/gate`);
+  }
+}
+
+function validateRouteSpecificClaimLine({ relativePath, line, lineNumber, lines, routeAliases, errors }) {
+  if (/not[-\s]execution-ready|not[-\s]user-project-ready/i.test(line)) return;
+  const claimText = line.toLowerCase();
+  const claimedLevel = claimText.includes('user-project-ready')
     ? 'user-project-ready'
-    : line.includes('execution-ready')
+    : claimText.includes('execution-ready')
       ? 'execution-ready'
       : null;
   if (!claimedLevel) return;
 
   const normalizedLine = normalizeClaimText(line);
+  const usesRoutePronoun = /\b(?:this|the)\s+route\b|\bthe\s+consumer\b/i.test(line);
+  const contextStart = Math.max(0, lineNumber - 4);
+  const context = usesRoutePronoun ? lines.slice(contextStart, lineNumber).join('\n') : '';
+  const normalizedContext = normalizeClaimText(context);
   const matchedRoutes = new Set();
   for (const { route, alias } of routeAliases) {
-    if (!normalizedLine.includes(alias)) continue;
+    if (!normalizedLine.includes(alias) && !normalizedContext.includes(alias)) continue;
     if (matchedRoutes.has(route.route_id)) continue;
     matchedRoutes.add(route.route_id);
 
@@ -287,6 +304,16 @@ function validateRouteSpecificClaimLine({ relativePath, line, lineNumber, routeA
     if (!claimSatisfies(actualLevel, claimedLevel)) {
       errors.push(`${relativePath}:${lineNumber}: docs claim ${route.route_id} is ${claimedLevel}, but Route Table runner is ${route.maturity?.runner ?? '<missing>'}`);
     }
+  }
+}
+
+function validateGlobalCapabilityClaimLine({ relativePath, line, lineNumber, errors }) {
+  if (/\b(?:must not|does not|do not|not)\s+(?:imply|claim|mean)\b/i.test(line)) return;
+  const globalClaim = /\b(?:all|every)\s+(?:routes?|consumers?)\s+(?:are|is|have been|has been)\s+(?:fully\s+)?(?:complete|execution-ready|user-project-ready|live)\b/i.test(line)
+    || /\b(?:all|every)\s+(?:routes?|consumers?)\s+(?:now\s+)?(?:execute|run)\s+(?:live|in production)\b/i.test(line)
+    || /\b(?:the|this)\s+(?:release|product|system|bundle)\s+is\s+(?:fully\s+)?(?:execution-ready|user-project-ready|live)\b/i.test(line);
+  if (globalClaim) {
+    errors.push(`${relativePath}:${lineNumber}: unscoped global capability claim must be supported by explicit Route Table rows`);
   }
 }
 
