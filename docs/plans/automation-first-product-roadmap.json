@@ -2900,6 +2900,11 @@
           "q": "consumer 配置门禁缺失后如何推进正向 dogfood？",
           "answer": "保留 Issue #7 作为负向证据，并在测试 fork 创建 Draft MR !37：补齐 route table 的 verification_gate_allowlist、repair_actions、repair_scope、master branch allowlist，同时让 carrier 传入 ci-sweeper-repair-actions.json；MR 流水线 10582668 已通过，等待人工合并。",
           "note": "consumer job 26223105 已正常运行到 verifier，返回 verification-gate-allowlist-missing、repair-actions-missing、repair-scope-missing，未 claim、未创建 repair MR。"
+        },
+        {
+          "q": "repair actions fixture 缺失后如何继续？",
+          "answer": "保留 Issue #8 对应的 carrier 负向证据，并创建 Draft MR !38 新增正确路径的 zj-loop/dogfood/ci-sweeper-repair-actions.json；MR 流水线 10582706 已通过，等待人工合并后重跑正向 dogfood。",
+          "note": "受控流水线 10582682 的 carrier job 26223467 成功但 request-body 返回 ENOENT，未生成 Issue Fix Request，未发生 provider 副作用。错误路径分支已废弃。"
         }
       ],
       "notes": "Design decisions complete; next implement isolated CI Sweeper bridge, explicit synthetic failure fixture, API carrier gate, repair MR and guarded closeout in ai-studio-gitlab."
@@ -4274,7 +4279,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-23 22:54:54",
+    "updated": "2026-07-23 23:05:56",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

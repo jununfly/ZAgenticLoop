@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 22:54:54
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 23:05:56
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -76,4 +76,5 @@ Design decisions complete; next implement isolated CI Sweeper bridge, explicit s
 - Q: execution-ready 后为什么仍未创建 carrier/repair MR？ → A：测试 fork 的 .gitlab-ci.local.yml 只有 Issue Note bridge 的 route/plan job，缺少 GitLab CI Sweeper carrier trigger、consumer preflight、repair-MR 和 closeout jobs；补齐生成式执行片段后再重跑 synthetic failure lifecycle。 (已验证：pipeline 10582044/job 26219391 返回 execution_ready=true 但只有 plan；synthetic failure pipeline 10582062/job 26219517 按预期失败并上传 side_effects_executed=false；测试 fork MR !35 补齐执行链路，CI pipeline 10582090 已通过。)
 - Q: 消费者 preflight shell 失败后采取什么修复？ → 在测试 fork 创建 Draft MR !36，只修改 .gitlab-ci.local.yml，将 node -e 命令统一改为单引号包裹；流水线 10582322 已通过，等待人工合并后重跑完整 dogfood。 (失败作业 26220128 在括号处发生 shell syntax error，未创建 repair MR，side_effects_executed=false。)
 - Q: consumer 配置门禁缺失后如何推进正向 dogfood？ → 保留 Issue #7 作为负向证据，并在测试 fork 创建 Draft MR !37：补齐 route table 的 verification_gate_allowlist、repair_actions、repair_scope、master branch allowlist，同时让 carrier 传入 ci-sweeper-repair-actions.json；MR 流水线 10582668 已通过，等待人工合并。 (consumer job 26223105 已正常运行到 verifier，返回 verification-gate-allowlist-missing、repair-actions-missing、repair-scope-missing，未 claim、未创建 repair MR。)
+- Q: repair actions fixture 缺失后如何继续？ → 保留 Issue #8 对应的 carrier 负向证据，并创建 Draft MR !38 新增正确路径的 zj-loop/dogfood/ci-sweeper-repair-actions.json；MR 流水线 10582706 已通过，等待人工合并后重跑正向 dogfood。 (受控流水线 10582682 的 carrier job 26223467 成功但 request-body 返回 ENOENT，未生成 Issue Fix Request，未发生 provider 副作用。错误路径分支已废弃。)
 <!-- ROADMAP_SECTION_END -->
