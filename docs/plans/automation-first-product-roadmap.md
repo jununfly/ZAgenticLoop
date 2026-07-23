@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 23:06:10
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 23:12:57
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -78,4 +78,5 @@ Design decisions complete; next implement isolated CI Sweeper bridge, explicit s
 - Q: consumer 配置门禁缺失后如何推进正向 dogfood？ → 保留 Issue #7 作为负向证据，并在测试 fork 创建 Draft MR !37：补齐 route table 的 verification_gate_allowlist、repair_actions、repair_scope、master branch allowlist，同时让 carrier 传入 ci-sweeper-repair-actions.json；MR 流水线 10582668 已通过，等待人工合并。 (consumer job 26223105 已正常运行到 verifier，返回 verification-gate-allowlist-missing、repair-actions-missing、repair-scope-missing，未 claim、未创建 repair MR。)
 - Q: repair actions fixture 缺失后如何继续？ → 保留 Issue #8 对应的 carrier 负向证据，并创建 Draft MR !38 新增正确路径的 zj-loop/dogfood/ci-sweeper-repair-actions.json；MR 流水线 10582706 已通过，等待人工合并后重跑正向 dogfood。 (受控流水线 10582682 的 carrier job 26223467 成功但 request-body 返回 ENOENT，未生成 Issue Fix Request，未发生 provider 副作用。错误路径分支已废弃。)
 - Q: 修正 fixture 负向证据编号 → 本次 carrier 未创建 Issue；仅保留流水线 10582682/job 26223467 的负向执行证据，Issue #7 仍是上一轮 request-actions 缺失的 carrier。 (不新增或关闭 Issue，避免把 ENOENT 失败误记为 provider carrier。)
+- Q: GitLab Commit API 首次失败后如何补齐 fixture？ → consumer 已完成 claim、verification gate、repair action gate，但因目标文件缺失返回 repair-commit-create-failed；创建 Draft MR !39 新增 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml，MR 流水线 10582719 已通过，等待人工合并。 (正向请求 ifr_7ed08dcec250、Issue #8、consumer pipeline 10582716/job 26223760 均保留失败证据；未创建 repair MR。)
 <!-- ROADMAP_SECTION_END -->

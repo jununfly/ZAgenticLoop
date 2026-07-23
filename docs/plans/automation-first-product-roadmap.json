@@ -2910,6 +2910,11 @@
           "q": "修正 fixture 负向证据编号",
           "answer": "本次 carrier 未创建 Issue；仅保留流水线 10582682/job 26223467 的负向执行证据，Issue #7 仍是上一轮 request-actions 缺失的 carrier。",
           "note": "不新增或关闭 Issue，避免把 ENOENT 失败误记为 provider carrier。"
+        },
+        {
+          "q": "GitLab Commit API 首次失败后如何补齐 fixture？",
+          "answer": "consumer 已完成 claim、verification gate、repair action gate，但因目标文件缺失返回 repair-commit-create-failed；创建 Draft MR !39 新增 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml，MR 流水线 10582719 已通过，等待人工合并。",
+          "note": "正向请求 ifr_7ed08dcec250、Issue #8、consumer pipeline 10582716/job 26223760 均保留失败证据；未创建 repair MR。"
         }
       ],
       "notes": "Design decisions complete; next implement isolated CI Sweeper bridge, explicit synthetic failure fixture, API carrier gate, repair MR and guarded closeout in ai-studio-gitlab."
@@ -4284,7 +4289,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-23 23:06:10",
+    "updated": "2026-07-23 23:12:57",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
