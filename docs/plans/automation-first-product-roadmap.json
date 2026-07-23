@@ -2930,6 +2930,11 @@
           "q": "如何修复 recovery job 未执行 CI Sweeper closeout？",
           "answer": "已确认 recovery job 26223931 实际继承 carrier 脚本，未执行 closeout；创建 Draft MR !41 补齐 gitlab-closeout CLI、六个参数和 artifact。MR 流水线 10582848 已通过，等待人工合并后重试 closeout。",
           "note": "MR !40 已合并但 branch automated/ci-sweeper-gitlab-10582736-98de4c86 与 Issue #9 尚未清理；未重复触发错误作业。"
+        },
+        {
+          "q": "CI Sweeper repair lifecycle closeout 是否完成？",
+          "answer": "完成：MR !41 合并后创建 Web pipeline 10583085，recovery job 26225369 执行 gitlab-closeout 成功；Issue #9 已关闭，repair branch 已确认不存在，closeout evidence 已写入。随后删除全部 6 个临时 closeout 项目变量。",
+          "note": "最终结果 outcome=closed，side effects 仅为受 guard 保护的 closeout：branch-absent、evidence written、carrier issue closed；项目变量复查仅剩原有三项。"
         }
       ],
       "notes": "Design decisions complete; next implement isolated CI Sweeper bridge, explicit synthetic failure fixture, API carrier gate, repair MR and guarded closeout in ai-studio-gitlab."
@@ -4304,7 +4309,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-23 23:58:22",
+    "updated": "2026-07-24 00:16:07",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
