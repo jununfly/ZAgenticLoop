@@ -263,6 +263,9 @@ bounded consumer outcomes.
 
 The first install-ready user-project choices are:
 
+These capability labels are read from the derived release capability ledger,
+which uses the generated Route Table as its source of truth.
+
 - **Turn a plan issue into a roadmap run:** enable
   `roadmap-sliced-development`, then comment
   `/zj-loop start roadmap-sliced-development` on the plan issue. The generated

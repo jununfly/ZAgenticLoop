@@ -221,7 +221,7 @@ batch-editing the tracker.
    the source issue for `ready-for-agent` so downstream consumer routing has a
    durable request without splitting lifecycle state.
 
-This route is execution-ready as a request-only bridge. It may create an
+This route is install-ready as a request-only bridge. It may create an
 independent Issue Fix Request carrier only for narrow exceptions such as a
 missing source issue, cross-repository permission limits, source issues
 unsuitable for automation evidence, or explicit human-requested isolation. It

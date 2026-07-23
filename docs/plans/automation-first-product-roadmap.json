@@ -155,7 +155,7 @@
     "1-6": {
       "id": "1-6",
       "label": "确定性脚本 gate 与 replay 证据闭环",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -176,7 +176,7 @@
     "1-7": {
       "id": "1-7",
       "label": "Dogfood 仪表盘与发布前完成判定",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -582,82 +582,124 @@
     "1-6-1": {
       "id": "1-6-1",
       "label": "Architecture Integrity deterministic validation gate",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "是否先实现 Architecture Integrity deterministic validation gate？",
+          "answer": "A：先实现 1-6-1，建立架构完整性确定性校验，再推进 evidence stale、completion delta 和 replay。",
+          "note": "Human 已确认；后续 1-6 子节点依赖可信的架构完整性结果。"
+        }
+      ],
+      "notes": "2026-07-24: Added scripts/validate-architecture-integrity-gate.mjs and its negative-fixture tests. The read-only gate emits zj-loop.architecture_integrity_gate.v1 with route table schema/unique route/completion target adapter checks, core doctor/release surface checks, architecture contract checks, and side_effects_executed=false. Wired npm run test:architecture-integrity and scripts/ci-validate-gates.sh. Evidence: 4/4 gate tests, complete ci-validate-gates.sh, and scripts/before-after-demo.sh passed; repository result pass across 15 routes."
     },
     "1-6-2": {
       "id": "1-6-2",
       "label": "Evidence compatibility invalidation and stale-status derivation",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Architecture Integrity gate 完成后是否继续实现 evidence compatibility invalidation？",
+          "answer": "A：继续实现 1-6-2，建立证据兼容性指纹、相关变更失效和 stale-status 派生。",
+          "note": "Human 已确认；1-6-3 completion delta 与 1-6-4 replay 依赖确定性的 evidence freshness 规则。"
+        }
+      ],
+      "notes": "2026-07-24: Added core completion-evidence compatibility API in tools/zj-loop-core/src/completion-evidence-compatibility.ts. It deterministically fingerprints target, Route Table, route, adapter, runner, workflow/template, protocol, and verification dimensions; derives compatible, stale, or missing freshness without time TTL or side effects; tampered fingerprints fail closed. Exported from core index and included in the default completion-evidence and core test suites. Evidence: targeted 13/13 tests, full zj-loop-core 361/361 tests, and complete ci-validate-gates.sh passed."
     },
     "1-6-3": {
       "id": "1-6-3",
       "label": "Completion delta CI and release hard gate",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Evidence compatibility 完成后是否接入 completion delta CI 与 release hard gate？",
+          "answer": "A：继续实现 1-6-3，把 completion ledger 变化、Architecture Integrity 失败和 required-cell 回退接入 PR/release gate。",
+          "note": "Human 已确认；只有把派生结果接入 CI，stale 与 capability regression 才能阻断发布而非停留在库 API。"
+        }
+      ],
+      "notes": "2026-07-24: Added scripts/validate-completion-delta-gate.mjs and tests. The gate derives current/baseline completion ledgers, blocks Architecture Integrity failures, current stale cells, target drift, and complete-cell regressions; it reports added cells without blocking. PR CI compares against HEAD^ with required baseline via scripts/ci-validate-gates.sh. npm run test:release-ready now includes current completion delta and Architecture Integrity validation, with explicit baseline-missing warning when no comparison ref is supplied. Evidence: delta tests passed, real HEAD^ comparison passed, complete ci-validate-gates.sh passed, and npm run test:release-ready passed; side_effects_executed=false."
     },
     "1-6-4": {
       "id": "1-6-4",
       "label": "Structured hard-stop and recovery replay corpus",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-6",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Completion delta gate 完成后是否建立 hard-stop/recovery replay corpus？",
+          "answer": "A：继续实现 1-6-4，覆盖 pass、stale、blocked、regression、recovery 与 duplicate 的结构化 replay，验证 zero-write 与 resume anchor。",
+          "note": "Human 已确认；replay corpus 是最后的确定性脚本闭环，后续可用于 CI 回归和事故复现。"
+        }
+      ],
+      "notes": "2026-07-24: Added scripts/completion-alignment-replay.mjs and tests with schema zj-loop.completion_replay_corpus.v1. The deterministic local corpus covers pass, stale, blocked, regression, recovery, and duplicate; hard-stop/resume evidence shares one resume anchor. It reuses core completion evidence, compatibility, and delta contracts without a second state machine or provider access. Evidence: corpus 2/2 tests, 6/6 scenarios, provider_calls=0, writes=0, side_effects_executed=false, and complete ci-validate-gates.sh passed."
     },
     "1-7-1": {
       "id": "1-7-1",
       "label": "Reference installation fixtures for GitHub GitLab and Workspace",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-7",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "确定性 gate/replay 完成后是否建立三类 reference installation fixtures？",
+          "answer": "A：开始 1-7-1，为 GitHub、GitLab、Workspace 建立可复现的 reference installation fixture，并统一安装后 readiness/completion 验证入口。",
+          "note": "Human 已确认；后续 doctor renderer、capability claim guard 和 release matrix audit 需要三类安装基线。"
+        }
+      ],
+      "notes": "2026-07-24: Added scripts/reference-installation-fixtures.mjs and tests. It creates isolated temporary GitHub, GitLab, and Workspace installations through zj-loop-init, verifies adapter-specific generated files, runs zj-loop-audit JSON readiness, and derives the completion ledger through zj-loop-doctor. Final evidence: all 3 fixtures passed with readiness 100/L3, target automation-first-product, completion schema valid, provider_calls=0, writes=0, side_effects_executed=false; complete ci-validate-gates.sh passed."
     },
     "1-7-2": {
       "id": "1-7-2",
       "label": "Doctor completion text renderer and user next actions",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-7",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "三类 reference installation 完成后是否实现 doctor completion text renderer？",
+          "answer": "A：实现 1-7-2，让 zj-loop-doctor --completion --format text 输出完成分组、阻塞原因和可直接执行的结构化 next actions。",
+          "note": "Human 已确认；用户不应从 JSON 或路线表自行推断下一步，文本层只呈现 core ledger 派生事实。"
+        }
+      ],
+      "notes": "2026-07-24: Added core renderCompletionAlignmentText and wired zj-loop-doctor --completion --format text. Output schema zj-loop.completion-alignment-text.v1 includes target, overall status, summary, completed, blocked_or_stale, architecture_review_required, and next_actions derived from ledger only; JSON output remains unchanged. Evidence: text renderer tests and doctor CLI regression included in full zj-loop-core 363/363 suite; complete ci-validate-gates.sh passed."
     },
     "1-7-3": {
       "id": "1-7-3",
       "label": "README and capability-claim guard for completion targets",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-7",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Doctor next actions 完成后是否强化 README/文档 capability claim guard？",
+          "answer": "A：复用并强化现有 release capability gate，确保 README、Quickstart、user-project bundle 与设计文档的 completion/execute-ready 声明不超过 Route Table truth，并把该检查作为 CI/release hard gate。",
+          "note": "Human 已确认；不新增第二份能力真相，文档只消费 Route Table/ledger 派生事实。"
+        }
+      ],
+      "notes": "2026-07-24: 强化现有 release capability gate，继续以 templates/zj-loop-route-table.yaml.template 为唯一能力真相来源。新增 claim 文档真值来源检查：README、Quickstart、dogfood、route-consumer、user-project bundle 必须引用 Route Table 与派生 release capability ledger/gate；新增章节上下文 route capability claim 检查，避免无别名的 this route/the consumer 声明绕过 Route Table runner maturity；新增 unscoped global capability claim hard-fail，阻止 all/every consumers/routes 或 release/product/system/bundle 的 execution-ready/user-project-ready/live 宣称；保留否定性边界语句不误报。修正 user-project bundle 中 issue-triage-transition 越界文案为 install-ready。新增 3 个负向回归测试。证据：npm run test:release-capability-gate、npm run test:release-ready、bash scripts/ci-validate-gates.sh、git diff --check 全部通过。"
     },
     "1-7-4": {
       "id": "1-7-4",
       "label": "Release candidate complete-matrix audit",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-7",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "2026-07-24: Added scripts/validate-release-candidate-audit.mjs and tests. Audit derives the existing completion alignment ledger, reuses Architecture Integrity, release capability, and completion delta gates, emits zj-loop.release_candidate_complete_matrix_audit.v1, separates upstream failures from required matrix blockers, excludes only not-applicable-with-reason cells from the denominator, and keeps side_effects_executed=false. Default command is report-compatible; npm run check:release-candidate uses --strict and rejects the current 0/40 required-cell candidate. Added package scripts and completion alignment architecture documentation. Evidence: npm run test:release-candidate-audit passed; strict check intentionally exited 1 for not-ready 0/40; npm run test:release-ready, bash scripts/ci-validate-gates.sh, and git diff --check passed."
     },
     "1-5-2-1": {
       "id": "1-5-2-1",
@@ -2741,7 +2783,7 @@
     "1-5-5-3-5": {
       "id": "1-5-5-3-5",
       "label": "GitLab bridged CI Sweeper event-driven repair lifecycle dogfood",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3",
       "children": [],
@@ -2935,9 +2977,14 @@
           "q": "CI Sweeper repair lifecycle closeout 是否完成？",
           "answer": "完成：MR !41 合并后创建 Web pipeline 10583085，recovery job 26225369 执行 gitlab-closeout 成功；Issue #9 已关闭，repair branch 已确认不存在，closeout evidence 已写入。随后删除全部 6 个临时 closeout 项目变量。",
           "note": "最终结果 outcome=closed，side effects 仅为受 guard 保护的 closeout：branch-absent、evidence written、carrier issue closed；项目变量复查仅剩原有三项。"
+        },
+        {
+          "q": "CI Sweeper dogfood 完成后是否收口并转向 product-project bridge 阻塞评估？",
+          "answer": "A：标记 CI Sweeper dogfood 完成；不继续堆叠测试 fork 场景，下一步单独评估 product-project Webhook bridge 阻塞是否值得解除。",
+          "note": "Human 已确认；完整 lifecycle 证据已具备，继续重复验证收益低。"
         }
       ],
-      "notes": "Design decisions complete; next implement isolated CI Sweeper bridge, explicit synthetic failure fixture, API carrier gate, repair MR and guarded closeout in ai-studio-gitlab."
+      "notes": "2026-07-24: CI Sweeper dogfood lifecycle completed in mlive-dev/ai-studio-gitlab. Evidence: source failure pipeline/job/artifacts; carrier Issue #9; consumer job 26223932; repair MR !40 merged; closeout job 26225369; closeout pipeline 10583085; carrier closed and repair branch deleted. Retained pipelines, jobs, MRs, and artifacts; removed temporary closeout variables."
     },
     "1-5-5-3-2-1": {
       "id": "1-5-5-3-2-1",
@@ -3225,6 +3272,11 @@
           "q": "正向 delivery 为什么被拒绝？",
           "answer": "A：GitLab 实际发送 X-Gitlab-Event=Note Hook，而旧 core 只允许 Issue Hook，delivery 返回 event-not-allowed 且 side_effects_executed=false；已修复 core 0.1.12 并更新私有 vendor。",
           "note": "私有项目提交 21a899f 已推送，但 Caster 当前可选镜像仍是旧 e69ff142；等待新构建后发布，再重试一次正向 marker。"
+        },
+        {
+          "q": "product-project Webhook bridge 阻塞期间是否继续线上验证？",
+          "answer": "A：保持 blocked/deferred，不进行部署或线上重试；转向已定义的后续确定性脚本 gate 阶段。",
+          "note": "Human 已确认；1-5-5-4 scheduled dogfood 已完成，bridge 外部能力阻塞不再重复消耗验证轮次。"
         }
       ],
       "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
@@ -4309,7 +4361,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-24 00:16:07",
+    "updated": "2026-07-24 01:15:57",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

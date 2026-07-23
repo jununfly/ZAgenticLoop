@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { runCli } from './cli.js';
 import { buildCompletionAlignmentLedger } from './completion-alignment.js';
+import { renderCompletionAlignmentText } from './completion-alignment-text.js';
 import { buildLoopDoctorReport } from './doctor-runner.js';
 import { buildGitLabIssueNoteBridgeCapabilityArtifact } from './gitlab-issue-note-bridge-capability.js';
 import { inspectGitLabScheduleHealth } from './schedule-health-contract.js';
@@ -82,9 +83,7 @@ const exitCode = await runCli({
             ]);
             const ledger = buildCompletionAlignmentLedger({ table, routeTableText });
             if (options.format === 'text') {
-                io.stdout(`target: ${ledger.target.id}`);
-                for (const [status, count] of Object.entries(ledger.summary))
-                    io.stdout(`${status}: ${count}`);
+                io.stdout(renderCompletionAlignmentText(ledger));
             }
             else {
                 io.stdout(JSON.stringify(ledger, null, 2));

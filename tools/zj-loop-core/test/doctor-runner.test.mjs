@@ -253,6 +253,12 @@ test('zj-loop-doctor completion report stays readable while require-complete is 
     assert.equal(report.status, 0);
     assert.equal(JSON.parse(report.stdout).schema, 'zj-loop.completion-alignment-ledger.v1');
 
+    const text = spawnSync(process.execPath, [DOCTOR_CLI, '--root', dir, '--completion', '--format', 'text'], { encoding: 'utf8' });
+    assert.equal(text.status, 0);
+    assert.match(text.stdout, /schema: zj-loop\.completion-alignment-text\.v1/);
+    assert.match(text.stdout, /target: automation-first-product/);
+    assert.match(text.stdout, /next_actions:/);
+
     const strict = spawnSync(process.execPath, [DOCTOR_CLI, '--root', dir, '--completion', '--require-complete'], { encoding: 'utf8' });
     assert.equal(strict.status, 1);
     assert.equal(JSON.parse(strict.stdout).schema, 'zj-loop.completion-alignment-ledger.v1');
