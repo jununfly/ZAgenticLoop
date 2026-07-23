@@ -90,6 +90,7 @@ node scripts/validate-architecture-integrity-gate.mjs
 
 CURRENT_GATE="completion delta"
 
+node --test scripts/validate-workflow-history.test.mjs
 node --test scripts/validate-completion-delta-gate.test.mjs
 node scripts/validate-completion-delta-gate.mjs --base-ref HEAD^ --require-baseline
 
