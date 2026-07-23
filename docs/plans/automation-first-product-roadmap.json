@@ -2880,6 +2880,11 @@
           "q": "正向 synthetic failure 证据是什么？",
           "answer": "测试 fork master pipeline 10581856 的 job 26218671 按预期失败，并上传 synthetic-failure-evidence.json；失败日志声明 side_effects_executed:false。",
           "note": "Pipeline: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/pipelines/10581856; Job: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/jobs/26218671"
+        },
+        {
+          "q": "CI Sweeper 当前 install-ready 且 execution_ready=false，下一步是否推进 execution-ready？",
+          "answer": "A：是。补齐 execution-ready 所需的配置、证据和验证门，再在测试 fork 中重跑一次受控 synthetic failure；生产项目保持隔离。",
+          "note": "当前 pipeline 10581876 仅完成 bridge 与 route dispatch，未创建 carrier/repair MR；必须先提升到 execution-ready 才能验证完整 repair lifecycle。"
         }
       ],
       "notes": "Design decisions complete; next implement isolated CI Sweeper bridge, explicit synthetic failure fixture, API carrier gate, repair MR and guarded closeout in ai-studio-gitlab."
@@ -4254,7 +4259,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-23 21:07:53",
+    "updated": "2026-07-23 21:13:20",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

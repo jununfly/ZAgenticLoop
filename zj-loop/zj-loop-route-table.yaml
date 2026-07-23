@@ -557,7 +557,7 @@ routes:
         - "https://github.com/jununfly/ZAgenticLoop/issues/18"
     maturity:
       protocol: "dogfooded"
-      runner: "dogfooded"
+      runner: execution-ready
     capabilities:
       scopes: ["ci", "validate-patterns", "audit", "generated-workflow"]
       verifiers: ["ci-validate-gates", "ci-audit-gates", "diff-check"]
