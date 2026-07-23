@@ -28,10 +28,12 @@ const server = createGitLabIssueNoteBridgeServer({
     },
     webhookSecret,
     triggerToken,
+    webhookPath: env.ZJ_LOOP_GITLAB_BRIDGE_WEBHOOK_PATH?.trim() || undefined,
     root: env.ZJ_LOOP_BRIDGE_ROOT?.trim() || '.',
     apiBaseUrl: env.ZJ_LOOP_GITLAB_API_URL?.trim() || 'https://gitlab.com/api/v4',
 });
 const port = Number(env.PORT || 8080);
 if (!Number.isSafeInteger(port) || port <= 0 || port > 65535)
     throw new Error('PORT-invalid');
-server.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ schema: 'zj-loop.gitlab_issue_note_bridge_server.v1', status: 'listening', path: '/gitlab/webhook/issue-note', port })));
+const webhookPath = env.ZJ_LOOP_GITLAB_BRIDGE_WEBHOOK_PATH?.trim() || '/gitlab/webhook/issue-note';
+server.listen(port, '0.0.0.0', () => console.log(JSON.stringify({ schema: 'zj-loop.gitlab_issue_note_bridge_server.v1', status: 'listening', path: webhookPath, port })));

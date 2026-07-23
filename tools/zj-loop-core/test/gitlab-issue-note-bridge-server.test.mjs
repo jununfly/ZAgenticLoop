@@ -44,6 +44,20 @@ test('HTTP runtime exposes a side-effect-free health probe', async () => {
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test('HTTP runtime supports a configured webhook path while preserving path isolation', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-http-custom-path-'));
+  try {
+    let pipelineCalls = 0;
+    const customPath = '/gitlab/webhook/ci-sweeper';
+    const baseConfig = { projectPath: 'group/project', route, triggerConfig, webhookSecret: 'webhook-secret', triggerToken: 'api-token', webhookPath: customPath, root, fetchImpl: async () => { pipelineCalls += 1; return { status: 201, async json() { return { id: 322, ref: 'master', web_url: 'https://git.example/group/project/-/pipelines/322' }; } }; } };
+    const custom = await withServer(baseConfig, async (port) => fetch(`http://127.0.0.1:${port}${customPath}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-custom-path-1', 'x-gitlab-token': 'webhook-secret' }, body: JSON.stringify(payload) }));
+    assert.equal(custom.status, 202);
+    const legacy = await withServer(baseConfig, async (port) => fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-custom-path-2', 'x-gitlab-token': 'webhook-secret' }, body: JSON.stringify(payload) }));
+    assert.equal(legacy.status, 404);
+    assert.equal(pipelineCalls, 1);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('HTTP runtime ignores ordinary Notes and blocks bad secrets without triggering', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-http-'));
   try {

@@ -13,6 +13,7 @@ export type GitLabIssueNoteBridgeServerConfig = {
     root?: string;
     apiBaseUrl?: string;
     maxBodyBytes?: number;
+    webhookPath?: string;
     fetchImpl?: typeof fetch;
     now?: () => string;
 };
