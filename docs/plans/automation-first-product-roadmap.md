@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 15:00:17
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 21:07:53
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -59,4 +59,17 @@ Design decisions complete; next implement isolated CI Sweeper bridge, explicit s
 - Q: CI Sweeper 正向 fixture 前如何验证安全边界？ → A：先跑负向矩阵，再只跑一次正向 fixture；错误 Secret、项目/route/ref、普通 Note、错误 marker、carrier gate 未开启和 confirmation 不匹配全部 zero-write，不创建 pipeline/Issue/MR/branch。 (负向证据通过后才允许正向 provider write。)
 - Q: CI Sweeper dogfood 结束后保留哪些证据？ → A：保留 source failure pipeline/job/artifacts、route decision、carrier notes、claim、repair MR 和 closeout artifacts；只删除 automated/ci-sweeper-gitlab-* branch，关闭本次独立 carrier Issue，不删除 pipeline/job/MR/artifacts。 (保留不可变审计证据，清理可再生运行资源。)
 - Q: 独立 bridge 如何区分 webhook path？ → A：在 ZAgenticLoop 开源 core 增加通用 ZJ_LOOP_GITLAB_BRIDGE_WEBHOOK_PATH 配置；默认 /gitlab/webhook/issue-note，CI Sweeper 使用独立 path；不暴露任何闭源项目内部信息。 (以兼容默认值提供多 bridge 共存能力，route 分流由独立 path、marker 和 target route 共同约束。)
+- Q: 下一步是否进入完整 CI Sweeper repair lifecycle dogfood？ → A：在测试 fork 中执行一次受控 synthetic failure，验证 failure → carrier Issue → repair MR → 人工合并 → closeout 全链路；生产项目保持隔离。 (Bridge 触发链路已通过，剩余风险集中在真实失败信号、repair MR 与 closeout。)
+- Q: synthetic failure fixture 如何开启？ → A：默认关闭，只通过显式 CI 变量手动开启一次；只修改 .gitlab-ci.local.yml，不影响普通流水线，验证完成后删除或关闭 fixture。 (保持普通流水线稳定，fixture 可控、可回滚。)
+- Q: carrier Issue 如何创建？ → A：由受控 ci-sweeper pipeline 自动创建全新的独立 carrier Issue；必须同时满足 API source、ZJ_LOOP_GITLAB_CARRIER_ENABLED=true、固定确认词和 bridge 身份绑定。 (验证事件驱动链路；任一 gate 失败保持 zero-write。)
+- Q: repair MR 允许修改哪些文件？ → A：只修改测试 fork 的 .gitlab-ci.local.yml，关闭或恢复 synthetic failure gate；不修改业务代码和普通测试文件。 (保证验证 CI Sweeper 生命周期，不引入业务变更噪声。)
+- Q: repair MR 如何进入主分支？ → A：自动化只创建 automated/ci-sweeper-gitlab-<pipeline-id>-<request-hash> 分支和 MR，目标为 master；由 Human 审核并合并。 (自动化不直接写入 master，保留人工审查边界。)
+- Q: repair MR 合并后如何 closeout？ → A：仅在 MR 已合并、分支符合 allowlist、carrier identity 和固定确认词均通过后，自动追加 closeout evidence、删除 repair 分支并关闭对应 carrier Issue；任一条件失败则 report-only。 (验证完整生命周期，同时把清理副作用限制在本次受控 fixture。)
+- Q: dogfood 完成后的证据如何处理？ → A：保留 source failure pipeline/job/artifacts、route decision、carrier notes、claim、repair MR 和 closeout evidence；只删除本次 repair 分支并关闭 carrier Issue。 (保留不可变审计证据，只清理可再生运行资源。)
+- Q: 正向 fixture 前是否强制先跑负向矩阵？ → A：是。先验证错误 Secret、项目/route/ref、普通 Note、错误 marker、carrier gate 和 confirmation 不匹配全部 zero-write；通过后只执行一次正向 fixture。 (先证明安全边界，再执行 provider 写操作。)
+- Q: 是否开始执行负向安全矩阵？ → A：开始执行，先验证全量 zero-write 安全边界，不进行 provider 写操作。 (先完成本地负向合同测试，再决定是否进入一次正向 fixture。)
+- Q: 负向安全矩阵结果是什么？ → A：本地负向合同测试 10/10 通过，错误凭证、禁用 route、项目/route/ref 不匹配、普通 Note、provider 失败/不确定响应和响应绑定异常均 zero-write。 (命令：npm run build && node --test test/gitlab-issue-note-bridge-negative-matrix.test.mjs test/gitlab-issue-note-bridge-trigger.test.mjs test/gitlab-issue-note-bridge-server.test.mjs；未访问 GitLab。)
+- Q: 负向矩阵通过后是否进入正向 fixture？ → A：进入测试 fork，开启一次显式失败 gate，创建 source failure pipeline，再触发 CI Sweeper 完整 repair lifecycle；只执行一次。 (负向安全边界已通过，正向 provider write 限定在测试 fork。)
+- Q: 正向 fixture 的人工评审入口是什么？ → 测试 fork 已创建 draft MR !33，分支 codex/ci-sweeper-positive-fixture；仅修改 .gitlab-ci.local.yml，Human 合并后才能进入一次正向失败流水线。 (MR URL: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/merge_requests/33)
+- Q: 正向 synthetic failure 证据是什么？ → 测试 fork master pipeline 10581856 的 job 26218671 按预期失败，并上传 synthetic-failure-evidence.json；失败日志声明 side_effects_executed:false。 (Pipeline: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/pipelines/10581856; Job: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/jobs/26218671)
 <!-- ROADMAP_SECTION_END -->
