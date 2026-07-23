@@ -43,11 +43,11 @@ jobs:
           TRIAGE_TRANSITION_REQUEST_JSON: ${{ inputs.triage_transition_request_json }}
           TRIAGE_TRANSITION_CONFIRMATION: ${{ inputs.triage_transition_confirmation }}
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.16 zj-loop-route dispatch issue-backlog-triage --json > route-decision.json || true
-          npx --yes --package @jununfly/zj-loop-core@0.1.16 zj-loop-consumer plan issue-backlog-triage --json > consumer-plan.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.17 zj-loop-route dispatch issue-backlog-triage --json > route-decision.json || true
+          npx --yes --package @jununfly/zj-loop-core@0.1.17 zj-loop-consumer plan issue-backlog-triage --json > consumer-plan.json || true
           if [ -n "$TRIAGE_ACTION_REQUEST_JSON" ]; then
             printf '%s\n' "$TRIAGE_ACTION_REQUEST_JSON" > triage-action-request.json
-            npx --yes --package @jununfly/zj-loop-core@0.1.16 zj-loop-issue-triage-action action-plan \
+            npx --yes --package @jununfly/zj-loop-core@0.1.17 zj-loop-issue-triage-action action-plan \
               --request triage-action-request.json \
               --json > action-plan.json || true
             cat action-plan.json >> "$GITHUB_STEP_SUMMARY"
@@ -65,13 +65,13 @@ jobs:
               cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
-            npx --yes --package @jununfly/zj-loop-core@0.1.16 zj-loop-issue-triage-transition confirm-plan \
+            npx --yes --package @jununfly/zj-loop-core@0.1.17 zj-loop-issue-triage-transition confirm-plan \
               --request triage-transition-request.json \
               --confirmation-phrase "$TRIAGE_TRANSITION_CONFIRMATION" \
               --json > transition-plan.json || true
             cat transition-plan.json >> "$GITHUB_STEP_SUMMARY"
             if jq -e '.decision.status == "confirmed" and .confirmed_transition.issue_fix_request != null' transition-plan.json >/dev/null; then
-              npx --yes --package @jununfly/zj-loop-core@0.1.16 zj-loop-issue-triage-transition request-body \
+              npx --yes --package @jununfly/zj-loop-core@0.1.17 zj-loop-issue-triage-transition request-body \
                 --transition-plan transition-plan.json \
                 --out issue-fix-request-body.md \
                 --title-out issue-fix-request-title.txt \

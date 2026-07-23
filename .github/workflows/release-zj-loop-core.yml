@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g. zj-loop-core-v0.1.16)'
+        description: 'Tag to publish (e.g. zj-loop-core-v0.1.17)'
         required: true
         type: string
 
