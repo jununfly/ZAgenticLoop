@@ -2,6 +2,20 @@
 # Pattern/registry validation gates — shared by validate-patterns.yml and daily-triage.yml
 set -euo pipefail
 
+CURRENT_GATE="startup"
+
+report_failure() {
+  local status=$?
+  trap - ERR
+  echo "::error title=validate gate failed::phase=${CURRENT_GATE}; line=$1; exit=${status}; command=$2"
+  echo "validate gates failed: phase=${CURRENT_GATE}, line=$1, exit=${status}"
+  exit "$status"
+}
+
+trap 'report_failure "$LINENO" "$BASH_COMMAND"' ERR
+
+CURRENT_GATE="registry and pattern structure"
+
 echo "Patterns declared in registry:"
 grep '^\s*-\s*id:' patterns/registry.yaml | sed 's/.*id: //' | sort > /tmp/registry.txt
 echo "Pattern markdown files:"
@@ -25,7 +39,10 @@ test -f templates/zj-loop-run-log.md.template || (echo "Missing zj-loop-run-log 
 test -f templates/zj-loop-budget.md.template || (echo "Missing zj-loop-budget template"; exit 1)
 echo "Templates present ✓"
 
+CURRENT_GATE="dependency bootstrap"
 npm install --no-save yaml@2 ajv@8 zod@3 cron-parser@5 typescript@5 @types/node@20
+
+CURRENT_GATE="compile and generated bundle validation"
 
 # The release dependency is registry-backed, but this pre-publish repository gate
 # must still run against the checked-out workspace before infra 0.1.0 exists.
@@ -38,9 +55,15 @@ node scripts/check-zj-loop-init-sync.mjs
 node scripts/validate-release-workflows.mjs
 node tools/zj-loop-init/scripts/bundle-assets.mjs
 node scripts/validate-generated-bundle-release-gate.mjs
+
+CURRENT_GATE="provider parity and release capability"
+
 npm run test:provider-parity-gate
 node --test scripts/validate-release-capability-gate.test.mjs
 node scripts/validate-release-capability-gate.mjs
+
+CURRENT_GATE="route and lifecycle replay tests"
+
 node scripts/ci-sweeper-e2e-replay.mjs > /tmp/ci-sweeper-e2e-replay.json
 node --test scripts/ci-sweeper-e2e-replay.test.mjs
 node scripts/issue-fix-request-e2e-replay.mjs > /tmp/issue-fix-request-e2e-replay.json
@@ -49,6 +72,7 @@ node scripts/post-merge-roadmap-closeout-e2e-replay.mjs > /tmp/post-merge-roadma
 node scripts/issue-backlog-triage-e2e-replay.mjs > /tmp/issue-backlog-triage-e2e-replay.json
 node scripts/issue-triage-transition-e2e-replay.mjs > /tmp/issue-triage-transition-e2e-replay.json
 node scripts/issue-triage-action-runner.mjs > /tmp/issue-triage-action-runner.json
+
 node scripts/pr-steward-report-e2e-replay.mjs > /tmp/pr-steward-report-e2e-replay.json
 node scripts/pr-steward-fix-request-e2e-replay.mjs > /tmp/pr-steward-fix-request-e2e-replay.json
 node scripts/pr-steward-claim-e2e-replay.mjs > /tmp/pr-steward-claim-e2e-replay.json
@@ -58,6 +82,9 @@ node scripts/dependency-sweeper-route-e2e-replay.mjs > /tmp/dependency-sweeper-r
 node scripts/dependency-sweeper-claim-e2e-replay.mjs > /tmp/dependency-sweeper-claim-e2e-replay.json
 node --test scripts/report-only-route-dispatcher.test.mjs scripts/issue-backlog-triage-e2e-replay.test.mjs scripts/issue-triage-transition-e2e-replay.test.mjs scripts/issue-triage-action-runner.test.mjs scripts/pr-steward-report-e2e-replay.test.mjs scripts/pr-steward-fix-request-e2e-replay.test.mjs scripts/pr-steward-claim-e2e-replay.test.mjs scripts/pr-steward-live-runner.test.mjs scripts/changelog-drafter-report-e2e-replay.test.mjs scripts/changelog-drafter-draft-request-e2e-replay.test.mjs scripts/changelog-drafter-live-runner.test.mjs scripts/dependency-sweeper-route-e2e-replay.test.mjs scripts/dependency-sweeper-claim-e2e-replay.test.mjs scripts/dependency-sweeper-live-runner.test.mjs scripts/write-file-once.test.mjs scripts/issue-fix-request-contract.test.mjs scripts/issue-fix-request-dispatcher.test.mjs scripts/issue-fix-request-e2e-replay.test.mjs scripts/roadmap-activation-e2e-replay.test.mjs scripts/roadmap-activation-dispatcher.test.mjs scripts/build-ci-issue-fix-request-body.test.mjs scripts/roadmap-handoff-gate.test.mjs scripts/protocol-terminology-gate.test.mjs scripts/post-merge-roadmap-closeout-contract.test.mjs scripts/post-merge-roadmap-closeout-e2e-replay.test.mjs scripts/post-merge-roadmap-closeout.test.mjs scripts/validate-post-merge-closeout-workflow.test.mjs
 node scripts/protocol-terminology-gate.mjs
+
+CURRENT_GATE="tool package tests"
+
 node scripts/run-tool-package-scripts.mjs test --gate=validate --install
 
 echo "validate gates passed ✓"

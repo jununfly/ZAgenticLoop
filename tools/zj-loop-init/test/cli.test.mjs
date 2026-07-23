@@ -10,6 +10,8 @@ import { promisify } from 'node:util';
 const exec = promisify(execFile);
 const CLI = path.resolve('dist/cli.js');
 const ROUTE_CLI = path.resolve('../zj-loop-core/dist/route-cli.js');
+const CORE_VERSION = JSON.parse(await readFile(path.resolve('../zj-loop-core/package.json'), 'utf8')).version;
+const CORE_PACKAGE_PATTERN = new RegExp(`@jununfly\\/zj-loop-core@${CORE_VERSION.replaceAll('.', '\\.')}`);
 
 test('bundle-assets tolerates concurrent rebuilds', async () => {
   await Promise.all([
@@ -219,7 +221,7 @@ test('zj-loop-init --add github-actions scaffolds the workflow bundle', async ()
 
     const smoke = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-smoke.yml'), 'utf8');
     assert.match(smoke, /@jununfly\/zj-loop-audit@0\.1\.6/);
-    assert.match(smoke, /@jununfly\/zj-loop-core@0\.1\.16/);
+    assert.match(smoke, CORE_PACKAGE_PATTERN);
     assert.match(smoke, /zj-loop-route dispatch manual-smoke-report/);
     assert.match(smoke, /zj-loop-consumer plan manual-smoke-report/);
     const ciSweeper = await readFile(path.join(dir, '.github', 'workflows', 'zj-loop-ci-sweeper.yml'), 'utf8');
@@ -465,7 +467,7 @@ test('zj-loop-init --add gitlab-ci scaffolds includeable GitLab CI fragments', a
       assert.match(body, fragment === 'zj-loop-ci-sweeper.yml' ? /stage: "zj-loop-recovery"/ : /stage: "zj-loop"/);
       assert.match(body, /image: "node:22"/);
       assert.match(body, /ZJ Loop GitLab CI requires Node >=18/);
-      assert.match(body, /--package @jununfly\/zj-loop-core@0\.1\.16/);
+      assert.match(body, CORE_PACKAGE_PATTERN);
       assert.match(body, /> consumer-plan\.json \|\| true/);
       assert.doesNotMatch(body, /\n  tags:\n/);
       assert.match(body, /artifacts:/);
