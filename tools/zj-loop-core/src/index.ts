@@ -50,6 +50,7 @@ export * from './gitlab-changelog-drafter-adapter.js';
 export * from './gitlab-changelog-drafter-closeout.js';
 export * from './gitlab-control-route-evidence.js';
 export * from './gitlab-issue-note-bridge.js';
+export * from './gitlab-issue-note-bridge-config.js';
 export * from './gitlab-issue-note-bridge-receipts.js';
 export * from './gitlab-issue-note-bridge-trigger.js';
 export * from './gitlab-issue-note-bridge-server.js';
