@@ -33,7 +33,8 @@ const FIXTURES = [
 export async function runReferenceInstallationFixtures(root = ROOT) {
   const tempRoot = await mkdtemp(path.join(tmpdir(), 'zj-loop-reference-installations-'));
   try {
-    await ensureLocalInitRuntime(root);
+    await ensureLocalToolRuntime(root, 'tools/zj-loop-init');
+    await ensureLocalToolRuntime(root, 'tools/zj-loop-audit');
     const results = [];
     for (const fixture of FIXTURES) {
       results.push(await runFixture(root, tempRoot, fixture));
@@ -93,10 +94,10 @@ async function runFixture(root, tempRoot, fixture) {
   };
 }
 
-async function ensureLocalInitRuntime(root) {
-  const initRoot = path.join(root, 'tools/zj-loop-init');
+async function ensureLocalToolRuntime(root, toolRelativePath) {
+  const toolRoot = path.join(root, toolRelativePath);
   const currentCorePackage = JSON.parse(await readFile(path.join(root, 'tools/zj-loop-core/package.json'), 'utf8'));
-  const installedCoreRoot = path.join(initRoot, 'node_modules/@jununfly/zj-loop-core');
+  const installedCoreRoot = path.join(toolRoot, 'node_modules/@jununfly/zj-loop-core');
   try {
     const installed = JSON.parse(await readFile(path.join(installedCoreRoot, 'package.json'), 'utf8'));
     if (installed.version === currentCorePackage.version) return;
