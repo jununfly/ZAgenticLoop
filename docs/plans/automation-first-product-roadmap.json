@@ -2538,10 +2538,12 @@
     "1-5-5-3-4": {
       "id": "1-5-5-3-4",
       "label": "GitLab bridged Issue Triage event-driven lifecycle dogfood",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3",
-      "children": [],
+      "children": [
+        "1-5-5-3-4-1"
+      ],
       "decisions": [
         {
           "q": "gitlab-webhook-test-fork 与 product-project 的职责边界是什么？",
@@ -2722,6 +2724,16 @@
           "q": "实际测试 Ingress/TLS 配置由谁执行？",
           "answer": "A：由闭源测试环境基础设施 owner 执行，并只向公开项目提供脱敏 opaque evidence reference",
           "note": "ZAgenticLoop 不接触 Secret、真实 hostname 或私有 provider response；公开仓库只记录协议与验证结果。"
+        },
+        {
+          "q": "GitLab Roadmap activation 遇到空 MR 如何处理？",
+          "answer": "A：视为空结果失败，executor 必须先提交可审阅 activation 变更，再创建或更新 MR",
+          "note": "GitLab live dogfood 已证明空 MR 不可审阅；后续实现 generic GitLab commit API，保持闭源项目细节在测试 fork，不写入公开仓库。"
+        },
+        {
+          "q": "activation MR 应提交哪类变更？",
+          "answer": "A：提交固定 activation contract artifact 到 zj-loop/orchestrations/<activation-request-id>/roadmap-activation.json",
+          "note": "不修改业务 roadmap 文档；artifact 作为可审阅、可审计、可幂等的最小 MR 变更。"
         }
       ],
       "notes": "Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied."
@@ -2729,12 +2741,83 @@
     "1-5-5-3-5": {
       "id": "1-5-5-3-5",
       "label": "GitLab bridged CI Sweeper event-driven repair lifecycle dogfood",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-5-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "CI Sweeper 正向 fixture 放在哪个项目？",
+          "answer": "A：仅在 mlive-dev/ai-studio-gitlab 专用测试 fork 执行；允许创建 repair MR，但由 Human 人工合并；不触碰 mlive-dev/ai-studio 生产项目。",
+          "note": "验证 bridge、carrier、claim、repair MR、closeout 全链路，生产项目保持只读/不触发。"
+        },
+        {
+          "q": "CI Sweeper 失败信号如何制造？",
+          "answer": "A：在 ai-studio-gitlab 的 .gitlab-ci.local.yml 增加一次性、显式变量门控的 synthetic failing job；不修改业务代码，不影响普通 pipeline；只生成 Issue Fix Request/repair MR，不自动合并或发布。",
+          "note": "fixture 完成后删除或关闭入口。"
+        },
+        {
+          "q": "CI Sweeper bridge 如何与 roadmap bridge 共存？",
+          "answer": "B：新增独立 CI Sweeper bridge 实例/入口；target_route=ci-sweeper，使用独立 marker 与 pipeline 配置；roadmap bridge 保持不变。",
+          "note": "验证多 route 共存、独立 marker、独立 pipeline 触发和故障隔离。"
+        },
+        {
+          "q": "CI Sweeper carrier 是否允许由 bridge API pipeline 创建？",
+          "answer": "B：允许受控 bridge-shaped API pipeline 创建；必须同时满足 API source、carrier enabled、固定 confirmation、bridge 身份/项目/route/request body 全绑定和 GITLAB_TOKEN；其他 API pipeline zero-write。",
+          "note": "保持事件驱动完整性，同时保留显式开关、固定确认词和身份绑定。"
+        },
+        {
+          "q": "CI Sweeper carrier 使用哪个 Issue？",
+          "answer": "A：为本次 synthetic failure 创建全新的独立 carrier Issue；使用新的 request_id/dedupe marker，不复用 Issue #2 或 roadmap carrier；closeout 后单独关闭并记录清理证据。",
+          "note": "隔离 route、request 和生命周期，避免重复消费或误关闭。"
+        },
+        {
+          "q": "repair MR 的最小变更范围是什么？",
+          "answer": "A：只修改 ai-studio-gitlab 的 .gitlab-ci.local.yml，恢复或关闭 synthetic fixture 的失败 gate；不修改业务代码或普通测试文件；由 Human 人工合并。",
+          "note": "隔离测试 substrate，验证有效 diff、repair MR 和后续 pipeline。"
+        },
+        {
+          "q": "CI Sweeper 如何接收 synthetic failure？",
+          "answer": "A：先创建故意失败的 pipeline，再用独立 Issue 的固定 marker Note 触发 CI Sweeper bridge；失败 pipeline ID 作为 signal_id，验证 pipeline/job/commit/artifact 到 carrier、claim、repair MR 的绑定。",
+          "note": "Issue Note 负责启动事件流，CI failure pipeline 保留为 source evidence。"
+        },
+        {
+          "q": "CI Sweeper bridge 使用什么 marker？",
+          "answer": "A：固定使用 /zj-loop start ci-sweeper；route、marker、target pipeline 固定绑定；普通评论和其他 route marker 默认拒绝。",
+          "note": "与 roadmap marker 语法一致，但保持 route 隔离。"
+        },
+        {
+          "q": "CI Sweeper carrier 使用什么确认词？",
+          "answer": "A：复用 CREATE_GITLAB_CI_SWEEPER_CARRIER，并要求 ZJ_LOOP_GITLAB_CARRIER_ENABLED=true；不新增临时确认词。",
+          "note": "沿用已有 GitLab CI Sweeper 协议，保持 provider parity 和安全双开关。"
+        },
+        {
+          "q": "CI Sweeper repair MR 使用什么分支策略？",
+          "answer": "A：使用 automated/ci-sweeper-gitlab-<pipeline-id>-<request-hash>，目标分支 master；只创建 MR，由 Human 审核并合并，不直接提交 master。",
+          "note": "保持 branch allowlist、request identity、source pipeline 和人工 review 边界。"
+        },
+        {
+          "q": "CI Sweeper repair MR 合并后如何 closeout？",
+          "answer": "A：受控自动 closeout；确认 MR 已合并、branch allowlist、carrier identity 和固定确认词全部通过后，追加 closeout evidence、删除 automated/ci-sweeper-gitlab-* 分支并关闭独立 carrier Issue；任一 guard 失败则 report-only。",
+          "note": "验证完整 lifecycle，同时限制清理副作用。"
+        },
+        {
+          "q": "CI Sweeper 正向 fixture 前如何验证安全边界？",
+          "answer": "A：先跑负向矩阵，再只跑一次正向 fixture；错误 Secret、项目/route/ref、普通 Note、错误 marker、carrier gate 未开启和 confirmation 不匹配全部 zero-write，不创建 pipeline/Issue/MR/branch。",
+          "note": "负向证据通过后才允许正向 provider write。"
+        },
+        {
+          "q": "CI Sweeper dogfood 结束后保留哪些证据？",
+          "answer": "A：保留 source failure pipeline/job/artifacts、route decision、carrier notes、claim、repair MR 和 closeout artifacts；只删除 automated/ci-sweeper-gitlab-* branch，关闭本次独立 carrier Issue，不删除 pipeline/job/MR/artifacts。",
+          "note": "保留不可变审计证据，清理可再生运行资源。"
+        },
+        {
+          "q": "独立 bridge 如何区分 webhook path？",
+          "answer": "A：在 ZAgenticLoop 开源 core 增加通用 ZJ_LOOP_GITLAB_BRIDGE_WEBHOOK_PATH 配置；默认 /gitlab/webhook/issue-note，CI Sweeper 使用独立 path；不暴露任何闭源项目内部信息。",
+          "note": "以兼容默认值提供多 bridge 共存能力，route 分流由独立 path、marker 和 target route 共同约束。"
+        }
+      ],
+      "notes": "Design decisions complete; next implement isolated CI Sweeper bridge, explicit synthetic failure fixture, API carrier gate, repair MR and guarded closeout in ai-studio-gitlab."
     },
     "1-5-5-3-2-1": {
       "id": "1-5-5-3-2-1",
@@ -3017,6 +3100,11 @@
           "q": "Webhook 目标域名如何与已发布实例绑定？",
           "answer": "A：将 Project Hook URL 从 UAT 域名切换为已验证返回 bridge health/unauthorized envelope 的已发布域名，并保留 Issue 与 Note 事件、SSL 和 Secret 配置。",
           "note": "Hook 页面已显示新 URL；不重复发送旧 marker，等待后续受控正向验证。"
+        },
+        {
+          "q": "正向 delivery 为什么被拒绝？",
+          "answer": "A：GitLab 实际发送 X-Gitlab-Event=Note Hook，而旧 core 只允许 Issue Hook，delivery 返回 event-not-allowed 且 side_effects_executed=false；已修复 core 0.1.12 并更新私有 vendor。",
+          "note": "私有项目提交 21a899f 已推送，但 Caster 当前可选镜像仍是旧 e69ff142；等待新构建后发布，再重试一次正向 marker。"
         }
       ],
       "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
@@ -4061,11 +4149,47 @@
       "children": [],
       "decisions": [],
       "notes": "Real product-project incident cleanup and zero-residue audit completed. Pipeline 10559519 rerun job 26152795 succeeded with artifact incident-zero-residue-audit.json. Final status=healthy: open_carrier_issues=0, open_repair_mrs=0, repair_branches=0, duplicate_requests=0, duplicate_claims=0. provider_writes=0 and side_effects_executed=false. Cleanup used fixed confirmation phrase CONFIRM_GITLAB_INCIDENT_CLEANUP; all automated ci-sweeper repair branches and the explicitly confirmed dependency-sweeper branch were removed."
+    },
+    "1-5-5-3-4-1": {
+      "id": "1-5-5-3-4-1",
+      "label": "GitLab Roadmap activation contract artifact commit",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "activation artifact 使用什么 schema？",
+          "answer": "A：直接提交现有 zj-loop.roadmap_activation_contract_plan.v1 contract plan JSON",
+          "note": "路径固定为 zj-loop/orchestrations/<activation-request-id>/roadmap-activation.json；复用现有 verifier 与 closeout contract，不新增 wrapper schema。"
+        },
+        {
+          "q": "重复运行如何处理？",
+          "answer": "A：固定路径幂等提交；首次 create，同一 activation_request_id 重试 update，并复用同一个 MR",
+          "note": "Webhook 重试不创建重复 MR；同内容重试不产生无意义 commit，只有内容变化才 update。"
+        },
+        {
+          "q": "内容相同的重试如何判定？",
+          "answer": "A：读取 branch 上现有 artifact，规范化 JSON 后比较；相同跳过 commit，变化才 update",
+          "note": "避免无意义 commit；比较只针对固定 artifact 路径，不扫描或覆盖其他文件。"
+        },
+        {
+          "q": "人工修改 activation artifact 时如何处理？",
+          "answer": "A：返回 artifact-conflict，拒绝覆盖并交给 Human 决定",
+          "note": "只保护固定 artifact 路径；自动化不得覆盖人工修订，也不创建第二个版本文件。"
+        },
+        {
+          "q": "artifact 路径是否允许自定义？",
+          "answer": "A：固定为 zj-loop/orchestrations/<activation-request-id>/roadmap-activation.json，并严格校验 request id slug",
+          "note": "拒绝 ..、斜杠、绝对路径和隐藏路径；固定路径保证 closeout、dedupe 与审计索引一致。"
+        }
+      ],
+      "notes": "Live GitLab dogfood completed: artifact commit, MR !17 merge, controlled post-merge closeout, activation branch deletion, carrier Issue #2 closure, and temporary variable cleanup verified."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-22 20:32:41",
+    "updated": "2026-07-23 15:00:17",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

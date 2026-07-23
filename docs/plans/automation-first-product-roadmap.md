@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-22 20:32:41
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 15:00:17
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -40,45 +40,23 @@
     ├── [ ][Y+] 1-7-3. README and capability-claim guard for completion targets
     └── [ ][Y+] 1-7-4. Release candidate complete-matrix audit
 
-### 当前施工：1-5-5-3-4. GitLab bridged Issue Triage event-driven lifecycle dogfood
+### 当前施工：1-5-5-3-5. GitLab bridged CI Sweeper event-driven repair lifecycle dogfood
 
-Deferred from current version. Track GitLab Webhook Issue Triage adaptation in docs/plans/known-gaps.md; no product capability, trusted automation, or live completion claim until the checklist is fully satisfied.
+Design decisions complete; next implement isolated CI Sweeper bridge, explicit synthetic failure fixture, API carrier gate, repair MR and guarded closeout in ai-studio-gitlab.
 
 **决策：**
-- Q: gitlab-webhook-test-fork 与 product-project 的职责边界是什么？ → gitlab-webhook-test-fork 作为独立 GitLab Webhook 验证服务器/容器；product-project 作为主要开发、CI consumer、Issue Triage 集成项目。 (Webhook 基础设施与业务/consumer 项目分层；周末只做本地开发，工作日再做真实 provider 验证。)
-- Q: 真实 Issue Triage dogfood 的项目绑定是什么？ → Issue Note 来源和目标 pipeline 都绑定 example-group/product-project；bridge 服务部署在 example-group/gitlab-webhook-test-fork。 (服务托管项目与业务验证项目分离；bridge 的 project_path、API target 和 trigger token 绑定 product-project。)
-- Q: GitLab Webhook Issue Triage 适配是否纳入本版本产品计划？ → 不纳入本版本；转移到 docs/plans/known-gaps.md checklist，作为后续版本待完善能力。 (保持本版本知行合一；已有 adapter、部署分支和本地测试只算探索性/基础设施准备，不算产品支持、trusted automation 或 live completion evidence。)
-- Q: GitLab Webhook Issue Triage 何时允许重新纳入版本路线图？ → 只有协议、negative/recovery matrix、真实 live evidence、promotion gate 全部完成，并经 Human 明确确认后，才重新纳入。 (known gap 不因核心代码或本地测试完成而提前回流；避免探索性实现被误读为产品结论。)
-- Q: 本版本发布时 GitLab Webhook 功能如何处理？ → 正常版本继续发布，但 Webhook 功能保持 disabled/unavailable；不启用 route、secret 或 provider write，其他功能正常。 (Webhook 是明确的 known gap，不影响其他产品功能；未完成 checklist 和 promotion gate 前不得对用户宣称可用。)
-- Q: Webhook disabled/unavailable 如何对用户表达？ → 版本能力说明标记 unavailable；误调用 endpoint 返回稳定的 webhook-unavailable 结构化结果，并保证零 provider side effect。 (外部 GitLab 操作方和内部用户得到一致信号；unavailable 不被误判为网络故障或已启用能力。)
-- Q: Webhook disabled 时 endpoint 返回什么协议？ → 返回 HTTP 200 和稳定 webhook-unavailable envelope，包含 schema、status、reason=webhook-unavailable、side_effects_executed=false。 (避免 GitLab 重试风暴，同时明确功能未启用；不触发 pipeline 或其他 provider side effect。)
-- Q: 当前版本如何技术性保证 Webhook disabled？ → Route Table 将 Webhook route 固定为 enabled=false，运行时默认 disabled；未完成 promotion gate 前不得通过普通环境变量开启。 (disabled 是结构化、可检查、可审计状态；误注入 Secret 或误配置 Webhook 也不能自动启用。)
-- Q: 谁能重新开启 disabled Webhook？ → 只有 Human 明确批准的 promotion PR，在 known-gaps checklist 和 promotion gate 完成后修改 Route Table 并开启；Secret 注入本身不能开启。 (防止部署权限或环境变量绕过产品版本 gate；enabled 状态必须由版本化变更和 Human 审核控制。)
-- Q: 当前版本如何证明 Webhook disabled？ → CI/doctor 生成结构化 capability artifact，记录 webhook.status=unavailable、enabled=false、provider_writes_allowed=false，并检查运行时配置。 (不可用状态本身必须有可审计证据，防止被误判为漏测或已启用。)
-- Q: disabled capability artifact 是否当前版本实现？ → 当前版本实现只读的 disabled capability check/artifact；不实现 Webhook trigger、Issue Triage write 或线上 bridge。 (用零 provider side effect 的可验证能力保证 unavailable 不是口头声明，同时不把 Webhook 适配带回本版本。)
-- Q: disabled capability artifact 由什么机制生成？ → 复用现有 doctor/ledger，增加 GitLab Webhook capability 行，记录 unavailable、enabled=false、provider_writes_allowed=false。 (所有 agent 使用同一份 capability 状态；不新增 Webhook 专用状态系统。)
-- Q: doctor/ledger 如何区分不可用与延期？ → 使用两个固定维度：status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；status 与 planning_status 均由固定 enum 和 Route Table 校验。 (运行能力与版本计划状态严格分层，禁止用 incomplete 或平均评分替代。)
-- Q: Webhook capability 与计划状态使用哪些固定 enum？ → status 固定为 available|unavailable|blocked|unknown；planning_status 固定为 in_scope|deferred|completed|superseded。当前为 status=unavailable、planning_status=deferred。 (两个维度均由 Route Table 校验；禁止用 incomplete 或自由文本替代。)
-- Q: deferred unavailable Webhook 是否阻塞其他产品发布？ → 只阻塞 GitLab Webhook capability 和对应路线图节点；不阻塞其他产品功能发布，但整体版本状态必须显示 deferred known gap，不能宣称全能力完成。 (保持正常产品发布与诚实能力声明并存；不做整体平均评分或静默忽略。)
-- Q: 当前版本收到 Webhook 请求时 agent 如何处理？ → 返回 status=unavailable、planning_status=deferred、side_effects_executed=false 的结构化 hard stop，引用 docs/plans/known-gaps.md；不调用 GitLab API，也不自动降级为其他写入路径。 (所有 agent 对 deferred capability 保持一致行为，避免把不可用能力转换成未授权的自动副作用。)
-- Q: 当前版本对外如何声明 GitLab Webhook？ → 声明 GitLab Webhook Issue Triage 暂不可用（deferred）；本版本不启用该能力，也不产生 GitLab provider write；其他产品功能正常，不承诺具体上线日期。 (能力声明必须与实现状态一致，避免 beta 或隐含可用性承诺。)
-- Q: Webhook unavailable 状态是否影响其他 capability？ → Webhook 只作为独立 route-specific ledger cell，status=unavailable、planning_status=deferred；只阻塞自身 route，不污染其他 capability 状态。 (doctor/ledger 严格按 route 计算，整体版本可显示 known gap，但其他功能正常发布。)
-- Q: Webhook ledger cell 使用什么 route identity？ → 独立使用 gitlab-issue-note-bridge；issue-triage、issue-triage-action、issue-triage-transition 分别记录，bridge transport 不等于 Issue Triage capability。 (严格区分接入层、consumer 层和 provider write 层，避免 route 语义混淆。)
-- Q: 当前版本 Route Table 是否保留 Webhook route？ → 保留完整 gitlab-issue-note-bridge route 条目，但固定 enabled=false、status=unavailable、planning_status=deferred，并声明 capabilities/verifiers 供 doctor/ledger 检查。 (系统可见且明确知道该能力；禁用状态不能被误读为未设计或可用。)
-- Q: Webhook route 的 capabilities/verifiers 如何表达？ → 分成 declared_capabilities、verified_capabilities、verifiers；当前 declared_capabilities 可列未来范围，verified_capabilities 为空，verifiers 只验证 route-table、disabled-state、zero-side-effect。 (声明未来范围不等于完成证据；当前 route 明确不可用且零 provider side effect。)
-- Q: Webhook bridge declared capabilities 覆盖到哪一层？ → 只声明 webhook-envelope-validation、receipt-dedupe、fixed-api-trigger；Issue Triage 分析、transition 和 provider write 由独立 route 声明。 (Bridge、consumer、provider write 三层保持独立，避免接入能力被误读为业务自动化能力。)
-- Q: disabled capability artifact 使用什么 schema？ → 采用统一 envelope zj-loop.capability.v1 与 route-specific artifact zj-loop.gitlab_issue_note_bridge_capability.v1；route artifact 包含 status、planning_status、enabled、provider_writes_allowed、declared/verified capabilities 和 verifiers。 (doctor/ledger 统一消费，bridge route 保持独立语义。)
-- Q: doctor/ledger 遇到 deferred Webhook 时如何影响退出码？ → 默认生成完整 artifact 并成功结束，但明确记录 route deferred；仅 --require-complete 等严格模式因 route 未完成而失败。 (正常发布不被该缺口阻塞，严格模式仍防止版本被误报为全能力完成。)
-- Q: Webhook capability artifact 记录哪些绑定信息？ → 记录 provider=gitlab、project_path=example-group/product-project、route_id=gitlab-issue-note-bridge、status=unavailable、planning_status=deferred、enabled=false、provider_writes_allowed=false；可记录 auth_source 名称，不记录 Secret、Token 或完整 payload。 (证明项目与 route 绑定且不泄露凭证；部署实验不被误当 live evidence。)
-- Q: disabled capability check 覆盖哪些验证场景？ → 本地覆盖正常 disabled 配置、Route 缺失或 enum 非法、普通环境变量越权开启、所有场景 provider_writes_allowed=false；使用 fixture，不访问 GitLab。 (证明默认不可用、配置错误 fail-closed，周末不引入 provider side effect。)
-- Q: disabled capability artifact 如何保存？ → 由 doctor/CI 每次动态生成并保存为 artifact/ledger 运行证据，不提交生成快照；Route Table 和 known-gaps 作为源配置。 (避免状态快照过期，同时保留每次运行的可审计证据。)
-- Q: disabled capability artifact 保留多久？ → 默认保留 90 天，覆盖一个完整版本周期；只保留脱敏 capability 状态，不保存 Secret、Token 或完整 payload。 (支持版本回顾和 known-gap 审计，避免无限累积运行数据。)
-- Q: 重新开启 GitLab Webhook 的第一步是什么？ → A：先提交 Webhook re-enable readiness PR，补齐版本、owner、项目绑定、Secret 分离、固定 endpoint/ref 与 health check；保持 enabled=false (当前没有可用 gitlab-webhook-test-fork deployment；准备 PR 不产生 GitLab provider side effect，待 Human review 后再部署与 promotion。)
-- Q: GitLab Webhook live fixture 使用哪个项目边界？ → A：只在 example-group/gitlab-webhook-test-fork 内网测试 fork 与其 bridge deployment 上验证；example-group/product-project 生产项目不创建 fixture、不配置 Webhook、不触发 API pipeline (product-project 有真实用户，必须保持生产隔离；生产项目只作为后续受控安装目标，不能作为开发验证环境。)
-- Q: 测试 fork 的 HTTPS bridge 如何承载？ → A：复用内网现有 Ingress，分配固定私有 DNS 与 TLS (不新增公网服务；Ingress 只暴露固定 /gitlab/webhook/issue-note 与 /healthz，目标为 gitlab-webhook-test-fork 测试 fork。)
-- Q: 测试 Ingress 的私有 DNS 如何分配？ → A：沿用测试集群现有域名规范，由基础设施 owner 分配固定 zj-loop-gitlab-bridge.<internal-test-domain> hostname (代码库不写入未确认的真实域名；hostname、TLS 证书和 Ingress 配置由测试环境 owner 提供并在部署 evidence 中绑定。)
-- Q: 真实测试 hostname 与 TLS 证据由谁提供？ → A：由 gitlab-webhook-test-fork 测试环境基础设施 owner 提供 hostname、TLS Secret 引用和 Ingress 配置证据 (ZAgenticLoop 不自行指定或创建基础设施；仓库只验证脱敏 provenance 与固定路径绑定。)
-- Q: 公开 ZAgenticLoop 如何记录闭源 GitLab 项目证据？ → A：全量使用公开占位符，移除真实项目名、内部域名、Issue/MR/Pipeline 与环境绑定；真实证据只保存在闭源项目或受控外部审计系统 (源码、测试、模板、路线图和公开文档均不得出现 product project 或测试 fork 的真实身份；协议行为用 example-group/product-project 等占位符验证。)
-- Q: 真实测试环境基础设施 evidence 保存在哪里？ → A：只保存在闭源测试项目或私有审计系统；公开 ZAgenticLoop 只保存脱敏 schema 与引用编号 (公开仓库不得记录真实 hostname、TLS Secret、Ingress 配置、项目路径、provider URL 或 live pipeline identity。)
-- Q: 实际测试 Ingress/TLS 配置由谁执行？ → A：由闭源测试环境基础设施 owner 执行，并只向公开项目提供脱敏 opaque evidence reference (ZAgenticLoop 不接触 Secret、真实 hostname 或私有 provider response；公开仓库只记录协议与验证结果。)
+- Q: CI Sweeper 正向 fixture 放在哪个项目？ → A：仅在 mlive-dev/ai-studio-gitlab 专用测试 fork 执行；允许创建 repair MR，但由 Human 人工合并；不触碰 mlive-dev/ai-studio 生产项目。 (验证 bridge、carrier、claim、repair MR、closeout 全链路，生产项目保持只读/不触发。)
+- Q: CI Sweeper 失败信号如何制造？ → A：在 ai-studio-gitlab 的 .gitlab-ci.local.yml 增加一次性、显式变量门控的 synthetic failing job；不修改业务代码，不影响普通 pipeline；只生成 Issue Fix Request/repair MR，不自动合并或发布。 (fixture 完成后删除或关闭入口。)
+- Q: CI Sweeper bridge 如何与 roadmap bridge 共存？ → B：新增独立 CI Sweeper bridge 实例/入口；target_route=ci-sweeper，使用独立 marker 与 pipeline 配置；roadmap bridge 保持不变。 (验证多 route 共存、独立 marker、独立 pipeline 触发和故障隔离。)
+- Q: CI Sweeper carrier 是否允许由 bridge API pipeline 创建？ → B：允许受控 bridge-shaped API pipeline 创建；必须同时满足 API source、carrier enabled、固定 confirmation、bridge 身份/项目/route/request body 全绑定和 GITLAB_TOKEN；其他 API pipeline zero-write。 (保持事件驱动完整性，同时保留显式开关、固定确认词和身份绑定。)
+- Q: CI Sweeper carrier 使用哪个 Issue？ → A：为本次 synthetic failure 创建全新的独立 carrier Issue；使用新的 request_id/dedupe marker，不复用 Issue #2 或 roadmap carrier；closeout 后单独关闭并记录清理证据。 (隔离 route、request 和生命周期，避免重复消费或误关闭。)
+- Q: repair MR 的最小变更范围是什么？ → A：只修改 ai-studio-gitlab 的 .gitlab-ci.local.yml，恢复或关闭 synthetic fixture 的失败 gate；不修改业务代码或普通测试文件；由 Human 人工合并。 (隔离测试 substrate，验证有效 diff、repair MR 和后续 pipeline。)
+- Q: CI Sweeper 如何接收 synthetic failure？ → A：先创建故意失败的 pipeline，再用独立 Issue 的固定 marker Note 触发 CI Sweeper bridge；失败 pipeline ID 作为 signal_id，验证 pipeline/job/commit/artifact 到 carrier、claim、repair MR 的绑定。 (Issue Note 负责启动事件流，CI failure pipeline 保留为 source evidence。)
+- Q: CI Sweeper bridge 使用什么 marker？ → A：固定使用 /zj-loop start ci-sweeper；route、marker、target pipeline 固定绑定；普通评论和其他 route marker 默认拒绝。 (与 roadmap marker 语法一致，但保持 route 隔离。)
+- Q: CI Sweeper carrier 使用什么确认词？ → A：复用 CREATE_GITLAB_CI_SWEEPER_CARRIER，并要求 ZJ_LOOP_GITLAB_CARRIER_ENABLED=true；不新增临时确认词。 (沿用已有 GitLab CI Sweeper 协议，保持 provider parity 和安全双开关。)
+- Q: CI Sweeper repair MR 使用什么分支策略？ → A：使用 automated/ci-sweeper-gitlab-<pipeline-id>-<request-hash>，目标分支 master；只创建 MR，由 Human 审核并合并，不直接提交 master。 (保持 branch allowlist、request identity、source pipeline 和人工 review 边界。)
+- Q: CI Sweeper repair MR 合并后如何 closeout？ → A：受控自动 closeout；确认 MR 已合并、branch allowlist、carrier identity 和固定确认词全部通过后，追加 closeout evidence、删除 automated/ci-sweeper-gitlab-* 分支并关闭独立 carrier Issue；任一 guard 失败则 report-only。 (验证完整 lifecycle，同时限制清理副作用。)
+- Q: CI Sweeper 正向 fixture 前如何验证安全边界？ → A：先跑负向矩阵，再只跑一次正向 fixture；错误 Secret、项目/route/ref、普通 Note、错误 marker、carrier gate 未开启和 confirmation 不匹配全部 zero-write，不创建 pipeline/Issue/MR/branch。 (负向证据通过后才允许正向 provider write。)
+- Q: CI Sweeper dogfood 结束后保留哪些证据？ → A：保留 source failure pipeline/job/artifacts、route decision、carrier notes、claim、repair MR 和 closeout artifacts；只删除 automated/ci-sweeper-gitlab-* branch，关闭本次独立 carrier Issue，不删除 pipeline/job/MR/artifacts。 (保留不可变审计证据，清理可再生运行资源。)
+- Q: 独立 bridge 如何区分 webhook path？ → A：在 ZAgenticLoop 开源 core 增加通用 ZJ_LOOP_GITLAB_BRIDGE_WEBHOOK_PATH 配置；默认 /gitlab/webhook/issue-note，CI Sweeper 使用独立 path；不暴露任何闭源项目内部信息。 (以兼容默认值提供多 bridge 共存能力，route 分流由独立 path、marker 和 target route 共同约束。)
 <!-- ROADMAP_SECTION_END -->
