@@ -91,6 +91,22 @@ test('ignores ordinary Issue Notes without provider side effects', () => {
   assert.equal(result.side_effects_executed, false);
 });
 
+test('ignores unrelated Merge Request Notes without returning a webhook error', () => {
+  const result = buildGitLabIssueNoteBridgeEnvelope({
+    ...base,
+    headers: { ...base.headers, event: 'Note Hook', eventId: 'mr-note-event-1' },
+    payload: {
+      ...base.payload,
+      object_kind: 'note',
+      object_attributes: { ...base.payload.object_attributes, noteable_type: 'MergeRequest' },
+      merge_request: { iid: 26 },
+    },
+  });
+  assert.equal(result.status, 'ignored');
+  assert.equal(result.envelope, null);
+  assert.equal(result.side_effects_executed, false);
+});
+
 test('fails closed for authentication, project, event, event id, and payload mismatches', () => {
   const cases = [
     [{ headers: { ...base.headers, webhookSecret: 'wrong' } }, 'unauthorized'],

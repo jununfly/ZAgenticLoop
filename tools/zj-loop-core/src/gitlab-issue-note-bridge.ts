@@ -93,12 +93,20 @@ export function buildGitLabIssueNoteBridgeEnvelope(input: GitLabIssueNoteWebhook
     return blocked('project-mismatch');
   }
   const attributes = payload?.object_attributes;
+  if (attributes?.noteable_type !== 'Issue') {
+    return {
+      schema: GITLAB_ISSUE_NOTE_BRIDGE_SCHEMA,
+      status: 'ignored',
+      reason: undefined,
+      side_effects_executed: false,
+      envelope: null,
+    };
+  }
   const actionIsValid = input.headers.event === GITLAB_ISSUE_NOTE_EVENT
     ? attributes?.action === undefined || attributes.action === 'create'
     : attributes?.action === 'create';
   if (
     !['note', 'issue'].includes(String(payload?.object_kind))
-    || attributes?.noteable_type !== 'Issue'
     || !actionIsValid
   ) {
     return blocked('issue-note-invalid');
