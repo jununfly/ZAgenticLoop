@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 21:13:20
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 21:28:37
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -73,4 +73,5 @@ Design decisions complete; next implement isolated CI Sweeper bridge, explicit s
 - Q: 正向 fixture 的人工评审入口是什么？ → 测试 fork 已创建 draft MR !33，分支 codex/ci-sweeper-positive-fixture；仅修改 .gitlab-ci.local.yml，Human 合并后才能进入一次正向失败流水线。 (MR URL: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/merge_requests/33)
 - Q: 正向 synthetic failure 证据是什么？ → 测试 fork master pipeline 10581856 的 job 26218671 按预期失败，并上传 synthetic-failure-evidence.json；失败日志声明 side_effects_executed:false。 (Pipeline: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/pipelines/10581856; Job: https://git.bilibili.co/mlive-dev/ai-studio-gitlab/-/jobs/26218671)
 - Q: CI Sweeper 当前 install-ready 且 execution_ready=false，下一步是否推进 execution-ready？ → A：是。补齐 execution-ready 所需的配置、证据和验证门，再在测试 fork 中重跑一次受控 synthetic failure；生产项目保持隔离。 (当前 pipeline 10581876 仅完成 bridge 与 route dispatch，未创建 carrier/repair MR；必须先提升到 execution-ready 才能验证完整 repair lifecycle。)
+- Q: execution-ready 后为什么仍未创建 carrier/repair MR？ → A：测试 fork 的 .gitlab-ci.local.yml 只有 Issue Note bridge 的 route/plan job，缺少 GitLab CI Sweeper carrier trigger、consumer preflight、repair-MR 和 closeout jobs；补齐生成式执行片段后再重跑 synthetic failure lifecycle。 (已验证：pipeline 10582044/job 26219391 返回 execution_ready=true 但只有 plan；synthetic failure pipeline 10582062/job 26219517 按预期失败并上传 side_effects_executed=false；测试 fork MR !35 补齐执行链路，CI pipeline 10582090 已通过。)
 <!-- ROADMAP_SECTION_END -->
