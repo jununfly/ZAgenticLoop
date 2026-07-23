@@ -1,20 +1,27 @@
 #!/usr/bin/env node
 import { createGitLabIssueNoteBridgeServer } from './gitlab-issue-note-bridge-server.js';
+import { readGitLabIssueNoteBridgeConfig } from './gitlab-issue-note-bridge-config.js';
 
 const env = process.env;
-const required = (name: string): string => {
+const config = readGitLabIssueNoteBridgeConfig(env);
+const required = (name: keyof typeof config, envName: string): string => {
+  const value = config[name];
+  if (!value) throw new Error(`${envName}-required`);
+  return String(value);
+};
+const requiredEnv = (name: string): string => {
   const value = env[name]?.trim();
   if (!value) throw new Error(`${name}-required`);
   return value;
 };
 
-const projectPath = required('ZJ_LOOP_BRIDGE_PROJECT_PATH');
-const routeId = required('ZJ_LOOP_BRIDGE_ROUTE_ID');
-const pipelineRef = required('ZJ_LOOP_BRIDGE_PIPELINE_REF');
-const targetRoute = required('ZJ_LOOP_BRIDGE_TARGET_ROUTE');
-const marker = required('ZJ_LOOP_BRIDGE_MARKER');
-const webhookSecret = required('ZJ_LOOP_GITLAB_WEBHOOK_SECRET');
-const triggerToken = required('ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN');
+const projectPath = required('projectPath', 'ZJ_LOOP_BRIDGE_PROJECT_PATH');
+const routeId = required('routeId', 'ZJ_LOOP_BRIDGE_ROUTE_ID');
+const pipelineRef = required('pipelineRef', 'ZJ_LOOP_BRIDGE_PIPELINE_REF');
+const targetRoute = required('targetRoute', 'ZJ_LOOP_BRIDGE_TARGET_ROUTE');
+const marker = required('marker', 'ZJ_LOOP_BRIDGE_MARKER');
+const webhookSecret = requiredEnv('ZJ_LOOP_GITLAB_WEBHOOK_SECRET');
+const triggerToken = requiredEnv('ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN');
 const server = createGitLabIssueNoteBridgeServer({
   projectPath,
   route: { routeId, marker, targetRoute, targetRef: pipelineRef },
@@ -23,9 +30,9 @@ const server = createGitLabIssueNoteBridgeServer({
     routeId,
     pipelineRef,
     targetRoute,
-    allowedEventType: env.ZJ_LOOP_BRIDGE_ALLOWED_EVENT_TYPE?.trim() || 'Note Hook',
-    enabled: env.ZJ_LOOP_BRIDGE_ENABLED === 'true',
-    maturity: env.ZJ_LOOP_BRIDGE_MATURITY?.trim() || 'install-ready',
+    allowedEventType: config.allowedEventType || 'Note Hook',
+    enabled: config.enabled === true,
+    maturity: config.maturity || 'install-ready',
   },
   webhookSecret,
   triggerToken,
