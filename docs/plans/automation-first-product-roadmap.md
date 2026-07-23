@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 23:17:45
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-23 23:23:26
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -80,4 +80,5 @@ Design decisions complete; next implement isolated CI Sweeper bridge, explicit s
 - Q: 修正 fixture 负向证据编号 → 本次 carrier 未创建 Issue；仅保留流水线 10582682/job 26223467 的负向执行证据，Issue #7 仍是上一轮 request-actions 缺失的 carrier。 (不新增或关闭 Issue，避免把 ENOENT 失败误记为 provider carrier。)
 - Q: GitLab Commit API 首次失败后如何补齐 fixture？ → consumer 已完成 claim、verification gate、repair action gate，但因目标文件缺失返回 repair-commit-create-failed；创建 Draft MR !39 新增 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml，MR 流水线 10582719 已通过，等待人工合并。 (正向请求 ifr_7ed08dcec250、Issue #8、consumer pipeline 10582716/job 26223760 均保留失败证据；未创建 repair MR。)
 - Q: GitLab CI Sweeper 正向 repair MR 是否创建成功？ → 成功：master 流水线 10582730 通过；受控流水线 10582735/job 26223926 创建 Issue #9 与 request ifr_d6a802bc8dba；consumer pipeline 10582736/job 26223932 通过 claim、两项 verifier、action gate，并创建 repair MR !40。等待人工合并后执行 closeout。 (repair MR !40 branch=automated/ci-sweeper-gitlab-10582736-98de4c86，target=master，action_count=1，仅更新 zj-loop/dogfood/ci-sweeper-generated-substrate-fixture.yml。)
+- Q: repair MR 合并后如何执行 CI Sweeper closeout？ → MR !40 已合并，master pipeline 10582740 通过；自动 post_merge_cleanup 仅对 roadmap contract report-only。CI Sweeper recovery job 26223931 需要同时注入 6 个 closeout 参数后再执行，避免手动作业单变量 UI 造成部分参数缺失。 (固定参数：MR=40、Issue=9、Request=ifr_d6a802bc8dba、Branch=automated/ci-sweeper-gitlab-10582736-98de4c86、Target=master、Confirm=DELETE_MERGED_ROADMAP_BRANCH_AND_CLOSE_CARRIER。)
 <!-- ROADMAP_SECTION_END -->
