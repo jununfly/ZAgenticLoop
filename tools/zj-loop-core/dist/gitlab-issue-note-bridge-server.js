@@ -6,12 +6,13 @@ export const GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA = 'zj-loop.gitlab_issue_note_b
 export const GITLAB_ISSUE_NOTE_BRIDGE_HTTP_PATH = '/gitlab/webhook/issue-note';
 export const GITLAB_ISSUE_NOTE_BRIDGE_HEALTH_PATH = '/healthz';
 export function createGitLabIssueNoteBridgeServer(config) {
+    const webhookPath = normalizeWebhookPath(config.webhookPath ?? GITLAB_ISSUE_NOTE_BRIDGE_HTTP_PATH);
     return createServer(async (request, response) => {
         if (request.method === 'GET' && request.url === GITLAB_ISSUE_NOTE_BRIDGE_HEALTH_PATH) {
             writeJson(response, 200, { schema: 'zj-loop.gitlab_issue_note_bridge_health.v1', status: 'ok', side_effects_executed: false });
             return;
         }
-        if (request.method !== 'POST' || request.url !== GITLAB_ISSUE_NOTE_BRIDGE_HTTP_PATH) {
+        if (request.method !== 'POST' || request.url !== webhookPath) {
             writeJson(response, 404, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'blocked', reason: 'endpoint-not-found', side_effects_executed: false });
             return;
         }
@@ -64,6 +65,13 @@ export function createGitLabIssueNoteBridgeServer(config) {
         await updateGitLabIssueNoteBridgeReceipt({ root: config.root, projectPath: decision.envelope.project_path, eventId: decision.envelope.event_id, dedupeKey: decision.envelope.dedupe_key, status: finalStatus, now, triggerPipelineId: trigger.pipeline?.id ?? null, recoveryReason: trigger.reason });
         writeJson(response, trigger.status === 'triggered' ? 202 : 502, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: trigger.status, side_effects_executed: trigger.side_effects_executed, receipt: { path: persisted.receipt_path, status: finalStatus }, trigger });
     });
+}
+function normalizeWebhookPath(value) {
+    const path = value.trim();
+    if (!path.startsWith('/') || path.length < 2 || path.includes('?') || path.includes('#') || path.includes('..')) {
+        throw new Error('webhook-path-invalid');
+    }
+    return path;
 }
 function header(request, name) {
     const value = request.headers[name];
