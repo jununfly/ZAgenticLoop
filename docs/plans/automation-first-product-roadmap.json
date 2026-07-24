@@ -2531,7 +2531,8 @@
         "1-5-5-3-3-2",
         "1-5-5-3-3-3",
         "1-5-5-3-3-4",
-        "1-5-5-3-3-5"
+        "1-5-5-3-3-5",
+        "1-5-5-3-3-6"
       ],
       "decisions": [
         {
@@ -3282,6 +3283,111 @@
           "q": "开发测试阶段是否要求跨实例 receipt/dedupe 持久化？",
           "answer": "暂不要求。test fork 只验证同一实例生命周期内的 receipt/dedupe 去重；实例重建导致状态丢失作为已知限制，真实项目接入时按项目实际持久化能力解决。",
           "note": "当前不引入持久化卷或外部 dedupe 存储，不重复消耗开发验证轮次。"
+        },
+        {
+          "q": "当前 test fork 验证完成后是否立即接入真实项目？",
+          "answer": "暂不接入真实项目。先以 test fork 证据和部署流程作为当前阶段完成边界；真实项目接入需另行明确项目、持久化方案和 token 责任人。",
+          "note": "product-project live dogfood 保持 deferred，不把 test fork 证据冒充真实项目完成证据。"
+        },
+        {
+          "q": "test fork 是否长期保持 live Webhook 与有效 token？",
+          "answer": "不长期保持。保留仓库、Issue、Note、pipeline 和代码证据；Webhook 与 token 仅在受控验证窗口临时启用，完成后立即删除或轮换。",
+          "note": "避免测试环境持续具备 provider 写入能力，未来验证使用新 Issue 和临时凭据。"
+        },
+        {
+          "q": "是否自动化 test fork 的 bridge 验证流程？",
+          "answer": "是，新增 report-only 验证编排器：健康检查、Hook 配置审计、受控 Issue/Note/pipeline/dedupe 证据采集和清理计划均结构化输出；provider 写操作与凭据轮换必须显式确认。",
+          "note": "降低重复手工验证成本，但保留真实 provider 写入的人工作业闸门。"
+        },
+        {
+          "q": "验证编排器应放在哪个仓库？",
+          "answer": "放在 ZAgenticLoop 的 provider-neutral 脚本层，GitLab 细节复用现有 adapter/API/evidence 原语；ai-studio-gitlab 只保留部署和 fixture。",
+          "note": "避免把 test fork 项目路径和验证逻辑耦合进产品仓库，便于未来真实 GitLab 项目复用。"
+        },
+        {
+          "q": "live 验证编排器允许哪些 provider 写操作？",
+          "answer": "默认 report-only；仅在固定确认短语下创建独立临时 Issue 和 marker Note，并允许触发一个固定 ref 的 pipeline；自动执行 Resend/dedupe 读取验证；禁止创建 MR、Branch、业务修复；Hook 删除和 token 轮换只输出清理计划，由人工执行。",
+          "note": "将验证写入限制在最小 fixture 范围，避免验证工具成为无限制自动化入口。"
+        },
+        {
+          "q": "每次 live 验证是否复用历史 Issue/Note？",
+          "answer": "不复用。每次运行创建全新的独立 Issue 和唯一 marker Note，标题携带 deterministic run ID；记录 Issue IID、Note ID、pipeline ID；同一 run 内执行 Resend/dedupe 验证。",
+          "note": "避免历史 receipt、pipeline 和 carrier 状态污染新一轮证据。"
+        },
+        {
+          "q": "验证编排器需要哪些凭据？",
+          "answer": "只通过环境变量 GITLAB_TOKEN 注入 GitLab API token，用于测试 Issue、Note、pipeline 的创建和读取；不接受 CLI/config/Issue 传入，不打印 token；不读取 webhook secret 或 bridge trigger token，Hook 管理和凭据轮换由人工负责。",
+          "note": "将编排器权限限制在 fixture 生命周期，避免覆盖 bridge 运行时权限。"
+        },
+        {
+          "q": "live 验证保存哪些证据？",
+          "answer": "保存到 zj-loop/evidence/gitlab-issue-note-bridge/live-runs/<run-id>.json，仅包含 run/project/Issue/Note/pipeline/event/dedupe、bridge/Resend 响应摘要、pipeline 状态、cleanup plan 和 side_effects_executed；禁止保存 token、secret、完整 webhook payload 和无关用户身份信息。",
+          "note": "证据最小化且可审计，避免凭据或隐私泄露。"
+        },
+        {
+          "q": "Webhook 配置由谁管理？",
+          "answer": "采用只读前置检查：编排器只检查 Hook URL、note_events、SSL、Hook 存在性和项目绑定；配置缺失或不匹配直接 blocked，不创建 Issue/Note、不触发 pipeline；Hook 创建、修改、删除由人工执行。",
+          "note": "避免验证编排器持有 Hook 管理权限和配置副作用。"
+        },
+        {
+          "q": "pipeline 和 Resend 如何等待？",
+          "answer": "采用固定超时、有限轮询；pipeline 创建和 Resend 响应按固定次数轮询，超时输出 uncertain；禁止自动重试 provider trigger，恢复由人工决定。",
+          "note": "例如 60 秒、每 5 秒一次，避免编排器无限等待或重复副作用。"
+        },
+        {
+          "q": "Resend 如何接入验证编排器？",
+          "answer": "保留人工 Resend：编排器创建 fixture 后输出 Hook Logs 页面和 delivery 标识，由 Human 点击 Resend；编排器负责后续响应采集、pipeline/dedupe 查询和 duplicate 判定。",
+          "note": "当前 GitLab hook_logs API 返回 404，新增 Note 不能等价证明真实 Resend。"
+        },
+        {
+          "q": "验证编排器使用什么状态和退出码？",
+          "answer": "统一输出 JSON 状态 ready、blocked、triggered、duplicate、uncertain、failed；退出码 0 表示预期完成，10=blocked，20=uncertain，30=明确失败；同时提供人类可读摘要。",
+          "note": "让 CI 和人工都能稳定判断结果，避免解析自然语言日志。"
+        },
+        {
+          "q": "验证编排器如何拆分实现？",
+          "answer": "分两步：第一步实现 report-only preflight，只读检查项目、Hook、权限和 bridge health，输出 ready/blocked；第二步实现显式确认的 live fixture，创建唯一 Issue/Note、等待 pipeline、人工 Resend、判定 duplicate、生成证据和 cleanup plan。",
+          "note": "先验证安全前置条件，再开放最小 provider 写入，避免一次性引入过大副作用面。"
+        },
+        {
+          "q": "preflight 无法读取 Hook 配置时如何处理？",
+          "answer": "直接 blocked，不允许降级继续。Hook API 返回 403/404、读取失败或权限不足时，停止所有 provider 写操作并输出人工修复步骤。",
+          "note": "避免在无法证明 Hook URL、note_events、SSL 和项目绑定时生成不完整的 live 证据。"
+        },
+        {
+          "q": "bridge health 如何检查？",
+          "answer": "通过 ZJ_LOOP_BRIDGE_HTTP_URL 拼接固定 /healthz；URL 缺失、非 200 或响应不符合预期时返回 blocked；不使用公网 Webhook URL 作为 health endpoint，health 失败时不创建 Issue/Note。",
+          "note": "将运行时健康检查与 Webhook 投递路径分离，避免错误 endpoint 产生假阳性。"
+        },
+        {
+          "q": "GitLab 项目和 Hook 如何绑定？",
+          "answer": "所有身份显式传入并校验：GITLAB_API_URL、GITLAB_PROJECT_PATH、GITLAB_HOOK_ID、GITLAB_PIPELINE_REF、GITLAB_TARGET_ROUTE、GITLAB_MARKER；同时校验项目 path、Hook project、URL、ref 和 route，任一不匹配直接 blocked。",
+          "note": "将验证编排器定义为显式协议，禁止从当前目录、默认项目或 Hook 响应推断关键身份。"
+        },
+        {
+          "q": "显式验证协议如何承载配置？",
+          "answer": "采用单一 JSON manifest（不含 secret），统一声明 GITLAB_API_URL、GITLAB_PROJECT_PATH、GITLAB_HOOK_ID、GITLAB_PIPELINE_REF、GITLAB_TARGET_ROUTE、GITLAB_MARKER 和 bridge health URL；GITLAB_TOKEN 仅通过环境变量注入。",
+          "note": "集中校验完整身份，支持可复现验证；避免多环境变量漏配或 CLI 参数泄露敏感信息。"
+        },
+        {
+          "q": "JSON manifest 如何传入？",
+          "answer": "必须通过显式 --config <path> 传入单一 JSON manifest；文件不存在、JSON 非法或 schema 不匹配直接 blocked；不从当前目录自动发现，不把完整 JSON 放入命令行；schema 固定为 zj-loop.gitlab_issue_note_bridge_verification.v1。",
+          "note": "保证验证输入可复现且不因隐式默认配置误触发 provider 写入。"
+        },
+        {
+          "q": "live 写入使用什么确认短语？",
+          "answer": "固定使用 run GitLab bridge live fixture；report-only 不需要确认，live 必须完全匹配 --confirm 短语；缺失或不匹配返回 blocked；不接受 --force/--yes 绕过；确认只授权本次 fixture，不授权 Hook 管理、token 轮换或业务修复。",
+          "note": "防止泛化确认参数误开放 provider 写入，保持副作用授权粒度最小。"
+        },
+        {
+          "q": "第一步 preflight PR 的验收标准是什么？",
+          "answer": "必须覆盖 manifest schema、缺失 token、项目/Hook URL/事件/SSL/ref/route mismatch、health 非 200 的 blocked 场景，并证明 blocked 场景 provider 写调用为 0；正常配置输出 ready；JSON/退出码稳定且不泄露 secret/payload；只提交 preflight 和 deterministic 单元测试，不实现 live Issue/Note 创建。",
+          "note": "先锁定零副作用安全边界，再进入第二步 live fixture。"
+        },
+        {
+          "q": "preflight 如何测试？",
+          "answer": "本地使用注入 fake HTTP client 的 deterministic 单元测试覆盖 ready/blocked，断言 blocked 时 provider 写调用为 0；真实 GitLab 只做一次 test fork report-only 只读兼容性验证，不创建 Issue/Note、不触发 pipeline。",
+          "note": "保证 CI 稳定快速，同时保留真实 provider API 兼容性证据。"
         }
       ],
       "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
@@ -4362,11 +4468,21 @@
         }
       ],
       "notes": "Live GitLab dogfood completed: artifact commit, MR !17 merge, controlled post-merge closeout, activation branch deletion, carrier Issue #2 closure, and temporary variable cleanup verified."
+    },
+    "1-5-5-3-3-6": {
+      "id": "1-5-5-3-3-6",
+      "label": "GitLab Issue Note bridge report-only preflight verification orchestrator",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented report-only preflight CLI and manifest example. Deterministic tests cover ready, missing token, project mismatch, Hook mismatch, and bridge health failure; blocked paths perform no writes. Release-ready and release-capability gates pass."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-24 14:11:05",
+    "updated": "2026-07-24 15:13:05",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

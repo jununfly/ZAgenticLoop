@@ -1,0 +1,12 @@
+{
+  "schema": "zj-loop.gitlab_issue_note_bridge_verification.v1",
+  "gitlab_api_url": "https://git.example/api/v4",
+  "project_path": "group/project",
+  "project_id": "12345",
+  "hook_id": "67890",
+  "hook_url": "https://bridge.example/gitlab/webhook/ci-sweeper",
+  "bridge_http_url": "http://127.0.0.1:8080",
+  "pipeline_ref": "master",
+  "target_route": "ci-sweeper",
+  "marker": "/zj-loop start ci-sweeper"
+}
