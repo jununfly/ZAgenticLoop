@@ -16,6 +16,7 @@ include:
   - local: "zj-loop/gitlab-ci/zj-loop-dependency-sweeper.yml"
   - local: "zj-loop/gitlab-ci/zj-loop-changelog-drafter.yml"
   - local: "zj-loop/gitlab-ci/zj-loop-roadmap-activation.yml"
+  - local: "zj-loop/gitlab-ci/zj-loop-gitlab-issue-note-bridge-consumer.yml"
   - local: "zj-loop/gitlab-ci/zj-loop-post-merge-cleanup.yml"
   - local: "zj-loop/gitlab-ci/zj-loop-schedule-probe.yml"
   - local: "zj-loop/gitlab-ci/zj-loop-schedule-health-check.yml"

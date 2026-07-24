@@ -4513,9 +4513,34 @@
           "q": "preflight CLI 使用哪个 core 版本？",
           "answer": "发布 @jununfly/zj-loop-core@0.1.21，新增 zj-loop-gitlab-bridge-preflight CLI；Pod 通过 npx 固定 0.1.21 执行，不重新发布 bridge runtime 0.1.21。",
           "note": "0.1.21 保持为 bridge dedupe 修复版本，0.1.21 单独承载验证工具能力。"
+        },
+        {
+          "q": "test fork 临时 Hook 的最终事件配置是否符合 preflight？",
+          "answer": "符合，Hook 15363 的 URL、project_id=52131、note_events=true 和 SSL 均匹配；issues_events=true 是 GitLab 当前接受的最小额外事件偏差，merge request、push、tag、pipeline 等事件均关闭。",
+          "note": "preflight 只要求 note_events=true、SSL 和项目/URL 绑定；记录 issues_events=true 的 provider 配置偏差，不扩大验证范围。"
+        },
+        {
+          "q": "真实 test fork report-only preflight 结果是什么？",
+          "answer": "A：通过。Hook 15363 的 manifest、project、Hook、bridge_health 检查均为 passed/matched/ok，status=ready，side_effects_executed=false；未创建 Issue、Note 或 pipeline。",
+          "note": "真实 GitLab API/bridge 兼容性已验证；经显式确认后进入 live fixture，完成后删除临时 Hook。"
+        },
+        {
+          "q": "是否开始第二阶段 live fixture？",
+          "answer": "开始。使用 test fork Hook 15363 和固定确认短语 run GitLab bridge live fixture，创建全新临时 Issue/marker Note，等待唯一 pipeline，人工 Resend 一次并验证 duplicate；不创建 MR/Branch，不修改业务文件。",
+          "note": "这是本轮唯一允许的 provider 写入，完成后保留证据并删除 Hook、轮换 token。"
+        },
+        {
+          "q": "live fixture 首次 marker 为什么未触发 pipeline？",
+          "answer": "A：blocked，Webhook 已到达 bridge，但 Hook 15363 的 Secret 与实例 ZJ_LOOP_GITLAB_WEBHOOK_SECRET 不一致，返回 HTTP 400 reason=unauthorized，side_effects_executed=false；未创建 pipeline。",
+          "note": "修正 Hook Secret 后可对同一 Note 重新发送；不重建 Issue/Note，不轮换 bridge trigger token。"
+        },
+        {
+          "q": "test fork live fixture 最终结果是什么？",
+          "answer": "A：完成。Issue #11、Note 19707969 在 Hook 15363 上经合法 Secret 触发唯一 pipeline 10592047，首次响应为 HTTP 202 triggered；同一 Note Resend 返回 HTTP 200 duplicate，reason=receipt-dedupe-hit，side_effects_executed=false；随后 Hook 15363 已删除、Issue #11 已关闭。",
+          "note": "bridge health 与重启后 PORT=8080 均验证通过；本证据只覆盖 test fork 同一实例生命周期内的 receipt/dedupe，不推进 product-project live dogfood。"
         }
       ],
-      "notes": "Implemented report-only preflight CLI and manifest example. Deterministic tests cover ready, missing token, project mismatch, Hook mismatch, and bridge health failure; blocked paths perform no writes. Release-ready and release-capability gates pass."
+      "notes": "Implemented report-only preflight CLI and manifest example. Deterministic tests cover ready, missing token, project mismatch, Hook mismatch, and bridge health failure; blocked paths perform no writes. Release-ready and release-capability gates pass. Test fork live fixture completed with triggered/duplicate evidence and cleanup; product-project live dogfood remains deferred."
     },
     "1-5-5-3-3-6-1": {
       "id": "1-5-5-3-3-6-1",
@@ -4530,7 +4555,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-24 15:41:44",
+    "updated": "2026-07-24 16:34:10",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
