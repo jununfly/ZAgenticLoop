@@ -1,7 +1,7 @@
 # zj-loop-generated: true
 # zj-loop-template-id: github-actions/zj-loop-smoke
 # zj-loop-template-version: 1
-# zj-loop-template-hash: 4ba578b6aede91b6
+# zj-loop-template-hash: 456feefe5c9833d3
 
 name: ZJ Loop Smoke
 
@@ -19,7 +19,7 @@ jobs:
 
       - name: Verify ZJ Loop version consistency
         run: |
-          if npx --yes --package @jununfly/zj-loop-core@0.1.20 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
+          if npx --yes --package @jununfly/zj-loop-core@0.1.21 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then
             exit 0
           fi
           test -f tools/zj-loop-core/dist/version-consistency-cli.js
@@ -38,8 +38,8 @@ jobs:
 
       - name: Smoke route decision
         run: |
-          npx --yes --package @jununfly/zj-loop-core@0.1.20 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
-          npx --yes --package @jununfly/zj-loop-core@0.1.20 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.21 zj-loop-route dispatch manual-smoke-report --json > route-decision.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.21 zj-loop-consumer plan manual-smoke-report --json > consumer-plan.json
           cat route-decision.json >> "$GITHUB_STEP_SUMMARY"
           cat consumer-plan.json >> "$GITHUB_STEP_SUMMARY"
 
@@ -53,9 +53,9 @@ jobs:
           ZJ_LOOP_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           node -e "const fs=require('fs'); const e=process.env; fs.writeFileSync('smoke-signal.json', JSON.stringify({schema:'zj-loop.signal.v1',signal_id:e.ZJ_LOOP_RUN_ID,source:'workflow_dispatch',provider:'github',subject:{kind:'local_goal',id:'manual-smoke-report',url:e.ZJ_LOOP_URL},intent:'triage',payload:{route_id:'manual-smoke-report',request_id:'smoke-'+e.ZJ_LOOP_RUN_ID,project:e.ZJ_LOOP_PROJECT,pipeline_id:e.ZJ_LOOP_RUN_ID,job_id:e.ZJ_LOOP_JOB,head_sha:e.ZJ_LOOP_SHA,ref:e.ZJ_LOOP_REF}}, null, 2));"
-          npx --yes --package @jununfly/zj-loop-core@0.1.20 zj-loop-dispatch --root . --signal smoke-signal.json --mode auto --format json > orchestration.json
+          npx --yes --package @jununfly/zj-loop-core@0.1.21 zj-loop-dispatch --root . --signal smoke-signal.json --mode auto --format json > orchestration.json
           node -e "const fs=require('fs'); const o=JSON.parse(fs.readFileSync('orchestration.json','utf8')); if(!o.completion_evidence) throw new Error('orchestration did not emit completion evidence'); fs.writeFileSync('completion-evidence.json', JSON.stringify(o.completion_evidence,null,2)+'\\n');"
-          npx --yes --package @jununfly/zj-loop-core@0.1.20 zj-loop-completion-evidence --evidence completion-evidence.json --out completion-evidence-validation.json --json
+          npx --yes --package @jununfly/zj-loop-core@0.1.21 zj-loop-completion-evidence --evidence completion-evidence.json --out completion-evidence-validation.json --json
 
       - name: Upload canonical completion evidence
         if: always()
