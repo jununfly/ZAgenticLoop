@@ -4472,7 +4472,7 @@
     "1-5-5-3-3-6": {
       "id": "1-5-5-3-3-6",
       "label": "GitLab Issue Note bridge report-only preflight verification orchestrator",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-3",
       "children": [
@@ -4520,17 +4520,17 @@
     "1-5-5-3-3-6-1": {
       "id": "1-5-5-3-3-6-1",
       "label": "Package report-only preflight CLI for Pod execution",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-3-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Packaged zj-loop-gitlab-bridge-preflight in @jununfly/zj-loop-core@0.1.21. Core full suite passed; npm provenance release workflow 30076229714 succeeded; registry confirms latest=0.1.21 and CLI bin present."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-24 15:32:29",
+    "updated": "2026-07-24 15:41:44",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
