@@ -4472,17 +4472,65 @@
     "1-5-5-3-3-6": {
       "id": "1-5-5-3-3-6",
       "label": "GitLab Issue Note bridge report-only preflight verification orchestrator",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5-5-3-3",
+      "children": [
+        "1-5-5-3-3-6-1"
+      ],
+      "decisions": [
+        {
+          "q": "是否执行一次真实 test fork report-only preflight？",
+          "answer": "执行。由 Human 临时创建 test fork Hook，开启 Note events 和 SSL；编排器只读检查项目、Hook 和 bridge health，预期 ready；不创建 Issue/Note、不触发 pipeline，完成后立即删除 Hook。",
+          "note": "验证真实 GitLab API/bridge 兼容性，同时保持零 provider 写副作用。"
+        },
+        {
+          "q": "真实 report-only preflight 使用哪个项目和 endpoint？",
+          "answer": "继续使用 test fork mlive-dev/ai-studio-gitlab（project_id=52131），GitLab API=https://git.bilibili.co/api/v4，Hook URL=https://aistudio.bilibili.co/gitlab-server/api/v1/gitlab/webhook/ci-sweeper；health 在 Pod 内使用 http://127.0.0.1:8080/healthz；不访问生产项目。",
+          "note": "保持验证范围与既有 live 证据一致，避免误触发真实项目。"
+        },
+        {
+          "q": "临时 Hook 开启哪些事件？",
+          "answer": "只开启 note_events=true 和 SSL 校验；issues、merge request、push、tag、pipeline、job 等其他事件关闭；若 GitLab API 要求至少一个额外事件，保持最小可接受配置并记录偏差。",
+          "note": "收窄 Webhook 输入面，report-only 阶段不产生事件副作用。"
+        },
+        {
+          "q": "临时 Hook Secret 如何处理？",
+          "answer": "沿用当前 bridge 实例已配置的 ZJ_LOOP_GITLAB_WEBHOOK_SECRET，仅在 GitLab Hook 页面输入，不输出或发到聊天；不为 report-only 重新部署；Hook 删除后再轮换。",
+          "note": "避免只读验证引入额外凭据变更和发布轮次。"
+        },
+        {
+          "q": "preflight 从哪里执行？",
+          "answer": "在 bridge Pod 内执行；GITLAB_TOKEN 由 Pod 环境注入，ZJ_LOOP_BRIDGE_HTTP_URL=http://127.0.0.1:8080，以同时访问 GitLab API 和 bridge health；不新增公网 health endpoint。",
+          "note": "保留 health 内网边界，但需要解决 preflight 工具进入 Pod 的分发方式。"
+        },
+        {
+          "q": "preflight 如何分发到 Pod？",
+          "answer": "提升为 @jununfly/zj-loop-core CLI（zj-loop-gitlab-bridge-preflight），Pod 内通过 npx --package @jununfly/zj-loop-core@版本执行；不复制到 ai-studio-gitlab，不临时下载未固定版本脚本。",
+          "note": "保持验证逻辑归属 ZAgenticLoop，保证版本可审计、可复现并降低手工部署成本。"
+        },
+        {
+          "q": "preflight CLI 使用哪个 core 版本？",
+          "answer": "发布 @jununfly/zj-loop-core@0.1.21，新增 zj-loop-gitlab-bridge-preflight CLI；Pod 通过 npx 固定 0.1.21 执行，不重新发布 bridge runtime 0.1.21。",
+          "note": "0.1.21 保持为 bridge dedupe 修复版本，0.1.21 单独承载验证工具能力。"
+        }
+      ],
+      "notes": "Implemented report-only preflight CLI and manifest example. Deterministic tests cover ready, missing token, project mismatch, Hook mismatch, and bridge health failure; blocked paths perform no writes. Release-ready and release-capability gates pass."
+    },
+    "1-5-5-3-3-6-1": {
+      "id": "1-5-5-3-3-6-1",
+      "label": "Package report-only preflight CLI for Pod execution",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5-3-3-6",
       "children": [],
       "decisions": [],
-      "notes": "Implemented report-only preflight CLI and manifest example. Deterministic tests cover ready, missing token, project mismatch, Hook mismatch, and bridge health failure; blocked paths perform no writes. Release-ready and release-capability gates pass."
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-24 15:13:05",
+    "updated": "2026-07-24 15:32:29",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

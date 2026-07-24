@@ -2,54 +2,54 @@
   "schema": "zj-loop.version-lock.v1",
   "core": {
     "package": "@jununfly/zj-loop-core",
-    "version": "0.1.20",
-    "source": "@jununfly/zj-loop-core@0.1.20"
+    "version": "0.1.21",
+    "source": "@jununfly/zj-loop-core@0.1.21"
   },
   "generated_files": {
     ".github/workflows/zj-loop-smoke.yml": {
       "path": ".github/workflows/zj-loop-smoke.yml",
-      "sha256": "8332ae1815f8df4884337821cfad0826ec0ca18031464b1d90dd658cf895e037",
-      "template_hash": "4ba578b6aede91b6"
+      "sha256": "62c2b15c558348bc7b9dbcb1282624503fbb9062657587c5d0e4727fed6c6e1f",
+      "template_hash": "456feefe5c9833d3"
     },
     ".github/workflows/zj-loop-daily-triage.yml": {
       "path": ".github/workflows/zj-loop-daily-triage.yml",
-      "sha256": "afb742c86c5d2824e20027a96af83ed764f4b3c3231320959b8bb396c911db5e",
-      "template_hash": "b5d6f716b948cefd"
+      "sha256": "d5f486f41c212f4eae63e9450b4ff99c02242d8a96730245b826fc29ec411d9c",
+      "template_hash": "222fbde9c71c2d90"
     },
     ".github/workflows/zj-loop-ci-sweeper.yml": {
       "path": ".github/workflows/zj-loop-ci-sweeper.yml",
-      "sha256": "a4d9072a51b01face5733170e1d51d4a55d8774882e9ae83705727ca00f8efc5",
-      "template_hash": "b74842904558e15d"
+      "sha256": "1676270d54d8378194c80405010bd293ce859cbc1ff9e6dbb6fc0d752702d4d1",
+      "template_hash": "2e1b1bc214fc0c10"
     },
     ".github/workflows/zj-loop-pr-steward.yml": {
       "path": ".github/workflows/zj-loop-pr-steward.yml",
-      "sha256": "7cd993372be64971eb70221e0792dcac4b5b32692acd72c71a70b83be02af770",
-      "template_hash": "82649fd211919856"
+      "sha256": "47bf709aa25cba13490470f024562ba63383ce0cb86bb9a03385e6f3f4018a5b",
+      "template_hash": "7b89dcba07432e7f"
     },
     ".github/workflows/zj-loop-issue-triage.yml": {
       "path": ".github/workflows/zj-loop-issue-triage.yml",
-      "sha256": "9317960e497eca27df2ab34dfdddb6c98c18912d247f26a41fc70c2cbc090319",
-      "template_hash": "5a590bf34461095d"
+      "sha256": "96fae4491205f90add61266713a826806d9a13ef559814c31209df7fd62124a0",
+      "template_hash": "402dfa75b7e284cd"
     },
     ".github/workflows/zj-loop-dependency-sweeper.yml": {
       "path": ".github/workflows/zj-loop-dependency-sweeper.yml",
-      "sha256": "6a5a80b473d8218d6b0d874f7b467cedfdd4e20e79697f51749a75892673b50b",
-      "template_hash": "f574c8fb4adac341"
+      "sha256": "06bbbac6678d221ce95adead6d7b96a9787e3eb2d5ae17966b76bb20d55d3983",
+      "template_hash": "339a9bdfdf15d1e5"
     },
     ".github/workflows/zj-loop-changelog-drafter.yml": {
       "path": ".github/workflows/zj-loop-changelog-drafter.yml",
-      "sha256": "1533369f902267607358208a313203120ffb041788e048df50512f5f2ceffcd7",
-      "template_hash": "d7ad0808827a74a9"
+      "sha256": "7cf1f284e81b76a513d0354ade3edd083492a2c7836aa84868a846036575cc99",
+      "template_hash": "febf092b454ff363"
     },
     ".github/workflows/zj-loop-roadmap-activation.yml": {
       "path": ".github/workflows/zj-loop-roadmap-activation.yml",
-      "sha256": "2e97a51f59d70a52297d9a19045ec2fa5e0cbdf9bce84493deaa04f1b3f67489",
-      "template_hash": "a99f0e7157309aa0"
+      "sha256": "21eb0616e09f4029dd3cdac6245e9d1ff1841a25c830f2d02d511f04393beb26",
+      "template_hash": "4ecab95a0e06c245"
     },
     ".github/workflows/zj-loop-post-merge-cleanup.yml": {
       "path": ".github/workflows/zj-loop-post-merge-cleanup.yml",
-      "sha256": "681131c323887d2f0c1330744139683b8381c2b05beeb525bc80ae55f0398f53",
-      "template_hash": "bc3f00f8cb1c6873"
+      "sha256": "901aff940ee12bf2849954c87f7df78338c89023eda21e9e33f14d70db07b288",
+      "template_hash": "aceca0fba879ece2"
     }
   }
 }
