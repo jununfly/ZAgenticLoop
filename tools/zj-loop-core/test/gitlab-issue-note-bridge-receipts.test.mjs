@@ -57,6 +57,32 @@ test('returns duplicate for a replay and event-id-collision for a conflicting ev
   }
 });
 
+test('returns route-level duplicate when GitLab resends the same note with a new event id', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-receipts-'));
+  try {
+    const first = await persistGitLabIssueNoteBridgeReceipt({
+      root,
+      envelope,
+      routeId: 'roadmap-activation-note',
+      now: '2026-07-17T00:00:01.000Z',
+    });
+    const replayEnvelope = { ...envelope, event_id: 'event-receipt-resend-1' };
+    const duplicate = await persistGitLabIssueNoteBridgeReceipt({
+      root,
+      envelope: replayEnvelope,
+      routeId: 'roadmap-activation-note',
+      now: '2026-07-17T00:00:02.000Z',
+    });
+
+    assert.equal(first.status, 'created');
+    assert.equal(duplicate.status, 'duplicate');
+    assert.equal(duplicate.receipt_path, first.receipt_path);
+    assert.equal(duplicate.dedupe_path, first.dedupe_path);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('updates trigger state and requires explicit bounded recovery', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-receipts-'));
   try {

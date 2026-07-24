@@ -23,17 +23,31 @@ export async function persistGitLabIssueNoteBridgeReceipt(input) {
         dedupeKey: input.envelope.dedupe_key,
     });
     const fingerprint = fingerprintEnvelope(input.envelope);
+    const existingDedupe = await readJsonIfPresent(paths.dedupe);
+    if (existingDedupe && existingDedupe.event_id !== input.envelope.event_id) {
+        const existingReceiptPath = path.resolve(input.root ?? '.', existingDedupe.envelope_ref);
+        const existingReceipt = await readJsonIfPresent(existingReceiptPath);
+        if (existingReceipt) {
+            return {
+                status: 'duplicate',
+                receipt: existingReceipt,
+                dedupe: existingDedupe,
+                receipt_path: relativePath(input.root, existingReceiptPath),
+                dedupe_path: relativePath(input.root, paths.dedupe),
+            };
+        }
+    }
     const existingReceipt = await readJsonIfPresent(paths.receipt);
     if (existingReceipt) {
         if (existingReceipt.fingerprint !== fingerprint) {
             return { status: 'event-id-collision', receipt: existingReceipt, receipt_path: relativePath(input.root, paths.receipt) };
         }
-        const existingDedupe = await readJsonIfPresent(paths.dedupe);
-        if (existingDedupe) {
+        const receiptDedupe = await readJsonIfPresent(paths.dedupe);
+        if (receiptDedupe) {
             return {
                 status: 'duplicate',
                 receipt: existingReceipt,
-                dedupe: existingDedupe,
+                dedupe: receiptDedupe,
                 receipt_path: relativePath(input.root, paths.receipt),
                 dedupe_path: relativePath(input.root, paths.dedupe),
             };
