@@ -3277,6 +3277,11 @@
           "q": "product-project Webhook bridge 阻塞期间是否继续线上验证？",
           "answer": "A：保持 blocked/deferred，不进行部署或线上重试；转向已定义的后续确定性脚本 gate 阶段。",
           "note": "Human 已确认；1-5-5-4 scheduled dogfood 已完成，bridge 外部能力阻塞不再重复消耗验证轮次。"
+        },
+        {
+          "q": "开发测试阶段是否要求跨实例 receipt/dedupe 持久化？",
+          "answer": "暂不要求。test fork 只验证同一实例生命周期内的 receipt/dedupe 去重；实例重建导致状态丢失作为已知限制，真实项目接入时按项目实际持久化能力解决。",
+          "note": "当前不引入持久化卷或外部 dedupe 存储，不重复消耗开发验证轮次。"
         }
       ],
       "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
@@ -4361,7 +4366,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-24 01:15:57",
+    "updated": "2026-07-24 14:11:05",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
