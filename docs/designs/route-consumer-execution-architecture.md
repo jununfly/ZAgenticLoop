@@ -30,6 +30,135 @@ run, verification evidence, and review artifact or structured hard stop without
 guessing where to reply, which command to run next, or which evidence is the
 current source of truth?
 
+## GitLab Bridge Deployment Topology
+
+The GitLab bridge may run on a separate container, server, or workstation from
+the target GitLab project. A test instance can therefore host both a product
+checkout and the bridge process without becoming the target project itself.
+
+For the current `mlive-dev/ai-studio` integration, the `ai-studio-gitlab`
+instance is the deployment carrier: its main Express application may listen on
+port `3000`, while the independent bridge process listens on port `8080`. The
+GitLab Project Webhook belongs to `mlive-dev/ai-studio`; it does not belong to
+the deployment carrier's name.
+
+```mermaid
+flowchart LR
+    GL["GitLab platform<br/>mlive-dev/ai-studio"]
+    HOOK["Target project<br/>Project Webhook"]
+    API["GitLab API"]
+    PIPE["Target project Pipeline<br/>master"]
+
+    subgraph HOST["Deployment carrier: ai-studio-gitlab instance / container"]
+        CHECKOUT["Checkout: ai-studio"]
+        APP["ai-studio Express<br/>PM2 :3000"]
+        BRIDGE["ZAgenticLoop Webhook Bridge<br/>PM2 :8080"]
+        ENV["Bridge runtime environment<br/>API URL / secrets / route registration"]
+        STATE["Receipt / dedupe state<br/>local or durable storage"]
+    end
+
+    subgraph INGRESS["Public ingress / Nginx"]
+        URL["aistudio.bilibili.co<br/>GitLab webhook URL"]
+    end
+
+    GL --> HOOK
+    HOOK --> URL
+    URL -->|"forward webhook"| BRIDGE
+    BRIDGE -->|"fixed API trigger"| API
+    API --> PIPE
+    CHECKOUT --> APP
+    CHECKOUT --> BRIDGE
+    ENV --> BRIDGE
+    BRIDGE --> STATE
+```
+
+The bridge is an ingress and dispatch boundary. It must not infer the target
+project from the deployment carrier name, and it must not treat the carrier's
+current checkout branch as request identity.
+
+## Project Registration and Executor Binding
+
+The canonical Route Protocol is global, while a project Registration supplies
+the project's default executor and its allowlisted executor profiles. The
+Registration is versioned in the target repository rather than hidden in
+bridge environment variables:
+
+```text
+master/zj-loop/registrations/project.yaml
+branch-or-commit/zj-loop/registrations/<registration-id>.yaml
+```
+
+The project default becomes active only after its `master` commit is merged.
+A local Registration may be unmerged but must already be pushed and addressed
+by an immutable commit SHA and file digest. A request may opt into it only with
+an explicit, validated contract. Ordinary markers use the project default.
+
+Registration precedence is therefore:
+
+```text
+global Route Protocol
+  -> project default Registration
+    -> explicit commit-pinned local Registration
+      -> execution envelope snapshot
+```
+
+The project Registration defines the capability ceiling. A local Registration
+may select only an allowlisted `executor kind + profile + capabilities` tuple;
+it cannot add a workspace, command, token, or provider write scope. The
+executor binding is copied into the envelope and never re-read during an
+active execution.
+
+The initial `mlive-dev/ai-studio` profiles are:
+
+```text
+gitlab-pipeline / ai-studio-master-pipeline   (default)
+agent-local    / human-codex-mac              (explicit contract + Human claim)
+```
+
+The branch is workflow context, not Registration identity. Registration
+identity is `commit SHA + path + SHA-256 digest`.
+
+## Durable State and Reconciliation
+
+When deployment storage is reset on instance publication, bridge state must
+not depend on the local checkout. The temporary durable substrate is a
+protected `zj-loop-state` branch in the target GitLab repository:
+
+```text
+zj-loop-state/receipts/<event-id>.json
+zj-loop-state/dedupe/<dedupe-key>.json
+zj-loop-state/executions/<request-id>/*.json
+```
+
+The state branch is append-only. A dedicated state-writer credential can write
+only this branch and path family; it is distinct from the bridge Pipeline
+trigger token. State commits use `[skip ci]` and the project CI workflow skips
+the state branch so evidence writes cannot create a feedback pipeline.
+
+The Webhook request returns after the API Pipeline is created. A separate
+reconciler reads the Pipeline and its artifacts, validates the event/project/
+route/Registration binding, and appends final evidence to `zj-loop-state`.
+Network ambiguity is `trigger-uncertain`; it never causes an automatic provider
+retry.
+
+## A/B Execution Envelope
+
+A and B share `zj-loop.execution_envelope.v1`. The envelope records the source
+identity, Registration snapshot, executor binding, and side-effect state. A
+Pipeline or Agent Executor adds only executor-specific fields. Unknown protocol
+versions or mismatched digests fail closed.
+
+For A, the default `roadmap-sliced-development` marker triggers only the
+`master` API Pipeline. The first consumer is report/plan-only and must upload
+structured artifacts with `allow_failure: false`; it does not receive
+`GITLAB_TOKEN`, create a branch, create an MR, or modify business files.
+
+For B1, an explicit hidden JSON request contract selects a local Registration.
+The Human's Mac Codex session claims it, creates an independent worktree from
+the Registration commit, and completes with a commit, verification evidence,
+and Draft MR. The current Codex Desktop session is Human-in-the-loop, not a
+remotely addressable Agent API.
+
 ## Control Surfaces
 
 `zj-loop/zj-loop-route-table.yaml` is the project-specific source of truth for
