@@ -9,7 +9,7 @@ const baseEnv = {
   CI_PIPELINE_SOURCE: 'api',
   CI_COMMIT_REF_NAME: 'master',
   CI_PROJECT_PATH: 'mlive-dev/ai-studio',
-  CI_PROJECT_ID: '52131',
+  CI_PROJECT_ID: '48263',
   CI_JOB_TOKEN: 'job-token',
   CI_API_V4_URL: 'https://git.bilibili.co/api/v4',
   ZJ_LOOP_BRIDGE_EVENT_ID: 'event-123',
@@ -58,11 +58,16 @@ function fetchImpl(url) {
 
 test('A consumer validates the fixed API/master/project/registration binding without writes', async () => {
   const root = await fixture();
-  const result = await runGitLabIssueNoteBridgeConsumer({ root, env: baseEnv, fetchImpl });
+  const urls = [];
+  const result = await runGitLabIssueNoteBridgeConsumer({ root, env: baseEnv, fetchImpl: (url) => { urls.push(url); return fetchImpl(url); } });
   assert.equal(result.status, 'completed');
   assert.equal(result.side_effects_executed, false);
   assert.equal(result.registration.executor_profile, 'ai-studio-master-pipeline');
   assert.match(result.registration.sha256, /^[a-f0-9]{64}$/);
+  assert.deepEqual(urls, [
+    'https://git.bilibili.co/api/v4/projects/48263',
+    'https://git.bilibili.co/api/v4/projects/48263/issues/11/notes/22',
+  ]);
 });
 
 test('A consumer fails closed for non-API pipelines and never calls a provider', async () => {

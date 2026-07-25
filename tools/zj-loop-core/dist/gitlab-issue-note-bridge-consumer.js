@@ -31,6 +31,8 @@ export async function runGitLabIssueNoteBridgeConsumer(input) {
         return blocked(result, 'pipeline-ref-master-required');
     if (clean(env.CI_PROJECT_PATH) !== 'mlive-dev/ai-studio')
         return blocked(result, 'ci-project-mismatch');
+    if (clean(env.CI_PROJECT_ID) !== '48263')
+        return blocked(result, 'ci-project-id-mismatch');
     if (!projectPath || projectPath !== 'mlive-dev/ai-studio')
         return blocked(result, 'bridge-project-mismatch');
     if (!targetRoute || targetRoute !== 'roadmap-sliced-development')
@@ -143,18 +145,21 @@ async function rereadSourceBinding(input) {
     if (!token)
         return { ok: false, reason: 'gitlab-read-token-required' };
     const apiUrl = clean(input.env.CI_API_V4_URL) ?? 'https://git.bilibili.co/api/v4';
+    const projectId = clean(input.env.CI_PROJECT_ID);
+    if (!projectId)
+        return { ok: false, reason: 'gitlab-read-project-id-required' };
     const projectPath = input.values.ZJ_LOOP_BRIDGE_PROJECT_PATH;
     const issueIid = input.values.ZJ_LOOP_BRIDGE_ISSUE_IID;
     const noteId = input.values.ZJ_LOOP_BRIDGE_NOTE_ID;
     const headers = { 'JOB-TOKEN': token };
     try {
-        const projectResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${encodeURIComponent(projectPath)}`, { headers });
+        const projectResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${projectId}`, { headers });
         if (projectResponse.status !== 200)
             return { ok: false, reason: 'gitlab-read-capability-blocked' };
         const project = await projectResponse.json();
         if (project.path_with_namespace !== projectPath)
             return { ok: false, reason: 'gitlab-project-reread-mismatch' };
-        const noteResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${encodeURIComponent(projectPath)}/issues/${issueIid}/notes/${noteId}`, { headers });
+        const noteResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${projectId}/issues/${issueIid}/notes/${noteId}`, { headers });
         if (noteResponse.status !== 200)
             return { ok: false, reason: 'gitlab-note-reread-unavailable' };
         const note = await noteResponse.json();
