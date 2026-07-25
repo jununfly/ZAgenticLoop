@@ -39,7 +39,7 @@ export declare function buildPrStewardExecutionPlan(input?: {
     request_id: any;
     dedupe_key: any;
     source_review: {
-        provider: "github" | "gitlab";
+        provider: "gitlab" | "github";
         kind: string;
         repo: any;
         number: any;

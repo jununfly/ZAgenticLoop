@@ -128,7 +128,7 @@
     "1-5": {
       "id": "1-5",
       "label": "GitHub 与 GitLab 的 live 能力对齐",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -433,7 +433,7 @@
     "1-5-5": {
       "id": "1-5-5",
       "label": "GitLab required-route reference dogfood",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-5",
       "children": [
@@ -443,7 +443,8 @@
         "1-5-5-4",
         "1-5-5-5",
         "1-5-5-6",
-        "1-5-5-7"
+        "1-5-5-7",
+        "1-5-5-8"
       ],
       "decisions": [
         {
@@ -2269,7 +2270,7 @@
     "1-5-5-3": {
       "id": "1-5-5-3",
       "label": "GitLab event-driven required-route dogfood",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5",
       "children": [
@@ -2523,7 +2524,7 @@
     "1-5-5-3-3": {
       "id": "1-5-5-3-3",
       "label": "GitLab Issue Note webhook bridge envelope dedupe and trigger recovery",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3",
       "children": [
@@ -3189,7 +3190,7 @@
     "1-5-5-3-3-5": {
       "id": "1-5-5-3-3-5",
       "label": "product-project GitLab Issue Note bridge live dogfood fixture",
-      "status": "blocked",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-3-3",
       "children": [],
@@ -3390,7 +3391,7 @@
           "note": "保证 CI 稳定快速，同时保留真实 provider API 兼容性证据。"
         }
       ],
-      "notes": "Deferred：Webhook live dogfood 依赖可访问的 HTTPS bridge deployment；保持 disabled/unavailable，不运行部署或线上验证，不降低 live completion gate。"
+      "notes": "Completed with real mlive-dev/ai-studio evidence: webhook trigger succeeded on master at 74dce918 with @jununfly/zj-loop-core@0.1.24, CI_JOB_TOKEN 404 fallback via masked GITLAB_TOKEN succeeded, and webhook redelivery returned duplicate with side_effects_executed=false."
     },
     "1-5-5-5-1": {
       "id": "1-5-5-5-1",
@@ -4551,11 +4552,176 @@
       "children": [],
       "decisions": [],
       "notes": "Packaged zj-loop-gitlab-bridge-preflight in @jununfly/zj-loop-core@0.1.21. Core full suite passed; npm provenance release workflow 30076229714 succeeded; registry confirms latest=0.1.21 and CLI bin present."
+    },
+    "1-5-5-8": {
+      "id": "1-5-5-8",
+      "label": "GitLab agent-local B1 handoff from bridge to Mac Codex",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": "1-5-5",
+      "children": [
+        "1-5-5-8-1",
+        "1-5-5-8-2",
+        "1-5-5-8-3",
+        "1-5-5-8-4"
+      ],
+      "decisions": [
+        {
+          "q": "B 路由第一阶段采用哪种 Agent 执行形态？",
+          "answer": "B1：bridge 写入 durable agent handoff，由 Mac 上当前 Codex 会话主动认领；B2 常驻 Mac Agent Worker 延后。",
+          "note": "当前 Codex Desktop 不是可被服务器直接调用的远程 Agent API；先实现 Human-in-the-loop B1，避免引入 Worker 生命周期、认证、断线恢复和并发 claim 复杂度。"
+        },
+        {
+          "q": "Mac Codex 如何发现并认领 B1 handoff？",
+          "answer": "使用显式 CLI list → claim；Codex/Human 主动列出 handoff，选择 handoff-id 后写入 claim receipt 并创建独立 worktree。",
+          "note": "第一阶段不轮询 Issue 评论、不运行常驻 Mac Worker、bridge 不直接调用 Mac；认领必须可审计、可重放、可恢复。"
+        },
+        {
+          "q": "A、B1、B2 是否互斥，哪个作为默认？",
+          "answer": "三者不是全局互斥模式：全局协议统一，项目 Registration 声明默认 executor；当前 mlive-dev/ai-studio 默认 A/gitlab-pipeline，B1/B2 只能由请求显式 override。禁止 executor 失败后的自动 fallback。",
+          "note": "A 适合作为事件入口默认；B1 需要 Human 与本地 Codex claim；B2 未来需要显式注册的 Agent Worker。每次请求将选中的 executor 固化到 Execution Envelope。"
+        },
+        {
+          "q": "A/B1/B2 的 executor override 如何表达？",
+          "answer": "使用统一结构化 Execution Request：route_id + executor.kind/profile；来源可为 GitLab Note hidden JSON、Mac Codex CLI 或未来 B2 Worker API，但最终都进入同一协议。",
+          "note": "bridge 校验 executor allowlist、capability ceiling、immutable Registration commit/digest，并将选择快照到 Execution Envelope；A/B1/B2 不拆成重复 route_id。"
+        },
+        {
+          "q": "B1 第一刀实现什么范围？",
+          "answer": "先实现 handoff/claim/execution/evidence schema、GitLab state-branch adapter、agent-local list/claim CLI、optimistic claim conflict 和 fake-state replay tests；线上 bridge、常驻 Worker、Codex 调用、Draft MR live dogfood 延后。",
+          "note": "第一刀先锁协议和认领边界，第二刀接 bridge，第三刀才做 Mac claim→worktree→verify→push→Draft MR live dogfood。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-8-1": {
+      "id": "1-5-5-8-1",
+      "label": "Durable agent-local handoff envelope and GitLab state-branch persistence",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5-8",
+      "children": [],
+      "decisions": [
+        {
+          "q": "B1 handoff 的持久化真相源是什么？",
+          "answer": "目标 GitLab 项目的受保护 zj-loop-state 分支，按 handoffs、claims、executions、evidence 路径保存 append-only JSON；state-writer credential 与 Pipeline Trigger Token 分离。",
+          "note": "使用 [skip ci] 避免 state branch 产生业务 Pipeline；不写 master，实例磁盘重置不影响 Mac Codex 恢复待认领任务。"
+        },
+        {
+          "q": "Execution Request 如何绑定 Registration？",
+          "answer": "使用 immutable commit SHA + 文件路径 + SHA-256 digest；普通 A 请求也快照默认 Registration，B1/B2 请求必须显式提供固定绑定；只提供 branch/master 或未提交 Registration 直接 blocked。",
+          "note": "bridge 校验后将 Registration snapshot 写入 handoff/envelope；执行期间不重新读取漂移后的 Registration。"
+        },
+        {
+          "q": "B1 请求到达 bridge 后，bridge 执行什么副作用？",
+          "answer": "仅创建一个 durable handoff，并写入 receipt/dedupe record；返回 202 handoff-created；不触发 Pipeline、不调用 Mac、不写 Issue/Note/MR、不修改 master。",
+          "note": "B1 必须显式 opt-in；同一 event_id/dedupe_key 只创建一个 handoff；Mac Codex 不在线不算失败，handoff 保持 pending。"
+        },
+        {
+          "q": "B1 的 handoff_id/request_id 由谁生成？",
+          "answer": "由 bridge 基于已验证的 project、event_id、dedupe_key、Issue/Note 生成稳定 identity；Note 只能声明 route、executor override 和 Registration binding，不能自由指定 request identity。",
+          "note": "同一 webhook 重放得到同一 handoff；冲突或伪造 request_id blocked；handoff_id 统一关联 state、claim、execution、MR evidence。"
+        },
+        {
+          "q": "zj-loop-state 分支如何初始化？",
+          "answer": "由 Human/Admin 预先创建并保护，写入基础目录和 [skip ci] 规则；bridge 不自动创建或从 master 派生 state branch。分支缺失、未保护或权限不符合直接 blocked。",
+          "note": "初始化、保护、state-writer 权限配置属于部署前置；adapter 只负责既有 state branch 的 append-only 读写。"
+        },
+        {
+          "q": "state branch 的写入提交如何组织？",
+          "answer": "每个状态变更创建一个带 [skip ci] 的 GitLab commit，claim 使用 expected HEAD SHA 做 CAS；只追加/创建对应 JSON，不覆盖历史 evidence，不 force push、不 squash/rebase。",
+          "note": "提交历史本身是审计日志；HEAD 冲突返回 already-claimed 或 state-conflict。"
+        },
+        {
+          "q": "B1 handoff 状态转移允许哪些路径？",
+          "answer": "允许 pending→claimed→running→completed；claimed/running 可转 blocked 或 released；blocked/released 仅通过显式 recover/re-claim 产生新 claim/recovery evidence 后回到 claimed；completed 不可逆。",
+          "note": "禁止无 claim 直接 running、旧 claim 覆盖新 claim、自动恢复，以及 completed→claimed/running。"
+        },
+        {
+          "q": "B1 handoff envelope 的最小字段集是什么？",
+          "answer": "使用 zj-loop.agent_handoff.v1，包含 handoff/request identity、status/created_at、GitLab project/Issue/Note/event/dedupe source、route_id、executor kind/profile/capabilities、Registration commit/path/digest、workspace project/base ref/base commit、claim 和 side_effects_executed；不保存完整 webhook payload。",
+          "note": "字段集服务于审计、claim、worktree 重建、MR 关联和 replay；provider 原始 payload 只在 bridge 内存中校验。"
+        }
+      ],
+      "notes": "Protocol and read/claim adapter implemented; handoff creation bridge integration, protected state-branch provisioning, and live GitLab replay remain in progress."
+    },
+    "1-5-5-8-2": {
+      "id": "1-5-5-8-2",
+      "label": "Mac Codex agent-local list and claim CLI contract",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-5-5-8",
+      "children": [],
+      "decisions": [
+        {
+          "q": "多个 Human/Agent 同时认领同一个 handoff 时如何仲裁？",
+          "answer": "使用 state branch optimistic claim：claim 携带 expected HEAD SHA，先写入者获胜；提交冲突重新读取并返回 already-claimed，禁止覆盖或强制接管。",
+          "note": "同一 handoff_id 只允许一个 active claim；claim 记录 human_id、agent_session_id、claimed_at；重新认领必须经过显式 release 或过期策略。"
+        },
+        {
+          "q": "Claim 如何释放或恢复？",
+          "answer": "第一阶段不设置自动 TTL；Codex 正常完成写 completed，Human 主动放弃写 released，异常写 blocked；恢复必须由 Human 显式执行并生成 recovery evidence，禁止自动接管。",
+          "note": "长时间运行的 Codex 任务不能因 TTL 误触发双重 worktree 或并发修改；恢复动作必须有明确操作者和理由。"
+        },
+        {
+          "q": "Mac Codex 使用什么凭据写入 zj-loop-state？",
+          "answer": "使用当前 Human 的 GitLab 身份凭据，通过本机 credential helper 或 SSH agent 注入；state branch 权限由 GitLab 控制，token 不写入项目、handoff 或 evidence。",
+          "note": "Mac 可读取 master/state branch、写 claims/executions/evidence、创建工作分支和 Draft MR，但不自动合并；bridge 的 state-writer credential 与 Human 凭据分离。"
+        },
+        {
+          "q": "B1 handoff 状态如何反馈给 Human？",
+          "answer": "机器状态写入 zj-loop-state，Human 通过 Mac CLI list/show 查看；bridge 返回 handoff-created JSON；不自动回写 GitLab Note。",
+          "note": "状态包括 pending、claimed、running、completed、blocked、released；避免 Note webhook 回环和评论噪声。"
+        }
+      ],
+      "notes": "First slice implemented: agent-local list/claim CLI contract, GitLab state-branch client, append-only claim files, existing-claim visibility, and optimistic HEAD conflict handling. Fake state tests pass; live bridge handoff remains a later slice."
+    },
+    "1-5-5-8-3": {
+      "id": "1-5-5-8-3",
+      "label": "Claimed handoff independent worktree creation and execution boundary",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5-5-8",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Mac Codex 的独立 worktree 从哪个代码点创建？",
+          "answer": "从 handoff 创建时解析并固化的 workspace_base_commit 创建；该 commit 与 Registration commit 分开记录，Mac 不直接信任本地 master。",
+          "note": "base commit 不可读则 claim blocked；worktree 分支名由 handoff_id 派生；不自动覆盖已有本地 worktree。"
+        },
+        {
+          "q": "B1 worktree 的分支和 Draft MR 如何命名？",
+          "answer": "使用 zJ-loop/agent-local/<handoff-id> 的确定性分支名；target branch 使用 handoff 固化的 base_ref；Mac Codex 创建或复用唯一 Draft MR。",
+          "note": "MR 描述包含 handoff、Registration commit/digest、base commit 与验证证据；不自动合并或关闭 Issue，同一 handoff 不创建第二个 Draft MR。"
+        },
+        {
+          "q": "分支名前缀的规范拼写是什么？",
+          "answer": "固定为 zj-loop/agent-local/<handoff-id>（全小写）。",
+          "note": "更正上一条记录中的大小写笔误；语义仍为确定性 handoff 分支与唯一 Draft MR。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-8-4": {
+      "id": "1-5-5-8-4",
+      "label": "Agent-local verification evidence and Draft MR handoff",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-5-5-8",
+      "children": [],
+      "decisions": [
+        {
+          "q": "B1 什么时候算完成？",
+          "answer": "以 Draft MR 加结构化验证证据作为成功边界：handoff、Registration、base commit、changed files/no-op、验证结果、source branch、Draft MR 与 side_effects_executed 必须齐全。",
+          "note": "只输出自然语言、没有验证、没有 push、工作区不确定或需要高风险 Human 决策时只能 blocked/released，不能 completed。"
+        }
+      ],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-24 16:34:10",
+    "updated": "2026-07-26 02:46:58",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

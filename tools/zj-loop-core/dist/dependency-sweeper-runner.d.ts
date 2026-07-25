@@ -57,9 +57,9 @@ export declare function buildDependencySweeperExecutionPlan(input?: {
     created_at: string;
     request_id: any;
     dedupe_key: any;
-    provider: "github" | "gitlab";
+    provider: "gitlab" | "github";
     source_signal: {
-        provider: "github" | "gitlab";
+        provider: "gitlab" | "github";
         id: any;
         source_url: any;
         provider_metadata: {
@@ -68,7 +68,7 @@ export declare function buildDependencySweeperExecutionPlan(input?: {
         } | undefined;
     };
     subject: {
-        provider: "github" | "gitlab";
+        provider: "gitlab" | "github";
         ecosystem: any;
         package_name: any;
         current_version: any;
