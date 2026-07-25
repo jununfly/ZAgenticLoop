@@ -85,3 +85,24 @@ test('A consumer fails closed when the project Registration is missing or mismat
   const mismatch = await runGitLabIssueNoteBridgeConsumer({ root, env: { ...baseEnv, ZJ_LOOP_BRIDGE_PROJECT_PATH: 'other/project' }, fetchImpl });
   assert.equal(mismatch.reason, 'bridge-project-mismatch');
 });
+
+test('A consumer falls back to a masked GitLab API token when CI_JOB_TOKEN cannot read the project', async () => {
+  const root = await fixture();
+  const env = { ...baseEnv, GITLAB_TOKEN: 'private-token' };
+  const authHeaders = [];
+  const result = await runGitLabIssueNoteBridgeConsumer({
+    root,
+    env,
+    fetchImpl: (url, init) => {
+      authHeaders.push(init?.headers);
+      if (init?.headers?.['JOB-TOKEN']) return Promise.resolve({ status: 404, async json() { return {}; } });
+      return fetchImpl(url);
+    },
+  });
+  assert.equal(result.status, 'completed');
+  assert.deepEqual(authHeaders, [
+    { 'JOB-TOKEN': 'job-token' },
+    { 'PRIVATE-TOKEN': 'private-token' },
+    { 'PRIVATE-TOKEN': 'private-token' },
+  ]);
+});

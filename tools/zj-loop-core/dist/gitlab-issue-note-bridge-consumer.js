@@ -141,8 +141,9 @@ function validateRegistration(registration, projectPath, routeId) {
     return { ok: true, executor: { kind: String(executor.kind), profile: String(executor.profile) }, marker: route.marker };
 }
 async function rereadSourceBinding(input) {
-    const token = clean(input.env.CI_JOB_TOKEN);
-    if (!token)
+    const jobToken = clean(input.env.CI_JOB_TOKEN);
+    const fallbackToken = clean(input.env.GITLAB_TOKEN) ?? clean(input.env.GITLAB_PRIVATE_TOKEN);
+    if (!jobToken && !fallbackToken)
         return { ok: false, reason: 'gitlab-read-token-required' };
     const apiUrl = clean(input.env.CI_API_V4_URL) ?? 'https://git.bilibili.co/api/v4';
     const projectId = clean(input.env.CI_PROJECT_ID);
@@ -151,23 +152,30 @@ async function rereadSourceBinding(input) {
     const projectPath = input.values.ZJ_LOOP_BRIDGE_PROJECT_PATH;
     const issueIid = input.values.ZJ_LOOP_BRIDGE_ISSUE_IID;
     const noteId = input.values.ZJ_LOOP_BRIDGE_NOTE_ID;
-    const headers = { 'JOB-TOKEN': token };
+    const auth = [
+        ...(jobToken ? [{ header: 'JOB-TOKEN', token: jobToken }] : []),
+        ...(fallbackToken ? [{ header: 'PRIVATE-TOKEN', token: fallbackToken }] : []),
+    ];
     try {
-        const projectResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${projectId}`, { headers });
-        if (projectResponse.status !== 200)
-            return { ok: false, reason: 'gitlab-read-capability-blocked' };
-        const project = await projectResponse.json();
-        if (project.path_with_namespace !== projectPath)
-            return { ok: false, reason: 'gitlab-project-reread-mismatch' };
-        const noteResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${projectId}/issues/${issueIid}/notes/${noteId}`, { headers });
-        if (noteResponse.status !== 200)
-            return { ok: false, reason: 'gitlab-note-reread-unavailable' };
-        const note = await noteResponse.json();
-        if (String(note.id) !== noteId || String(note.noteable_iid) !== issueIid || note.noteable_type !== 'Issue' || note.system === true)
-            return { ok: false, reason: 'gitlab-note-binding-mismatch' };
-        if (typeof note.body !== 'string' || !note.body.includes(input.marker) || Number(note.author?.id) !== 81)
-            return { ok: false, reason: 'gitlab-note-request-mismatch' };
-        return { ok: true };
+        for (const candidate of auth) {
+            const headers = { [candidate.header]: candidate.token };
+            const projectResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${projectId}`, { headers });
+            if (projectResponse.status !== 200)
+                continue;
+            const project = await projectResponse.json();
+            if (project.path_with_namespace !== projectPath)
+                return { ok: false, reason: 'gitlab-project-reread-mismatch' };
+            const noteResponse = await input.fetchImpl(`${apiUrl.replace(/\/+$/, '')}/projects/${projectId}/issues/${issueIid}/notes/${noteId}`, { headers });
+            if (noteResponse.status !== 200)
+                continue;
+            const note = await noteResponse.json();
+            if (String(note.id) !== noteId || String(note.noteable_iid) !== issueIid || note.noteable_type !== 'Issue' || note.system === true)
+                return { ok: false, reason: 'gitlab-note-binding-mismatch' };
+            if (typeof note.body !== 'string' || !note.body.includes(input.marker) || Number(note.author?.id) !== 81)
+                return { ok: false, reason: 'gitlab-note-request-mismatch' };
+            return { ok: true };
+        }
+        return { ok: false, reason: 'gitlab-read-capability-blocked' };
     }
     catch {
         return { ok: false, reason: 'gitlab-read-request-failed' };
