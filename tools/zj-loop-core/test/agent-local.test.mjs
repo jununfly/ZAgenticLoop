@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   claimAgentLocalHandoff,
+  createGitLabStateBranchClient,
   listAgentLocalHandoffs,
 } from "../dist/agent-local.js";
 
@@ -116,4 +117,27 @@ test("agent-local list and claim surface an existing append-only claim", async (
   });
   assert.equal(result.status, "already-claimed");
   assert.equal(result.claim?.claim_id, "clm_existing");
+});
+
+test("GitLab state commits use the provider commit_message field", async () => {
+  let request;
+  const client = createGitLabStateBranchClient({
+    apiBaseUrl: "https://git.example/api/v4",
+    projectPath: "group/project",
+    token: "state-token",
+    fetchImpl: async (url, init = {}) => {
+      request = { url, init };
+      return { ok: true, status: 201, async json() { return { id: "commit-1" }; } };
+    },
+  });
+  const result = await client.commit({
+    branch: "zj-loop-state",
+    message: "Create handoff [skip ci]",
+    last_commit_id: "head-1",
+    actions: [{ action: "create", file_path: "handoffs/test.json", content: "{}\n" }],
+  });
+  const body = JSON.parse(request.init.body);
+  assert.equal(result.id, "commit-1");
+  assert.equal(body.commit_message, "Create handoff [skip ci]");
+  assert.equal("message" in body, false);
 });
