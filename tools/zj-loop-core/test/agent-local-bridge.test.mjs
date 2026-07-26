@@ -38,7 +38,7 @@ test("agent-local handoff binds registration digest and current workspace base",
 test("agent-local handoff persistence is append-only and idempotent", async () => {
   const files = new Map();
   let head = "head-1";
-  const client = { getHead: async () => head, readJson: async (path) => files.get(path) ?? null, list: async () => [], commit: async ({ last_commit_id, actions }) => { assert.equal(last_commit_id, head); head = "head-2"; for (const action of actions) files.set(action.file_path, JSON.parse(action.content)); return { id: head }; } };
+  const client = { getHead: async () => head, readJson: async (path) => files.get(path) ?? null, list: async (directory) => [...files.keys()].filter((path) => path.startsWith(`${directory}/`)), commit: async ({ last_commit_id, actions }) => { assert.equal(last_commit_id, head); head = "head-2"; for (const action of actions) files.set(action.file_path, JSON.parse(action.content)); return { id: head }; } };
   const handoff = buildAgentLocalHandoff({ envelope, request, registrationText, registrationCommit: ref, workspaceBaseCommit: "b".repeat(40), now: "2026-07-26T00:01:00.000Z" });
   const created = await persistAgentLocalHandoff({ client, handoff });
   const duplicate = await persistAgentLocalHandoff({ client, handoff });
@@ -46,4 +46,7 @@ test("agent-local handoff persistence is append-only and idempotent", async () =
   assert.equal(created.side_effects_executed, true);
   assert.equal(duplicate.status, "duplicate");
   assert.equal(duplicate.side_effects_executed, false);
+  const replay = await persistAgentLocalHandoff({ client, handoff: { ...handoff, handoff_id: "glh_replay" } });
+  assert.equal(replay.status, "duplicate");
+  assert.equal(replay.handoff.handoff_id, handoff.handoff_id);
 });

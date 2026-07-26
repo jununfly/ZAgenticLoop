@@ -43,10 +43,10 @@ function workflowTemplateHash(text) {
   return createHash('sha256').update(canonical).digest('hex').slice(0, 16);
 }
 
-function renderWorkflowTemplate(template) {
+function renderWorkflowTemplate(template, coreVersion) {
   const withGate = template.replace(
     /(^\s*- uses: actions\/checkout@[^\n]+$)/gm,
-    '$1\n\n      - name: Verify ZJ Loop version consistency\n        run: |\n          if npx --yes --package @jununfly/zj-loop-core@0.1.25 zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then\n            exit 0\n          fi\n          test -f tools/zj-loop-core/dist/version-consistency-cli.js\n          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json\n\n      - name: Upload ZJ Loop version consistency evidence\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: zj-loop-version-consistency\n          path: version-consistency-result.json',
+    `$1\n\n      - name: Verify ZJ Loop version consistency\n        run: |\n          if npx --yes --package @jununfly/zj-loop-core@${coreVersion} zj-loop-version-consistency --root . --provider github --out version-consistency-result.json --json; then\n            exit 0\n          fi\n          test -f tools/zj-loop-core/dist/version-consistency-cli.js\n          node tools/zj-loop-core/dist/version-consistency-cli.js --root . --provider github --out version-consistency-result.json --json\n\n      - name: Upload ZJ Loop version consistency evidence\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: zj-loop-version-consistency\n          path: version-consistency-result.json`,
   );
   return withGate.replace(/^# zj-loop-template-hash: .+$/m, `# zj-loop-template-hash: ${workflowTemplateHash(withGate)}`);
 }
@@ -154,7 +154,7 @@ async function validateGeneratedBundleReleaseGate(root = ROOT) {
     const generatedPath = path.join(root, '.github/workflows', workflowFile);
     const template = await readFile(templatePath, 'utf8');
     const generated = await readFile(generatedPath, 'utf8');
-    const expectedGenerated = renderWorkflowTemplate(template);
+    const expectedGenerated = renderWorkflowTemplate(template, expectedCoreVersion);
 
     if (generated !== expectedGenerated) {
       errors.push(`${generatedPath} is not the rendered form of ${templatePath}`);

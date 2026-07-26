@@ -4,6 +4,7 @@ import type { GitLabIssueNoteBridgeEnvelope } from "./gitlab-issue-note-bridge.j
 import {
   AGENT_HANDOFF_SCHEMA,
   buildHandoffId,
+  isAgentHandoff,
   type AgentHandoff,
   type StateBranchClient,
 } from "./agent-local.js";
@@ -92,6 +93,19 @@ export async function persistAgentLocalHandoff(input: { client: StateBranchClien
   const path = `handoffs/${input.handoff.handoff_id}.json`;
   const existing = await input.client.readJson(path);
   if (existing) return { status: "duplicate", handoff: existing as AgentHandoff, state_commit_id: null, side_effects_executed: false };
+  let handoffPaths: string[] = [];
+  try {
+    handoffPaths = await input.client.list("handoffs");
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "gitlab-state-404") throw error;
+  }
+  for (const handoffPath of handoffPaths.filter((item) => item.endsWith(".json"))) {
+    const candidate = await input.client.readJson(handoffPath);
+    if (!isAgentHandoff(candidate)) continue;
+    if (candidate.request_id === input.handoff.request_id || candidate.source.dedupe_key === input.handoff.source.dedupe_key) {
+      return { status: "duplicate", handoff: candidate, state_commit_id: null, side_effects_executed: false };
+    }
+  }
   try {
     const head = await input.client.getHead();
     const commit = await input.client.commit({ branch: "zj-loop-state", message: `Create agent handoff ${input.handoff.handoff_id} [skip ci]`, last_commit_id: head, actions: [{ action: "create", file_path: path, content: `${JSON.stringify(input.handoff, null, 2)}\n` }] });

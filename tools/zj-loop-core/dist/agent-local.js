@@ -191,10 +191,11 @@ export function createGitLabStateBranchClient(input) {
                 .map((item) => item.path);
         },
         async commit(commitInput) {
+            const { message, ...commitPayload } = commitInput;
             const response = await request(`${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/commits`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(commitInput),
+                body: JSON.stringify({ ...commitPayload, commit_message: message }),
             });
             const body = (await response.json());
             if (typeof body.id !== "string")
