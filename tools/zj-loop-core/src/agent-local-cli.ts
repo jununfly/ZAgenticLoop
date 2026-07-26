@@ -8,18 +8,19 @@ import {
   type AgentHandoff,
 } from "./agent-local.js";
 import { prepareAgentLocalWorktree } from "./agent-local-worktree.js";
+import { buildAgentExecutionContext } from "./execution-context.js";
 
 const argv = process.argv.slice(2);
 process.exitCode = await runCli(
   {
     name: "zj-loop-agent-local",
     description: "List and claim durable agent-local handoffs.",
-    usage: "zj-loop-agent-local <list|claim|worktree> [options]",
+    usage: "zj-loop-agent-local <list|claim|worktree|preflight> [options]",
     options: [
       {
         name: "command",
         type: "positional",
-        description: "list or claim",
+        description: "list, claim, worktree, or preflight",
         default: "list",
       },
       {
@@ -41,6 +42,8 @@ process.exitCode = await runCli(
       },
       { name: "repo-root", type: "string", description: "Local Git repository root", default: process.cwd() },
       { name: "worktree-root", type: "string", description: "Directory for agent worktrees", default: path.resolve(process.cwd(), "../zj-loop-worktrees") },
+      { name: "activation", type: "string", description: "Roadmap activation id for preflight" },
+      { name: "roadmap-path", flag: "roadmap-path", type: "string", description: "Repository-relative roadmap path" },
       {
         name: "project",
         type: "string",
@@ -92,6 +95,14 @@ process.exitCode = await runCli(
           repoRoot: path.resolve(String(options["repo-root"])),
           worktreeRoot: path.resolve(String(options["worktree-root"])),
         });
+      } else if (command === "preflight") {
+        const handoffId = String(options["handoff-id"] ?? "");
+        const value = await client.readJson(`handoffs/${handoffId}.json`);
+        const claims = await client.list(`claims/${handoffId}`);
+        const claimPath = claims.find((item) => item.endsWith(".json"));
+        const claim = claimPath ? await client.readJson(claimPath) : null;
+        const handoff = (value && typeof value === "object" ? { ...value, ...(claim && typeof claim === "object" ? { status: "claimed", claim } : {}) } : null) as AgentHandoff | null;
+        result = await buildAgentExecutionContext({ handoff, repoRoot: path.resolve(String(options["repo-root"])), activationId: String(options.activation ?? ""), roadmapPath: typeof options["roadmap-path"] === "string" ? options["roadmap-path"] : undefined });
       } else {
         throw new Error("unsupported-agent-local-command");
       }
@@ -100,7 +111,8 @@ process.exitCode = await runCli(
         result.status === "claimed" ||
         result.status === "already-claimed" ||
         result.status === "prepared" ||
-        result.status === "reused"
+        result.status === "reused" ||
+        result.status === "execution-ready"
         ? 0
         : 2;
     },
