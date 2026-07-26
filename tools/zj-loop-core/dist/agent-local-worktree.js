@@ -47,7 +47,7 @@ export async function prepareAgentLocalWorktree(input) {
                 return blocked("existing-worktree-binding-mismatch");
             return { schema: AGENT_WORKTREE_SCHEMA, status: "reused", handoff_id: handoff.handoff_id, branch, worktree_path: worktreePath, base_commit: baseCommit, side_effects_executed: false };
         }
-        await git(["worktree", "add", "--branch", branch, worktreePath, baseCommit], input.repoRoot);
+        await git(["worktree", "add", "-b", branch, worktreePath, baseCommit], input.repoRoot);
         return { schema: AGENT_WORKTREE_SCHEMA, status: "prepared", handoff_id: handoff.handoff_id, branch, worktree_path: worktreePath, base_commit: baseCommit, side_effects_executed: true };
     }
     catch (error) {
