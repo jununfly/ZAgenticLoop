@@ -143,7 +143,7 @@ export declare function appendGitLabCiSweeperLifecycleEvidence(input: {
         schema: string;
         request_id: string;
         claim_id: string;
-        status: "completed" | "failed" | "running";
+        status: "running" | "completed" | "failed";
         evidence: Record<string, unknown>;
         recorded_at: string;
     };
@@ -418,7 +418,7 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
             schema: string;
             request_id: string;
             claim_id: string;
-            status: "completed" | "failed" | "running";
+            status: "running" | "completed" | "failed";
             evidence: Record<string, unknown>;
             recorded_at: string;
         };
