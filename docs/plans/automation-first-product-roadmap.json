@@ -4703,6 +4703,11 @@
           "q": "分支名前缀的规范拼写是什么？",
           "answer": "固定为 zj-loop/agent-local/<handoff-id>（全小写）。",
           "note": "更正上一条记录中的大小写笔误；语义仍为确定性 handoff 分支与唯一 Draft MR。"
+        },
+        {
+          "q": "B1本地工作区准备如何执行？",
+          "answer": "Mac CLI只接受已claim handoff，使用handoff.workspace.base_commit创建确定性分支 zj-loop/agent-local/<handoff-id> 和独立Git worktree；不自动调用Codex、不修改state执行状态，已有同路径且HEAD匹配时幂等复用，否则失败关闭。",
+          "note": "第三切片先实现worktree准备协议与CLI，Codex执行、验证、push和Draft MR另行切片。"
         }
       ],
       "notes": ""
@@ -4726,7 +4731,7 @@
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-26 09:06:45",
+    "updated": "2026-07-26 17:30:26",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

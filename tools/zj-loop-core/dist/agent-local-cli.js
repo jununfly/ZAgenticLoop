@@ -1,11 +1,13 @@
 #!/usr/bin/env node
+import path from "node:path";
 import { runCli } from "./cli.js";
 import { claimAgentLocalHandoff, createGitLabStateBranchClient, listAgentLocalHandoffs, } from "./agent-local.js";
+import { prepareAgentLocalWorktree } from "./agent-local-worktree.js";
 const argv = process.argv.slice(2);
 process.exitCode = await runCli({
     name: "zj-loop-agent-local",
     description: "List and claim durable agent-local handoffs.",
-    usage: "zj-loop-agent-local <list|claim> [options]",
+    usage: "zj-loop-agent-local <list|claim|worktree> [options]",
     options: [
         {
             name: "command",
@@ -30,6 +32,8 @@ process.exitCode = await runCli({
             description: "Local Codex session id",
             default: process.env.ZJ_LOOP_AGENT_SESSION_ID,
         },
+        { name: "repo-root", type: "string", description: "Local Git repository root", default: process.cwd() },
+        { name: "worktree-root", type: "string", description: "Directory for agent worktrees", default: path.resolve(process.cwd(), "../zj-loop-worktrees") },
         {
             name: "project",
             type: "string",
@@ -56,18 +60,42 @@ process.exitCode = await runCli({
             token,
         });
         const command = String(options.command);
-        const result = command === "list"
-            ? await listAgentLocalHandoffs({ client })
-            : await claimAgentLocalHandoff({
+        let result;
+        if (command === "list") {
+            result = await listAgentLocalHandoffs({ client });
+        }
+        else if (command === "claim") {
+            result = await claimAgentLocalHandoff({
                 client,
                 handoffId: String(options["handoff-id"] ?? ""),
                 humanId: Number(options["human-id"]),
                 agentSessionId: String(options["agent-session-id"] ?? ""),
             });
+        }
+        else if (command === "worktree") {
+            const handoffId = String(options["handoff-id"] ?? "");
+            const value = await client.readJson(`handoffs/${handoffId}.json`);
+            if (!value || typeof value !== "object")
+                throw new Error("handoff-not-found");
+            const claims = await client.list(`claims/${handoffId}`);
+            const claimPath = claims.find((item) => item.endsWith(".json"));
+            const claim = claimPath ? await client.readJson(claimPath) : null;
+            const handoff = (claim && typeof claim === "object" ? { ...value, status: "claimed", claim } : value);
+            result = await prepareAgentLocalWorktree({
+                handoff,
+                repoRoot: path.resolve(String(options["repo-root"])),
+                worktreeRoot: path.resolve(String(options["worktree-root"])),
+            });
+        }
+        else {
+            throw new Error("unsupported-agent-local-command");
+        }
         io.stdout(JSON.stringify(result, null, 2));
         return result.status === "completed" ||
             result.status === "claimed" ||
-            result.status === "already-claimed"
+            result.status === "already-claimed" ||
+            result.status === "prepared" ||
+            result.status === "reused"
             ? 0
             : 2;
     },

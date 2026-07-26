@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import yaml from "yaml";
-import { AGENT_HANDOFF_SCHEMA, buildHandoffId, } from "./agent-local.js";
+import { AGENT_HANDOFF_SCHEMA, buildHandoffId, isAgentHandoff, } from "./agent-local.js";
 export const AGENT_EXECUTION_REQUEST_SCHEMA = "zj-loop.agent_execution_request.v1";
 export function parseAgentExecutionRequest(note, marker) {
     if (!note.includes(marker))
@@ -62,6 +62,22 @@ export async function persistAgentLocalHandoff(input) {
     const existing = await input.client.readJson(path);
     if (existing)
         return { status: "duplicate", handoff: existing, state_commit_id: null, side_effects_executed: false };
+    let handoffPaths = [];
+    try {
+        handoffPaths = await input.client.list("handoffs");
+    }
+    catch (error) {
+        if (!(error instanceof Error) || error.message !== "gitlab-state-404")
+            throw error;
+    }
+    for (const handoffPath of handoffPaths.filter((item) => item.endsWith(".json"))) {
+        const candidate = await input.client.readJson(handoffPath);
+        if (!isAgentHandoff(candidate))
+            continue;
+        if (candidate.request_id === input.handoff.request_id || candidate.source.dedupe_key === input.handoff.source.dedupe_key) {
+            return { status: "duplicate", handoff: candidate, state_commit_id: null, side_effects_executed: false };
+        }
+    }
     try {
         const head = await input.client.getHead();
         const commit = await input.client.commit({ branch: "zj-loop-state", message: `Create agent handoff ${input.handoff.handoff_id} [skip ci]`, last_commit_id: head, actions: [{ action: "create", file_path: path, content: `${JSON.stringify(input.handoff, null, 2)}\n` }] });
