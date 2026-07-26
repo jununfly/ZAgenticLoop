@@ -23,7 +23,7 @@ test('HTTP runtime validates the real webhook envelope, persists receipt, and tr
       const response = await fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-event-1', 'x-gitlab-token': 'webhook-secret' }, body: JSON.stringify(payload) });
       return { status: response.status, body: await response.json() };
     });
-    assert.equal(result.status, 202);
+    assert.equal(result.status, 202, JSON.stringify(result.body));
     assert.equal(result.body.status, 'triggered');
     assert.equal(result.body.trigger.pipeline.id, 321);
     assert.equal(pipelineCalls, 1);
@@ -68,5 +68,39 @@ test('HTTP runtime ignores ordinary Notes and blocks bad secrets without trigger
     const badSecret = await withServer(baseConfig, async (port) => fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-event-3', 'x-gitlab-token': 'wrong' }, body: JSON.stringify(payload) }));
     assert.equal(badSecret.status, 400);
     assert.equal(pipelineCalls, 0);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('HTTP runtime creates an explicit agent-local handoff without triggering a pipeline', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'zj-loop-http-agent-local-'));
+  try {
+    let pipelineCalls = 0;
+    const files = new Map();
+    let head = 'state-head-1';
+    const stateClient = {
+      getHead: async () => head,
+      readJson: async (filePath) => files.get(filePath) ?? null,
+      list: async () => [],
+      commit: async ({ last_commit_id, actions }) => {
+        assert.equal(last_commit_id, head);
+        head = 'state-head-2';
+        for (const action of actions) files.set(action.file_path, JSON.parse(action.content));
+        return { id: head };
+      },
+    };
+    const ref = 'a'.repeat(40);
+    const registrationText = `schema: zj-loop.project-registration.v1\nproject_path: group/project\ndefault_branch: master\nroutes:\n  - route_id: roadmap-sliced-development\n    marker: /zj-loop start roadmap-sliced-development\n    allowed_executors:\n      - kind: agent-local\n        profile: human-codex-mac\n        capabilities: [read-repository, modify-worktree]\n`;
+    const { createHash } = await import('node:crypto');
+    const request = { schema: 'zj-loop.agent_execution_request.v1', registration: { ref, path: 'zj-loop/registrations/project.yaml', sha256: createHash('sha256').update(registrationText).digest('hex') } };
+    const agentNote = `/zj-loop start roadmap-sliced-development\n<!-- zj-loop.agent_execution_request.v1\n${JSON.stringify(request)}\n-->`;
+    const result = await withServer({ projectPath: 'group/project', route, triggerConfig, webhookSecret: 'webhook-secret', triggerToken: 'api-token', root, agentLocal: { stateClient, resolveRegistration: async () => ({ text: registrationText, commit: ref, baseCommit: 'b'.repeat(40) }) }, fetchImpl: async () => { pipelineCalls += 1; throw new Error('pipeline must not trigger'); } }, async (port) => {
+      const response = await fetch(`http://127.0.0.1:${port}/gitlab/webhook/issue-note`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-gitlab-event': 'Issue Hook', 'x-gitlab-event-uuid': 'http-agent-local-1', 'x-gitlab-token': 'webhook-secret' }, body: JSON.stringify({ ...payload, object_attributes: { ...payload.object_attributes, note: agentNote } }) });
+      return { status: response.status, body: await response.json() };
+    });
+    assert.equal(result.status, 202, JSON.stringify(result.body));
+    assert.equal(result.body.status, 'handoff-created');
+    assert.equal(result.body.handoff.status, 'pending');
+    assert.equal(pipelineCalls, 0);
+    assert.equal(files.size, 1);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

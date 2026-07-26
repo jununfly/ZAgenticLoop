@@ -39,6 +39,7 @@ const server = createGitLabIssueNoteBridgeServer({
   webhookPath: env.ZJ_LOOP_GITLAB_BRIDGE_WEBHOOK_PATH?.trim() || undefined,
   root: env.ZJ_LOOP_BRIDGE_ROOT?.trim() || '.',
   apiBaseUrl: env.ZJ_LOOP_GITLAB_API_URL?.trim() || 'https://gitlab.com/api/v4',
+  agentLocal: env.ZJ_LOOP_GITLAB_STATE_TOKEN?.trim() ? { stateToken: env.ZJ_LOOP_GITLAB_STATE_TOKEN.trim() } : undefined,
 });
 const port = Number(env.PORT || 8080);
 if (!Number.isSafeInteger(port) || port <= 0 || port > 65535) throw new Error('PORT-invalid');
