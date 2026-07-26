@@ -363,7 +363,7 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
     } | {
         schema: string;
         status: string;
-        outcome: "duplicate" | "created";
+    outcome: "duplicate" | "created";
         audit: Record<string, unknown>;
         merge_request: {
             iid: number;

@@ -62,3 +62,4 @@ export * from './gitlab-repair-safety.js';
 export * from './gitlab-issue-note-bridge-preflight.js';
 export * from './gitlab-issue-note-bridge-consumer.js';
 export * from './agent-local.js';
+export * from './agent-local-bridge.js';

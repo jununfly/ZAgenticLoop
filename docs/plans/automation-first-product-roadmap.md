@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-26 02:46:58
+> 数据文件: `automation-first-product-roadmap.json` | 最后更新: 2026-07-26 09:06:45
 
 [~][Y+] 1. Automation-First Product Goal Roadmap
 ├── [x][Y+] 1-1. Completion Alignment Ledger 与不可补偿完成硬门
@@ -53,4 +53,5 @@ Protocol and read/claim adapter implemented; handoff creation bridge integration
 - Q: state branch 的写入提交如何组织？ → 每个状态变更创建一个带 [skip ci] 的 GitLab commit，claim 使用 expected HEAD SHA 做 CAS；只追加/创建对应 JSON，不覆盖历史 evidence，不 force push、不 squash/rebase。 (提交历史本身是审计日志；HEAD 冲突返回 already-claimed 或 state-conflict。)
 - Q: B1 handoff 状态转移允许哪些路径？ → 允许 pending→claimed→running→completed；claimed/running 可转 blocked 或 released；blocked/released 仅通过显式 recover/re-claim 产生新 claim/recovery evidence 后回到 claimed；completed 不可逆。 (禁止无 claim 直接 running、旧 claim 覆盖新 claim、自动恢复，以及 completed→claimed/running。)
 - Q: B1 handoff envelope 的最小字段集是什么？ → 使用 zj-loop.agent_handoff.v1，包含 handoff/request identity、status/created_at、GitLab project/Issue/Note/event/dedupe source、route_id、executor kind/profile/capabilities、Registration commit/path/digest、workspace project/base ref/base commit、claim 和 side_effects_executed；不保存完整 webhook payload。 (字段集服务于审计、claim、worktree 重建、MR 关联和 replay；provider 原始 payload 只在 bridge 内存中校验。)
+- Q: B1 bridge如何选择并持久化agent-local handoff？ → 仅接受Note中的显式隐藏JSON Registration commit/path/sha256合同；bridge校验项目、路由、注册快照和agent-local allowlist后写入受保护zj-loop-state，A默认路径仍触发GitLab Pipeline，禁止自动A→B回退。 (第二切片实现；handoff只产生durable state，不创建Pipeline、Issue、Note、MR或master写入。)
 <!-- ROADMAP_SECTION_END -->

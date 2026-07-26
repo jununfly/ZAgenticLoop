@@ -2,6 +2,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { buildGitLabIssueNoteBridgeEnvelope, type GitLabIssueNoteBridgeRoute } from './gitlab-issue-note-bridge.js';
 import { persistGitLabIssueNoteBridgeReceipt, updateGitLabIssueNoteBridgeReceipt } from './gitlab-issue-note-bridge-receipts.js';
 import { triggerGitLabIssueNoteBridgePipeline, type GitLabIssueNoteBridgeTriggerConfig } from './gitlab-issue-note-bridge-trigger.js';
+import { buildAgentLocalHandoff, parseAgentExecutionRequest, persistAgentLocalHandoff, type AgentExecutionRequest } from './agent-local-bridge.js';
+import { createGitLabStateBranchClient, type StateBranchClient } from './agent-local.js';
 
 export const GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA = 'zj-loop.gitlab_issue_note_bridge_http.v1';
 export const GITLAB_ISSUE_NOTE_BRIDGE_HTTP_PATH = '/gitlab/webhook/issue-note';
@@ -19,6 +21,11 @@ export type GitLabIssueNoteBridgeServerConfig = {
   webhookPath?: string;
   fetchImpl?: typeof fetch;
   now?: () => string;
+  agentLocal?: {
+    stateToken?: string;
+    stateClient?: StateBranchClient;
+    resolveRegistration?: (request: AgentExecutionRequest) => Promise<{ text: string; commit: string; baseCommit: string }>;
+  };
 };
 
 export function createGitLabIssueNoteBridgeServer(config: GitLabIssueNoteBridgeServerConfig): Server {
@@ -64,6 +71,33 @@ export function createGitLabIssueNoteBridgeServer(config: GitLabIssueNoteBridgeS
       writeJson(response, decision.status === 'blocked' ? 400 : 200, { ...decision, schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA });
       return;
     }
+    const note = noteText(payload);
+    let agentRequest: AgentExecutionRequest | null = null;
+    try {
+      agentRequest = parseAgentExecutionRequest(note, config.route.marker);
+    } catch (error) {
+      writeJson(response, 400, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'blocked', reason: error instanceof Error ? error.message : 'agent-execution-request-invalid', side_effects_executed: false });
+      return;
+    }
+    if (agentRequest) {
+      if (!config.agentLocal) {
+        writeJson(response, 400, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'blocked', reason: 'agent-local-not-configured', side_effects_executed: false });
+        return;
+      }
+      try {
+        const resolved = config.agentLocal.resolveRegistration
+          ? await config.agentLocal.resolveRegistration(agentRequest)
+          : await resolveRegistration({ apiBaseUrl: config.apiBaseUrl, projectPath: config.projectPath, token: config.agentLocal.stateToken, request: agentRequest, fetchImpl: config.fetchImpl });
+        if (!config.agentLocal.stateClient && !config.agentLocal.stateToken) throw new Error('agent-local-state-token-required');
+        const stateClient = config.agentLocal.stateClient ?? createGitLabStateBranchClient({ apiBaseUrl: config.apiBaseUrl ?? 'https://gitlab.com/api/v4', projectPath: config.projectPath, token: config.agentLocal.stateToken ?? '', fetchImpl: config.fetchImpl });
+        const handoff = buildAgentLocalHandoff({ envelope: decision.envelope, request: agentRequest, registrationText: resolved.text, registrationCommit: resolved.commit, workspaceBaseCommit: resolved.baseCommit, now });
+        const result = await persistAgentLocalHandoff({ client: stateClient, handoff });
+        writeJson(response, result.status === 'blocked' ? 502 : 202, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: result.status === 'created' ? 'handoff-created' : result.status, side_effects_executed: result.side_effects_executed, handoff: result.handoff ? { id: result.handoff.handoff_id, status: result.handoff.status } : null, state_commit_id: result.state_commit_id, reason: result.reason });
+      } catch (error) {
+        writeJson(response, 400, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'blocked', reason: error instanceof Error ? error.message : 'agent-local-handoff-invalid', side_effects_executed: false });
+      }
+      return;
+    }
     const persisted = await persistGitLabIssueNoteBridgeReceipt({ root: config.root, envelope: decision.envelope, routeId: config.triggerConfig.routeId, now });
     if (persisted.status === 'event-id-collision' || persisted.status === 'receipt-persistence-failed') {
       writeJson(response, 409, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'blocked', reason: persisted.status, side_effects_executed: false, receipt: { path: persisted.receipt_path, status: persisted.receipt.status } });
@@ -92,6 +126,28 @@ function normalizeWebhookPath(value: string): string {
 function header(request: IncomingMessage, name: string): string | undefined {
   const value = request.headers[name];
   return Array.isArray(value) ? value[0] : value;
+}
+
+function noteText(payload: unknown): string {
+  const value = (payload as { object_attributes?: { note?: unknown } })?.object_attributes?.note;
+  return typeof value === 'string' ? value : '';
+}
+
+async function resolveRegistration(input: { apiBaseUrl?: string; projectPath: string; token?: string; request: AgentExecutionRequest; fetchImpl?: typeof fetch }): Promise<{ text: string; commit: string; baseCommit: string }> {
+  if (!input.token) throw new Error('agent-local-state-token-required');
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const base = (input.apiBaseUrl ?? 'https://gitlab.com/api/v4').replace(/\/+$/, '');
+  const project = encodeURIComponent(input.projectPath);
+  const headers = { 'PRIVATE-TOKEN': input.token };
+  const registrationResponse = await fetchImpl(`${base}/projects/${project}/repository/files/${encodeURIComponent(input.request.registration.path)}?ref=${encodeURIComponent(input.request.registration.ref)}`, { headers });
+  if (!registrationResponse.ok) throw new Error(`registration-fetch-${registrationResponse.status}`);
+  const registrationBody = await registrationResponse.json() as { file_name?: unknown; file_path?: unknown; ref?: unknown; blob_id?: unknown; content?: unknown; encoding?: unknown };
+  if (registrationBody.encoding !== 'base64' || typeof registrationBody.content !== 'string' || registrationBody.ref !== input.request.registration.ref) throw new Error('registration-response-invalid');
+  const branchResponse = await fetchImpl(`${base}/projects/${project}/repository/branches/master`, { headers });
+  if (!branchResponse.ok) throw new Error(`workspace-base-fetch-${branchResponse.status}`);
+  const branchBody = await branchResponse.json() as { commit?: { id?: unknown } };
+  if (typeof branchBody.commit?.id !== 'string') throw new Error('workspace-base-invalid');
+  return { text: Buffer.from(registrationBody.content, 'base64').toString('utf8'), commit: input.request.registration.ref, baseCommit: branchBody.commit.id };
 }
 
 function readBody(request: IncomingMessage, maxBytes: number): Promise<string> {
