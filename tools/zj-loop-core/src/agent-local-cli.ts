@@ -6,6 +6,8 @@ import {
   claimAgentLocalHandoff,
   createGitLabStateBranchClient,
   listAgentLocalHandoffs,
+  recordAgentLocalEvidence,
+  recordAgentLocalExecution,
   type AgentHandoff,
 } from "./agent-local.js";
 import { prepareAgentLocalWorktree } from "./agent-local-worktree.js";
@@ -46,6 +48,15 @@ process.exitCode = await runCli(
       { name: "activation", type: "string", description: "Roadmap activation id for preflight" },
       { name: "roadmap-path", flag: "roadmap-path", type: "string", description: "Repository-relative roadmap path" },
       { name: "out", type: "string", description: "Write the execution-context snapshot to this path" },
+      { name: "execution-id", flag: "execution-id", type: "string", description: "Execution id" },
+      { name: "execution-status", flag: "execution-status", type: "enum", values: ["running", "completed", "blocked", "released"], description: "Execution lifecycle status" },
+      { name: "branch", type: "string", description: "Agent branch for execution evidence" },
+      { name: "worktree-path", flag: "worktree-path", type: "string", description: "Agent worktree path for execution evidence" },
+      { name: "reason", type: "string", description: "Structured execution block/release reason" },
+      { name: "evidence-kind", flag: "evidence-kind", type: "string", description: "Evidence kind" },
+      { name: "evidence-status", flag: "evidence-status", type: "enum", values: ["passed", "failed", "informational"], description: "Evidence status" },
+      { name: "evidence-path", flag: "evidence-path", type: "string", description: "Repository-relative evidence path" },
+      { name: "evidence-sha256", flag: "evidence-sha256", type: "string", description: "Evidence SHA-256" },
       {
         name: "project",
         type: "string",
@@ -107,6 +118,25 @@ process.exitCode = await runCli(
         const stateHead = await client.getHead();
         result = await buildAgentExecutionContext({ handoff, repoRoot: path.resolve(String(options["repo-root"])), activationId: String(options.activation ?? ""), roadmapPath: typeof options["roadmap-path"] === "string" ? options["roadmap-path"] : undefined, stateHead });
         if (typeof options.out === "string") await writeFile(String(options.out), `${JSON.stringify(result, null, 2)}\n`);
+      } else if (command === "execution" || command === "evidence") {
+        const handoffId = String(options["handoff-id"] ?? "");
+        const value = await client.readJson(`handoffs/${handoffId}.json`);
+        const claims = await client.list(`claims/${handoffId}`);
+        const claimPath = claims.find((item) => item.endsWith(".json"));
+        const claim = claimPath ? await client.readJson(claimPath) : null;
+        const claimValue = claim as { claim_id?: unknown } | null;
+        if (!claimValue || typeof claimValue.claim_id !== "string") throw new Error("handoff-claim-required");
+        if (command === "execution") {
+          const status = String(options["execution-status"] ?? "");
+          if (!["running", "completed", "blocked", "released"].includes(status)) throw new Error("execution-status-required");
+          result = await recordAgentLocalExecution({ client, handoffId, claimId: claimValue.claim_id, executionId: typeof options["execution-id"] === "string" ? options["execution-id"] : undefined, status: status as "running" | "completed" | "blocked" | "released", branch: typeof options.branch === "string" ? options.branch : undefined, worktreePath: typeof options["worktree-path"] === "string" ? options["worktree-path"] : undefined, reason: typeof options.reason === "string" ? options.reason : undefined });
+        } else {
+          const executionId = String(options["execution-id"] ?? "");
+          const kind = String(options["evidence-kind"] ?? "");
+          const status = String(options["evidence-status"] ?? "");
+          if (!executionId || !kind || !["passed", "failed", "informational"].includes(status)) throw new Error("evidence-fields-required");
+          result = await recordAgentLocalEvidence({ client, handoffId, claimId: claimValue.claim_id, executionId, kind, status: status as "passed" | "failed" | "informational", path: typeof options["evidence-path"] === "string" ? options["evidence-path"] : undefined, sha256: typeof options["evidence-sha256"] === "string" ? options["evidence-sha256"] : undefined });
+        }
       } else {
         throw new Error("unsupported-agent-local-command");
       }
@@ -117,6 +147,7 @@ process.exitCode = await runCli(
         result.status === "prepared" ||
         result.status === "reused" ||
         result.status === "execution-ready"
+        || result.status === "recorded"
         ? 0
         : 2;
     },

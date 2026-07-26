@@ -2,6 +2,71 @@ import { createHash, randomUUID } from "node:crypto";
 export const AGENT_HANDOFF_SCHEMA = "zj-loop.agent_handoff.v1";
 export const AGENT_CLAIM_SCHEMA = "zj-loop.agent_claim.v1";
 export const AGENT_STATE_BRANCH = "zj-loop-state";
+export const AGENT_EXECUTION_SCHEMA = "zj-loop.agent_execution.v1";
+export const AGENT_EVIDENCE_SCHEMA = "zj-loop.agent_evidence.v1";
+export async function recordAgentLocalExecution(input) {
+    const record = {
+        schema: AGENT_EXECUTION_SCHEMA,
+        execution_id: safeId(input.executionId ?? `exe_${randomUUID().replaceAll("-", "")}`),
+        handoff_id: safeId(input.handoffId),
+        claim_id: safeId(input.claimId),
+        status: input.status,
+        recorded_at: input.now ?? new Date().toISOString(),
+        branch: input.branch ?? null,
+        worktree_path: input.worktreePath ?? null,
+        reason: input.reason ?? null,
+        side_effects_executed: false,
+    };
+    return appendClaimBoundRecord({
+        client: input.client,
+        handoffId: input.handoffId,
+        claimId: input.claimId,
+        path: `executions/${record.handoff_id}/${record.execution_id}/${record.recorded_at.replace(/[^0-9A-Za-z]/g, "")}-${record.status}.json`,
+        record,
+        schema: "zj-loop.agent_local_execution.v1",
+    });
+}
+export async function recordAgentLocalEvidence(input) {
+    const record = {
+        schema: AGENT_EVIDENCE_SCHEMA,
+        evidence_id: safeId(`evd_${randomUUID().replaceAll("-", "")}`),
+        handoff_id: safeId(input.handoffId),
+        execution_id: safeId(input.executionId),
+        claim_id: safeId(input.claimId),
+        kind: input.kind,
+        status: input.status,
+        path: input.path ?? null,
+        sha256: input.sha256 ?? null,
+        recorded_at: input.now ?? new Date().toISOString(),
+        side_effects_executed: false,
+    };
+    return appendClaimBoundRecord({
+        client: input.client,
+        handoffId: input.handoffId,
+        claimId: input.claimId,
+        path: `evidence/${record.handoff_id}/${record.execution_id}/${record.evidence_id}.json`,
+        record,
+        schema: "zj-loop.agent_local_evidence.v1",
+    });
+}
+async function appendClaimBoundRecord(input) {
+    try {
+        const handoff = await input.client.readJson(`handoffs/${safeId(input.handoffId)}.json`);
+        if (!isAgentHandoff(handoff))
+            return { schema: input.schema, status: "blocked", record: null, commit_id: null, side_effects_executed: false, reason: "handoff-not-found" };
+        const claims = await input.client.list(`claims/${safeId(input.handoffId)}`);
+        const claimPath = claims.find((item) => item.endsWith(".json"));
+        const claim = claimPath ? await input.client.readJson(claimPath) : null;
+        if (!isAgentClaim(claim) || claim.claim_id !== input.claimId || claim.handoff_id !== input.handoffId)
+            return { schema: input.schema, status: "blocked", record: null, commit_id: null, side_effects_executed: false, reason: "claim-binding-mismatch" };
+        const head = await input.client.getHead();
+        const commit = await input.client.commit({ branch: AGENT_STATE_BRANCH, message: `Record agent ${input.schema === "zj-loop.agent_local_execution.v1" ? "execution" : "evidence"} ${input.handoffId} [skip ci]`, last_commit_id: head, actions: [{ action: "create", file_path: input.path, content: `${JSON.stringify(input.record, null, 2)}\n` }] });
+        return { schema: input.schema, status: "recorded", record: input.record, commit_id: commit.id, side_effects_executed: true };
+    }
+    catch (error) {
+        return { schema: input.schema, status: "blocked", record: null, commit_id: null, side_effects_executed: false, reason: error instanceof Error ? error.message : "state-write-failed" };
+    }
+}
 export async function listAgentLocalHandoffs(input) {
     try {
         const paths = await input.client.list("handoffs");

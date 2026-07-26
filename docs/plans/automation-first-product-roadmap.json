@@ -4715,7 +4715,7 @@
     "1-5-5-8-4": {
       "id": "1-5-5-8-4",
       "label": "Agent-local verification evidence and Draft MR handoff",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5-8",
       "children": [
@@ -4733,7 +4733,7 @@
     "1-5-5-8-4-1": {
       "id": "1-5-5-8-4-1",
       "label": "Roadmap activation consumer execution-context preflight and artifact",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-8-4",
       "children": [
@@ -4751,17 +4751,35 @@
     "1-5-5-8-4-1-1": {
       "id": "1-5-5-8-4-1-1",
       "label": "Protected state branch context bus and execution snapshot reconstruction",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-8-4-1",
+      "children": [
+        "1-5-5-8-4-1-1-1"
+      ],
+      "decisions": [
+        {
+          "q": "execution 和 evidence 如何跨设备关联？",
+          "answer": "execution_id 与 evidence.execution_id 都绑定 handoff_id + claim_id；所有记录只追加、不覆盖，状态由最新合法记录重建。",
+          "note": "旧 claim 不能写新 execution；每次 state commit 使用当前 HEAD 做 CAS，保留完整审计历史。"
+        }
+      ],
+      "notes": "Added append-only execution and evidence schemas, claim-bound state-branch writes, lifecycle CLI commands, and stale-claim replay tests."
+    },
+    "1-5-5-8-4-1-1-1": {
+      "id": "1-5-5-8-4-1-1-1",
+      "label": "Append-only execution and evidence lifecycle records",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4-1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Added append-only execution and evidence schemas, claim-bound state-branch writes, lifecycle CLI commands, and stale-claim replay tests."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-27 01:56:00",
+    "updated": "2026-07-27 02:04:11",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }
