@@ -40,7 +40,7 @@ test("agent-local worktree preparation uses deterministic branch and base commit
     assert.equal(prepared.branch, "zj-loop/agent-local/glh_worktree_1");
     assert.equal(prepared.base_commit, "c".repeat(40));
     assert.equal(reused.status, "reused");
-    assert.deepEqual(calls[0], ["worktree", "add", "--branch", "zj-loop/agent-local/glh_worktree_1", prepared.worktree_path, "c".repeat(40)]);
+    assert.deepEqual(calls[0], ["worktree", "add", "-b", "zj-loop/agent-local/glh_worktree_1", prepared.worktree_path, "c".repeat(40)]);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
