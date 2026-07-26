@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { runCli } from "./cli.js";
 import { claimAgentLocalHandoff, createGitLabStateBranchClient, listAgentLocalHandoffs, } from "./agent-local.js";
@@ -37,6 +38,7 @@ process.exitCode = await runCli({
         { name: "worktree-root", type: "string", description: "Directory for agent worktrees", default: path.resolve(process.cwd(), "../zj-loop-worktrees") },
         { name: "activation", type: "string", description: "Roadmap activation id for preflight" },
         { name: "roadmap-path", flag: "roadmap-path", type: "string", description: "Repository-relative roadmap path" },
+        { name: "out", type: "string", description: "Write the execution-context snapshot to this path" },
         {
             name: "project",
             type: "string",
@@ -97,7 +99,10 @@ process.exitCode = await runCli({
             const claimPath = claims.find((item) => item.endsWith(".json"));
             const claim = claimPath ? await client.readJson(claimPath) : null;
             const handoff = (value && typeof value === "object" ? { ...value, ...(claim && typeof claim === "object" ? { status: "claimed", claim } : {}) } : null);
-            result = await buildAgentExecutionContext({ handoff, repoRoot: path.resolve(String(options["repo-root"])), activationId: String(options.activation ?? ""), roadmapPath: typeof options["roadmap-path"] === "string" ? options["roadmap-path"] : undefined });
+            const stateHead = await client.getHead();
+            result = await buildAgentExecutionContext({ handoff, repoRoot: path.resolve(String(options["repo-root"])), activationId: String(options.activation ?? ""), roadmapPath: typeof options["roadmap-path"] === "string" ? options["roadmap-path"] : undefined, stateHead });
+            if (typeof options.out === "string")
+                await writeFile(String(options.out), `${JSON.stringify(result, null, 2)}\n`);
         }
         else {
             throw new Error("unsupported-agent-local-command");

@@ -12,6 +12,7 @@ export type AgentExecutionContext = {
   side_effects_executed: false;
   handoff: { id: string; status: AgentHandoff["status"]; claim_id: string | null; human_id: number | null; agent_session_id: string | null };
   activation: { id: string; contract_path: string; contract_sha256: string | null };
+  state: { branch: "zj-loop-state"; head_sha: string | null };
   executor: { kind: string | null; profile: string | null; allowed_side_effects: string[] };
   workspace: { repo_root: string; base_ref: string | null; base_commit: string | null; branch: string | null; roadmap_path: string; roadmap_exists: boolean };
   merge_request: { target_branch: string | null; draft_required: boolean; create_allowed: boolean };
@@ -20,7 +21,7 @@ export type AgentExecutionContext = {
   reason?: string;
 };
 
-export async function buildAgentExecutionContext(input: { handoff: AgentHandoff | null; repoRoot: string; activationId: string; activationContractPath?: string; roadmapPath?: string }): Promise<AgentExecutionContext> {
+export async function buildAgentExecutionContext(input: { handoff: AgentHandoff | null; repoRoot: string; activationId: string; activationContractPath?: string; roadmapPath?: string; stateHead?: string | null }): Promise<AgentExecutionContext> {
   const contractPath = input.activationContractPath ?? `zj-loop/orchestrations/${safeActivationId(input.activationId)}/roadmap-activation.json`;
   const roadmapPath = input.roadmapPath ?? "docs/plans/roadmap.json";
   const repoRoot = path.resolve(input.repoRoot);
@@ -29,6 +30,7 @@ export async function buildAgentExecutionContext(input: { handoff: AgentHandoff 
     schema: AGENT_EXECUTION_CONTEXT_SCHEMA, status, side_effects_executed: false,
     handoff: { id: handoff?.handoff_id ?? "", status: handoff?.status ?? "pending", claim_id: handoff?.claim?.claim_id ?? null, human_id: handoff?.claim?.human_id ?? null, agent_session_id: handoff?.claim?.agent_session_id ?? null },
     activation: { id: input.activationId, contract_path: contractPath, contract_sha256: null },
+    state: { branch: "zj-loop-state", head_sha: input.stateHead ?? null },
     executor: { kind: handoff?.executor?.kind ?? null, profile: handoff?.executor?.profile ?? null, allowed_side_effects: handoff?.executor?.capabilities ?? [] },
     workspace: { repo_root: repoRoot, base_ref: handoff?.workspace?.base_ref ?? null, base_commit: handoff?.workspace?.base_commit ?? null, branch: null, roadmap_path: roadmapPath, roadmap_exists: false },
     merge_request: { target_branch: null, draft_required: true, create_allowed: false },

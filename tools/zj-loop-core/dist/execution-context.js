@@ -11,6 +11,7 @@ export async function buildAgentExecutionContext(input) {
         schema: AGENT_EXECUTION_CONTEXT_SCHEMA, status, side_effects_executed: false,
         handoff: { id: handoff?.handoff_id ?? "", status: handoff?.status ?? "pending", claim_id: handoff?.claim?.claim_id ?? null, human_id: handoff?.claim?.human_id ?? null, agent_session_id: handoff?.claim?.agent_session_id ?? null },
         activation: { id: input.activationId, contract_path: contractPath, contract_sha256: null },
+        state: { branch: "zj-loop-state", head_sha: input.stateHead ?? null },
         executor: { kind: handoff?.executor?.kind ?? null, profile: handoff?.executor?.profile ?? null, allowed_side_effects: handoff?.executor?.capabilities ?? [] },
         workspace: { repo_root: repoRoot, base_ref: handoff?.workspace?.base_ref ?? null, base_commit: handoff?.workspace?.base_commit ?? null, branch: null, roadmap_path: roadmapPath, roadmap_exists: false },
         merge_request: { target_branch: null, draft_required: true, create_allowed: false },

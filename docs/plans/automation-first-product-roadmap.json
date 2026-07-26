@@ -4718,7 +4718,9 @@
       "status": "pending",
       "mode": "explore",
       "parent": "1-5-5-8",
-      "children": [],
+      "children": [
+        "1-5-5-8-4-1"
+      ],
       "decisions": [
         {
           "q": "B1 什么时候算完成？",
@@ -4727,11 +4729,39 @@
         }
       ],
       "notes": ""
+    },
+    "1-5-5-8-4-1": {
+      "id": "1-5-5-8-4-1",
+      "label": "Roadmap activation consumer execution-context preflight and artifact",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4",
+      "children": [
+        "1-5-5-8-4-1-1"
+      ],
+      "decisions": [
+        {
+          "q": "跨设备上下文的唯一真相源是什么？",
+          "answer": "项目受保护的 zj-loop-state 分支；handoff、claim、execution、evidence 通过 handoff_id/activation_id 关联，execution-context.json 只是可验证物化快照。",
+          "note": "不依赖聊天历史、本地磁盘或 Agent 内存；CI、Mac Codex 和未来 Worker 消费同一套结构化上下文。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-8-4-1-1": {
+      "id": "1-5-5-8-4-1-1",
+      "label": "Protected state branch context bus and execution snapshot reconstruction",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-26 17:30:26",
+    "updated": "2026-07-27 01:56:00",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

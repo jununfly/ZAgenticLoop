@@ -31,6 +31,7 @@ test("execution context is ready only with claim, activation contract, and roadm
   assert.equal(result.merge_request.create_allowed, true);
   assert.deepEqual(result.workspace.branch, "zjal-act-1");
   assert.equal(result.side_effects_executed, false);
+  assert.equal(result.state.branch, "zj-loop-state");
 });
 
 test("missing roadmap is an explicit blocked state with exact remediation path", async () => {
