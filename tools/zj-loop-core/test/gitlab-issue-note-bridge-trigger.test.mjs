@@ -6,22 +6,32 @@ const envelope = buildGitLabIssueNoteBridgeEnvelope({
   headers: { event: 'Issue Hook', eventId: 'event-trigger-1', webhookSecret: 'secret' },
   projectPath: 'group/project', expectedProjectPath: 'group/project', expectedWebhookSecret: 'secret',
   route: { routeId: 'bridge-roadmap-activation', marker: '/zj-loop start roadmap-sliced-development', targetRoute: 'roadmap-sliced-development', targetRef: 'master' },
-  payload: { object_kind: 'issue', project: { path_with_namespace: 'group/project' }, issue: { iid: 7 }, object_attributes: { id: 8, note: '/zj-loop start roadmap-sliced-development', noteable_type: 'Issue', noteable_iid: 7, action: 'create' } },
+  payload: { object_kind: 'issue', project: { path_with_namespace: 'group/project' }, issue: { iid: 7, web_url: 'https://git.example/group/project/-/issues/7' }, object_attributes: { id: 8, note: '/zj-loop start roadmap-sliced-development', noteable_type: 'Issue', noteable_iid: 7, action: 'create', url: 'https://git.example/group/project/-/issues/7#note_8' } },
 }).envelope;
 
 const config = { projectPath: 'group/project', routeId: 'bridge-roadmap-activation', pipelineRef: 'master', targetRoute: 'roadmap-sliced-development', allowedEventType: 'Issue Hook', enabled: true, maturity: 'install-ready' };
 
-test('triggers only the fixed pipeline ref with the seven allowlisted variables', async () => {
+test('triggers only the fixed pipeline ref with bridge and activation variables', async () => {
   const calls = [];
   const result = await triggerGitLabIssueNoteBridgePipeline({ config, envelope, envelopeRef: 'zj-loop/evidence/envelope.json', token: 'secret', apiBaseUrl: 'https://git.example/api/v4', fetchImpl: async (url, init) => { calls.push({ url: String(url), init }); return { status: 201, async json() { return { id: 123, ref: 'master', web_url: 'https://git.example/group/project/-/pipelines/123' }; } }; } });
   assert.equal(result.status, 'triggered');
-  assert.deepEqual(result.variable_keys, ['ZJ_LOOP_BRIDGE_EVENT_ID', 'ZJ_LOOP_BRIDGE_DEDUPE_KEY', 'ZJ_LOOP_BRIDGE_PROJECT_PATH', 'ZJ_LOOP_BRIDGE_ISSUE_IID', 'ZJ_LOOP_BRIDGE_NOTE_ID', 'ZJ_LOOP_BRIDGE_TARGET_ROUTE', 'ZJ_LOOP_BRIDGE_ENVELOPE_REF']);
+  assert.deepEqual(result.variable_keys, ['ZJ_LOOP_BRIDGE_EVENT_ID', 'ZJ_LOOP_BRIDGE_DEDUPE_KEY', 'ZJ_LOOP_BRIDGE_PROJECT_PATH', 'ZJ_LOOP_BRIDGE_ISSUE_IID', 'ZJ_LOOP_BRIDGE_NOTE_ID', 'ZJ_LOOP_BRIDGE_TARGET_ROUTE', 'ZJ_LOOP_BRIDGE_ENVELOPE_REF', 'ZJ_LOOP_SIGNAL_ID', 'ZJ_LOOP_ISSUE_IID', 'ZJ_LOOP_COMMENT_ID', 'ZJ_LOOP_ISSUE_URL', 'ZJ_LOOP_COMMENT_URL', 'ZJ_LOOP_ROADMAP_TITLE', 'ZJ_LOOP_ACTIVATION_REQUEST_ID']);
   assert.equal(result.pipeline.id, 123);
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /projects\/group%2Fproject\/pipeline$/);
   assert.equal(calls[0].init.redirect, 'manual');
   assert.deepEqual(JSON.parse(calls[0].init.body).ref, 'master');
-  assert.equal(JSON.parse(calls[0].init.body).variables.length, 7);
+  const variables = JSON.parse(calls[0].init.body).variables;
+  assert.equal(variables.length, 14);
+  assert.deepEqual(Object.fromEntries(variables.slice(7).map(({ key, value }) => [key, value])), {
+    ZJ_LOOP_SIGNAL_ID: 'event-trigger-1',
+    ZJ_LOOP_ISSUE_IID: '7',
+    ZJ_LOOP_COMMENT_ID: '8',
+    ZJ_LOOP_ISSUE_URL: 'https://git.example/group/project/-/issues/7',
+    ZJ_LOOP_COMMENT_URL: 'https://git.example/group/project/-/issues/7#note_8',
+    ZJ_LOOP_ROADMAP_TITLE: 'roadmap-sliced-development',
+    ZJ_LOOP_ACTIVATION_REQUEST_ID: '',
+  });
   assert.equal(JSON.stringify(result).includes('secret'), false);
 });
 
