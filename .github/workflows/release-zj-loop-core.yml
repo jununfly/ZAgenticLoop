@@ -43,3 +43,5 @@ jobs:
       - name: Publish to npm
         working-directory: tools/zj-loop-core
         run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
