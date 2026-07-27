@@ -381,7 +381,9 @@ test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLA
   const commitPayload = JSON.parse(commitCall.options.body);
   assert.equal(commitPayload.actions[0].action, 'create');
   assert.equal(commitPayload.actions[0].file_path, 'zj-loop/orchestrations/act-87-note/roadmap-activation.json');
-  assert.equal(JSON.parse(commitPayload.actions[0].content).schema, 'zj-loop.roadmap_activation_contract_plan.v1');
+  const activationArtifact = JSON.parse(commitPayload.actions[0].content);
+  assert.equal(activationArtifact.schema, 'zj-loop.roadmap_activation_contract_plan.v1');
+  assert.equal(activationArtifact.targetBranch, 'master');
   assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')), true);
   assert.equal(calls.filter((call) => call.options.headers?.['PRIVATE-TOKEN'] === 'private-token').length, calls.length);
   assert.match(JSON.parse(calls.find((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')).options.body).title, /^Draft:/);
