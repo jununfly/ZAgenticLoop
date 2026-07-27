@@ -91,8 +91,25 @@ export function createGitLabIssueNoteBridgeServer(config: GitLabIssueNoteBridgeS
         if (!config.agentLocal.stateClient && !config.agentLocal.stateToken) throw new Error('agent-local-state-token-required');
         const stateClient = config.agentLocal.stateClient ?? createGitLabStateBranchClient({ apiBaseUrl: config.apiBaseUrl ?? 'https://gitlab.com/api/v4', projectPath: config.projectPath, token: config.agentLocal.stateToken ?? '', fetchImpl: config.fetchImpl });
         const handoff = buildAgentLocalHandoff({ envelope: decision.envelope, request: agentRequest, registrationText: resolved.text, registrationCommit: resolved.commit, workspaceBaseCommit: resolved.baseCommit, now });
+        const persisted = await persistGitLabIssueNoteBridgeReceipt({ root: config.root, envelope: decision.envelope, routeId: config.triggerConfig.routeId, now });
+        if (persisted.status === 'event-id-collision' || persisted.status === 'receipt-persistence-failed') {
+          writeJson(response, 409, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'blocked', reason: persisted.status, side_effects_executed: false, receipt: { path: persisted.receipt_path, status: persisted.receipt.status } });
+          return;
+        }
+        if (persisted.status === 'duplicate') {
+          writeJson(response, 200, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'duplicate', reason: 'receipt-dedupe-hit', side_effects_executed: false, receipt: { path: persisted.receipt_path, status: persisted.receipt.status }, dedupe: { path: persisted.dedupe_path, status: persisted.dedupe.status } });
+          return;
+        }
+        await updateGitLabIssueNoteBridgeReceipt({ root: config.root, projectPath: decision.envelope.project_path, eventId: decision.envelope.event_id, dedupeKey: decision.envelope.dedupe_key, status: 'trigger-pending', now });
+        const trigger = await triggerGitLabIssueNoteBridgePipeline({ config: config.triggerConfig, envelope: decision.envelope, envelopeRef: persisted.receipt_path, activationRequestId: handoff.request_id, token: config.triggerToken, apiBaseUrl: config.apiBaseUrl, fetchImpl: config.fetchImpl });
+        if (trigger.status !== 'triggered') {
+          await updateGitLabIssueNoteBridgeReceipt({ root: config.root, projectPath: decision.envelope.project_path, eventId: decision.envelope.event_id, dedupeKey: decision.envelope.dedupe_key, status: trigger.status === 'uncertain' ? 'trigger-uncertain' : 'trigger-failed', now, recoveryReason: trigger.reason });
+          writeJson(response, 502, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: trigger.status, side_effects_executed: trigger.side_effects_executed, receipt: { path: persisted.receipt_path, status: trigger.status === 'uncertain' ? 'trigger-uncertain' : 'trigger-failed' }, trigger });
+          return;
+        }
         const result = await persistAgentLocalHandoff({ client: stateClient, handoff });
-        writeJson(response, result.status === 'blocked' ? 502 : 202, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: result.status === 'created' ? 'handoff-created' : result.status, side_effects_executed: result.side_effects_executed, handoff: result.handoff ? { id: result.handoff.handoff_id, status: result.handoff.status } : null, state_commit_id: result.state_commit_id, reason: result.reason });
+        await updateGitLabIssueNoteBridgeReceipt({ root: config.root, projectPath: decision.envelope.project_path, eventId: decision.envelope.event_id, dedupeKey: decision.envelope.dedupe_key, status: 'triggered', now, triggerPipelineId: trigger.pipeline?.id ?? null });
+        writeJson(response, result.status === 'blocked' ? 502 : 202, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: result.status === 'created' ? 'handoff-created' : result.status, side_effects_executed: result.side_effects_executed || trigger.side_effects_executed, handoff: result.handoff ? { id: result.handoff.handoff_id, status: result.handoff.status } : null, state_commit_id: result.state_commit_id, trigger, reason: result.reason });
       } catch (error) {
         writeJson(response, 400, { schema: GITLAB_ISSUE_NOTE_BRIDGE_HTTP_SCHEMA, status: 'blocked', reason: error instanceof Error ? error.message : 'agent-local-handoff-invalid', side_effects_executed: false });
       }

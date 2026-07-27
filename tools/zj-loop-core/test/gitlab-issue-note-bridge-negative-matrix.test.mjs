@@ -62,7 +62,7 @@ test('positive matrix produces one triggered artifact with no secret or payload'
   assert.equal(result.status, 'triggered');
   assert.equal(result.side_effects_executed, true);
   assert.equal(result.pipeline.id, 123);
-  assert.equal(result.variable_keys.length, 7);
+  assert.equal(result.variable_keys.length, 14);
   assert.equal(calls, 1);
   assert.equal(JSON.stringify(result).includes('bridge-token'), false);
   assert.equal(JSON.stringify(result).includes('webhook-secret'), false);
