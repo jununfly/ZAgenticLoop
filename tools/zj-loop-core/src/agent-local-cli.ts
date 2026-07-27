@@ -128,8 +128,8 @@ process.exitCode = await runCli(
         const claimPath = claims.find((item) => item.endsWith(".json"));
         const claim = claimPath ? await client.readJson(claimPath) : null;
         const handoff = (value && typeof value === "object" ? { ...value, ...(claim && typeof claim === "object" ? { status: "claimed", claim } : {}) } : null) as AgentHandoff | null;
-        const stateHead = await client.getHead();
-        result = await buildAgentExecutionContext({ handoff, repoRoot: path.resolve(String(options["repo-root"])), activationId: String(options.activation ?? ""), roadmapPath: typeof options["roadmap-path"] === "string" ? options["roadmap-path"] : undefined, stateHead });
+        const agentContext = await loadAgentContext({ state: client, project: client, handoffId });
+        result = await buildAgentExecutionContext({ handoff, repoRoot: path.resolve(String(options["repo-root"])), activationId: String(options.activation ?? ""), roadmapPath: typeof options["roadmap-path"] === "string" ? options["roadmap-path"] : undefined, stateHead: agentContext.state.head_sha, agentContext, requireContext: true });
         if (typeof options.out === "string") await writeFile(String(options.out), `${JSON.stringify(result, null, 2)}\n`);
       } else if (command === "execution" || command === "evidence") {
         const handoffId = String(options["handoff-id"] ?? "");

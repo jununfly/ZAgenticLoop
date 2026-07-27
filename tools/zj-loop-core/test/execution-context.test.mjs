@@ -16,6 +16,15 @@ const handoff = {
   side_effects_executed: false,
 };
 
+const agentContext = {
+  schema: "zj-loop.agent_context_snapshot.v1",
+  status: "completed",
+  state: { branch: "zj-loop-state", head_sha: "d".repeat(40) },
+  handoff: { handoff_id: "glh_context_1" },
+  claim: { claim_id: "clm_1" },
+  activation: { ref: { activation_id: "act-1", path: "zj-loop/orchestrations/act-1/roadmap-activation.json" } },
+};
+
 async function fixture({ roadmap = true } = {}) {
   const root = await mkdtemp(path.join(tmpdir(), "zj-loop-context-"));
   await mkdir(path.join(root, "zj-loop/orchestrations/act-1"), { recursive: true });
@@ -47,4 +56,18 @@ test("unclaimed handoff requests a human claim before contract inspection", asyn
   const result = await buildAgentExecutionContext({ handoff: { ...handoff, status: "pending", claim: null }, repoRoot: root, activationId: "act-1" });
   assert.equal(result.status, "request-human-claim");
   assert.equal(result.reason, "handoff-claim-required");
+});
+
+test("formal preflight rejects a missing or blocked reconstructed context", async () => {
+  const root = await fixture();
+  const result = await buildAgentExecutionContext({ handoff, repoRoot: root, activationId: "act-1", agentContext: { ...agentContext, status: "blocked", reason: "activation-ref-missing" }, requireContext: true });
+  assert.equal(result.status, "blocked-incomplete-contract");
+  assert.equal(result.reason, "agent-context-activation-ref-missing");
+});
+
+test("formal preflight accepts only bindings from the reconstructed context", async () => {
+  const root = await fixture();
+  const result = await buildAgentExecutionContext({ handoff, repoRoot: root, activationId: "act-1", agentContext: { ...agentContext, state: { ...agentContext.state, head_sha: null } }, stateHead: "d".repeat(40), requireContext: true });
+  assert.equal(result.status, "blocked-incomplete-contract");
+  assert.equal(result.reason, "agent-context-state-head-mismatch");
 });
