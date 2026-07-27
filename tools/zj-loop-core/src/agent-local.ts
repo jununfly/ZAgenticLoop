@@ -40,8 +40,9 @@ export type AgentClaim = {
 
 export type StateBranchClient = {
   getHead(): Promise<string>;
-  readJson(path: string): Promise<unknown | null>;
-  list(path: string): Promise<string[]>;
+  readText?(path: string, ref?: string): Promise<string | null>;
+  readJson(path: string, ref?: string): Promise<unknown | null>;
+  list(path: string, ref?: string): Promise<string[]>;
   commit(input: {
     branch: string;
     message: string;
@@ -399,26 +400,35 @@ export function createGitLabStateBranchClient(input: {
         throw new Error("gitlab-state-head-invalid");
       return body.commit.id;
     },
-    async readJson(filePath) {
+    async readText(filePath, ref = AGENT_STATE_BRANCH) {
       const response = await fetchImpl(
-        `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/files/${encodeURIComponent(filePath)}/raw?ref=${encodeURIComponent(AGENT_STATE_BRANCH)}`,
+        `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/files/${encodeURIComponent(filePath)}/raw?ref=${encodeURIComponent(ref)}`,
         { headers },
       );
       if (response.status === 404) return null;
       if (!response.ok) throw new Error(`gitlab-state-${response.status}`);
-      return JSON.parse(await response.text());
+      return response.text();
     },
-    async list(directory) {
-      const response = await request(
-        `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/tree?ref=${encodeURIComponent(AGENT_STATE_BRANCH)}&path=${encodeURIComponent(directory)}&recursive=true&per_page=100`,
-      );
-      const body = (await response.json()) as Array<{
-        path?: unknown;
-        type?: unknown;
-      }>;
-      return body
-        .filter((item) => item.type === "blob" && typeof item.path === "string")
-        .map((item) => item.path as string);
+    async readJson(filePath, ref = AGENT_STATE_BRANCH) {
+      const text = await this.readText?.(filePath, ref);
+      return text === null || text === undefined ? null : JSON.parse(text);
+    },
+    async list(directory, ref = AGENT_STATE_BRANCH) {
+      const files: string[] = [];
+      let page = 1;
+      while (page <= 100) {
+        const response = await request(
+          `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/tree?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(directory)}&recursive=true&per_page=100&page=${page}`,
+        );
+        const body = (await response.json()) as Array<{ path?: unknown; type?: unknown }>;
+        files.push(...body.filter((item) => item.type === "blob" && typeof item.path === "string").map((item) => item.path as string));
+        const nextPage = response.headers.get("x-next-page");
+        if (!nextPage) return files;
+        page = Number(nextPage);
+        if (!Number.isInteger(page) || page < 1) throw new Error("gitlab-state-pagination-invalid");
+        if (files.length > 1000) throw new Error("gitlab-state-record-limit-exceeded");
+      }
+      throw new Error("gitlab-state-record-limit-exceeded");
     },
     async commit(commitInput) {
       const { message, ...commitPayload } = commitInput;

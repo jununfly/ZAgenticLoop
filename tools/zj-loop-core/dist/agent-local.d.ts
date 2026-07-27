@@ -48,8 +48,9 @@ export type AgentClaim = {
 };
 export type StateBranchClient = {
     getHead(): Promise<string>;
-    readJson(path: string): Promise<unknown | null>;
-    list(path: string): Promise<string[]>;
+    readText?(path: string, ref?: string): Promise<string | null>;
+    readJson(path: string, ref?: string): Promise<unknown | null>;
+    list(path: string, ref?: string): Promise<string[]>;
     commit(input: {
         branch: string;
         message: string;

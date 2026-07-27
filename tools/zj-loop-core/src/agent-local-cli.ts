@@ -10,6 +10,7 @@ import {
   recordAgentLocalExecution,
   type AgentHandoff,
 } from "./agent-local.js";
+import { loadAgentContext } from "./agent-context.js";
 import { prepareAgentLocalWorktree } from "./agent-local-worktree.js";
 import { buildAgentExecutionContext } from "./execution-context.js";
 
@@ -18,12 +19,12 @@ process.exitCode = await runCli(
   {
     name: "zj-loop-agent-local",
     description: "List and claim durable agent-local handoffs.",
-    usage: "zj-loop-agent-local <list|claim|worktree|preflight> [options]",
+    usage: "zj-loop-agent-local <list|claim|worktree|context|preflight> [options]",
     options: [
       {
         name: "command",
         type: "positional",
-        description: "list, claim, worktree, or preflight",
+        description: "list, claim, worktree, context, or preflight",
         default: "list",
       },
       {
@@ -108,6 +109,8 @@ process.exitCode = await runCli(
           repoRoot: path.resolve(String(options["repo-root"])),
           worktreeRoot: path.resolve(String(options["worktree-root"])),
         });
+      } else if (command === "context") {
+        result = await loadAgentContext({ state: client, project: client, handoffId: String(options["handoff-id"] ?? "") });
       } else if (command === "preflight") {
         const handoffId = String(options["handoff-id"] ?? "");
         const value = await client.readJson(`handoffs/${handoffId}.json`);

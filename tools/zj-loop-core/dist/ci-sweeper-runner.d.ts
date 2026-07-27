@@ -47,7 +47,7 @@ export declare function createGitLabCiSweeperIssueFixRequest(input: {
 } | {
     schema: string;
     status: string;
-    outcome: "duplicate" | "created" | "recovered-duplicate";
+    outcome: "created" | "duplicate" | "recovered-duplicate";
     audit: Record<string, unknown>;
     issue: {
         iid: number;
@@ -195,7 +195,7 @@ export declare function createGitLabCiSweeperRepairMr(input: {
 } | {
     schema: string;
     status: string;
-    outcome: "duplicate" | "created";
+    outcome: "created" | "duplicate";
     audit: Record<string, unknown>;
     merge_request: {
         iid: number;
@@ -363,7 +363,7 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
     } | {
         schema: string;
         status: string;
-    outcome: "duplicate" | "created";
+        outcome: "created" | "duplicate";
         audit: Record<string, unknown>;
         merge_request: {
             iid: number;
