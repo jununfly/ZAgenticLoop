@@ -10,7 +10,7 @@ import {
   recordAgentLocalExecution,
   type AgentHandoff,
 } from "./agent-local.js";
-import { loadAgentContext } from "./agent-context.js";
+import { loadAgentContext, persistActivationSnapshotRef } from "./agent-context.js";
 import { prepareAgentLocalWorktree } from "./agent-local-worktree.js";
 import { buildAgentExecutionContext } from "./execution-context.js";
 
@@ -19,12 +19,12 @@ process.exitCode = await runCli(
   {
     name: "zj-loop-agent-local",
     description: "List and claim durable agent-local handoffs.",
-    usage: "zj-loop-agent-local <list|claim|worktree|context|preflight> [options]",
+    usage: "zj-loop-agent-local <list|claim|worktree|context|activation-ref|preflight> [options]",
     options: [
       {
         name: "command",
         type: "positional",
-        description: "list, claim, worktree, context, or preflight",
+        description: "list, claim, worktree, context, activation-ref, or preflight",
         default: "list",
       },
       {
@@ -49,6 +49,9 @@ process.exitCode = await runCli(
       { name: "activation", type: "string", description: "Roadmap activation id for preflight" },
       { name: "roadmap-path", flag: "roadmap-path", type: "string", description: "Repository-relative roadmap path" },
       { name: "out", type: "string", description: "Write the execution-context snapshot to this path" },
+      { name: "commit", type: "string", description: "Immutable activation contract commit" },
+      { name: "path", type: "string", description: "Repository-relative activation contract path" },
+      { name: "sha256", type: "string", description: "Activation contract SHA-256" },
       { name: "execution-id", flag: "execution-id", type: "string", description: "Execution id" },
       { name: "execution-status", flag: "execution-status", type: "enum", values: ["running", "completed", "blocked", "released"], description: "Execution lifecycle status" },
       { name: "branch", type: "string", description: "Agent branch for execution evidence" },
@@ -111,6 +114,13 @@ process.exitCode = await runCli(
         });
       } else if (command === "context") {
         result = await loadAgentContext({ state: client, project: client, handoffId: String(options["handoff-id"] ?? "") });
+      } else if (command === "activation-ref") {
+        const activationId = String(options.activation ?? "");
+        const commit = String(options.commit ?? "");
+        const contractPath = String(options.path ?? "");
+        const sha256 = String(options.sha256 ?? "");
+        if (!activationId || !commit || !contractPath || !sha256) throw new Error("activation-ref-fields-required");
+        result = await persistActivationSnapshotRef({ state: client, activationId, projectPath: project, commit, path: contractPath, sha256 });
       } else if (command === "preflight") {
         const handoffId = String(options["handoff-id"] ?? "");
         const value = await client.readJson(`handoffs/${handoffId}.json`);
@@ -151,6 +161,7 @@ process.exitCode = await runCli(
         result.status === "reused" ||
         result.status === "execution-ready"
         || result.status === "recorded"
+        || result.status === "duplicate"
         ? 0
         : 2;
     },
