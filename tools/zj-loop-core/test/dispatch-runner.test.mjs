@@ -905,10 +905,11 @@ test('zj-loop-dispatch execute mode normalizes GitLab roadmap activation live si
     const fetchImpl = async (url, options = {}) => {
       calls.push({ url: String(url), options });
       const text = String(url);
+      if (text.endsWith('/repository/branches/zj-loop-state')) return jsonResponse({ commit: { id: 'b'.repeat(40) } }, 200);
       if (text.includes('/repository/branches/')) return jsonResponse({}, 404);
       if (text.endsWith('/repository/branches')) return jsonResponse({}, 201);
       if (text.includes('/repository/files/')) return jsonResponse({}, 404);
-      if (text.endsWith('/repository/commits')) return jsonResponse({ id: 'commit-1' }, 201);
+      if (text.endsWith('/repository/commits')) return jsonResponse({ id: 'a'.repeat(40) }, 201);
       if (text.includes('/merge_requests?')) return jsonResponse([]);
       if (text.endsWith('/merge_requests')) {
         return jsonResponse({ iid: 5, web_url: 'https://gitlab.com/group/project/-/merge_requests/5' }, 201);

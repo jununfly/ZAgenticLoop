@@ -1,3 +1,4 @@
+import { type StateBranchClient } from './agent-local.js';
 import { RouteStatus } from './route.js';
 export declare const ACTIVATION_SCHEMA_VERSION = 1;
 export declare const ALLOWED_ACTIVATION_PATTERNS: string[];
@@ -359,6 +360,7 @@ export declare function executeGitLabRoadmapActivation(input: {
     draft?: boolean;
     live?: boolean;
     fetchImpl?: typeof fetch;
+    stateClient?: StateBranchClient;
 }): Promise<{
     status: string;
     execution_allowed: boolean;
