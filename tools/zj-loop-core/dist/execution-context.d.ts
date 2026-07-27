@@ -17,6 +17,10 @@ export type AgentExecutionContext = {
         contract_path: string;
         contract_sha256: string | null;
     };
+    state: {
+        branch: "zj-loop-state";
+        head_sha: string | null;
+    };
     executor: {
         kind: string | null;
         profile: string | null;
@@ -45,4 +49,5 @@ export declare function buildAgentExecutionContext(input: {
     activationId: string;
     activationContractPath?: string;
     roadmapPath?: string;
+    stateHead?: string | null;
 }): Promise<AgentExecutionContext>;
