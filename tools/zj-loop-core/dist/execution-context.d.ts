@@ -1,4 +1,5 @@
 import type { AgentHandoff } from "./agent-local.js";
+import type { AgentContextSnapshot } from "./agent-context.js";
 export declare const AGENT_EXECUTION_CONTEXT_SCHEMA = "zj-loop.agent_execution_context.v1";
 export type AgentExecutionContextStatus = "execution-ready" | "blocked-missing-roadmap" | "blocked-incomplete-contract" | "request-human-claim";
 export type AgentExecutionContext = {
@@ -50,4 +51,6 @@ export declare function buildAgentExecutionContext(input: {
     activationContractPath?: string;
     roadmapPath?: string;
     stateHead?: string | null;
+    agentContext?: AgentContextSnapshot;
+    requireContext?: boolean;
 }): Promise<AgentExecutionContext>;

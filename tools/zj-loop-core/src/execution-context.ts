@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { AgentHandoff } from "./agent-local.js";
+import type { AgentContextSnapshot } from "./agent-context.js";
 
 export const AGENT_EXECUTION_CONTEXT_SCHEMA = "zj-loop.agent_execution_context.v1";
 export type AgentExecutionContextStatus = "execution-ready" | "blocked-missing-roadmap" | "blocked-incomplete-contract" | "request-human-claim";
@@ -21,7 +22,7 @@ export type AgentExecutionContext = {
   reason?: string;
 };
 
-export async function buildAgentExecutionContext(input: { handoff: AgentHandoff | null; repoRoot: string; activationId: string; activationContractPath?: string; roadmapPath?: string; stateHead?: string | null }): Promise<AgentExecutionContext> {
+export async function buildAgentExecutionContext(input: { handoff: AgentHandoff | null; repoRoot: string; activationId: string; activationContractPath?: string; roadmapPath?: string; stateHead?: string | null; agentContext?: AgentContextSnapshot; requireContext?: boolean }): Promise<AgentExecutionContext> {
   const contractPath = input.activationContractPath ?? `zj-loop/orchestrations/${safeActivationId(input.activationId)}/roadmap-activation.json`;
   const roadmapPath = input.roadmapPath ?? "docs/plans/roadmap.json";
   const repoRoot = path.resolve(input.repoRoot);
@@ -37,6 +38,13 @@ export async function buildAgentExecutionContext(input: { handoff: AgentHandoff 
     required_gates: ["git diff --check", "project verification commands", "human review before merge"], next_steps: [], ...extra,
   });
   if (!handoff || !handoff.claim || handoff.status !== "claimed") return base("request-human-claim", { reason: "handoff-claim-required", next_steps: ["Claim the handoff before preparing or modifying a worktree."] });
+  if (input.requireContext) {
+    const context = input.agentContext;
+    if (!context || context.status !== "completed") return base("blocked-incomplete-contract", { reason: `agent-context-${context?.reason ?? "required"}`, next_steps: ["Reconstruct a stable agent context snapshot before execution."] });
+    if (context.handoff?.handoff_id !== handoff.handoff_id || context.claim?.claim_id !== handoff.claim.claim_id) return base("blocked-incomplete-contract", { reason: "agent-context-binding-mismatch", next_steps: ["Re-read the handoff, claim, and context snapshot from the same state HEAD."] });
+    if (context.activation.ref?.activation_id !== input.activationId || context.activation.ref.path !== contractPath) return base("blocked-incomplete-contract", { reason: "agent-context-activation-mismatch", next_steps: ["Use the activation ref bound to this handoff and activation."] });
+    if (input.stateHead && context.state.head_sha !== input.stateHead) return base("blocked-incomplete-contract", { reason: "agent-context-state-head-mismatch", next_steps: ["Retry preflight against one stable state branch HEAD."] });
+  }
   let contract: any;
   let contractText = "";
   const contractAbsolute = path.resolve(repoRoot, contractPath);
