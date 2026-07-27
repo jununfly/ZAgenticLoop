@@ -14,6 +14,14 @@ export type ActivationSnapshotRef = {
     path: string;
     sha256: string;
 };
+export type ActivationSnapshotRefWriteResult = {
+    schema: "zj-loop.agent_local_activation_ref.v1";
+    status: "recorded" | "duplicate" | "blocked";
+    activation: ActivationSnapshotRef | null;
+    commit_id: string | null;
+    side_effects_executed: boolean;
+    reason?: string;
+};
 export type AgentContextSnapshot = {
     schema: typeof AGENT_CONTEXT_SNAPSHOT_SCHEMA;
     status: "completed" | "blocked";
@@ -53,6 +61,29 @@ export type ProjectReadClient = {
     readText?(path: string, ref: string): Promise<string | null>;
     readJson(path: string, ref: string): Promise<unknown | null>;
 };
+export declare function persistActivationSnapshotRef(input: {
+    state: {
+        getHead(): Promise<string>;
+        readJson(path: string, ref?: string): Promise<unknown | null>;
+        commit(input: {
+            branch: "zj-loop-state";
+            message: string;
+            last_commit_id: string;
+            actions: Array<{
+                action: "create";
+                file_path: string;
+                content: string;
+            }>;
+        }): Promise<{
+            id: string;
+        }>;
+    };
+    activationId: string;
+    projectPath: string;
+    commit: string;
+    path: string;
+    sha256: string;
+}): Promise<ActivationSnapshotRefWriteResult>;
 export declare function loadAgentContext(input: {
     state: {
         getHead(): Promise<string>;

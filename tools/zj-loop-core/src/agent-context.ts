@@ -24,6 +24,15 @@ export type ActivationSnapshotRef = {
   sha256: string;
 };
 
+export type ActivationSnapshotRefWriteResult = {
+  schema: "zj-loop.agent_local_activation_ref.v1";
+  status: "recorded" | "duplicate" | "blocked";
+  activation: ActivationSnapshotRef | null;
+  commit_id: string | null;
+  side_effects_executed: boolean;
+  reason?: string;
+};
+
 export type AgentContextSnapshot = {
   schema: typeof AGENT_CONTEXT_SNAPSHOT_SCHEMA;
   status: "completed" | "blocked";
@@ -57,6 +66,71 @@ export type ProjectReadClient = {
   readText?(path: string, ref: string): Promise<string | null>;
   readJson(path: string, ref: string): Promise<unknown | null>;
 };
+
+export async function persistActivationSnapshotRef(input: {
+  state: {
+    getHead(): Promise<string>;
+    readJson(path: string, ref?: string): Promise<unknown | null>;
+    commit(input: {
+      branch: "zj-loop-state";
+      message: string;
+      last_commit_id: string;
+      actions: Array<{ action: "create"; file_path: string; content: string }>;
+    }): Promise<{ id: string }>;
+  };
+  activationId: string;
+  projectPath: string;
+  commit: string;
+  path: string;
+  sha256: string;
+}): Promise<ActivationSnapshotRefWriteResult> {
+  const checked = validateActivationSnapshotRef({
+    schema: ACTIVATION_SNAPSHOT_REF_SCHEMA,
+    activation_id: input.activationId,
+    project_path: input.projectPath,
+    commit: input.commit,
+    path: input.path,
+    sha256: input.sha256,
+  });
+  if (checked.error || !checked.value) return blockedActivationRef(checked.error ?? "activation-ref-invalid");
+  const activation = checked.value;
+  const filePath = `activations/${activation.activation_id}.json`;
+  try {
+    const existing = await input.state.readJson(filePath);
+    if (existing !== null) {
+      if (!isActivationRef(existing)) return blockedActivationRef("activation-ref-invalid");
+      if (sameActivationRef(existing, activation)) return { schema: "zj-loop.agent_local_activation_ref.v1", status: "duplicate", activation: existing, commit_id: null, side_effects_executed: false };
+      return blockedActivationRef("activation-ref-conflict", existing);
+    }
+    const head = await input.state.getHead();
+    const result = await input.state.commit({
+      branch: "zj-loop-state",
+      message: `Record activation snapshot ref ${activation.activation_id} [skip ci]`,
+      last_commit_id: head,
+      actions: [{ action: "create", file_path: filePath, content: `${JSON.stringify(activation, null, 2)}\n` }],
+    });
+    return { schema: "zj-loop.agent_local_activation_ref.v1", status: "recorded", activation, commit_id: result.id, side_effects_executed: true };
+  } catch (error) {
+    return blockedActivationRef(error instanceof Error && error.message === "gitlab-state-409" ? "state-head-conflict" : "state-write-failed");
+  }
+}
+
+function validateActivationSnapshotRef(value: ActivationSnapshotRef): { value?: ActivationSnapshotRef; error?: string } {
+  if (!/^[a-zA-Z0-9_-]+$/.test(value.activation_id)) return { error: "activation-id-invalid" };
+  if (!/^[a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)+$/.test(value.project_path)) return { error: "project-path-invalid" };
+  if (!/^[0-9a-f]{40}$/i.test(value.commit)) return { error: "activation-commit-invalid" };
+  if (!/^[a-zA-Z0-9_./-]+$/.test(value.path) || value.path.startsWith("/") || value.path.includes("..")) return { error: "activation-path-invalid" };
+  if (!/^[0-9a-f]{64}$/i.test(value.sha256)) return { error: "activation-sha256-invalid" };
+  return { value };
+}
+
+function sameActivationRef(left: ActivationSnapshotRef, right: ActivationSnapshotRef): boolean {
+  return left.schema === right.schema && left.activation_id === right.activation_id && left.project_path === right.project_path && left.commit === right.commit && left.path === right.path && left.sha256 === right.sha256;
+}
+
+function blockedActivationRef(reason: string, activation: ActivationSnapshotRef | null = null): ActivationSnapshotRefWriteResult {
+  return { schema: "zj-loop.agent_local_activation_ref.v1", status: "blocked", activation, commit_id: null, side_effects_executed: false, reason };
+}
 
 export async function loadAgentContext(input: {
   state: {
