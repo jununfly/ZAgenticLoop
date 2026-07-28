@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "Automation-First Product Goal Roadmap",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": null,
       "children": [
@@ -128,7 +128,7 @@
     "1-5": {
       "id": "1-5",
       "label": "GitHub 与 GitLab 的 live 能力对齐",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -433,7 +433,7 @@
     "1-5-5": {
       "id": "1-5-5",
       "label": "GitLab required-route reference dogfood",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [
@@ -4556,7 +4556,7 @@
     "1-5-5-8": {
       "id": "1-5-5-8",
       "label": "GitLab agent-local B1 handoff from bridge to Mac Codex",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5",
       "children": [
@@ -4597,7 +4597,7 @@
     "1-5-5-8-1": {
       "id": "1-5-5-8-1",
       "label": "Durable agent-local handoff envelope and GitLab state-branch persistence",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5-5-8",
       "children": [],
@@ -4646,9 +4646,19 @@
           "q": "B1 bridge如何选择并持久化agent-local handoff？",
           "answer": "仅接受Note中的显式隐藏JSON Registration commit/path/sha256合同；bridge校验项目、路由、注册快照和agent-local allowlist后写入受保护zj-loop-state，A默认路径仍触发GitLab Pipeline，禁止自动A→B回退。",
           "note": "第二切片实现；handoff只产生durable state，不创建Pipeline、Issue、Note、MR或master写入。"
+        },
+        {
+          "q": "zj-loop-state 当前保护规则是否满足部署前置？",
+          "answer": "否：分支已 protected 且 merge_access_levels=No one，但 allow_force_push=true，且 push_access_levels=Developers + Maintainers 过宽；不满足禁止 force-push 与最小 state-writer 权限要求。",
+          "note": "需要人工授权后修正保护规则；当前只读检查未修改 GitLab 设置。"
+        },
+        {
+          "q": "旧版 GitLab 无用户级 push 白名单时如何完成 state branch 部署前置？",
+          "answer": "接受 Developers + Maintainers 作为 GitLab 14.10 下的最小可用 push 权限；保持 protected、allow_force_push=false、code_owner_approval_required=true、merge_access_levels=No one；用户级最小权限待 GitLab 升级后改进。",
+          "note": "不通过取消保护再重建制造保护空窗；当前 state-writer 可写且核心安全约束已满足。"
         }
       ],
-      "notes": "Protocol and read/claim adapter implemented; handoff creation bridge integration, protected state-branch provisioning, and live GitLab replay remain in progress."
+      "notes": "GitLab 14.10 exception accepted: protected=true, allow_force_push=false, code_owner_approval_required=true, merge_access_levels=No one; Developers + Maintainers retained as minimum available push scope for state-writer."
     },
     "1-5-5-8-2": {
       "id": "1-5-5-8-2",
@@ -4684,7 +4694,7 @@
     "1-5-5-8-3": {
       "id": "1-5-5-8-3",
       "label": "Claimed handoff independent worktree creation and execution boundary",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5-8",
       "children": [],
@@ -4710,28 +4720,357 @@
           "note": "第三切片先实现worktree准备协议与CLI，Codex执行、验证、push和Draft MR另行切片。"
         }
       ],
-      "notes": ""
+      "notes": "Merged implementation provides deterministic claimed-handoff worktree preparation with valid git worktree branch creation and idempotent reuse."
     },
     "1-5-5-8-4": {
       "id": "1-5-5-8-4",
       "label": "Agent-local verification evidence and Draft MR handoff",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-5-5-8",
-      "children": [],
+      "children": [
+        "1-5-5-8-4-1"
+      ],
       "decisions": [
         {
           "q": "B1 什么时候算完成？",
           "answer": "以 Draft MR 加结构化验证证据作为成功边界：handoff、Registration、base commit、changed files/no-op、验证结果、source branch、Draft MR 与 side_effects_executed 必须齐全。",
           "note": "只输出自然语言、没有验证、没有 push、工作区不确定或需要高风险 Human 决策时只能 blocked/released，不能 completed。"
+        },
+        {
+          "q": "Execution-context preflight 的下一刀是什么？",
+          "answer": "先接入 GitLab roadmap activation consumer，生成 execution-context.json 并在缺少 claim、contract 或 roadmap 时 fail closed；verify、push、Draft MR 作为后续刀。",
+          "note": "先建立所有写操作共用的运行上下文授权边界，避免 agent 在上下文不完整时修改仓库或创建 MR。"
         }
       ],
       "notes": ""
+    },
+    "1-5-5-8-4-1": {
+      "id": "1-5-5-8-4-1",
+      "label": "Roadmap activation consumer execution-context preflight and artifact",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4",
+      "children": [
+        "1-5-5-8-4-1-1"
+      ],
+      "decisions": [
+        {
+          "q": "跨设备上下文的唯一真相源是什么？",
+          "answer": "项目受保护的 zj-loop-state 分支；handoff、claim、execution、evidence 通过 handoff_id/activation_id 关联，execution-context.json 只是可验证物化快照。",
+          "note": "不依赖聊天历史、本地磁盘或 Agent 内存；CI、Mac Codex 和未来 Worker 消费同一套结构化上下文。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-8-4-1-1": {
+      "id": "1-5-5-8-4-1-1",
+      "label": "Protected state branch context bus and execution snapshot reconstruction",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4-1",
+      "children": [
+        "1-5-5-8-4-1-1-1",
+        "1-5-5-8-4-1-1-2",
+        "1-5-5-8-4-1-1-3",
+        "1-5-5-8-4-1-1-4"
+      ],
+      "decisions": [
+        {
+          "q": "下一步上下文重建范围是什么？",
+          "answer": "限定为 GitLab B1 state-branch context reconstruction：仅凭 project + handoff_id 重建并校验 handoff、claim、execution、evidence、Registration 和 roadmap activation 快照。",
+          "note": "先闭环跨设备上下文协议，再扩展 GitHub、远程 Worker 和其他 Agent。"
+        },
+        {
+          "q": "上下文重建遇到不完整或不一致状态时如何处理？",
+          "answer": "Fail-closed：handoff、claim、execution、evidence、Registration 或 activation contract 任一缺失、歧义、SHA 不匹配，或 state branch HEAD 在读取期间变化，都返回结构化 blocked，禁止继续执行、自动重试或猜测恢复。",
+          "note": "跨设备上下文宁可阻断，也不允许消费过期或拼接自相矛盾的快照。"
+        },
+        {
+          "q": "state branch 快照如何保证读取原子性？",
+          "answer": "读取 H0=state branch HEAD；所有 handoff、claim、execution、evidence、Registration、activation 文件按不可变 commit H0 读取；再读取 H1，只有 H0===H1 才生成 execution-context，否则返回 blocked: state-head-changed。",
+          "note": "避免按移动分支逐文件读取造成混合快照；快照记录 state_head_sha=H0。"
+        },
+        {
+          "q": "同一 handoff 多次 execution 重试时快照如何表达？",
+          "answer": "同时保留完整不可变 execution/evidence 历史，并提供确定性的 current 投影；current 按状态序列与记录时间计算，相同时间或多个候选无法唯一确定时 fail-closed；历史记录不覆盖、不删除。",
+          "note": "支持跨设备恢复完整上下文，也让 Agent 直接消费当前执行状态。"
+        },
+        {
+          "q": "跨设备 canonical context 允许包含哪些信息？",
+          "answer": "仅保存最小结构化事实：身份、状态、引用、SHA、时间和验证结果；不保存 token、Webhook header、原始 Note payload 或凭据。设备路径与本地 workspace 只由当前设备重新绑定，不进入 canonical context。",
+          "note": "降低 state branch 泄露面，避免把某台设备的路径或秘密误传给另一台 Agent。"
+        },
+        {
+          "q": "context 重建能力通过什么接口暴露？",
+          "answer": "新增独立只读命令 zj-loop-agent-local context --project <project> --handoff-id <id> --json：负责 state branch context reconstruction、H0/H1 校验、历史与 current 投影；preflight 只消费 context 并负责本地 worktree、roadmap、activation contract 检查。",
+          "note": "避免让 preflight 同时承担远端重建和本地执行门禁，便于未来其他 Agent/设备复用。"
+        },
+        {
+          "q": "context snapshot 的 current 投影 schema 如何组织？",
+          "answer": "采用 zj-loop.agent_context_snapshot.v1：state、handoff、claim、history{executions,evidence}、current{execution,evidence}、validation、side_effects_executed=false；history 保留完整不可变记录，current 只保留唯一 execution 及其 evidence，handoff/claim 仅保留最小结构化内容。",
+          "note": "current 无法唯一确定时返回 blocked，不携带原始 Note payload 或凭据。"
+        },
+        {
+          "q": "current execution 如何确定？",
+          "answer": "仅考虑 handoff_id 与 claim_id 均匹配的 execution，按 recorded_at 取最新；最新时间戳存在多条 execution 时返回 blocked: current-execution-ambiguous；不按状态偏爱 completed/running；current.evidence 必须同时绑定选中 execution 与 claim。",
+          "note": "重试是新的 execution，状态由时间序列决定；不使用不稳定的文件枚举顺序。"
+        },
+        {
+          "q": "evidence sha256 应在哪一层校验？",
+          "answer": "context 命令只校验 evidence schema、handoff_id、claim_id、execution_id、路径格式和 SHA-256 格式，不访问本地文件；preflight 在当前 worktree 校验 evidence 文件存在并计算 SHA-256。文件缺失或 hash 不匹配则 blocked；无 SHA 的 informational evidence 可保留但不能作为完成门禁。",
+          "note": "区分跨设备 canonical facts 与当前设备可验证 artifact，避免把本地路径误当成远端事实。"
+        },
+        {
+          "q": "state branch 历史超过 API 单页时如何处理？",
+          "answer": "list 请求完整跟随 GitLab X-Next-Page 分页，并设置明确硬上限（例如 1000 条记录）；超过上限返回 blocked: state-record-limit-exceeded；禁止静默截断或只取最新记录。",
+          "note": "保证 history/current 投影基于完整输入，避免大历史导致错误恢复。"
+        },
+        {
+          "q": "context 命令使用什么凭据边界？",
+          "answer": "仅接受 GITLAB_TOKEN 或显式只读 GitLab credential，读取 state branch、Registration、activation contract；只调用 GET API，禁止 commit/push/Issue/MR 写入；不回退 bridge trigger token、webhook secret 或 state-writer 凭据；输出与错误不包含 token/header。",
+          "note": "确保 context reconstruction 本身没有隐藏 side effect 或凭据升级路径。"
+        },
+        {
+          "q": "activation snapshot ref 如何固定 immutable 来源？",
+          "answer": "在 state branch 写入 activations/<activation-id>.json，记录 zj-loop.activation_snapshot_ref.v1、activation_id、project_path、immutable commit、path、sha256；context 按该 commit 读取并校验 activation contract，缺失或 digest 不匹配直接 blocked。",
+          "note": "不读取移动中的 master，确保跨设备重建历史时 activation contract 不漂移。"
+        },
+        {
+          "q": "activation snapshot ref 由谁在何时写入？",
+          "answer": "roadmap-activation producer 在 immutable activation contract 推送成功并获得 commit SHA 后立即向 zj-loop-state append activations/<activation-id>.json；只有 ref 写入成功，agent-local context/preflight 才可 execution-ready；context 只读不补写；写入冲突或失败返回 blocked。",
+          "note": "避免 preflight 依赖尚未持久化的 activation 事实，也避免 context 隐式产生 side effect。"
+        },
+        {
+          "q": "activation ref 重复或并发写入如何处理？",
+          "answer": "同一 activation_id 已存在且 commit/path/sha256 完全一致时返回 duplicate 并视为成功；引用不同则 blocked: activation-ref-conflict；不覆盖/更新/删除。并发写入使用 state HEAD optimistic concurrency，冲突后只读取判断 duplicate/conflict，不自动覆盖。",
+          "note": "保持 append-only 历史与 immutable activation 身份，避免 silent replacement。"
+        },
+        {
+          "q": "handoff 原始状态与派生 lifecycle status 如何共存？",
+          "answer": "handoff.status、claim.status、history.executions[*].status 都保留 state branch 原始事实；context 额外派生 current.lifecycle_status；不把派生状态回写旧 handoff 或其他历史记录。",
+          "note": "审计历史不可变，同时为当前 Agent 提供明确状态。"
+        },
+        {
+          "q": "blocked 错误如何提供给 Agent 与 Human？",
+          "answer": "validation.errors 使用结构化记录 {code,path,message}；code 稳定可机读，path 指向字段或 state 路径，message 仅人读且不泄露 token/header/原文；顶层 reason 取首个主要 code；错误顺序稳定。",
+          "note": "让跨设备消费者可以按 code 恢复或阻断，不依赖自然语言解析。"
+        },
+        {
+          "q": "旧版 state 与 CLI 如何兼容新 context snapshot？",
+          "answer": "新增 zj-loop.agent_context_snapshot.v1，旧 state 可读取但缺少 activation ref、execution 或 evidence 时明确返回 blocked，不猜测补全；list/claim/worktree 保持现有行为；preflight 接入后旧 state 返回 blocked-incomplete-context；通过新 core 版本和版本锁/模板同步发布，不做隐式 schema migration。",
+          "note": "保持已有 handoff 数据与命令兼容，同时让新执行门禁 fail-closed。"
+        },
+        {
+          "q": "context reconstruction 的验收门禁是什么？",
+          "answer": "覆盖四层：纯函数 schema/current/错误排序单测；fake GitLab client 的 H0/H1、commit-pinned reads、分页/上限、duplicate/conflict、fail-closed 集成测试；context CLI 与 preflight 消费及只读凭据测试；一次真实 GitLab 跨设备 dogfood，验证无 token/header/绝对设备路径并完成 execution/evidence 闭环。",
+          "note": "结构正确、远端一致性、本地 CLI 行为和真实跨设备链路同时有证据。"
+        },
+        {
+          "q": "context reconstruction 如何发布与 rollout？",
+          "answer": "先在 ZAgenticLoop 实现 snapshot 与 activation-ref producer，完成四层测试并发布新 core；再更新 ai-studio bridge/runtime；先做只读真实 dogfood，再让 preflight 强制消费 context，最后将新门禁作为 B1 execution-ready 条件。旧版 bridge/handoff 可读取但缺少新记录时明确 blocked。",
+          "note": "渐进发布，避免一次升级同时改变 producer、consumer 和执行门禁。"
+        },
+        {
+          "q": "context reconstruction 如何进行版本发布？",
+          "answer": "新能力发布为下一个 @jununfly/zj-loop-core 版本，提供 zj-loop-agent-local context 与 zj-loop.agent_context_snapshot.v1；list/claim/worktree/execution/evidence 保持兼容；preflight 正式 execution-ready 不接受 legacy-context；同步 version-lock、GitLab/GitHub 模板和 generated bundles；不回溯修改历史 state。",
+          "note": "先只读 dogfood，再逐步强制 preflight，控制跨设备 rollout 风险。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-5-8-4-1-1-1": {
+      "id": "1-5-5-8-4-1-1-1",
+      "label": "Context snapshot schema and fail-closed reconstruction",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4-1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "Draft PR #216: context snapshot schema, fail-closed reconstruction, read-only context CLI, canonical path redaction. Verified npm run test:agent-local (18 tests) and git diff --check."
+    },
+    "1-5-5-8-4-1-1-2": {
+      "id": "1-5-5-8-4-1-1-2",
+      "label": "Pinned GitLab state reads with pagination and read-only credentials",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4-1-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "core 0.1.32 发布后消费端 rollout 的范围是什么？",
+          "answer": "仅升级 ai-studio bridge/runtime 与 roadmap activation/issue-note consumer 的必要 pin、版本锁和生成 CI 文件；完成 CI 与只读 agent-local context/preflight 验证，不顺手升级无关 route。",
+          "note": "控制变更面，先闭合跨设备 context 消费链路，再单独推进其他 route。"
+        },
+        {
+          "q": "全局 version-lock 与生成 GitLab CI 的 core pin 如何升级？",
+          "answer": "统一升级所有生成 GitLab CI pin 与 version-lock core 到 0.1.32；只做依赖和版本锁对齐，不改变其他 route 的行为或启用状态。",
+          "note": "version-lock 是全局一致性边界，局部混用旧 pin 会被版本一致性 gate 阻断。"
+        },
+        {
+          "q": "历史 handoff 缺少 activation ref 且 execution 重复时如何处理？",
+          "answer": "保留旧 handoff 为 blocked，不修复、覆盖或猜测历史 state；待 rollout 合并部署后，用新 Issue 与新评论产生全新 handoff 做最终跨设备 dogfood。",
+          "note": "验证 fail-closed 边界，避免把 producer 上线前的历史状态误当作新协议可消费上下文。"
+        },
+        {
+          "q": "MR 合并后如何进行最终 dogfood？",
+          "answer": "先部署 ai-studio master 的 core 0.1.32 bridge/runtime 并确认 healthz，再创建全新 Issue 与 Note 产生新 handoff；只读执行 context 与 preflight，旧 blocked handoff 不复用。",
+          "note": "生产实例必须先消费新版本，避免用旧部署或 producer 上线前的历史状态验证新协议。"
+        }
+      ],
+      "notes": "ai-studio MR !602 已合并；master 与 version-lock 已统一到 core 0.1.32；bridge 容器热更新后 healthz 返回 200。历史 handoff dogfood 按 fail-closed 阻断，最终验证改用新 handoff。"
+    },
+    "1-5-5-8-4-1-1-3": {
+      "id": "1-5-5-8-4-1-1-3",
+      "label": "Activation snapshot reference producer and preflight integration",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4-1-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "bridge-shaped API pipeline 如何进入 activation producer？",
+          "answer": "桥接触发的 API pipeline 同时提供 bridge 原始变量与 activation producer 标准变量；roadmap activation job 识别该绑定并使用同一 issue/note/request 上下文生成 activation ref，补充回归 gate 后再重新 dogfood。",
+          "note": "避免 agent-local handoff 在 activation ref 尚未持久化时进入执行；保持 bridge 与 activation producer 的字段映射确定、可回放。"
+        },
+        {
+          "q": "下一步是否执行最终 fresh dogfood？",
+          "answer": "是：先部署 ai-studio bridge/runtime 0.1.33，再用全新 Issue + Note 验证 activation ref、handoff、claim、worktree、context/preflight 与 execution/evidence 闭环。",
+          "note": "推荐先做真实链路闭环；旧 blocked handoff 不复用。"
+        },
+        {
+          "q": "bridge 0.1.33 部署健康检查结果是什么？",
+          "answer": "通过：容器内 /healthz 返回 schema zj-loop.gitlab_issue_note_bridge_health.v1、status=ok、side_effects_executed=false、HTTP 200。",
+          "note": "可以进入全新 Issue + Note 的真实 dogfood；不复用旧 handoff。"
+        },
+        {
+          "q": "fresh dogfood 的 GitLab Note 使用什么输入契约？",
+          "answer": "使用 slash command 加 zj-loop.agent_execution_request.v1 结构化 marker；request_id 必须全新，registration 固定为 master 的 ref=5b4b8564864ecf8745fb84400457493452f15389、path=zj-loop/registrations/project.yaml、sha256=eebd9cc9a08ea31178e3595db3ecf704f40f0f93077d2a116dc0a6c5214cef0d。",
+          "note": "禁止裸命令、复用旧 request_id 或复用旧 handoff。"
+        },
+        {
+          "q": "fresh dogfood 首次 trigger-failed 401 如何恢复？",
+          "answer": "先验证并更新容器内 ZJ_LOOP_GITLAB_BRIDGE_TRIGGER_TOKEN 的 GitLab API 访问权限；旧 receipt 不重试、不复用，凭据修复后用全新 request_id 和全新 Note 重新 dogfood。",
+          "note": "401 发生在 pipeline API 之前，优先修复 auth，不改变结构化评论契约。"
+        },
+        {
+          "q": "agent-execution-request-invalid 的根因是什么？",
+          "answer": "当前 webhook 接收实例实际仍运行旧 core 0.1.31，或公网 webhook 未路由到刚升级的 8080 bridge；0.1.32/0.1.33 可解析同一结构化请求。先确认 child binary 与公网路由，再重新发送 Note。",
+          "note": "不修改评论契约，不继续消耗新的 request_id，先完成 runtime identity 校验。"
+        },
+        {
+          "q": "本轮发布验证范围是什么？",
+          "answer": "只升级 ai-studio bridge/runtime、zj-loop/version-lock.json 及相关 GitLab CI core pin 到 0.1.34，然后部署当前 UAT 并用全新 Issue + Note 做 dogfood；不复用旧 handoff，不升级其他 route。",
+          "note": "发布版本 0.1.34 已确认 npm latest；先完成运行时升级，再验证 activation ref、handoff、claim、worktree、context/preflight、execution/evidence 闭环。"
+        },
+        {
+          "q": "本次 fresh dogfood 的 invalid 根因是什么？",
+          "answer": "Note 19729546 的 registration.sha256 少了 3 个字符，长度为 61；正确 SHA-256 为 eebd9cc9a08ea31178e3595db3ecf704f40f0f93077d2a116dc0a6c5214cef0d。bridge、网关和 0.1.34 runtime 均已确认正常。",
+          "note": "保留原 Note 作为失败证据；用全新 request_id 在 Issue 990 下追加修正 Note，不复用失败 request_id。"
+        },
+        {
+          "q": "consumer 失败的根因是什么？",
+          "answer": "通过 project_48263_bot2 创建的 Note 作者 ID 为 25544，而 GitLab consumer 合约要求 Note 作者 ID 为 81；bridge 仍会创建 handoff，但 consumer reread 时返回 gitlab-note-request-mismatch。",
+          "note": "下一次 Note 必须由 GitLab 人类用户张骏（ID 81）通过 Web UI 或其个人 token 创建；不得使用 project bot token。"
+        },
+        {
+          "q": "是否在 fresh dogfood、execution/evidence、MR 合并和 Issue closeout 完成后结束本节点？",
+          "answer": "是：将 Activation snapshot reference producer and preflight integration 标记为 completed，进入四层测试与跨设备 dogfood release。",
+          "note": "证据：MR !612 已合并；Issue 990 已关闭；agent-local context status=completed，activation ref 存在，execution completed，activation-preflight evidence passed。"
+        }
+      ],
+      "notes": "MR !612 merged; Issue 990 closed; activation ref, execution completed, and activation-preflight evidence passed."
+    },
+    "1-5-5-8-4-1-1-4": {
+      "id": "1-5-5-8-4-1-1-4",
+      "label": "Four-layer tests and GitLab cross-device dogfood release",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5-5-8-4-1-1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "四层验收门槛如何定义？",
+          "answer": "按 core 确定性测试、generated bundle 校验、provider parity 校验、GitLab 跨设备 live dogfood 四层执行；先本地验证，再做 live 验收。",
+          "note": "推荐将单次 fresh dogfood 纳入统一发布门槛，并为每层保留可回放证据。"
+        },
+        {
+          "q": "本地 gates 验证的 core 版本与 live UAT 版本不一致时如何处理？",
+          "answer": "将仓库 release gates 与已发布的 @jununfly/zj-loop-core@0.1.34 对齐后，才能把四层验收记为通过；当前 0.1.30 结果仅作历史基线。",
+          "note": "发布阻断：tools/zj-loop-core、package-lock、zj-loop/version-lock、generated bundle 与 release workflow 必须遵守同一版本来源。"
+        },
+        {
+          "q": "源码版本 0.1.30 与已发布 runtime 0.1.34 如何对齐？",
+          "answer": "不直接修改仓库版本号；保留 0.1.30 源码回归，新增或运行明确的已发布 0.1.34 runtime compatibility gate，并分别记录两类结果。",
+          "note": "避免重复发布已存在的 0.1.34，也避免把 published runtime 伪装成当前源码版本。"
+        },
+        {
+          "q": "已发布 runtime compatibility gate 如何落地？",
+          "answer": "新增独立 gate，固定解析 @jununfly/zj-loop-core@0.1.34，通过 npm registry 执行 CLI 协议 smoke，并将结果作为第四层发布必需证据；不改当前源码 0.1.30 版本源。",
+          "note": "与源码回归 gate 分离，版本固定且可回放；registry 不可达时必须阻断并报告，不得降级为未验证。"
+        },
+        {
+          "q": "published-runtime compatibility smoke 是否允许外部副作用？",
+          "answer": "只读验证 npm 精确版本、agent-local CLI help 和 roadmap activation CLI help 的启动/退出契约；不执行 claim、commit、pipeline、Issue 或 MR 写操作。",
+          "note": "真实 GitLab 写操作由 Issue 990 fresh dogfood 证据覆盖；compatibility gate 只证明已发布包可解析和协议兼容。"
+        },
+        {
+          "q": "published-runtime compatibility gate 是否固化进仓库发布门禁？",
+          "answer": "新增脚本与回归测试，固定 0.1.34，提供 npm test:published-core-runtime，并接入 test:tools 或 test:release-ready；输出结构化 JSON artifact。",
+          "note": "将一次性 smoke 转为可复用、可审计的 release gate。"
+        },
+        {
+          "q": "compatibility gate 的输出与失败契约是什么？",
+          "answer": "输出 zj-loop.published_core_runtime_gate.v1 JSON；记录 requested/resolved version、registry、checks、side_effects_executed=false；版本不匹配、CLI 异常或 registry 不可达时 status=blocked，不降级为 warning；不输出 Token 或 npm 缓存路径。",
+          "note": "保持与现有 evidence 契约一致，确保结果可审计且 fail-closed。"
+        },
+        {
+          "q": "compatibility gate 覆盖哪个 registry？",
+          "answer": "只固定验证 public npm registry https://registry.npmjs.org 上的 @jununfly/zj-loop-core@0.1.34；GitLab registry 另行建 gate，不扩展本节点范围。",
+          "note": "与当前 UAT bridge/runtime 的真实 package source 保持一致。"
+        },
+        {
+          "q": "published-runtime compatibility gate 固定哪些只读检查？",
+          "answer": "固定执行 npm view 精确版本、npx @jununfly/zj-loop-core@0.1.34 zj-loop-agent-local --help、npx @jununfly/zj-loop-core@0.1.34 zj-loop-roadmap-activation --help；三项均不得产生外部副作用。",
+          "note": "分别覆盖 npm 版本解析、agent-local CLI 启动和 roadmap activation CLI 启动。"
+        },
+        {
+          "q": "compatibility gate 如何避免误用本地 npm 缓存？",
+          "answer": "每次运行使用隔离临时 npm cache，并显式指定 --registry https://registry.npmjs.org；结果 JSON 不输出 cache 路径。",
+          "note": "确保验证的是 public registry 上的精确 0.1.34，而不是本机残留包。"
+        },
+        {
+          "q": "published-runtime compatibility gate 是否进入 CI release-ready？",
+          "answer": "是：作为 release-ready 的强制联网门禁；npm registry 不可达、版本不匹配或 CLI smoke 失败都必须阻断；普通离线开发可只运行源码三层 gates。",
+          "note": "发布证据必须证明 public npm runtime，而不是仅证明本地源码。"
+        },
+        {
+          "q": "published-runtime compatibility gate 接入哪些 CI 触发范围？",
+          "answer": "只接入 release workflow；PR CI 不运行联网 gate，继续运行本地源码、generated bundle 和 provider parity gates。",
+          "note": "降低普通 PR 对外部 npm registry 的依赖，同时保留 release 的真实 runtime 硬门禁。"
+        },
+        {
+          "q": "compatibility gate 的结果如何留存？",
+          "answer": "上传脱敏的 published-core-runtime-result.json 作为 CI artifact，并将状态、版本、registry、三项 check 结果写入 job summary；禁止输出 Token、cache 路径或完整环境变量。",
+          "note": "同时满足人工审阅和机器回放。"
+        },
+        {
+          "q": "compatibility gate 采用什么实现方式？",
+          "answer": "使用独立脚本调用固定版本的 npm CLI，不复用本地 package build/test runner；脚本负责临时 cache、registry、退出码、脱敏摘要和 zj-loop.published_core_runtime_gate.v1 输出。",
+          "note": "明确隔离源码回归与 published runtime 验证。"
+        },
+        {
+          "q": "四层验收是否全部通过？",
+          "answer": "是：core 379/379、generated bundle、provider parity、published 0.1.34 runtime compatibility 均通过；GitLab Issue 990 跨设备 live dogfood、execution/evidence、MR !612 合并和 closeout 也已完成。",
+          "note": "runtime gate 输出 zj-loop.published_core_runtime_gate.v1，side_effects_executed=false；当前节点可完成。"
+        }
+      ],
+      "notes": "Four-layer gates passed: core 379/379; generated bundle; provider parity; published core runtime 0.1.34 compatibility. GitLab Issue 990 live dogfood, execution/evidence, MR !612 merge, and closeout completed."
     }
   },
   "metadata": {
     "created": "2026-07-14 14:07:31",
-    "updated": "2026-07-26 17:30:26",
+    "updated": "2026-07-28 18:21:25",
     "md_file": "docs/plans/automation-first-product-roadmap.md"
   }
 }

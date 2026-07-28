@@ -40,6 +40,32 @@ jobs:
           npm run build
           npm test
 
+      - name: Verify published core runtime compatibility
+        run: node scripts/validate-published-core-runtime.mjs --out published-core-runtime-result.json --json
+
+      - name: Upload published core runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-core-runtime
+          path: published-core-runtime-result.json
+
+      - name: Summarize published core runtime evidence
+        if: always()
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const x = JSON.parse(fs.readFileSync('published-core-runtime-result.json', 'utf8'));
+          const lines = [
+            '### Published core runtime',
+            `- status: \`${x.status}\``,
+            `- package: \`${x.package}@${x.requested_version}\``,
+            `- registry: \`${x.registry}\``,
+            ...x.checks.map((check) => `- ${check.id}: \`${check.status}\``),
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\\n')}\\n`);
+          NODE
+
       - name: Publish to npm
         working-directory: tools/zj-loop-core
         run: npm publish --access public --provenance
