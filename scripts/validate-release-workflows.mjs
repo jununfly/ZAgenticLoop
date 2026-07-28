@@ -24,6 +24,7 @@ export const RELEASE_PACKAGES = [
     workflow: '.github/workflows/release-zj-loop-core.yml',
     tagPattern: 'zj-loop-core-v*',
     provenancePublishing: true,
+    trustedPublisher: true,
     knownLocalFileDependencies: [],
   },
   {
@@ -314,7 +315,16 @@ export async function validateReleaseWorkflows(root = ROOT) {
     assertIncludes(workflow, `working-directory: ${releasePackage.directory}`, releasePackage.workflow, errors);
     assertIncludes(workflow, `cache-dependency-path: ${releasePackage.directory}/package-lock.json`, releasePackage.workflow, errors);
     assertIncludes(workflow, 'npm publish --access public', releasePackage.workflow, errors);
-    assertIncludes(workflow, 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}', releasePackage.workflow, errors);
+    if (releasePackage.trustedPublisher) {
+      const usesToken = workflow.includes('NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}');
+      if (usesToken) {
+        errors.push(`${releasePackage.workflow} trusted publisher workflow must not use NODE_AUTH_TOKEN`);
+      } else if (!usesToken) {
+        assertIncludes(workflow, 'npm install -g npm@latest', releasePackage.workflow, errors);
+      }
+    } else {
+      assertIncludes(workflow, 'NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}', releasePackage.workflow, errors);
+    }
     if (releasePackage.provenancePublishing) {
       assertIncludes(workflow, 'id-token: write', releasePackage.workflow, errors);
       assertIncludes(workflow, '--provenance', releasePackage.workflow, errors);

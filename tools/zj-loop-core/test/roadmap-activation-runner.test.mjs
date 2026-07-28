@@ -29,6 +29,19 @@ import {
 
 const ROADMAP_ACTIVATION_CLI = fileURLToPath(new URL('../dist/roadmap-activation-cli.js', import.meta.url));
 
+function fakeActivationStateClient() {
+  let head = 'e'.repeat(40);
+  return {
+    getHead: async () => head,
+    readJson: async () => null,
+    commit: async ({ last_commit_id }) => {
+      assert.equal(last_commit_id, head);
+      head = 'f'.repeat(40);
+      return { id: head };
+    },
+  };
+}
+
 const ROUTE = {
   route_id: 'roadmap-sliced-development',
   consumer: 'roadmap-sliced-development',
@@ -333,7 +346,7 @@ test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLA
     if (String(url).includes('/repository/branches/')) return { ok: false, status: 404, json: async () => ({}) };
     if (String(url).endsWith('/repository/branches')) return { ok: true, status: 201, json: async () => ({ name: 'zjal-act-87-note-gitlab' }) };
     if (String(url).includes('/repository/files/')) return { ok: false, status: 404, json: async () => ({}) };
-    if (String(url).endsWith('/repository/commits')) return { ok: true, status: 201, json: async () => ({ id: 'commit-1' }) };
+    if (String(url).endsWith('/repository/commits')) return { ok: true, status: 201, json: async () => ({ id: 'a'.repeat(40) }) };
     if (String(url).includes('/merge_requests?')) return { ok: true, status: 200, json: async () => [] };
     if (String(url).endsWith('/merge_requests')) return { ok: true, status: 201, json: async () => ({ iid: 12, web_url: 'https://gitlab.com/group/project/-/merge_requests/12' }) };
     return { ok: false, status: 500, json: async () => ({}) };
@@ -356,6 +369,7 @@ test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLA
     },
     projectPath: 'group/project',
     targetBranch: 'master',
+    stateClient: fakeActivationStateClient(),
   });
 
   assert.equal(result.status, 'completed');
@@ -367,7 +381,9 @@ test('Roadmap Activation GitLab execute creates a branch and draft MR with GITLA
   const commitPayload = JSON.parse(commitCall.options.body);
   assert.equal(commitPayload.actions[0].action, 'create');
   assert.equal(commitPayload.actions[0].file_path, 'zj-loop/orchestrations/act-87-note/roadmap-activation.json');
-  assert.equal(JSON.parse(commitPayload.actions[0].content).schema, 'zj-loop.roadmap_activation_contract_plan.v1');
+  const activationArtifact = JSON.parse(commitPayload.actions[0].content);
+  assert.equal(activationArtifact.schema, 'zj-loop.roadmap_activation_contract_plan.v1');
+  assert.equal(activationArtifact.targetBranch, 'master');
   assert.equal(calls.some((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')), true);
   assert.equal(calls.filter((call) => call.options.headers?.['PRIVATE-TOKEN'] === 'private-token').length, calls.length);
   assert.match(JSON.parse(calls.find((call) => call.options.method === 'POST' && call.url.endsWith('/merge_requests')).options.body).title, /^Draft:/);
@@ -396,9 +412,48 @@ test('Roadmap Activation GitLab execute dry-run plans branch and MR operations',
   assert.deepEqual(result.operations.map((item) => item.kind), [
     'find-or-create-branch',
     'commit-activation-artifact',
+    'record-activation-snapshot-ref',
     'find-or-create-merge-request',
     'update-merge-request-description',
   ]);
+});
+
+test('Roadmap Activation stops before MR creation when the activation snapshot ref cannot be recorded', async () => {
+  const calls = [];
+  const result = await executeGitLabRoadmapActivation({
+    live: true,
+    token: 'private-token',
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+      if (String(url).includes('/repository/branches/')) return { ok: true, status: 200, json: async () => ({}) };
+      if (String(url).includes('/repository/files/')) return { ok: false, status: 404, json: async () => ({}) };
+      if (String(url).endsWith('/repository/commits')) return { ok: true, status: 201, json: async () => ({ id: 'a'.repeat(40) }) };
+      return { ok: false, status: 500, json: async () => ({}) };
+    },
+    stateClient: {
+      getHead: async () => 'b'.repeat(40),
+      readJson: async () => null,
+      commit: async () => { throw new Error('gitlab-state-409'); },
+    },
+    projectPath: 'group/project',
+    targetBranch: 'master',
+    contractPlan: {
+      schema: 'zj-loop.roadmap_activation_contract_plan.v1',
+      provider: 'gitlab',
+      activationRequestId: 'act-87-ref-conflict',
+      sourceIssue: '87',
+      sourceCommentId: '4932786315',
+      sourceIssueUrl: 'https://gitlab.com/group/project/-/issues/87',
+      sourceCommentUrl: 'https://gitlab.com/group/project/-/issues/87#note_4932786315',
+      branchName: 'zjal-act-87-ref-conflict-gitlab',
+      mrTitle: 'Roadmap Activation: ref conflict',
+      mrContract: 'contract',
+    },
+  });
+
+  assert.equal(result.status, 'failed');
+  assert.equal(result.reason, 'activation-snapshot-ref-state-head-conflict');
+  assert.equal(calls.some((call) => String(call.url).includes('/merge_requests')), false);
 });
 
 test('Roadmap Activation GitLab execute is idempotent by branch and updates existing MR', async () => {
@@ -407,7 +462,7 @@ test('Roadmap Activation GitLab execute is idempotent by branch and updates exis
     calls.push({ url: String(url), options });
     if (String(url).includes('/repository/branches/')) return { ok: true, status: 200, json: async () => ({}) };
     if (String(url).includes('/repository/files/')) return { ok: false, status: 404, json: async () => ({}) };
-    if (String(url).endsWith('/repository/commits')) return { ok: true, status: 201, json: async () => ({ id: 'commit-1' }) };
+    if (String(url).endsWith('/repository/commits')) return { ok: true, status: 201, json: async () => ({ id: 'a'.repeat(40) }) };
     if (String(url).includes('/merge_requests?')) {
       return { ok: true, status: 200, json: async () => [{ iid: 9, web_url: 'https://gitlab.com/group/project/-/merge_requests/9' }] };
     }
@@ -431,6 +486,7 @@ test('Roadmap Activation GitLab execute is idempotent by branch and updates exis
     },
     projectPath: 'group/project',
     targetBranch: 'main',
+    stateClient: fakeActivationStateClient(),
   });
 
   assert.equal(result.status, 'completed');

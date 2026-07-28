@@ -38,6 +38,7 @@ export declare function triggerGitLabIssueNoteBridgePipeline(input: {
     config: GitLabIssueNoteBridgeTriggerConfig;
     envelope: GitLabIssueNoteBridgeEnvelope;
     envelopeRef: string;
+    activationRequestId?: string;
     token?: string;
     apiBaseUrl?: string;
     fetchImpl?: typeof fetch;

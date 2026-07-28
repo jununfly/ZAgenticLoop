@@ -48,8 +48,9 @@ export type AgentClaim = {
 };
 export type StateBranchClient = {
     getHead(): Promise<string>;
-    readJson(path: string): Promise<unknown | null>;
-    list(path: string): Promise<string[]>;
+    readText?(path: string, ref?: string): Promise<string | null>;
+    readJson(path: string, ref?: string): Promise<unknown | null>;
+    list(path: string, ref?: string): Promise<string[]>;
     commit(input: {
         branch: string;
         message: string;
@@ -79,6 +80,64 @@ export type AgentLocalClaimResult = {
     side_effects_executed: boolean;
     reason?: string;
 };
+export declare const AGENT_EXECUTION_SCHEMA = "zj-loop.agent_execution.v1";
+export declare const AGENT_EVIDENCE_SCHEMA = "zj-loop.agent_evidence.v1";
+export type AgentExecutionStatus = "running" | "completed" | "blocked" | "released";
+export type AgentExecution = {
+    schema: typeof AGENT_EXECUTION_SCHEMA;
+    execution_id: string;
+    handoff_id: string;
+    claim_id: string;
+    status: AgentExecutionStatus;
+    recorded_at: string;
+    branch: string | null;
+    worktree_path: string | null;
+    reason: string | null;
+    side_effects_executed: false;
+};
+export type AgentEvidence = {
+    schema: typeof AGENT_EVIDENCE_SCHEMA;
+    evidence_id: string;
+    handoff_id: string;
+    execution_id: string;
+    claim_id: string;
+    kind: string;
+    status: "passed" | "failed" | "informational";
+    path: string | null;
+    sha256: string | null;
+    recorded_at: string;
+    side_effects_executed: false;
+};
+export type AgentExecutionWriteResult = {
+    schema: "zj-loop.agent_local_execution.v1" | "zj-loop.agent_local_evidence.v1";
+    status: "recorded" | "blocked";
+    record: AgentExecution | AgentEvidence | null;
+    commit_id: string | null;
+    side_effects_executed: boolean;
+    reason?: string;
+};
+export declare function recordAgentLocalExecution(input: {
+    client: StateBranchClient;
+    handoffId: string;
+    claimId: string;
+    status: AgentExecutionStatus;
+    executionId?: string;
+    branch?: string;
+    worktreePath?: string;
+    reason?: string;
+    now?: string;
+}): Promise<AgentExecutionWriteResult>;
+export declare function recordAgentLocalEvidence(input: {
+    client: StateBranchClient;
+    handoffId: string;
+    claimId: string;
+    executionId: string;
+    kind: string;
+    status: AgentEvidence["status"];
+    path?: string;
+    sha256?: string;
+    now?: string;
+}): Promise<AgentExecutionWriteResult>;
 export declare function listAgentLocalHandoffs(input: {
     client: StateBranchClient;
 }): Promise<AgentLocalListResult>;

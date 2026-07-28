@@ -49,7 +49,11 @@ Publisher** → **GitHub Actions**:
 
 Names must match **exactly** (case-sensitive). After trusted publishing is
 verified, workflows can remove the `NPM_TOKEN` dependency in a dedicated
-hardening change.
+hardening change. The `@jununfly/zj-loop-core` workflow now uses npm `latest`,
+`id-token: write`, and no `NODE_AUTH_TOKEN`; its first package creation was
+completed through the one-time bootstrap flow.
+Trusted publishing is performed by GitHub Actions; local `npm publish` still
+requires an OTP or a token that explicitly bypasses 2FA.
 
 **Retry without re-tagging:** Actions → Release workflow → **Run workflow** → enter the tag (e.g. `zj-loop-audit-v0.1.0`).
 

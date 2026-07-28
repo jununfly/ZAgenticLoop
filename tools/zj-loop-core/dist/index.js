@@ -64,3 +64,5 @@ export * from './gitlab-issue-note-bridge-consumer.js';
 export * from './agent-local.js';
 export * from './agent-local-bridge.js';
 export * from './agent-local-worktree.js';
+export * from './execution-context.js';
+export * from './agent-context.js';

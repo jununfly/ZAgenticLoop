@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { ROUTE_DECISION_SCHEMA } from './issue-fix-request-contract.js';
 import { POST_MERGE_CONTRACT_CONSUMER, POST_MERGE_CONTRACT_KIND, POST_MERGE_CONTRACT_MODE, POST_MERGE_CONTRACT_VERSION, } from './post-merge-closeout-runner.js';
 import { buildGitLabApiUrl, buildGitLabAuthHeaders, buildGitLabBranchApiUrl, buildGitLabMergeRequestApiUrl, } from './providers.js';
+import { createGitLabStateBranchClient } from './agent-local.js';
+import { persistActivationSnapshotRef } from './agent-context.js';
 export const ACTIVATION_SCHEMA_VERSION = 1;
 export const ALLOWED_ACTIVATION_PATTERNS = ['roadmap-sliced-development'];
 export const ALLOWED_ACTIVATION_PERMISSIONS = ['admin', 'maintain', 'write'];
@@ -539,6 +541,7 @@ export async function executeGitLabRoadmapActivation(input) {
         operations: [
             { kind: 'find-or-create-branch', branch: branchName, target: targetBranch },
             { kind: 'commit-activation-artifact', path: artifactPath },
+            { kind: 'record-activation-snapshot-ref', path: `activations/${activationRequestId}.json` },
             { kind: 'find-or-create-merge-request', source_branch: branchName, target_branch: targetBranch },
             { kind: 'update-merge-request-description', source_branch: branchName },
         ],
@@ -595,7 +598,12 @@ export async function executeGitLabRoadmapActivation(input) {
     if (![200, 404].includes(artifactRead.status)) {
         return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: artifactRead.status }] };
     }
-    const artifactContent = `${JSON.stringify(plan, null, 2)}\n`;
+    // Persist the resolved target so downstream context reconstruction can bind
+    // the activation contract to its Draft MR without re-inferring provider state.
+    const artifactPlan = { ...plan, targetBranch };
+    const artifactContent = `${JSON.stringify(artifactPlan, null, 2)}\n`;
+    let activationArtifactCommit = '';
+    let activationArtifactDigest = createHash('sha256').update(artifactContent).digest('hex');
     let artifactAction = artifactRead.status === 404 ? 'create' : 'update';
     if (artifactRead.status === 200) {
         try {
@@ -603,6 +611,11 @@ export async function executeGitLabRoadmapActivation(input) {
             const existingContent = Buffer.from(String(existing.content ?? ''), 'base64').toString('utf8');
             if (!sameJson(existingContent, artifactContent)) {
                 return { ...baseResult, status: 'refused', reason: 'artifact-conflict', execution_allowed: false, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: artifactRead.status }] };
+            }
+            activationArtifactCommit = String(existing.last_commit_id ?? existing.commit_id ?? '');
+            activationArtifactDigest = createHash('sha256').update(existingContent).digest('hex');
+            if (!/^[0-9a-f]{40}$/i.test(activationArtifactCommit)) {
+                return { ...baseResult, status: 'failed', reason: 'activation-artifact-commit-missing', execution_allowed: true, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: artifactRead.status }] };
             }
             artifactAction = null;
         }
@@ -620,9 +633,27 @@ export async function executeGitLabRoadmapActivation(input) {
         liveOperations.push({ kind: 'commit-activation-artifact', action: artifactAction, status: commitResponse.status, path: artifactFilePath });
         if (!commitResponse.ok)
             return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: liveOperations };
+        const commitBody = await commitResponse.json();
+        activationArtifactCommit = String(commitBody.id ?? '');
+        if (!/^[0-9a-f]{40}$/i.test(activationArtifactCommit)) {
+            return { ...baseResult, status: 'failed', reason: 'activation-artifact-commit-invalid', execution_allowed: true, live_operations: liveOperations };
+        }
     }
     else {
         liveOperations.push({ kind: 'activation-artifact-unchanged', status: artifactRead.status, path: artifactFilePath });
+    }
+    const stateClient = input.stateClient ?? createGitLabStateBranchClient({ apiBaseUrl: input.apiBaseUrl ?? '', projectPath, token, fetchImpl: fetcher });
+    const activationRef = await persistActivationSnapshotRef({
+        state: stateClient,
+        activationId: activationRequestId,
+        projectPath,
+        commit: activationArtifactCommit,
+        path: artifactFilePath,
+        sha256: activationArtifactDigest,
+    });
+    liveOperations.push({ kind: 'record-activation-snapshot-ref', status: activationRef.status, reason: activationRef.reason ?? null, commit_id: activationRef.commit_id });
+    if (activationRef.status === 'blocked') {
+        return { ...baseResult, status: 'failed', reason: `activation-snapshot-ref-${activationRef.reason ?? 'blocked'}`, execution_allowed: true, live_operations: liveOperations };
     }
     const mrQuery = new URLSearchParams({ state: 'opened', source_branch: branchName }).toString();
     const existingMrs = await fetcher(`${buildGitLabApiUrl({

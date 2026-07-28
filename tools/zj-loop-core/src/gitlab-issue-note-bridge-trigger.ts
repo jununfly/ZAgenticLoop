@@ -12,6 +12,13 @@ const VARIABLE_KEYS = [
   'ZJ_LOOP_BRIDGE_NOTE_ID',
   'ZJ_LOOP_BRIDGE_TARGET_ROUTE',
   'ZJ_LOOP_BRIDGE_ENVELOPE_REF',
+  'ZJ_LOOP_SIGNAL_ID',
+  'ZJ_LOOP_ISSUE_IID',
+  'ZJ_LOOP_COMMENT_ID',
+  'ZJ_LOOP_ISSUE_URL',
+  'ZJ_LOOP_COMMENT_URL',
+  'ZJ_LOOP_ROADMAP_TITLE',
+  'ZJ_LOOP_ACTIVATION_REQUEST_ID',
 ] as const;
 
 export type GitLabIssueNoteBridgeTriggerConfig = {
@@ -47,6 +54,7 @@ export async function triggerGitLabIssueNoteBridgePipeline(input: {
   config: GitLabIssueNoteBridgeTriggerConfig;
   envelope: GitLabIssueNoteBridgeEnvelope;
   envelopeRef: string;
+  activationRequestId?: string;
   token?: string;
   apiBaseUrl?: string;
   fetchImpl?: typeof fetch;
@@ -68,7 +76,7 @@ export async function triggerGitLabIssueNoteBridgePipeline(input: {
   if (!input.config.enabled || !['install-ready', 'execution-ready', 'dogfood-verified', 'replayed'].includes(input.config.maturity)) return blocked('route-not-triggerable');
   if (!input.envelopeRef.trim()) return blocked('envelope-ref-required');
 
-  const variables = buildVariables(input.envelope, input.config.targetRoute, input.envelopeRef);
+  const variables = buildVariables(input.envelope, input.config.targetRoute, input.envelopeRef, input.activationRequestId);
   if (!variables) return blocked('variable-contract-mismatch');
   const fetchImpl = input.fetchImpl ?? globalThis.fetch;
   if (!fetchImpl) return blocked('gitlab-fetch-unavailable');
@@ -121,7 +129,8 @@ function artifactBase(input: { config: GitLabIssueNoteBridgeTriggerConfig; envel
   };
 }
 
-function buildVariables(envelope: GitLabIssueNoteBridgeEnvelope, targetRoute: string, envelopeRef: string) {
+function buildVariables(envelope: GitLabIssueNoteBridgeEnvelope, targetRoute: string, envelopeRef: string, activationRequestId?: string) {
+  const issueUrl = envelope.source_url.replace(/#note_[0-9]+$/, '');
   const values = [
     envelope.event_id,
     envelope.dedupe_key,
@@ -130,8 +139,19 @@ function buildVariables(envelope: GitLabIssueNoteBridgeEnvelope, targetRoute: st
     String(envelope.note_id),
     targetRoute,
     envelopeRef,
+    envelope.event_id,
+    String(envelope.issue_iid),
+    String(envelope.note_id),
+    issueUrl,
+    envelope.source_url,
+    targetRoute,
+    activationRequestId ?? '',
   ];
-  if (values.some((value) => !value || value.length > 512) || !/^\d+$/.test(values[3]) || !/^\d+$/.test(values[4]) || Number(values[3]) <= 0 || Number(values[4]) <= 0) return null;
+  if (values.slice(0, 7).some((value) => !value || value.length > 512)
+    || (values[13] && values[13].length > 512)
+    || !/^\d+$/.test(values[3]) || !/^\d+$/.test(values[4])
+    || Number(values[3]) <= 0 || Number(values[4]) <= 0
+    || (values[13] && !/^[a-zA-Z0-9_-]+$/.test(values[13]))) return null;
   return VARIABLE_KEYS.map((key, index) => ({ key, value: values[index] }));
 }
 

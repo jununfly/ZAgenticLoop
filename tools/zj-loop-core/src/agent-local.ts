@@ -40,8 +40,9 @@ export type AgentClaim = {
 
 export type StateBranchClient = {
   getHead(): Promise<string>;
-  readJson(path: string): Promise<unknown | null>;
-  list(path: string): Promise<string[]>;
+  readText?(path: string, ref?: string): Promise<string | null>;
+  readJson(path: string, ref?: string): Promise<unknown | null>;
+  list(path: string, ref?: string): Promise<string[]>;
   commit(input: {
     branch: string;
     message: string;
@@ -67,6 +68,136 @@ export type AgentLocalClaimResult = {
   side_effects_executed: boolean;
   reason?: string;
 };
+
+export const AGENT_EXECUTION_SCHEMA = "zj-loop.agent_execution.v1";
+export const AGENT_EVIDENCE_SCHEMA = "zj-loop.agent_evidence.v1";
+export type AgentExecutionStatus = "running" | "completed" | "blocked" | "released";
+
+export type AgentExecution = {
+  schema: typeof AGENT_EXECUTION_SCHEMA;
+  execution_id: string;
+  handoff_id: string;
+  claim_id: string;
+  status: AgentExecutionStatus;
+  recorded_at: string;
+  branch: string | null;
+  worktree_path: string | null;
+  reason: string | null;
+  side_effects_executed: false;
+};
+
+export type AgentEvidence = {
+  schema: typeof AGENT_EVIDENCE_SCHEMA;
+  evidence_id: string;
+  handoff_id: string;
+  execution_id: string;
+  claim_id: string;
+  kind: string;
+  status: "passed" | "failed" | "informational";
+  path: string | null;
+  sha256: string | null;
+  recorded_at: string;
+  side_effects_executed: false;
+};
+
+export type AgentExecutionWriteResult = {
+  schema: "zj-loop.agent_local_execution.v1" | "zj-loop.agent_local_evidence.v1";
+  status: "recorded" | "blocked";
+  record: AgentExecution | AgentEvidence | null;
+  commit_id: string | null;
+  side_effects_executed: boolean;
+  reason?: string;
+};
+
+export async function recordAgentLocalExecution(input: {
+  client: StateBranchClient;
+  handoffId: string;
+  claimId: string;
+  status: AgentExecutionStatus;
+  executionId?: string;
+  branch?: string;
+  worktreePath?: string;
+  reason?: string;
+  now?: string;
+}): Promise<AgentExecutionWriteResult> {
+  const record: AgentExecution = {
+    schema: AGENT_EXECUTION_SCHEMA,
+    execution_id: safeId(input.executionId ?? `exe_${randomUUID().replaceAll("-", "")}`),
+    handoff_id: safeId(input.handoffId),
+    claim_id: safeId(input.claimId),
+    status: input.status,
+    recorded_at: input.now ?? new Date().toISOString(),
+    branch: input.branch ?? null,
+    worktree_path: input.worktreePath ?? null,
+    reason: input.reason ?? null,
+    side_effects_executed: false,
+  };
+  return appendClaimBoundRecord({
+    client: input.client,
+    handoffId: input.handoffId,
+    claimId: input.claimId,
+    path: `executions/${record.handoff_id}/${record.execution_id}/${record.recorded_at.replace(/[^0-9A-Za-z]/g, "")}-${record.status}.json`,
+    record,
+    schema: "zj-loop.agent_local_execution.v1",
+  });
+}
+
+export async function recordAgentLocalEvidence(input: {
+  client: StateBranchClient;
+  handoffId: string;
+  claimId: string;
+  executionId: string;
+  kind: string;
+  status: AgentEvidence["status"];
+  path?: string;
+  sha256?: string;
+  now?: string;
+}): Promise<AgentExecutionWriteResult> {
+  const record: AgentEvidence = {
+    schema: AGENT_EVIDENCE_SCHEMA,
+    evidence_id: safeId(`evd_${randomUUID().replaceAll("-", "")}`),
+    handoff_id: safeId(input.handoffId),
+    execution_id: safeId(input.executionId),
+    claim_id: safeId(input.claimId),
+    kind: input.kind,
+    status: input.status,
+    path: input.path ?? null,
+    sha256: input.sha256 ?? null,
+    recorded_at: input.now ?? new Date().toISOString(),
+    side_effects_executed: false,
+  };
+  return appendClaimBoundRecord({
+    client: input.client,
+    handoffId: input.handoffId,
+    claimId: input.claimId,
+    path: `evidence/${record.handoff_id}/${record.execution_id}/${record.evidence_id}.json`,
+    record,
+    schema: "zj-loop.agent_local_evidence.v1",
+  });
+}
+
+async function appendClaimBoundRecord(input: {
+  client: StateBranchClient;
+  handoffId: string;
+  claimId: string;
+  path: string;
+  record: AgentExecution | AgentEvidence;
+  schema: AgentExecutionWriteResult["schema"];
+}): Promise<AgentExecutionWriteResult> {
+  try {
+    const handoff = await input.client.readJson(`handoffs/${safeId(input.handoffId)}.json`);
+    if (!isAgentHandoff(handoff)) return { schema: input.schema, status: "blocked", record: null, commit_id: null, side_effects_executed: false, reason: "handoff-not-found" };
+    const claims = await input.client.list(`claims/${safeId(input.handoffId)}`);
+    const claimPath = claims.find((item) => item.endsWith(".json"));
+    const claim = claimPath ? await input.client.readJson(claimPath) : null;
+    if (!isAgentClaim(claim) || claim.claim_id !== input.claimId || claim.handoff_id !== input.handoffId) return { schema: input.schema, status: "blocked", record: null, commit_id: null, side_effects_executed: false, reason: "claim-binding-mismatch" };
+    const head = await input.client.getHead();
+    const commit = await input.client.commit({ branch: AGENT_STATE_BRANCH, message: `Record agent ${input.schema === "zj-loop.agent_local_execution.v1" ? "execution" : "evidence"} ${input.handoffId} [skip ci]`, last_commit_id: head, actions: [{ action: "create", file_path: input.path, content: `${JSON.stringify(input.record, null, 2)}\n` }] });
+    return { schema: input.schema, status: "recorded", record: input.record, commit_id: commit.id, side_effects_executed: true };
+  } catch (error) {
+    return { schema: input.schema, status: "blocked", record: null, commit_id: null, side_effects_executed: false, reason: error instanceof Error ? error.message : "state-write-failed" };
+  }
+}
 
 export async function listAgentLocalHandoffs(input: {
   client: StateBranchClient;
@@ -269,26 +400,35 @@ export function createGitLabStateBranchClient(input: {
         throw new Error("gitlab-state-head-invalid");
       return body.commit.id;
     },
-    async readJson(filePath) {
+    async readText(filePath, ref = AGENT_STATE_BRANCH) {
       const response = await fetchImpl(
-        `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/files/${encodeURIComponent(filePath)}/raw?ref=${encodeURIComponent(AGENT_STATE_BRANCH)}`,
+        `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/files/${encodeURIComponent(filePath)}/raw?ref=${encodeURIComponent(ref)}`,
         { headers },
       );
       if (response.status === 404) return null;
       if (!response.ok) throw new Error(`gitlab-state-${response.status}`);
-      return JSON.parse(await response.text());
+      return response.text();
     },
-    async list(directory) {
-      const response = await request(
-        `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/tree?ref=${encodeURIComponent(AGENT_STATE_BRANCH)}&path=${encodeURIComponent(directory)}&recursive=true&per_page=100`,
-      );
-      const body = (await response.json()) as Array<{
-        path?: unknown;
-        type?: unknown;
-      }>;
-      return body
-        .filter((item) => item.type === "blob" && typeof item.path === "string")
-        .map((item) => item.path as string);
+    async readJson(filePath, ref = AGENT_STATE_BRANCH) {
+      const text = await this.readText?.(filePath, ref);
+      return text === null || text === undefined ? null : JSON.parse(text);
+    },
+    async list(directory, ref = AGENT_STATE_BRANCH) {
+      const files: string[] = [];
+      let page = 1;
+      while (page <= 100) {
+        const response = await request(
+          `${input.apiBaseUrl.replace(/\/+$/, "")}/projects/${project}/repository/tree?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(directory)}&recursive=true&per_page=100&page=${page}`,
+        );
+        const body = (await response.json()) as Array<{ path?: unknown; type?: unknown }>;
+        files.push(...body.filter((item) => item.type === "blob" && typeof item.path === "string").map((item) => item.path as string));
+        const nextPage = response.headers.get("x-next-page");
+        if (!nextPage) return files;
+        page = Number(nextPage);
+        if (!Number.isInteger(page) || page < 1) throw new Error("gitlab-state-pagination-invalid");
+        if (files.length > 1000) throw new Error("gitlab-state-record-limit-exceeded");
+      }
+      throw new Error("gitlab-state-record-limit-exceeded");
     },
     async commit(commitInput) {
       const { message, ...commitPayload } = commitInput;

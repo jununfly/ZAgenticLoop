@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (e.g. zj-loop-core-v0.1.30)'
+        description: 'Tag to publish (e.g. zj-loop-core-v0.1.33)'
         required: true
         type: string
 
@@ -30,8 +30,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: tools/zj-loop-core/package-lock.json
 
-      - name: Ensure npm supports provenance publishing
-        run: npm install -g npm@10.9.8
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@latest
 
       - name: Install, build, test
         working-directory: tools/zj-loop-core
@@ -69,5 +69,3 @@ jobs:
       - name: Publish to npm
         working-directory: tools/zj-loop-core
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
