@@ -721,7 +721,10 @@ export async function executeGitLabRoadmapActivation(input: {
     return { ...baseResult, status: 'failed', execution_allowed: true, live_operations: [...liveOperations, { kind: 'read-activation-artifact', status: artifactRead.status }] };
   }
 
-  const artifactContent = `${JSON.stringify(plan, null, 2)}\n`;
+  // Persist the resolved target so downstream context reconstruction can bind
+  // the activation contract to its Draft MR without re-inferring provider state.
+  const artifactPlan = { ...plan, targetBranch };
+  const artifactContent = `${JSON.stringify(artifactPlan, null, 2)}\n`;
   let activationArtifactCommit = '';
   let activationArtifactDigest = createHash('sha256').update(artifactContent).digest('hex');
   let artifactAction: 'create' | 'update' | null = artifactRead.status === 404 ? 'create' : 'update';
