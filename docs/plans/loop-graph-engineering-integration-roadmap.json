@@ -726,9 +726,209 @@
           "q": "ArtifactStore第一条provider纵切采用什么形态？",
           "answer": "采用本地content-addressed文件目录：artifact_id为sha256内容摘要，文件与metadata sidecar原子创建，读取时校验network归属、大小、content_type与内容hash；StateStore只保存artifact引用，ArtifactStore不进入HTTP service与Relay。",
           "note": "Human accepted local immutable artifact provider as the second implementation slice."
+        },
+        {
+          "q": "Relay接受MessageEvent后的持久性边界是什么？",
+          "answer": "采用StateStore作为唯一canonical MessageEvent事实源：只有StateStore成功记录事件后Relay才返回publish accepted；Relay只负责短期投递、唤醒、重试和连接管理，重启后消费者依据cursor从StateStore按revision恢复，允许重复投递但不能丢失已记录事件。",
+          "note": "Human confirmed Relay is transport, not a second message database."
+        },
+        {
+          "q": "Relay的投递确认ack代表什么？",
+          "answer": "采用at-least-once投递：ack只表示消费者已完成身份/权限校验并将事件写入可恢复执行入口；消费者先记录delivery_accepted等canonical execution状态再ack，未ack可重试，已ack但中断由StateStore recovery处理，执行完成/验证/Review Handoff另行记录，不存在ack=completed。",
+          "note": "Human confirmed transport acceptance is distinct from business completion."
+        },
+        {
+          "q": "Relay的订阅与恢复cursor绑定什么？",
+          "answer": "采用network_id + consumer_node_id + last_accepted_revision；cursor使用StateStore的network revision而非Relay本地sequence，消费者成功写入delivery_accepted等canonical状态后才推进cursor，重连从after_revision=last_accepted_revision恢复并允许重复投递。",
+          "note": "Human confirmed recovery position belongs to the StateStore revision domain."
+        },
+        {
+          "q": "Relay允许转发什么内容？",
+          "answer": "采用Relay只转发已写入StateStore的canonical MessageEvent引用和受限投递envelope；不接受绕过StateStore的任意消息，不创建/修改事件、不授予或扩大capability、不改写目标依赖权限，不承载大型日志、checkpoint或二进制，后者使用ArtifactStore引用。",
+          "note": "Human confirmed Relay is transport-only and cannot bypass canonical facts or authority."
+        },
+        {
+          "q": "Relay失败时如何重试与停止？",
+          "answer": "采用仅对明确临时连接/超时故障做有限指数退避：最多5次，建议1s、2s、4s、8s、16s并加jitter；认证失败、权限不足、revoked、事件冲突和协议校验失败立即停止；超过上限写入delivery_blocked或transport-recovery-required，不自动续签credential、改变目标节点或无限重试，恢复需中心责任单元或Human明确发起。",
+          "note": "Human confirmed bounded retry and explainable stop."
+        },
+        {
+          "q": "Relay如何决定MessageEvent投递目标节点？",
+          "answer": "采用Directed Task Graph显式指定assigned_node，Relay不根据能力、在线状态或订阅兴趣自动选节点；单task单目标，多节点协作通过多个有依赖task或显式fan-out，每个目标节点独立delivery_id和ack生命周期；目标变更由中心责任单元重新编排并产生新事实。",
+          "note": "Human confirmed Relay cannot invent or rewrite task assignment."
+        },
+        {
+          "q": "Relay的MVP连接模型是什么？",
+          "answer": "采用HTTP/JSON long-poll：Agent通过mTLS与短期scoped session credential建立Relay session，按session发起long-poll获取授权delivery并显式ack，超时返回空结果；断线后使用last_accepted_revision恢复。不引入WebSocket、WebRTC或P2P，未来可增加transport adapter而不改变canonical协议。",
+          "note": "Human confirmed HTTP long-poll as the first Relay transport."
+        },
+        {
+          "q": "Relay session的生命周期和凭证绑定如何定义？",
+          "answer": "采用短期、无权力扩张的session，绑定network_id + node_id + credential scope；session不取代ScopedCredential也不独立授予权限，TTL不超过credential剩余有效期且MVP上限建议15分钟；credential revoke/过期立即拒绝新long-poll与ack，不自动续签或转移session，重建session不改变StateStore cursor，session_id为随机opaque标识。",
+          "note": "Human confirmed Relay session is ephemeral connection state, not authority."
+        },
+        {
+          "q": "Producer如何触发Relay投递？",
+          "answer": "采用Producer先通过StateStore append MessageEvent，Relay不提供创建事件的publish API；Relay通过StateStore revision/cursor发现新事件，再依据已存在的Directed Task Graph assigned_node生成delivery。事件创建只有StateStore入口，Relay不承担CAS、event dedupe或Graph真相。",
+          "note": "Human confirmed StateStore append is the sole event creation path."
+        },
+        {
+          "q": "Relay如何确认目标节点合法而不解释Directed Task Graph？",
+          "answer": "采用注入的provider-neutral DeliveryResolver：由StateStore/Graph projection或中心编排层返回已验证的delivery target，Relay不实现Graph解析。Relay只校验event/revision存在、target与session node一致、network/task生命周期有效和credential具备投递/消费能力；Resolver blocked则停止投递并记录原因。",
+          "note": "Human confirmed Graph authority stays outside the transport service."
+        },
+        {
+          "q": "Relay的delivery状态存在哪里？",
+          "answer": "采用所有对恢复、审计和责任有意义的delivery状态写入StateStore，Relay内存只保留可丢弃连接/缓存；canonical状态包括delivery.offered、delivery.retry_scheduled、delivery.accepted、delivery.blocked和delivery.acknowledged，acknowledged只表示传输确认。Relay可用受限transport authority写这些事实，但不能修改MessageEvent、Directed Task Graph、CapabilityGrant、Human decision或Execution/Evidence业务结论。",
+          "note": "Human confirmed delivery observability belongs to StateStore without granting Relay business authority."
+        },
+        {
+          "q": "Relay的transport authority具体允许写什么？",
+          "answer": "采用独立service identity与受限transport credential，只能在指定network内追加固定delivery事件：delivery.offered、delivery.retry_scheduled、delivery.accepted、delivery.blocked、delivery.acknowledged；记录必须绑定network/event/task/delivery/target和重试上下文；禁止修改删除历史、写Human decision/CapabilityGrant/Execution completed/Evidence accepted、改变目标或替代Human authority。",
+          "note": "Human confirmed Relay transport authority is append-only and event-type constrained."
+        },
+        {
+          "q": "如何避免同一delivery的并发投递、重复ack或状态倒退？",
+          "answer": "采用delivery_id幂等键与StateStore network-level CAS结合的delivery状态机；每次尝试有attempt_id，相同状态重试返回duplicate，非法倒退或并发冲突返回conflict；Relay可重复投递，消费者按delivery_id/task_id幂等，delivery状态与业务Execution状态分离，冲突进入delivery-conflict并解释原因。",
+          "note": "Human confirmed transport concurrency cannot overwrite canonical lifecycle."
+        },
+        {
+          "q": "Relay的日志和可观测性允许记录什么？",
+          "answer": "采用只记录可审计元数据：network/event/task/delivery/attempt、source/target node、revision、状态、重试次数、错误码、payload/artifact hash、时间戳和协议版本；禁止Bearer token、Human approval context、私钥、完整证书、完整payload、日志正文、checkpoint或二进制。日志非canonical truth，关键delivery状态仍写StateStore。",
+          "note": "Human confirmed Relay observability is metadata-only."
+        },
+        {
+          "q": "Relay服务身份和客户端信任如何建立？",
+          "answer": "采用Relay独立service identity与显式pinned X.509 certificate；Agent客户端显式pin Relay证书，Relay要求Agent mTLS client certificate并从DER计算node_id。不使用系统CA、通用trust store或自动发现，不因loopback省略mTLS；证书轮换需Human/部署显式更新pin，Relay不代表Agent也不成为Center Node，Relay与StateStore服务身份独立。",
+          "note": "Human confirmed independent pinned Relay trust."
+        },
+        {
+          "q": "Relay是否必须是独立进程以及如何隔离Agent资源？",
+          "answer": "采用独立Relay service process，仅通过mTLS+HTTP/JSON与Agent通信；Relay不加载Agent工作区、不执行任务、不共享Agent内存或IPC状态、不checkout或读写目标repo、不持有Agent工作目录、token明文或执行上下文；Relay重启不改变Agent worktree、Execution或StateStore canonical facts。",
+          "note": "Human confirmed process and external-resource isolation."
+        },
+        {
+          "q": "Relay关闭、重启或StateStore不可用时系统呈现什么状态？",
+          "answer": "采用显式transport-degraded或state-store-unavailable，不伪装成功，也不使用绕过StateStore的本地canonical队列；Relay重启从StateStore恢复未ack delivery，暂时不可用时事件保持pending，有限重试后进入transport-recovery-required；StateStore不可用时禁止创建事件、ack或推进cursor；运行中task不被Relay强行终止，但新生命周期/Evidence写入需明确blocked或待恢复，恢复留下新事实。",
+          "note": "Human confirmed transport failure is explainable and cannot bypass StateStore."
+        },
+        {
+          "q": "单次delivery的超时、租约和重投如何定义？",
+          "answer": "采用delivery_id不变、attempt_id每次重投递新建的有限lease；MVP offer/long-poll返回后ack lease建议30秒，未ack到期记录delivery.retry_scheduled并按退避重投；ack关闭当前lease，旧attempt迟到ack返回duplicate/stale且不得倒退，业务执行超时由Node Runtime/Execution生命周期负责。",
+          "note": "Human confirmed Relay lease is transport-level, not execution timeout."
+        },
+        {
+          "q": "long-poll请求的超时、空响应和并发连接上限如何定义？",
+          "answer": "采用单次long-poll最长25秒；无delivery返回204或结构化空结果；每session同时只允许一个long-poll，并发请求返回session-request-in-progress；每次最多返回一个delivery以简化ack/lease；客户端空响应后带jitter重连，Relay不无限保留连接或内存队列。",
+          "note": "Human confirmed bounded long-poll behavior."
+        },
+        {
+          "q": "Relay是否负责节点enrollment？",
+          "answer": "采用Relay不负责enrollment，也不能自行接纳新节点；只有Human authority批准、StateStore存在enrollment projection且拥有有效ScopedCredential的节点才能建立Relay session。session创建不等于enrollment，enrollment/revoke/re-enrollment由StateStore/Human authority完成，revoke后立即阻止新session、long-poll和ack，Relay只消费验证结果而不复制权限真相。",
+          "note": "Human confirmed enrollment authority remains outside Relay."
+        },
+        {
+          "q": "节点revoke后已建立session和active delivery如何处理？",
+          "answer": "采用revoke立即失效session后续权限并终止未完成transport lease，不强杀已开始业务Execution；active long-poll结束，未ack delivery停止重投并写delivery.blocked，迟到ack返回credential-revoked且不改变状态；被撤销节点不能领取新事件、读取新Artifact或续签credential，恢复需Human发起re-enrollment/新credential。",
+          "note": "Human confirmed revoke blocks transport without pretending to undo running work."
+        },
+        {
+          "q": "目标节点离线时Relay是否自动改派任务？",
+          "answer": "采用Relay不自动改派；目标离线只做有限重试，超限进入transport-recovery-required，原task assigned_node保持不变。改派由Human或Human+Agent中心责任单元重新评估并创建新task/execution或显式recovery action，保留原delivery失败证据，不覆盖原task，Relay不静默改变责任归属。",
+          "note": "Human confirmed offline delivery cannot silently change accountability."
+        },
+        {
+          "q": "Relay MVP暴露哪些HTTP endpoint？",
+          "answer": "采用最小HTTP集合：GET /healthz、POST /v1/sessions、DELETE /v1/sessions/:session_id、GET /v1/sessions/:session_id/deliveries、POST /v1/sessions/:session_id/deliveries/:delivery_id/ack、GET /v1/sessions/:session_id/status。明确不暴露publish/任意消息创建、enrollment、credential签发、Graph编排、task完成、Evidence接受、Human decision、SQL任意查询或大文件上传接口。",
+          "note": "Human confirmed the narrow Relay HTTP surface."
+        },
+        {
+          "q": "Relay HTTP response/error schema如何定义？",
+          "answer": "采用独立zj-loop.relay_http.v1 schema；正常响应包含schema/status/side_effects_executed及必要session/delivery/cursor；错误固定映射400请求或cursor无效、401缺认证、403revoked/scope/target不符、404资源不存在、409并发/CAS/重复或过期ack、410session/lease过期、413envelope超限、429并发/速率限制、503StateStore或Resolver不可用；不返回秘密或敏感payload。",
+          "note": "Human confirmed structured Relay protocol errors."
+        },
+        {
+          "q": "Relay delivery envelope大小和payload传输限制是什么？",
+          "answer": "采用Relay HTTP body上限64KiB、delivery envelope上限32KiB；只允许小型结构化元数据和Artifact引用，不携带大型payload、日志、checkpoint或二进制。完整MessageEvent payload由消费者按权限从StateStore读取，Artifact内容由消费者按权限从ArtifactStore读取；超限返回413且不截断、压缩或临时转存。",
+          "note": "Human confirmed Relay carries references, not data bulk."
+        },
+        {
+          "q": "delivery中的事件和Artifact内容由谁读取？",
+          "answer": "采用Relay只返回引用；消费者使用自己的scoped credential直接从StateStore读取MessageEvent、从ArtifactStore读取Artifact，Relay不做代理读取或数据中转。StateStore/ArtifactStore各自执行权限校验，读取失败由消费者记录为execution blocked或recovery required。",
+          "note": "Human confirmed Relay does not become a data access proxy."
+        },
+        {
+          "q": "Relay envelope如何防止引用被篡改或错配？",
+          "answer": "采用envelope携带network_id、event_id、revision、task_id、delivery_id、target_node_id，Relay生成envelope_sha256；消费者从StateStore校验event的network/event/revision/task绑定，从ArtifactStore校验artifact_id/content_sha256/network归属；任一不一致进入delivery-integrity-failed且不ack。envelope hash只做完整性校验，不替代mTLS、credential或Human authority。",
+          "note": "Human confirmed reference integrity is verified at both transport and resource boundaries."
+        },
+        {
+          "q": "Relay是否保证事件顺序？",
+          "answer": "采用Relay不提供全局顺序保证；唯一canonical顺序是StateStore network revision，Directed Task Graph依赖顺序由中心编排/Node Runtime校验。Relay可按revision尽力投递但不同task/target可并行，依赖未满足时消费者不ack或记录delivery-dependency-blocked，Relay不重排、跳过或补造依赖。",
+          "note": "Human confirmed business ordering belongs to Graph/Execution, not transport."
+        },
+        {
+          "q": "Relay的背压和资源上限如何定义？",
+          "answer": "采用每session最多一个active long-poll、每node最多一个active session，全局active session由部署配置限制；内存只保留连接与有限delivery metadata，不缓存完整payload；超限返回429 relay-capacity-exceeded，不丢弃已写StateStore事件，只延迟投递，恢复按StateStore cursor继续，不使用无限内存队列。",
+          "note": "Human confirmed bounded transport capacity and durable recovery."
+        },
+        {
+          "q": "消费者取消断开或拒绝delivery时如何区分transport与business execution？",
+          "answer": "采用连接断开仅为transport事件，不等于业务取消；中断long-poll的attempt等待lease到期或按断开处理后可重投；能力/依赖不满足不ack成功并记录delivery.blocked，明确拒绝记录transport-level delivery.rejected；task/execution cancel必须由中心责任单元或Human写StateStore，Relay不能把断开/超时/拒绝自动解释成业务失败或取消。",
+          "note": "Human confirmed transport interruption cannot decide business responsibility."
+        },
+        {
+          "q": "Relay的healthz和readyz分别检查什么？",
+          "answer": "采用分层health：healthz只检查Relay进程与基础HTTP/TLS响应，不检查StateStore且免mTLS；readyz检查StateStore连通性、DeliveryResolver加载与是否可接收新session；session status返回非敏感依赖状态。StateStore不可用时healthz仍存活、readyz not ready、新session/delivery/ack返回503；health不暴露network/owner/token/权限或敏感revision细节。",
+          "note": "Human confirmed liveness and readiness must not be conflated."
+        },
+        {
+          "q": "Relay的配置来源和可变配置边界是什么？",
+          "answer": "采用启动时显式配置：bind host/port、Relay TLS key/cert与client trust、StateStore endpoint/pin、DeliveryResolver、session/lease/long-poll/retry/resource limits和日志脱敏策略。运行时不得静默改变trust、network接入、target routing、capability、retry上限或StateStore地址；变更需Human/部署显式更新并重启，留下版本和启动事实。",
+          "note": "Human confirmed Relay trust and routing configuration is deployment-controlled."
+        },
+        {
+          "q": "Relay MVP是否支持多实例和如何处理端口冲突？",
+          "answer": "采用MVP单Relay实例、单loopback端口；端口占用启动失败并清晰报错，不自动换端口；不允许多个Relay同时为同一network投递，不做leader election、共享lease或跨实例队列。多实例/多设备需另行设计Relay authority、lease与StateStore CAS协调。",
+          "note": "Human confirmed single-instance Relay MVP."
+        },
+        {
+          "q": "Relay如何处理协议版本不兼容的Agent或envelope？",
+          "answer": "采用session创建时显式协商protocol_version，MVP只支持一个pinned protocol version且不静默降级；不支持版本返回426 protocol-version-unsupported，不创建session；envelope schema必须匹配协商版本，未知字段不得改变语义，兼容版本通过显式adapter/迁移并保留canonical event原样，版本不兼容不靠重试解决。",
+          "note": "Human confirmed explicit protocol version compatibility."
+        },
+        {
+          "q": "Relay的时间、lease过期和客户端时钟偏差如何处理？",
+          "answer": "采用Relay与StateStore服务端时钟为唯一权威，客户端不能决定session、credential或lease过期；session TTL、ack lease和retry schedule由服务端计算，canonical时间由服务端生成，客户端时间不延长权限或lease；时钟异常进入clock-invalid/not-ready并停止新session/delivery，测试注入clock验证边界。",
+          "note": "Human confirmed server-authoritative time."
+        },
+        {
+          "q": "Relay如何优雅停机？",
+          "answer": "采用draining流程：先将readyz置为not ready，停止新session和新delivery lease；已建立long-poll返回503 relay-draining，已发delivery等待ack lease自然完成或记录retry；宽限期后关闭连接。重启从StateStore恢复未ack delivery，停机写relay.draining/relay.stopped运维事实但不修改业务Execution。",
+          "note": "Human confirmed graceful shutdown and restart recovery."
+        },
+        {
+          "q": "Relay启动时如何扫描和恢复历史delivery？",
+          "answer": "采用启动恢复只读取StateStore delivery canonical状态，不创建事件或重置业务状态：offered未过期等待lease，offered已过期追加retry_scheduled，retry_scheduled按服务端时间重投，accepted/acknowledged不重投，blocked/rejected不自动恢复；delivery_id不变、attempt_id递增，启动结果写relay.recovered，不重放已完成Execution/Evidence。",
+          "note": "Human confirmed restart recovery is state-derived and idempotent."
+        },
+        {
+          "q": "Relay本地缓存与StateStore canonical状态冲突时以谁为准？",
+          "answer": "采用StateStore永远权威，本地状态仅性能缓存；冲突时丢弃缓存并重新读取StateStore，StateStore较新snapshot覆盖本地；本地accepted但StateStore无对应事实不得继续认为accepted，本地可重试但StateStore已blocked/acknowledged则停止；冲突写relay.state-reconciled，无法读取StateStore进入state-store-unavailable且不依据旧缓存继续ack或投递。",
+          "note": "Human confirmed cache cannot outrank canonical state."
+        },
+        {
+          "q": "Relay是否允许离线缓存delivery？",
+          "answer": "采用不把delivery缓存为Relay本地可恢复队列；StateStore不可用时Relay停止新投递、ack和cursor推进。仅允许当前连接与不含完整payload/Artifact的非权威短期metadata cache，不允许离线接受事件、依赖缓存ack、改变delivery状态或从本地文件推断canonical状态。",
+          "note": "Human confirmed Relay must stop rather than create a second offline truth."
+        },
+        {
+          "q": "Relay MVP的最小验收场景是什么？",
+          "answer": "采用最小验收矩阵：独立enrolled节点通过mTLS+scoped credential建session；非法证书/credential/network/target阻断；StateStore已记录MessageEvent后按Graph target投递；消费者校验envelope并记录delivery_accepted后ack；重复/迟到/并发ack幂等或冲突；重启恢复未ack；临时故障有限重试并超限recovery-required；离线不改派；StateStore不可用停止；revoke阻断session/long-poll/ack/new delivery；依赖不满足不ack并解释性blocked；Relay不读写工作区、不执行任务、不接收大payload。",
+          "note": "Human confirmed Relay MVP acceptance matrix."
         }
       ],
-      "notes": "StateStore、credential与ArtifactStore tracer持续施工：better-sqlite3 StateStore已具备Human-owned network、network-level CAS append/read、dedupe/conflict、canonical payload hash与snapshot revision；原生HTTPS service已具备pinned TLS、healthz、mTLS node_id、HumanAuthorityVerifier、真实CredentialVerifier委托、network/revision/event读写；独立SQLite credential provider已实现一次性opaque token签发、hash存储、network/node/event/task与capability scope、expiry和revoke校验，并通过真实mTLS+HTTP event append链路验证；本地content-addressed ArtifactStore已实现sha256 artifact_id、不可变文件与metadata、幂等put、network归属、大小/type约束和读取完整性校验。npm run test:agent-local 68/68通过。仍未实现credential issuance HTTP/Human UI、ArtifactStore HTTP、Relay与两Agent端到端fixture。"
+      "notes": "StateStore、credential、ArtifactStore与Relay contract持续施工：StateStore已具备Human-owned network、network-level CAS append/read、dedupe/conflict、canonical payload hash、snapshot revision与原生HTTPS读写服务；独立SQLite credential provider已实现一次性opaque token、hash存储、scope、expiry、revoke和真实mTLS HTTP授权链路；本地content-addressed ArtifactStore已实现sha256 artifact、不可变metadata、幂等put、network归属与完整性校验；Relay provider-neutral contract已固定session TTL不超过credential、at-least-once delivery、delivery lease/attempt、accepted-before-ack、bounded retry、状态机防倒退、revoke/离线/StateStore故障语义、协议版本与资源边界。npm run test:agent-local 71/71通过。仍未实现Relay HTTP service、credential issuance HTTP/Human UI、ArtifactStore HTTP与双Agent端到端fixture。"
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -793,7 +993,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 18:05:54",
+    "updated": "2026-07-29 19:27:50",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
