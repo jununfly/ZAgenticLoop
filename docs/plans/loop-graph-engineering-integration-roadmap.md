@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 16:48:00
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 16:53:08
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
 
-TDD首个纵切已完成：新增node-enrollment.v1 Node Identity（X.509 certificate raw SHA-256 fingerprint）、append-only enrollment projection、revoke状态与capability ceiling/grant交集；新增loopback mutual TLS server/client options和真实双节点握手测试。LibreSSL测试环境使用RSA证书验证跨平台X.509契约，生产Ed25519发行器仍是后续边界。npm run test:agent-local 40/40通过。下一步集成Human pairing、StateStore enrollment records与短期credential。
+TDD已完成四个基础纵切：Node Identity与loopback mTLS；Human pairing request/approval contract（network/node绑定、能力越界与过期阻断）；provider-neutral append-only EnrollmentRecordStore（幂等重试、event冲突fail-closed）；StateStore语义的短期scoped credential签发（绑定network/node/event/task、能力取批准子集、有效期不越界）；以及从revoke/re-enroll历史重建EnrollmentProjection。npm run test:agent-local 48/48通过。仍未实现真实SQLite provider、签名credential、loopback pairing service、Relay与双Agent端到端fixture。
 
 **决策：**
 - Q: 本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？ → 是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。 (Human confirmed independent node identity on the same device.)
