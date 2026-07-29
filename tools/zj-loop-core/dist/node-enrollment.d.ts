@@ -4,6 +4,7 @@ export declare const ENROLLMENT_PROJECTION_SCHEMA: "zj-loop.enrollment_projectio
 export declare const PAIRING_REQUEST_SCHEMA: "zj-loop.pairing_request.v1";
 export declare const PAIRING_APPROVAL_SCHEMA: "zj-loop.pairing_approval.v1";
 export declare const ENROLLMENT_RECORD_SCHEMA: "zj-loop.enrollment_record.v1";
+export declare const SCOPED_CREDENTIAL_SCHEMA: "zj-loop.scoped_credential.v1";
 export type NodeIdentity = {
     schema: typeof NODE_IDENTITY_SCHEMA;
     node_id: string;
@@ -71,6 +72,18 @@ export type PairingApproval = {
     approved_at: string;
     request_expires_at: string;
 };
+export type ScopedCredential = {
+    schema: typeof SCOPED_CREDENTIAL_SCHEMA;
+    credential_id: string;
+    issuer: 'state-store';
+    network_id: string;
+    node_id: string;
+    event_id: string;
+    task_id: string;
+    capabilities: string[];
+    issued_at: string;
+    expires_at: string;
+};
 export declare function createPairingRequest(input: {
     request_id: string;
     network_id: string;
@@ -85,6 +98,12 @@ export declare function approvePairingRequest(input: {
     approved_at: string;
     approved_capabilities: string[];
 }): PairingApproval;
+export declare function issueScopedCredential(input: {
+    approval: PairingApproval;
+    grant: CapabilityGrant;
+    issued_at: string;
+    expires_at: string;
+}): ScopedCredential;
 export declare function buildMutualTlsServerOptions(input: {
     identity: NodeIdentity;
     private_key_pem: string;

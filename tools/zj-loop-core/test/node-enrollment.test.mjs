@@ -13,6 +13,7 @@ import {
   createPairingRequest,
   createInMemoryEnrollmentRecordStore,
   evaluateCapabilityGrant,
+  issueScopedCredential,
   projectEnrollment,
 } from '../dist/node-enrollment.js';
 
@@ -125,6 +126,48 @@ test('StateStore enrollment adapter rejects conflicting reuse of an event id', a
   await store.append(record);
   await assert.rejects(() => store.append({ ...record, type: 'revoked' }), { message: 'enrollment-event-conflict' });
   assert.deepEqual(await store.list('network-1', 'node-1'), [record]);
+});
+
+test('StateStore issues a short-lived credential from a narrower approved grant', async () => {
+  const material = await certificate('workbuddy');
+  const identity = buildNodeIdentity({ certificate_pem: material.certificate_pem, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
+  const request = createPairingRequest({
+    request_id: 'pair-4',
+    network_id: 'network-1',
+    identity,
+    endpoint: 'loopback://127.0.0.1:43126',
+    requested_capabilities: ['event.consume', 'evidence.write'],
+    expires_at: '2026-07-29T00:10:00.000Z',
+  });
+  const approval = approvePairingRequest({
+    request,
+    human_id: 'human-1',
+    approved_at: '2026-07-29T00:05:00.000Z',
+    approved_capabilities: ['event.consume', 'evidence.write'],
+  });
+  const credential = issueScopedCredential({
+    approval,
+    grant: { node_id: identity.node_id, event_id: 'event-1', task_id: 'task-1', capabilities: ['event.consume'] },
+    issued_at: '2026-07-29T00:06:00.000Z',
+    expires_at: '2026-07-29T00:09:00.000Z',
+  });
+  assert.equal(credential.schema, 'zj-loop.scoped_credential.v1');
+  assert.equal(credential.network_id, 'network-1');
+  assert.equal(credential.node_id, identity.node_id);
+  assert.deepEqual(credential.capabilities, ['event.consume']);
+});
+
+test('StateStore refuses a credential that outlives Human approval', async () => {
+  const material = await certificate('workbuddy');
+  const identity = buildNodeIdentity({ certificate_pem: material.certificate_pem, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
+  const request = createPairingRequest({ request_id: 'pair-5', network_id: 'network-1', identity, endpoint: 'loopback://127.0.0.1:43127', requested_capabilities: ['event.consume'], expires_at: '2026-07-29T00:10:00.000Z' });
+  const approval = approvePairingRequest({ request, human_id: 'human-1', approved_at: '2026-07-29T00:05:00.000Z', approved_capabilities: ['event.consume'] });
+  assert.throws(() => issueScopedCredential({
+    approval,
+    grant: { node_id: identity.node_id, event_id: 'event-1', task_id: 'task-1', capabilities: ['event.consume'] },
+    issued_at: '2026-07-29T00:06:00.000Z',
+    expires_at: '2026-07-29T00:10:01.000Z',
+  }), { message: 'credential-expiry-exceeds-approval' });
 });
 
 test('builds an independent Node Identity from an X.509 certificate', async () => {

@@ -4,6 +4,7 @@ export const ENROLLMENT_PROJECTION_SCHEMA = 'zj-loop.enrollment_projection.v1';
 export const PAIRING_REQUEST_SCHEMA = 'zj-loop.pairing_request.v1';
 export const PAIRING_APPROVAL_SCHEMA = 'zj-loop.pairing_approval.v1';
 export const ENROLLMENT_RECORD_SCHEMA = 'zj-loop.enrollment_record.v1';
+export const SCOPED_CREDENTIAL_SCHEMA = 'zj-loop.scoped_credential.v1';
 function cloneRecord(record) {
     return { ...record, ...(record.capabilities ? { capabilities: [...record.capabilities] } : {}) };
 }
@@ -96,6 +97,35 @@ export function approvePairingRequest(input) {
         approved_capabilities: approved,
         approved_at: input.approved_at,
         request_expires_at: input.request.expires_at,
+    };
+}
+export function issueScopedCredential(input) {
+    const issuedAt = requireTimestamp(input.issued_at, 'credential-issued-time-invalid');
+    const expiresAt = requireTimestamp(input.expires_at, 'credential-expiry-invalid');
+    const approvalExpiry = requireTimestamp(input.approval.request_expires_at, 'pairing-expiry-invalid');
+    if (issuedAt > expiresAt)
+        throw new Error('credential-time-range-invalid');
+    if (expiresAt > approvalExpiry)
+        throw new Error('credential-expiry-exceeds-approval');
+    if (input.grant.node_id !== input.approval.node_id)
+        throw new Error('credential-node-identity-mismatch');
+    const approved = new Set(input.approval.approved_capabilities);
+    const capabilities = [...new Set(input.grant.capabilities)];
+    if (capabilities.some((capability) => !approved.has(capability)))
+        throw new Error('credential-capability-exceeded');
+    requireNonEmpty(input.grant.event_id, 'event-id-required');
+    requireNonEmpty(input.grant.task_id, 'task-id-required');
+    return {
+        schema: SCOPED_CREDENTIAL_SCHEMA,
+        credential_id: `${input.approval.request_id}:${input.grant.event_id}:${input.grant.task_id}:${input.issued_at}`,
+        issuer: 'state-store',
+        network_id: input.approval.network_id,
+        node_id: input.approval.node_id,
+        event_id: input.grant.event_id,
+        task_id: input.grant.task_id,
+        capabilities,
+        issued_at: input.issued_at,
+        expires_at: input.expires_at,
     };
 }
 export function buildMutualTlsServerOptions(input) {

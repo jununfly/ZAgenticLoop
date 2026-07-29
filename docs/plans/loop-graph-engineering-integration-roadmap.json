@@ -495,6 +495,11 @@
           "q": "StateStore enrollment adapter的MVP边界是什么？",
           "answer": "采用provider-neutral异步EnrollmentRecordStore接口；记录按node_id和event_id append-only保存，重复写入同一不可变record幂等返回，冲突内容fail-closed；读取只返回记录副本，再由协议投影生成当前enrollment状态。内存实现仅作无副作用conformance fixture，不代表生产存储。",
           "note": "Human accepted the provider-neutral append-only adapter boundary."
+        },
+        {
+          "q": "短期scoped credential的最小签发契约是什么？",
+          "answer": "由StateStore/Network Authority语义签发的credential必须绑定network、node、event、task和approved capability子集；issued_at不晚于expires_at，expires_at不得超过Human批准的pairing有效期；中心节点不能自行扩大能力或签发范围。本切片只实现provider-neutral纯函数，真实签名、密钥托管和续期由后续provider/runtime切片实现。",
+          "note": "Human accepted the bounded scoped credential contract."
         }
       ],
       "notes": "TDD首个纵切已完成：新增node-enrollment.v1 Node Identity（X.509 certificate raw SHA-256 fingerprint）、append-only enrollment projection、revoke状态与capability ceiling/grant交集；新增loopback mutual TLS server/client options和真实双节点握手测试。LibreSSL测试环境使用RSA证书验证跨平台X.509契约，生产Ed25519发行器仍是后续边界。npm run test:agent-local 40/40通过。下一步集成Human pairing、StateStore enrollment records与短期credential。"
@@ -572,7 +577,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 16:44:54",
+    "updated": "2026-07-29 16:48:00",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
