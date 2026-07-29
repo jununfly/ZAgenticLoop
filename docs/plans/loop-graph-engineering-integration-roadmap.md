@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 16:40:30
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 16:44:54
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -45,4 +45,5 @@ TDD首个纵切已完成：新增node-enrollment.v1 Node Identity（X.509 certif
 - Q: MVP是否需要threshold recovery（如2-of-3 recovery keys）？ → 不需要。MVP采用单一Human owner与一份离线recovery material，使用后立即轮换；多份或门限恢复作为未来多人owner或高价值network扩展，当前先验证单人OPN的身份、撤销和恢复边界。 (Human confirmed single-material recovery for MVP.)
 - Q: 1-4-2的最小enrollment conformance fixture包含哪些行为？ → 固定为单机双独立节点、无真实业务副作用：Human创建Network Owner；Codex与Workbuddy分别生成X.509/Node Identity；通过loopback pairing；Human确认fingerprint、capability ceiling和endpoint；StateStore写append-only enrollment records；分别签发短期credential；验证mTLS与event-scoped CapabilityGrant；revoke Workbuddy并验证其不能领取新事件或读取新Artifact；验证Codex仍可独立工作；re-enrollment生成新审计链；不连接真实GitLab、不修改目标代码库、不引入跨设备发现。 (Human accepted the bounded local dual-node enrollment fixture.)
 - Q: Human pairing request与approval contract的最小边界是什么？ → 先实现纯协议契约：PairingRequest绑定network、Node Identity、endpoint、requested capability ceiling和过期时间；HumanApproval绑定request、Human owner、approved capabilities与批准时间，并强制网络/节点一致、批准能力不得超出请求、过期请求不能批准。该契约不直接持久化、不签发运行时credential，后续由StateStore adapter消费并追加记录。 (Human accepted the pairing contract as the next bounded TDD slice.)
+- Q: StateStore enrollment adapter的MVP边界是什么？ → 采用provider-neutral异步EnrollmentRecordStore接口；记录按node_id和event_id append-only保存，重复写入同一不可变record幂等返回，冲突内容fail-closed；读取只返回记录副本，再由协议投影生成当前enrollment状态。内存实现仅作无副作用conformance fixture，不代表生产存储。 (Human accepted the provider-neutral append-only adapter boundary.)
 <!-- ROADMAP_SECTION_END -->

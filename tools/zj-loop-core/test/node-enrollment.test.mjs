@@ -11,6 +11,7 @@ import {
   buildMutualTlsClientOptions,
   buildMutualTlsServerOptions,
   createPairingRequest,
+  createInMemoryEnrollmentRecordStore,
   evaluateCapabilityGrant,
   projectEnrollment,
 } from '../dist/node-enrollment.js';
@@ -91,7 +92,39 @@ test('expired pairing requests cannot be approved', async () => {
     human_id: 'human-1',
     approved_at: '2026-07-29T00:10:01.000Z',
     approved_capabilities: ['event.consume'],
-  }), { message: 'pairing-request-expired' });
+}), { message: 'pairing-request-expired' });
+});
+
+test('StateStore enrollment adapter makes identical append retries idempotent', async () => {
+  const store = createInMemoryEnrollmentRecordStore();
+  const record = {
+    schema: 'zj-loop.enrollment_record.v1',
+    type: 'pairing-requested',
+    event_id: 'evt-1',
+    node_id: 'node-1',
+    network_id: 'network-1',
+    occurred_at: '2026-07-29T00:00:00.000Z',
+  };
+  const first = await store.append(record);
+  const retry = await store.append({ ...record });
+  assert.equal(first.status, 'recorded');
+  assert.equal(retry.status, 'duplicate');
+  assert.deepEqual(await store.list('network-1', 'node-1'), [record]);
+});
+
+test('StateStore enrollment adapter rejects conflicting reuse of an event id', async () => {
+  const store = createInMemoryEnrollmentRecordStore();
+  const record = {
+    schema: 'zj-loop.enrollment_record.v1',
+    type: 'pairing-requested',
+    event_id: 'evt-2',
+    node_id: 'node-1',
+    network_id: 'network-1',
+    occurred_at: '2026-07-29T00:00:00.000Z',
+  };
+  await store.append(record);
+  await assert.rejects(() => store.append({ ...record, type: 'revoked' }), { message: 'enrollment-event-conflict' });
+  assert.deepEqual(await store.list('network-1', 'node-1'), [record]);
 });
 
 test('builds an independent Node Identity from an X.509 certificate', async () => {

@@ -3,6 +3,7 @@ export declare const NODE_IDENTITY_SCHEMA: "zj-loop.node_identity.v1";
 export declare const ENROLLMENT_PROJECTION_SCHEMA: "zj-loop.enrollment_projection.v1";
 export declare const PAIRING_REQUEST_SCHEMA: "zj-loop.pairing_request.v1";
 export declare const PAIRING_APPROVAL_SCHEMA: "zj-loop.pairing_approval.v1";
+export declare const ENROLLMENT_RECORD_SCHEMA: "zj-loop.enrollment_record.v1";
 export type NodeIdentity = {
     schema: typeof NODE_IDENTITY_SCHEMA;
     node_id: string;
@@ -19,6 +20,23 @@ export type EnrollmentEvent = {
     occurred_at: string;
     capabilities?: string[];
 };
+export type EnrollmentRecord = {
+    schema: typeof ENROLLMENT_RECORD_SCHEMA;
+    type: EnrollmentEvent['type'];
+    event_id: string;
+    network_id: string;
+    node_id: string;
+    occurred_at: string;
+    capabilities?: string[];
+};
+export type EnrollmentRecordStore = {
+    append(record: EnrollmentRecord): Promise<{
+        status: 'recorded' | 'duplicate';
+        record: EnrollmentRecord;
+    }>;
+    list(networkId: string, nodeId: string): Promise<EnrollmentRecord[]>;
+};
+export declare function createInMemoryEnrollmentRecordStore(): EnrollmentRecordStore;
 export type EnrollmentProjection = {
     schema: typeof ENROLLMENT_PROJECTION_SCHEMA;
     identity: NodeIdentity;

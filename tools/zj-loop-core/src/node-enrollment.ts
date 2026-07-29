@@ -5,6 +5,7 @@ export const NODE_IDENTITY_SCHEMA = 'zj-loop.node_identity.v1' as const;
 export const ENROLLMENT_PROJECTION_SCHEMA = 'zj-loop.enrollment_projection.v1' as const;
 export const PAIRING_REQUEST_SCHEMA = 'zj-loop.pairing_request.v1' as const;
 export const PAIRING_APPROVAL_SCHEMA = 'zj-loop.pairing_approval.v1' as const;
+export const ENROLLMENT_RECORD_SCHEMA = 'zj-loop.enrollment_record.v1' as const;
 
 export type NodeIdentity = {
   schema: typeof NODE_IDENTITY_SCHEMA;
@@ -23,6 +24,50 @@ export type EnrollmentEvent = {
   occurred_at: string;
   capabilities?: string[];
 };
+
+export type EnrollmentRecord = {
+  schema: typeof ENROLLMENT_RECORD_SCHEMA;
+  type: EnrollmentEvent['type'];
+  event_id: string;
+  network_id: string;
+  node_id: string;
+  occurred_at: string;
+  capabilities?: string[];
+};
+
+export type EnrollmentRecordStore = {
+  append(record: EnrollmentRecord): Promise<{ status: 'recorded' | 'duplicate'; record: EnrollmentRecord }>;
+  list(networkId: string, nodeId: string): Promise<EnrollmentRecord[]>;
+};
+
+function cloneRecord(record: EnrollmentRecord): EnrollmentRecord {
+  return { ...record, ...(record.capabilities ? { capabilities: [...record.capabilities] } : {}) };
+}
+
+export function createInMemoryEnrollmentRecordStore(): EnrollmentRecordStore {
+  const records = new Map<string, EnrollmentRecord>();
+  return {
+    async append(record) {
+      if (!record.event_id.trim()) throw new Error('enrollment-event-id-required');
+      if (!record.network_id.trim()) throw new Error('network-id-required');
+      if (!record.node_id.trim()) throw new Error('node-id-required');
+      const key = `${record.network_id}:${record.node_id}:${record.event_id}`;
+      const existing = records.get(key);
+      if (existing) {
+        if (JSON.stringify(existing) !== JSON.stringify(record)) throw new Error('enrollment-event-conflict');
+        return { status: 'duplicate', record: cloneRecord(existing) };
+      }
+      const stored = cloneRecord(record);
+      records.set(key, stored);
+      return { status: 'recorded', record: cloneRecord(stored) };
+    },
+    async list(networkId, nodeId) {
+      return [...records.values()]
+        .filter((record) => record.network_id === networkId && record.node_id === nodeId)
+        .map(cloneRecord);
+    },
+  };
+}
 
 export type EnrollmentProjection = {
   schema: typeof ENROLLMENT_PROJECTION_SCHEMA;
