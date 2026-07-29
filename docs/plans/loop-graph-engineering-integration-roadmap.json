@@ -325,7 +325,7 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "single-agent-opn-atom.v1 baseline fixture",
-      "status": "blocked",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
@@ -364,9 +364,14 @@
           "q": "baseline报告由谁生成、如何避免自证？",
           "answer": "采用Agent生成、确定性gate和Human审查三段式：Agent负责只读分析agent-context.ts并填充agent-context-capability-review.v1；npm run test:agent-local及引用的测试命令提供机械事实；Human通过Review Handoff审查事实/推断/未验证项并作最终decision。Agent不能把自己生成的报告直接标记为Human接受，报告hash和证据引用必须可复查。",
           "note": "让Single-Agent OPN Atom同时验证Agent杠杆和责任边界，避免Agent自写报告、自证结论。"
+        },
+        {
+          "q": "Human是否接受agent-context-capability-review.v1作为Single-Agent OPN Atom baseline conformance fixture？",
+          "answer": "接受。接受范围包括只读能力审查、结构化Evidence、blocked/recovery语义、verification manifest、pinned commit可重放和Human Review Handoff；不代表双Agent组网、StateStore、Directed Task Graph或资源隔离已完成。",
+          "note": "Human review accepted the baseline; product scope remains bounded."
         }
       ],
-      "notes": "第三次审查问题已全部处理：CLI新增allowlisted --execute生成真实verification provenance，并自动识别仓库根与tools/zj-loop-core包根；manifest命令唯一且与verification result一一对应；工作树证据使用realpath防symlink越界；--ref要求解析到target.commit。实现修正已提交为 dcdc378e576f8da3d060e9c7153a122556a3b116，报告 docs/testing/agent-context-capability-review.json 已绑定该commit；--ref pinned replay通过。npm run test:agent-local 36/36通过，git diff --check通过。Human Review Handoff仍为needs-human-review，human_decision=pending。"
+      "notes": "Human已接受baseline。已提供Human可读Mermaid视图 docs/testing/agent-context-capability-review.md；机器报告human_decision=accept，review_handoff=ready。"
     },
     "1-4-2": {
       "id": "1-4-2",
@@ -451,7 +456,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 15:34:32",
+    "updated": "2026-07-29 15:51:30",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

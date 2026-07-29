@@ -186,19 +186,17 @@
     "If accepted, design the next tracer slice for two explicit execution nodes only after the resource-isolation plan is recorded."
   ],
   "review_handoff": {
-    "status": "needs-human-review",
-    "summary": "Single-Agent OPN Atom baseline report is generated and mechanically verified; Human acceptance is still required.",
+    "status": "ready",
+    "summary": "Human accepted the pinned, mechanically verified Single-Agent OPN Atom baseline report.",
     "risks": [
       "No multi-node graph or external resource isolation is claimed."
     ],
-    "decisions_needed": [
-      "Accept this baseline report as the conformance fixture, or request a bounded revision."
-    ]
+    "decisions_needed": []
   },
   "human_decision": {
-    "status": "pending",
-    "decided_by": null,
-    "decided_at": null,
-    "rationale": null
+    "status": "accept",
+    "decided_by": "human:81",
+    "decided_at": "2026-07-29T07:51:29.000Z",
+    "rationale": "Accepted as the Single-Agent OPN Atom baseline conformance fixture within the stated read-only scope and boundaries."
   }
 }
