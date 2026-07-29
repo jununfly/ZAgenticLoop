@@ -30,16 +30,17 @@ function request({ address, server, client, body, headers = {} }) {
   });
 }
 
-function requestPath({ address, server, client, path: requestPathValue, method = 'GET', headers = {} }) {
+function requestPath({ address, server, client, path: requestPathValue, method = 'GET', body, headers = {} }) {
   return new Promise((resolve, reject) => {
-    const request = https.request({ hostname: '127.0.0.1', port: address.port, path: requestPathValue, method, ca: server.cert, cert: client.cert, key: client.key, servername: 'localhost', headers }, (response) => {
+    const payload = body === undefined ? '' : JSON.stringify(body);
+    const request = https.request({ hostname: '127.0.0.1', port: address.port, path: requestPathValue, method, ca: server.cert, cert: client.cert, key: client.key, servername: 'localhost', headers: { ...(body === undefined ? {} : { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) }), ...headers } }, (response) => {
       let text = '';
       response.setEncoding('utf8');
       response.on('data', (chunk) => { text += chunk; });
       response.on('end', () => resolve({ statusCode: response.statusCode, body: text ? JSON.parse(text) : null }));
     });
     request.on('error', reject);
-    request.end();
+    request.end(payload);
   });
 }
 
@@ -189,6 +190,77 @@ test('Relay long-poll returns an empty result when no authorized delivery is ava
   assert.equal(response.statusCode, 204);
   assert.equal(response.body, null);
   assert.deepEqual(resolverInput, { network_id: 'network-1', node_id: created.body.session.node_id, after_revision: 7 });
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('Relay long-poll returns the resolver delivery envelope without business payload', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('workbuddy');
+  const delivery = { delivery_id: 'delivery-1', attempt_id: 'attempt-1', network_id: 'network-1', event_id: 'event-1', task_id: 'task-1', target_node_id: 'node-1', revision: 8, envelope_sha256: 'hash-1', artifact_refs: [] };
+  const server = createLoopbackRelayServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    sessionVerifier: { verify: () => ({ status: 'allowed', credential_id: 'credential-1', expires_at: '2026-07-29T03:10:00.000Z' }) },
+    deliveryResolver: { findNext: () => delivery },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const created = await request({ address, server: serverMaterial, client: clientMaterial, body: { network_id: 'network-1', protocol_version: 'relay.v1' }, headers: { authorization: 'Bearer session-token' } });
+  const response = await requestPath({ address, server: serverMaterial, client: clientMaterial, path: `/v1/sessions/${created.body.session.session_id}/deliveries?after_revision=7`, headers: { authorization: 'Bearer session-token' } });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.schema, 'zj-loop.relay_http.v1');
+  assert.equal(response.body.status, 'delivery-available');
+  assert.deepEqual(response.body.delivery, delivery);
+  assert.equal('payload' in response.body.delivery, false);
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('Relay acknowledges a delivery through the injected transport handler', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('workbuddy');
+  let ackInput;
+  const server = createLoopbackRelayServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    sessionVerifier: { verify: () => ({ status: 'allowed', credential_id: 'credential-1', expires_at: '2026-07-29T03:10:00.000Z' }) },
+    deliveryAcknowledger: { acknowledge: (input) => { ackInput = input; return { status: 'acknowledged', delivery_id: input.delivery_id, attempt_id: input.attempt_id }; } },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const created = await request({ address, server: serverMaterial, client: clientMaterial, body: { network_id: 'network-1', protocol_version: 'relay.v1' }, headers: { authorization: 'Bearer session-token' } });
+  const response = await requestPath({ address, server: serverMaterial, client: clientMaterial, path: `/v1/sessions/${created.body.session.session_id}/deliveries/delivery-1/ack`, method: 'POST', body: { attempt_id: 'attempt-1' }, headers: { authorization: 'Bearer session-token' } });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body, { schema: 'zj-loop.relay_http.v1', status: 'delivery-acknowledged', delivery: { status: 'acknowledged', delivery_id: 'delivery-1', attempt_id: 'attempt-1' }, side_effects_executed: true });
+  assert.deepEqual(ackInput, { network_id: 'network-1', node_id: created.body.session.node_id, delivery_id: 'delivery-1', attempt_id: 'attempt-1' });
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('Relay maps an expired delivery lease to a transport recovery response', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('workbuddy');
+  let handlerCalls = 0;
+  const server = createLoopbackRelayServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    sessionVerifier: { verify: () => ({ status: 'allowed', credential_id: 'credential-1', expires_at: '2026-07-29T03:10:00.000Z' }) },
+    deliveryAcknowledger: { acknowledge: () => { handlerCalls += 1; throw new Error('delivery-lease-expired'); } },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const created = await request({ address, server: serverMaterial, client: clientMaterial, body: { network_id: 'network-1', protocol_version: 'relay.v1' }, headers: { authorization: 'Bearer session-token' } });
+  const response = await requestPath({ address, server: serverMaterial, client: clientMaterial, path: `/v1/sessions/${created.body.session.session_id}/deliveries/delivery-1/ack`, method: 'POST', body: { attempt_id: 'attempt-1' }, headers: { authorization: 'Bearer session-token' } });
+  assert.equal(response.statusCode, 410);
+  assert.deepEqual(response.body, { schema: 'zj-loop.relay_http.v1', status: 'blocked', reason: 'delivery-lease-expired', side_effects_executed: false });
+  assert.equal(handlerCalls, 1);
   await new Promise((resolve) => server.close(resolve));
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });

@@ -46,6 +46,67 @@ export function createLoopbackRelayServer(input) {
             return;
         }
         const url = new URL(request.url ?? '/', 'https://relay.local');
+        const ackMatch = url.pathname.match(/^\/v1\/sessions\/([^/]+)\/deliveries\/([^/]+)\/ack$/);
+        if (request.method === 'POST' && ackMatch) {
+            const authorization = request.headers.authorization;
+            if (!authorization || !/^Bearer\s+\S+$/.test(authorization)) {
+                sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-required', side_effects_executed: false });
+                return;
+            }
+            const session = sessions.get(decodeURIComponent(ackMatch[1]));
+            if (!session) {
+                sendJson(response, 404, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-not-found', side_effects_executed: false });
+                return;
+            }
+            const peer = request.socket.getPeerCertificate();
+            if (!peer.raw) {
+                sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'client-identity-unavailable', side_effects_executed: false });
+                return;
+            }
+            const nodeId = createHash('sha256').update(peer.raw).digest('hex');
+            if (nodeId !== session.node_id) {
+                sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-node-mismatch', side_effects_executed: false });
+                return;
+            }
+            if (!input.sessionVerifier) {
+                sendJson(response, 503, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-verifier-unavailable', side_effects_executed: false });
+                return;
+            }
+            const verification = await Promise.resolve(input.sessionVerifier.verify({ token: authorization.replace(/^Bearer\s+/, ''), node_id: nodeId, network_id: session.network_id, protocol_version: session.protocol_version }));
+            if (verification.status !== 'allowed' || verification.credential_id !== session.credential_id) {
+                sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'session-credential-invalid', side_effects_executed: false });
+                return;
+            }
+            if (!input.deliveryAcknowledger) {
+                sendJson(response, 503, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'delivery-acknowledger-unavailable', side_effects_executed: false });
+                return;
+            }
+            let body;
+            try {
+                body = await readBody(request);
+            }
+            catch (error) {
+                const reason = error instanceof Error ? error.message : 'json-invalid';
+                sendJson(response, reason === 'relay-envelope-too-large' ? 413 : 400, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
+                return;
+            }
+            const bodyKeys = body && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body).sort() : [];
+            const requestBody = body;
+            if (bodyKeys.join(',') !== 'attempt_id' || typeof requestBody.attempt_id !== 'string' || !requestBody.attempt_id.trim()) {
+                sendJson(response, 400, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'ack-request-invalid', side_effects_executed: false });
+                return;
+            }
+            try {
+                const delivery = await Promise.resolve(input.deliveryAcknowledger.acknowledge({ network_id: session.network_id, node_id: nodeId, delivery_id: decodeURIComponent(ackMatch[2]), attempt_id: requestBody.attempt_id }));
+                sendJson(response, 200, { schema: RELAY_HTTP_SCHEMA, status: 'delivery-acknowledged', delivery, side_effects_executed: true });
+            }
+            catch (error) {
+                const reason = error instanceof Error ? error.message : 'delivery-ack-failed';
+                const statusCode = reason === 'delivery-lease-expired' ? 410 : reason === 'delivery-attempt-stale' || reason === 'delivery-state-conflict' ? 409 : 400;
+                sendJson(response, statusCode, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
+            }
+            return;
+        }
         const deliveriesMatch = url.pathname.match(/^\/v1\/sessions\/([^/]+)\/deliveries$/);
         if (request.method === 'GET' && deliveriesMatch) {
             const authorization = request.headers.authorization;

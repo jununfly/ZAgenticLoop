@@ -26,10 +26,19 @@ export type RelayDeliveryResolver = {
         after_revision: number;
     }): Promise<Record<string, unknown> | null> | Record<string, unknown> | null;
 };
+export type RelayDeliveryAcknowledger = {
+    acknowledge(input: {
+        network_id: string;
+        node_id: string;
+        delivery_id: string;
+        attempt_id: string;
+    }): Promise<Record<string, unknown>> | Record<string, unknown>;
+};
 export declare function createLoopbackRelayServer(input: {
     tls: ServerOptions;
     sessionVerifier: RelaySessionVerifier | null;
     deliveryResolver?: RelayDeliveryResolver | null;
+    deliveryAcknowledger?: RelayDeliveryAcknowledger | null;
     now?: () => string;
     session_ttl_ms: number;
     supported_protocol_version?: string;
