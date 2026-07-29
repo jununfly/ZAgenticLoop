@@ -17,6 +17,21 @@ async function serverCertificate(commonName = 'localhost') {
   return { root, key: await readFile(keyPath, 'utf8'), cert: await readFile(certPath, 'utf8') };
 }
 
+function requestJson({ address, serverMaterial, clientMaterial, path: requestPath, method = 'GET', body, headers = {} }) {
+  return new Promise((resolve, reject) => {
+    const payload = body === undefined ? undefined : JSON.stringify(body);
+    const request = https.request({ hostname: '127.0.0.1', port: address.port, path: requestPath, method, ca: serverMaterial.cert, cert: clientMaterial.cert, key: clientMaterial.key, servername: 'localhost', headers: { ...(payload ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) } : {}), ...headers } }, (response) => {
+      let text = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { text += chunk; });
+      response.on('end', () => resolve({ statusCode: response.statusCode, body: JSON.parse(text) }));
+    });
+    request.on('error', reject);
+    if (payload) request.end(payload);
+    else request.end();
+  });
+}
+
 test('StateStore service exposes a pinned TLS health response without side effects', async () => {
   const material = await serverCertificate();
   const server = createStateStoreServer({ tls: material, store: null, credentialVerifier: null });
@@ -192,6 +207,78 @@ test('StateStore creates a network from verified Human context without trusting 
   assert.deepEqual(response.body, { schema: 'zj-loop.state_store_http.v1', status: 'ok', network_id: 'network-1', owner_id: 'human-1', revision: 1, side_effects_executed: true });
   assert.deepEqual(observedBody, { network_id: 'network-1' });
   assert.equal(await store.getRevision('network-1'), 1);
+  await new Promise((resolve) => server.close(resolve));
+  await store.close();
+  await rm(root, { recursive: true, force: true });
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('StateStore appends an authorized event with CAS and makes retries idempotent', async () => {
+  const serverMaterial = await serverCertificate();
+  const clientMaterial = await serverCertificate('workbuddy');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-service-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1' });
+  const observed = [];
+  const server = createStateStoreServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    store,
+    credentialVerifier: { verify: (input) => { observed.push(input); return { status: 'allowed' }; } },
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const event = { event_id: 'event-1', aggregate_type: 'task', aggregate_id: 'task-1', event_type: 'task.created', occurred_at: '2026-07-29T01:01:00.000Z', payload: { title: 'demo' } };
+  const first = await requestJson({ address, serverMaterial, clientMaterial, path: '/v1/networks/network-1/events', method: 'POST', body: { expected_revision: 1, event }, headers: { authorization: 'Bearer valid-token' } });
+  const retry = await requestJson({ address, serverMaterial, clientMaterial, path: '/v1/networks/network-1/events', method: 'POST', body: { expected_revision: 1, event }, headers: { authorization: 'Bearer valid-token' } });
+  assert.equal(first.statusCode, 201);
+  assert.deepEqual(first.body, { schema: 'zj-loop.state_store_http.v1', status: 'recorded', network_id: 'network-1', event_id: 'event-1', revision: 2, current_revision: 2, side_effects_executed: true });
+  assert.equal(retry.statusCode, 200);
+  assert.equal(retry.body.status, 'duplicate');
+  assert.equal(retry.body.side_effects_executed, false);
+  assert.equal(observed[0].event_id, 'event-1');
+  assert.equal(observed[0].task_id, 'task-1');
+  await new Promise((resolve) => server.close(resolve));
+  await store.close();
+  await rm(root, { recursive: true, force: true });
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('StateStore blocks invalid event requests before authorization or provider access', async () => {
+  const serverMaterial = await serverCertificate();
+  const clientMaterial = await serverCertificate('codex');
+  let verifierCalls = 0;
+  let storeCalls = 0;
+  const server = createStateStoreServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    store: { appendEvent: async () => { storeCalls += 1; throw new Error('should-not-call'); } },
+    credentialVerifier: { verify: () => { verifierCalls += 1; return { status: 'allowed' }; } },
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/events', method: 'POST', body: { expected_revision: 1, event: { event_id: 'event-1' } }, headers: { authorization: 'Bearer valid-token' } });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.reason, 'event-request-invalid');
+  assert.equal(verifierCalls, 0);
+  assert.equal(storeCalls, 0);
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('StateStore maps stale event revisions to a conflict without writing', async () => {
+  const serverMaterial = await serverCertificate();
+  const clientMaterial = await serverCertificate('workbuddy');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-service-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1' });
+  const server = createStateStoreServer({ tls: { ...serverMaterial, ca: clientMaterial.cert }, store, credentialVerifier: { verify: () => ({ status: 'allowed' }) } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const event = { event_id: 'event-1', aggregate_type: 'task', aggregate_id: 'task-1', event_type: 'task.created', occurred_at: '2026-07-29T01:01:00.000Z', payload: {} };
+  await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/events', method: 'POST', body: { expected_revision: 1, event }, headers: { authorization: 'Bearer valid-token' } });
+  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/events', method: 'POST', body: { expected_revision: 1, event: { ...event, event_id: 'event-2' } }, headers: { authorization: 'Bearer valid-token' } });
+  assert.equal(response.statusCode, 409);
+  assert.deepEqual(response.body, { schema: 'zj-loop.state_store_http.v1', status: 'blocked', reason: 'revision-mismatch', current_revision: 2, side_effects_executed: false });
   await new Promise((resolve) => server.close(resolve));
   await store.close();
   await rm(root, { recursive: true, force: true });

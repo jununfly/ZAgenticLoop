@@ -93,6 +93,72 @@ export function createStateStoreServer(input) {
             }
             return;
         }
+        const eventMatch = url.pathname.match(/^\/v1\/networks\/([^/]+)\/events$/);
+        if (request.method === 'POST' && eventMatch) {
+            let body;
+            try {
+                body = await readJsonBody(request);
+            }
+            catch (error) {
+                const reason = error instanceof Error ? error.message : 'json-invalid';
+                sendJson(response, reason === 'payload-too-large' ? 413 : 400, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
+                return;
+            }
+            const networkId = decodeURIComponent(eventMatch[1]);
+            const eventBody = body;
+            const event = eventBody && typeof eventBody === 'object' && !Array.isArray(eventBody) ? eventBody.event : undefined;
+            const eventKeys = event && typeof event === 'object' && !Array.isArray(event) ? Object.keys(event).sort() : [];
+            const bodyKeys = body && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body).sort() : [];
+            if (bodyKeys.join(',') !== 'event,expected_revision' || !Number.isInteger(eventBody.expected_revision) || eventBody.expected_revision < 1 || !event || Array.isArray(event) || eventKeys.join(',') !== 'aggregate_id,aggregate_type,event_id,event_type,occurred_at,payload' || Object.values(event).some((value) => value === undefined) || !['event_id', 'aggregate_type', 'aggregate_id', 'event_type', 'occurred_at'].every((key) => typeof event[key] === 'string')) {
+                sendJson(response, 400, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'event-request-invalid', side_effects_executed: false });
+                return;
+            }
+            const authorization = request.headers.authorization;
+            if (!authorization || !/^Bearer\s+\S+$/.test(authorization)) {
+                sendJson(response, 401, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'credential-required', side_effects_executed: false });
+                return;
+            }
+            if (!input.credentialVerifier) {
+                sendJson(response, 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'credential-verifier-unavailable', side_effects_executed: false });
+                return;
+            }
+            const peer = request.socket.getPeerCertificate();
+            if (!peer.raw) {
+                sendJson(response, 401, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'client-identity-unavailable', side_effects_executed: false });
+                return;
+            }
+            const verification = await Promise.resolve(input.credentialVerifier.verify({
+                token: authorization.replace(/^Bearer\s+/, ''),
+                node_id: createHash('sha256').update(peer.raw).digest('hex'),
+                network_id: networkId,
+                operation: `${request.method} ${url.pathname}`,
+                event_id: event.event_id,
+                task_id: event.aggregate_type === 'task' ? event.aggregate_id : undefined,
+            }));
+            if (verification.status !== 'allowed') {
+                sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'credential-invalid', side_effects_executed: false });
+                return;
+            }
+            if (!input.store) {
+                sendJson(response, 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'state-store-unavailable', side_effects_executed: false });
+                return;
+            }
+            try {
+                const result = await input.store.appendEvent({ network_id: networkId, expected_revision: eventBody.expected_revision, event: event });
+                if (result.status === 'conflict') {
+                    sendJson(response, 409, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: result.reason ?? 'event-conflict', current_revision: result.current_revision, side_effects_executed: false });
+                }
+                else {
+                    sendJson(response, result.status === 'recorded' ? 201 : 200, { schema: STATE_STORE_HTTP_SCHEMA, status: result.status, network_id: networkId, event_id: event.event_id, revision: result.revision, current_revision: result.current_revision, side_effects_executed: result.status === 'recorded' });
+                }
+            }
+            catch (error) {
+                const reason = error instanceof Error ? error.message : 'state-store-failure';
+                const statusCode = reason === 'network-not-found' ? 404 : ['event-id-required', 'aggregate-type-required', 'aggregate-id-required', 'event-type-required', 'event-occurred-at-required', 'payload-json-invalid', 'payload-json-circular', 'payload-too-large', 'expected-revision-invalid'].includes(reason) ? 400 : 503;
+                sendJson(response, statusCode, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
+            }
+            return;
+        }
         const authorization = request.headers.authorization;
         if (!authorization || !/^Bearer\s+\S+$/.test(authorization)) {
             sendJson(response, 401, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'credential-required', side_effects_executed: false });
