@@ -1,0 +1,204 @@
+import { createHash } from 'node:crypto';
+import Database from 'better-sqlite3';
+export const SQLITE_STATE_STORE_SCHEMA = 'zj-loop.sqlite_state_store.v1';
+export const STATE_EVENT_SCHEMA = 'zj-loop.state_event.v1';
+export const STATE_EVENT_PAYLOAD_LIMIT = 256 * 1024;
+function requireId(value, error) {
+    if (!value.trim())
+        throw new Error(error);
+    return value;
+}
+function canonicalize(value, seen = new WeakSet()) {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean')
+        return value;
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value))
+            throw new Error('payload-json-invalid');
+        return value;
+    }
+    if (typeof value !== 'object')
+        throw new Error('payload-json-invalid');
+    if (seen.has(value))
+        throw new Error('payload-json-circular');
+    seen.add(value);
+    if (Array.isArray(value)) {
+        const result = value.map((item) => canonicalize(item, seen));
+        seen.delete(value);
+        return result;
+    }
+    const result = {};
+    for (const key of Object.keys(value).sort())
+        result[key] = canonicalize(value[key], seen);
+    seen.delete(value);
+    return result;
+}
+export function canonicalizeJson(value) {
+    const encoded = JSON.stringify(canonicalize(value));
+    if (encoded === undefined)
+        throw new Error('payload-json-invalid');
+    return encoded;
+}
+export function sha256CanonicalJson(value) {
+    return createHash('sha256').update(canonicalizeJson(value), 'utf8').digest('hex');
+}
+function validateEventInput(event) {
+    requireId(event.event_id, 'event-id-required');
+    requireId(event.aggregate_type, 'aggregate-type-required');
+    requireId(event.aggregate_id, 'aggregate-id-required');
+    requireId(event.event_type, 'event-type-required');
+    requireId(event.occurred_at, 'event-occurred-at-required');
+    const payload_json = canonicalizeJson(event.payload);
+    if (Buffer.byteLength(payload_json, 'utf8') > STATE_EVENT_PAYLOAD_LIMIT)
+        throw new Error('payload-too-large');
+    return { payload_json, payload_sha256: sha256CanonicalJson(event.payload) };
+}
+function withImmediateTransaction(db, work) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+        const result = work();
+        db.exec('COMMIT');
+        return result;
+    }
+    catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+    }
+}
+function bootstrap(db) {
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+    db.pragma('busy_timeout = 5000');
+    db.pragma('synchronous = FULL');
+    db.exec(`
+    CREATE TABLE IF NOT EXISTS state_metadata (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      schema_version INTEGER NOT NULL
+    );
+    INSERT INTO state_metadata (id, schema_version)
+      VALUES (1, 1)
+      ON CONFLICT(id) DO NOTHING;
+    CREATE TABLE IF NOT EXISTS network_metadata (
+      network_id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      current_revision INTEGER NOT NULL CHECK (current_revision >= 1),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS state_events (
+      network_id TEXT NOT NULL,
+      revision INTEGER NOT NULL CHECK (revision > 0),
+      event_id TEXT NOT NULL,
+      aggregate_type TEXT NOT NULL,
+      aggregate_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      occurred_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      payload_sha256 TEXT NOT NULL CHECK (length(payload_sha256) = 64),
+      PRIMARY KEY (network_id, revision),
+      UNIQUE (network_id, event_id),
+      FOREIGN KEY (network_id) REFERENCES network_metadata(network_id)
+    );
+    CREATE INDEX IF NOT EXISTS state_events_aggregate_idx
+      ON state_events (network_id, aggregate_type, aggregate_id, revision);
+    CREATE INDEX IF NOT EXISTS state_events_created_at_idx
+      ON state_events (network_id, created_at);
+    CREATE TRIGGER IF NOT EXISTS state_events_no_update
+      BEFORE UPDATE ON state_events BEGIN SELECT RAISE(ABORT, 'state-events-append-only'); END;
+    CREATE TRIGGER IF NOT EXISTS state_events_no_delete
+      BEFORE DELETE ON state_events BEGIN SELECT RAISE(ABORT, 'state-events-append-only'); END;
+  `);
+    const version = db.prepare('SELECT schema_version FROM state_metadata WHERE id = 1').get();
+    if (!version || version.schema_version !== 1)
+        throw new Error('state-schema-version-unsupported');
+}
+export function createSqliteStateStore(input) {
+    requireId(input.filename, 'state-store-filename-required');
+    const db = new Database(input.filename);
+    try {
+        bootstrap(db);
+    }
+    catch (error) {
+        db.close();
+        throw error;
+    }
+    return {
+        async createNetwork(network) {
+            requireId(network.network_id, 'network-id-required');
+            requireId(network.owner_id, 'network-owner-required');
+            const now = network.now ?? new Date().toISOString();
+            return withImmediateTransaction(db, () => {
+                const existing = db.prepare('SELECT owner_id, current_revision FROM network_metadata WHERE network_id = ?').get(network.network_id);
+                if (existing) {
+                    return existing.owner_id === network.owner_id
+                        ? { status: 'duplicate', revision: existing.current_revision }
+                        : { status: 'conflict', revision: existing.current_revision, reason: 'network-owner-mismatch' };
+                }
+                db.prepare('INSERT INTO network_metadata (network_id, owner_id, current_revision, created_at, updated_at) VALUES (?, ?, 1, ?, ?)').run(network.network_id, network.owner_id, now, now);
+                const payload = { network_id: network.network_id, owner_id: network.owner_id };
+                db.prepare('INSERT INTO state_events (network_id, revision, event_id, aggregate_type, aggregate_id, event_type, occurred_at, created_at, payload_json, payload_sha256) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?)').run(network.network_id, `network-created:${network.network_id}`, 'network', network.network_id, 'network.created', now, now, canonicalizeJson(payload), sha256CanonicalJson(payload));
+                return { status: 'recorded', revision: 1 };
+            });
+        },
+        async appendEvent(input) {
+            requireId(input.network_id, 'network-id-required');
+            if (!Number.isInteger(input.expected_revision) || input.expected_revision < 1)
+                throw new Error('expected-revision-invalid');
+            const { payload_json, payload_sha256 } = validateEventInput(input.event);
+            const now = input.now ?? new Date().toISOString();
+            return withImmediateTransaction(db, () => {
+                const current = db.prepare('SELECT current_revision FROM network_metadata WHERE network_id = ?').get(input.network_id);
+                if (!current)
+                    throw new Error('network-not-found');
+                const existing = db.prepare('SELECT revision, aggregate_type, aggregate_id, event_type, occurred_at, payload_json, payload_sha256 FROM state_events WHERE network_id = ? AND event_id = ?').get(input.network_id, input.event.event_id);
+                if (existing) {
+                    const same = existing.aggregate_type === input.event.aggregate_type && existing.aggregate_id === input.event.aggregate_id && existing.event_type === input.event.event_type && existing.occurred_at === input.event.occurred_at && existing.payload_json === payload_json && existing.payload_sha256 === payload_sha256;
+                    return same
+                        ? { status: 'duplicate', revision: existing.revision, current_revision: current.current_revision }
+                        : { status: 'conflict', current_revision: current.current_revision, reason: 'event-id-reused' };
+                }
+                if (input.expected_revision !== current.current_revision)
+                    return { status: 'conflict', current_revision: current.current_revision, reason: 'revision-mismatch' };
+                const revision = current.current_revision + 1;
+                db.prepare('INSERT INTO state_events (network_id, revision, event_id, aggregate_type, aggregate_id, event_type, occurred_at, created_at, payload_json, payload_sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(input.network_id, revision, input.event.event_id, input.event.aggregate_type, input.event.aggregate_id, input.event.event_type, input.event.occurred_at, now, payload_json, payload_sha256);
+                db.prepare('UPDATE network_metadata SET current_revision = ?, updated_at = ? WHERE network_id = ?').run(revision, now, input.network_id);
+                return { status: 'recorded', revision, current_revision: revision };
+            });
+        },
+        async getRevision(network_id) {
+            requireId(network_id, 'network-id-required');
+            const row = db.prepare('SELECT current_revision FROM network_metadata WHERE network_id = ?').get(network_id);
+            if (!row)
+                throw new Error('network-not-found');
+            return row.current_revision;
+        },
+        async readEvents(input) {
+            requireId(input.network_id, 'network-id-required');
+            if (input.after_revision !== undefined && (!Number.isInteger(input.after_revision) || input.after_revision < 0))
+                throw new Error('after-revision-invalid');
+            db.exec('BEGIN');
+            try {
+                const metadata = db.prepare('SELECT current_revision FROM network_metadata WHERE network_id = ?').get(input.network_id);
+                if (!metadata)
+                    throw new Error('network-not-found');
+                const rows = db.prepare(`SELECT network_id, revision, event_id, aggregate_type, aggregate_id, event_type, occurred_at, created_at, payload_json, payload_sha256 FROM state_events WHERE network_id = ? AND revision > ? AND revision <= ? ${input.aggregate_type ? 'AND aggregate_type = ?' : ''} ${input.aggregate_id ? 'AND aggregate_id = ?' : ''} ORDER BY revision`).all(...([input.network_id, input.after_revision ?? 0, metadata.current_revision, ...(input.aggregate_type ? [input.aggregate_type] : []), ...(input.aggregate_id ? [input.aggregate_id] : [])]));
+                const events = rows.map((row) => {
+                    const payload = JSON.parse(row.payload_json);
+                    if (sha256CanonicalJson(payload) !== row.payload_sha256)
+                        throw new Error('state-event-payload-integrity-failed');
+                    return { schema: STATE_EVENT_SCHEMA, network_id: row.network_id, revision: row.revision, event_id: row.event_id, aggregate_type: row.aggregate_type, aggregate_id: row.aggregate_id, event_type: row.event_type, occurred_at: row.occurred_at, created_at: row.created_at, payload, payload_sha256: row.payload_sha256 };
+                });
+                db.exec('COMMIT');
+                return { snapshot_revision: metadata.current_revision, events };
+            }
+            catch (error) {
+                db.exec('ROLLBACK');
+                throw error;
+            }
+        },
+        async close() {
+            if (db.open)
+                db.close();
+        },
+    };
+}

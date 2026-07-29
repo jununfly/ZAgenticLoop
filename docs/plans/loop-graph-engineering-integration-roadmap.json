@@ -507,12 +507,148 @@
     "1-4-3": {
       "id": "1-4-3",
       "label": "SQLite StateStore、ArtifactStore与loopback Relay",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "SQLite StateStore、ArtifactStore与loopback Relay的施工顺序是什么？",
+          "answer": "采用先SQLite-compatible StateStore，再ArtifactStore，最后loopback Relay。StateStore先钉住身份、授权、生命周期、幂等与CAS canonical facts；ArtifactStore随后承载不可变验证产物；Relay最后依赖前两者提供认证、投递与恢复事实。",
+          "note": "Human accepted this implementation order."
+        },
+        {
+          "q": "SQLite StateStore首个真实provider采用什么驱动？",
+          "answer": "采用better-sqlite3作为首个真实provider；核心StateStore与EnrollmentRecordStore保持provider-neutral。better-sqlite3提供本地事务、WAL、CAS revision与幂等约束，未来可替换PostgreSQL-compatible managed provider。",
+          "note": "Human accepted better-sqlite3 for the first real local provider."
+        },
+        {
+          "q": "SQLite StateStore的canonical schema采用什么形态？",
+          "answer": "采用单一append-only state_events表作为canonical facts来源，字段包含network_id、event_id、aggregate_type、aggregate_id、event_type、revision、occurred_at、payload_json和created_at；enrollment、Graph、credential等通过typed projection adapter读取，不复制可变真相表。",
+          "note": "Human accepted the single event-log canonical schema."
+        },
+        {
+          "q": "SQLite StateStore的revision与CAS作用域是什么？",
+          "answer": "采用network-level全局单调revision：每个network独立维护revision，append必须携带expected_revision，事务内匹配才写入revision+1；不匹配返回conflict，不覆盖、不隐式重试。event_id在network内唯一负责幂等dedupe，aggregate字段只用于查询与投影。",
+          "note": "Human accepted network-level CAS ordering."
+        },
+        {
+          "q": "StateStore对业务层暴露什么API边界？",
+          "answer": "只暴露provider-neutral typed API：getRevision(network_id)、appendEvent(network_id, expected_revision, event)和readEvents(network_id, aggregate/after_revision)，append结果区分recorded、duplicate、conflict；业务层不直接依赖SQL，SQLite只存在provider内部。",
+          "note": "Human accepted the typed provider boundary."
+        },
+        {
+          "q": "SQLite StateStore采用什么并发与持久化配置？",
+          "answer": "采用WAL、foreign_keys=ON、busy_timeout=5000、synchronous=FULL；append使用显式事务，CAS冲突不自动重试，由上层重新读取后决策；数据库目录由调用方提供，provider不写入项目仓库。",
+          "note": "Human accepted the durability and concurrency settings."
+        },
+        {
+          "q": "SQLite StateStore如何初始化与处理schema版本？",
+          "answer": "采用幂等bootstrap：首次打开创建state_events与state_metadata，metadata保存schema_version；支持版本正常打开，遇到更高或不支持版本fail-closed；本轮不引入复杂migration framework，后续版本通过显式迁移函数与测试升级。",
+          "note": "Human accepted fail-closed schema bootstrap."
+        },
+        {
+          "q": "StateStore中的事件时间与排序如何定义？",
+          "answer": "revision是唯一canonical全局顺序；created_at由StateStore provider记录；occurred_at由节点提供，仅作业务时间与审计信息，不参与排序；同一event_id重试保持原revision，不重新排序。",
+          "note": "Human accepted provider-assigned ordering."
+        },
+        {
+          "q": "StateStore如何处理事件payload与未知event_type？",
+          "answer": "StateStore只校验通用事件envelope、JSON可序列化、network/event/aggregate、时间与CAS约束，payload_json保持opaque；Enrollment、Graph、Credential等typed adapter负责业务schema与projection。未知event_type可存储，但不能被不认识它的projection解释。",
+          "note": "Human accepted generic envelope validation."
+        },
+        {
+          "q": "StateStore写入是否强制携带授权上下文？",
+          "answer": "强制。Agent写入必须携带经验证的ScopedCredential并匹配network/node/event/task与能力；Human owner的enrollment、revoke和capability ceiling变更使用独立Human-authority context；缺少授权、过期、revoked或scope不匹配在事务前fail-closed。SQLite文件权限只属于部署防线，不能代替协议授权，Relay只转发不授予权限。",
+          "note": "Human accepted authorization at the StateStore boundary."
+        },
+        {
+          "q": "SQLite StateStore的数据库文件由谁打开？",
+          "answer": "采用独立StateStore service进程独占SQLite文件；Codex与Workbuddy不直接读写数据库，通过provider-neutral typed API访问。MVP可先本机部署，未来跨设备只替换service/provider，不改变Agent协议。",
+          "note": "Human accepted the independent StateStore service boundary."
+        },
+        {
+          "q": "StateStore service的MVP传输协议是什么？",
+          "answer": "采用loopback HTTP/JSON over mTLS：API保持typed HTTP/JSON契约，本机也不因loopback而默认信任进程；Node Identity与ScopedCredential共同参与认证授权。Unix socket作为未来本机优化，不作为第一版协议。",
+          "note": "Human accepted HTTP/JSON over mTLS."
+        },
+        {
+          "q": "StateStore请求如何组合mTLS身份与运行时授权？",
+          "answer": "采用双层授权：mTLS client certificate绑定node_id，Authorization Bearer ScopedCredential绑定network/event/task/capabilities；service强制校验二者node_id一致，并检查credential有效期、revoked状态和scope。Human-authority操作使用独立Human approval context，不能伪装成Agent credential。",
+          "note": "Human accepted dual-layer request authorization."
+        },
+        {
+          "q": "MVP ScopedCredential采用什么形态？",
+          "answer": "采用短期opaque bearer token：StateStore生成高熵随机token，仅保存token hash与绑定的network/node/event/task/capabilities/issued_at/expires_at metadata；请求通过Authorization header携带，service同时校验mTLS node、hash、scope、expiry与revoke。未来离线验证再增加Ed25519/JWS provider，不让MVP过早绑定JWT。",
+          "note": "Human accepted opaque short-lived credentials."
+        },
+        {
+          "q": "SQLite StateStore第一条TDD纵切包含哪些验收？",
+          "answer": "限定为真实better-sqlite3 provider的本地typed API：幂等bootstrap与schema version、getRevision、network-level CAS append、同event_id duplicate、revision conflict、按revision readEvents，以及WAL/事务/synchronous=FULL配置验证。本条不包含HTTP service、mTLS、credential endpoint、ArtifactStore和Relay。",
+          "note": "Human accepted the narrow StateStore provider tracer slice."
+        },
+        {
+          "q": "StateStore typed API如何区分正常结果与错误？",
+          "answer": "采用结构化正常结果：recorded、duplicate、conflict；输入不合法返回明确validation error；SQLite I/O、损坏或不兼容schema返回blocked/failure。CAS conflict不自动重试，duplicate不改revision。",
+          "note": "Human accepted explicit result semantics."
+        },
+        {
+          "q": "StateStore readEvents是否返回一致性快照revision？",
+          "answer": "采用一致性read transaction并返回snapshot_revision；事件全部不超过该revision，支持after_revision增量读取；调用方记录该revision用于context/evidence，多次读取需显式接受新snapshot，不隐式假设跨读取一致。",
+          "note": "Human accepted snapshot revision semantics."
+        },
+        {
+          "q": "SQLite StateStore MVP是否实现复制与自动备份？",
+          "answer": "暂不实现。MVP保证单实例SQLite事务持久化和启动完整性检查，不做多副本、跨设备同步、自动failover，也不把WAL当复制协议；预留backup/restore provider接口。StateStore丢失进入network-recovery-blocked，不能自动重建owner或权限。",
+          "note": "Human accepted deferred StateStore replication and backup."
+        },
+        {
+          "q": "StateStore事件是否保存payload hash？",
+          "answer": "采用。append时对canonical JSON payload计算SHA-256并随事件保存；readEvents可验证hash，发现不一致返回blocked。payload hash只用于存储完整性与迁移校验，不替代Human/Node签名，也不宣称能防御直接写数据库文件的攻击者。",
+          "note": "Human accepted payload integrity hashing."
+        },
+        {
+          "q": "payload_sha256采用什么canonical JSON规则？",
+          "answer": "采用递归字典序对象key、数组保序、无空白JSON；拒绝undefined、NaN、Infinity、函数和循环引用，只接受JSON-compatible payload；按UTF-8计算SHA-256，读时使用同一canonicalizer验证。",
+          "note": "Human accepted deterministic payload canonicalization."
+        },
+        {
+          "q": "StateStore单个payload_json的大小上限是多少？",
+          "answer": "采用默认256 KiB上限；超出直接validation error，不截断或隐式压缩。大型Evidence、日志、checkpoint与二进制进入ArtifactStore，StateStore只保存artifact id、hash、大小、归属和授权范围。",
+          "note": "Human accepted the bounded StateStore payload size."
+        },
+        {
+          "q": "SQLite StateStore如何持久化network-level当前revision？",
+          "answer": "采用独立network_metadata表：network_id主键、current_revision、schema_version、created_at、updated_at。append在同一事务内锁定metadata、校验expected_revision、写入下一revision的state_events并更新current_revision；不扫描MAX(revision)推断当前revision，数据库schema_version与network revision分离。",
+          "note": "Human accepted the CAS metadata anchor."
+        },
+        {
+          "q": "state_events采用哪些数据库约束与索引？",
+          "answer": "采用network_id+revision主键、network_id+event_id唯一约束、aggregate与revision查询索引、created_at索引；revision为正数，核心字段非空，payload_sha256为64位小写hex；数据库层禁止更新与删除事件，强化append-only语义。",
+          "note": "Human accepted append-only database constraints."
+        },
+        {
+          "q": "SQLite provider与StateStore service如何分层授权？",
+          "answer": "better-sqlite3 provider第一条纵切只负责事务、CAS、dedupe、完整性与append-only；StateStore service/API负责mTLS、ScopedCredential、Human-authority context与revoke校验。provider接受已验证typed request，不解析Bearer token；未来可注入AuthorizationVerifier但不把HTTP credential语义硬编码进SQLite。",
+          "note": "Human accepted provider/service authorization separation."
+        },
+        {
+          "q": "SQLite CAS append采用什么事务锁模式？",
+          "answer": "采用显式BEGIN IMMEDIATE：append开始即获取写锁，在同一事务内读取network_metadata、校验expected_revision、写event并更新revision；锁竞争使用busy_timeout，CAS不匹配返回conflict，应用层不自动重试。",
+          "note": "Human accepted immediate transaction locking."
+        },
+        {
+          "q": "Network如何创建并获得初始revision？",
+          "answer": "采用显式createNetwork流程：只有Human-authority context能创建network；事务内创建network_metadata并追加network.created事件，revision为1；普通Agent append不能隐式创建network，不存在network返回network-not-found。",
+          "note": "Human accepted explicit Human-owned network creation."
+        },
+        {
+          "q": "Network是否允许物理删除？",
+          "answer": "不允许物理删除；采用Human-authority的network.archived tombstone作为最后生命周期事件。archived后拒绝新Agent事件、credential与enrollment，只允许只读审计与recovery查询；恢复必须由Human明确执行，物理清理留给未来retention策略。",
+          "note": "Human accepted append-only network archival."
+        }
+      ],
+      "notes": "StateStore provider第一条TDD纵切已完成：引入better-sqlite3；幂等bootstrap与schema version；WAL、foreign_keys、busy_timeout、synchronous=FULL；Human-owned createNetwork与network.created revision 1；network-level BEGIN IMMEDIATE CAS append；event_id dedupe/conflict；canonical JSON与payload_sha256；256 KiB payload上限；snapshot_revision readEvents；owner冲突和stale revision fail-closed。npm run test:agent-local 52/52通过。仍未实现HTTP/mTLS service、ScopedCredential endpoint、ArtifactStore和Relay。"
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -577,7 +713,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 16:53:08",
+    "updated": "2026-07-29 17:29:41",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

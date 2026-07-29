@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 16:53:08
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 17:29:41
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -10,7 +10,7 @@
 └── [ ][X+] 1-4. 下一实现里程碑与行为验收边界
     ├── [x][X+] 1-4-1. single-agent-opn-atom.v1 baseline fixture
     ├── [~][X+] 1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
-    ├── [ ][X+] 1-4-3. SQLite StateStore、ArtifactStore与loopback Relay
+    ├── [~][X+] 1-4-3. SQLite StateStore、ArtifactStore与loopback Relay
     ├── [ ][X+] 1-4-4. Directed Task Graph与OrchestrationPlan
     ├── [ ][X+] 1-4-5. orchestration-and-isolation preflight
     ├── [ ][X+] 1-4-6. Human Grill、blocked/recovery与重新preflight
