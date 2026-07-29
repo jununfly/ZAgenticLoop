@@ -1,0 +1,457 @@
+{
+  "title": "Loop Engineering与Graph Engineering产品融合",
+  "description": "独立于已完成的automation-first路线图和当前OPN收口路线图，全面理解并吸收Loop Engineering与Graph Engineering的方法论，将二者融汇进ZAgenticLoop的产品能力、体验路径与技术架构。先完成统一心智模型和产品边界，再进入下一阶段细节实现。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "Loop Engineering与Graph Engineering产品融合",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Loop Engineering与Graph Engineering统一心智模型",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Loop Engineering与Graph Engineering是什么关系？",
+          "answer": "二者是正交但组合的产品层：Loop Engineering处理单个目标在时间维度上的发现、执行、验证、修正和交付闭环；Graph Engineering处理多个Human/Agent/设备节点在空间与关系维度上的组网、身份、能力、权限、路由、协同、责任和恢复。ZAgenticLoop通过二者融合实现OPN。",
+          "note": "Graph Engineering不是Graph Database、普通DAG工作流或Agent群聊；拓扑只是其一部分，核心是节点、责任、能力、事件和状态关系。"
+        },
+        {
+          "q": "Graph Engineering中的图由什么构成？",
+          "answer": "采用由可审计协议关系生成的多层图，而不是用户自由绘制的拓扑图：Identity Graph、Capability Graph、Authority Graph、Event Graph和State Graph分别表示身份、能力、授权、事件参与和生命周期关系。用户可调整策略、授权和委托，但不能通过绘制边直接获得权限；Event Graph是Network Graph上的临时投影。",
+          "note": "每条边必须有来源、有效期、作用域和撤销记录，避免把视觉拓扑误当成运行时权威。"
+        },
+        {
+          "q": "如何用递归、迭代和ScaleUp/ScaleOut理解ZAgenticLoop架构？",
+          "answer": "采用三层算法思想：递归将复杂目标、任务图和网络拆成仍保持明确目标、有限权限、可执行工作、验证、证据与责任决策或停止的更小实例；迭代在原子契约上叠加状态、证据、约束和委托，每次暴露输入、输出、进展、失败和下一决策；只有当原子或迭代单元在协议、隔离、幂等、权限上限、资源预算和验证语义上可组合时，才允许ScaleUp或ScaleOut到更多任务、节点或网络。",
+          "note": "递归保证去掉枝叶后仍完整正确，迭代提供复杂场景适应性，ScaleUp/ScaleOut只复制已证明可组合的能力，不把并行数量误当产品价值。"
+        },
+        {
+          "q": "ZAgenticLoop的最小完整产品原子是什么？",
+          "answer": "采用Single-Agent OPN Atom：Human委托一个独立enrolled Agent执行一个有价值且有界的MessageEvent，Agent完成Execution并返回Evidence和Review Handoff，Human做最终决策或明确停止。Human-only Loop Atom只能证明目标有价值和成功标准，不能证明OPN的生产能力杠杆；必须有Agent参与才能验证网络化效率提升。",
+          "note": "把产品原子从‘任务能完成’提升到‘Human通过Agent节点获得可验证的能力杠杆’，同时保留责任、权限和证据闭环。"
+        },
+        {
+          "q": "Single-Agent OPN Atom中Human与Agent的交互粒度是什么？",
+          "answer": "Human负责目标、约束、授权和最终Review；Agent在授权范围内独立完成内部Loop，不要求Human持续逐步提示或批准。流程为Human定义目标与约束、授予有界能力、Agent发现/执行/验证、返回Evidence和Review Handoff、Human执行accept/revise/recover/reject；风险、歧义、权限不足、预算耗尽、验证失败或恢复时才中途唤回Human。",
+          "note": "保留Human责任而不把Agent退化成需要持续遥控的工具，形成可验证的效率杠杆。"
+        },
+        {
+          "q": "Single-Agent OPN Atom如何证明效率杠杆？",
+          "answer": "至少记录并比较Human从目标提出到最终决策的总耗时、主动介入次数和原因、Agent独立完成的有效步骤、Review Handoff是否足以支持决策、验证通过率与返工次数、blocked/recovery可解释性和未授权副作用（必须为0），并与Human-only完成同类任务的baseline比较。核心判断是Human是否用更少协调成本获得更多可验证且可负责的有效产出，而不是Agent动作数量。",
+          "note": "将OPN价值绑定到可验证结果和Human协调成本，不被并发数、token数或自动化次数误导。"
+        },
+        {
+          "q": "OPN效率基线是否采用Human-only比较？",
+          "answer": "不专门做Human-only科学比较；将Single-Agent OPN Atom定义为ZAgenticLoop的内部产品baseline。后续多节点Graph Atom、复杂编排和ScaleOut都与该baseline比较新增能力、协调成本、证据质量、恢复能力和风险，重点判断组合是否带来足够的能力增量，而不是证明Agent优于Human。",
+          "note": "避免把产品目标误写成单Agent替代Human的性能Benchmark，保持OPN作为可组合生产网络的产品方向。"
+        },
+        {
+          "q": "Single-Agent OPN Atom baseline如何产品化？",
+          "answer": "定义为single-agent-opn-atom.v1 conformance fixture：固定Human owner、一个独立enrolled Agent、一个有价值且有界的MessageEvent、CapabilityGrant、Execution、Evidence、Review Handoff、Human decision或explainable stop、blocked/recovery路径和零未授权副作用；协议和验收边界固定，低风险业务任务可以替换。后续Graph Atom必须说明相对baseline的能力增量。",
+          "note": "把baseline变成可重复验证的产品契约，而不是绑定单一业务Demo或Agent数量。"
+        },
+        {
+          "q": "Single-Agent Atom递归组合成Multi-node Graph Atom时保留哪些不变量？",
+          "answer": "必须保留：每个子任务有明确目标/边界/成功标准；每个Agent有独立身份、CapabilityGrant和执行记录；组合任务有Human或Human+Agent责任中心；每个结果有Evidence和Review Handoff；失败/歧义/权限不足/恢复有停止语义；分派前完成外部资源隔离；组合保持幂等、可恢复、可审计且未授权副作用为0。可变化：Agent数量、任务图宽度深度、依赖/并行度、中间Artifact和验证层级。",
+          "note": "递归增加枝叶但不改变原子契约的责任、权限、证据、隔离、幂等、恢复和停止语义。"
+        },
+        {
+          "q": "何时允许从原子组合ScaleUp或ScaleOut？",
+          "answer": "只有在已证明的组合范式成立时允许扩张：子任务有明确边界和兼容contract，资源隔离已知且可验证，fan-out有上限，执行独立或幂等，存在canonical aggregation/verification，资源和预算有上限，并有Human承担的恢复路径。任一条件未知时不自动扩张，由中心单元grill Human或退回更小的已验证组合。",
+          "note": "Scale不是无限递归或节点复制；只有原子契约可组合且聚合结果可验证时才扩大规模。"
+        },
+        {
+          "q": "何时允许从原子组合ScaleUp或ScaleOut？",
+          "answer": "只有在已证明的组合范式成立时允许扩张：子任务有明确边界和兼容contract，资源隔离已知且可验证，fan-out有上限，执行独立或幂等，存在canonical aggregation/verification，资源和预算有上限，并有Human承担的恢复路径。任一条件未知时不自动扩张，由中心单元grill Human或退回更小的已验证组合。",
+          "note": "Scale不是无限递归或节点复制；只有原子契约可组合且聚合结果可验证时才扩大规模。"
+        },
+        {
+          "q": "Multi-node Graph Atom相对Single-Agent baseline必须新增什么？",
+          "answer": "至少包含Human-held center responsibility unit、两个独立enrolled Agent execution nodes、两个不同但有依赖关系的任务、Directed Task Graph、明确资源隔离、中间Evidence、canonical aggregation或verification和一个Review Handoff。仅增加第二个Agent而没有新增可组合能力，不算Graph Atom。",
+          "note": "Graph Atom必须证明任务分工、依赖、隔离和聚合能力，而不是把多Agent聊天或并行数量当作产品升级。"
+        },
+        {
+          "q": "Multi-node Graph Atom相对Single-Agent baseline必须新增什么？",
+          "answer": "至少包含Human-held center responsibility unit、两个独立enrolled Agent execution nodes、两个不同但有依赖关系的任务、Directed Task Graph、明确资源隔离、中间Evidence、canonical aggregation或verification和一个Review Handoff。仅增加第二个Agent而没有新增可组合能力，不算Graph Atom。",
+          "note": "Graph Atom必须证明任务分工、依赖、隔离和聚合能力，而不是把多Agent聊天或并行数量当作产品升级。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Loop与Graph协同的端到端用户体验路径",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "用户体验应先进入Graph还是Loop？",
+          "answer": "采用Loop-first、Graph按需渐进展开：用户从目标和任务开始，单节点任务几乎只感知Loop；需要跨设备或Agent时展示参与节点、能力、权限和责任边界；复杂协同再进入网络视图调整关系、路由、委托和恢复策略。所有Graph变化都必须能回到当前任务并解释其必要性。",
+          "note": "保持提出目标并推进完成的直觉入口，避免让用户先学习网络拓扑。"
+        },
+        {
+          "q": "Codex与Workbuddy的有向图如何建模？",
+          "answer": "采用Network Graph + Event-scoped Directed Task Graph双层模型：Network Graph描述持久的节点、身份、能力、权限和关系；Directed Task Graph是单个MessageEvent的执行投影，节点是分配给具体OPN节点的有界工作单元，边表达控制、数据、验证或恢复依赖，不直接授予权限。每个任务声明task_id、assigned_node、输入输出Artifact、前置依赖、读写集、CapabilityGrant、验证条件、超时重试失败策略和并行性。",
+          "note": "让Codex既能作为event center又能参与任务，Workbuddy作为consumer；同时分离永久组网关系与单次任务编排。"
+        },
+        {
+          "q": "外部资源（如目标代码库）的读写竞态是否由ZAgenticLoop直接解决？",
+          "answer": "不直接实现通用外部资源锁；任务编排时由中心节点选择并记录资源特定的隔离策略。以同一Git repo开发任务为例，Codex可创建branch A并让Codex/Workbuddy在隔离工作区完成各自任务、提交commit，再由Codex先合并后验收总体结果。中心节点知道可行策略时自行决策；不知道时必须grill Human并在确认前阻塞，不共享写入或自行发明未验证的锁。",
+          "note": "ZAgenticLoop负责编排隔离策略的选择、记录、验证和升级，不替外部系统实现普适锁；资源适配细节由任务执行环境或provider处理。"
+        },
+        {
+          "q": "中心节点的责任主体如何定义？",
+          "answer": "中心责任单元必须由Human承担：可以是Human单独承担，也可以是Human与Agent组成协作单元。Agent不能独立成为中心节点；Codex、Workbuddy等Agent统一定义为被编排执行节点，Codex只有在Human身边作为Center Agent collaborator时参与中心工作。任务编排前必须完成orchestration-and-isolation preflight：Human或Human+Agent中心责任单元选择并记录资源隔离策略；无法证明可行时必须grill Human并阻塞。",
+          "note": "修正此前Agent可独立承担event center的表述；中心的责任主体和资源隔离决策权始终在Human，Agent只提供受控协作或执行。"
+        },
+        {
+          "q": "任务编排前是否强制执行orchestration-and-isolation preflight？",
+          "answer": "强制生成可审计OrchestrationPlan，包含Directed Task Graph、任务负责人/依赖/输入输出/验证、外部资源清单、每项资源隔离策略及理由、读写范围、并行串行决策、合并或副作用责任人、风险和未知点，以及preflight_status=ready/blocked/needs-human-grill。只有ready才能分派执行节点；blocked或needs-human-grill时Codex可继续分析，但不能派发可能造成竞态或副作用的任务。",
+          "note": "把资源隔离决策前置为中心责任单元的硬门槛，而不是执行节点运行时才发现冲突。"
+        },
+        {
+          "q": "Codex在中心协作与执行任务之间如何避免角色混淆？",
+          "answer": "Codex可以同时参与中心协作和被分派的执行任务，但两者必须在Directed Task Graph中拆成显式节点：Center Coordination节点负责分析、编排、preflight和Review Handoff；Codex Execution节点只在已确认CapabilityGrant和资源隔离策略下执行具体工作。执行节点不能隐式修改OrchestrationPlan、扩大权限或自我验收；需要验证时由独立后继任务或Human完成。",
+          "note": "允许Human+Codex高效协作，同时避免Codex自己编排、自己修改、自己验收形成不可审计的闭环。"
+        },
+        {
+          "q": "Codex在中心协作与执行任务之间如何避免角色混淆？",
+          "answer": "Codex可以同时参与中心协作和被分派的执行任务，但两者必须在Directed Task Graph中拆成显式节点：Center Coordination节点负责分析、编排、preflight和Review Handoff；Codex Execution节点只在已确认CapabilityGrant和资源隔离策略下执行具体工作。执行节点不能隐式修改OrchestrationPlan、扩大权限或自我验收；需要验证时由独立后继任务或Human完成。",
+          "note": "允许Human+Codex高效协作，同时避免Codex自己编排、自己修改、自己验收形成不可审计的闭环。"
+        },
+        {
+          "q": "隔离写入验证是否同时覆盖成功和阻止路径？",
+          "answer": "采用两个fixture case：成功case中Codex与Workbuddy修改不同文件，各自使用独立branch/worktree，preflight=ready并可并行，Codex显式合并和验收；阻止case中两个任务声明写入同一文件且没有可靠隔离方案，preflight必须为blocked或needs-human-grill，不得分派两个写任务，Human需选择串行化、重新拆分或明确合并策略，并验证无未授权写入。",
+          "note": "同时证明中心节点知道方案时能推进、不知道或方案不成立时会停下。"
+        },
+        {
+          "q": "needs-human-grill的交互协议如何定义？",
+          "answer": "Codex输出结构化Human Grill：问题、已知事实、冲突资源或未知点、候选隔离策略、推荐方案、权衡和风险、需要Human选择的选项。Human选择形成不可变决策记录并回写OrchestrationPlan；只有重新通过preflight后任务才能分派。",
+          "note": "把不确定性升级从自然语言追问变成可审计的决策协议，防止未记录的Human override或跳过重新检查。"
+        },
+        {
+          "q": "Multi-node Graph Atom中Codex如何同时参与中心协作和执行？",
+          "answer": "Codex可作为Human+Agent中心责任单元的协作者，也可作为一个执行节点，但必须在Directed Task Graph中拆成独立节点并使用独立CapabilityGrant与Evidence：Center Coordination节点负责目标分析、OrchestrationPlan、preflight、分派和Review Handoff；Codex Execution节点只执行自己的任务；后继Aggregation/Verification节点评估Codex与Workbuddy的合并结果，避免Codex隐式自我验收。",
+          "note": "允许Human+Codex高效承担中心工作，同时保持角色、权限、证据和验证边界可审计。"
+        },
+        {
+          "q": "首个Multi-node Graph Atom采用什么任务分工？",
+          "answer": "采用并行分工+聚合验证：Human审批OrchestrationPlan后，Human+Codex Center Coordination节点分派Codex Execution（架构/实现边界分析）与Workbuddy Execution（行为/验证证据分析），两者产出独立Evidence并行进行；Aggregation/Verification检查结论一致性、冲突解释和证据完整性，再生成Review Handoff。隔离写入段两Agent分别在独立branch/worktree修改不同文件，Codex执行显式merge task，独立验证合并结果；不推送、不创建真实MR。",
+          "note": "同时证明并行独立工作、依赖聚合、外部资源隔离和总体验收。"
+        },
+        {
+          "q": "首个Multi-node Graph Atom采用什么任务分工？",
+          "answer": "采用并行分工+聚合验证：Human审批OrchestrationPlan后，Human+Codex Center Coordination节点分派Codex Execution（架构/实现边界分析）与Workbuddy Execution（行为/验证证据分析），两者产出独立Evidence并行进行；Aggregation/Verification检查结论一致性、冲突解释和证据完整性，再生成Review Handoff。隔离写入段两Agent分别在独立branch/worktree修改不同文件，Codex执行显式merge task，独立验证合并结果；不推送、不创建真实MR。",
+          "note": "同时证明并行独立工作、依赖聚合、外部资源隔离和总体验收。"
+        },
+        {
+          "q": "Codex合并后谁负责独立验证？",
+          "answer": "Codex可以执行显式merge task，但合并后的验证必须是Directed Task Graph中的独立后继节点，拥有独立Evidence。验证可由确定性项目gate、Workbuddy或Human完成；Codex的merge结果不能直接作为聚合结果已验收的证明。",
+          "note": "保留Codex作为Human+Codex中心协作单元的高效合并者，同时避免自己合并、自己证明成功。"
+        },
+        {
+          "q": "Codex合并后谁负责独立验证？",
+          "answer": "Codex可以执行显式merge task，但合并后的验证必须是Directed Task Graph中的独立后继节点，拥有独立Evidence。验证可由确定性项目gate、Workbuddy或Human完成；Codex的merge结果不能直接作为聚合结果已验收的证明。",
+          "note": "保留Codex作为Human+Codex中心协作单元的高效合并者，同时避免自己合并、自己证明成功。"
+        },
+        {
+          "q": "第一阶段独立验收采用什么组合？",
+          "answer": "采用三层验收：Codex merge后先运行确定性gate检查分支来源、commit可达性、worktree隔离、目标文件变化、测试/构建和git diff --check；再由Workbuddy独立审查合并后的语义结果、子任务整合和Evidence充分性；最后Human通过Review Handoff处理风险/歧义并作最终责任决策。任一层失败都不能标记Graph Atom完成。",
+          "note": "将机械事实、独立语义审查和Human责任判断分层，避免单一Agent或单一日志自证完成。"
+        },
+        {
+          "q": "Graph Engineering的默认产品视图如何保持简单？",
+          "answer": "采用三层渐进披露：默认Loop Timeline展示目标、进展、阻塞/风险、结果和Human决策；展开Task Graph展示Codex/Workbuddy职责、依赖、并行性、状态和Evidence；审计层展示身份、CapabilityGrant、OrchestrationPlan、资源隔离、branch/worktree/commit、claim/lease/recovery、Human Grill、确定性gate和独立验证。默认先回答工作是否推进，需要时再解释网络如何协同和协议如何证明。",
+          "note": "保持Loop-first体验，Graph作为按需解释与控制面，UI只渲染协议投影。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "OPN产品能力与技术架构融合边界",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "成熟框架应如何被ZAgenticLoop采用？",
+          "answer": "不把LangGraph、AutoGen、CrewAI或LlamaIndex Workflows直接作为Graph/OPN协议核心；自定义provider-neutral Graph/OPN协议层、StateStore和责任边界，成熟框架作为可插拔Loop执行器适配器。优先评估LangGraph作为第一个执行器适配器，但不让其成为产品协议或StateStore真相源。",
+          "note": "复用成熟执行技术，保留ZAgenticLoop在组网、身份、授权、责任、跨设备状态和恢复上的产品主权。"
+        },
+        {
+          "q": "成熟框架中的哪些技术点适合复用？",
+          "answer": "采用稳定技术点优先、适配器隔离、能力矩阵评估：复用checkpoint、interrupt、typed event、local runtime、retry、timeout、cancellation和tracing等执行技术；先定义Execution Adapter Contract，优先评估LangGraph checkpoint/interrupt/resume，再评估LlamaIndex Workflows typed event/并发控制，AutoGen Core作为Agent Runtime候选，CrewAI作为高层Loop DSL候选。第三方框架不进入Graph/OPN核心。",
+          "note": "避免完整框架反向定义ZAgenticLoop的身份、权限、责任、StateStore和完成语义。"
+        },
+        {
+          "q": "Execution Adapter Contract的最小输入输出是什么？",
+          "answer": "输入为MessageEvent、ExecutionContext、CapabilityGrant和可选ResumeContext；输出为ExecutionStarted/Progress/Interrupted、Evidence、StopSignal、ExecutionCompleted和ReviewHandoff。适配器不得修改Network/Node/Authority关系、签发或扩大CapabilityGrant、改写StateStore历史、代表Human接受结果，也不得把框架内部完成直接映射为产品完成。",
+          "note": "适配器只负责被授权的一次Loop执行及其证据转换，不成为第二套业务状态系统。"
+        },
+        {
+          "q": "Execution Adapter应该部署在哪里？",
+          "answer": "适配器运行在已注册的执行节点内部；Node Runtime加载框架适配器并执行Loop，Relay只负责投递/唤醒/重试/连接管理，StateStore只保存canonical facts/生命周期/权限/审计，ArtifactStore只保存验证产物，Center Node只负责目标、委托协调和Review Handoff。不同节点可使用不同框架，但对外遵守同一OPN事件、能力、证据和恢复协议。",
+          "note": "让执行框架成为节点内部实现选择，避免Relay、StateStore或中心节点演化成框架绑定的执行平台。"
+        },
+        {
+          "q": "第三方框架在Node Runtime内如何受到CapabilityGrant限制？",
+          "answer": "适配器不能直接拿到节点全部工具、凭据或文件系统权限；Node Runtime为本次执行构造受限ToolContext或CapabilityContext，只暴露CapabilityGrant允许的工具和资源。所有外部访问经过capability-aware gateway并记录授权检查与副作用结果；未授权访问返回结构化blocked，换框架、换工具名或重试不能扩大权限，高风险副作用仍需Human Gate。",
+          "note": "把框架自由度限制在执行实现内部，确保权限边界由ZAgenticLoop协议掌握。"
+        },
+        {
+          "q": "框架checkpoint、memory、thread state与OPN StateStore如何分工？",
+          "answer": "OPN StateStore保存跨节点、可审计且与责任相关的canonical facts；框架checkpoint保存节点内部执行所需的opaque runtime state。checkpoint需要持久化时通过ArtifactStore引用和hash管理，StateStore只保存metadata、版本、归属和授权范围。恢复先由OPN StateStore判断权限和生命周期，再将合法checkpoint交给适配器；checkpoint不可用时进入blocked/recovery，不把从头重跑默认为等价恢复。",
+          "note": "保持网络事实与执行器细节分离，使框架可替换且不会通过checkpoint改变权限或Human decision。"
+        },
+        {
+          "q": "更换执行框架时如何处理旧checkpoint？",
+          "answer": "框架替换必须保持OPN canonical facts兼容，但不要求不同框架直接兼容opaque checkpoint。旧框架checkpoint可由旧适配器继续恢复；新框架只有在显式迁移器通过hash/schema/权限校验时才能消费。无法迁移时不能静默丢弃并继续同一Execution，须由Human或中心确认后创建新Execution并标记retry-from-canonical-state；旧checkpoint按retention policy保留或删除。",
+          "note": "区分协议事实兼容与执行器私有状态兼容，保证替换框架时审计和责任语义不丢失。"
+        },
+        {
+          "q": "如何判断成熟框架的技术点适合采用？",
+          "answer": "建立Framework Capability Matrix，评估Loop能力、协议适配性、权限隔离、恢复语义、观测能力、Provider中立性、可运维性和工程风险。协议适配、权限隔离、恢复语义、许可证或供应链风险为硬门槛；功能丰富但无法证明责任和恢复边界的框架不进入核心路径。",
+          "note": "避免按框架声量或Demo功能选型，把产品责任和长期维护风险纳入技术选择。"
+        },
+        {
+          "q": "Graph Engineering实践完成后必须留下哪些成果物？",
+          "answer": "必须留下可复用的Graph Engineering Evidence Set：OrchestrationPlan、协议生成的Graph projections、任务分配与依赖、资源隔离决策、Node claim与Execution、中间Artifact、确定性gate、独立语义审查、Human Grill决策、blocked/recovery路径和最终Review Handoff。每个证据项说明所证明的事实和作用域，不能只留下日志倾倒或无范围的最终结果。",
+          "note": "把Graph Engineering从一次执行过程沉淀成可审计、可复现、可比较的产品能力证据。"
+        },
+        {
+          "q": "Graph Engineering实践完成后必须留下哪些成果物？",
+          "answer": "必须留下可复用的Graph Engineering Evidence Set：OrchestrationPlan、协议生成的Graph projections、任务分配与依赖、资源隔离决策、Node claim与Execution、中间Artifact、确定性gate、独立语义审查、Human Grill决策、blocked/recovery路径和最终Review Handoff。每个证据项说明所证明的事实和作用域，不能只留下日志倾倒或无范围的最终结果。",
+          "note": "把Graph Engineering从一次执行过程沉淀成可审计、可复现、可比较的产品能力证据。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "下一实现里程碑与行为验收边界",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3",
+        "1-4-4",
+        "1-4-5",
+        "1-4-6",
+        "1-4-7",
+        "1-4-8",
+        "1-4-9"
+      ],
+      "decisions": [
+        {
+          "q": "第一阶段是否适配成熟框架？",
+          "answer": "先全都不适配；LangGraph、AutoGen、CrewAI和LlamaIndex Workflows只作为未来Extension候选。第一阶段先用ZAgenticLoop自己的native实现走通并验证OPN产品、Loop Engineering和Graph Engineering实践，外部框架未来接入时不得改变canonical产品模型。",
+          "note": "先证明自己的产品和方法论，不让框架选型掩盖核心协议、责任、权限和体验问题。"
+        },
+        {
+          "q": "第一条Native OPN实践采用什么最小场景？",
+          "answer": "采用单台设备上的双Agent Native OPN Tracer：Human-owned local network enrolls两个独立Agent节点（本机Codex与Workbuddy），一个发布或协调只读目标事件，另一个消费并执行原生Loop，StateStore记录Graph和Loop生命周期，ArtifactStore保存验证产物，Review Handoff返回责任中心，并覆盖一条blocked或recovery路径。两Agent必须拥有独立identity、权限和审计记录，不能退化成同一进程的普通调用。",
+          "note": "先排除跨设备连通、部署和Provider变量，专注验证OPN、Loop Engineering和Graph Engineering的核心实践；后续再扩展到多设备。"
+        },
+        {
+          "q": "双Agent Native OPN Tracer如何分配角色？",
+          "answer": "Human是Network Owner和最终责任中心；Codex是被Human显式委托的event_center，负责发布或协调目标事件；Workbuddy是Agent consumer，负责领取事件、执行原生Loop、验证并返回Evidence；Review Handoff经Codex返回Human，由Human执行accept、request-revision、recover或reject。",
+          "note": "验证Human→Codex Center Delegation、Codex→Workbuddy MessageEvent、Workbuddy执行证据和Human最终决策，同时保持责任不对称。"
+        },
+        {
+          "q": "Native OPN Tracer是否加入受控写入验证段？",
+          "answer": "采用两段式tracer：阶段A为只读能力审查，验证目标澄清、Codex编排、Workbuddy消费、Loop执行、Evidence、Review Handoff和blocked路径；阶段B为本地测试仓库或fixture中的隔离开发任务，由Codex建立集成分支和独立Worktree，Workbuddy使用独立任务分支和Worktree，双方完成极小修改并提交，Codex执行显式merge task，独立验证节点检查合并结果、分支来源、commit可达性和隔离证据。不推送、不创建真实MR、不触碰生产仓库。",
+          "note": "只读阶段证明协议和体验，隔离写入阶段证明Graph Engineering对外部资源的编排能力，二者都保持零生产副作用。"
+        },
+        {
+          "q": "两阶段Native OPN Tracer何时算完成？",
+          "answer": "必须同时满足：Human或Human+Codex中心责任单元成立且Agent不能独立为中心；Codex与Workbuddy拥有独立身份/权限/执行记录；目标事件生成合法Directed Task Graph；所有任务通过OrchestrationPlan和资源隔离preflight；只读阶段完成审查、证据和Review Handoff；隔离写入成功case完成独立branch/worktree、提交、显式合并和总体验收；阻止case在preflight停下且无未授权写入；至少一次结构化Human Grill并重新preflight；至少一次blocked/recovery；StateStore/ArtifactStore记录完整生命周期；不引入四个第三方框架为核心依赖，不推送、不创建真实MR、不修改生产仓库；能证明Loop Engineering和Graph Engineering都被实际使用。",
+          "note": "以行为闭环证明产品与方法论，不以脚本运行或Agent通信作为完成标准。"
+        },
+        {
+          "q": "下一实现阶段是否只实现Native OPN Tracer？",
+          "answer": "采用：下一阶段唯一实现目标是两阶段Native OPN Tracer。排除第三方框架适配、完整Control Console、P2P、多Human owner、真实代码库推送/MR/生产副作用、通用外部资源锁和全面Provider实现。允许实现Native Node Runtime、Network/Node/MessageEvent/DirectedTaskGraph、OrchestrationPlan与资源隔离preflight、Human Grill/blocked/recovery、本地StateStore/ArtifactStore/Relay最小闭环，以及Codex/Workbuddy本机fixture的Git branch/worktree/merge隔离验证。",
+          "note": "先证明自有OPN、Loop Engineering和Graph Engineering产品闭环，再独立规划扩展和生产化。"
+        },
+        {
+          "q": "本机双Agent Native Tracer采用什么StateStore形态？",
+          "answer": "采用本地SQLite-compatible StateStore adapter，启用WAL、事务、CAS revision、幂等dedupe和append-only audit records；本地ArtifactStore采用content-addressed文件目录；Relay可先采用本机service/IPC或loopback HTTP，但仍遵守provider-neutral relay contract。SQLite只作为开发/测试provider，canonical contract保持与未来managed PostgreSQL-compatible StateStore一致。",
+          "note": "验证重启、恢复、审计和并发语义，同时避免把生产部署复杂度提前带入本机tracer。"
+        },
+        {
+          "q": "本机Codex与Workbuddy如何通过Relay通信？",
+          "answer": "采用独立的本机loopback Relay service（优先HTTP，必要时可替换为IPC）作为两个Agent进程之间的provider-neutral传输边界；Relay负责认证、投递、唤醒、重试和连接管理，不直接共享工作区或执行任务。两个Agent通过独立Node Identity和scoped session credential连接，StateStore仍是canonical facts来源。",
+          "note": "保持两个Agent是真实独立节点，验证协议投递和幂等，同时避免用共享文件或进程内调用伪造组网。"
+        },
+        {
+          "q": "本机Codex与Workbuddy如何通过Relay通信？",
+          "answer": "采用独立的本机loopback Relay service（优先HTTP，必要时可替换为IPC）作为两个Agent进程之间的provider-neutral传输边界；Relay负责认证、投递、唤醒、重试和连接管理，不直接共享工作区或执行任务。两个Agent通过独立Node Identity和scoped session credential连接，StateStore仍是canonical facts来源。",
+          "note": "保持两个Agent是真实独立节点，验证协议投递和幂等，同时避免用共享文件或进程内调用伪造组网。"
+        },
+        {
+          "q": "本机双Agent如何完成Human-controlled enrollment和撤销？",
+          "answer": "即使同一设备也不默认进程可信：Human通过一次本地pairing流程分别批准Codex和Workbuddy加入Network，每个Agent生成独立非对称Node Identity，Relay或StateStore只接受Human批准的enrollment record；运行时使用短期scoped session credential。撤销按Node Identity单独生效，撤销后不能领取新事件或获取新Artifact，所有enrollment、授权和撤销动作留下审计记录。",
+          "note": "验证Graph Engineering的身份与责任边界，而不是把同机部署简化成共享token。"
+        },
+        {
+          "q": "本机双Agent如何完成Human-controlled enrollment和撤销？",
+          "answer": "即使同一设备也不默认进程可信：Human通过一次本地pairing流程分别批准Codex和Workbuddy加入Network，每个Agent生成独立非对称Node Identity，Relay或StateStore只接受Human批准的enrollment record；运行时使用短期scoped session credential。撤销按Node Identity单独生效，撤销后不能领取新事件或获取新Artifact，所有enrollment、授权和撤销动作留下审计记录。",
+          "note": "验证Graph Engineering的身份与责任边界，而不是把同机部署简化成共享token。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "single-agent-opn-atom.v1 baseline fixture",
+      "status": "blocked",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "single-agent-opn-atom.v1首个conformance fixture执行什么任务？",
+          "answer": "固定为只读模块能力与边界审查：Human提出明确目标，单个独立enrolled Agent对指定模块或目录执行只读扫描，输出结构化报告（现有能力、缺口、证据位置、风险、验证结果和建议下一步），Human通过Review Handoff做最终决策。Fixture固定只读权限、结构化报告schema、至少一条验证命令、可复查证据引用和blocked/recovery路径；不修改目标代码库，业务目标可替换但OPN原子协议不变。",
+          "note": "证明最小产品原子产生有价值且可验证的Agent杠杆，而不是只验证协议消息能流通。"
+        },
+        {
+          "q": "首个single-agent-opn-atom.v1使用哪个目标模块？",
+          "answer": "优先选择ZAgenticLoop自身的tools/zj-loop-core作为dogfood目标，限定为只读审查其一个边界清晰的模块或CLI路径；这样能验证产品用自身Loop/Graph方法审查自身实现，同时不修改目标仓库。若该目标过大，则先选更小的单一CLI或契约模块，必须保留结构化报告、证据引用、验证命令和blocked/recovery语义。",
+          "note": "先用自身核心代码做闭环dogfood，但严格限制范围，避免baseline fixture变成全仓库架构审查。"
+        },
+        {
+          "q": "首个single-agent-opn-atom.v1的dogfood目标模块是什么？",
+          "answer": "选择tools/zj-loop-core/src/agent-context.ts，范围限定为从受保护状态事实重建可执行上下文、读取activation snapshot ref、校验state-head稳定性，以及在activation ref缺失或state不稳定时给出可解释blocked结果。利用已有B1语义做自我dogfood，不扩展为全Core审查。",
+          "note": "目标边界清晰且直接连接已完成B1能力，能验证baseline fixture的证据和停止语义。"
+        },
+        {
+          "q": "agent-context.ts baseline报告的最小schema是什么？",
+          "answer": "采用可复用的agent-context-capability-review.v1报告：target（path、scope、commit）、goal、capability_status（implemented/guarded/not-implemented）、observed_flow、contracts_and_invariants、evidence_refs（path/hash/command）、failure_or_blocked_cases、risks_and_unknowns、verification_results、recommended_next_action、review_handoff和human_decision。报告必须区分代码事实、推断和未验证项，禁止把测试通过等同于产品能力完成。",
+          "note": "让Single-Agent OPN Atom的产出可被Human审查、后续Graph聚合，并保留证据边界。"
+        },
+        {
+          "q": "baseline fixture如何验证agent-context.ts？",
+          "answer": "复用现有tools/zj-loop-core的npm run test:agent-local作为第一道确定性gate，不重造重复测试；在其上生成agent-context-capability-review.v1报告。报告必须引用agent-context.test.mjs、activation-snapshot-ref.test.mjs、execution-context.test.mjs及实际命令/commit等证据，并把activation-ref-missing、state-head-changed、绑定不一致等阻止路径纳入failure_or_blocked_cases。",
+          "note": "让baseline直接吸收已有B1验证资产，同时把测试事实提升为Human可审查的产品能力报告。"
+        },
+        {
+          "q": "baseline报告由谁生成、如何避免自证？",
+          "answer": "采用Agent生成、确定性gate和Human审查三段式：Agent负责只读分析agent-context.ts并填充agent-context-capability-review.v1；npm run test:agent-local及引用的测试命令提供机械事实；Human通过Review Handoff审查事实/推断/未验证项并作最终decision。Agent不能把自己生成的报告直接标记为Human接受，报告hash和证据引用必须可复查。",
+          "note": "让Single-Agent OPN Atom同时验证Agent杠杆和责任边界，避免Agent自写报告、自证结论。"
+        },
+        {
+          "q": "baseline报告由谁生成、如何避免自证？",
+          "answer": "采用Agent生成、确定性gate和Human审查三段式：Agent负责只读分析agent-context.ts并填充agent-context-capability-review.v1；npm run test:agent-local及引用的测试命令提供机械事实；Human通过Review Handoff审查事实/推断/未验证项并作最终decision。Agent不能把自己生成的报告直接标记为Human接受，报告hash和证据引用必须可复查。",
+          "note": "让Single-Agent OPN Atom同时验证Agent杠杆和责任边界，避免Agent自写报告、自证结论。"
+        }
+      ],
+      "notes": "第三次审查问题已处理：CLI新增allowlisted --execute生成真实verification provenance；manifest命令唯一且与verification result一一对应；工作树证据使用realpath防symlink越界；--ref要求解析到target.commit。实现与测试已提交为11ce2176e2361c3fb37cb61ef5ca78271247addf，报告 docs/testing/agent-context-capability-review.json 已绑定该commit。npm run test:agent-local 36/36 通过，git diff --check通过，--root与--ref 11ce2176 pinned replay均通过。Human Review Handoff仍为needs-human-review，human_decision=pending。"
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "本机双Agent Human-controlled enrollment与Node Identity",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "SQLite StateStore、ArtifactStore与loopback Relay",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-4": {
+      "id": "1-4-4",
+      "label": "Directed Task Graph与OrchestrationPlan",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-5": {
+      "id": "1-4-5",
+      "label": "orchestration-and-isolation preflight",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-6": {
+      "id": "1-4-6",
+      "label": "Human Grill、blocked/recovery与重新preflight",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-7": {
+      "id": "1-4-7",
+      "label": "Codex与Workbuddy两阶段Native OPN Tracer",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-8": {
+      "id": "1-4-8",
+      "label": "deterministic gate、独立语义审查与Review Handoff",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-9": {
+      "id": "1-4-9",
+      "label": "Graph Engineering Evidence Set与最终conformance验收",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-29 10:55:22",
+    "updated": "2026-07-29 15:29:58",
+    "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
+  }
+}

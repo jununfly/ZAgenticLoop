@@ -1,0 +1,204 @@
+{
+  "schema": "zj-loop.agent_context_capability_review.v1",
+  "target": {
+    "path": "tools/zj-loop-core/src/agent-context.ts",
+    "scope": "protected-state context reconstruction, activation snapshot reference validation, and fail-closed recovery semantics",
+    "commit": "11ce2176e2361c3fb37cb61ef5ca78271247addf"
+  },
+  "report_metadata": {
+    "generated_at": "2026-07-29T07:29:37.000Z",
+    "generator": "zj-loop-agent-context-review",
+    "workspace_commit": "11ce2176e2361c3fb37cb61ef5ca78271247addf"
+  },
+  "goal": "Establish the Single-Agent OPN Atom baseline by producing a read-only, evidence-bound capability review for Agent context reconstruction.",
+  "capability_status": "guarded",
+  "observed_flow": [
+    "Read the handoff, claim, activation, execution, and evidence records from one captured state head.",
+    "Validate immutable registration and activation references against their pinned project commits and SHA-256 digests.",
+    "Re-read the state head and reconstruct a completed snapshot only when the head is stable and canonical records are valid.",
+    "Return an explainable blocked snapshot with side_effects_executed=false when required records are missing, bindings conflict, or the state changes during reconstruction."
+  ],
+  "contracts_and_invariants": [
+    "Context reconstruction reads a bounded protected-state record set and does not execute side effects.",
+    "The state head must remain unchanged across reconstruction.",
+    "A handoff, matching claim, and activation snapshot reference are required for a completed context.",
+    "Pinned registration and activation references must exist and match their recorded SHA-256 digests.",
+    "Branch and worktree details are projected as null in context output to avoid treating execution metadata as canonical state."
+  ],
+  "facts": [
+    "reconstructAgentContext is exported from tools/zj-loop-core/src/agent-context.ts.",
+    "The module emits status=blocked with a machine-readable validation.errors array for invalid context.",
+    "The public report builder validates the canonical agent-context-capability-review.v1 schema.",
+    "The agent-local deterministic gate passed while this report was generated."
+  ],
+  "inferences": [
+    "The capability is a suitable read-only baseline fixture for one enrolled Agent returning context and evidence to a Human responsibility center.",
+    "The current contract supports explainable stop and Human Review Handoff, but does not yet demonstrate a multi-node Directed Task Graph."
+  ],
+  "unverified": [
+    "Provider-neutral StateStore behavior outside the current protected Git state implementation.",
+    "Cross-device relay, node enrollment, and Workbuddy execution interoperability.",
+    "Human acceptance, revision, recovery, or rejection of this specific report."
+  ],
+  "evidence_refs": {
+    "target_source": {
+      "path": "tools/zj-loop-core/src/agent-context.ts",
+      "hash": "56544b971e092f0f9749d257e127c72a6a39fae895731eb78b2f057724d983a5",
+      "description": "Implementation under review.",
+      "classification": "fact"
+    },
+    "context_tests": {
+      "path": "tools/zj-loop-core/test/agent-context.test.mjs",
+      "hash": "7da6389ef145cbfe6abbee5603cd40ef1361043d944833471226cd4eb943af19",
+      "command": "npm run test:agent-local",
+      "description": "Deterministic reconstruction and state-head blocked-state tests.",
+      "classification": "fact"
+    },
+    "activation_snapshot_tests": {
+      "path": "tools/zj-loop-core/test/activation-snapshot-ref.test.mjs",
+      "hash": "147ec33c296e26d744b4ce3994d2fb5efb5e1877a913e6bc37bbf77a59234eb9",
+      "command": "npm run test:agent-local",
+      "description": "Activation snapshot reference validation and conflict tests.",
+      "classification": "fact"
+    },
+    "execution_context_tests": {
+      "path": "tools/zj-loop-core/test/execution-context.test.mjs",
+      "hash": "6719c491b49b8e1e917da0572df3d5c9bc9c54a62c3aec17a25491b4ec933811",
+      "command": "npm run test:agent-local",
+      "description": "Execution readiness and activation-ref preflight tests.",
+      "classification": "fact"
+    },
+    "execution_binding_tests": {
+      "path": "tools/zj-loop-core/test/agent-local-execution.test.mjs",
+      "hash": "2c3c00c02c3b632cd83ab2b61f2cf85b90a1d79520c1075ee728a20653e39f34",
+      "command": "npm run test:agent-local",
+      "description": "Claim-to-execution binding failure test.",
+      "classification": "fact"
+    },
+    "review_schema_tests": {
+      "path": "tools/zj-loop-core/test/agent-context-capability-review.test.mjs",
+      "hash": "cc06055a600380ce7c3adf87454d7ccd1ea9ec2946326a18471cdbeb23352e2c",
+      "command": "npm run test:agent-local",
+      "description": "Canonical capability review schema tests.",
+      "classification": "fact"
+    },
+    "review_cli_tests": {
+      "path": "tools/zj-loop-core/test/agent-context-capability-review-cli.test.mjs",
+      "hash": "a6a618bc72fc206f8b49628619f5fa42332d174a2c97e595fd0c74de138b11ad",
+      "command": "npm run test:agent-local",
+      "description": "Report materialization CLI contract tests.",
+      "classification": "fact"
+    },
+    "agent_local_gate": {
+      "path": "tools/zj-loop-core/package.json",
+      "hash": "6d98e4418b1daa42ddf22302e33cf0805a1e56e09c6e50af8f21f99d46252887",
+      "command": "npm run test:agent-local",
+      "description": "Build plus deterministic agent-local verification gate.",
+      "classification": "fact"
+    },
+    "diff_check": {
+      "path": "tools/zj-loop-core/package.json",
+      "command": "git diff --check",
+      "description": "Working-tree whitespace verification command.",
+      "classification": "fact",
+      "hash": "6d98e4418b1daa42ddf22302e33cf0805a1e56e09c6e50af8f21f99d46252887"
+    }
+  },
+  "failure_or_blocked_cases": [
+    {
+      "code": "activation-ref-missing",
+      "status": "blocked",
+      "condition": "The handoff has no activation snapshot reference.",
+      "observed_behavior": "Reconstruction blocks with reason=activation-ref-missing and no side effects.",
+      "evidence_refs": [
+        "context_tests"
+      ]
+    },
+    {
+      "code": "state-head-changed",
+      "status": "blocked",
+      "condition": "The protected state branch changes between the initial and final head reads.",
+      "observed_behavior": "Reconstruction blocks with state_head_stable=false and reason=state-head-changed.",
+      "evidence_refs": [
+        "context_tests"
+      ]
+    },
+    {
+      "code": "claim-binding-mismatch",
+      "status": "blocked",
+      "condition": "The claim does not bind to the requested handoff.",
+      "observed_behavior": "Agent-local lifecycle recording blocks and reports side_effects_executed=false.",
+      "evidence_refs": [
+        "execution_binding_tests"
+      ]
+    }
+  ],
+  "risks_and_unknowns": [
+    "The report is a read-only capability review, not proof of end-to-end OPN coordination.",
+    "The report does not prove resource isolation for external repositories or multi-node execution.",
+    "The Human responsibility center must review this handoff before the baseline is accepted."
+  ],
+  "verification_results": [
+    {
+      "command": "npm run test:agent-local",
+      "status": "passed",
+      "summary": "36 deterministic agent-local tests passed.",
+      "evidence_refs": [
+        "context_tests",
+        "activation_snapshot_tests",
+        "execution_context_tests",
+        "execution_binding_tests",
+        "review_schema_tests",
+        "review_cli_tests",
+        "agent_local_gate"
+      ]
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed",
+      "summary": "No whitespace errors were detected in the working tree.",
+      "evidence_refs": [
+        "diff_check"
+      ]
+    }
+  ],
+  "verification_manifest": [
+    {
+      "command": "npm run test:agent-local",
+      "status": "passed",
+      "exit_code": 0,
+      "output_sha256": "4b5f5dbcdefffd0c1e37ba7af8b3798add62ea8f03728ee54d6eb105adba6e12",
+      "output_path": "docs/testing/artifacts/agent-local-gate.txt",
+      "captured_at": "2026-07-29T07:29:37.000Z"
+    },
+    {
+      "command": "git diff --check",
+      "status": "passed",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "output_path": "docs/testing/artifacts/git-diff-check.txt",
+      "captured_at": "2026-07-29T07:29:37.000Z"
+    }
+  ],
+  "recommended_next_action": [
+    "Human reviews the facts, inferences, unverified items, and blocked cases.",
+    "Human accepts or requests revision of this baseline report.",
+    "If accepted, design the next tracer slice for two explicit execution nodes only after the resource-isolation plan is recorded."
+  ],
+  "review_handoff": {
+    "status": "needs-human-review",
+    "summary": "Single-Agent OPN Atom baseline report is generated and mechanically verified; Human acceptance is still required.",
+    "risks": [
+      "No multi-node graph or external resource isolation is claimed."
+    ],
+    "decisions_needed": [
+      "Accept this baseline report as the conformance fixture, or request a bounded revision."
+    ]
+  },
+  "human_decision": {
+    "status": "pending",
+    "decided_by": null,
+    "decided_at": null,
+    "rationale": null
+  }
+}
