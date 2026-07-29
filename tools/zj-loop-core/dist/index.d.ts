@@ -71,3 +71,4 @@ export * from './node-enrollment.js';
 export * from './sqlite-state-store.js';
 export * from './sqlite-state-store-server.js';
 export * from './sqlite-credential-verifier.js';
+export * from './content-addressed-artifact-store.js';

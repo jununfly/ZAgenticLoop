@@ -721,9 +721,14 @@
           "q": "真实ScopedCredential provider的MVP实现采用什么形态？",
           "answer": "采用独立SQLite credential provider：首次签发生成一次性高熵opaque bearer token，仅持久化SHA-256 token hash及network/node/event/task/capabilities/issued_at/expires_at/revoked_at元数据；通过CredentialVerifier注入StateStore service，按mTLS node_id、scope、expiry和revoke fail-closed验证。",
           "note": "Human accepted the provider boundary; credential issuance/revoke endpoint and Human-held signing context remain later work."
+        },
+        {
+          "q": "ArtifactStore第一条provider纵切采用什么形态？",
+          "answer": "采用本地content-addressed文件目录：artifact_id为sha256内容摘要，文件与metadata sidecar原子创建，读取时校验network归属、大小、content_type与内容hash；StateStore只保存artifact引用，ArtifactStore不进入HTTP service与Relay。",
+          "note": "Human accepted local immutable artifact provider as the second implementation slice."
         }
       ],
-      "notes": "StateStore provider与service tracer持续施工：provider已具备better-sqlite3 bootstrap、Human-owned network、network-level CAS append/read、dedupe/conflict、canonical payload hash与snapshot revision；service已具备loopback-only原生HTTPS、pinned service TLS、healthz、mTLS client-cert门禁、certificate-derived node_id、CredentialVerifier委托、HumanAuthorityVerifier委托、authenticated revision read、Human-owned network creation、POST /v1/networks/:id/events CAS append与幂等重试、GET /v1/networks/:id/events 一致性快照读取及aggregate过滤；独立SQLite credential provider已实现一次性opaque token签发、hash存储、network/node/event/task与capability scope、expiry和revoke校验，并通过真实mTLS+HTTP event append链路验证。npm run test:agent-local 65/65通过；定向真实credential链路14/14通过。仍未实现credential issuance HTTP/Human UI、ArtifactStore与Relay。"
+      "notes": "StateStore、credential与ArtifactStore tracer持续施工：better-sqlite3 StateStore已具备Human-owned network、network-level CAS append/read、dedupe/conflict、canonical payload hash与snapshot revision；原生HTTPS service已具备pinned TLS、healthz、mTLS node_id、HumanAuthorityVerifier、真实CredentialVerifier委托、network/revision/event读写；独立SQLite credential provider已实现一次性opaque token签发、hash存储、network/node/event/task与capability scope、expiry和revoke校验，并通过真实mTLS+HTTP event append链路验证；本地content-addressed ArtifactStore已实现sha256 artifact_id、不可变文件与metadata、幂等put、network归属、大小/type约束和读取完整性校验。npm run test:agent-local 68/68通过。仍未实现credential issuance HTTP/Human UI、ArtifactStore HTTP、Relay与两Agent端到端fixture。"
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -788,7 +793,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 18:02:39",
+    "updated": "2026-07-29 18:05:54",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
