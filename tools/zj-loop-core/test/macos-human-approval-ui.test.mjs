@@ -18,7 +18,12 @@ function request(address, pathValue, options = {}) {
     const request = http.request({ hostname: '127.0.0.1', port: address.port, path: pathValue, method: options.method ?? 'GET', headers: { ...(payload === undefined ? {} : { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) }), ...(options.headers ?? {}) } }, (response) => {
       const chunks = [];
       response.on('data', (chunk) => chunks.push(chunk));
-      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, body: JSON.parse(Buffer.concat(chunks).toString('utf8')) }));
+      response.on('end', () => {
+        const text = Buffer.concat(chunks).toString('utf8');
+        let body = text;
+        try { body = JSON.parse(text); } catch { /* redirects have an empty body */ }
+        resolve({ status: response.statusCode, headers: response.headers, body });
+      });
     });
     request.on('error', reject);
     if (payload !== undefined) request.write(payload);
