@@ -66,6 +66,11 @@ export type PairingRequest = {
     requested_capabilities: string[];
     expires_at: string;
 };
+export type PairingRequestProof = {
+    algorithm: 'Ed25519';
+    request_digest: string;
+    signature_base64: string;
+};
 export type PairingApproval = {
     schema: typeof PAIRING_APPROVAL_SCHEMA;
     approval_id: string;
@@ -97,6 +102,15 @@ export declare function createPairingRequest(input: {
     requested_capabilities: string[];
     expires_at: string;
 }): PairingRequest;
+export declare function pairingRequestDigest(request: PairingRequest): string;
+export declare function createPairingRequestProof(input: {
+    request: PairingRequest;
+    private_key_pem: string;
+}): PairingRequestProof;
+export declare function verifyPairingRequestProof(input: {
+    request: PairingRequest;
+    proof: PairingRequestProof;
+}): boolean;
 export declare function approvePairingRequest(input: {
     request: PairingRequest;
     human_id: string;

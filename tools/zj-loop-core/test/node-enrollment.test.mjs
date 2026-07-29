@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import tls from 'node:tls';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -11,12 +12,23 @@ import {
   buildMutualTlsClientOptions,
   buildMutualTlsServerOptions,
   createPairingRequest,
+  createPairingRequestProof,
+  verifyPairingRequestProof,
   createInMemoryEnrollmentRecordStore,
   evaluateCapabilityGrant,
   issueScopedCredential,
   projectStoredEnrollment,
   projectEnrollment,
 } from '../dist/node-enrollment.js';
+
+async function ed25519Certificate(commonName) {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-ed25519-'));
+  const keyPath = path.join(root, 'private.pem');
+  const certPath = path.join(root, 'certificate.pem');
+  execFileSync('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
+  execFileSync('openssl', ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
+  return { certificate_pem: await readFile(certPath, 'utf8'), private_key_pem: await readFile(keyPath, 'utf8') };
+}
 
 async function certificate(commonName) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-node-'));
@@ -57,6 +69,17 @@ test('Human can approve a bounded pairing request for the same network and node'
   assert.equal(approval.network_id, request.network_id);
   assert.equal(approval.node_id, identity.node_id);
   assert.deepEqual(approval.approved_capabilities, ['event.consume']);
+});
+
+test('Pairing request proof binds the request digest to the Node Identity private key', { skip: process.platform === 'darwin' }, async () => {
+  const material = await ed25519Certificate('workbuddy');
+  const identity = buildNodeIdentity({ certificate_pem: material.certificate_pem, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
+  const request = createPairingRequest({ request_id: 'pair-proof-1', network_id: 'network-1', identity, endpoint: 'loopback://127.0.0.1:43123', requested_capabilities: ['event.consume'], expires_at: '2026-07-29T00:10:00.000Z' });
+  const proof = createPairingRequestProof({ request, private_key_pem: material.private_key_pem });
+  assert.equal(proof.algorithm, 'Ed25519');
+  assert.equal(proof.request_digest, createHash('sha256').update(JSON.stringify({ request_id: request.request_id, network_id: request.network_id, node_id: request.node_id, certificate_sha256: request.identity.certificate_sha256, endpoint: request.endpoint, requested_capabilities: request.requested_capabilities, expires_at: request.expires_at })).digest('hex'));
+  assert.equal(verifyPairingRequestProof({ request, proof }), true);
+  assert.equal(verifyPairingRequestProof({ request: { ...request, endpoint: 'loopback://127.0.0.1:43124' }, proof }), false);
 });
 
 test('Human approval cannot grant capability outside the pairing request', async () => {

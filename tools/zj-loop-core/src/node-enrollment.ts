@@ -1,4 +1,4 @@
-import { createHash, X509Certificate } from 'node:crypto';
+import { createHash, createPrivateKey, createPublicKey, sign, verify, X509Certificate } from 'node:crypto';
 import type { ConnectionOptions, TlsOptions } from 'node:tls';
 
 export const NODE_IDENTITY_SCHEMA = 'zj-loop.node_identity.v1' as const;
@@ -117,6 +117,12 @@ export type PairingRequest = {
   expires_at: string;
 };
 
+export type PairingRequestProof = {
+  algorithm: 'Ed25519';
+  request_digest: string;
+  signature_base64: string;
+};
+
 export type PairingApproval = {
   schema: typeof PAIRING_APPROVAL_SCHEMA;
   approval_id: string;
@@ -186,6 +192,49 @@ export function createPairingRequest(input: {
     requested_capabilities: capabilities,
     expires_at: input.expires_at,
   };
+}
+
+function pairingRequestCanonicalValue(request: PairingRequest): Record<string, unknown> {
+  return {
+    request_id: request.request_id,
+    network_id: request.network_id,
+    node_id: request.node_id,
+    certificate_sha256: request.identity.certificate_sha256,
+    endpoint: request.endpoint,
+    requested_capabilities: request.requested_capabilities,
+    expires_at: request.expires_at,
+  };
+}
+
+export function pairingRequestDigest(request: PairingRequest): string {
+  return createHash('sha256').update(JSON.stringify(pairingRequestCanonicalValue(request)), 'utf8').digest('hex');
+}
+
+export function createPairingRequestProof(input: { request: PairingRequest; private_key_pem: string }): PairingRequestProof {
+  const privateKey = createPrivateKey(input.private_key_pem);
+  if (privateKey.asymmetricKeyType !== 'ed25519') throw new Error('pairing-proof-key-type-invalid');
+  const certificate = new X509Certificate(input.request.identity.certificate_pem);
+  if (certificate.publicKey.asymmetricKeyType !== 'ed25519') throw new Error('pairing-proof-certificate-type-invalid');
+  const privatePublicKey = createPublicKey(privateKey).export({ type: 'spki', format: 'der' });
+  const certificatePublicKey = certificate.publicKey.export({ type: 'spki', format: 'der' });
+  if (!privatePublicKey.equals(certificatePublicKey)) throw new Error('pairing-proof-key-mismatch');
+  const digest = pairingRequestDigest(input.request);
+  const signature = sign(null, Buffer.from(digest, 'utf8'), privateKey);
+  return { algorithm: 'Ed25519', request_digest: digest, signature_base64: signature.toString('base64') };
+}
+
+export function verifyPairingRequestProof(input: { request: PairingRequest; proof: PairingRequestProof }): boolean {
+  if (input.proof.algorithm !== 'Ed25519') return false;
+  if (!/^[0-9a-f]{64}$/.test(input.proof.request_digest)) return false;
+  const digest = pairingRequestDigest(input.request);
+  if (digest !== input.proof.request_digest) return false;
+  try {
+    const certificate = new X509Certificate(input.request.identity.certificate_pem);
+    if (certificate.publicKey.asymmetricKeyType !== 'ed25519') return false;
+    return verify(null, Buffer.from(digest, 'utf8'), certificate.publicKey, Buffer.from(input.proof.signature_base64, 'base64'));
+  } catch {
+    return false;
+  }
 }
 
 export function approvePairingRequest(input: {
