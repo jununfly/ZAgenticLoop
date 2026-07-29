@@ -1,0 +1,234 @@
+
+> @jununfly/zj-loop-core@0.1.34 test:agent-local
+> npm run build && node --test test/agent-local.test.mjs test/agent-local-bridge.test.mjs test/agent-local-worktree.test.mjs test/execution-context.test.mjs test/agent-local-execution.test.mjs test/agent-context.test.mjs test/activation-snapshot-ref.test.mjs test/agent-context-capability-review.test.mjs test/agent-context-capability-review-cli.test.mjs
+
+
+> @jununfly/zj-loop-core@0.1.34 build
+> tsc
+
+TAP version 13
+# Subtest: activation snapshot ref is appended with an observed state HEAD
+ok 1 - activation snapshot ref is appended with an observed state HEAD
+  ---
+  duration_ms: 0.686916
+  type: 'test'
+  ...
+# Subtest: identical activation snapshot ref is an idempotent duplicate
+ok 2 - identical activation snapshot ref is an idempotent duplicate
+  ---
+  duration_ms: 0.129334
+  type: 'test'
+  ...
+# Subtest: different activation snapshot ref fails closed without overwrite
+ok 3 - different activation snapshot ref fails closed without overwrite
+  ---
+  duration_ms: 0.126292
+  type: 'test'
+  ...
+# Subtest: state HEAD conflict fails closed
+ok 4 - state HEAD conflict fails closed
+  ---
+  duration_ms: 0.348709
+  type: 'test'
+  ...
+# Subtest: invalid activation ref fields are rejected before any read or commit
+ok 5 - invalid activation ref fields are rejected before any read or commit
+  ---
+  duration_ms: 0.126042
+  type: 'test'
+  ...
+# Subtest: review CLI writes a canonical report from structured input
+ok 6 - review CLI writes a canonical report from structured input
+  ---
+  duration_ms: 137.079042
+  type: 'test'
+  ...
+# Subtest: review CLI fails when input is omitted
+ok 7 - review CLI fails when input is omitted
+  ---
+  duration_ms: 70.563042
+  type: 'test'
+  ...
+# Subtest: review CLI rejects a mismatched evidence hash when verification is requested
+ok 8 - review CLI rejects a mismatched evidence hash when verification is requested
+  ---
+  duration_ms: 70.654625
+  type: 'test'
+  ...
+# Subtest: review CLI verifies evidence against a pinned git ref
+ok 9 - review CLI verifies evidence against a pinned git ref
+  ---
+  duration_ms: 101.397292
+  type: 'test'
+  ...
+# Subtest: review CLI rejects an evidence symlink that escapes root
+ok 10 - review CLI rejects an evidence symlink that escapes root
+  ---
+  duration_ms: 70.805625
+  type: 'test'
+  ...
+# Subtest: parses a complete capability review
+ok 11 - parses a complete capability review
+  ---
+  duration_ms: 5.345416
+  type: 'test'
+  ...
+# Subtest: builds a publishable capability review through the public builder
+ok 12 - builds a publishable capability review through the public builder
+  ---
+  duration_ms: 0.5645
+  type: 'test'
+  ...
+# Subtest: rejects a review with an invalid target commit
+ok 13 - rejects a review with an invalid target commit
+  ---
+  duration_ms: 0.800916
+  type: 'test'
+  ...
+# Subtest: rejects evidence that does not classify facts and uncertainty
+ok 14 - rejects evidence that does not classify facts and uncertainty
+  ---
+  duration_ms: 0.404417
+  type: 'test'
+  ...
+# Subtest: requires report metadata and a verification manifest
+ok 15 - requires report metadata and a verification manifest
+  ---
+  duration_ms: 1.123792
+  type: 'test'
+  ...
+# Subtest: rejects semantically inconsistent reports
+ok 16 - rejects semantically inconsistent reports
+  ---
+  duration_ms: 2.324792
+  type: 'test'
+  ...
+# Subtest: reconstructs a minimal context and selects the latest execution
+ok 17 - reconstructs a minimal context and selects the latest execution
+  ---
+  duration_ms: 1.156958
+  type: 'test'
+  ...
+# Subtest: fails closed when the state head changes
+ok 18 - fails closed when the state head changes
+  ---
+  duration_ms: 0.19225
+  type: 'test'
+  ...
+# Subtest: fails closed when latest execution is ambiguous
+ok 19 - fails closed when latest execution is ambiguous
+  ---
+  duration_ms: 0.183792
+  type: 'test'
+  ...
+# Subtest: fails closed when canonical records are incomplete
+ok 20 - fails closed when canonical records are incomplete
+  ---
+  duration_ms: 1.010125
+  type: 'test'
+  ...
+# Subtest: agent-local request parser requires an explicit pinned registration
+ok 21 - agent-local request parser requires an explicit pinned registration
+  ---
+  duration_ms: 1.332583
+  type: 'test'
+  ...
+# Subtest: agent-local handoff binds registration digest and current workspace base
+ok 22 - agent-local handoff binds registration digest and current workspace base
+  ---
+  duration_ms: 7.774375
+  type: 'test'
+  ...
+# Subtest: agent-local handoff persistence is append-only and idempotent
+ok 23 - agent-local handoff persistence is append-only and idempotent
+  ---
+  duration_ms: 3.583291
+  type: 'test'
+  ...
+# Subtest: execution and evidence records append under the same handoff and claim
+ok 24 - execution and evidence records append under the same handoff and claim
+  ---
+  duration_ms: 1.256459
+  type: 'test'
+  ...
+# Subtest: execution writes fail closed when the claim binding is stale
+ok 25 - execution writes fail closed when the claim binding is stale
+  ---
+  duration_ms: 2.687459
+  type: 'test'
+  ...
+# Subtest: agent-local worktree preparation uses deterministic branch and base commit
+ok 26 - agent-local worktree preparation uses deterministic branch and base commit
+  ---
+  duration_ms: 14.858833
+  type: 'test'
+  ...
+# Subtest: agent-local worktree preparation refuses an unclaimed handoff
+ok 27 - agent-local worktree preparation refuses an unclaimed handoff
+  ---
+  duration_ms: 0.15725
+  type: 'test'
+  ...
+# Subtest: agent-local list returns pending handoffs without side effects
+ok 28 - agent-local list returns pending handoffs without side effects
+  ---
+  duration_ms: 1.303375
+  type: 'test'
+  ...
+# Subtest: agent-local claim writes one claim using the observed state HEAD
+ok 29 - agent-local claim writes one claim using the observed state HEAD
+  ---
+  duration_ms: 0.40925
+  type: 'test'
+  ...
+# Subtest: agent-local claim maps a state HEAD conflict to already-claimed
+ok 30 - agent-local claim maps a state HEAD conflict to already-claimed
+  ---
+  duration_ms: 1.691375
+  type: 'test'
+  ...
+# Subtest: agent-local list and claim surface an existing append-only claim
+ok 31 - agent-local list and claim surface an existing append-only claim
+  ---
+  duration_ms: 0.202375
+  type: 'test'
+  ...
+# Subtest: execution context is ready only with claim, activation contract, and roadmap
+ok 32 - execution context is ready only with claim, activation contract, and roadmap
+  ---
+  duration_ms: 11.294833
+  type: 'test'
+  ...
+# Subtest: missing roadmap is an explicit blocked state with exact remediation path
+ok 33 - missing roadmap is an explicit blocked state with exact remediation path
+  ---
+  duration_ms: 1.878792
+  type: 'test'
+  ...
+# Subtest: unclaimed handoff requests a human claim before contract inspection
+ok 34 - unclaimed handoff requests a human claim before contract inspection
+  ---
+  duration_ms: 1.302584
+  type: 'test'
+  ...
+# Subtest: formal preflight rejects a missing or blocked reconstructed context
+ok 35 - formal preflight rejects a missing or blocked reconstructed context
+  ---
+  duration_ms: 0.900208
+  type: 'test'
+  ...
+# Subtest: formal preflight accepts only bindings from the reconstructed context
+ok 36 - formal preflight accepts only bindings from the reconstructed context
+  ---
+  duration_ms: 1.150584
+  type: 'test'
+  ...
+1..36
+# tests 36
+# suites 0
+# pass 36
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 555.572458
