@@ -184,6 +184,34 @@ export function createStateStoreServer(input) {
             sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'credential-invalid', side_effects_executed: false });
             return;
         }
+        const eventReadMatch = url.pathname.match(/^\/v1\/networks\/([^/]+)\/events$/);
+        if (request.method === 'GET' && eventReadMatch) {
+            if (!input.store) {
+                sendJson(response, 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'state-store-unavailable', side_effects_executed: false });
+                return;
+            }
+            const afterRevisionText = url.searchParams.get('after_revision');
+            const afterRevision = afterRevisionText === null ? undefined : Number(afterRevisionText);
+            if (afterRevisionText !== null && (afterRevision === undefined || !Number.isInteger(afterRevision) || afterRevision < 0)) {
+                sendJson(response, 400, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'after-revision-invalid', side_effects_executed: false });
+                return;
+            }
+            try {
+                const networkId = decodeURIComponent(eventReadMatch[1]);
+                const snapshot = await input.store.readEvents({
+                    network_id: networkId,
+                    after_revision: afterRevision,
+                    aggregate_type: url.searchParams.get('aggregate_type') ?? undefined,
+                    aggregate_id: url.searchParams.get('aggregate_id') ?? undefined,
+                });
+                sendJson(response, 200, { schema: STATE_STORE_HTTP_SCHEMA, status: 'ok', network_id: networkId, snapshot_revision: snapshot.snapshot_revision, events: snapshot.events, side_effects_executed: false });
+            }
+            catch (error) {
+                const reason = error instanceof Error && error.message === 'network-not-found' ? 'network-not-found' : 'state-store-failure';
+                sendJson(response, reason === 'network-not-found' ? 404 : 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
+            }
+            return;
+        }
         const revisionMatch = url.pathname.match(/^\/v1\/networks\/([^/]+)\/revision$/);
         if (request.method === 'GET' && revisionMatch) {
             if (!input.store) {

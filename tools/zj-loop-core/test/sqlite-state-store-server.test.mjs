@@ -285,3 +285,27 @@ test('StateStore maps stale event revisions to a conflict without writing', asyn
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
 });
+
+test('StateStore reads a consistent event snapshot with revision and aggregate filters', async () => {
+  const serverMaterial = await serverCertificate();
+  const clientMaterial = await serverCertificate('codex');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-service-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1' });
+  await store.appendEvent({ network_id: 'network-1', expected_revision: 1, event: { event_id: 'event-1', aggregate_type: 'task', aggregate_id: 'task-1', event_type: 'task.created', occurred_at: '2026-07-29T01:01:00.000Z', payload: { title: 'one' } } });
+  await store.appendEvent({ network_id: 'network-1', expected_revision: 2, event: { event_id: 'event-2', aggregate_type: 'enrollment', aggregate_id: 'node-1', event_type: 'node.enrolled', occurred_at: '2026-07-29T01:02:00.000Z', payload: { node: 'one' } } });
+  const server = createStateStoreServer({ tls: { ...serverMaterial, ca: clientMaterial.cert }, store, credentialVerifier: { verify: () => ({ status: 'allowed' }) } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/events?after_revision=1&aggregate_type=task&aggregate_id=task-1', headers: { authorization: 'Bearer valid-token' } });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.snapshot_revision, 3);
+  assert.equal(response.body.events.length, 1);
+  assert.equal(response.body.events[0].event_id, 'event-1');
+  assert.equal(response.body.events[0].payload.title, 'one');
+  assert.equal(response.body.side_effects_executed, false);
+  await new Promise((resolve) => server.close(resolve));
+  await store.close();
+  await rm(root, { recursive: true, force: true });
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
