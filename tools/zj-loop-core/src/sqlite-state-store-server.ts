@@ -161,6 +161,7 @@ export function createStateStoreServer(input: {
         operation: `${request.method} ${url.pathname}`,
         event_id: event.event_id as string,
         task_id: event.aggregate_type === 'task' ? event.aggregate_id as string : undefined,
+        required_capabilities: ['event.append'],
       }));
       if (verification.status !== 'allowed') {
         sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'credential-invalid', side_effects_executed: false });
@@ -204,6 +205,7 @@ export function createStateStoreServer(input: {
       node_id: createHash('sha256').update(peer.raw).digest('hex'),
       network_id: networkMatch ? decodeURIComponent(networkMatch[1]) : undefined,
       operation: `${request.method ?? 'GET'} ${url.pathname}`,
+      required_capabilities: request.method === 'GET' ? ['state.read'] : undefined,
     }));
     if (verification.status !== 'allowed') {
       sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'credential-invalid', side_effects_executed: false });

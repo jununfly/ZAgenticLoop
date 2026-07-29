@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash, X509Certificate } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import https from 'node:https';
 import os from 'node:os';
 import path from 'node:path';
 import { createStateStoreServer } from '../dist/sqlite-state-store-server.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
+import { createSqliteCredentialVerifier } from '../dist/sqlite-credential-verifier.js';
 
 async function serverCertificate(commonName = 'localhost') {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-server-'));
@@ -305,6 +307,28 @@ test('StateStore reads a consistent event snapshot with revision and aggregate f
   assert.equal(response.body.side_effects_executed, false);
   await new Promise((resolve) => server.close(resolve));
   await store.close();
+  await rm(root, { recursive: true, force: true });
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('StateStore service authorizes a real SQLite opaque credential against the mTLS node identity', async () => {
+  const serverMaterial = await serverCertificate();
+  const clientMaterial = await serverCertificate('workbuddy');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-service-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  const credentialStore = createSqliteCredentialVerifier({ filename: path.join(root, 'state.db'), now: () => '2026-07-29T01:30:00.000Z' });
+  await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1' });
+  const nodeId = createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex');
+  const issued = await credentialStore.issueCredential({ credential: { schema: 'zj-loop.scoped_credential.v1', credential_id: 'credential-1', issuer: 'state-store', network_id: 'network-1', node_id: nodeId, event_id: 'event-1', task_id: 'task-1', capabilities: ['event.append'], issued_at: '2026-07-29T01:00:00.000Z', expires_at: '2026-07-29T02:00:00.000Z' } });
+  const server = createStateStoreServer({ tls: { ...serverMaterial, ca: clientMaterial.cert }, store: stateStore, credentialVerifier: credentialStore });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/events', method: 'POST', body: { expected_revision: 1, event: { event_id: 'event-1', aggregate_type: 'task', aggregate_id: 'task-1', event_type: 'task.created', occurred_at: '2026-07-29T01:01:00.000Z', payload: { source: 'real-verifier' } } }, headers: { authorization: `Bearer ${issued.token}` } });
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.body.event_id, 'event-1');
+  await new Promise((resolve) => server.close(resolve));
+  await credentialStore.close();
+  await stateStore.close();
   await rm(root, { recursive: true, force: true });
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });

@@ -716,9 +716,14 @@
           "q": "Human approval context由谁解析？",
           "answer": "X-ZJ-Loop-Human-Approval作为opaque context传给注入的HumanAuthorityVerifier；verifier负责解析、验签、有效期与action/body digest校验，返回human_id或blocked。service只读header、限制长度、传递action/body并使用verifier结果，不绑定签名算法或key格式。",
           "note": "Human accepted opaque Human verifier context."
+        },
+        {
+          "q": "真实ScopedCredential provider的MVP实现采用什么形态？",
+          "answer": "采用独立SQLite credential provider：首次签发生成一次性高熵opaque bearer token，仅持久化SHA-256 token hash及network/node/event/task/capabilities/issued_at/expires_at/revoked_at元数据；通过CredentialVerifier注入StateStore service，按mTLS node_id、scope、expiry和revoke fail-closed验证。",
+          "note": "Human accepted the provider boundary; credential issuance/revoke endpoint and Human-held signing context remain later work."
         }
       ],
-      "notes": "StateStore provider与service tracer持续施工：provider已具备better-sqlite3 bootstrap、Human-owned network、network-level CAS append/read、dedupe/conflict、canonical payload hash与snapshot revision；service已具备loopback-only原生HTTPS、pinned service TLS、healthz、mTLS client-cert门禁、certificate-derived node_id、CredentialVerifier委托、HumanAuthorityVerifier委托、authenticated revision read、Human-owned network creation、POST /v1/networks/:id/events CAS append与幂等重试、GET /v1/networks/:id/events 一致性快照读取及aggregate过滤。npm run test:agent-local 63/63通过。仍未实现真实credential issuance/verifier、ArtifactStore与Relay。"
+      "notes": "StateStore provider与service tracer持续施工：provider已具备better-sqlite3 bootstrap、Human-owned network、network-level CAS append/read、dedupe/conflict、canonical payload hash与snapshot revision；service已具备loopback-only原生HTTPS、pinned service TLS、healthz、mTLS client-cert门禁、certificate-derived node_id、CredentialVerifier委托、HumanAuthorityVerifier委托、authenticated revision read、Human-owned network creation、POST /v1/networks/:id/events CAS append与幂等重试、GET /v1/networks/:id/events 一致性快照读取及aggregate过滤；独立SQLite credential provider已实现一次性opaque token签发、hash存储、network/node/event/task与capability scope、expiry和revoke校验，并通过真实mTLS+HTTP event append链路验证。npm run test:agent-local 65/65通过；定向真实credential链路14/14通过。仍未实现credential issuance HTTP/Human UI、ArtifactStore与Relay。"
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -783,7 +788,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 17:58:06",
+    "updated": "2026-07-29 18:02:39",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
