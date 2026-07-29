@@ -5,7 +5,7 @@ export const HUMAN_AUTHORITY_SCHEMA = 'zj-loop.human_authority.v1' as const;
 export type HumanPublicIdentity = {
   schema: typeof HUMAN_AUTHORITY_SCHEMA;
   human_id: string;
-  algorithm: 'Ed25519';
+  algorithm: 'ECDSA-P256';
   public_key_pem: string;
   public_key_fingerprint: string;
 };
@@ -56,11 +56,11 @@ function now(): string {
 
 export function createInMemoryHumanAuthorityProvider(input: { human_id: string }): HumanAuthorityProvider {
   const humanId = requireText(input.human_id, 'human-id-required');
-  const keys = generateKeyPairSync('ed25519');
+  const keys = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
   const publicKeyPem = keys.publicKey.export({ type: 'spki', format: 'pem' }).toString();
   const publicKeyFingerprint = createHash('sha256').update(keys.publicKey.export({ type: 'spki', format: 'der' })).digest('hex');
   let recoveryHash: string | null = null;
-  const identity = (): HumanPublicIdentity => ({ schema: HUMAN_AUTHORITY_SCHEMA, human_id: humanId, algorithm: 'Ed25519', public_key_pem: publicKeyPem, public_key_fingerprint: publicKeyFingerprint });
+  const identity = (): HumanPublicIdentity => ({ schema: HUMAN_AUTHORITY_SCHEMA, human_id: humanId, algorithm: 'ECDSA-P256', public_key_pem: publicKeyPem, public_key_fingerprint: publicKeyFingerprint });
   const createRecovery = (): RecoveryMaterial => {
     const secret = randomBytes(32).toString('base64url');
     recoveryHash = digest(secret);
@@ -76,7 +76,7 @@ export function createInMemoryHumanAuthorityProvider(input: { human_id: string }
       const expiresAt = input.expires_at ?? new Date(Date.parse(issuedAt) + 5 * 60 * 1000).toISOString();
       const approvedCapabilities = [...new Set(input.approved_capabilities ?? [])].sort();
       const payloadDigest = digest(canonicalJson({ action, request_id: requestId, request_digest: requestDigest, approved_capabilities: approvedCapabilities, human_id: humanId, issued_at: issuedAt, expires_at: expiresAt }));
-      const signature = sign(null, Buffer.from(payloadDigest, 'utf8'), keys.privateKey);
+      const signature = sign('sha256', Buffer.from(payloadDigest, 'utf8'), keys.privateKey);
       return { schema: HUMAN_AUTHORITY_SCHEMA, human_id: humanId, public_key_fingerprint: publicKeyFingerprint, action, request_id: requestId, request_digest: requestDigest, approved_capabilities: approvedCapabilities, issued_at: issuedAt, expires_at: expiresAt, payload_digest: payloadDigest, signature_base64: signature.toString('base64') };
     },
     async createRecoveryMaterial() {
@@ -101,5 +101,9 @@ export function verifyHumanApprovalContext(input: { identity: HumanPublicIdentit
   const approvedCapabilities = [...new Set(context.approved_capabilities)].sort();
   const payloadDigest = digest(canonicalJson({ action: context.action, request_id: context.request_id, request_digest: context.request_digest, approved_capabilities: approvedCapabilities, human_id: context.human_id, issued_at: context.issued_at, expires_at: context.expires_at }));
   if (payloadDigest !== context.payload_digest) return false;
-  try { return verify(null, Buffer.from(payloadDigest, 'utf8'), createPublicKey(identity.public_key_pem), Buffer.from(context.signature_base64, 'base64')); } catch { return false; }
+  try {
+    const publicKey = createPublicKey(identity.public_key_pem);
+    if (publicKey.asymmetricKeyType !== 'ec' || publicKey.asymmetricKeyDetails?.namedCurve !== 'prime256v1') return false;
+    return verify('sha256', Buffer.from(payloadDigest, 'utf8'), publicKey, Buffer.from(context.signature_base64, 'base64'));
+  } catch { return false; }
 }

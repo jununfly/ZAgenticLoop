@@ -700,9 +700,14 @@
           "q": "HumanSigner provider-neutral接口如何定义，平台密钥后端如何接入？",
           "answer": "先实现provider-neutral HumanSigner接口与Ed25519内存测试fixture；协议统一public identity、fingerprint、签名和验证，平台adapter分别接macOS Keychain/Secure Enclave、Windows CNG/TPM、Linux PKCS#11/TPM2。缺少可靠安全后端时fail-closed，不退化为文件私钥、环境变量或普通配置项。",
           "note": "Human confirmed portable signer abstraction before platform-specific adapters."
+        },
+        {
+          "q": "Human authority生产基线采用什么签名算法？",
+          "answer": "直接统一改为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用P-256公钥、SHA-256签名和稳定fingerprint；Node Identity的Agent mTLS协议仍保留Ed25519，不与Human authority算法混淆。Ed25519不再作为Human authority生产基线。",
+          "note": "Human chose a clean P-256 ECDSA Human authority baseline."
         }
       ],
-      "notes": "已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession、Human authority fixture、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。新增provider-neutral HumanSigner协议与Ed25519内存fixture：HumanSigner只暴露human_id、算法、公钥和fingerprint；签名返回绑定公钥fingerprint的HumanSignature；独立verifyHumanSignature重新计算公钥指纹并对payload/identity/signature篡改fail-closed。平台adapter尚未实现，后续分别接macOS Keychain/Secure Enclave、Windows CNG/TPM、Linux PKCS#11/TPM2；没有可靠安全后端时阻塞，不退化为文件私钥或环境变量。验证：npm run test:agent-local = 100 passed、5 skipped；macOS LibreSSL无法生成Ed25519 X.509测试证书的5项按环境能力跳过。当前仍未实现平台Keychain adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。"
+      "notes": "已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession（Agent侧仍为Ed25519）、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。Human authority已干净切换为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用prime256v1公钥、SHA-256签名、稳定public-key fingerprint；verifyHumanSignature与verifyHumanApprovalContext严格检查EC/P-256、指纹、payload和签名，篡改fail-closed。Human authority不再以Ed25519作为生产基线；Agent Node Identity协议保持Ed25519，二者职责和算法分离。验证：npm run test:agent-local = 100 passed、5 skipped；macOS LibreSSL无法生成Agent侧Ed25519 X.509测试证书的5项按环境能力跳过。当前仍未实现平台Keychain adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。"
     },
     "1-4-3": {
       "id": "1-4-3",
@@ -1193,7 +1198,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 21:31:00",
+    "updated": "2026-07-29 21:38:44",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

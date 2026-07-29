@@ -2,7 +2,7 @@ export declare const HUMAN_AUTHORITY_SCHEMA: "zj-loop.human_authority.v1";
 export type HumanPublicIdentity = {
     schema: typeof HUMAN_AUTHORITY_SCHEMA;
     human_id: string;
-    algorithm: 'Ed25519';
+    algorithm: 'ECDSA-P256';
     public_key_pem: string;
     public_key_fingerprint: string;
 };

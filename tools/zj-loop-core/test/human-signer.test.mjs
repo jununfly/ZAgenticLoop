@@ -11,12 +11,12 @@ test('HumanSigner exposes only a stable public identity and signs arbitrary appr
 
   assert.equal(identity.schema, 'zj-loop.human_signer.v1');
   assert.equal(identity.human_id, 'human-1');
-  assert.equal(identity.algorithm, 'Ed25519');
+  assert.equal(identity.algorithm, 'ECDSA-P256');
   assert.match(identity.public_key_fingerprint, /^[0-9a-f]{64}$/);
   assert.equal('private_key_pem' in identity, false);
-  assert.equal(signature.algorithm, 'Ed25519');
+  assert.equal(signature.algorithm, 'ECDSA-P256');
   assert.equal(signature.public_key_fingerprint, identity.public_key_fingerprint);
-  assert.equal(verify(null, payload, createPublicKey(identity.public_key_pem), Buffer.from(signature.signature_base64, 'base64')), true);
+  assert.equal(verify('sha256', payload, createPublicKey(identity.public_key_pem), Buffer.from(signature.signature_base64, 'base64')), true);
   assert.equal(await verifyHumanSignature({ identity, payload, signature }), true);
 });
 
