@@ -6,9 +6,11 @@ import { mkdtemp, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {
+  approvePairingRequest,
   buildNodeIdentity,
   buildMutualTlsClientOptions,
   buildMutualTlsServerOptions,
+  createPairingRequest,
   evaluateCapabilityGrant,
   projectEnrollment,
 } from '../dist/node-enrollment.js';
@@ -24,6 +26,73 @@ async function certificate(commonName) {
   ], { stdio: 'ignore' });
   return { certificate_pem: await readFile(certPath, 'utf8'), private_key_pem: await readFile(keyPath, 'utf8') };
 }
+
+test('Human can approve a bounded pairing request for the same network and node', async () => {
+  const material = await certificate('workbuddy');
+  const identity = buildNodeIdentity({
+    certificate_pem: material.certificate_pem,
+    display_name: 'Workbuddy',
+    agent_kind: 'workbuddy',
+    agent_version: 'test',
+  });
+  const request = createPairingRequest({
+    request_id: 'pair-1',
+    network_id: 'network-1',
+    identity,
+    endpoint: 'loopback://127.0.0.1:43123',
+    requested_capabilities: ['event.consume', 'evidence.write'],
+    expires_at: '2026-07-29T00:10:00.000Z',
+  });
+  const approval = approvePairingRequest({
+    request,
+    human_id: 'human-1',
+    approved_at: '2026-07-29T00:05:00.000Z',
+    approved_capabilities: ['event.consume'],
+  });
+  assert.equal(approval.schema, 'zj-loop.pairing_approval.v1');
+  assert.equal(approval.request_id, request.request_id);
+  assert.equal(approval.network_id, request.network_id);
+  assert.equal(approval.node_id, identity.node_id);
+  assert.deepEqual(approval.approved_capabilities, ['event.consume']);
+});
+
+test('Human approval cannot grant capability outside the pairing request', async () => {
+  const material = await certificate('workbuddy');
+  const identity = buildNodeIdentity({ certificate_pem: material.certificate_pem, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
+  const request = createPairingRequest({
+    request_id: 'pair-2',
+    network_id: 'network-1',
+    identity,
+    endpoint: 'loopback://127.0.0.1:43124',
+    requested_capabilities: ['event.consume'],
+    expires_at: '2026-07-29T00:10:00.000Z',
+  });
+  assert.throws(() => approvePairingRequest({
+    request,
+    human_id: 'human-1',
+    approved_at: '2026-07-29T00:05:00.000Z',
+    approved_capabilities: ['artifact.read'],
+}), { message: 'pairing-capability-exceeded' });
+});
+
+test('expired pairing requests cannot be approved', async () => {
+  const material = await certificate('workbuddy');
+  const identity = buildNodeIdentity({ certificate_pem: material.certificate_pem, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
+  const request = createPairingRequest({
+    request_id: 'pair-3',
+    network_id: 'network-1',
+    identity,
+    endpoint: 'loopback://127.0.0.1:43125',
+    requested_capabilities: ['event.consume'],
+    expires_at: '2026-07-29T00:10:00.000Z',
+  });
+  assert.throws(() => approvePairingRequest({
+    request,
+    human_id: 'human-1',
+    approved_at: '2026-07-29T00:10:01.000Z',
+    approved_capabilities: ['event.consume'],
+  }), { message: 'pairing-request-expired' });
+});
 
 test('builds an independent Node Identity from an X.509 certificate', async () => {
   const identity = buildNodeIdentity({

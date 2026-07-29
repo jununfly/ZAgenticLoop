@@ -3,6 +3,8 @@ import type { ConnectionOptions, TlsOptions } from 'node:tls';
 
 export const NODE_IDENTITY_SCHEMA = 'zj-loop.node_identity.v1' as const;
 export const ENROLLMENT_PROJECTION_SCHEMA = 'zj-loop.enrollment_projection.v1' as const;
+export const PAIRING_REQUEST_SCHEMA = 'zj-loop.pairing_request.v1' as const;
+export const PAIRING_APPROVAL_SCHEMA = 'zj-loop.pairing_approval.v1' as const;
 
 export type NodeIdentity = {
   schema: typeof NODE_IDENTITY_SCHEMA;
@@ -36,6 +38,102 @@ export type CapabilityGrant = {
   task_id: string;
   capabilities: string[];
 };
+
+export type PairingRequest = {
+  schema: typeof PAIRING_REQUEST_SCHEMA;
+  request_id: string;
+  network_id: string;
+  node_id: string;
+  identity: NodeIdentity;
+  endpoint: string;
+  requested_capabilities: string[];
+  expires_at: string;
+};
+
+export type PairingApproval = {
+  schema: typeof PAIRING_APPROVAL_SCHEMA;
+  approval_id: string;
+  request_id: string;
+  network_id: string;
+  node_id: string;
+  human_id: string;
+  approved_capabilities: string[];
+  approved_at: string;
+  request_expires_at: string;
+};
+
+function requireNonEmpty(value: string, error: string): string {
+  if (!value.trim()) throw new Error(error);
+  return value;
+}
+
+function requireTimestamp(value: string, error: string): number {
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) throw new Error(error);
+  return timestamp;
+}
+
+export function createPairingRequest(input: {
+  request_id: string;
+  network_id: string;
+  identity: NodeIdentity;
+  endpoint: string;
+  requested_capabilities: string[];
+  expires_at: string;
+}): PairingRequest {
+  requireNonEmpty(input.request_id, 'pairing-request-id-required');
+  requireNonEmpty(input.network_id, 'network-id-required');
+  requireNonEmpty(input.endpoint, 'pairing-endpoint-required');
+  requireTimestamp(input.expires_at, 'pairing-expiry-invalid');
+  const capabilities = [...new Set(input.requested_capabilities)];
+  if (capabilities.some((capability) => !capability.trim())) throw new Error('pairing-capability-invalid');
+  const rebuiltIdentity = buildNodeIdentity({
+    certificate_pem: input.identity.certificate_pem,
+    display_name: input.identity.display_name,
+    agent_kind: input.identity.agent_kind,
+    agent_version: input.identity.agent_version,
+  });
+  if (input.identity.node_id !== rebuiltIdentity.node_id || input.identity.certificate_sha256 !== rebuiltIdentity.certificate_sha256) {
+    throw new Error('pairing-node-identity-invalid');
+  }
+  return {
+    schema: PAIRING_REQUEST_SCHEMA,
+    request_id: input.request_id,
+    network_id: input.network_id,
+    node_id: input.identity.node_id,
+    identity: input.identity,
+    endpoint: input.endpoint,
+    requested_capabilities: capabilities,
+    expires_at: input.expires_at,
+  };
+}
+
+export function approvePairingRequest(input: {
+  request: PairingRequest;
+  human_id: string;
+  approved_at: string;
+  approved_capabilities: string[];
+}): PairingApproval {
+  requireNonEmpty(input.human_id, 'human-id-required');
+  const approvedAt = requireTimestamp(input.approved_at, 'pairing-approval-time-invalid');
+  const requestExpiry = requireTimestamp(input.request.expires_at, 'pairing-expiry-invalid');
+  if (approvedAt > requestExpiry) throw new Error('pairing-request-expired');
+  const requested = new Set(input.request.requested_capabilities);
+  const approved = [...new Set(input.approved_capabilities)];
+  if (approved.some((capability) => !capability.trim())) throw new Error('pairing-capability-invalid');
+  if (approved.some((capability) => !requested.has(capability))) throw new Error('pairing-capability-exceeded');
+  return {
+    schema: PAIRING_APPROVAL_SCHEMA,
+    approval_id: `${input.request.request_id}:${input.human_id}:${input.approved_at}`,
+    request_id: input.request.request_id,
+    network_id: input.request.network_id,
+    node_id: input.request.node_id,
+    human_id: input.human_id,
+    approved_capabilities: approved,
+    approved_at: input.approved_at,
+    request_expires_at: input.request.expires_at,
+  };
+}
 
 export function buildMutualTlsServerOptions(input: {
   identity: NodeIdentity;
