@@ -705,9 +705,14 @@
           "q": "Human authority生产基线采用什么签名算法？",
           "answer": "直接统一改为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用P-256公钥、SHA-256签名和稳定fingerprint；Node Identity的Agent mTLS协议仍保留Ed25519，不与Human authority算法混淆。Ed25519不再作为Human authority生产基线。",
           "note": "Human chose a clean P-256 ECDSA Human authority baseline."
+        },
+        {
+          "q": "macOS P-256 HumanSigner adapter采用什么实现形态？",
+          "answer": "采用独立Swift Security helper + TypeScript HumanSigner adapter：Swift helper负责Keychain内生成/读取P-256私钥与SecKey签名，只输出公钥SPKI、fingerprint和签名；TypeScript负责进程协议与HumanSigner契约映射。测试helper使用唯一tag并在结束时删除，生产helper由显式编译产物提供。",
+          "note": "Human confirmed the native helper boundary."
         }
       ],
-      "notes": "已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession（Agent侧仍为Ed25519）、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。Human authority已干净切换为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用prime256v1公钥、SHA-256签名、稳定public-key fingerprint；verifyHumanSignature与verifyHumanApprovalContext严格检查EC/P-256、指纹、payload和签名，篡改fail-closed。Human authority不再以Ed25519作为生产基线；Agent Node Identity协议保持Ed25519，二者职责和算法分离。验证：npm run test:agent-local = 100 passed、5 skipped；macOS LibreSSL无法生成Agent侧Ed25519 X.509测试证书的5项按环境能力跳过。当前仍未实现平台Keychain adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。"
+      "notes": "已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession（Agent侧仍为Ed25519）、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。Human authority已干净切换为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用prime256v1公钥、SHA-256签名、稳定public-key fingerprint；verifyHumanSignature与verifyHumanApprovalContext严格检查EC/P-256、指纹、payload和签名，篡改fail-closed。macOS平台adapter已完成：独立Swift Security helper在Keychain内生成/读取P-256私钥并执行SecKey签名，TypeScript adapter仅接收公钥SPKI、fingerprint和签名；测试使用唯一tag并清理临时key，私钥不进入Node、OpenSSL或文件。验证：npm run test:agent-local = 106 tests，101 passed、5 skipped、0 failed；macOS真实Keychain conformance已通过。5项skip仍是Agent Ed25519 X.509测试受macOS LibreSSL限制。当前仍未实现Windows CNG/TPM adapter、Linux PKCS#11/TPM2 adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。"
     },
     "1-4-3": {
       "id": "1-4-3",
@@ -1198,7 +1203,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 21:38:44",
+    "updated": "2026-07-29 21:47:09",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

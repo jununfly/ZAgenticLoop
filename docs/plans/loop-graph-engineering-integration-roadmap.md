@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 21:38:44
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 21:47:09
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
 
-已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession（Agent侧仍为Ed25519）、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。Human authority已干净切换为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用prime256v1公钥、SHA-256签名、稳定public-key fingerprint；verifyHumanSignature与verifyHumanApprovalContext严格检查EC/P-256、指纹、payload和签名，篡改fail-closed。Human authority不再以Ed25519作为生产基线；Agent Node Identity协议保持Ed25519，二者职责和算法分离。验证：npm run test:agent-local = 100 passed、5 skipped；macOS LibreSSL无法生成Agent侧Ed25519 X.509测试证书的5项按环境能力跳过。当前仍未实现平台Keychain adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。
+已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession（Agent侧仍为Ed25519）、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。Human authority已干净切换为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用prime256v1公钥、SHA-256签名、稳定public-key fingerprint；verifyHumanSignature与verifyHumanApprovalContext严格检查EC/P-256、指纹、payload和签名，篡改fail-closed。macOS平台adapter已完成：独立Swift Security helper在Keychain内生成/读取P-256私钥并执行SecKey签名，TypeScript adapter仅接收公钥SPKI、fingerprint和签名；测试使用唯一tag并清理临时key，私钥不进入Node、OpenSSL或文件。验证：npm run test:agent-local = 106 tests，101 passed、5 skipped、0 failed；macOS真实Keychain conformance已通过。5项skip仍是Agent Ed25519 X.509测试受macOS LibreSSL限制。当前仍未实现Windows CNG/TPM adapter、Linux PKCS#11/TPM2 adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。
 
 **决策：**
 - Q: 本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？ → 是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。 (Human confirmed independent node identity on the same device.)
@@ -88,4 +88,5 @@
 - Q: Pairing service的实现顺序如何安排？ → 先实现provider-neutral PairingRequestProjection与record lifecycle；再实现loopback HTTPS API和mTLS/session绑定；再接Human authority context与CAS approval/rejection；最后提供静态Web UI；每一步先有纯协议/服务测试，再组合成双Agent conformance fixture。 (Human confirmed the incremental Pairing service implementation order.)
 - Q: HumanSigner provider-neutral接口如何定义，平台密钥后端如何接入？ → 先实现provider-neutral HumanSigner接口与Ed25519内存测试fixture；协议统一public identity、fingerprint、签名和验证，平台adapter分别接macOS Keychain/Secure Enclave、Windows CNG/TPM、Linux PKCS#11/TPM2。缺少可靠安全后端时fail-closed，不退化为文件私钥、环境变量或普通配置项。 (Human confirmed portable signer abstraction before platform-specific adapters.)
 - Q: Human authority生产基线采用什么签名算法？ → 直接统一改为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用P-256公钥、SHA-256签名和稳定fingerprint；Node Identity的Agent mTLS协议仍保留Ed25519，不与Human authority算法混淆。Ed25519不再作为Human authority生产基线。 (Human chose a clean P-256 ECDSA Human authority baseline.)
+- Q: macOS P-256 HumanSigner adapter采用什么实现形态？ → 采用独立Swift Security helper + TypeScript HumanSigner adapter：Swift helper负责Keychain内生成/读取P-256私钥与SecKey签名，只输出公钥SPKI、fingerprint和签名；TypeScript负责进程协议与HumanSigner契约映射。测试helper使用唯一tag并在结束时删除，生产helper由显式编译产物提供。 (Human confirmed the native helper boundary.)
 <!-- ROADMAP_SECTION_END -->
