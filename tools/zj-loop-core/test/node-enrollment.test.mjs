@@ -14,6 +14,7 @@ import {
   createInMemoryEnrollmentRecordStore,
   evaluateCapabilityGrant,
   issueScopedCredential,
+  projectStoredEnrollment,
   projectEnrollment,
 } from '../dist/node-enrollment.js';
 
@@ -167,7 +168,24 @@ test('StateStore refuses a credential that outlives Human approval', async () =>
     grant: { node_id: identity.node_id, event_id: 'event-1', task_id: 'task-1', capabilities: ['event.consume'] },
     issued_at: '2026-07-29T00:06:00.000Z',
     expires_at: '2026-07-29T00:10:01.000Z',
-  }), { message: 'credential-expiry-exceeds-approval' });
+}), { message: 'credential-expiry-exceeds-approval' });
+});
+
+test('StateStore rebuilds enrollment status from the append-only revoke and re-enroll history', async () => {
+  const material = await certificate('workbuddy');
+  const identity = buildNodeIdentity({ certificate_pem: material.certificate_pem, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
+  const store = createInMemoryEnrollmentRecordStore();
+  for (const record of [
+    { type: 'human-approved', event_id: 'evt-1' },
+    { type: 'revoked', event_id: 'evt-2' },
+    { type: 're-enrolled', event_id: 'evt-3' },
+    { type: 'human-approved', event_id: 'evt-4' },
+  ]) {
+    await store.append({ schema: 'zj-loop.enrollment_record.v1', ...record, node_id: identity.node_id, network_id: 'network-1', occurred_at: `2026-07-29T00:0${record.event_id.slice(-1)}:00.000Z` });
+  }
+  const projection = await projectStoredEnrollment({ store, network_id: 'network-1', identity });
+  assert.equal(projection.status, 'approved');
+  assert.equal(projection.events.length, 4);
 });
 
 test('builds an independent Node Identity from an X.509 certificate', async () => {

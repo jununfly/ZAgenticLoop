@@ -70,6 +70,27 @@ export function createInMemoryEnrollmentRecordStore(): EnrollmentRecordStore {
   };
 }
 
+export async function projectStoredEnrollment(input: {
+  store: EnrollmentRecordStore;
+  network_id: string;
+  identity: NodeIdentity;
+}): Promise<EnrollmentProjection> {
+  const records = await input.store.list(input.network_id, input.identity.node_id);
+  const events = records.map((record): EnrollmentEvent => {
+    if (record.network_id !== input.network_id || record.node_id !== input.identity.node_id) {
+      throw new Error('enrollment-record-binding-mismatch');
+    }
+    return {
+      type: record.type,
+      event_id: record.event_id,
+      node_id: record.node_id,
+      occurred_at: record.occurred_at,
+      ...(record.capabilities ? { capabilities: [...record.capabilities] } : {}),
+    };
+  });
+  return projectEnrollment({ identity: input.identity, events });
+}
+
 export type EnrollmentProjection = {
   schema: typeof ENROLLMENT_PROJECTION_SCHEMA;
   identity: NodeIdentity;

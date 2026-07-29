@@ -38,6 +38,11 @@ export type EnrollmentRecordStore = {
     list(networkId: string, nodeId: string): Promise<EnrollmentRecord[]>;
 };
 export declare function createInMemoryEnrollmentRecordStore(): EnrollmentRecordStore;
+export declare function projectStoredEnrollment(input: {
+    store: EnrollmentRecordStore;
+    network_id: string;
+    identity: NodeIdentity;
+}): Promise<EnrollmentProjection>;
 export type EnrollmentProjection = {
     schema: typeof ENROLLMENT_PROJECTION_SCHEMA;
     identity: NodeIdentity;

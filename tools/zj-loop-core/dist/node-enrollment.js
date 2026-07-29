@@ -36,6 +36,22 @@ export function createInMemoryEnrollmentRecordStore() {
         },
     };
 }
+export async function projectStoredEnrollment(input) {
+    const records = await input.store.list(input.network_id, input.identity.node_id);
+    const events = records.map((record) => {
+        if (record.network_id !== input.network_id || record.node_id !== input.identity.node_id) {
+            throw new Error('enrollment-record-binding-mismatch');
+        }
+        return {
+            type: record.type,
+            event_id: record.event_id,
+            node_id: record.node_id,
+            occurred_at: record.occurred_at,
+            ...(record.capabilities ? { capabilities: [...record.capabilities] } : {}),
+        };
+    });
+    return projectEnrollment({ identity: input.identity, events });
+}
 function requireNonEmpty(value, error) {
     if (!value.trim())
         throw new Error(error);
