@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-30 00:02:22
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-30 00:10:00
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -18,9 +18,11 @@
     ├── [ ][X+] 1-4-8. deterministic gate、独立语义审查与Review Handoff
     └── [ ][X+] 1-4-9. Graph Engineering Evidence Set与最终conformance验收
 
-### 当前施工：1-4-2-1. SQLite与loopback HTTPS双Agent enrollment conformance
+### 已完成：1-4-2-1. SQLite与loopback HTTPS双Agent enrollment conformance
 
-已实现SQLite PairingRecordStore：Pairing lifecycle records映射到同一个StateStore canonical event log，普通append在revision竞争时重试，条件approval使用StateStore CAS并对状态冲突fail-closed。已加入双Codex/Workbuddy loopback HTTPS conformance测试：独立pairing request、同一request并发approval、双节点分别approval和服务重启恢复。当前macOS LibreSSL无法生成Ed25519 X.509测试证书，真实HTTPS双节点场景按环境能力跳过；协议测试已保留并应在支持Ed25519 X.509的环境执行。
+已完成SQLite PairingRecordStore与真实双Agent HTTPS conformance：Pairing lifecycle records映射到同一个StateStore canonical event log，普通append在revision竞争时重试，条件approval使用StateStore CAS并对状态冲突fail-closed。Codex与Workbuddy通过独立loopback HTTPS/mTLS节点完成pairing request、同一request真实并发approval、双节点分别approval，并在SQLite服务重启后恢复enrolled-active。
+
+macOS系统LibreSSL不能生成Ed25519 X.509测试证书，测试自动优先使用Homebrew OpenSSL 3（可用 `OPENSSL_BIN` 覆盖）；因此本机主路径已实际跑通，Ed25519协议身份未被替换。复现：`cd tools/zj-loop-core && npm run test:agent-local`。结果：109 tests，108 passed，0 failed，1 skipped；唯一skip是darwin上的独立Node Identity纯协议测试，不影响真实HTTPS路径。
 
 **决策：**
 - Q: Workbuddy被撤销后conformance是否必须验证重新enrollment？ → 必须验证，但重新enrollment必须是显式新流程：旧request不能再次批准，旧credential不能续期或复活，revoked Node Identity不能通过重连自动恢复；Workbuddy创建新的pairing request，Human重新确认身份、能力和有效期，推荐生成新的Node Identity key并形成新的append-only审计链，旧生命周期和Evidence不迁移覆盖。 (Human确认撤销是终态，恢复必须重新建立信任。)

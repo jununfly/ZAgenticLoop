@@ -205,7 +205,7 @@ export function createPairingHttpServer(input) {
                     throw new Error('pairing-request-expired');
                 if (!verifyPairingRequestProof({ request: pairingRequest, proof }))
                     throw new Error('pairing-proof-invalid');
-                const record = createPairingRequestedRecord({ request: pairingRequest });
+                const record = createPairingRequestedRecord({ request: pairingRequest, occurred_at: now() });
                 const appended = await input.recordStore.append(record);
                 const records = await input.recordStore.list(pairingRequest.network_id);
                 const projection = projectPairingRequests({ network_id: pairingRequest.network_id, records, now: now() }).find((item) => item.request_id === pairingRequest.request_id);

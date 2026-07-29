@@ -2,6 +2,7 @@ import { type PairingApproval, type PairingRequest } from './node-enrollment.js'
 import type { PairingLifecycleRecord } from './pairing-projection.js';
 export declare function createPairingRequestedRecord(input: {
     request: PairingRequest;
+    occurred_at?: string;
 }): Extract<PairingLifecycleRecord, {
     type: 'pairing-requested';
 }>;

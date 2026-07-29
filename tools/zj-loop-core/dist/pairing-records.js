@@ -10,7 +10,7 @@ function bind(request, input) {
 }
 export function createPairingRequestedRecord(input) {
     const digest = pairingRequestDigest(input.request);
-    return { type: 'pairing-requested', event_id: `pairing-requested:${input.request.request_id}`, occurred_at: new Date().toISOString(), network_id: input.request.network_id, request_digest: digest, request: input.request };
+    return { type: 'pairing-requested', event_id: `pairing-requested:${input.request.request_id}`, occurred_at: input.occurred_at ?? new Date().toISOString(), network_id: input.request.network_id, request_digest: digest, request: input.request };
 }
 export function createPairingApprovedRecord(input) {
     bind(input.request, input.approval);

@@ -1273,7 +1273,7 @@
     "1-4-2-1": {
       "id": "1-4-2-1",
       "label": "SQLite与loopback HTTPS双Agent enrollment conformance",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4-2",
       "children": [],
@@ -1294,7 +1294,7 @@
           "note": "Human确认所有权限生命周期共享一个canonical revision与CAS边界。"
         }
       ],
-      "notes": "已实现SQLite PairingRecordStore：Pairing lifecycle records映射到同一个StateStore canonical event log，普通append在revision竞争时重试，条件approval使用StateStore CAS并对状态冲突fail-closed。已加入双Codex/Workbuddy loopback HTTPS conformance测试：独立pairing request、同一request并发approval、双节点分别approval和服务重启恢复。当前macOS LibreSSL无法生成Ed25519 X.509测试证书，真实HTTPS双节点场景按环境能力跳过；协议测试已保留并应在支持Ed25519 X.509的环境执行。"
+      "notes": "已完成SQLite PairingRecordStore与真实双Agent HTTPS conformance：Pairing lifecycle records映射到同一个StateStore canonical event log，普通append在revision竞争时重试，条件approval使用StateStore CAS并对状态冲突fail-closed。Codex与Workbuddy通过独立loopback HTTPS/mTLS节点完成pairing request、同一request真实并发approval、双节点分别approval，并在SQLite服务重启后恢复enrolled-active。macOS系统LibreSSL不能生成Ed25519 X.509测试证书，测试自动优先使用Homebrew OpenSSL 3（可用OPENSSL_BIN覆盖）；因此本机主路径已实际跑通，Ed25519协议身份未被替换。复现：cd tools/zj-loop-core && npm run test:agent-local。结果：109 tests，108 passed，0 failed，1 skipped；唯一skip是darwin上的独立Node Identity纯协议测试，不影响真实HTTPS路径。"
     },
     "1-4-2-2": {
       "id": "1-4-2-2",
@@ -1366,7 +1366,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-30 00:02:22",
+    "updated": "2026-07-30 00:10:00",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import tls from 'node:tls';
 import { mkdtemp, readFile } from 'node:fs/promises';
@@ -21,12 +22,14 @@ import {
   projectEnrollment,
 } from '../dist/node-enrollment.js';
 
+const OPENSSL_BIN = process.env.OPENSSL_BIN ?? (existsSync('/opt/homebrew/opt/openssl@3/bin/openssl') ? '/opt/homebrew/opt/openssl@3/bin/openssl' : 'openssl');
+
 async function ed25519Certificate(commonName) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-ed25519-'));
   const keyPath = path.join(root, 'private.pem');
   const certPath = path.join(root, 'certificate.pem');
-  execFileSync('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
-  execFileSync('openssl', ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
+  execFileSync(OPENSSL_BIN, ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
+  execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
   return { certificate_pem: await readFile(certPath, 'utf8'), private_key_pem: await readFile(keyPath, 'utf8') };
 }
 
@@ -34,7 +37,7 @@ async function certificate(commonName) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-node-'));
   const keyPath = path.join(root, 'private.pem');
   const certPath = path.join(root, 'certificate.pem');
-  execFileSync('openssl', [
+  execFileSync(OPENSSL_BIN, [
     'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
     '-keyout', keyPath, '-out', certPath,
     '-subj', `/CN=${commonName}`, '-days', '1',

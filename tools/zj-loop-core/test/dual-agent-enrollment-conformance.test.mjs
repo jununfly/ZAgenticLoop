@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { mkdtemp, rm } from 'node:fs/promises';
 import https from 'node:https';
@@ -14,6 +15,8 @@ import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createSqlitePairingRecordStore } from '../dist/sqlite-pairing-record-store.js';
 import { createContentAddressedArtifactStore } from '../dist/content-addressed-artifact-store.js';
 import { buildDualAgentEnrollmentEvidence, dualAgentEnrollmentEvidenceDigest } from '../dist/dual-agent-enrollment-conformance.js';
+
+const OPENSSL_BIN = process.env.OPENSSL_BIN ?? (existsSync('/opt/homebrew/opt/openssl@3/bin/openssl') ? '/opt/homebrew/opt/openssl@3/bin/openssl' : 'openssl');
 
 function requestRecord(requestId, nodeId, digest) {
   return {
@@ -146,8 +149,8 @@ const supportsEd25519Certificates = (() => {
     const root = execFileSync('mktemp', ['-d'], { encoding: 'utf8' }).trim();
     const key = path.join(root, 'key.pem');
     const cert = path.join(root, 'cert.pem');
-    execFileSync('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', key], { stdio: 'ignore' });
-    execFileSync('openssl', ['req', '-x509', '-new', '-key', key, '-out', cert, '-subj', '/CN=probe', '-days', '1'], { stdio: 'ignore' });
+    execFileSync(OPENSSL_BIN, ['genpkey', '-algorithm', 'Ed25519', '-out', key], { stdio: 'ignore' });
+    execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', key, '-out', cert, '-subj', '/CN=probe', '-days', '1'], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -157,9 +160,9 @@ const supportsEd25519Certificates = (() => {
 async function certificate(root, commonName, ed25519 = false) {
   const keyPath = path.join(root, `${commonName}.key.pem`);
   const certPath = path.join(root, `${commonName}.cert.pem`);
-  if (ed25519) execFileSync('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
-  else execFileSync('openssl', ['genrsa', '-out', keyPath, '2048'], { stdio: 'ignore' });
-  execFileSync('openssl', ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
+  if (ed25519) execFileSync(OPENSSL_BIN, ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
+  else execFileSync(OPENSSL_BIN, ['genrsa', '-out', keyPath, '2048'], { stdio: 'ignore' });
+  execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
   return { key: await readFile(keyPath, 'utf8'), cert: await readFile(certPath, 'utf8') };
 }
 
@@ -184,7 +187,7 @@ test('dual Codex and Workbuddy nodes enroll through loopback HTTPS and recover f
   await state.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-29T10:00:00.000Z' });
   const pairing = createSqlitePairingRecordStore({ stateStore: state });
   const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
-  const serverMaterial = await certificate(root, 'pairing-server');
+  const serverMaterial = await certificate(root, 'localhost');
   const codexMaterial = await certificate(root, 'codex', true);
   const workbuddyMaterial = await certificate(root, 'workbuddy', true);
   const clients = [
@@ -200,9 +203,11 @@ test('dual Codex and Workbuddy nodes enroll through loopback HTTPS and recover f
     recordStore: pairing,
     now: () => '2026-07-29T10:00:00.000Z',
     ownerAuthenticator: {
-      authenticate: ({ action, context }) => context && verifyHumanApprovalContext({ identity: authority.getPublicIdentity(), context, now: '2026-07-29T10:10:00.000Z' }) && context.action === action
+      authenticate: ({ action, context, authorization }) => action === 'pairing.list' && authorization === 'Bearer test-human-session'
         ? { status: 'allowed', human_id: 'human-1' }
-        : { status: 'blocked', reason: 'owner-not-authorized' },
+        : context && verifyHumanApprovalContext({ identity: authority.getPublicIdentity(), context, now: '2026-07-29T10:10:00.000Z' }) && context.action === action
+          ? { status: 'allowed', human_id: 'human-1' }
+          : { status: 'blocked', reason: 'owner-not-authorized' },
     },
   });
   let server = createServer();
@@ -215,7 +220,7 @@ test('dual Codex and Workbuddy nodes enroll through loopback HTTPS and recover f
   const codexContext = await authority.signApprovalContext({ action: 'pairing.approve', request_id: clients[0].request.request_id, request_digest: created[0].body.session.request_digest, approved_capabilities: ['event.consume'], issued_at: '2026-07-29T10:10:00.000Z', expires_at: '2026-07-29T10:20:00.000Z' });
   const codexApprovalBody = { network_id: 'network-1', request_digest: created[0].body.session.request_digest, approved_capabilities: ['event.consume'], context: codexContext };
   const concurrentApprovals = await Promise.all([1, 2].map(() => httpsRequest({ address, server: serverMaterial, path: `/v1/owner/pairing-requests/${clients[0].request.request_id}/approve`, method: 'POST', body: codexApprovalBody })));
-  assert.deepEqual(concurrentApprovals.map((response) => response.statusCode).sort(), [201, 200]);
+  assert.deepEqual(concurrentApprovals.map((response) => response.statusCode).sort(), [200, 201]);
   const workbuddyContext = await authority.signApprovalContext({ action: 'pairing.approve', request_id: clients[1].request.request_id, request_digest: created[1].body.session.request_digest, approved_capabilities: ['event.consume'], issued_at: '2026-07-29T10:10:00.000Z', expires_at: '2026-07-29T10:20:00.000Z' });
   const workbuddyApproval = await httpsRequest({ address, server: serverMaterial, path: `/v1/owner/pairing-requests/${clients[1].request.request_id}/approve`, method: 'POST', body: { network_id: 'network-1', request_digest: created[1].body.session.request_digest, approved_capabilities: ['event.consume'], context: workbuddyContext } });
   assert.equal(workbuddyApproval.statusCode, 201);
@@ -224,7 +229,7 @@ test('dual Codex and Workbuddy nodes enroll through loopback HTTPS and recover f
   await new Promise((resolve) => server.close(resolve));
   server = createServer();
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const recovered = await httpsRequest({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests?network_id=network-1' });
+  const recovered = await httpsRequest({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests?network_id=network-1', headers: { authorization: 'Bearer test-human-session' } });
   assert.equal(recovered.statusCode, 200);
   assert.deepEqual(recovered.body.requests.map((item) => item.status).sort(), ['approved', 'approved']);
   await new Promise((resolve) => server.close(resolve));

@@ -10,9 +10,9 @@ function bind(request: { request_id: string; network_id: string; node_id: string
   if (request.request_id !== input.request_id || request.network_id !== input.network_id || request.node_id !== input.node_id) throw new Error('pairing-record-binding-mismatch');
 }
 
-export function createPairingRequestedRecord(input: { request: PairingRequest }): Extract<PairingLifecycleRecord, { type: 'pairing-requested' }> {
+export function createPairingRequestedRecord(input: { request: PairingRequest; occurred_at?: string }): Extract<PairingLifecycleRecord, { type: 'pairing-requested' }> {
   const digest = pairingRequestDigest(input.request);
-  return { type: 'pairing-requested', event_id: `pairing-requested:${input.request.request_id}`, occurred_at: new Date().toISOString(), network_id: input.request.network_id, request_digest: digest, request: input.request };
+  return { type: 'pairing-requested', event_id: `pairing-requested:${input.request.request_id}`, occurred_at: input.occurred_at ?? new Date().toISOString(), network_id: input.request.network_id, request_digest: digest, request: input.request };
 }
 
 export function createPairingApprovedRecord(input: { request: { request_id: string; network_id: string; node_id: string; request_digest: string }; approval: Pick<PairingApproval, 'request_id' | 'network_id' | 'node_id' | 'human_id' | 'approved_capabilities' | 'approved_at'> }): Extract<PairingLifecycleRecord, { type: 'human-approved' }> {

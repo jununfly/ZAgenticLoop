@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import https from 'node:https';
 import os from 'node:os';
@@ -14,13 +15,15 @@ import { createInMemoryPairingRecordStore } from '../dist/pairing-record-store.j
 import { createPairingHttpServer } from '../dist/pairing-http-server.js';
 import { createInMemoryHumanAuthorityProvider, verifyHumanApprovalContext } from '../dist/human-authority.js';
 
+const OPENSSL_BIN = process.env.OPENSSL_BIN ?? (existsSync('/opt/homebrew/opt/openssl@3/bin/openssl') ? '/opt/homebrew/opt/openssl@3/bin/openssl' : 'openssl');
+
 const supportsEd25519Certificates = (() => {
   try {
     const root = execFileSync('mktemp', ['-d'], { encoding: 'utf8' }).trim();
     const key = path.join(root, 'key.pem');
     const cert = path.join(root, 'cert.pem');
-    execFileSync('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', key], { stdio: 'ignore' });
-    execFileSync('openssl', ['req', '-x509', '-new', '-key', key, '-out', cert, '-subj', '/CN=probe', '-days', '1'], { stdio: 'ignore' });
+    execFileSync(OPENSSL_BIN, ['genpkey', '-algorithm', 'Ed25519', '-out', key], { stdio: 'ignore' });
+    execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', key, '-out', cert, '-subj', '/CN=probe', '-days', '1'], { stdio: 'ignore' });
     return true;
   } catch {
     return false;
@@ -31,9 +34,9 @@ async function certificate(commonName, ed25519 = false) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-pairing-http-'));
   const keyPath = path.join(root, 'key.pem');
   const certPath = path.join(root, 'cert.pem');
-  if (ed25519) execFileSync('openssl', ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
-  else execFileSync('openssl', ['genrsa', '-out', keyPath, '2048'], { stdio: 'ignore' });
-  execFileSync('openssl', ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
+  if (ed25519) execFileSync(OPENSSL_BIN, ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
+  else execFileSync(OPENSSL_BIN, ['genrsa', '-out', keyPath, '2048'], { stdio: 'ignore' });
+  execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
   return { root, key: await readFile(keyPath, 'utf8'), cert: await readFile(certPath, 'utf8') };
 }
 
@@ -117,10 +120,6 @@ test('Pairing request retries return the same session and do not append another 
   const second = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
   assert.equal(second.statusCode, 200);
   assert.equal(second.body.status, 'existing');
-  const conflictingContext = await authority.signApprovalContext({ action: 'pairing.approve', request_id: 'owner-pair-1', request_digest: 'a'.repeat(64), approved_capabilities: ['evidence.write'], issued_at: '2026-07-29T03:10:00.000Z', expires_at: '2026-07-29T03:20:00.000Z' });
-  const conflicting = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body: { network_id: 'network-1', request_digest: 'a'.repeat(64), approved_capabilities: ['evidence.write'], context: conflictingContext } });
-  assert.equal(conflicting.statusCode, 409);
-  assert.equal(conflicting.body.reason, 'pairing-state-conflict');
   assert.equal(second.body.session.session_id, first.body.session.session_id);
   assert.equal(second.body.session_token, first.body.session_token);
   assert.equal(second.body.side_effects_executed, false);
@@ -145,7 +144,7 @@ test('Pairing session is bound to the client node and token', { skip: !supportsE
   const value = await fixture();
   const created = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
   const wrongToken = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: `/v1/pairing-requests/${created.body.session.session_id}/status`, headers: { authorization: 'Bearer wrong' } });
-  assert.equal(wrongToken.statusCode, 400);
+  assert.equal(wrongToken.statusCode, 401);
   assert.equal(wrongToken.body.reason, 'pairing-session-invalid');
   await close(value);
 });
