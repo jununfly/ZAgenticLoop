@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 20:30:10
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 20:32:38
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
 
-已完成并持续扩展本机双Agent enrollment基础：Node Identity与loopback mTLS；Human pairing request/approval contract（network/node绑定、能力越界与过期阻断）；provider-neutral append-only EnrollmentRecordStore；ScopedCredential契约与SQLite verifier；revoke/re-enroll历史投影；新增PairingRequest canonical digest与Ed25519 proof-of-possession生成/验证。npm run test:agent-local 82 passed、1 skipped（macOS LibreSSL无法生成Ed25519 X.509测试证书）。下一步实现HumanAuthorityProvider、loopback Pairing service与轻量Web UI；真实Keychain、StateStore-backed pending projection和双Agent end-to-end fixture仍未完成。
+已完成并持续扩展本机双Agent enrollment基础：Node Identity与loopback mTLS；Human pairing request/approval contract（network/node绑定、能力越界与过期阻断）；provider-neutral append-only EnrollmentRecordStore；ScopedCredential契约与SQLite verifier；revoke/re-enroll历史投影；PairingRequest canonical digest与Ed25519 proof-of-possession生成/验证；新增provider-neutral HumanAuthorityProvider内存fixture，支持Ed25519 Human public identity、approval context签名、recovery material创建与轮换。npm run test:agent-local 84 passed、1 skipped（macOS LibreSSL无法生成Ed25519 X.509测试证书）。下一步实现loopback Pairing service与轻量Web UI；真实Keychain、StateStore-backed pending projection和双Agent end-to-end fixture仍未完成。
 
 **决策：**
 - Q: 本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？ → 是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。 (Human confirmed independent node identity on the same device.)
