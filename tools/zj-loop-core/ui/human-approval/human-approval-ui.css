@@ -1,0 +1,21 @@
+:root { color-scheme: light; --ink: #17211f; --muted: #60706b; --line: #d5dfda; --paper: #ffffff; --wash: #f4f8f5; --accent: #087f5b; --danger: #b23a48; --shadow: 0 18px 50px rgba(23, 33, 31, .10); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--wash); }
+.topbar { min-height: 64px; padding: 0 5vw; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--paper); }
+.product-label { margin-left: 12px; color: var(--muted); font-size: .85rem; }
+.status { padding: 6px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+.status-pending { color: #745617; background: #fff3cd; }.status-ok { color: #076346; background: #d9f7e9; }.status-error { color: #8c2534; background: #fde2e5; }
+.layout { max-width: 1180px; margin: 0 auto; padding: 7vh 5vw 10vh; display: grid; grid-template-columns: minmax(230px, .7fr) minmax(0, 1.3fr); gap: 7vw; }
+.eyebrow { margin: 0 0 8px; color: var(--accent); font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+h1, h2, p { margin-top: 0; } h1 { max-width: 420px; margin-bottom: 18px; font-size: clamp(2rem, 5vw, 4.5rem); line-height: 1.02; } h2 { margin-bottom: 0; font-size: 1.55rem; }
+.lede { max-width: 380px; color: var(--muted); font-size: 1.02rem; }
+.identity-panel, .request-card, .empty-state, .error-state { border: 1px solid var(--line); border-radius: 8px; background: var(--paper); box-shadow: var(--shadow); }
+.identity-panel { margin-top: 36px; padding: 18px; font-size: .9rem; }
+.identity-panel strong { display: block; margin-bottom: 5px; }.fingerprint { color: var(--muted); font-family: ui-monospace, monospace; font-size: .7rem; word-break: break-all; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }.request-list { display: grid; gap: 12px; }
+.request-card { padding: 20px; cursor: pointer; transition: border-color .15s, transform .15s; }.request-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.request-card h3 { margin: 0 0 8px; font-size: 1.05rem; }.request-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--muted); font-size: .82rem; }.capability { display: inline-block; margin: 12px 6px 0 0; padding: 4px 8px; border-radius: 4px; background: #e7f4ee; color: #076346; font: .75rem ui-monospace, monospace; }
+.empty-state, .error-state { padding: 28px; color: var(--muted); }.error-state { color: var(--danger); }
+button { font: inherit; cursor: pointer; }.button { border: 0; border-radius: 6px; padding: 10px 14px; font-weight: 700; }.button-secondary { color: var(--ink); background: #e6eeea; }.button-primary { color: white; background: var(--accent); }.button-danger { color: white; background: var(--danger); }
+dialog { border: 0; padding: 0; background: transparent; max-width: min(620px, 94vw); width: 100%; }.dialog-card { position: relative; padding: 30px; border-radius: 8px; background: var(--paper); box-shadow: var(--shadow); }.close { position: absolute; top: 14px; right: 16px; border: 0; background: transparent; font-size: 1.6rem; color: var(--muted); }.summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0; }.summary-grid div { padding: 12px; background: var(--wash); border-radius: 5px; }.summary-grid dt { color: var(--muted); font-size: .72rem; }.summary-grid dd { margin: 4px 0 0; overflow-wrap: anywhere; font-size: .86rem; }fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 14px; }legend { padding: 0 6px; color: var(--muted); font-size: .8rem; }.check { display: block; margin: 8px 0; }.dialog-actions { display: flex; justify-content: end; gap: 10px; margin-top: 22px; }.dialog-message { min-height: 1.2em; margin: 14px 0 0; color: var(--danger); font-size: .85rem; }dialog::backdrop { background: rgba(23, 33, 31, .38); }
+@media (max-width: 760px) { .layout { display: block; padding-top: 36px; }.workspace { margin-top: 48px; }.summary-grid { grid-template-columns: 1fr; } h1 { font-size: 2.8rem; } }

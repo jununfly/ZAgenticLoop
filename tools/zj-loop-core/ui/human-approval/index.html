@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZAgenticLoop Human Approval</title>
+  <link rel="stylesheet" href="/assets/human-approval-ui.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><strong>ZAgenticLoop</strong><span class="product-label">Human approval</span></div>
+    <div id="connection-status" class="status status-pending">Connecting</div>
+  </header>
+  <main class="layout">
+    <section class="intro">
+      <p class="eyebrow">ONE NETWORK</p>
+      <h1>Review who joins your network.</h1>
+      <p class="lede">Inspect each node, choose the smallest capability grant, and sign only what you understand.</p>
+      <div id="human-card" class="identity-panel" aria-live="polite">Loading Human identity...</div>
+    </section>
+    <section class="workspace" aria-label="Pairing requests">
+      <div class="section-heading"><div><p class="eyebrow">PENDING REQUESTS</p><h2>Needs your decision</h2></div><button id="refresh" class="button button-secondary" type="button">Refresh</button></div>
+      <div id="request-list" class="request-list" aria-live="polite"></div>
+      <div id="empty-state" class="empty-state" hidden>No pending requests.</div>
+      <div id="error-state" class="error-state" hidden></div>
+    </section>
+  </main>
+  <dialog id="review-dialog">
+    <form method="dialog" class="dialog-card" id="review-form">
+      <button class="close" value="cancel" aria-label="Close">×</button>
+      <p class="eyebrow" id="dialog-eyebrow">REVIEW REQUEST</p>
+      <h2 id="dialog-title"></h2>
+      <div id="dialog-summary" class="summary-grid"></div>
+      <fieldset><legend>Capabilities to grant</legend><div id="capability-list"></div></fieldset>
+      <div class="dialog-actions"><button class="button button-danger" id="reject" type="button">Reject</button><button class="button button-primary" id="approve" type="button">Approve with Keychain</button></div>
+      <p id="dialog-message" class="dialog-message" aria-live="polite"></p>
+    </form>
+  </dialog>
+  <script src="/assets/human-approval-ui.js" defer></script>
+</body>
+</html>

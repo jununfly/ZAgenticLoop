@@ -83,3 +83,4 @@ export * from './sqlite-credential-verifier.js';
 export * from './content-addressed-artifact-store.js';
 export * from './relay-contract.js';
 export * from './loopback-relay-server.js';
+export * from './human-approval-ui.js';
