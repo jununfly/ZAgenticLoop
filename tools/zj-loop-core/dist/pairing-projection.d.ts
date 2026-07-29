@@ -3,12 +3,14 @@ export type PairingLifecycleRecord = {
     type: 'pairing-requested';
     event_id: string;
     occurred_at: string;
+    network_id: string;
     request: PairingRequest;
     request_digest: string;
 } | {
     type: 'human-approved';
     event_id: string;
     occurred_at: string;
+    network_id: string;
     request_id: string;
     request_digest: string;
     human_id: string;
@@ -17,6 +19,7 @@ export type PairingLifecycleRecord = {
     type: 'pairing-rejected';
     event_id: string;
     occurred_at: string;
+    network_id: string;
     request_id: string;
     request_digest: string;
     reason: string;
@@ -24,6 +27,7 @@ export type PairingLifecycleRecord = {
     type: 'pairing-expired';
     event_id: string;
     occurred_at: string;
+    network_id: string;
     request_id: string;
     request_digest: string;
 };

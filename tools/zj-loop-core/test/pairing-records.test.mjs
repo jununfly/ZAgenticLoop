@@ -14,7 +14,7 @@ test('Pairing record builders derive deterministic lifecycle event IDs and bind 
 test('Pairing decision records preserve the request digest and deterministic operation identity', () => {
   const request = { request_id: 'pair-2', network_id: 'network-1', node_id: 'node-1', request_digest: 'a'.repeat(64), expires_at: '2026-07-30T00:10:00.000Z', requested_capabilities: ['event.consume'] };
   const approval = { request_id: 'pair-2', network_id: 'network-1', node_id: 'node-1', human_id: 'human-1', approved_capabilities: ['event.consume'], approved_at: '2026-07-29T00:05:00.000Z' };
-  assert.deepEqual(createPairingApprovedRecord({ request, approval }), { type: 'human-approved', event_id: 'pairing-approved:pair-2:human-1', occurred_at: approval.approved_at, request_id: request.request_id, request_digest: request.request_digest, human_id: approval.human_id, approved_capabilities: approval.approved_capabilities });
+  assert.deepEqual(createPairingApprovedRecord({ request, approval }), { type: 'human-approved', event_id: 'pairing-approved:pair-2:human-1', occurred_at: approval.approved_at, network_id: request.network_id, request_id: request.request_id, request_digest: request.request_digest, human_id: approval.human_id, approved_capabilities: approval.approved_capabilities });
   assert.equal(createPairingRejectedRecord({ request, human_id: 'human-1', rejected_at: '2026-07-29T00:06:00.000Z', reason: 'not-needed' }).event_id, 'pairing-rejected:pair-2:human-1');
   assert.equal(createPairingExpiredRecord({ request, expired_at: '2026-07-30T00:10:00.000Z' }).event_id, 'pairing-expired:pair-2');
 });

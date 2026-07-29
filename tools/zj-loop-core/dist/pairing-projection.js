@@ -12,14 +12,14 @@ export function projectPairingRequests(input) {
             conflict();
         eventIds.add(record.event_id);
         if (record.type === 'pairing-requested') {
-            if (record.request.network_id !== input.network_id || projections.has(record.request.request_id))
+            if (record.network_id !== input.network_id || record.request.network_id !== input.network_id || projections.has(record.request.request_id))
                 conflict();
             const projection = clone(record.request, record.request_digest);
             projections.set(record.request.request_id, projection);
             continue;
         }
         const projection = projections.get(record.request_id);
-        if (!projection || projection.network_id !== input.network_id || projection.request_digest !== record.request_digest)
+        if (!projection || record.network_id !== input.network_id || projection.network_id !== input.network_id || projection.request_digest !== record.request_digest)
             continue;
         if (projection.status !== 'pending')
             conflict();
