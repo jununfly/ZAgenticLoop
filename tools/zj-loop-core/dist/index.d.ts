@@ -67,3 +67,4 @@ export * from './agent-local-worktree.js';
 export * from './execution-context.js';
 export * from './agent-context.js';
 export * from './agent-context-capability-review.js';
+export * from './node-enrollment.js';

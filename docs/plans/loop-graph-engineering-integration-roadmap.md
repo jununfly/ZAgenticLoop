@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 15:51:30
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 16:37:24
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -9,7 +9,7 @@
 ├── [ ][X+] 1-3. OPN产品能力与技术架构融合边界
 └── [ ][X+] 1-4. 下一实现里程碑与行为验收边界
     ├── [x][X+] 1-4-1. single-agent-opn-atom.v1 baseline fixture
-    ├── [ ][X+] 1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
+    ├── [~][X+] 1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
     ├── [ ][X+] 1-4-3. SQLite StateStore、ArtifactStore与loopback Relay
     ├── [ ][X+] 1-4-4. Directed Task Graph与OrchestrationPlan
     ├── [ ][X+] 1-4-5. orchestration-and-isolation preflight
@@ -18,20 +18,30 @@
     ├── [ ][X+] 1-4-8. deterministic gate、独立语义审查与Review Handoff
     └── [ ][X+] 1-4-9. Graph Engineering Evidence Set与最终conformance验收
 
-### 当前施工：1-1. Loop Engineering与Graph Engineering统一心智模型
+### 当前施工：1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
+
+TDD首个纵切已完成：新增node-enrollment.v1 Node Identity（X.509 certificate raw SHA-256 fingerprint）、append-only enrollment projection、revoke状态与capability ceiling/grant交集；新增loopback mutual TLS server/client options和真实双节点握手测试。LibreSSL测试环境使用RSA证书验证跨平台X.509契约，生产Ed25519发行器仍是后续边界。npm run test:agent-local 40/40通过。下一步集成Human pairing、StateStore enrollment records与短期credential。
 
 **决策：**
-- Q: Loop Engineering与Graph Engineering是什么关系？ → 二者是正交但组合的产品层：Loop Engineering处理单个目标在时间维度上的发现、执行、验证、修正和交付闭环；Graph Engineering处理多个Human/Agent/设备节点在空间与关系维度上的组网、身份、能力、权限、路由、协同、责任和恢复。ZAgenticLoop通过二者融合实现OPN。 (Graph Engineering不是Graph Database、普通DAG工作流或Agent群聊；拓扑只是其一部分，核心是节点、责任、能力、事件和状态关系。)
-- Q: Graph Engineering中的图由什么构成？ → 采用由可审计协议关系生成的多层图，而不是用户自由绘制的拓扑图：Identity Graph、Capability Graph、Authority Graph、Event Graph和State Graph分别表示身份、能力、授权、事件参与和生命周期关系。用户可调整策略、授权和委托，但不能通过绘制边直接获得权限；Event Graph是Network Graph上的临时投影。 (每条边必须有来源、有效期、作用域和撤销记录，避免把视觉拓扑误当成运行时权威。)
-- Q: 如何用递归、迭代和ScaleUp/ScaleOut理解ZAgenticLoop架构？ → 采用三层算法思想：递归将复杂目标、任务图和网络拆成仍保持明确目标、有限权限、可执行工作、验证、证据与责任决策或停止的更小实例；迭代在原子契约上叠加状态、证据、约束和委托，每次暴露输入、输出、进展、失败和下一决策；只有当原子或迭代单元在协议、隔离、幂等、权限上限、资源预算和验证语义上可组合时，才允许ScaleUp或ScaleOut到更多任务、节点或网络。 (递归保证去掉枝叶后仍完整正确，迭代提供复杂场景适应性，ScaleUp/ScaleOut只复制已证明可组合的能力，不把并行数量误当产品价值。)
-- Q: ZAgenticLoop的最小完整产品原子是什么？ → 采用Single-Agent OPN Atom：Human委托一个独立enrolled Agent执行一个有价值且有界的MessageEvent，Agent完成Execution并返回Evidence和Review Handoff，Human做最终决策或明确停止。Human-only Loop Atom只能证明目标有价值和成功标准，不能证明OPN的生产能力杠杆；必须有Agent参与才能验证网络化效率提升。 (把产品原子从‘任务能完成’提升到‘Human通过Agent节点获得可验证的能力杠杆’，同时保留责任、权限和证据闭环。)
-- Q: Single-Agent OPN Atom中Human与Agent的交互粒度是什么？ → Human负责目标、约束、授权和最终Review；Agent在授权范围内独立完成内部Loop，不要求Human持续逐步提示或批准。流程为Human定义目标与约束、授予有界能力、Agent发现/执行/验证、返回Evidence和Review Handoff、Human执行accept/revise/recover/reject；风险、歧义、权限不足、预算耗尽、验证失败或恢复时才中途唤回Human。 (保留Human责任而不把Agent退化成需要持续遥控的工具，形成可验证的效率杠杆。)
-- Q: Single-Agent OPN Atom如何证明效率杠杆？ → 至少记录并比较Human从目标提出到最终决策的总耗时、主动介入次数和原因、Agent独立完成的有效步骤、Review Handoff是否足以支持决策、验证通过率与返工次数、blocked/recovery可解释性和未授权副作用（必须为0），并与Human-only完成同类任务的baseline比较。核心判断是Human是否用更少协调成本获得更多可验证且可负责的有效产出，而不是Agent动作数量。 (将OPN价值绑定到可验证结果和Human协调成本，不被并发数、token数或自动化次数误导。)
-- Q: OPN效率基线是否采用Human-only比较？ → 不专门做Human-only科学比较；将Single-Agent OPN Atom定义为ZAgenticLoop的内部产品baseline。后续多节点Graph Atom、复杂编排和ScaleOut都与该baseline比较新增能力、协调成本、证据质量、恢复能力和风险，重点判断组合是否带来足够的能力增量，而不是证明Agent优于Human。 (避免把产品目标误写成单Agent替代Human的性能Benchmark，保持OPN作为可组合生产网络的产品方向。)
-- Q: Single-Agent OPN Atom baseline如何产品化？ → 定义为single-agent-opn-atom.v1 conformance fixture：固定Human owner、一个独立enrolled Agent、一个有价值且有界的MessageEvent、CapabilityGrant、Execution、Evidence、Review Handoff、Human decision或explainable stop、blocked/recovery路径和零未授权副作用；协议和验收边界固定，低风险业务任务可以替换。后续Graph Atom必须说明相对baseline的能力增量。 (把baseline变成可重复验证的产品契约，而不是绑定单一业务Demo或Agent数量。)
-- Q: Single-Agent Atom递归组合成Multi-node Graph Atom时保留哪些不变量？ → 必须保留：每个子任务有明确目标/边界/成功标准；每个Agent有独立身份、CapabilityGrant和执行记录；组合任务有Human或Human+Agent责任中心；每个结果有Evidence和Review Handoff；失败/歧义/权限不足/恢复有停止语义；分派前完成外部资源隔离；组合保持幂等、可恢复、可审计且未授权副作用为0。可变化：Agent数量、任务图宽度深度、依赖/并行度、中间Artifact和验证层级。 (递归增加枝叶但不改变原子契约的责任、权限、证据、隔离、幂等、恢复和停止语义。)
-- Q: 何时允许从原子组合ScaleUp或ScaleOut？ → 只有在已证明的组合范式成立时允许扩张：子任务有明确边界和兼容contract，资源隔离已知且可验证，fan-out有上限，执行独立或幂等，存在canonical aggregation/verification，资源和预算有上限，并有Human承担的恢复路径。任一条件未知时不自动扩张，由中心单元grill Human或退回更小的已验证组合。 (Scale不是无限递归或节点复制；只有原子契约可组合且聚合结果可验证时才扩大规模。)
-- Q: 何时允许从原子组合ScaleUp或ScaleOut？ → 只有在已证明的组合范式成立时允许扩张：子任务有明确边界和兼容contract，资源隔离已知且可验证，fan-out有上限，执行独立或幂等，存在canonical aggregation/verification，资源和预算有上限，并有Human承担的恢复路径。任一条件未知时不自动扩张，由中心单元grill Human或退回更小的已验证组合。 (Scale不是无限递归或节点复制；只有原子契约可组合且聚合结果可验证时才扩大规模。)
-- Q: Multi-node Graph Atom相对Single-Agent baseline必须新增什么？ → 至少包含Human-held center responsibility unit、两个独立enrolled Agent execution nodes、两个不同但有依赖关系的任务、Directed Task Graph、明确资源隔离、中间Evidence、canonical aggregation或verification和一个Review Handoff。仅增加第二个Agent而没有新增可组合能力，不算Graph Atom。 (Graph Atom必须证明任务分工、依赖、隔离和聚合能力，而不是把多Agent聊天或并行数量当作产品升级。)
-- Q: Multi-node Graph Atom相对Single-Agent baseline必须新增什么？ → 至少包含Human-held center responsibility unit、两个独立enrolled Agent execution nodes、两个不同但有依赖关系的任务、Directed Task Graph、明确资源隔离、中间Evidence、canonical aggregation或verification和一个Review Handoff。仅增加第二个Agent而没有新增可组合能力，不算Graph Atom。 (Graph Atom必须证明任务分工、依赖、隔离和聚合能力，而不是把多Agent聊天或并行数量当作产品升级。)
+- Q: 本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？ → 是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。 (Human confirmed independent node identity on the same device.)
+- Q: 本机enrollment的信任根是什么？ → 采用Human-controlled local pairing：Codex与Workbuddy分别生成Node Identity，Human分别确认节点名称、能力和授权范围，StateStore保存enrollment record，运行时使用短期scoped credential；未经Human批准不能领取事件或读取Artifact，撤销按Node Identity单独生效。 (Human confirmed explicit local pairing as the trust root.)
+- Q: enrollment record是否采用append-only生命周期？ → 采用。identity-generated、pairing-requested、human-approved、capability-granted、credential-issued、revoked、re-enrolled均作为不可变事件记录；当前节点状态由事件投影得到，撤销不删除历史或覆盖旧record。 (Human confirmed append-only enrollment lifecycle.)
+- Q: 撤销Node Identity后正在执行的任务如何处理？ → 立即禁止节点领取新事件、读取新Artifact和写入新StateStore记录；已开始执行允许运行到安全检查点，任何新副作用前重新检查credential与revoke状态；无法安全暂停或验证则blocked返回Human；不默认强杀进程。 (Human confirmed checkpoint-based revocation semantics.)
+- Q: CapabilityGrant如何设计？ → 采用两层授权：enrollment capability ceiling规定Human授予的能力上限；每个MessageEvent再通过event-scoped CapabilityGrant授予更窄的能力、资源范围、有效期和预算；实际权限取两者交集。Agent不能扩大ceiling或grant，grant绑定node_identity、event_id和task_id并留下审计记录。 (Human confirmed intersected enrollment and event-scoped grants.)
+- Q: Node Identity与配对协议采用什么方案？ → 采用Syncthing-like pairing UX + 自签名Ed25519 X.509 certificate + SHA-256 fingerprint作为Node ID + mTLS双向认证；StateStore保存证书和enrollment生命周期，Relay只转发连接，CapabilityGrant由ZAgenticLoop应用层独立控制。Noise、libp2p和Tailscale作为未来扩展。 (Human accepted the Syncthing-inspired UX and certificate identity split.)
+- Q: MVP的pairing入口采用什么方式？ → 采用loopback-first、跨设备可扩展：Codex与Workbuddy先通过本机loopback pairing endpoint完成mTLS enrollment，后续可增加QR、局域网发现或Relay，不改变Node Identity与CapabilityGrant协议。 (Human accepted loopback-first pairing.)
+- Q: Human在pairing时至少确认哪些信息？ → 至少展示并确认节点显示名、Node ID/certificate fingerprint、Agent类型与版本、目标network、enrollment capability ceiling、设备或loopback endpoint、credential有效期以及Artifact读写和事件领取权限；短码只降低输入成本，不能替代fingerprint与能力审查。 (Human accepted explicit identity, capability, endpoint, and expiry confirmation.)
+- Q: Node Identity证书轮换与运行时credential续期如何区分？ → 区分处理：短期credential续期不改变Node ID；证书或key轮换视为高风险身份变更，有旧私钥时由旧identity签名确认continuity，无旧私钥时重新Human pairing；旧identity先撤销再启用新identity，历史Evidence绑定旧Node ID不迁移覆盖。 (Human accepted separate credential renewal and identity rotation semantics.)
+- Q: 短期credential由谁签发？ → 由StateStore或Network Authority签发；Human批准enrollment后，中心节点只能提交具体事件的窄化CapabilityGrant请求，StateStore校验节点状态、事件范围和预算后签发短期credential。中心节点不因拥有事件协调权而自动拥有credential签发权。 (Human confirmed StateStore-issued scoped credentials.)
+- Q: StateStore暂时不可用时已签发credential如何处理？ → 禁止签发新credential和新CapabilityGrant，禁止领取新事件；已签发credential在有效期内可完成当前安全步骤，但每次新外部副作用前必须检查credential有效期和revoke notice；无法确认安全状态则blocked，不允许无限期离线运行或自动延长权限。 (Human accepted bounded degraded mode for StateStore outage.)
+- Q: 节点被revoke后是否允许自动恢复enrollment？ → 不允许。临时StateStore或Relay故障允许有限次数、带退避的幂等重试；明确revoked后停止领取事件和读取新Artifact，不能通过credential renewal、重连或重试自动恢复；恢复必须由Human发起新的pairing或明确批准re-enrollment，并留下新的append-only事件。 (Human accepted no automatic recovery after revocation.)
+- Q: 已enrollment节点的capability ceiling需要扩大时谁能批准？ → 只能由Human批准并采用追加式变更：中心节点只能提出capability change request，Human审查新增能力、资源范围、风险和有效期，StateStore写入新的capability-ceiling-granted事件；旧ceiling保留历史，新ceiling只影响后续credential和grant；缩权可立即生效，扩权需显式Human approval。 (Human confirmed append-only Human-approved capability ceiling changes.)
+- Q: Node Identity与中心角色是否应分离？ → 必须分离。Node Identity只表示节点身份；Center Role是Network或Event scope内由Human授权的临时角色，enrollment不自动授予中心权力。Human或Human+Agent才是中心责任单元，Codex的event_center协作角色需显式授权，执行节点不能自行升级为中心。 (Human confirmed identity-role separation.)
+- Q: Codex同时承担中心协作与执行任务时是否拆成两个逻辑节点？ → 需要拆分逻辑节点但不生成两个物理Node Identity：同一Codex identity分别承担Center Coordination与Codex Execution，使用独立CapabilityGrant、task scope和Evidence；Execution不能修改OrchestrationPlan或自我验收，后继Verification节点或Human独立验收。 (Human confirmed explicit dual logical roles for Codex.)
+- Q: Codex与Workbuddy的默认capability profile是否相同？ → 协议相同但默认权限不同且都从最小权限开始：Codex默认只读网络协调、计划分析和Evidence汇总；Workbuddy默认只读事件消费、任务执行和Evidence返回；代码写入、外部API和Artifact读取等高风险能力默认关闭，新增能力需Human-approved enrollment ceiling与event-scoped grant共同开启。 (Human confirmed differentiated least-privilege defaults.)
+- Q: 一个OPN network是否只允许一个Human owner？ → MVP只允许一个Human owner：Human是Network Owner与最终责任中心，Agent可多节点但不能成为owner，其他Human不加入同一network的责任决策链；未来多人协作再引入co-owner、reviewer或delegated-human角色。 (Human confirmed single-owner MVP boundary.)
+- Q: Human owner丢失设备或迁移到新设备时是否允许直接转移owner？ → MVP不允许静默转移：owner identity与network root key绑定，新设备迁移需旧设备Human明确批准；旧设备不可用则进入network-recovery-blocked，通过预先保存的recovery material或重新建立新network恢复；Agent、StateStore和Relay不能自行替换owner，迁移留下append-only审计记录。 (Human confirmed explicit owner migration and recovery boundary.)
+- Q: recovery material应由谁持有？ → 只由Human持有，StateStore不保存可直接恢复owner的完整秘密：Human离线保存recovery key或phrase，StateStore只保存public identifier或hash，使用一次后立即轮换；Agent、Relay和普通credential不能充当recovery material，丢失时只能新建network。 (Human confirmed Human-held offline recovery material.)
+- Q: MVP是否需要threshold recovery（如2-of-3 recovery keys）？ → 不需要。MVP采用单一Human owner与一份离线recovery material，使用后立即轮换；多份或门限恢复作为未来多人owner或高价值network扩展，当前先验证单人OPN的身份、撤销和恢复边界。 (Human confirmed single-material recovery for MVP.)
+- Q: 1-4-2的最小enrollment conformance fixture包含哪些行为？ → 固定为单机双独立节点、无真实业务副作用：Human创建Network Owner；Codex与Workbuddy分别生成X.509/Node Identity；通过loopback pairing；Human确认fingerprint、capability ceiling和endpoint；StateStore写append-only enrollment records；分别签发短期credential；验证mTLS与event-scoped CapabilityGrant；revoke Workbuddy并验证其不能领取新事件或读取新Artifact；验证Codex仍可独立工作；re-enrollment生成新审计链；不连接真实GitLab、不修改目标代码库、不引入跨设备发现。 (Human accepted the bounded local dual-node enrollment fixture.)
 <!-- ROADMAP_SECTION_END -->
