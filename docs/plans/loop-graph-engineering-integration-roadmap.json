@@ -928,7 +928,7 @@
           "note": "Human confirmed Relay MVP acceptance matrix."
         }
       ],
-      "notes": "StateStore、credential、ArtifactStore与Relay持续施工：StateStore已具备Human-owned network、network-level CAS append/read、dedupe/conflict、canonical hash、snapshot revision与原生HTTPS读写；SQLite credential provider已实现opaque token、hash存储、scope、expiry、revoke与真实mTLS HTTP授权链路；content-addressed ArtifactStore已实现sha256 artifact、不可变metadata、幂等put、network归属与完整性校验；Relay contract已固定session/lease/attempt、at-least-once、accepted-before-ack、bounded retry、revoke/恢复/状态机语义；loopback Relay HTTP session adapter已实现免认证healthz、mTLS node_id、protocol version negotiation、credential verification与credential-bound session TTL。npm run test:agent-local 75/75通过。仍未实现Relay DELETE/status/long-poll/delivery ack、credential issuance HTTP/Human UI、ArtifactStore HTTP与双Agent端到端fixture。"
+      "notes": "StateStore、credential、ArtifactStore与Relay持续施工：StateStore已具备Human-owned network、network-level CAS append/read、dedupe/conflict、canonical hash、snapshot revision与原生HTTPS读写；SQLite credential provider已实现opaque token、hash存储、scope、expiry、revoke与真实mTLS HTTP授权链路；content-addressed ArtifactStore已实现sha256 artifact、不可变metadata、幂等put、network归属与完整性校验；Relay contract已固定session/lease/attempt、at-least-once、accepted-before-ack、bounded retry、revoke/恢复/状态机语义；loopback Relay HTTP adapter已实现免认证healthz、mTLS node_id、protocol version negotiation、credential-bound session TTL、authenticated non-sensitive status与session close。npm run test:agent-local 77/77通过。仍未实现Relay long-poll/delivery ack、credential issuance HTTP/Human UI、ArtifactStore HTTP与双Agent端到端fixture。"
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -993,7 +993,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 19:34:02",
+    "updated": "2026-07-29 19:38:31",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

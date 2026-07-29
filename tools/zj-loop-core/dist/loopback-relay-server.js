@@ -46,6 +46,77 @@ export function createLoopbackRelayServer(input) {
             return;
         }
         const url = new URL(request.url ?? '/', 'https://relay.local');
+        const closeMatch = url.pathname.match(/^\/v1\/sessions\/([^/]+)$/);
+        if (request.method === 'DELETE' && closeMatch) {
+            const authorization = request.headers.authorization;
+            if (!authorization || !/^Bearer\s+\S+$/.test(authorization)) {
+                sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-required', side_effects_executed: false });
+                return;
+            }
+            const sessionId = decodeURIComponent(closeMatch[1]);
+            const session = sessions.get(sessionId);
+            if (!session) {
+                sendJson(response, 404, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-not-found', side_effects_executed: false });
+                return;
+            }
+            const peer = request.socket.getPeerCertificate();
+            if (!peer.raw) {
+                sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'client-identity-unavailable', side_effects_executed: false });
+                return;
+            }
+            const nodeId = createHash('sha256').update(peer.raw).digest('hex');
+            if (nodeId !== session.node_id) {
+                sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-node-mismatch', side_effects_executed: false });
+                return;
+            }
+            if (!input.sessionVerifier) {
+                sendJson(response, 503, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-verifier-unavailable', side_effects_executed: false });
+                return;
+            }
+            const verification = await Promise.resolve(input.sessionVerifier.verify({ token: authorization.replace(/^Bearer\s+/, ''), node_id: nodeId, network_id: session.network_id, protocol_version: session.protocol_version }));
+            if (verification.status !== 'allowed' || verification.credential_id !== session.credential_id) {
+                sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'session-credential-invalid', side_effects_executed: false });
+                return;
+            }
+            sessions.set(sessionId, { ...session, status: 'closed' });
+            response.statusCode = 204;
+            response.end();
+            return;
+        }
+        const statusMatch = url.pathname.match(/^\/v1\/sessions\/([^/]+)\/status$/);
+        if (request.method === 'GET' && statusMatch) {
+            const authorization = request.headers.authorization;
+            if (!authorization || !/^Bearer\s+\S+$/.test(authorization)) {
+                sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-required', side_effects_executed: false });
+                return;
+            }
+            const session = sessions.get(decodeURIComponent(statusMatch[1]));
+            if (!session) {
+                sendJson(response, 404, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-not-found', side_effects_executed: false });
+                return;
+            }
+            const peer = request.socket.getPeerCertificate();
+            if (!peer.raw) {
+                sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'client-identity-unavailable', side_effects_executed: false });
+                return;
+            }
+            const nodeId = createHash('sha256').update(peer.raw).digest('hex');
+            if (nodeId !== session.node_id) {
+                sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-node-mismatch', side_effects_executed: false });
+                return;
+            }
+            if (!input.sessionVerifier) {
+                sendJson(response, 503, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-verifier-unavailable', side_effects_executed: false });
+                return;
+            }
+            const verification = await Promise.resolve(input.sessionVerifier.verify({ token: authorization.replace(/^Bearer\s+/, ''), node_id: nodeId, network_id: session.network_id, protocol_version: session.protocol_version }));
+            if (verification.status !== 'allowed' || verification.credential_id !== session.credential_id) {
+                sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'session-credential-invalid', side_effects_executed: false });
+                return;
+            }
+            sendJson(response, 200, { schema: RELAY_HTTP_SCHEMA, status: 'ok', session: { session_id: session.session_id, network_id: session.network_id, node_id: session.node_id, protocol_version: session.protocol_version, status: session.status }, side_effects_executed: false });
+            return;
+        }
         if (request.method !== 'POST' || url.pathname !== '/v1/sessions') {
             sendJson(response, 404, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'route-not-found', side_effects_executed: false });
             return;

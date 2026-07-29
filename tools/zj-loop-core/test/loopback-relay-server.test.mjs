@@ -23,10 +23,23 @@ function request({ address, server, client, body, headers = {} }) {
       let text = '';
       response.setEncoding('utf8');
       response.on('data', (chunk) => { text += chunk; });
-      response.on('end', () => resolve({ statusCode: response.statusCode, body: JSON.parse(text) }));
+      response.on('end', () => resolve({ statusCode: response.statusCode, body: text ? JSON.parse(text) : null }));
     });
     request.on('error', reject);
     request.end(payload);
+  });
+}
+
+function requestPath({ address, server, client, path: requestPathValue, method = 'GET', headers = {} }) {
+  return new Promise((resolve, reject) => {
+    const request = https.request({ hostname: '127.0.0.1', port: address.port, path: requestPathValue, method, ca: server.cert, cert: client.cert, key: client.key, servername: 'localhost', headers }, (response) => {
+      let text = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { text += chunk; });
+      response.on('end', () => resolve({ statusCode: response.statusCode, body: text ? JSON.parse(text) : null }));
+    });
+    request.on('error', reject);
+    request.end();
   });
 }
 
@@ -106,6 +119,53 @@ test('Relay rejects an unsupported protocol before credential verification', asy
   assert.equal(response.statusCode, 426);
   assert.deepEqual(response.body, { schema: 'zj-loop.relay_http.v1', status: 'blocked', reason: 'protocol-version-unsupported', side_effects_executed: false });
   assert.equal(verifierCalls, 0);
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('Relay exposes non-sensitive status for the authenticated session owner', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('workbuddy');
+  const server = createLoopbackRelayServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    sessionVerifier: { verify: () => ({ status: 'allowed', credential_id: 'credential-1', expires_at: '2026-07-29T03:10:00.000Z' }) },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const created = await request({ address, server: serverMaterial, client: clientMaterial, body: { network_id: 'network-1', protocol_version: 'relay.v1' }, headers: { authorization: 'Bearer session-token' } });
+  const status = await requestPath({ address, server: serverMaterial, client: clientMaterial, path: `/v1/sessions/${created.body.session.session_id}/status`, headers: { authorization: 'Bearer session-token' } });
+  assert.equal(status.statusCode, 200);
+  assert.equal(status.body.schema, 'zj-loop.relay_http.v1');
+  assert.equal(status.body.status, 'ok');
+  assert.deepEqual(status.body.session, { session_id: created.body.session.session_id, network_id: 'network-1', node_id: created.body.session.node_id, protocol_version: 'relay.v1', status: 'active' });
+  assert.equal('credential_id' in status.body.session, false);
+  assert.equal('token' in status.body.session, false);
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('Relay closes an authenticated session without changing business state', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('codex');
+  const server = createLoopbackRelayServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    sessionVerifier: { verify: () => ({ status: 'allowed', credential_id: 'credential-1', expires_at: '2026-07-29T03:10:00.000Z' }) },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const created = await request({ address, server: serverMaterial, client: clientMaterial, body: { network_id: 'network-1', protocol_version: 'relay.v1' }, headers: { authorization: 'Bearer session-token' } });
+  const closed = await requestPath({ address, server: serverMaterial, client: clientMaterial, path: `/v1/sessions/${created.body.session.session_id}`, method: 'DELETE', headers: { authorization: 'Bearer session-token' } });
+  assert.equal(closed.statusCode, 204);
+  assert.equal(closed.body, null);
+  const status = await requestPath({ address, server: serverMaterial, client: clientMaterial, path: `/v1/sessions/${created.body.session.session_id}/status`, headers: { authorization: 'Bearer session-token' } });
+  assert.equal(status.statusCode, 200);
+  assert.equal(status.body.session.status, 'closed');
   await new Promise((resolve) => server.close(resolve));
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
