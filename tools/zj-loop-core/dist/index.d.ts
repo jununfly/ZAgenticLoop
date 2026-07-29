@@ -73,3 +73,4 @@ export * from './sqlite-state-store-server.js';
 export * from './sqlite-credential-verifier.js';
 export * from './content-addressed-artifact-store.js';
 export * from './relay-contract.js';
+export * from './loopback-relay-server.js';
