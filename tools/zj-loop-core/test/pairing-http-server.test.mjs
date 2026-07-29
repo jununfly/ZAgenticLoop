@@ -12,6 +12,7 @@ import {
 } from '../dist/node-enrollment.js';
 import { createInMemoryPairingRecordStore } from '../dist/pairing-record-store.js';
 import { createPairingHttpServer } from '../dist/pairing-http-server.js';
+import { createInMemoryHumanAuthorityProvider, verifyHumanApprovalContext } from '../dist/human-authority.js';
 
 const supportsEd25519Certificates = (() => {
   try {
@@ -116,6 +117,10 @@ test('Pairing request retries return the same session and do not append another 
   const second = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
   assert.equal(second.statusCode, 200);
   assert.equal(second.body.status, 'existing');
+  const conflictingContext = await authority.signApprovalContext({ action: 'pairing.approve', request_id: 'owner-pair-1', request_digest: 'a'.repeat(64), approved_capabilities: ['evidence.write'], issued_at: '2026-07-29T03:10:00.000Z', expires_at: '2026-07-29T03:20:00.000Z' });
+  const conflicting = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body: { network_id: 'network-1', request_digest: 'a'.repeat(64), approved_capabilities: ['evidence.write'], context: conflictingContext } });
+  assert.equal(conflicting.statusCode, 409);
+  assert.equal(conflicting.body.reason, 'pairing-state-conflict');
   assert.equal(second.body.session.session_id, first.body.session.session_id);
   assert.equal(second.body.session_token, first.body.session_token);
   assert.equal(second.body.side_effects_executed, false);
@@ -143,4 +148,24 @@ test('Pairing session is bound to the client node and token', { skip: !supportsE
   assert.equal(wrongToken.statusCode, 400);
   assert.equal(wrongToken.body.reason, 'pairing-session-invalid');
   await close(value);
+});
+
+test('Owner approval binds signed capabilities and is CAS-protected', async () => {
+  const serverMaterial = await certificate('localhost');
+  const store = createInMemoryPairingRecordStore();
+  const record = { type: 'pairing-requested', event_id: 'pairing-requested:owner-pair-1', occurred_at: '2026-07-29T03:00:00.000Z', network_id: 'network-1', request_digest: 'a'.repeat(64), request: { request_id: 'owner-pair-1', network_id: 'network-1', node_id: 'node-1', endpoint: 'loopback://127.0.0.1:1', requested_capabilities: ['event.consume', 'evidence.write'], expires_at: '2026-07-29T04:00:00.000Z', identity: { certificate_sha256: 'b'.repeat(64) } } };
+  await store.append(record);
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const server = createPairingHttpServer({ tls: serverMaterial, recordStore: store, now: () => '2026-07-29T03:10:00.000Z', ownerAuthenticator: { authenticate: ({ action, context }) => context && verifyHumanApprovalContext({ identity: authority.getPublicIdentity(), context, now: '2026-07-29T03:10:00.000Z' }) && context.action === action ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const context = await authority.signApprovalContext({ action: 'pairing.approve', request_id: 'owner-pair-1', request_digest: 'a'.repeat(64), approved_capabilities: ['event.consume'], issued_at: '2026-07-29T03:10:00.000Z', expires_at: '2026-07-29T03:20:00.000Z' });
+  const body = { network_id: 'network-1', request_digest: 'a'.repeat(64), approved_capabilities: ['event.consume'], context };
+  const first = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body });
+  assert.equal(first.statusCode, 201, JSON.stringify(first.body));
+  assert.equal(first.body.lifecycle.type, 'human-approved');
+  const second = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body });
+  assert.equal(second.statusCode, 200);
+  assert.equal(second.body.status, 'existing');
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
 });

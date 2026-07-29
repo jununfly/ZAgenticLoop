@@ -1,4 +1,4 @@
-import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
+import { createHash, createPublicKey, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
 export const HUMAN_AUTHORITY_SCHEMA = 'zj-loop.human_authority.v1';
 function requireText(value, error) {
     if (!value.trim())
@@ -34,9 +34,10 @@ export function createInMemoryHumanAuthorityProvider(input) {
             const requestDigest = requireText(input.request_digest, 'request-digest-required');
             const issuedAt = input.issued_at ?? now();
             const expiresAt = input.expires_at ?? new Date(Date.parse(issuedAt) + 5 * 60 * 1000).toISOString();
-            const payloadDigest = digest(canonicalJson({ action, request_id: requestId, request_digest: requestDigest, human_id: humanId, issued_at: issuedAt, expires_at: expiresAt }));
+            const approvedCapabilities = [...new Set(input.approved_capabilities ?? [])].sort();
+            const payloadDigest = digest(canonicalJson({ action, request_id: requestId, request_digest: requestDigest, approved_capabilities: approvedCapabilities, human_id: humanId, issued_at: issuedAt, expires_at: expiresAt }));
             const signature = sign(null, Buffer.from(payloadDigest, 'utf8'), keys.privateKey);
-            return { schema: HUMAN_AUTHORITY_SCHEMA, human_id: humanId, public_key_fingerprint: publicKeyFingerprint, action, request_id: requestId, request_digest: requestDigest, issued_at: issuedAt, expires_at: expiresAt, payload_digest: payloadDigest, signature_base64: signature.toString('base64') };
+            return { schema: HUMAN_AUTHORITY_SCHEMA, human_id: humanId, public_key_fingerprint: publicKeyFingerprint, action, request_id: requestId, request_digest: requestDigest, approved_capabilities: approvedCapabilities, issued_at: issuedAt, expires_at: expiresAt, payload_digest: payloadDigest, signature_base64: signature.toString('base64') };
         },
         async createRecoveryMaterial() {
             return createRecovery();
@@ -48,4 +49,24 @@ export function createInMemoryHumanAuthorityProvider(input) {
             return typeof secret === 'string' && recoveryHash !== null && digest(secret) === recoveryHash;
         },
     };
+}
+export function verifyHumanApprovalContext(input) {
+    const { identity, context } = input;
+    if (context.schema !== HUMAN_AUTHORITY_SCHEMA || identity.human_id !== context.human_id || identity.public_key_fingerprint !== context.public_key_fingerprint)
+        return false;
+    const expiresAt = Date.parse(context.expires_at);
+    const issuedAt = Date.parse(context.issued_at);
+    const now = Date.parse(input.now ?? new Date().toISOString());
+    if (![issuedAt, expiresAt, now].every(Number.isFinite) || issuedAt > expiresAt || now >= expiresAt)
+        return false;
+    const approvedCapabilities = [...new Set(context.approved_capabilities)].sort();
+    const payloadDigest = digest(canonicalJson({ action: context.action, request_id: context.request_id, request_digest: context.request_digest, approved_capabilities: approvedCapabilities, human_id: context.human_id, issued_at: context.issued_at, expires_at: context.expires_at }));
+    if (payloadDigest !== context.payload_digest)
+        return false;
+    try {
+        return verify(null, Buffer.from(payloadDigest, 'utf8'), createPublicKey(identity.public_key_pem), Buffer.from(context.signature_base64, 'base64'));
+    }
+    catch {
+        return false;
+    }
 }

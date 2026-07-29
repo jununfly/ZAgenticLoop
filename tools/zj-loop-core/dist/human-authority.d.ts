@@ -13,6 +13,7 @@ export type HumanApprovalContext = {
     action: string;
     request_id: string;
     request_digest: string;
+    approved_capabilities: string[];
     issued_at: string;
     expires_at: string;
     payload_digest: string;
@@ -28,6 +29,7 @@ export type HumanAuthorityProvider = {
         action: string;
         request_id: string;
         request_digest: string;
+        approved_capabilities?: string[];
         issued_at?: string;
         expires_at?: string;
     }): Promise<HumanApprovalContext>;
@@ -38,3 +40,8 @@ export type HumanAuthorityProvider = {
 export declare function createInMemoryHumanAuthorityProvider(input: {
     human_id: string;
 }): HumanAuthorityProvider;
+export declare function verifyHumanApprovalContext(input: {
+    identity: HumanPublicIdentity;
+    context: HumanApprovalContext;
+    now?: string;
+}): boolean;

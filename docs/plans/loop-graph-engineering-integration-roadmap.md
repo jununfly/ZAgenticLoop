@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 21:12:40
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 21:22:43
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
 
-已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession、Human authority fixture、PairingRequestProjection、append-only Pairing lifecycle records与provider-neutral PairingRecordStore。新增loopback Pairing HTTPS service：GET /healthz、GET /readyz、POST /v1/pairing-requests、GET /v1/pairing-requests/:id/status；服务通过注入式PairingRecordStore重建projection，绑定客户端证书指纹、request digest、短期opaque session与network，统一返回zj-loop.pairing_http.v1结构化错误，不接触业务payload、目标代码库或Graph/Relay执行。验证：npm run test:agent-local = 95 passed、4 skipped；新增服务测试本机2 passed、3 skipped，跳过原因仍为macOS LibreSSL无法生成Ed25519 X.509测试证书。当前仍未实现Human approval CAS API、Keychain adapter、静态Web UI与双Agent conformance fixture。
+已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession、Human authority fixture、PairingRequestProjection、append-only Pairing lifecycle records与provider-neutral PairingRecordStore。已新增loopback Pairing HTTPS service：healthz/readyz、Agent pairing request、短期request-scoped session、状态轮询、重复请求幂等与结构化错误。新增Human approval context能力绑定：approved_capabilities纳入Ed25519签名摘要并可独立验证；PairingRecordStore新增appendIfPending(now)条件追加，支持CAS、重复决策幂等和冲突fail-closed；Owner API已实现GET /v1/owner/pairing-requests、POST approve/reject的注入式Owner authenticator边界，审批只在签名context、request digest、能力子集和pending projection全部一致时追加human-approved/pairing-rejected。验证：npm run test:agent-local = 97 passed、5 skipped；macOS LibreSSL无法生成Ed25519 X.509测试证书的5项按环境能力跳过。当前仍未实现真实OS Keychain adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。
 
 **决策：**
 - Q: 本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？ → 是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。 (Human confirmed independent node identity on the same device.)

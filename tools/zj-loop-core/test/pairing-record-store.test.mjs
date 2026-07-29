@@ -22,3 +22,13 @@ test('Pairing record store never returns records from another network', async ()
   await store.append(record);
   assert.deepEqual(await store.list('network-2'), []);
 });
+
+test('Pairing record store conditionally appends one lifecycle decision', async () => {
+  const store = createInMemoryPairingRecordStore();
+  await store.append(record);
+  const decision = { type: 'pairing-rejected', event_id: 'pairing-rejected:pair-1:human-1', occurred_at: '2026-07-29T00:01:00.000Z', network_id: 'network-1', request_id: 'pair-1', request_digest: record.request_digest, reason: 'not-approved' };
+  const now = '2026-07-29T00:01:00.000Z';
+  assert.equal((await store.appendIfPending({ request_id: 'pair-1', request_digest: record.request_digest, record: decision, now })).status, 'recorded');
+  await assert.rejects(() => store.appendIfPending({ request_id: 'pair-1', request_digest: record.request_digest, record: { ...decision, event_id: 'pairing-rejected:pair-1:human-2' }, now }), { message: 'pairing-state-conflict' });
+  assert.equal((await store.appendIfPending({ request_id: 'pair-1', request_digest: record.request_digest, record: decision, now })).status, 'duplicate');
+});

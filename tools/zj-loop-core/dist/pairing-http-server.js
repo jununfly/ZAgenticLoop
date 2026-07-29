@@ -1,8 +1,8 @@
 import { createHash, randomBytes, X509Certificate } from 'node:crypto';
 import { createServer } from 'node:https';
-import { createPairingRequestedRecord } from './pairing-records.js';
+import { createPairingApprovedRecord, createPairingRejectedRecord, createPairingRequestedRecord } from './pairing-records.js';
 import { projectPairingRequests } from './pairing-projection.js';
-import { pairingRequestDigest } from './node-enrollment.js';
+import { approvePairingRequest, pairingRequestDigest } from './node-enrollment.js';
 import { verifyPairingRequestProof } from './node-enrollment.js';
 export const PAIRING_HTTP_SCHEMA = 'zj-loop.pairing_http.v1';
 const MAX_BODY_BYTES = 64 * 1024;
@@ -49,6 +49,10 @@ function errorStatus(reason) {
         return 410;
     if (reason === 'pairing-request-not-found' || reason === 'route-not-found')
         return 404;
+    if (reason === 'owner-authenticator-unavailable')
+        return 503;
+    if (reason === 'owner-authentication-required' || reason === 'owner-not-authorized')
+        return 403;
     if (reason === 'pairing-request-conflict' || reason === 'pairing-projection-conflict')
         return 409;
     if (reason === 'pairing-service-not-ready')
@@ -86,13 +90,92 @@ export function createPairingHttpServer(input) {
             json(response, readiness.status === 'ready' ? 200 : 503, { schema: PAIRING_HTTP_SCHEMA, status: readiness.status, ...(readiness.reason ? { reason: readiness.reason } : {}), side_effects_executed: false });
             return;
         }
+        const url = new URL(request.url ?? '/', 'https://pairing.local');
+        const ownerList = request.method === 'GET' && url.pathname === '/v1/owner/pairing-requests';
+        const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);
+        const ownerReject = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/reject$/);
+        if (ownerList || ownerApprove || ownerReject) {
+            if (!input.ownerAuthenticator) {
+                blocked(response, 'owner-authenticator-unavailable');
+                return;
+            }
+            let body = null;
+            if (!ownerList) {
+                try {
+                    body = await readBody(request);
+                }
+                catch (error) {
+                    blocked(response, error instanceof Error ? error.message : 'json-invalid');
+                    return;
+                }
+            }
+            const value = body;
+            const ownerMatch = typeof ownerApprove === 'object' ? ownerApprove : typeof ownerReject === 'object' ? ownerReject : null;
+            const requestId = ownerMatch ? decodeURIComponent(ownerMatch[1]) : undefined;
+            const networkId = typeof value?.network_id === 'string' ? value.network_id : url.searchParams.get('network_id');
+            if (!networkId?.trim()) {
+                blocked(response, 'network-id-required');
+                return;
+            }
+            const requestDigest = typeof value?.request_digest === 'string' ? value.request_digest : undefined;
+            const action = ownerList ? 'pairing.list' : ownerApprove ? 'pairing.approve' : 'pairing.reject';
+            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action, authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null, ...(requestId ? { request_id: requestId } : {}), ...(requestDigest ? { request_digest: requestDigest } : {}), ...(value?.context ? { context: value.context } : {}) }));
+            if (auth.status !== 'allowed') {
+                blocked(response, auth.reason ?? 'owner-not-authorized');
+                return;
+            }
+            const records = await input.recordStore.list(networkId);
+            if (ownerList) {
+                json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, requests: projectPairingRequests({ network_id: networkId, records, now: now() }), side_effects_executed: false });
+                return;
+            }
+            const projection = projectPairingRequests({ network_id: networkId, records, now: now() }).find((item) => item.request_id === requestId);
+            if (!projection) {
+                blocked(response, 'pairing-request-not-found');
+                return;
+            }
+            const baseRecord = records.find((record) => record.type === 'pairing-requested' && record.request.request_id === requestId);
+            if (!baseRecord || baseRecord.type !== 'pairing-requested') {
+                blocked(response, 'pairing-request-not-found');
+                return;
+            }
+            if (projection.request_digest !== requestDigest) {
+                blocked(response, 'pairing-request-digest-mismatch');
+                return;
+            }
+            if (!value.context || value.context.request_id !== requestId || value.context.request_digest !== requestDigest || value.context.action !== action || value.context.human_id !== auth.human_id) {
+                blocked(response, 'human-approval-context-invalid');
+                return;
+            }
+            try {
+                let decision;
+                if (ownerApprove) {
+                    if (!Array.isArray(value.approved_capabilities) || value.approved_capabilities.some((capability) => typeof capability !== 'string'))
+                        throw new Error('approved-capabilities-invalid');
+                    if (JSON.stringify([...new Set(value.approved_capabilities)].sort()) !== JSON.stringify([...value.context.approved_capabilities].sort()))
+                        throw new Error('human-approval-context-invalid');
+                    const approval = approvePairingRequest({ request: baseRecord.request, human_id: auth.human_id, approved_at: now(), approved_capabilities: value.approved_capabilities });
+                    decision = createPairingApprovedRecord({ request: { request_id: projection.request_id, network_id: projection.network_id, node_id: projection.node_id, request_digest: projection.request_digest }, approval });
+                }
+                else {
+                    if (typeof value.reason !== 'string' || !value.reason.trim())
+                        throw new Error('pairing-rejection-reason-required');
+                    decision = createPairingRejectedRecord({ request: { request_id: projection.request_id, network_id: projection.network_id, node_id: projection.node_id, request_digest: projection.request_digest }, human_id: auth.human_id, rejected_at: now(), reason: value.reason });
+                }
+                const appended = await input.recordStore.appendIfPending({ request_id: projection.request_id, request_digest: projection.request_digest, record: decision, now: now() });
+                json(response, appended.status === 'duplicate' ? 200 : 201, { schema: PAIRING_HTTP_SCHEMA, status: appended.status === 'duplicate' ? 'existing' : 'recorded', request_id: projection.request_id, lifecycle: appended.record, side_effects_executed: appended.status === 'recorded' });
+            }
+            catch (error) {
+                blocked(response, error instanceof Error && error.message === 'pairing-state-conflict' ? 'pairing-state-conflict' : error instanceof Error ? error.message : 'pairing-decision-invalid');
+            }
+            return;
+        }
         const socket = request.socket;
         if (!socket.authorized || !peerNodeId(socket)) {
             blocked(response, 'client-certificate-required');
             return;
         }
         const nodeId = peerNodeId(socket);
-        const url = new URL(request.url ?? '/', 'https://pairing.local');
         if (request.method === 'POST' && url.pathname === '/v1/pairing-requests') {
             let body;
             try {
