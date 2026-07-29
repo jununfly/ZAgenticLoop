@@ -3,12 +3,12 @@
   "target": {
     "path": "tools/zj-loop-core/src/agent-context.ts",
     "scope": "protected-state context reconstruction, activation snapshot reference validation, and fail-closed recovery semantics",
-    "commit": "11ce2176e2361c3fb37cb61ef5ca78271247addf"
+    "commit": "dcdc378e576f8da3d060e9c7153a122556a3b116"
   },
   "report_metadata": {
-    "generated_at": "2026-07-29T07:29:37.000Z",
+    "generated_at": "2026-07-29T07:34:16.000Z",
     "generator": "zj-loop-agent-context-review",
-    "workspace_commit": "11ce2176e2361c3fb37cb61ef5ca78271247addf"
+    "workspace_commit": "dcdc378e576f8da3d060e9c7153a122556a3b116"
   },
   "goal": "Establish the Single-Agent OPN Atom baseline by producing a read-only, evidence-bound capability review for Agent context reconstruction.",
   "capability_status": "guarded",
@@ -84,7 +84,7 @@
     },
     "review_cli_tests": {
       "path": "tools/zj-loop-core/test/agent-context-capability-review-cli.test.mjs",
-      "hash": "a6a618bc72fc206f8b49628619f5fa42332d174a2c97e595fd0c74de138b11ad",
+      "hash": "d847b810dd8904274bf6c50acac9dc2e5a104a71c0f19dee1e689fce400e7647",
       "command": "npm run test:agent-local",
       "description": "Report materialization CLI contract tests.",
       "classification": "fact"

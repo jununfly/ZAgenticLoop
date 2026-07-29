@@ -366,7 +366,7 @@
           "note": "让Single-Agent OPN Atom同时验证Agent杠杆和责任边界，避免Agent自写报告、自证结论。"
         }
       ],
-      "notes": "第三次审查问题已处理：CLI新增allowlisted --execute生成真实verification provenance；manifest命令唯一且与verification result一一对应；工作树证据使用realpath防symlink越界；--ref要求解析到target.commit。实现与测试已提交为11ce2176e2361c3fb37cb61ef5ca78271247addf，报告 docs/testing/agent-context-capability-review.json 已绑定该commit。npm run test:agent-local 36/36 通过，git diff --check通过，--root与--ref 11ce2176 pinned replay均通过。Human Review Handoff仍为needs-human-review，human_decision=pending。"
+      "notes": "第三次审查问题已全部处理：CLI新增allowlisted --execute生成真实verification provenance，并自动识别仓库根与tools/zj-loop-core包根；manifest命令唯一且与verification result一一对应；工作树证据使用realpath防symlink越界；--ref要求解析到target.commit。实现修正已提交为 dcdc378e576f8da3d060e9c7153a122556a3b116，报告 docs/testing/agent-context-capability-review.json 已绑定该commit；--ref pinned replay通过。npm run test:agent-local 36/36通过，git diff --check通过。Human Review Handoff仍为needs-human-review，human_decision=pending。"
     },
     "1-4-2": {
       "id": "1-4-2",
@@ -451,7 +451,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 15:29:58",
+    "updated": "2026-07-29 15:34:32",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
