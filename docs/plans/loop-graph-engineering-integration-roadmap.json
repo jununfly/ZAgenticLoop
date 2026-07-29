@@ -379,7 +379,12 @@
       "status": "in_progress",
       "mode": "explore",
       "parent": "1-4",
-      "children": [],
+      "children": [
+        "1-4-2-1",
+        "1-4-2-2",
+        "1-4-2-3",
+        "1-4-2-4"
+      ],
       "decisions": [
         {
           "q": "本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？",
@@ -710,6 +715,71 @@
           "q": "macOS P-256 HumanSigner adapter采用什么实现形态？",
           "answer": "采用独立Swift Security helper + TypeScript HumanSigner adapter：Swift helper负责Keychain内生成/读取P-256私钥与SecKey签名，只输出公钥SPKI、fingerprint和签名；TypeScript负责进程协议与HumanSigner契约映射。测试helper使用唯一tag并在结束时删除，生产helper由显式编译产物提供。",
           "note": "Human confirmed the native helper boundary."
+        },
+        {
+          "q": "Windows CNG/TPM与Linux PKCS#11/TPM2适配器是否纳入本阶段完成条件？",
+          "answer": "暂不纳入。本阶段以macOS Keychain真实后端完成本机双Agent Human-controlled enrollment与Node Identity核心闭环；provider-neutral HumanSigner contract与内存fixture作为跨平台替换边界。Windows CNG/TPM与Linux PKCS#11/TPM2作为后续平台扩展，不阻塞本阶段双Agent conformance。",
+          "note": "Human确认平台扩展不阻塞当前核心里程碑。"
+        },
+        {
+          "q": "本机双Agent conformance fixture是否需要启动真实Codex与Workbuddy进程？",
+          "answer": "不需要。当前fixture使用两个独立的协议测试节点，分别以codex和workbuddy作为节点类型标识，验证Node Identity、mTLS、Human pairing、capability ceiling、append-only enrollment、scoped credential和撤销阻断；不依赖真实Agent安装、模型调用、CLI环境或目标代码库。真实runtime集成留到1-4-7 Native OPN Tracer。",
+          "note": "Human确认协议正确性与Agent runtime集成分开验收。"
+        },
+        {
+          "q": "本机双Agent conformance fixture的canonical StateStore采用内存还是SQLite？",
+          "answer": "采用临时SQLite StateStore作为canonical存储；内存实现仅用于纯协议单元测试。fixture验证Human-owned network、双节点append-only enrollment、CAS/幂等、重启恢复和独立撤销，测试结束清理临时SQLite文件，不连接真实GitLab、目标代码库或真实Agent进程。",
+          "note": "Human确认conformance必须覆盖持久化与重启语义。"
+        },
+        {
+          "q": "双Agent conformance是否应通过真实loopback HTTPS Pairing service完成？",
+          "answer": "应通过真实loopback HTTPS Pairing service完成，并使用SQLite StateStore作为canonical存储；Human authority使用无副作用的内存HumanSigner fixture。验证mTLS、PairingRequest、session binding、CAS、持久化和重启恢复；macOS Keychain真实签名由独立conformance覆盖，不引入Web UI、真实Agent进程、GitLab或目标代码库。",
+          "note": "Human确认conformance覆盖产品协议边界，同时保持环境可重复。"
+        },
+        {
+          "q": "静态Web UI是否作为双Agent enrollment conformance的硬性条件？",
+          "answer": "不作为协议conformance fixture的硬性条件，但作为1-4-2的后续产品实现子任务。先完成loopback HTTPS、SQLite和双协议节点conformance，再接入静态Web UI；UI只改变交互入口，不改变身份、授权、StateStore或审计协议。UI完成前CLI/API仅用于开发验证，不能视为最终用户体验完成。",
+          "note": "Human确认协议验收与用户体验验收分阶段推进。"
+        },
+        {
+          "q": "双Agent conformance是否必须同时验证成功路径和关键阻断路径？",
+          "answer": "必须同时验证。最小矩阵包括Codex与Workbuddy独立成功enrollment、SQLite重启恢复、撤销Workbuddy而Codex继续可用、伪造或不匹配Node Identity阻断、超出Human approval的capability阻断、重复approval幂等、CAS冲突fail-closed和过期pairing request拒绝。",
+          "note": "Human确认不能以happy path代表责任与权限边界成立。"
+        },
+        {
+          "q": "双Agent conformance是否需要生成机器可读Evidence？",
+          "answer": "需要。fixture除测试通过/失败外生成结构化Evidence，包含schema与fixture版本、Codex/Workbuddy身份摘要、pairing/approval/credential/revoke/restart场景结果、SQLite revision与append-only record摘要、阻断reason/code、side_effects_executed=false、commit/时间/环境摘要和Evidence SHA-256，供Review Handoff、Web UI和后续Graph Engineering验收复用。",
+          "note": "Human确认Evidence是产品协议的一等产物。"
+        },
+        {
+          "q": "双Agent conformance Evidence是否允许保存完整证书、session token或Human signing信息？",
+          "answer": "不允许。Evidence仅保存Node Identity与public-key fingerprint摘要、证书摘要或哈希、capability范围、StateStore revision/record ID/digest、结构化状态与reason/code、时间和版本；禁止私钥、Human approval secret、bearer/session token、完整证书链、可重放签名材料和不必要业务payload。",
+          "note": "Human确认Evidence metadata-only，不能成为凭据或身份恢复材料。"
+        },
+        {
+          "q": "双Agent conformance的成功终点是Human approval还是enrolled-active？",
+          "answer": "必须到达enrolled-active：PairingRequest经Human approval后追加append-only enrollment record，StateStore/Network Authority按network、node、event、task与approved capability交集签发scoped credential，Agent验证credential后才进入enrolled-active。Pairing service不拥有任意credential签发权；Codex与Workbuddy分别获得credential，撤销后不能续期或领取新事件。",
+          "note": "Human确认批准不是运行资格，credential验证是激活门槛。"
+        },
+        {
+          "q": "Human approval后credential签发或Agent激活中途崩溃时如何恢复？",
+          "answer": "保留approved/pending-activation，不自动标记enrolled-active。已写approval但无credential时保持待激活；credential已写但Agent未确认时允许通过绑定的幂等请求重新获取并验证；只有Agent成功验证credential后才追加enrolled-active。重复请求返回同一结果，状态证据缺失或冲突则blocked，不能因approval存在自动放行事件或Artifact访问。",
+          "note": "Human确认激活状态必须有完整证据链。"
+        },
+        {
+          "q": "达到enrolled-active是否要求本阶段实现StateStore credential issuance HTTP接口？",
+          "answer": "暂不要求。本阶段使用已有provider-neutral/SQLite credential issuer，通过受控注入验证credential绑定network、node、event、task、approved capability交集、approval有效期、revoke阻断和幂等签发；真正的StateStore credential issuance HTTP API留在1-4-3独立子任务，避免扩大本阶段改动边界。",
+          "note": "Human确认enrollment conformance与StateStore HTTP扩展解耦。"
+        },
+        {
+          "q": "初次enrollment激活时scoped credential的event_id和task_id绑定什么？",
+          "answer": "绑定明确的无业务副作用enrollment bootstrap scope，例如event_id=enrollment-bootstrap:<request_id>、task_id=enrollment-activation:<node_id>。该scope只允许查询自身enrollment状态、获取激活确认和验证capability ceiling，不允许领取业务事件、读取Artifact、写业务StateStore、访问目标代码库或执行外部副作用。真实业务credential必须由后续MessageEvent单独签发。",
+          "note": "Human确认enrollment资格与业务执行权限严格分离。"
+        },
+        {
+          "q": "Codex与Workbuddy的enrollment顺序如何定义？",
+          "answer": "两个节点可以并发提交独立pairing request，但Human approval按request独立处理，不建立Codex到Workbuddy的隐含依赖。批准Codex不自动批准Workbuddy，反之亦然；两个request的CAS、session、credential和审计记录彼此独立，同一request的并发批准由CAS保证单一结果。",
+          "note": "Human确认同机不等于同节点，节点激活彼此解耦。"
         }
       ],
       "notes": "已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession（Agent侧仍为Ed25519）、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。Human authority已干净切换为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用prime256v1公钥、SHA-256签名、稳定public-key fingerprint；verifyHumanSignature与verifyHumanApprovalContext严格检查EC/P-256、指纹、payload和签名，篡改fail-closed。macOS平台adapter已完成：独立Swift Security helper在Keychain内生成/读取P-256私钥并执行SecKey签名，TypeScript adapter仅接收公钥SPKI、fingerprint和签名；测试使用唯一tag并清理临时key，私钥不进入Node、OpenSSL或文件。验证：npm run test:agent-local = 106 tests，101 passed、5 skipped、0 failed；macOS真实Keychain conformance已通过。5项skip仍是Agent Ed25519 X.509测试受macOS LibreSSL限制。当前仍未实现Windows CNG/TPM adapter、Linux PKCS#11/TPM2 adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。"
@@ -1199,11 +1269,104 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-4-2-1": {
+      "id": "1-4-2-1",
+      "label": "SQLite与loopback HTTPS双Agent enrollment conformance",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-4-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Workbuddy被撤销后conformance是否必须验证重新enrollment？",
+          "answer": "必须验证，但重新enrollment必须是显式新流程：旧request不能再次批准，旧credential不能续期或复活，revoked Node Identity不能通过重连自动恢复；Workbuddy创建新的pairing request，Human重新确认身份、能力和有效期，推荐生成新的Node Identity key并形成新的append-only审计链，旧生命周期和Evidence不迁移覆盖。",
+          "note": "Human确认撤销是终态，恢复必须重新建立信任。"
+        },
+        {
+          "q": "conformance是否必须真实并发执行同一pairing request的两次approval？",
+          "answer": "必须真实并发执行。两个approval使用同一request_id、request_digest和expected lifecycle state；结果必须恰好一个canonical approval，另一个返回同一幂等结果或明确CAS conflict，不产生两个有效credential或两个enrolled-active生命周期，SQLite revision只按实际canonical append递增一次。",
+          "note": "Human确认CAS需要真实竞态验证而非只做静态单测。"
+        },
+        {
+          "q": "Pairing lifecycle records应存入独立SQLite还是复用同一个StateStore canonical event log？",
+          "answer": "复用同一个SQLite StateStore canonical event log，不建立第二个持久化真相。network、revision、CAS、pairing-requested/approved/rejected/expired、enrollment、credential-issued、revoked和Evidence metadata references共享同一StateStore；PairingRecordStore只做provider-neutral映射，内存实现继续用于纯协议测试。",
+          "note": "Human确认所有权限生命周期共享一个canonical revision与CAS边界。"
+        }
+      ],
+      "notes": "已实现SQLite PairingRecordStore：Pairing lifecycle records映射到同一个StateStore canonical event log，普通append在revision竞争时重试，条件approval使用StateStore CAS并对状态冲突fail-closed。已加入双Codex/Workbuddy loopback HTTPS conformance测试：独立pairing request、同一request并发approval、双节点分别approval和服务重启恢复。当前macOS LibreSSL无法生成Ed25519 X.509测试证书，真实HTTPS双节点场景按环境能力跳过；协议测试已保留并应在支持Ed25519 X.509的环境执行。"
+    },
+    "1-4-2-2": {
+      "id": "1-4-2-2",
+      "label": "结构化 conformance Evidence 与 Review Handoff",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "结构化conformance Evidence的canonical存储位置是什么？",
+          "answer": "Evidence JSON内容进入content-addressed ArtifactStore，StateStore只保存evidence_id、artifact_id、execution_id、status、digest、created_at等不可变引用与审计元数据。Review Handoff先读取StateStore元数据，再按授权读取Artifact；fixture使用临时ArtifactStore和SQLite StateStore，不把Evidence只写日志或普通本地文件。",
+          "note": "Human确认Evidence内容与网络级事实分层存储。"
+        },
+        {
+          "q": "谁可以读取双Agent conformance Evidence？",
+          "answer": "Human可以读取完整Evidence并作最终Review Handoff决策；Human+Codex Center Coordination仅在Human授权的evidence.read范围内读取和汇总；Codex/Workbuddy执行节点默认只能读取自己产生或明确授权的Evidence摘要，不能默认读取另一节点完整结果；pairing bootstrap credential不能读取Evidence；Relay只传递引用和受限元数据，不读取或修改内容。",
+          "note": "Human确认Evidence读取按责任角色和CapabilityGrant隔离。"
+        },
+        {
+          "q": "双Agent conformance运行结束后Evidence默认保留还是清理？",
+          "answer": "分两种模式：普通自动化测试使用临时ArtifactStore并在结束时清理；验收或Review Handoff模式显式指定输出目录或Evidence destination，保留结构化Evidence与SHA-256供Human review、CI artifact或状态记录使用。禁止默认写入仓库、目标代码库或不可控用户目录；StateStore和ArtifactStore始终隔离。",
+          "note": "Human确认测试清洁性与验收证据保留分离。"
+        }
+      ],
+      "notes": "已实现dual-agent-enrollment-conformance Evidence构造器和测试：两个协议节点可达到enrolled-active，bootstrap credential仅绑定enrollment状态读取，credential-issued与enrolled-active追加到同一StateStore event log；Evidence内容写入临时content-addressed ArtifactStore，StateStore保存evidence metadata引用与digest，禁止session token/private key等敏感信息。自动化测试默认清理临时资源，验收模式可显式保留Evidence。"
+    },
+    "1-4-2-3": {
+      "id": "1-4-2-3",
+      "label": "静态 Web UI Human approval 入口",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "静态Web UI第一版是否只聚焦enrollment与approval？",
+          "answer": "只聚焦enrollment/approval主路径：Human Owner初始化与fingerprint、pending request列表、request详情、批准/拒绝、enrollment状态、Evidence摘要与Review Handoff入口，以及human-authority/state-store不可用和CAS冲突等阻断状态。暂不提供Graph拓扑编辑、任意capability拖拽授权、任务执行控制台、Artifact编辑、Relay管理或真实Agent进程控制。",
+          "note": "Human确认UI先降低身份与配对门槛，不超前伪装Graph能力。"
+        },
+        {
+          "q": "Human是否可以在UI中批量批准Codex与Workbuddy？",
+          "answer": "MVP必须逐个request审批，不提供批量批准。每个Node Identity、capability ceiling、endpoint和有效期独立审查，每个approval独立绑定request_digest、签名上下文和CAS；未来批量操作也必须为每个request追加独立canonical approval，不能用aggregate approval替代节点级事实。",
+          "note": "Human确认同一network不等于同一权限。"
+        },
+        {
+          "q": "Human拒绝pairing request时是否必须填写结构化原因？",
+          "answer": "必须填写结构化原因，至少区分identity-untrusted、capability-too-broad、endpoint-unexpected、request-not-needed、duplicate-node、human-review-deferred和需补充文本的other。reject追加不可变pairing-rejected；过期由系统追加pairing-expired；未处理request保持pending直到过期。原因进入Evidence与Review Handoff，但不写入敏感业务payload。",
+          "note": "Human确认拒绝、忽略和过期是不同生命周期事实。"
+        },
+        {
+          "q": "UI页面过期后是否还能直接提交pairing操作？",
+          "answer": "不能直接提交。UI mutation携带request_id、页面所见request_digest和expected state，服务端以SQLite StateStore当前状态为准重新校验；digest或状态不匹配返回结构化409 pairing-state-conflict，UI刷新最新状态和原因。不能因页面仍显示pending覆盖新状态，只有内容完全一致的重复批准才幂等返回。",
+          "note": "Human确认UI只是操作入口，canonical状态由StateStore决定。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-2-4": {
+      "id": "1-4-2-4",
+      "label": "macOS Keychain HumanSigner 集成验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 21:47:09",
+    "updated": "2026-07-30 00:02:22",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
