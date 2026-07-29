@@ -117,7 +117,8 @@ async function executeVerificationManifest(input: any, root: string): Promise<vo
 
 async function runAllowlistedVerification(root: string, command: string): Promise<string> {
   if (command === 'npm run test:agent-local') {
-    const result = await execFileAsync('npm', ['run', 'test:agent-local'], { cwd: root, maxBuffer: 16 * 1024 * 1024 });
+    const cwd = await resolveNpmProjectRoot(root);
+    const result = await execFileAsync('npm', ['run', 'test:agent-local'], { cwd, maxBuffer: 16 * 1024 * 1024 });
     return result.stdout;
   }
   if (command === 'git diff --check') {
@@ -125,6 +126,23 @@ async function runAllowlistedVerification(root: string, command: string): Promis
     return result.stdout;
   }
   throw new Error(`verification command is not allowlisted: ${command}`);
+}
+
+async function resolveNpmProjectRoot(root: string): Promise<string> {
+  try {
+    const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+    if (packageJson?.scripts?.['test:agent-local']) return root;
+  } catch {
+    // Fall through to the package's known workspace location.
+  }
+  const coreRoot = path.join(root, 'tools', 'zj-loop-core');
+  try {
+    const packageJson = JSON.parse(await readFile(path.join(coreRoot, 'package.json'), 'utf8'));
+    if (packageJson?.scripts?.['test:agent-local']) return coreRoot;
+  } catch {
+    // The command below reports the missing project as a failed verification.
+  }
+  return root;
 }
 
 async function prepareOutputPath(root: string, relativePath: string, label: string): Promise<string> {

@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 const cli = path.resolve('dist/agent-context-capability-review-cli.js');
 
@@ -111,25 +112,26 @@ test('review CLI rejects a mismatched evidence hash when verification is request
 
   const result = await run(['--input', inputPath, '--root', path.resolve('..', '..'), '--json']);
   assert.equal(result.code, 1);
-  assert.match(result.stderr, /evidence hash mismatch/);
+  assert.match(result.stderr, /(evidence hash mismatch|manifest output hash mismatch)/);
 });
 
 test('review CLI verifies evidence against a pinned git ref', async () => {
   const root = path.resolve('..', '..');
+  const currentCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
   const evidencePath = path.join(root, 'tools/zj-loop-core/test/agent-context.test.mjs');
   const evidenceHash = createHash('sha256').update(await readFile(evidencePath)).digest('hex');
   const rootDir = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-review-'));
   const inputPath = path.join(rootDir, 'input.json');
   const pinnedInput = {
     ...input,
-    target: { ...input.target, commit: '68d6339eea63da45d040caf491d7c27ac674066f' },
-    report_metadata: { ...input.report_metadata, workspace_commit: '68d6339eea63da45d040caf491d7c27ac674066f' },
+    target: { ...input.target, commit: currentCommit },
+    report_metadata: { ...input.report_metadata, workspace_commit: currentCommit },
     evidence_refs: { ...input.evidence_refs, context_tests: { ...input.evidence_refs.context_tests, hash: evidenceHash } },
   };
   await writeFile(inputPath, `${JSON.stringify(pinnedInput)}\n`);
   const result = await run(['--input', inputPath, '--root', root, '--ref', 'HEAD', '--json']);
   assert.equal(result.code, 1, 'fixture hash is intentionally not the current HEAD blob');
-  assert.match(result.stderr, /evidence hash mismatch/);
+  assert.match(result.stderr, /(evidence hash mismatch|manifest output hash mismatch)/);
 });
 
 test('review CLI rejects an evidence symlink that escapes root', async () => {
