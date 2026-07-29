@@ -170,3 +170,26 @@ test('Relay closes an authenticated session without changing business state', as
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
 });
+
+test('Relay long-poll returns an empty result when no authorized delivery is available', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('workbuddy');
+  let resolverInput;
+  const server = createLoopbackRelayServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    sessionVerifier: { verify: () => ({ status: 'allowed', credential_id: 'credential-1', expires_at: '2026-07-29T03:10:00.000Z' }) },
+    deliveryResolver: { findNext: (input) => { resolverInput = input; return null; } },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const created = await request({ address, server: serverMaterial, client: clientMaterial, body: { network_id: 'network-1', protocol_version: 'relay.v1' }, headers: { authorization: 'Bearer session-token' } });
+  const response = await requestPath({ address, server: serverMaterial, client: clientMaterial, path: `/v1/sessions/${created.body.session.session_id}/deliveries?after_revision=7`, headers: { authorization: 'Bearer session-token' } });
+  assert.equal(response.statusCode, 204);
+  assert.equal(response.body, null);
+  assert.deepEqual(resolverInput, { network_id: 'network-1', node_id: created.body.session.node_id, after_revision: 7 });
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});

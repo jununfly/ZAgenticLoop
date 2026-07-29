@@ -17,6 +17,10 @@ export type RelaySessionVerifier = {
   verify(input: RelaySessionVerificationRequest): Promise<{ status: 'allowed' | 'blocked'; credential_id?: string; expires_at?: string; reason?: string }> | { status: 'allowed' | 'blocked'; credential_id?: string; expires_at?: string; reason?: string };
 };
 
+export type RelayDeliveryResolver = {
+  findNext(input: { network_id: string; node_id: string; after_revision: number }): Promise<Record<string, unknown> | null> | Record<string, unknown> | null;
+};
+
 function sendJson(response: import('node:http').ServerResponse, statusCode: number, body: Record<string, unknown>): void {
   const encoded = JSON.stringify(body);
   response.statusCode = statusCode;
@@ -47,6 +51,7 @@ async function readBody(request: import('node:http').IncomingMessage): Promise<u
 export function createLoopbackRelayServer(input: {
   tls: ServerOptions;
   sessionVerifier: RelaySessionVerifier | null;
+  deliveryResolver?: RelayDeliveryResolver | null;
   now?: () => string;
   session_ttl_ms: number;
   supported_protocol_version?: string;
@@ -64,6 +69,56 @@ export function createLoopbackRelayServer(input: {
       return;
     }
     const url = new URL(request.url ?? '/', 'https://relay.local');
+    const deliveriesMatch = url.pathname.match(/^\/v1\/sessions\/([^/]+)\/deliveries$/);
+    if (request.method === 'GET' && deliveriesMatch) {
+      const authorization = request.headers.authorization;
+      if (!authorization || !/^Bearer\s+\S+$/.test(authorization)) {
+        sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-required', side_effects_executed: false });
+        return;
+      }
+      const session = sessions.get(decodeURIComponent(deliveriesMatch[1]));
+      if (!session) {
+        sendJson(response, 404, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-not-found', side_effects_executed: false });
+        return;
+      }
+      const peer = (request.socket as TLSSocket).getPeerCertificate();
+      if (!peer.raw) {
+        sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'client-identity-unavailable', side_effects_executed: false });
+        return;
+      }
+      const nodeId = createHash('sha256').update(peer.raw).digest('hex');
+      if (nodeId !== session.node_id) {
+        sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-node-mismatch', side_effects_executed: false });
+        return;
+      }
+      if (!input.sessionVerifier) {
+        sendJson(response, 503, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-verifier-unavailable', side_effects_executed: false });
+        return;
+      }
+      const verification = await Promise.resolve(input.sessionVerifier.verify({ token: authorization.replace(/^Bearer\s+/, ''), node_id: nodeId, network_id: session.network_id, protocol_version: session.protocol_version }));
+      if (verification.status !== 'allowed' || verification.credential_id !== session.credential_id) {
+        sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: verification.reason ?? 'session-credential-invalid', side_effects_executed: false });
+        return;
+      }
+      if (!input.deliveryResolver) {
+        sendJson(response, 503, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'delivery-resolver-unavailable', side_effects_executed: false });
+        return;
+      }
+      const afterRevisionText = url.searchParams.get('after_revision') ?? '0';
+      const afterRevision = Number(afterRevisionText);
+      if (!Number.isInteger(afterRevision) || afterRevision < 0) {
+        sendJson(response, 400, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'cursor-invalid', side_effects_executed: false });
+        return;
+      }
+      const delivery = await Promise.resolve(input.deliveryResolver.findNext({ network_id: session.network_id, node_id: nodeId, after_revision: afterRevision }));
+      if (!delivery) {
+        response.statusCode = 204;
+        response.end();
+        return;
+      }
+      sendJson(response, 200, { schema: RELAY_HTTP_SCHEMA, status: 'delivery-available', delivery, side_effects_executed: false });
+      return;
+    }
     const closeMatch = url.pathname.match(/^\/v1\/sessions\/([^/]+)$/);
     if (request.method === 'DELETE' && closeMatch) {
       const authorization = request.headers.authorization;

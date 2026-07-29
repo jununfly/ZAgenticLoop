@@ -19,9 +19,17 @@ export type RelaySessionVerifier = {
         reason?: string;
     };
 };
+export type RelayDeliveryResolver = {
+    findNext(input: {
+        network_id: string;
+        node_id: string;
+        after_revision: number;
+    }): Promise<Record<string, unknown> | null> | Record<string, unknown> | null;
+};
 export declare function createLoopbackRelayServer(input: {
     tls: ServerOptions;
     sessionVerifier: RelaySessionVerifier | null;
+    deliveryResolver?: RelayDeliveryResolver | null;
     now?: () => string;
     session_ttl_ms: number;
     supported_protocol_version?: string;
