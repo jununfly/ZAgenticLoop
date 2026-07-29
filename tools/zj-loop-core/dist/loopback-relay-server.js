@@ -41,6 +41,11 @@ export function createLoopbackRelayServer(input) {
             sendJson(response, 200, { schema: RELAY_HTTP_SCHEMA, status: 'ok', side_effects_executed: false });
             return;
         }
+        if (request.method === 'GET' && request.url === '/readyz') {
+            const readiness = input.readinessCheck ? await Promise.resolve(input.readinessCheck.check()) : { status: 'ready' };
+            sendJson(response, readiness.status === 'ready' ? 200 : 503, { schema: RELAY_HTTP_SCHEMA, status: readiness.status, ...(readiness.reason ? { reason: readiness.reason } : {}), side_effects_executed: false });
+            return;
+        }
         if (!request.socket.authorized) {
             sendJson(response, 401, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'client-certificate-required', side_effects_executed: false });
             return;

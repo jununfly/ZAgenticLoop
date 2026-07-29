@@ -25,6 +25,10 @@ export type RelayDeliveryAcknowledger = {
   acknowledge(input: { network_id: string; node_id: string; delivery_id: string; attempt_id: string }): Promise<Record<string, unknown>> | Record<string, unknown>;
 };
 
+export type RelayReadinessCheck = {
+  check(): Promise<{ status: 'ready' | 'not-ready'; reason?: string }> | { status: 'ready' | 'not-ready'; reason?: string };
+};
+
 function sendJson(response: import('node:http').ServerResponse, statusCode: number, body: Record<string, unknown>): void {
   const encoded = JSON.stringify(body);
   response.statusCode = statusCode;
@@ -57,6 +61,7 @@ export function createLoopbackRelayServer(input: {
   sessionVerifier: RelaySessionVerifier | null;
   deliveryResolver?: RelayDeliveryResolver | null;
   deliveryAcknowledger?: RelayDeliveryAcknowledger | null;
+  readinessCheck?: RelayReadinessCheck | null;
   now?: () => string;
   session_ttl_ms: number;
   supported_protocol_version?: string;
@@ -67,6 +72,11 @@ export function createLoopbackRelayServer(input: {
   return createServer({ ...input.tls, requestCert: true, rejectUnauthorized: false }, async (request, response) => {
     if (request.method === 'GET' && request.url === '/healthz') {
       sendJson(response, 200, { schema: RELAY_HTTP_SCHEMA, status: 'ok', side_effects_executed: false });
+      return;
+    }
+    if (request.method === 'GET' && request.url === '/readyz') {
+      const readiness = input.readinessCheck ? await Promise.resolve(input.readinessCheck.check()) : { status: 'ready' as const };
+      sendJson(response, readiness.status === 'ready' ? 200 : 503, { schema: RELAY_HTTP_SCHEMA, status: readiness.status, ...(readiness.reason ? { reason: readiness.reason } : {}), side_effects_executed: false });
       return;
     }
     if (!(request.socket as TLSSocket).authorized) {

@@ -265,3 +265,29 @@ test('Relay maps an expired delivery lease to a transport recovery response', as
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
 });
+
+test('Relay readyz reports dependency readiness without exposing canonical state', async () => {
+  const serverMaterial = await certificate();
+  const server = createLoopbackRelayServer({
+    tls: serverMaterial,
+    sessionVerifier: null,
+    readinessCheck: { check: () => ({ status: 'not-ready', reason: 'state-store-unavailable' }) },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const response = await new Promise((resolve, reject) => {
+    https.get({ hostname: '127.0.0.1', port: server.address().port, path: '/readyz', ca: serverMaterial.cert, servername: 'localhost' }, (res) => {
+      let text = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { text += chunk; });
+      res.on('end', () => resolve({ statusCode: res.statusCode, body: JSON.parse(text) }));
+    }).on('error', reject);
+  });
+  assert.equal(response.statusCode, 503);
+  assert.deepEqual(response.body, { schema: 'zj-loop.relay_http.v1', status: 'not-ready', reason: 'state-store-unavailable', side_effects_executed: false });
+  assert.equal('network_id' in response.body, false);
+  assert.equal('revision' in response.body, false);
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+});

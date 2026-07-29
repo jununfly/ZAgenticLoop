@@ -34,11 +34,21 @@ export type RelayDeliveryAcknowledger = {
         attempt_id: string;
     }): Promise<Record<string, unknown>> | Record<string, unknown>;
 };
+export type RelayReadinessCheck = {
+    check(): Promise<{
+        status: 'ready' | 'not-ready';
+        reason?: string;
+    }> | {
+        status: 'ready' | 'not-ready';
+        reason?: string;
+    };
+};
 export declare function createLoopbackRelayServer(input: {
     tls: ServerOptions;
     sessionVerifier: RelaySessionVerifier | null;
     deliveryResolver?: RelayDeliveryResolver | null;
     deliveryAcknowledger?: RelayDeliveryAcknowledger | null;
+    readinessCheck?: RelayReadinessCheck | null;
     now?: () => string;
     session_ttl_ms: number;
     supported_protocol_version?: string;
