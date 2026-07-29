@@ -646,9 +646,79 @@
           "q": "Network是否允许物理删除？",
           "answer": "不允许物理删除；采用Human-authority的network.archived tombstone作为最后生命周期事件。archived后拒绝新Agent事件、credential与enrollment，只允许只读审计与recovery查询；恢复必须由Human明确执行，物理清理留给未来retention策略。",
           "note": "Human accepted append-only network archival."
+        },
+        {
+          "q": "StateStore service第一版HTTP API包含哪些端点？",
+          "answer": "限定为GET /healthz、POST /v1/networks、GET /v1/networks/:id/revision、POST /v1/networks/:id/events、GET /v1/networks/:id/events?after_revision；不加入ArtifactStore、Relay、watch/long-poll、SQL或任意查询。除health外均经过mTLS与授权上下文，事件端点只接受通用envelope。",
+          "note": "Human accepted the narrow StateStore HTTP API."
+        },
+        {
+          "q": "StateStore healthz是否免认证？",
+          "answer": "采用免认证healthz：只返回service/schema/status，不返回network、owner、revision、节点或credential信息，并声明side_effects_executed=false；其他所有endpoint强制mTLS与授权。",
+          "note": "Human accepted minimal unauthenticated health probe."
+        },
+        {
+          "q": "HTTP service如何接入opaque credential验证？",
+          "answer": "当前HTTP API不公开credential签发endpoint；service构造时注入provider-neutral CredentialVerifier，根据opaque token hash查询credential metadata并验证scope/expiry/revoke。测试可用内存verifier，后续独立slice实现真实token生成、hash存储、renew/revoke；service不自行扩大scope或代表Human签发权限。",
+          "note": "Human accepted injected credential verification."
+        },
+        {
+          "q": "mTLS peer certificate如何映射Node Identity？",
+          "answer": "从TLS peer certificate原始DER bytes计算SHA-256作为node_id；必须匹配已注册enrollment projection，拒绝仅凭CN、Subject、display name或客户端自报node_id；certificate未注册或已revoked直接拒绝；CredentialVerifier返回的node_id必须与mTLS fingerprint一致。",
+          "note": "Human accepted certificate-derived node identity."
+        },
+        {
+          "q": "StateStore service是否拥有独立Service Identity？",
+          "answer": "采用独立X.509 service certificate/key；service不代表任何Agent、不成为Center Node。客户端通过pinned service certificate/CA验证服务端，service通过客户端证书fingerprint验证Agent Node Identity；MVP由启动配置提供service trust material，后续再纳入Human-controlled rotation。",
+          "note": "Human accepted separate StateStore service identity."
+        },
+        {
+          "q": "MVP StateStore service如何建立服务端TLS信任？",
+          "answer": "采用pinned self-signed service certificate：Agent client显式配置service certificate作为trust material，不使用通用CA、系统trust store或自动发现；service certificate轮换需显式更新pin，失败进入blocked。未来跨设备规模化再引入Network CA/Service Authority。",
+          "note": "Human accepted pinned service certificate trust."
+        },
+        {
+          "q": "MVP StateStore service监听在哪个网络边界？",
+          "answer": "默认只bind 127.0.0.1，不监听0.0.0.0，不做LAN discovery、端口映射或Relay暴露；端口由调用方配置。即使loopback仍强制mTLS与Bearer授权，跨设备访问留给后续transport slice。",
+          "note": "Human accepted loopback-only service binding."
+        },
+        {
+          "q": "StateStore service采用什么HTTP实现？",
+          "answer": "采用Node原生https.createServer，不引入Express/Fastify；手写最小路由与JSON body解析，TLS参数显式传入，复用现有原生HTTP server风格，未来通过adapter扩展而不改变typed API。",
+          "note": "Human accepted native HTTPS service implementation."
+        },
+        {
+          "q": "StateStore service的HTTP body大小边界是什么？",
+          "answer": "HTTP request body上限512 KiB，超出返回413；JSON解析失败返回400；StateStore payload仍硬限制256 KiB并返回domain validation error；不截断、不自动压缩、不写临时文件，大响应未来转ArtifactStore。",
+          "note": "Human accepted two-level request size limits."
+        },
+        {
+          "q": "StateStore service的HTTP错误响应如何结构化？",
+          "answer": "统一返回zj-loop.state_store_http.v1结构：status、reason、side_effects_executed=false；400输入错误、401缺少/无效认证、403无权限或revoked、404 network不存在、409 CAS或event冲突、413超限、500/503 provider故障；不返回token、私钥、完整证书或敏感payload。",
+          "note": "Human accepted structured StateStore HTTP errors."
+        },
+        {
+          "q": "CredentialVerifier采用什么provider-neutral接口？",
+          "answer": "采用verify({token,node_id,network_id,operation,event_id?,task_id?,required_capabilities?})，返回allowed或blocked及reason。service从mTLS证书得到node_id，从URL/body映射network与任务scope，从method/path映射operation；verifier负责token hash、expiry、revoked、node、scope与capability校验，service不解析token或直接读取credential表。",
+          "note": "Human accepted the injected verifier contract."
+        },
+        {
+          "q": "Human-authority HTTP请求如何区别于Agent Bearer credential？",
+          "answer": "采用独立X-ZJ-Loop-Human-Approval签名上下文：Agent Bearer只允许事件范围内操作；创建network、revoke和capability ceiling变更必须携带绑定human_id、action/network、request digest、issued_at、expires_at的Human context，由注入HumanAuthorityVerifier验证。MVP可用内存fixture，后续接Human-held signing key/UI。",
+          "note": "Human accepted separate Human authority context."
+        },
+        {
+          "q": "POST /v1/networks的owner_id从哪里获得？",
+          "answer": "请求body只接受network_id，不接受owner_id；owner_id只来自已验证Human-authority context。service将verifier返回的human_id写入network_metadata.owner_id；Human context的request digest覆盖完整body，body出现owner_id直接拒绝。",
+          "note": "Human accepted verifier-derived owner binding."
+        },
+        {
+          "q": "Human approval context由谁解析？",
+          "answer": "X-ZJ-Loop-Human-Approval作为opaque context传给注入的HumanAuthorityVerifier；verifier负责解析、验签、有效期与action/body digest校验，返回human_id或blocked。service只读header、限制长度、传递action/body并使用verifier结果，不绑定签名算法或key格式。",
+          "note": "Human accepted opaque Human verifier context."
         }
       ],
-      "notes": "StateStore provider第一条TDD纵切已完成：引入better-sqlite3；幂等bootstrap与schema version；WAL、foreign_keys、busy_timeout、synchronous=FULL；Human-owned createNetwork与network.created revision 1；network-level BEGIN IMMEDIATE CAS append；event_id dedupe/conflict；canonical JSON与payload_sha256；256 KiB payload上限；snapshot_revision readEvents；owner冲突和stale revision fail-closed。npm run test:agent-local 52/52通过。仍未实现HTTP/mTLS service、ScopedCredential endpoint、ArtifactStore和Relay。"
+      "notes": "StateStore provider与service tracer持续施工：provider已具备better-sqlite3 bootstrap、Human-owned network、network-level CAS append/read、dedupe/conflict、canonical payload hash与snapshot revision；service已具备loopback-only原生HTTPS、pinned service TLS、healthz、mTLS client-cert门禁、certificate-derived node_id、CredentialVerifier委托、HumanAuthorityVerifier委托、authenticated revision read与Human-owned network creation。npm run test:agent-local 59/59通过。仍未实现HTTP event append/read、真实credential issuance/verifier、ArtifactStore与Relay。"
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -713,7 +783,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-29 17:29:41",
+    "updated": "2026-07-29 17:53:18",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
