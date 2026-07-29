@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 20:32:38
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 20:58:32
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
 
-已完成并持续扩展本机双Agent enrollment基础：Node Identity与loopback mTLS；Human pairing request/approval contract（network/node绑定、能力越界与过期阻断）；provider-neutral append-only EnrollmentRecordStore；ScopedCredential契约与SQLite verifier；revoke/re-enroll历史投影；PairingRequest canonical digest与Ed25519 proof-of-possession生成/验证；新增provider-neutral HumanAuthorityProvider内存fixture，支持Ed25519 Human public identity、approval context签名、recovery material创建与轮换。npm run test:agent-local 84 passed、1 skipped（macOS LibreSSL无法生成Ed25519 X.509测试证书）。下一步实现loopback Pairing service与轻量Web UI；真实Keychain、StateStore-backed pending projection和双Agent end-to-end fixture仍未完成。
+已完成并持续扩展本机双Agent enrollment基础：Node Identity与loopback mTLS；Human pairing request/approval contract（network/node绑定、能力越界与过期阻断）；provider-neutral append-only EnrollmentRecordStore；ScopedCredential契约与SQLite verifier；revoke/re-enroll历史投影；PairingRequest canonical digest与Ed25519 proof-of-possession生成/验证；provider-neutral HumanAuthorityProvider内存fixture（Ed25519 Human public identity、approval context签名、recovery material创建与轮换）；新增独立PairingRequestProjection，按显式request digest重建pending/approved/rejected/expired状态并对缺失基础事件、重复事件和非法迁移fail-closed。npm run test:agent-local 88 passed、1 skipped（macOS LibreSSL无法生成Ed25519 X.509测试证书）。下一步实现loopback Pairing service与轻量Web UI；真实Keychain、StateStore-backed pending projection和双Agent end-to-end fixture仍未完成。
 
 **决策：**
 - Q: 本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？ → 是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。 (Human confirmed independent node identity on the same device.)
@@ -78,4 +78,12 @@
 - Q: Pairing service重启或优雅停机时pending request和浏览器session如何处理？ → 停机先将readyz置为not-ready，拒绝新request和approval；已有StateStore记录不受影响。重启后从StateStore重建pending projection，未过期request可继续处理，过期request进入pairing-expired；浏览器session全部失效，Human重新打开一次性UI session。 (Human confirmed restart and drain semantics.)
 - Q: OS Keychain与Human-authority broker如何保持跨平台可替换？ → 核心只依赖provider-neutral HumanAuthorityProvider：getPublicIdentity、signApprovalContext、createRecoveryMaterial、rotateRecoveryMaterial。MVP先提供macOS Keychain adapter和无副作用测试fixture；其他平台、硬件密钥或远程Human authority替换adapter，不改变Pairing contract和StateStore事件协议。 (Human confirmed provider-neutral Human authority boundary.)
 - Q: 如何验收Pairing Web UI与enrollment service？ → 最小conformance fixture覆盖Human owner初始化与public fingerprint绑定、Agent证书proof-of-possession、Web UI展示pending request、Human显式批准并追加canonical approval、Agent验证结果进入enrolled-active、重复批准幂等、过期/拒绝/CAS冲突fail-closed、非owner与伪造身份阻断、Keychain/broker不可用阻塞、service重启恢复pending projection；全程无真实GitLab、目标代码库或业务副作用。 (Human accepted the Pairing Web UI enrollment conformance matrix.)
+- Q: Pairing service第一版如何接入StateStore？ → Pairing service只依赖注入的provider-neutral PairingRecordStore/EnrollmentRecordStore，不直接依赖SQLite、SQL或StateStore文件；先用内存fixture验证HTTP/UI行为，再接StateStore HTTP/SQLite adapter。所有request/approval/rejection最终映射为StateStore canonical append-only enrollment records。 (Human confirmed provider-neutral Pairing service persistence boundary.)
+- Q: Pending Pairing request应如何投影？ → 新增独立PairingRequestProjection，按network_id + request_id从append-only records重建，保留request摘要、当前状态pending/approved/rejected/expired、request digest、Human decision和时间信息；不把pending列表塞进EnrollmentProjection，避免混淆请求生命周期与节点enrollment生命周期。 (Human confirmed a separate PairingRequestProjection.)
+- Q: PairingRequestProjection遇到事件缺失、重复或非法状态迁移时如何处理？ → 严格fail-closed：缺少pairing-requested不展示为pending；重复或内容不一致进入projection-conflict；approved后rejected、过期后批准等非法迁移进入projection-conflict；未知event type不改变状态但保留审计读取；Web UI只显示需要恢复，不允许批准或自动修复。 (Human confirmed fail-closed pairing projection.)
+- Q: Agent如何获取Human approval结果，MVP采用轮询还是长轮询？ → MVP采用有界轮询：Agent每次查询GET /v1/pairing-requests/:id/status并携带短期pairing session；服务端返回pending/approved/rejected/expired/conflict。不在首版引入长连接，后续可增加long-poll adapter而不改变canonical状态。 (Human confirmed bounded polling for pairing status.)
+- Q: 未enrollment的Agent如何提交Pairing request？ → Pairing service仍要求TLS client certificate但不要求已enrollment；从证书提取Node Identity fingerprint，并验证X.509有效、request identity与证书一致、Ed25519 proof-of-possession有效、request未过期且network合法。未enrollment只可创建和查询自己的pairing request，不能访问Owner API、领取事件、读取Artifact或写业务StateStore事实。 (Human confirmed pre-enrollment proof and least privilege.)
+- Q: Pairing session如何绑定Agent，避免其他节点轮询request？ → 创建request时服务端生成短期opaque pairing session，绑定request_id、node_id和certificate fingerprint，仅通过该Agent的mTLS连接使用；状态查询同时匹配session、客户端证书和request。session过期、撤销或request进入终态后立即失效，不复用运行时scoped credential。 (Human confirmed request-scoped session binding.)
+- Q: Pairing request与Web UI的输入大小和速率边界如何定义？ → HTTP body上限64 KiB；identity/certificate、endpoint和capability列表有明确长度上限；capability去重并拒绝空值；每个Node Identity同时最多一个pending request；重复提交幂等；UI mutation和Agent request有限速率；超限返回结构化413或429，不截断、不排队、不写入StateStore。 (Human confirmed bounded pairing inputs and rate limits.)
+- Q: Pairing service的实现顺序如何安排？ → 先实现provider-neutral PairingRequestProjection与record lifecycle；再实现loopback HTTPS API和mTLS/session绑定；再接Human authority context与CAS approval/rejection；最后提供静态Web UI；每一步先有纯协议/服务测试，再组合成双Agent conformance fixture。 (Human confirmed the incremental Pairing service implementation order.)
 <!-- ROADMAP_SECTION_END -->
