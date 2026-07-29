@@ -70,6 +70,7 @@ export * from './agent-context-capability-review.js';
 export * from './node-enrollment.js';
 export * from './human-authority.js';
 export * from './pairing-projection.js';
+export * from './pairing-records.js';
 export * from './sqlite-state-store.js';
 export * from './sqlite-state-store-server.js';
 export * from './sqlite-credential-verifier.js';
