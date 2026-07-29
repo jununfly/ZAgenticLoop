@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 21:22:43
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-29 21:31:00
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-2. 本机双Agent Human-controlled enrollment与Node Identity
 
-已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession、Human authority fixture、PairingRequestProjection、append-only Pairing lifecycle records与provider-neutral PairingRecordStore。已新增loopback Pairing HTTPS service：healthz/readyz、Agent pairing request、短期request-scoped session、状态轮询、重复请求幂等与结构化错误。新增Human approval context能力绑定：approved_capabilities纳入Ed25519签名摘要并可独立验证；PairingRecordStore新增appendIfPending(now)条件追加，支持CAS、重复决策幂等和冲突fail-closed；Owner API已实现GET /v1/owner/pairing-requests、POST approve/reject的注入式Owner authenticator边界，审批只在签名context、request digest、能力子集和pending projection全部一致时追加human-approved/pairing-rejected。验证：npm run test:agent-local = 97 passed、5 skipped；macOS LibreSSL无法生成Ed25519 X.509测试证书的5项按环境能力跳过。当前仍未实现真实OS Keychain adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。
+已完成Node Identity、loopback mTLS、PairingRequest proof-of-possession、Human authority fixture、独立PairingRequestProjection、append-only Pairing lifecycle records、provider-neutral PairingRecordStore、loopback Pairing HTTPS service和Owner CAS approval/rejection。新增provider-neutral HumanSigner协议与Ed25519内存fixture：HumanSigner只暴露human_id、算法、公钥和fingerprint；签名返回绑定公钥fingerprint的HumanSignature；独立verifyHumanSignature重新计算公钥指纹并对payload/identity/signature篡改fail-closed。平台adapter尚未实现，后续分别接macOS Keychain/Secure Enclave、Windows CNG/TPM、Linux PKCS#11/TPM2；没有可靠安全后端时阻塞，不退化为文件私钥或环境变量。验证：npm run test:agent-local = 100 passed、5 skipped；macOS LibreSSL无法生成Ed25519 X.509测试证书的5项按环境能力跳过。当前仍未实现平台Keychain adapter、静态Web UI、StateStore生产adapter接入与双Agent conformance fixture。
 
 **决策：**
 - Q: 本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？ → 是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。 (Human confirmed independent node identity on the same device.)
@@ -86,4 +86,5 @@
 - Q: Pairing session如何绑定Agent，避免其他节点轮询request？ → 创建request时服务端生成短期opaque pairing session，绑定request_id、node_id和certificate fingerprint，仅通过该Agent的mTLS连接使用；状态查询同时匹配session、客户端证书和request。session过期、撤销或request进入终态后立即失效，不复用运行时scoped credential。 (Human confirmed request-scoped session binding.)
 - Q: Pairing request与Web UI的输入大小和速率边界如何定义？ → HTTP body上限64 KiB；identity/certificate、endpoint和capability列表有明确长度上限；capability去重并拒绝空值；每个Node Identity同时最多一个pending request；重复提交幂等；UI mutation和Agent request有限速率；超限返回结构化413或429，不截断、不排队、不写入StateStore。 (Human confirmed bounded pairing inputs and rate limits.)
 - Q: Pairing service的实现顺序如何安排？ → 先实现provider-neutral PairingRequestProjection与record lifecycle；再实现loopback HTTPS API和mTLS/session绑定；再接Human authority context与CAS approval/rejection；最后提供静态Web UI；每一步先有纯协议/服务测试，再组合成双Agent conformance fixture。 (Human confirmed the incremental Pairing service implementation order.)
+- Q: HumanSigner provider-neutral接口如何定义，平台密钥后端如何接入？ → 先实现provider-neutral HumanSigner接口与Ed25519内存测试fixture；协议统一public identity、fingerprint、签名和验证，平台adapter分别接macOS Keychain/Secure Enclave、Windows CNG/TPM、Linux PKCS#11/TPM2。缺少可靠安全后端时fail-closed，不退化为文件私钥、环境变量或普通配置项。 (Human confirmed portable signer abstraction before platform-specific adapters.)
 <!-- ROADMAP_SECTION_END -->
