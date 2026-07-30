@@ -68,6 +68,39 @@ test('Relay creates a bounded session after mTLS and credential authorization', 
   await rm(clientMaterial.root, { recursive: true, force: true });
 });
 
+test('Relay creates a dispatch-bound session once and rejects a conflicting retry', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('workbuddy');
+  const intentDigest = `sha256:${'a'.repeat(64)}`;
+  let verifierCalls = 0;
+  const server = createLoopbackRelayServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    sessionVerifier: { verify: () => { verifierCalls += 1; return { status: 'allowed', credential_id: 'credential-1', expires_at: '2026-07-29T03:10:00.000Z' }; } },
+    now: () => '2026-07-29T03:00:00.000Z',
+    session_ttl_ms: 15 * 60 * 1000,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const body = { dispatch_event_id: 'dispatch-event-1', intent_digest: intentDigest, network_id: 'network-1', protocol_version: 'relay.v1', session_request_id: 'session-request-1' };
+  const created = await request({ address, server: serverMaterial, client: clientMaterial, body, headers: { authorization: 'Bearer session-token' } });
+  const duplicate = await request({ address, server: serverMaterial, client: clientMaterial, body, headers: { authorization: 'Bearer session-token' } });
+  const conflict = await request({ address, server: serverMaterial, client: clientMaterial, body: { ...body, intent_digest: `sha256:${'b'.repeat(64)}` }, headers: { authorization: 'Bearer session-token' } });
+  assert.equal(created.statusCode, 201);
+  assert.equal(created.body.status, 'created');
+  assert.equal(created.body.session.session_request_id, 'session-request-1');
+  assert.equal(created.body.session.dispatch_event_id, 'dispatch-event-1');
+  assert.equal(created.body.session.intent_digest, intentDigest);
+  assert.equal(duplicate.statusCode, 200);
+  assert.equal(duplicate.body.status, 'duplicate');
+  assert.deepEqual(duplicate.body.session, created.body.session);
+  assert.equal(conflict.statusCode, 409);
+  assert.deepEqual(conflict.body, { schema: 'zj-loop.relay_http.v1', status: 'blocked', reason: 'session-request-conflict', side_effects_executed: false });
+  assert.equal(verifierCalls, 3);
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
 test('Relay creates a session from the real SQLite credential verifier', async () => {
   const serverMaterial = await certificate();
   const clientMaterial = await certificate('workbuddy');

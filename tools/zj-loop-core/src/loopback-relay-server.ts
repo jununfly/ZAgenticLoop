@@ -69,6 +69,7 @@ export function createLoopbackRelayServer(input: {
   const now = input.now ?? (() => new Date().toISOString());
   const supportedProtocol = input.supported_protocol_version ?? 'relay.v1';
   const sessions = new Map<string, RelaySession>();
+  const sessionRequests = new Map<string, string>();
   return createServer({ ...input.tls, requestCert: true, rejectUnauthorized: false }, async (request, response) => {
     if (request.method === 'GET' && request.url === '/healthz') {
       sendJson(response, 200, { schema: RELAY_HTTP_SCHEMA, status: 'ok', side_effects_executed: false });
@@ -291,10 +292,13 @@ export function createLoopbackRelayServer(input: {
       return;
     }
     const bodyKeys = body && typeof body === 'object' && !Array.isArray(body) ? Object.keys(body).sort() : [];
-    const requestBody = body as { network_id?: unknown; protocol_version?: unknown };
+    const requestBody = body as { network_id?: unknown; protocol_version?: unknown; session_request_id?: unknown; dispatch_event_id?: unknown; intent_digest?: unknown };
     if (bodyKeys.join(',') !== 'network_id,protocol_version' || typeof requestBody.network_id !== 'string' || typeof requestBody.protocol_version !== 'string') {
-      sendJson(response, 400, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-request-invalid', side_effects_executed: false });
-      return;
+      const dispatchKeys = ['dispatch_event_id', 'intent_digest', 'network_id', 'protocol_version', 'session_request_id'];
+      if (bodyKeys.join(',') !== dispatchKeys.join(',') || typeof requestBody.network_id !== 'string' || typeof requestBody.protocol_version !== 'string' || typeof requestBody.session_request_id !== 'string' || typeof requestBody.dispatch_event_id !== 'string' || typeof requestBody.intent_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(requestBody.intent_digest)) {
+        sendJson(response, 400, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-request-invalid', side_effects_executed: false });
+        return;
+      }
     }
     if (requestBody.protocol_version !== supportedProtocol) {
       sendJson(response, 426, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'protocol-version-unsupported', side_effects_executed: false });
@@ -310,9 +314,25 @@ export function createLoopbackRelayServer(input: {
       sendJson(response, 403, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'credential-binding-missing', side_effects_executed: false });
       return;
     }
+    const sessionRequestId = typeof requestBody.session_request_id === 'string' ? requestBody.session_request_id : undefined;
+    if (sessionRequestId) {
+      const existingSessionId = sessionRequests.get(sessionRequestId);
+      if (existingSessionId) {
+        const existingSession = sessions.get(existingSessionId);
+        if (existingSession) {
+          if (existingSession.network_id !== requestBody.network_id || existingSession.protocol_version !== requestBody.protocol_version || existingSession.dispatch_event_id !== requestBody.dispatch_event_id || existingSession.intent_digest !== requestBody.intent_digest || existingSession.node_id !== nodeId) {
+            sendJson(response, 409, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: 'session-request-conflict', side_effects_executed: false });
+            return;
+          }
+          sendJson(response, 200, { schema: RELAY_HTTP_SCHEMA, status: 'duplicate', session: existingSession, side_effects_executed: false });
+          return;
+        }
+      }
+    }
     try {
-      const session = createRelaySession({ session_id: `rly_${randomUUID().replaceAll('-', '')}`, network_id: requestBody.network_id, node_id: nodeId, credential_id: verification.credential_id, protocol_version: requestBody.protocol_version, created_at: now(), credential_expires_at: verification.expires_at, max_ttl_ms: input.session_ttl_ms });
+      const session = createRelaySession({ session_id: `rly_${randomUUID().replaceAll('-', '')}`, network_id: requestBody.network_id, node_id: nodeId, credential_id: verification.credential_id, protocol_version: requestBody.protocol_version, created_at: now(), credential_expires_at: verification.expires_at, max_ttl_ms: input.session_ttl_ms, ...(sessionRequestId === undefined ? {} : { session_request_id: sessionRequestId, dispatch_event_id: requestBody.dispatch_event_id as string, intent_digest: requestBody.intent_digest as string }) });
       sessions.set(session.session_id, session);
+      if (session.session_request_id) sessionRequests.set(session.session_request_id, session.session_id);
       sendJson(response, 201, { schema: RELAY_HTTP_SCHEMA, status: 'created', session, side_effects_executed: false });
     } catch (error) {
       sendJson(response, 400, { schema: RELAY_HTTP_SCHEMA, status: 'blocked', reason: error instanceof Error ? error.message : 'session-invalid', side_effects_executed: false });

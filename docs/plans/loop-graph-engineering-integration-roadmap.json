@@ -787,7 +787,7 @@
     "1-4-3": {
       "id": "1-4-3",
       "label": "SQLite StateStore、ArtifactStore与loopback Relay",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
       "children": [],
@@ -2566,28 +2566,262 @@
           "q": "下一步是否实现严格的 vector metadata loader？",
           "answer": "是。校验 zj-loop.canonicalization_vector.v1 的必需字段、类型、未知字段和 hash 引用，避免测试 fixture 自身格式漂移。",
           "note": "采用严格 fixture loader，测试先验证协议向量完整性再消费 canonicalization 结果。"
+        },
+        {
+          "q": "是否将1-4-3 SQLite StateStore、ArtifactStore与loopback Relay标记为完成并转入1-4-4？",
+          "answer": "是。1-4-3的MVP边界已完成；生产级复制、跨设备同步、自动HA与复杂投递调度后置，不阻塞进入Graph Engineering。",
+          "note": "已验证SQLite StateStore、Human approval到credential issue/claim、Pairing session、真实SQLite verifier接入Relay、ArtifactStore完整性与66项组合回归。"
         }
       ],
-      "notes": "范围已冻结；本次完成并验证：StateStore-backed SQLite credential provider复用StateStore同一BEGIN IMMEDIATE事务；issue intent、一次性claim、revoke的本地凭证索引与credential-issued、credential-claimed、credential-revoked canonical事件原子提交；network-level CAS冲突整体回滚；重复issue/claim/revoke不推进revision；新增createCredentialIssueIntentService，将已验证HumanApprovalEnvelope接入typed SQLite issuer并保持human_id、签名和digest fail-closed校验。独立provider兼容路径仍保留。验证：npm run test:agent-local（本次改动前）= 120 passed, 1 skipped, 0 failed；本次adapter targeted = 6 passed, 0 failed；git diff --check通过。Remaining：HTTP server真实provider wiring测试、pairing claim真实provider adapter、lifecycle projections、canonicalization v1 fixtures、加密backup/restore、真实双Agent端到端流程。自动HA/failover、平台级沙箱、硬件隔离、离线授权与复杂策略引擎后置。"
+      "notes": "MVP完成：SQLite StateStore、ArtifactStore、loopback Relay及真实Human approval→issue intent→pairing claim→Relay credential wiring均已验证；组合回归66 tests passed。生产复制、跨设备同步、自动HA与复杂投递调度后置。"
     },
     "1-4-4": {
       "id": "1-4-4",
       "label": "Directed Task Graph与OrchestrationPlan",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-4-4-1"
+      ],
+      "decisions": [
+        {
+          "q": "Directed Task Graph与OrchestrationPlan的第一条实现纵切采用什么边界？",
+          "answer": "先实现provider-neutral、不可变的OrchestrationPlan与DirectedTaskGraph类型及确定性validator；通过validator后再作为canonical StateStore facts持久化。第一条纵切只验证图结构、依赖合法性、任务分派和计划完整性，不执行Agent任务、不接Relay、不处理外部资源。",
+          "note": "先钉住Graph Engineering的最小原子协议，再叠加StateStore projection与Native OPN runtime。"
+        }
+      ],
       "notes": ""
     },
     "1-4-5": {
       "id": "1-4-5",
       "label": "orchestration-and-isolation preflight",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1-4",
-      "children": [],
-      "decisions": [],
+      "children": [
+        "1-4-5-1",
+        "1-4-5-2",
+        "1-4-5-3",
+        "1-4-5-4"
+      ],
+      "decisions": [
+        {
+          "q": "Preflight是否只读取不可变OrchestrationPlan并输出确定性execution-context或blocking errors，不执行Agent、不创建Relay session、不读写目标代码库、不自动申请权限？",
+          "answer": "是。Graph validator负责结构正确性；orchestration-and-isolation preflight负责执行前提，包括Human approval、CapabilityGrant、资源隔离证据、风险/成本/歧义；runtime留给后续节点。任何不确定资源隔离方案进入needs-human-grill并禁止自动放行。",
+          "note": "保持Graph contract、执行前置判断与runtime边界清晰，避免preflight产生不可逆副作用。"
+        },
+        {
+          "q": "缺少或过期Human Plan Approval时，Preflight是否允许输出完整只读诊断但必须blocked，不生成CapabilityGrant或可执行execution-context？",
+          "answer": "是。允许Human看到完整阻塞原因并一次修正，但未批准、过期、digest不匹配或设备身份不匹配都不得进入preflight-ready，不创建Relay session或其他执行授权。",
+          "note": "区分结构合法、责任授权与执行准备状态，避免把Graph validator通过误认为可以执行。"
+        },
+        {
+          "q": "CapabilityGrant是否由Preflight根据Human Approval、Agent enrollment ceiling与Task scope交集确定性生成，每个task独立绑定plan digest、task、resource scope与有效期，且只作为无副作用execution-context输出？",
+          "answer": "是。Grant不得超出Human批准范围或Agent enrollment上限；Codex、Workbuddy、Verification各自独立授权；外部权限不足时blocked，不自动提权；Runtime只接受与当前Plan revision/digest匹配的grant。",
+          "note": "把授权确认与外部权限申请分离，保证Preflight可重放、无副作用且不可横向借权。"
+        },
+        {
+          "q": "资源隔离策略是否必须由版本化Registry定义证据要求，并由Preflight逐项验证，而不只检查isolation_strategy枚举？",
+          "answer": "是。git-branch-worktree、read-only-snapshot、serialized-owner等策略各自绑定可验证事实；needs-human-grill始终阻塞；自由文本声明不能单独放行。",
+          "note": "把资源隔离从口头承诺升级为可重放的Preflight证据。"
+        },
+        {
+          "q": "并行Task是否必须由Preflight检查资源绑定交集与access mode，共享读可放行，未隔离并行写必须blocked，只有worktree/copy/serialized-owner等证据可放行？",
+          "answer": "是。并行放行必须是可证明结论；冲突交回Human+Codex重新选隔离方案或改为串行，Preflight不替外部资源系统实现锁。",
+          "note": "把并行意图与资源安全分开验证，避免Graph的并发声明直接变成不安全runtime行为。"
+        },
+        {
+          "q": "Preflight输出是否固定为版本化可重放结构化对象，包含Plan identity/digest、profile hash、execution status、稳定错误、task级CapabilityGrant摘要、隔离证据、并行判定、side_effects_executed=false与有效期？",
+          "answer": "是。execution-context作为Evidence与后续Runtime的唯一输入，不依赖对话文本或临时日志。",
+          "note": "确保执行准备结果可审计、可重放，并与Graph Plan完全绑定。"
+        },
+        {
+          "q": "Human Approval验证是否复用Human Authority v2，仅新增orchestration.plan.approve动作，并要求request_digest等于plan_digest且network、revision、Human/device identity与有效期全部匹配？",
+          "answer": "是。任何digest、revision、network、设备或有效期不匹配都是确定性blocking error，不另造Graph签名协议。",
+          "note": "复用已验证的密码学边界，Graph只负责Plan业务绑定。"
+        },
+        {
+          "q": "Plan任一执行事实变化是否必须生成新plan_revision，使旧Approval、CapabilityGrant与execution-context全部失效并重新Human Approval与Preflight？",
+          "answer": "是。节点、edge、task scope、capability、资源隔离证据、verification conditions或registry/profile变化都不能热修、静默覆盖或继承旧授权。",
+          "note": "保证批准内容、执行权限与实际路径始终一致。"
+        },
+        {
+          "q": "execution-context与task级CapabilityGrant是否必须有有限有效期且不超过Human Approval expires_at，Runtime在claim/dispatch时再次校验时间、digest与revision？",
+          "answer": "是。禁止长期持有旧授权；延迟执行、Approval过期或Plan替换时必须blocked并重新Preflight。",
+          "note": "将授权生命周期边界延伸到Runtime入口，避免预检结果被无限期复用。"
+        },
+        {
+          "q": "Preflight是否必须保持纯读无StateStore写入，仅读取Plan、Approval、Enrollment与隔离证据，返回execution-context或blocking result；持久化由上层显式记录Evidence？",
+          "answer": "是。Preflight可重复、可测试、可回放；不写事件、不claim、不改变Plan，持久化preflight结果由显式上层动作完成。",
+          "note": "避免检查动作产生隐藏状态变化，保持验证与事实记录分层。"
+        },
+        {
+          "q": "Preflight是否通过provider-neutral resolver/adapter获取Enrollment、Human Approval、隔离证据与Provider capability事实，核心协议不假设GitLab？",
+          "answer": "是。核心Preflight只消费统一resolver结果；GitLab、GitHub、本地文件系统等放在adapter层。",
+          "note": "保持协议跨Provider可移植，避免GitLab成为ZAgenticLoop的唯一存储或执行前提。"
+        },
+        {
+          "q": "任一Task或全局条件出现blocking error时，Preflight是否整体blocked且不生成任何Runtime可接受的部分CapabilityGrant或dispatchable context，只返回完整诊断？",
+          "answer": "是。允许返回每个Task的诊断、缺失项和修复建议，但不允许partial dispatch或用成功Task掩盖失败Task。",
+          "note": "保持Plan批准、授权和执行路径的原子一致性。"
+        },
+        {
+          "q": "Preflight成功状态是否固定为execution-ready而非dispatchable，由Runtime在claim/dispatch时重新检查实时事实后才可dispatch？",
+          "answer": "是。blocked表示存在blocking error；execution-ready表示执行前提满足；dispatchable只属于后续Runtime状态；Preflight不声明已调度、不改变运行时状态。",
+          "note": "分离结构/授权预检与运行时调度，避免把检查结果误称为执行事实。"
+        },
+        {
+          "q": "Plan approval是否采用结构化plan_id与plan_revision绑定，而不是编码进request_id；是否通过Human Authority新版本或明确的orchestration.plan.approve协议演进且不修改v2语义？",
+          "answer": "采用方案2。plan_id、plan_revision、plan_digest作为结构化字段进入签名canonical payload；保留Human Authority v2兼容性，通过新版本或新action演进，不原地破坏v2。",
+          "note": "安全边界字段不使用字符串约定间接绑定，避免解析与审计歧义。"
+        },
+        {
+          "q": "Plan approval的结构化绑定是否采用Graph专用orchestration.plan.approve.v1协议，复用P-256 signer与canonicalization基础但使用独立domain/profile，不扩展Human Authority v2或通用v3？",
+          "answer": "是。仅为Graph Plan签署network_id、plan_id、plan_revision、plan_digest、Human/device identity、capabilities与有效期，保持通用身份协议稳定。",
+          "note": "减少协议扩张面，避免把Graph语义过早耦合进所有Human Authority action。"
+        },
+        {
+          "q": "Preflight是否必须根据最终task grant字段重新计算grant_digest，并拒绝Plan中声明digest不匹配，而不是信任输入？",
+          "answer": "是。grant_digest覆盖最终network、plan、revision、event、task、assigned_node、capabilities、resource_scope与有效期；任一内容变化都必须产生新digest并阻断旧grant。",
+          "note": "防止修改grant内容后保留旧digest，保持授权证据链完整。"
+        },
+        {
+          "q": "Plan中的capability_grant.capabilities是否视为Task请求集合，任一能力不在Human Approval、enrollment ceiling或Provider capability交集内就整体blocked，不静默删减后继续？",
+          "answer": "是。Preflight可计算交集用于诊断，但不能改变已批准Plan；权限不一致必须整体阻塞并重新修订Plan、Approval与grant digest。",
+          "note": "保证批准内容、实际执行权限与审计digest一一对应。"
+        },
+        {
+          "q": "资源隔离Registry是否从策略字符串列表升级为不可变策略descriptor，定义strategy_id、允许access mode、必需证据、验证规则、并行写能力、blocking code与registry hash？",
+          "answer": "是。Descriptor参与协议profile hash；Preflight只按descriptor验证，不接受自由策略语义。",
+          "note": "让资源隔离判定可版本化、可审计、可重放，并把并行安全纳入固定协议。"
+        },
+        {
+          "q": "Preflight结果持久化是否采用完整execution-context作为Artifact，StateStore只追加orchestration.preflight.completed或blocked事实引用，事件绑定plan_digest、artifact_digest、schema/profile与生成时间？",
+          "answer": "是。ArtifactStore承载完整context，StateStore承载轻量可重放事实，避免事件过大并保持CAS与审计边界。",
+          "note": "复用1-4-3已验证的StateStore与ArtifactStore边界，不让Preflight纯函数隐式写状态。"
+        },
+        {
+          "q": "Runtime入口是否只消费持久化Preflight Artifact并在claim/dispatch前重校验network、Plan revision/digest、context有效期、grant digest、StateStore CAS与enrollment撤销，不执行Agent或创建外部Provider session？",
+          "answer": "是。Runtime revalidation通过后才允许dispatch；执行、Relay session与Provider副作用留给后续Runtime slice。",
+          "note": "把Preflight事实与Runtime实时门禁分开，防止过期或撤销授权被复用。"
+        },
+        {
+          "q": "Runtime revalidation通过后是否必须在同一StateStore CAS事务中追加task.claimed事实，CAS成功后才交给后续dispatch，禁止先返回可dispatch再异步claim？",
+          "answer": "是。Runtime在事务内再次确认Plan revision、grant、enrollment与有效期；并发claim冲突必须返回blocking，不自动覆盖或重试。",
+          "note": "消除双claim与授权通过但claim事实缺失的窗口。"
+        },
+        {
+          "q": "task.claimed的event_id是否由network、plan、revision、task与node identity确定性生成，重试返回duplicate，绑定不同返回conflict，不使用随机event id？",
+          "answer": "是。采用确定性幂等claim事实，避免并发或重试产生重复claim。",
+          "note": "把Runtime claim从一次性操作变为可重放、可CAS验证的StateStore事实。"
+        },
+        {
+          "q": "成功claim后是否必须等待独立task.dispatched事实，才允许创建Relay session或产生Provider副作用；本slice不把claim视为执行？",
+          "answer": "是。当前边界只证明Preflight Artifact到Runtime revalidation再到task.claimed；dispatch、Agent execution与Provider副作用由后续独立slice负责。",
+          "note": "保持claim、dispatch、execution三种事实分离，避免Runtime门禁隐式产生外部副作用。"
+        },
+        {
+          "q": "task.dispatched是否必须由Human或Human+Codex中心责任单元授权并记录，执行节点不能自派、自扩CapabilityGrant或绕过中心创建Relay session？",
+          "answer": "是。执行节点只能接收已dispatch任务并报告生命周期/Evidence；dispatch权与最终责任留在中心责任单元。",
+          "note": "落实Human或Human+Agent中心责任单元与被编排执行节点的不对称权限边界。"
+        },
+        {
+          "q": "Provider session是否只能消费不可变DispatchIntent，且Intent绑定network、plan/revision/digest、task、Graph node、assigned Agent、grant digest、claim event、dispatch event与session TTL，adapter不得扩权或重解释？",
+          "answer": "是。Provider adapter只执行已验证Intent；本slice只实现provider-neutral contract与确定性digest，不创建session或产生Provider副作用。",
+          "note": "把中心授权的dispatch事实与后续Provider执行严格分层。"
+        },
+        {
+          "q": "普通task的DispatchIntent是否不重复Human签名，而是绑定已验证Plan Approval、task.claimed与中心责任单元身份；只有超出原Plan Approval的高风险动作才重新Human Approval？",
+          "answer": "是。DispatchIntent不能扩权或绕过原Approval；高风险动作通过独立Approval action重新授权。",
+          "note": "减少正常路径交互负担，同时保留高风险动作的责任闸门。"
+        },
+        {
+          "q": "高风险动作是否必须由不可变Capability/Risk Registry判定，定义risk level、是否需重新Human Approval、resource scope、自动dispatch资格与稳定blocking code，禁止Agent自报低风险？",
+          "answer": "是。Risk Registry参与协议版本与digest；未知或未注册capability不得按普通task放行。",
+          "note": "防止Agent通过自定义风险标签绕过重新审批。"
+        },
+        {
+          "q": "未知capability或缺少Risk Registry条目时是否fail-closed整体blocked，要求Human Grill或新增并review的registry版本，不能按低风险默认？",
+          "answer": "是。未建模风险不进入普通dispatch路径；registry新增或变更参与版本与digest。",
+          "note": "避免风险模型缺失被误当成安全，保持责任边界可审计。"
+        },
+        {
+          "q": "Risk Registry是否采用low、review-required、human-approval-required三档；low可在Plan Approval覆盖后自动dispatch，review-required需独立Verification/Review Handoff，human-approval-required需重新Human Approval，未注册直接blocked？",
+          "answer": "是。先用离散责任闸门，不引入复杂风险评分；风险等级与registry版本/hash进入DispatchIntent与Evidence。",
+          "note": "保持风险模型最小、可解释、可审计，避免评分黑箱。"
+        },
+        {
+          "q": "review-required capability是否必须阻止Runtime产生task.dispatched，直到独立Verification与Review Handoff Evidence均绑定同一Plan digest/revision并通过？",
+          "answer": "是。review-required是硬门禁；缺Evidence、digest/revision不匹配或验证失败都blocked。",
+          "note": "避免把风险等级退化为不可执行的提示文本。"
+        },
+        {
+          "q": "human-approval-required capability触发重新审批时是否必须生成新Plan revision并重算Plan digest，使旧Approval、Grant、Claim与DispatchIntent全部失效，而不是只追加action approval？",
+          "answer": "是。高风险动作进入新Plan revision，重新Human Approval与Preflight；旧授权链不可继承。",
+          "note": "保持高风险授权与执行事实的一致性，避免同一revision下混入不同责任边界。"
+        },
+        {
+          "q": "Risk Registry版本或hash变化是否必须使引用旧Registry的Plan进入新revision并重新Approval/Preflight，而不能Runtime临时重解释？",
+          "answer": "是。Registry是Plan语义的一部分，风险等级、Review/Approval门槛、scope与自动dispatch资格变化都使旧Plan失效。",
+          "note": "防止同一Plan digest在不同风险语义下被重放。"
+        },
+        {
+          "q": "Capability/Risk Registry是否与资源隔离Registry统一放入provider-neutral protocol-registry，由代码版本化不可变发布，registry hash进入Plan profile/digest，禁止环境/远程配置/Agent输入覆盖？",
+          "answer": "是。两类安全语义统一生命周期；历史descriptor不原地修改，新规则以新registry/profile版本发布。",
+          "note": "保证历史Plan可重放解释，阻断运行时风险语义漂移。"
+        },
+        {
+          "q": "首版Capability/Risk Registry是否将artifact.read标为low、artifact.write标为review-required、credential.issue与network.create标为human-approval-required，并将风险门槛与scope纳入descriptor/profile hash？",
+          "answer": "采用。读能力保持低摩擦；持久化写入需独立Review；凭证与网络级资源变化必须重新Human Approval。",
+          "note": "提供最小可用责任闸门，后续按真实OPN实践扩展但不引入复杂评分。"
+        },
+        {
+          "q": "是否实现task.dispatched gate：low需Plan Approval+claim+Runtime revalidation，review-required需同Plan digest/revision的Verification与Review Handoff Evidence，human-approval-required需新revision重新Approval/Preflight，未知capability直接blocked；gate通过后才追加task.dispatched，不创建Relay session？",
+          "answer": "是。先实现provider-neutral纯validator，不在gate内追加事实或创建Provider session。",
+          "note": "将风险闸门、责任证据和实际dispatch副作用分层。"
+        },
+        {
+          "q": "task.dispatched是否必须使用确定性event id，并在同一StateStore CAS事务中绑定DispatchIntent digest追加事实；重复返回duplicate，绑定不同返回conflict，不创建第二Provider session？",
+          "answer": "是。Dispatch事实只在gate通过且CAS成功后产生，intent、Plan、grant或授权中心漂移都不能复用旧dispatch。",
+          "note": "维持claim与dispatch事实幂等、可审计，并把Provider session留给后续adapter。"
+        },
+        {
+          "q": "Provider adapter是否必须先验证唯一task.dispatched事实，再消费匹配DispatchIntent创建session，并校验intent/grant/claim/Plan绑定与side_effects_executed=false；验证失败零副作用？",
+          "answer": "是。Adapter不能只信Intent或对话；缺事实、绑定漂移、重复session或已执行标记都必须blocked。",
+          "note": "把StateStore事实作为Provider副作用前的最终审计门。"
+        },
+        {
+          "q": "Provider session创建结果不确定时是否使用dispatch_event_id派生的幂等session_request_id，先查询receipt/provider状态，不盲目重试；查询不到进入provider-outcome-uncertain并交回中心责任单元？",
+          "answer": "是。Provider能力不足以证明幂等时不得自动重试或创建第二session。",
+          "note": "把外部副作用不确定性显式化，避免重复session与不可解释成本。"
+        },
+        {
+          "q": "Provider adapter是否必须在dispatch前声明并验证副作用能力契约，包括幂等session_request_id、按request查询、session状态读取与不确定结果恢复；能力不足返回固定blocking code？",
+          "answer": "是。Provider不具备可证明幂等与查询能力时不得进入自动dispatch。",
+          "note": "把Provider副作用能力从实现假设升级为可验证前置条件。"
+        },
+        {
+          "q": "Provider capability contract是否也由版本化不可变Provider Registry管理，并将provider adapter version与capability descriptor hash纳入DispatchIntent/Evidence，能力漂移触发阻断与重新Preflight？",
+          "answer": "是。Provider能力是dispatch语义的一部分，变化不能被Runtime临时忽略。",
+          "note": "保证旧DispatchIntent可解释，阻断Provider能力漂移造成的重复或不可恢复副作用。"
+        },
+        {
+          "q": "Provider成功或不确定结果是否必须写入独立不可变ProviderSessionReceipt Artifact，StateStore只追加绑定dispatch_event_id、session_request_id、provider version/capability hash与receipt digest的轻量事实？",
+          "answer": "是。Receipt记录created/already-existed/uncertain/blocked与恢复证据，完整结果不塞入task状态或对话文本。",
+          "note": "让外部副作用结果可审计、可查询、可重放，且与DispatchIntent严格绑定。"
+        },
+        {
+          "q": "ProviderSessionReceipt是否必须禁止保存原始token、credential、私钥、Authorization header与敏感response body，只保存脱敏metadata、digest、session id、状态时间、错误摘要与opaque secret reference？",
+          "answer": "是。Receipt是长期Evidence，不得成为凭证泄露的新存储位置。",
+          "note": "把外部副作用审计与秘密存储严格分离。"
+        },
+        {
+          "q": "loopback Relay session contract是否扩展session_request_id、dispatch_event_id、intent_digest，并提供幂等创建与按session_request_id查询，使其具备可证明Provider能力？",
+          "answer": "是。旧安全校验继续保留；dispatch绑定字段用于新Orchestration adapter，重复request返回既有session，不创建第二session。",
+          "note": "让已验证的loopback Relay成为首个具备幂等session能力的Provider adapter。"
+        }
+      ],
       "notes": ""
     },
     "1-4-6": {
@@ -2782,11 +3016,177 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-4-4-1": {
+      "id": "1-4-4-1",
+      "label": "OrchestrationPlan与DirectedTaskGraph typed contract及确定性validator",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "中心责任单元、执行节点与验证节点是否都必须是显式Graph node？",
+          "answer": "是。Human或Human+Codex中心责任单元、Codex/Workbuddy执行节点、Aggregation/Verification与Review Handoff均显式建模；Agent identity、CapabilityGrant、执行任务和验证任务保持独立作用域。",
+          "note": "显式节点保证责任、依赖、证据和Review Handoff可审计，禁止Codex隐式自我验收。"
+        },
+        {
+          "q": "Graph edge是否采用有类型依赖边而不是统一depends_on？",
+          "answer": "是。采用control、data、verification、recovery四类edge；首版validator只接受合法DAG，禁止普通任务成环，校验引用、data输入输出和verification目标；recovery只描述备用路径，不自动执行恢复。",
+          "note": "保留顺序、数据、验收和恢复语义，避免所有关系退化成同一种depends_on。"
+        },
+        {
+          "q": "Task node是否采用显式生命周期状态机？",
+          "answer": "是。采用planned、ready、claimed、running、blocked、failed、succeeded、verified、cancelled等显式状态；依赖满足后才能ready，ready后才能claim，Agent不能置verified，blocked不自动重试，状态转换写入StateStore canonical facts。",
+          "note": "状态机保证Loop Engineering的反复执行与Graph Engineering的责任边界可审计。"
+        },
+        {
+          "q": "OrchestrationPlan是否必须为每个任务声明资源隔离方案？",
+          "answer": "必须。每个任务声明resource_id、access_mode、isolation_strategy、strategy_reason、merge_owner与unknowns；ZAgenticLoop只要求中心责任单元做分派前决策，不实现外部资源锁；未知隔离方案时进入needs-human-grill并禁止分派，隔离决策进入Evidence与Review Handoff。",
+          "note": "明确产品边界：编排资源隔离决策，不接管目标代码库等外部资源的竞态细节。"
+        },
+        {
+          "q": "Human批准后的OrchestrationPlan是否必须不可变？",
+          "answer": "是。Plan拥有plan_revision与plan_digest，Human批准绑定完整digest；任务、依赖、资源隔离、CapabilityGrant或验证条件变化都生成新revision并重新preflight；旧revision保留，已claim/running任务不得静默改派。",
+          "note": "防止批准后改变执行路径，保持责任、权限和证据的一致性。"
+        },
+        {
+          "q": "OrchestrationPlan是否直接复用Human approval的canonicalization profile？",
+          "answer": "不直接复用。采用独立orchestration-plan.v1 canonicalization profile，复用provider-neutral基础；digest覆盖完整Plan，Human approval只签署Plan digest，Plan profile与approval profile分离，禁止两类digest混用。",
+          "note": "保持计划事实与批准事实的协议独立，同时共享确定性字节基础。"
+        },
+        {
+          "q": "validator发现多个问题时是否一次返回完整错误集合？",
+          "answer": "是。返回按path、code稳定排序的完整结构化错误集合，每项包含code、path、message、severity、blocking；不执行任何副作用，blocking错误禁止Plan进入ready，needs-human-grill为结构化结果。",
+          "note": "完整确定性错误集合便于Human grill、UI展示、自动测试和Evidence复用。"
+        },
+        {
+          "q": "第一版Graph validator是否同时负责权限与资源可行性检查？",
+          "answer": "不同时负责。Graph validator只负责schema、引用、DAG、edge语义、生命周期初始状态、输入输出闭合与资源隔离字段完整性；orchestration-and-isolation preflight负责CapabilityGrant、Human approval、外部资源策略可执行性、风险/成本/歧义与Human Grill。",
+          "note": "保持Graph contract纯结构可测试，运行时责任判断集中在preflight。"
+        },
+        {
+          "q": "首个Multi-node Graph Atom是否固定为Center→Codex/Workbuddy并行→Aggregation→Independent Verification→Review Handoff拓扑？",
+          "answer": "是。固定该最小可证明拓扑：Codex与Workbuddy独立执行且有真实依赖或互补输入；写资源必须隔离；Aggregation结构化合并Evidence；Verification为独立后继节点；Review Handoff由中心责任单元接收，Agent不能自行宣布完成。",
+          "note": "该Atom用于证明Graph Engineering新增任务分工、依赖、隔离、聚合与复核能力。"
+        },
+        {
+          "q": "资源隔离策略是否必须来自固定版本化策略注册表？",
+          "answer": "必须。首版策略包括read-only-snapshot、git-branch-worktree、isolated-copy、serialized-owner、human-defined、not-applicable与needs-human-grill；每项定义适用access mode、必需字段、可证明事实、阻断reason和merge/副作用owner；registry版本参与Plan digest，禁止不可验证自由文本。",
+          "note": "把资源隔离判断变成可验证协议，而不是Agent的口头承诺。"
+        },
+        {
+          "q": "资源隔离策略registry是否内置在zj-loop-core并只通过代码版本变更？",
+          "answer": "是。放入provider-neutral protocol-registry模块，使用不可变descriptor；不从环境变量、普通配置、远程服务或Agent输入加载；策略绑定strategy_id、registry version与hash，新策略新增版本并Human review，禁止原地修改旧策略。",
+          "note": "阻断Agent通过自定义策略绕过资源隔离门槛，并保证历史Plan可重放解释。"
+        },
+        {
+          "q": "OrchestrationPlan是否必须Human批准后才能进入preflight-ready与dispatch阶段？",
+          "answer": "必须。Center只能创建或修改draft/proposed；Human或Human+Codex中心责任单元显式批准后才可preflight-ready/dispatchable；Agent不能批准自己的Plan；任何Plan revision、registry hash、CapabilityGrant、资源策略或依赖变化都回退到proposed。",
+          "note": "把结构正确与责任授权分开，未经Human批准的Plan只能分析不能claim、dispatch或产生外部副作用。"
+        },
+        {
+          "q": "Plan approval是否复用Human Authority v2并绑定完整Plan digest？",
+          "answer": "是。使用独立action orchestration.plan.approve，approval context绑定network_id、plan_id、plan_revision、plan_digest、request_id、human_id、设备身份、有效期和canonicalization profile/hash；request_digest必须等于Plan digest，不能只批准task子集冒充全Plan批准。",
+          "note": "Plan digest、approval digest与task execution digest分离保存，过期或设备绑定不匹配即不能dispatch。"
+        },
+        {
+          "q": "CapabilityGrant是否必须按task独立签发和验证？",
+          "answer": "必须。每个执行task拥有独立grant，绑定network、plan、revision、event、task、assigned_node、capabilities、resource_scope、有效期和grant_digest；grant取enrollment ceiling、Human approval与task scope交集；任何任务、节点、资源或能力变化都生成新grant并重新preflight。",
+          "note": "隔离Center、Codex、Workbuddy、Aggregation与Verification的权限，防止Agent横向借权。"
+        },
+        {
+          "q": "Aggregation节点是否只做确定性结构化合并而不直接生成最终业务结论？",
+          "answer": "是。Aggregation只收集并校验Codex/Workbuddy输出、task/plan/revision/digest绑定与Evidence完整性，标记冲突/缺失/重复并生成canonical aggregation artifact；不替Human做最终责任决策，不强行压平冲突，不得标记verified。",
+          "note": "最终结论由独立Verification与Human Review Handoff共同完成。"
+        },
+        {
+          "q": "Independent Verification的独立性是否至少包含逻辑职责、权限和输入证据范围三层？",
+          "answer": "是。Verification是独立Graph node，拥有独立task_id、CapabilityGrant与Evidence；不可修改原始output，只能读取Plan、Aggregation artifact、指定Evidence与确定性gate；同一Codex进程也必须不同逻辑节点、grant和evidence scope，不得自我批准；失败产生blocked或failed。",
+          "note": "首版验证逻辑边界，物理进程隔离留给Native OPN Tracer。"
+        },
+        {
+          "q": "Review Handoff是否必须是Graph的显式终点Artifact而不是最终文本？",
+          "answer": "必须。Review Handoff为结构化不可变Artifact，包含handoff/network/event/plan revision与digest、Graph状态、Aggregation与Verification Evidence引用、成功/失败/阻塞/风险、资源隔离摘要、side_effects_executed、Human待决问题、推荐下一步、生成者身份与artifact digest；只交回Human，不自动触发下一轮执行。",
+          "note": "使Graph结果可复用、可审计、可Review，而不是依赖对话文本。"
+        },
+        {
+          "q": "Graph facts是否必须进入StateStore append-only canonical event log？",
+          "answer": "必须。plan.created、plan.revised、plan.approved、task生命周期与review.handoff等事实进入StateStore；projection重建当前Graph；不以可覆盖的Graph JSON作为唯一真相；Plan digest、revision、task state与Evidence引用必须可重放；contract validator与persistence分层。",
+          "note": "保持Graph状态可重放、可审计，并复用1-4-3已验证的StateStore CAS事实模型。"
+        },
+        {
+          "q": "Plan revision并发提交是否统一采用StateStore network-level CAS？",
+          "answer": "是。创建、修订、批准Plan都携带expected_revision；事务内校验network revision、plan revision与当前digest；只有中心责任单元可提交Plan事实；冲突返回plan-revision-conflict，不自动重试/覆盖/合并；Agent只能提交自身task lifecycle facts。",
+          "note": "避免多个编排路径同时修改同一执行计划，冲突交回Human+Codex重新决策。"
+        },
+        {
+          "q": "首版Graph validator是否允许并行task？",
+          "answer": "允许，但必须可证明安全：无未声明控制/数据依赖；共享读安全；写资源必须不同、隔离或由serialized-owner与后继merge串行化；未有隔离证据的并行写入为blocking error；并行决策进入Plan digest与Evidence，首版不承诺runtime并发调度。",
+          "note": "区分Graph计划中的并行意图与后续Relay/Runtime的调度能力。"
+        },
+        {
+          "q": "Graph validator是否要求所有node从Center可达并最终到达Review Handoff或明确terminal？",
+          "answer": "是。Center为唯一root；每个执行task从Center可达；每个分支最终到Aggregation、Verification或明确blocked/recovery terminal；正常完成路径唯一业务终点为Review Handoff；recovery不得绕过Human；孤立或无终点node使Plan blocked。",
+          "note": "保证任务有责任来源、依赖闭环和验收去向，防止声明任务却没有执行/Review路径。"
+        },
+        {
+          "q": "fan-out与fan-in是否必须显式建模？",
+          "answer": "必须。fan-out由显式control edges表达；fan-in显式汇入Aggregation node；Aggregation声明预期task、Evidence类型、冲突策略、缺失策略和输出Artifact schema；缺少输入只能blocked/incomplete，不能隐式合并或伪装完整；拓扑进入Plan digest。",
+          "note": "让并行分工与聚合责任可验证、可审计。"
+        },
+        {
+          "q": "OrchestrationPlan、Graph node与edge是否采用严格闭合schema？",
+          "answer": "是。采用严格闭合schema，未知/缺失字段、null替代缺失、非法ID/时间/digest/状态/枚举均拒绝；输入解析复用parseBoundedJson，validator输出null-prototype结构；node、edge、task、resource、grant各自定义字段。",
+          "note": "让Graph contract可安全解析、可重放、可测试，并避免Graph层重复实现JSON parser。"
+        }
+      ],
+      "notes": "已完成provider-neutral OrchestrationPlan与DirectedTaskGraph typed contract、immutable protocol-registry、JCS profile hash、确定性plan digest、严格闭合schema、资源隔离策略枚举、任务初始状态、DAG/可达性、cycle、edge引用、Aggregation fan-in与结构化错误validator。新增最小Graph Atom fixture 3项测试；验证 npm test 380/380、npm run build、git diff --check。首版不接入Agent执行、Relay或外部资源锁。"
+    },
+    "1-4-5-1": {
+      "id": "1-4-5-1",
+      "label": "Provider-neutral orchestration-and-isolation preflight contract及确定性校验",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成provider-neutral Preflight contract、Graph专用orchestration.plan.approve.v1签名绑定、不可变资源隔离descriptor registry、纯函数blocked/execution-ready校验与显式持久化adapter。完整context写入ArtifactStore，StateStore追加orchestration.preflight.completed/blocked轻量CAS事实，grant_digest和registry descriptor hash均确定性校验；未接入Runtime dispatch或真实provider adapter。验证聚焦Graph测试9/9、npm test 380/380、npm run build、git diff --check。"
+    },
+    "1-4-5-2": {
+      "id": "1-4-5-2",
+      "label": "Runtime claim/dispatch revalidation boundary",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成Runtime claim/dispatch revalidation boundary首版：读取并校验持久化Preflight Artifact、execution-ready、network/plan/revision/digest、expires_at、task级grant digest、Graph node与assigned Agent identity、enrollment状态与capability ceiling；通过后在同一StateStore CAS事务追加确定性task.claimed事实，重试返回duplicate，阻塞不产生副作用。已完成真实SQLite CAS测试；dispatch gate及Relay session边界分别由1-4-5-4承载，真实外部Provider副作用尚未接入。"
+    },
+    "1-4-5-3": {
+      "id": "1-4-5-3",
+      "label": "Provider-neutral DispatchIntent contract及确定性validator",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成provider-neutral DispatchIntent contract、确定性validator与Capability/Risk Registry：绑定network、plan/revision/digest、task、Graph node、assigned Agent、grant digest、claim/dispatch event、authorized_by与session TTL；闭合schema、scope、时间窗口、intent digest drift；内置artifact.read=low、artifact.write=review-required、credential.issue/network.create=human-approval-required，未知capability fail-closed，registry纳入protocol profile hash。已完成DispatchIntent/Risk Registry测试；真实外部Provider adapter尚未接入。"
+    },
+    "1-4-5-4": {
+      "id": "1-4-5-4",
+      "label": "Provider-neutral task.dispatched gate及风险证据校验",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成provider-neutral task.dispatched gate、风险证据校验与CAS事实记录：低风险要求claim+Runtime revalidation，review-required要求同Plan digest/revision的Verification与accepted Review Handoff，human-approval-required要求匹配Human Approval，未知capability fail-closed；gate只返回dispatch-ready/blocked，通过后由确定性dispatch_event_id在StateStore CAS事务追加task.dispatched，重复返回duplicate。Relay首个Provider session边界已接入：支持带dispatch_event_id、intent_digest、session_request_id的请求，首次创建201，完全相同重试返回duplicate且复用同一会话，绑定冲突返回409；旧{network_id,protocol_version}请求保持兼容。已验证Relay定向测试16项及全量npm test 380项，git diff --check通过。尚未实现真实外部Provider adapter副作用。"
     }
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-30 20:58:04",
+    "updated": "2026-07-30 23:33:28",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

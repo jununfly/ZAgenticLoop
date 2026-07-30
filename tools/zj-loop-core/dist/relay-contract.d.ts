@@ -9,6 +9,9 @@ export type RelaySession = {
     created_at: string;
     expires_at: string;
     status: 'active' | 'closed' | 'revoked';
+    session_request_id?: string;
+    dispatch_event_id?: string;
+    intent_digest?: string;
 };
 export type DeliveryState = 'offered' | 'retry_scheduled' | 'accepted' | 'acknowledged' | 'blocked' | 'rejected';
 export type RelayDelivery = {
@@ -32,6 +35,9 @@ export declare function createRelaySession(input: {
     created_at: string;
     credential_expires_at: string;
     max_ttl_ms: number;
+    session_request_id?: string;
+    dispatch_event_id?: string;
+    intent_digest?: string;
 }): RelaySession;
 export declare function transitionDelivery(delivery: RelayDelivery, next: {
     state: DeliveryState;

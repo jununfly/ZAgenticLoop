@@ -23,7 +23,12 @@ export function createRelaySession(input) {
     const expires = Math.min(created + input.max_ttl_ms, credentialExpiry);
     if (expires <= created)
         throw new Error('session-expired');
-    return { schema: RELAY_CONTRACT_SCHEMA, session_id: input.session_id, network_id: input.network_id, node_id: input.node_id, credential_id: input.credential_id, protocol_version: input.protocol_version, created_at: input.created_at, expires_at: new Date(expires).toISOString(), status: 'active' };
+    if (input.intent_digest !== undefined && !/^sha256:[0-9a-f]{64}$/.test(input.intent_digest))
+        throw new Error('session-intent-digest-invalid');
+    const bindingValues = [input.session_request_id, input.dispatch_event_id, input.intent_digest];
+    if (bindingValues.some((value) => value !== undefined) && bindingValues.some((value) => value === undefined) || (input.session_request_id !== undefined && !input.session_request_id.trim()) || (input.dispatch_event_id !== undefined && !input.dispatch_event_id.trim()))
+        throw new Error('session-dispatch-binding-invalid');
+    return { schema: RELAY_CONTRACT_SCHEMA, session_id: input.session_id, network_id: input.network_id, node_id: input.node_id, credential_id: input.credential_id, protocol_version: input.protocol_version, created_at: input.created_at, expires_at: new Date(expires).toISOString(), status: 'active', ...(input.session_request_id === undefined ? {} : { session_request_id: input.session_request_id }), ...(input.dispatch_event_id === undefined ? {} : { dispatch_event_id: input.dispatch_event_id }), ...(input.intent_digest === undefined ? {} : { intent_digest: input.intent_digest }) };
 }
 export function transitionDelivery(delivery, next) {
     const allowed = {
