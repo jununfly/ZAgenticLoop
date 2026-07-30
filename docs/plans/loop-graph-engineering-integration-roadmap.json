@@ -1716,6 +1716,141 @@
           "q": "StateStore HTTP issue-intent如何接入真实SQLite credential provider？",
           "answer": "通过createCredentialIssueIntentService将已由HTTP HumanAuthorityVerifier认可的HumanApprovalEnvelope解码为typed issuance request；adapter不返回token、不解析Bearer、不替代签名校验，issuer继续校验Human签名、digest、能力与StateStore CAS。",
           "note": "已实现adapter并覆盖JSON envelope、human_id绑定与真实issuer delegation；HTTP server仍由调用方显式注入该service。"
+        },
+        {
+          "q": "下一条纵切先做真实HTTP端到端链路还是先做lifecycle projection？",
+          "answer": "先做真实双服务端到端链路：Human approval → StateStore issue-intent HTTP → canonical credential-issued → Pairing claim HTTP → 一次性token → token verification；projection随后消费已验证canonical events。",
+          "note": "Human选择A；先验证真实provider、HTTP边界、mTLS/session、CAS与token生命周期能否串通。"
+        },
+        {
+          "q": "Pairing credential claim应采用credential_id定位还是session-bound定位？",
+          "answer": "采用session-bound contract：Pairing HTTP只传递并由服务端派生request_id、session_id、network_id与mTLS node_id，调用claimForPairingSession；credential_id由issuer依据request映射，客户端不能提供或替换。",
+          "note": "Human确认采用；避免客户端参与credential定位并减少查询竞态。"
+        },
+        {
+          "q": "Pairing与credential provider在真实E2E中是否共享同一StateStore？",
+          "answer": "共享同一SqliteStateStore实例与SQLite文件：SqlitePairingRecordStore和StateStore-backed SqliteCredentialIssuance都写入同一append-only state_events；两个HTTPS server只共享typed provider依赖，不各自维护canonical数据库。",
+          "note": "Human确认采用；避免Pairing approval与credential lifecycle事实分裂。"
+        },
+        {
+          "q": "真实E2E中Pairing approval与credential issue approval是否保持独立事实？",
+          "answer": "保持独立事实：先追加human-approved完成节点enrollment/capability ceiling，再由Human针对具体event/task/capabilities签署credential.issue approval并追加credential-issued；重试不重复Human点击；Pairing service不自动签发credential。",
+          "note": "Human确认采用；UI可连续呈现，但canonical StateStore事实与权限边界不合并。"
+        },
+        {
+          "q": "真实E2E的Human approval envelope如何通过HTTP传输？",
+          "answer": "MVP继续使用现有x-zj-loop-human-approval header，header值为紧凑JSON {approval,human_identity}；adapter只解码，issuer再次校验签名、digest、能力与有效期。后续若超出header限制再引入版本化body或引用传输。",
+          "note": "Human确认采用；不扩展当前HTTP surface。"
+        },
+        {
+          "q": "Node Identity与Pairing proof是否从Ed25519统一切换为P-256 ECDSA？",
+          "answer": "统一切换为P-256 ECDSA：Node Identity使用P-256 X.509证书，pairing request proof使用ECDSA-P256；验证端只接受prime256v1，删除Ed25519平台探测与skip，HumanSigner与Node proof共享算法族但保持身份和密钥隔离。",
+          "note": "Human确认采用；目标是macOS、Windows、Linux真实HTTPS E2E一致可运行。"
+        },
+        {
+          "q": "P-256 ECDSA签名在跨平台协议中的encoding如何固定？",
+          "answer": "固定为ECDSA-P256-SHA256、ASN.1 DER encoding、base64 transport；Node/OpenSSL默认DER作为MVP基准，WebCrypto等raw r||s实现由provider adapter转换，不改变canonical协议。",
+          "note": "Human确认采用；避免跨平台实现对签名字节格式产生歧义。"
+        },
+        {
+          "q": "真实E2E的mTLS信任材料采用什么形态？",
+          "answer": "采用合成P-256自签名X.509与显式pinning：Agent pin service certificate，service配置允许的client certificate集合；不使用系统trust store、自动发现或通用CA；node_id由证书原始DER SHA-256派生。",
+          "note": "Human确认采用；移除Ed25519探测与平台skip，保证跨平台fixture可复现。"
+        },
+        {
+          "q": "真实E2E的credential verify应读取哪一个事实源？",
+          "answer": "StateStore-backed SqliteCredentialIssuance同时实现CredentialVerifier，直接读取同一credential_issue_intents的token hash、scope、approval capabilities、expiry与revoke；HTTP StateStore注入同一authority对象。独立credential_metadata verifier保留兼容但不用于新E2E。",
+          "note": "Human确认采用；issue、claim、revoke、verify共享单一凭证事实源。"
+        },
+        {
+          "q": "真实E2E的最小credential scope如何定义？",
+          "answer": "采用无外部副作用的event.append scope：固定network、node、event_id=e2e-credential-event-1、task_id=e2e-credential-task-1与capability=event.append；验证正确scope成功，改event/task/capability/node及revoke后fail-closed，不连接GitLab或目标代码库。",
+          "note": "Human确认采用；避免只测试token生成而不测试scope约束。"
+        },
+        {
+          "q": "真实E2E的Human authority使用哪一层实现？",
+          "answer": "采用跨平台in-memory HumanAuthority fixture执行真实HTTP/mTLS/StateStore/Pairing/issue/claim/verify链路，使用真实P-256签名、digest与DER协议；macOS Keychain、Windows CNG、Linux PKCS#11/TPM作为独立平台conformance，不成为协议E2E的CI前置条件。",
+          "note": "Human确认采用；协议验证与平台密钥托管验证分层。"
+        },
+        {
+          "q": "真实E2E中谁调用StateStore issue-intent HTTP？",
+          "answer": "由Human-side client调用并使用独立human-device mTLS certificate；Human UI/broker携带Human approval context并请求issue-intent，Codex作为Human+Codex中心责任单元协作者准备scope但不能代签，Workbuddy只通过Pairing session claim。",
+          "note": "Human确认采用；符合Human UI与Agent API职责隔离。"
+        },
+        {
+          "q": "StateStore如何阻止Agent伪造Human-side issue-intent请求？",
+          "answer": "要求独立Human-device mTLS certificate pinning，并将TLS peer certificate DER SHA-256 fingerprint传给HumanAuthorityVerifier；verifier同时校验Human签名、human_id、device fingerprint与request/scope digest；不信任请求体role/human_id/node_id，未配置pin则fail-closed。",
+          "note": "Human确认采用；把Human UI与Agent API隔离落实到可验证传输身份。"
+        },
+        {
+          "q": "Human signing key与Human-device mTLS certificate是否复用？",
+          "answer": "明确分离：signing key只签署approval并形成human_id/public identity；device mTLS certificate只证明当前设备并形成device_fingerprint；StateStore同时校验human_id、approval signature、device fingerprint与scope digest。",
+          "note": "Human确认采用；支持设备证书轮换和未来多设备，不改变Human signing identity。"
+        },
+        {
+          "q": "Human多设备的device certificate如何进入信任集合？",
+          "answer": "采用显式Human device allowlist：StateStore为Human维护device_fingerprint集合；当前E2E只配置一个设备；新增/撤销设备由Human signing key批准，证书轮换视为新fingerprint，未绑定设备即使有有效approval也不能调用issue-intent。",
+          "note": "Human确认采用；禁止Agent或请求体自助加入设备信任。"
+        },
+        {
+          "q": "Human-device allowlist是否在真实E2E前落成canonical StateStore事实？",
+          "answer": "是。先实现最小human-device trust slice：human-device-bound与human-device-revoked append-only事件、当前device fingerprint projection、issue-intent verifier按projection fail-closed；新增/撤销由Human signing key批准；E2E使用一个bound device并验证撤销/替换阻断。",
+          "note": "Human确认采用；不使用注入mock allowlist掩盖产品边界。"
+        },
+        {
+          "q": "Human-device trust的作用域是全局Human还是Network？",
+          "answer": "采用Network作用域：human_id可稳定跨Network，但human-device-bound必须绑定network_id、human_id、device_key_id与device_fingerprint；Network A的设备信任不自动扩展到Network B；新增/撤销按Network写canonical事实。",
+          "note": "Human确认采用；遵守StateStore network-level authority boundary。"
+        },
+        {
+          "q": "初始Human-device binding是否作为独立HTTP操作？",
+          "answer": "是，新增显式POST /v1/networks/:network_id/human-devices/bind；Human-side client携带device_key_id、device_fingerprint与action=human-device.bind approval context；StateStore校验peer certificate、owner与digest后追加human-device-bound并推进revision，network create不隐式绑定设备。",
+          "note": "Human确认采用；支持独立bind/revoke/rotate审计与重试语义。"
+        },
+        {
+          "q": "Human-device bind是否必须遵循network-level expected_revision CAS？",
+          "answer": "必须。bind携带expected_revision并在同一事务校验owner、Human approval、peer device fingerprint、revision与当前绑定状态；stale返回409且不写入，相同request重试返回duplicate不推进revision；bind/revoke/issue并发由network revision线性化。",
+          "note": "Human确认采用；避免设备信任变化与credential issue并发产生悬空授权。"
+        },
+        {
+          "q": "首个Human device尚未绑定时如何创建第一个Network？",
+          "answer": "采用显式POST /v1/bootstrap/networks流程：Human-side client使用Human signing key与device mTLS；同一事务追加独立network.created和human-device-bound事实；bootstrap幂等，普通network create不隐式绑定设备，后续设备走独立bind。",
+          "note": "Human确认采用；解决首个device trust的bootstrap循环，同时保留生命周期分离。"
+        },
+        {
+          "q": "StateStore第一次如何信任Human signing public key？",
+          "answer": "采用本机显式Human bootstrap trust：broker/Keychain生成或读取不可导出P-256 signing key，UI展示public-key fingerprint并由Human确认；StateStore写human-authority-bootstrapped事实，后续network bootstrap、device bind、issue-intent必须匹配该identity；Agent/远程HTTP不能建立trust root。",
+          "note": ""
+        },
+        {
+          "q": "bootstrap时network、Human authority与Human device三类事实如何排序？",
+          "answer": "同一事务追加三个独立canonical facts：revision 1 network.created，revision 2 human-authority-bootstrapped，revision 3 human-device-bound；任一失败全部回滚；network绑定human_id/public-key fingerprint，trust与device事实分别可投影，重试不重复追加。",
+          "note": "Human确认采用；避免半初始化Network。"
+        },
+        {
+          "q": "Network bootstrap的幂等键与冲突语义如何定义？",
+          "answer": "使用request_id与canonical bootstrap digest：相同request_id+digest返回原结果且不重复追加network.created、human-authority-bootstrapped、human-device-bound；相同request_id不同digest返回409且不改状态；不同request_id同network需校验owner/key/device一致，否则conflict；幂等记录保留到审计完成。",
+          "note": "Human确认采用；遵循高风险写入统一幂等规则。"
+        },
+        {
+          "q": "device_key_id与device certificate fingerprint如何区分？",
+          "answer": "明确分离：device_key_id是随机稳定引用，用于UI/审计/生命周期；device_fingerprint由服务端从mTLS peer公钥或证书DER SHA-256派生，用于认证授权；StateStore同时保存，客户端声明的fingerprint不能替代TLS证明。",
+          "note": "Human确认采用；key rotation改变fingerprint但不混淆生命周期引用。"
+        },
+        {
+          "q": "Human approval digest是否绑定当前mTLS peer fingerprint？",
+          "answer": "必须绑定。服务端从TLS peer派生device_fingerprint，approval canonical payload覆盖network、human、device_key_id、derived fingerprint、action、request_id与request body digest；服务端校验approval、canonical device binding与当前peer一致，客户端自报值不构成信任。",
+          "note": "Human确认采用；防止Human approval被转移到另一设备或被Agent重放。"
+        },
+        {
+          "q": "是否把Human device identity加入HumanApprovalContext签名字段？",
+          "answer": "是。高风险action的HumanApprovalContext一等包含device_key_id与device_fingerprint，canonical signed payload覆盖network、human、device、action、request与时间；服务端仍从TLS peer派生fingerprint二次匹配；低风险旧context可兼容但不得用于高风险操作。",
+          "note": "Human确认采用；避免设备绑定只存在opaque digest而不可审计。"
+        },
+        {
+          "q": "加入device字段后，Human authority协议如何版本化？",
+          "answer": "引入 zj-loop.human_authority.v2，保留 v1 作为只读历史协议；v2 将 network_id、device_key_id、device_fingerprint 纳入规范化签名载荷；高风险动作只接受 v2；补齐 v1/v2 版本化 fixture 与兼容性测试；不从 npm 包版本推断协议版本。",
+          "note": "采用：v2 承载设备绑定字段并限制高风险动作，v1 仅用于历史验证。"
         }
       ],
       "notes": "范围已冻结；本次完成并验证：StateStore-backed SQLite credential provider复用StateStore同一BEGIN IMMEDIATE事务；issue intent、一次性claim、revoke的本地凭证索引与credential-issued、credential-claimed、credential-revoked canonical事件原子提交；network-level CAS冲突整体回滚；重复issue/claim/revoke不推进revision；新增createCredentialIssueIntentService，将已验证HumanApprovalEnvelope接入typed SQLite issuer并保持human_id、签名和digest fail-closed校验。独立provider兼容路径仍保留。验证：npm run test:agent-local（本次改动前）= 120 passed, 1 skipped, 0 failed；本次adapter targeted = 6 passed, 0 failed；git diff --check通过。Remaining：HTTP server真实provider wiring测试、pairing claim真实provider adapter、lifecycle projections、canonicalization v1 fixtures、加密backup/restore、真实双Agent端到端流程。自动HA/failover、平台级沙箱、硬件隔离、离线授权与复杂策略引擎后置。"
@@ -1936,7 +2071,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-30 10:16:46",
+    "updated": "2026-07-30 12:07:13",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

@@ -28,3 +28,35 @@ test('Human authority fixture rotates recovery material and never returns the pr
   assert.equal(await authority.verifyRecoveryMaterial(first.secret), false);
   assert.equal(await authority.verifyRecoveryMaterial(rotated.secret), true);
 });
+
+test('Human authority v2 binds network and device identity into the signed context', async () => {
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2' });
+  const identity = authority.getPublicIdentity();
+  const context = await authority.signApprovalContext({
+    action: 'credential.issue',
+    request_id: 'issue-1',
+    request_digest: 'a'.repeat(64),
+    network_id: 'network-1',
+    device_key_id: 'device-key-1',
+    device_fingerprint: 'b'.repeat(64),
+    approved_capabilities: ['event.append'],
+    issued_at: '2026-07-30T00:00:00.000Z',
+    expires_at: '2026-07-30T00:05:00.000Z',
+  });
+
+  assert.equal(identity.schema, 'zj-loop.human_authority.v2');
+  assert.equal(context.schema, 'zj-loop.human_authority.v2');
+  assert.equal(context.network_id, 'network-1');
+  assert.equal(context.device_key_id, 'device-key-1');
+  assert.equal(context.device_fingerprint, 'b'.repeat(64));
+  assert.equal(verifyHumanApprovalContext({ identity, context, now: context.issued_at, require_v2: true }), true);
+  assert.equal(verifyHumanApprovalContext({ identity, context: { ...context, device_fingerprint: 'c'.repeat(64) }, now: context.issued_at, require_v2: true }), false);
+  assert.equal(verifyHumanApprovalContext({ identity, context, now: context.issued_at }), true);
+});
+
+test('high-risk verification rejects historical v1 approval contexts', async () => {
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const identity = authority.getPublicIdentity();
+  const context = await authority.signApprovalContext({ action: 'credential.issue', request_id: 'issue-1', request_digest: 'a'.repeat(64) });
+  assert.equal(verifyHumanApprovalContext({ identity, context, now: context.issued_at, require_v2: true }), false);
+});
