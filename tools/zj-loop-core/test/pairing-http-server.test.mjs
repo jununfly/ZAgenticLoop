@@ -15,6 +15,8 @@ import {
 import { createInMemoryPairingRecordStore } from '../dist/pairing-record-store.js';
 import { createPairingHttpServer } from '../dist/pairing-http-server.js';
 import { createInMemoryHumanAuthorityProvider, verifyHumanApprovalContext } from '../dist/human-authority.js';
+import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
+import { createSqliteCredentialIssuance, credentialIssuanceDigest } from '../dist/sqlite-credential-issuance.js';
 
 const OPENSSL_BIN = process.env.OPENSSL_BIN ?? (existsSync('/opt/homebrew/opt/openssl@3/bin/openssl') ? '/opt/homebrew/opt/openssl@3/bin/openssl' : 'openssl');
 
@@ -57,7 +59,7 @@ function request({ address, server, client, path: requestPath, method = 'GET', b
 
 async function fixture(options = {}) {
   const serverMaterial = await certificate('localhost');
-  const clientMaterial = await certificate('workbuddy', true);
+  const clientMaterial = options.clientMaterial ?? await certificate('workbuddy', true);
   const identity = buildNodeIdentity({ certificate_pem: clientMaterial.cert, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
   const requestBody = createPairingRequest({ request_id: 'pair-1', network_id: 'network-1', identity, endpoint: 'loopback://127.0.0.1:43123', requested_capabilities: ['event.consume'], expires_at: '2026-07-29T04:00:00.000Z' });
   const proof = createPairingRequestProof({ request: requestBody, private_key_pem: clientMaterial.key });
@@ -162,6 +164,37 @@ test('Pairing credential claim derives network and node from the authenticated s
   const retry = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: `/v1/pairing-requests/${value.requestBody.request_id}/credential/claim`, method: 'POST', body: {}, headers: { authorization: `Bearer ${created.body.session_token}` } });
   assert.equal('token' in retry.body, false);
   await close(value);
+});
+
+test('Pairing credential claim completes against the real SQLite issuance provider', { skip: !supportsEd25519Certificates }, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-pairing-claim-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-29T03:00:00.000Z' });
+  const clientMaterial = await certificate('workbuddy', true);
+  const nodeId = createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex');
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: 'network-1', device_key_id: 'device-key-1', device_fingerprint: nodeId });
+  const issuance = createSqliteCredentialIssuance({ filename: path.join(root, 'unused-credential.db'), stateStore, now: () => '2026-07-29T03:01:00.000Z' });
+  const credentialRequest = { request_id: 'pair-1', network_id: 'network-1', node_id: nodeId, event_id: 'event-1', task_id: 'task-1', capabilities: ['event.consume'], issued_at: '2026-07-29T03:00:00.000Z', expires_at: '2026-07-29T04:00:00.000Z', approval: { human_id: 'human-1' } };
+  const approval = await authority.signApprovalContext({ action: 'credential.issue', request_id: credentialRequest.request_id, request_digest: credentialIssuanceDigest(credentialRequest), approved_capabilities: credentialRequest.capabilities, issued_at: credentialRequest.issued_at, expires_at: credentialRequest.expires_at });
+  const intent = await issuance.issueIntent({ ...credentialRequest, approval, human_identity: authority.getPublicIdentity(), expected_revision: 1 });
+  assert.equal(intent.status, 'recorded');
+  const value = await fixture({ clientMaterial, credentialClaim: { claim: (input) => issuance.claimForPairingSession(input) } });
+  const created = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
+  assert.equal(created.statusCode, 201);
+  const claimed = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: `/v1/pairing-requests/${value.requestBody.request_id}/credential/claim`, method: 'POST', body: {}, headers: { authorization: `Bearer ${created.body.session_token}` } });
+
+  assert.equal(claimed.statusCode, 200, JSON.stringify(claimed.body));
+  assert.equal(claimed.body.status, 'claimed');
+  assert.equal(claimed.body.credential_id, intent.credential_id);
+  assert.match(claimed.body.token, /^[-_A-Za-z0-9]+$/);
+  const events = await stateStore.readEvents({ network_id: 'network-1', after_revision: 1 });
+  assert.deepEqual(events.events.map((event) => event.event_type), ['credential-issued', 'credential-claimed']);
+
+  await close(value);
+  await issuance.close();
+  await stateStore.close();
+  await rm(clientMaterial.root, { recursive: true, force: true });
+  await rm(root, { recursive: true, force: true });
 });
 
 test('Owner approval binds signed capabilities and is CAS-protected', async () => {
