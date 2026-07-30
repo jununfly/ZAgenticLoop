@@ -85,3 +85,4 @@ export * from './relay-contract.js';
 export * from './loopback-relay-server.js';
 export * from './human-approval-ui.js';
 export * from './sqlite-credential-issuance.js';
+export * from './credential-issuance-events.js';
