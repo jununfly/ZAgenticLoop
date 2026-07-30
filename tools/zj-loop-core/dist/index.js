@@ -94,6 +94,8 @@ export * from './orchestration-plan-approval.js';
 export * from './orchestration-preflight.js';
 export * from './orchestration-preflight-persistence.js';
 export * from './orchestration-runtime-claim.js';
+export * from './human-grill.js';
+export * from './human-grill-store.js';
 export * from './dispatch-intent.js';
 export * from './dispatch-gate.js';
 export * from './dispatch-fact.js';
