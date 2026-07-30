@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-30 09:51:45
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-30 10:16:46
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-3. SQLite StateStore、ArtifactStore与loopback Relay
 
-范围已冻结；已完成并验证：SQLite credential issue intent/一次性 claim provider slice、P-256 Human approval digest binding、metadata-only lifecycle event builders (issue/claim/revoke/expire/node revoke)、StateStore issue-intent HTTP contract、pairing-session credential claim HTTP contract。全量 agent-local 回归：118 passed, 1 skipped, 0 failed。Remaining: wire real SQLite issuance provider to canonical StateStore events with atomic CAS/idempotency, lifecycle projections, encrypted backup/restore, protocol fixtures, and end-to-end real-provider flow.
+范围已冻结；本次完成并验证：StateStore-backed SQLite credential provider复用StateStore同一BEGIN IMMEDIATE事务；issue intent、一次性claim、revoke的本地凭证索引与credential-issued、credential-claimed、credential-revoked canonical事件原子提交；network-level CAS冲突整体回滚；重复issue/claim/revoke不推进revision；新增createCredentialIssueIntentService，将已验证HumanApprovalEnvelope接入typed SQLite issuer并保持human_id、签名和digest fail-closed校验。独立provider兼容路径仍保留。验证：npm run test:agent-local（本次改动前）= 120 passed, 1 skipped, 0 failed；本次adapter targeted = 6 passed, 0 failed；git diff --check通过。Remaining：HTTP server真实provider wiring测试、pairing claim真实provider adapter、lifecycle projections、canonicalization v1 fixtures、加密backup/restore、真实双Agent端到端流程。自动HA/failover、平台级沙箱、硬件隔离、离线授权与复杂策略引擎后置。
 
 **决策：**
 - Q: SQLite StateStore、ArtifactStore与loopback Relay的施工顺序是什么？ → 采用先SQLite-compatible StateStore，再ArtifactStore，最后loopback Relay。StateStore先钉住身份、授权、生命周期、幂等与CAS canonical facts；ArtifactStore随后承载不可变验证产物；Relay最后依赖前两者提供认证、投递与恢复事实。 (Human accepted this implementation order.)
@@ -206,4 +206,6 @@
 - Q: 同一设备同时运行 Agent 与 Human UI 时必须强制进程与凭据隔离：不同进程身份、不同 socket/端口和不同凭据目录；Human session secret 只进入 Human UI 进程，不得通过环境变量、共享文件或 Agent API 暴露；Agent 只能访问自己的 pairing session 和 node credential；Human UI 高风险 API 拒绝 Agent node identity、Agent mTLS 证书和 Agent bearer token；Human device private key 由平台安全存储隔离，Agent 不得读取；隔离配置和越权尝试全部审计。 → 同机不等于可信共进程，Human 责任边界必须由操作系统和协议双重隔离，而不是靠 Agent 自觉。 (已确认：确认)
 - Q: MVP 的同机 Agent/Human UI 隔离只承诺可验证最小边界：Human UI 与 Agent 独立进程；Human session 不通过环境变量、命令行参数或共享明文文件传递；Human UI 使用 loopback HTTPS、独立 session cookie 和独立 API surface；Agent API 与 Human API 路由分离并执行 role、mTLS、session 校验；平台级沙箱、不同 OS 用户、硬件隔离和强制 MAC policy 后置；当前平台无法证明基本隔离时，高风险操作必须 fail-closed 并明确报告能力缺口。 → MVP 必须把承诺限制在可测试事实，避免把未实现的平台安全能力误包装为产品保证。 (已确认：确认)
 - Q: 冻结本轮 1-4-3 决策范围，转入实现与验证：Credential issue intent 与一次性 claim；P-256 HumanSigner approval 校验；StateStore canonical event、CAS、revision、writer epoch 和幂等；revoke/expire/node revoke 生命周期；canonicalization v1、SHA-256 digest 和跨平台 fixtures；pairing/session/version transcript 绑定；加密备份、人工恢复和显式 writer transfer；Human UI 与 Agent 最小隔离及 fail-closed；端到端测试、审计验证和长期文档。自动 HA/failover、真正多 writer 一致性、平台级沙箱、硬件隔离、离线授权、复杂策略引擎和完整灾备体系后置。 → 本轮范围已冻结，不再继续扩展设计问题，后续新增想法进入下一里程碑路线图。 (已确认：确认)
+- Q: credential issuance、claim、revoke如何与StateStore canonical event保持原子一致？ → StateStore-backed SQLite credential provider复用StateStore同一BEGIN IMMEDIATE事务；凭证本地索引与credential-issued、credential-claimed、credential-revoked事件同事务提交，CAS冲突整体回滚，重复操作不推进network revision。独立provider模式保留为兼容路径。 (本次已实现并由120 passed、1 skipped回归覆盖；后续仍需真实HTTP adapter、projection与端到端验证。)
+- Q: StateStore HTTP issue-intent如何接入真实SQLite credential provider？ → 通过createCredentialIssueIntentService将已由HTTP HumanAuthorityVerifier认可的HumanApprovalEnvelope解码为typed issuance request；adapter不返回token、不解析Bearer、不替代签名校验，issuer继续校验Human签名、digest、能力与StateStore CAS。 (已实现adapter并覆盖JSON envelope、human_id绑定与真实issuer delegation；HTTP server仍由调用方显式注入该service。)
 <!-- ROADMAP_SECTION_END -->

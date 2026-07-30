@@ -1706,9 +1706,19 @@
           "q": "冻结本轮 1-4-3 决策范围，转入实现与验证：Credential issue intent 与一次性 claim；P-256 HumanSigner approval 校验；StateStore canonical event、CAS、revision、writer epoch 和幂等；revoke/expire/node revoke 生命周期；canonicalization v1、SHA-256 digest 和跨平台 fixtures；pairing/session/version transcript 绑定；加密备份、人工恢复和显式 writer transfer；Human UI 与 Agent 最小隔离及 fail-closed；端到端测试、审计验证和长期文档。自动 HA/failover、真正多 writer 一致性、平台级沙箱、硬件隔离、离线授权、复杂策略引擎和完整灾备体系后置。",
           "answer": "本轮范围已冻结，不再继续扩展设计问题，后续新增想法进入下一里程碑路线图。",
           "note": "已确认：确认"
+        },
+        {
+          "q": "credential issuance、claim、revoke如何与StateStore canonical event保持原子一致？",
+          "answer": "StateStore-backed SQLite credential provider复用StateStore同一BEGIN IMMEDIATE事务；凭证本地索引与credential-issued、credential-claimed、credential-revoked事件同事务提交，CAS冲突整体回滚，重复操作不推进network revision。独立provider模式保留为兼容路径。",
+          "note": "本次已实现并由120 passed、1 skipped回归覆盖；后续仍需真实HTTP adapter、projection与端到端验证。"
+        },
+        {
+          "q": "StateStore HTTP issue-intent如何接入真实SQLite credential provider？",
+          "answer": "通过createCredentialIssueIntentService将已由HTTP HumanAuthorityVerifier认可的HumanApprovalEnvelope解码为typed issuance request；adapter不返回token、不解析Bearer、不替代签名校验，issuer继续校验Human签名、digest、能力与StateStore CAS。",
+          "note": "已实现adapter并覆盖JSON envelope、human_id绑定与真实issuer delegation；HTTP server仍由调用方显式注入该service。"
         }
       ],
-      "notes": "范围已冻结；已完成并验证：SQLite credential issue intent/一次性 claim provider slice、P-256 Human approval digest binding、metadata-only lifecycle event builders (issue/claim/revoke/expire/node revoke)、StateStore issue-intent HTTP contract、pairing-session credential claim HTTP contract。全量 agent-local 回归：118 passed, 1 skipped, 0 failed。Remaining: wire real SQLite issuance provider to canonical StateStore events with atomic CAS/idempotency, lifecycle projections, encrypted backup/restore, protocol fixtures, and end-to-end real-provider flow."
+      "notes": "范围已冻结；本次完成并验证：StateStore-backed SQLite credential provider复用StateStore同一BEGIN IMMEDIATE事务；issue intent、一次性claim、revoke的本地凭证索引与credential-issued、credential-claimed、credential-revoked canonical事件原子提交；network-level CAS冲突整体回滚；重复issue/claim/revoke不推进revision；新增createCredentialIssueIntentService，将已验证HumanApprovalEnvelope接入typed SQLite issuer并保持human_id、签名和digest fail-closed校验。独立provider兼容路径仍保留。验证：npm run test:agent-local（本次改动前）= 120 passed, 1 skipped, 0 failed；本次adapter targeted = 6 passed, 0 failed；git diff --check通过。Remaining：HTTP server真实provider wiring测试、pairing claim真实provider adapter、lifecycle projections、canonicalization v1 fixtures、加密backup/restore、真实双Agent端到端流程。自动HA/failover、平台级沙箱、硬件隔离、离线授权与复杂策略引擎后置。"
     },
     "1-4-4": {
       "id": "1-4-4",
@@ -1926,7 +1936,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-30 09:51:45",
+    "updated": "2026-07-30 10:16:46",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

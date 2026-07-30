@@ -1,3 +1,4 @@
+import type { SqliteStateStore } from './sqlite-state-store.js';
 import { type HumanApprovalContext, type HumanPublicIdentity } from './human-authority.js';
 export declare const SQLITE_CREDENTIAL_ISSUANCE_SCHEMA: "zj-loop.sqlite_credential_issuance.v1";
 export type CredentialIssuanceRequest = {
@@ -11,6 +12,7 @@ export type CredentialIssuanceRequest = {
     expires_at: string;
     approval: HumanApprovalContext;
     human_identity: HumanPublicIdentity;
+    expected_revision?: number;
 };
 export type CredentialIssueIntentResult = {
     status: 'recorded' | 'duplicate';
@@ -52,8 +54,27 @@ export type SqliteCredentialIssuance = {
     }>;
     close(): Promise<void>;
 };
+export type CredentialIssueIntentServiceInput = {
+    network_id: string;
+    expected_revision: number;
+    human_id: string;
+    human_context: string;
+    request: Record<string, unknown>;
+};
+export type HumanApprovalEnvelope = {
+    approval: HumanApprovalContext;
+    human_identity: HumanPublicIdentity;
+};
+export declare function parseHumanApprovalEnvelope(context: string): HumanApprovalEnvelope;
+export declare function createCredentialIssueIntentService(input: {
+    issuance: SqliteCredentialIssuance;
+    resolveApproval?: (context: string) => HumanApprovalEnvelope | Promise<HumanApprovalEnvelope>;
+}): {
+    issueIntent(request: CredentialIssueIntentServiceInput): Promise<CredentialIssueIntentResult>;
+};
 export declare function credentialIssuanceDigest(input: CredentialIssuanceRequest): string;
 export declare function createSqliteCredentialIssuance(input: {
     filename: string;
     now?: () => string;
+    stateStore?: SqliteStateStore;
 }): SqliteCredentialIssuance;

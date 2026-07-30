@@ -28,11 +28,17 @@ export type StateEvent = {
   payload_sha256: string;
 };
 
+export type SqliteStateStoreTransaction = {
+  database: Database.Database;
+  appendEvent(input: { network_id: string; expected_revision: number; event: StateEventInput; now?: string }): { status: 'recorded' | 'duplicate' | 'conflict'; revision?: number; current_revision: number; reason?: string };
+};
+
 export type SqliteStateStore = {
   createNetwork(input: { network_id: string; owner_id: string; now?: string }): Promise<{ status: 'recorded' | 'duplicate' | 'conflict'; revision: number; reason?: string }>;
   appendEvent(input: { network_id: string; expected_revision: number; event: StateEventInput; now?: string }): Promise<{ status: 'recorded' | 'duplicate' | 'conflict'; revision?: number; current_revision: number; reason?: string }>;
   getRevision(network_id: string): Promise<number>;
   readEvents(input: { network_id: string; after_revision?: number; aggregate_type?: string; aggregate_id?: string }): Promise<{ snapshot_revision: number; events: StateEvent[] }>;
+  runAtomic<T>(work: (transaction: SqliteStateStoreTransaction) => T): Promise<T>;
   close(): Promise<void>;
 };
 
@@ -71,7 +77,7 @@ export function sha256CanonicalJson(value: unknown): string {
   return createHash('sha256').update(canonicalizeJson(value), 'utf8').digest('hex');
 }
 
-function validateEventInput(event: StateEventInput): { payload_json: string; payload_sha256: string } {
+export function validateStateEventInput(event: StateEventInput): { payload_json: string; payload_sha256: string } {
   requireId(event.event_id, 'event-id-required');
   requireId(event.aggregate_type, 'aggregate-type-required');
   requireId(event.aggregate_id, 'aggregate-id-required');
@@ -92,6 +98,25 @@ function withImmediateTransaction<T>(db: Database.Database, work: () => T): T {
     db.exec('ROLLBACK');
     throw error;
   }
+}
+
+function appendEventInTransaction(db: Database.Database, input: { network_id: string; expected_revision: number; event: StateEventInput; now?: string }): { status: 'recorded' | 'duplicate' | 'conflict'; revision?: number; current_revision: number; reason?: string } {
+  requireId(input.network_id, 'network-id-required');
+  if (!Number.isInteger(input.expected_revision) || input.expected_revision < 1) throw new Error('expected-revision-invalid');
+  const { payload_json, payload_sha256 } = validateStateEventInput(input.event);
+  const now = input.now ?? new Date().toISOString();
+  const current = db.prepare('SELECT current_revision FROM network_metadata WHERE network_id = ?').get(input.network_id) as { current_revision: number } | undefined;
+  if (!current) throw new Error('network-not-found');
+  const existing = db.prepare('SELECT revision, aggregate_type, aggregate_id, event_type, occurred_at, payload_json, payload_sha256 FROM state_events WHERE network_id = ? AND event_id = ?').get(input.network_id, input.event.event_id) as { revision: number; aggregate_type: string; aggregate_id: string; event_type: string; occurred_at: string; payload_json: string; payload_sha256: string } | undefined;
+  if (existing) {
+    const same = existing.aggregate_type === input.event.aggregate_type && existing.aggregate_id === input.event.aggregate_id && existing.event_type === input.event.event_type && existing.occurred_at === input.event.occurred_at && existing.payload_json === payload_json && existing.payload_sha256 === payload_sha256;
+    return same ? { status: 'duplicate', revision: existing.revision, current_revision: current.current_revision } : { status: 'conflict', current_revision: current.current_revision, reason: 'event-id-reused' };
+  }
+  if (input.expected_revision !== current.current_revision) return { status: 'conflict', current_revision: current.current_revision, reason: 'revision-mismatch' };
+  const revision = current.current_revision + 1;
+  db.prepare('INSERT INTO state_events (network_id, revision, event_id, aggregate_type, aggregate_id, event_type, occurred_at, created_at, payload_json, payload_sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(input.network_id, revision, input.event.event_id, input.event.aggregate_type, input.event.aggregate_id, input.event.event_type, input.event.occurred_at, now, payload_json, payload_sha256);
+  db.prepare('UPDATE network_metadata SET current_revision = ?, updated_at = ? WHERE network_id = ?').run(revision, now, input.network_id);
+  return { status: 'recorded', revision, current_revision: revision };
 }
 
 function bootstrap(db: Database.Database): void {
@@ -170,26 +195,7 @@ export function createSqliteStateStore(input: { filename: string }): SqliteState
       });
     },
     async appendEvent(input) {
-      requireId(input.network_id, 'network-id-required');
-      if (!Number.isInteger(input.expected_revision) || input.expected_revision < 1) throw new Error('expected-revision-invalid');
-      const { payload_json, payload_sha256 } = validateEventInput(input.event);
-      const now = input.now ?? new Date().toISOString();
-      return withImmediateTransaction(db, () => {
-        const current = db.prepare('SELECT current_revision FROM network_metadata WHERE network_id = ?').get(input.network_id) as { current_revision: number } | undefined;
-        if (!current) throw new Error('network-not-found');
-        const existing = db.prepare('SELECT revision, aggregate_type, aggregate_id, event_type, occurred_at, payload_json, payload_sha256 FROM state_events WHERE network_id = ? AND event_id = ?').get(input.network_id, input.event.event_id) as { revision: number; aggregate_type: string; aggregate_id: string; event_type: string; occurred_at: string; payload_json: string; payload_sha256: string } | undefined;
-        if (existing) {
-          const same = existing.aggregate_type === input.event.aggregate_type && existing.aggregate_id === input.event.aggregate_id && existing.event_type === input.event.event_type && existing.occurred_at === input.event.occurred_at && existing.payload_json === payload_json && existing.payload_sha256 === payload_sha256;
-          return same
-            ? { status: 'duplicate', revision: existing.revision, current_revision: current.current_revision }
-            : { status: 'conflict', current_revision: current.current_revision, reason: 'event-id-reused' };
-        }
-        if (input.expected_revision !== current.current_revision) return { status: 'conflict', current_revision: current.current_revision, reason: 'revision-mismatch' };
-        const revision = current.current_revision + 1;
-        db.prepare('INSERT INTO state_events (network_id, revision, event_id, aggregate_type, aggregate_id, event_type, occurred_at, created_at, payload_json, payload_sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(input.network_id, revision, input.event.event_id, input.event.aggregate_type, input.event.aggregate_id, input.event.event_type, input.event.occurred_at, now, payload_json, payload_sha256);
-        db.prepare('UPDATE network_metadata SET current_revision = ?, updated_at = ? WHERE network_id = ?').run(revision, now, input.network_id);
-        return { status: 'recorded', revision, current_revision: revision };
-      });
+      return withImmediateTransaction(db, () => appendEventInTransaction(db, input));
     },
     async getRevision(network_id) {
       requireId(network_id, 'network-id-required');
@@ -216,6 +222,10 @@ export function createSqliteStateStore(input: { filename: string }): SqliteState
         db.exec('ROLLBACK');
         throw error;
       }
+    },
+    async runAtomic(work) {
+      if (typeof work !== 'function') throw new Error('state-transaction-work-required');
+      return withImmediateTransaction(db, () => work({ database: db, appendEvent: (event) => appendEventInTransaction(db, event) }));
     },
     async close() {
       if (db.open) db.close();

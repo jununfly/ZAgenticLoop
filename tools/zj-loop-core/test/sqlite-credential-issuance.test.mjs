@@ -4,7 +4,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createInMemoryHumanAuthorityProvider } from '../dist/human-authority.js';
-import { createSqliteCredentialIssuance, credentialIssuanceDigest } from '../dist/sqlite-credential-issuance.js';
+import { createCredentialIssueIntentService, createSqliteCredentialIssuance, credentialIssuanceDigest } from '../dist/sqlite-credential-issuance.js';
+import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 
 const base = {
   request_id: 'issue-request-1',
@@ -85,6 +86,68 @@ test('SQLite credential claim fails closed after credential expiry or revoke', a
   try {
     const intent = await issuance.issueIntent({ ...request, approval, human_identity: authority.getPublicIdentity() });
     await assert.rejects(() => issuance.claim({ request_id: request.request_id, network_id: request.network_id, node_id: request.node_id, credential_id: intent.credential_id, now: '2026-07-30T01:02:00.000Z' }), { message: 'credential-expired' });
+  } finally {
+    await issuance.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('StateStore-backed credential issuance atomically appends canonical issue facts with CAS', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-atomic-'));
+  const filename = path.join(root, 'state.db');
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const stateStore = createSqliteStateStore({ filename });
+  const issuance = createSqliteCredentialIssuance({ filename, stateStore, now: () => '2026-07-30T01:01:00.000Z' });
+  const approvedRequest = async (request) => {
+    const draft = await authority.signApprovalContext({ action: 'credential.issue', request_id: request.request_id, request_digest: 'sha256:' + '0'.repeat(64), approved_capabilities: request.capabilities, issued_at: request.issued_at, expires_at: '2026-07-30T01:05:00.000Z' });
+    const digest = credentialIssuanceDigest({ ...request, approval: draft, human_identity: authority.getPublicIdentity() });
+    return { ...request, approval: await authority.signApprovalContext({ action: 'credential.issue', request_id: request.request_id, request_digest: digest, approved_capabilities: request.capabilities, issued_at: request.issued_at, expires_at: '2026-07-30T01:05:00.000Z' }), human_identity: authority.getPublicIdentity() };
+  };
+  try {
+    await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-30T01:00:00.000Z' });
+    const request = await approvedRequest({ ...base, expected_revision: 1 });
+    const first = await issuance.issueIntent(request);
+    assert.equal(first.status, 'recorded');
+    assert.equal(await stateStore.getRevision('network-1'), 2);
+    const events = await stateStore.readEvents({ network_id: 'network-1', after_revision: 1 });
+    assert.deepEqual(events.events.map((event) => event.event_type), ['credential-issued']);
+    const retry = await issuance.issueIntent(request);
+    assert.deepEqual(retry, { ...first, status: 'duplicate' });
+    assert.equal(await stateStore.getRevision('network-1'), 2);
+    const claimed = await issuance.claim({ request_id: request.request_id, network_id: request.network_id, node_id: request.node_id, credential_id: first.credential_id, now: '2026-07-30T01:02:00.000Z' });
+    assert.equal(claimed.status, 'claimed');
+    assert.equal(await stateStore.getRevision('network-1'), 3);
+    const claimRetry = await issuance.claim({ request_id: request.request_id, network_id: request.network_id, node_id: request.node_id, credential_id: first.credential_id, now: '2026-07-30T01:02:01.000Z' });
+    assert.equal(claimRetry.status, 'duplicate');
+    assert.equal(await stateStore.getRevision('network-1'), 3);
+    const revoked = await issuance.revoke({ credential_id: first.credential_id, request_id: 'revoke-request-1', reason: 'human-request', now: '2026-07-30T01:03:00.000Z' });
+    assert.equal(revoked.status, 'revoked');
+    assert.equal(await stateStore.getRevision('network-1'), 4);
+    const stale = await approvedRequest({ ...base, request_id: 'issue-request-stale', event_id: 'event-stale', expected_revision: 1 });
+    await assert.rejects(() => issuance.issueIntent(stale), { message: 'revision-mismatch' });
+    assert.equal(await stateStore.getRevision('network-1'), 4);
+    const canonicalEvents = await stateStore.readEvents({ network_id: 'network-1', after_revision: 1 });
+    assert.deepEqual(canonicalEvents.events.map((event) => event.event_type), ['credential-issued', 'credential-claimed', 'credential-revoked']);
+    await assert.rejects(() => issuance.claim({ request_id: stale.request_id, network_id: stale.network_id, node_id: stale.node_id, credential_id: 'credential_missing', now: '2026-07-30T01:02:00.000Z' }), { message: 'credential-not-available' });
+  } finally {
+    await issuance.close();
+    await stateStore.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('credential issue HTTP adapter decodes a Human envelope and delegates typed issuance', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-adapter-'));
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const issuance = createSqliteCredentialIssuance({ filename: path.join(root, 'state.db'), now: () => '2026-07-30T01:01:00.000Z' });
+  try {
+    const request = { ...base, request_id: 'issue-request-adapter' };
+    const draft = await authority.signApprovalContext({ action: 'credential.issue', request_id: request.request_id, request_digest: 'sha256:' + '0'.repeat(64), approved_capabilities: request.capabilities, issued_at: request.issued_at, expires_at: '2026-07-30T01:05:00.000Z' });
+    const digest = credentialIssuanceDigest({ ...request, approval: draft, human_identity: authority.getPublicIdentity() });
+    const approval = await authority.signApprovalContext({ action: 'credential.issue', request_id: request.request_id, request_digest: digest, approved_capabilities: request.capabilities, issued_at: request.issued_at, expires_at: '2026-07-30T01:05:00.000Z' });
+    const service = createCredentialIssueIntentService({ issuance });
+    const result = await service.issueIntent({ network_id: request.network_id, expected_revision: 1, human_id: 'human-1', human_context: JSON.stringify({ approval, human_identity: authority.getPublicIdentity() }), request: { request_id: request.request_id, node_id: request.node_id, event_id: request.event_id, task_id: request.task_id, capabilities: request.capabilities, issued_at: request.issued_at, expires_at: request.expires_at } });
+    assert.equal(result.status, 'recorded');
   } finally {
     await issuance.close();
     await rm(root, { recursive: true, force: true });
