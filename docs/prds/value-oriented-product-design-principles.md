@@ -2,7 +2,8 @@
 
 ## Status
 
-Draft product direction.
+Adopted product direction. The completed automation-first roadmap is absorbed
+into this durable document and the architecture reference.
 
 ## Purpose
 
@@ -135,12 +136,17 @@ Automation must be tied to verification:
 - Documentation should teach users how to make loops safely automatic, not only
   how to keep them manual.
 
-### Open Questions
+### Durable Resolution
 
-- What is the minimum evidence required before a route can be considered
-  automation-default?
-- Which stop signals should be hard blockers versus warning-level pauses?
-- How should users configure cost budgets without making first-run setup feel
-  heavy?
-- Which existing routes are closest to automation-default readiness?
-- What dashboard or report would make stop signals easy to understand?
+Automation-default is not a blanket live-side-effect promise. A route may
+progress automatically only when its enablement, request binding, provider
+capability, authority, credentials, cost envelope, workspace safety,
+verification gates, and stop conditions are all observable. Otherwise it emits
+a structured hard stop or Human handoff.
+
+The minimum durable stop signal contains the reason, responsible layer,
+evidence reference, recommended next action, retry or new-request policy, and
+Human-review requirement. Cost budgets, bounded slices, and verification are
+part of the same contract. Current route capability is derived from the Route
+Table and completion-alignment ledger; it is never promoted by a prose claim,
+a provider link from another adapter, or a dry-run replay.

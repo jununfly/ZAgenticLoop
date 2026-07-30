@@ -114,6 +114,34 @@ Useful measures include Human elapsed coordination time, intervention count
 and reason, independently completed work, verification pass rate, rework,
 handoff quality, recovery explainability, and unauthorized side effects.
 
+## Automation Experience
+
+The default experience is automatic progression when the work is safe,
+bounded, authorized, affordable, and verifiable. The expected path is:
+
+```text
+signal
+  -> route
+  -> request carrier
+  -> bounded execution
+  -> verification
+  -> review artifact or structured hard stop
+```
+
+Manual confirmation is reserved for genuinely risky, ambiguous, destructive,
+costly, or policy-sensitive boundaries. A route being enabled does not by
+itself authorize live side effects; capability, credentials, workspace safety,
+budget, verification, and stop observability must all be proven.
+
+Every stop must tell Human what happened, why it stopped, which layer owns the
+decision, where the evidence is, what can resume it, and whether a new request
+is required. A natural-language hint is not a side-effect authorization.
+
+Completion alignment is a product invariant: architecture readiness and user
+experience readiness must advance together. A deterministic protocol without a
+clear review path is incomplete, and a friendly UI that claims capability the
+Route Table or evidence cannot prove is also incomplete.
+
 ## Product Boundary
 
 ZAgenticLoop owns the OPN protocol, identity, capability and authority

@@ -63,6 +63,42 @@ experience, but they must not claim a route has reached a higher execution mode,
 runner maturity, or provider capability than the current Route Table row and
 gate evidence support.
 
+## Automation-First Operating Contract
+
+The durable product direction is automation-first, not confirmation-first:
+when work is safe, bounded, authorized, affordable, and verifiable, the loop
+should continue automatically to a review artifact or a structured hard stop.
+Manual confirmation is reserved for high-risk, ambiguous, destructive,
+costly, or policy-sensitive boundaries.
+
+Automatic progression must prove route enablement, request binding, provider
+capability, credentials and actor authority, cost and workspace safety,
+verification gates, and observable stop conditions. Unknown, unsupported,
+ambiguous, or unverifiable conditions fail closed and do not silently downgrade
+into a different side-effect path.
+
+Every stop is a first-class protocol result. It identifies the reason,
+responsible layer, evidence reference, recommended next action, retry or
+new-request policy, and whether Human review is required. Cost is part of the
+execution contract: work declares bounded slices or work units, token/time
+budget, continuation limits, and budget evidence.
+
+Status transitions require deterministic or reviewable evidence, and failed
+verification produces replayable failure context. Automatic merge, release,
+and other higher-risk actions remain separate Human-governed boundaries.
+
+The Route Table and derived completion-alignment ledger are the durable truth
+for current route capability. The ledger is derived, never hand-maintained,
+and binds target, Route Table, route, adapter, runner, workflow/template,
+protocol, and verification identities. Evidence from one provider cannot
+promote another provider's cell. Unsupported, incomplete, blocked, stale, or
+regressed cells remain visible in release decisions.
+
+This contract does not claim every route is live. It distinguishes protocol
+readiness, runner readiness, provider support, and user-facing completion
+evidence so a replay, disabled route, or dry run cannot masquerade as
+production capability.
+
 ## Registry
 
 `patterns/registry.yaml` is the shared pattern index. It carries stable metadata
