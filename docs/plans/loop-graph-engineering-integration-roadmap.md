@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-30 02:50:20
+> 数据文件: `loop-graph-engineering-integration-roadmap.json` | 最后更新: 2026-07-30 09:51:45
 
 [~][X+] 1. Loop Engineering与Graph Engineering产品融合
 ├── [~][X+] 1-1. Loop Engineering与Graph Engineering统一心智模型
@@ -20,7 +20,7 @@
 
 ### 当前施工：1-4-3. SQLite StateStore、ArtifactStore与loopback Relay
 
-范围已冻结；Credential issue intent/一次性 claim provider-neutral SQLite slice implemented and verified (3 tests: signed approval binding, idempotent issue/claim, one-time opaque token, node mismatch and intent expiry fail-closed). Remaining: canonical StateStore event integration, HTTP issuance/claim, lifecycle, backup/restore, protocol fixtures, and E2E gates.
+范围已冻结；已完成并验证：SQLite credential issue intent/一次性 claim provider slice、P-256 Human approval digest binding、metadata-only lifecycle event builders (issue/claim/revoke/expire/node revoke)、StateStore issue-intent HTTP contract、pairing-session credential claim HTTP contract。全量 agent-local 回归：118 passed, 1 skipped, 0 failed。Remaining: wire real SQLite issuance provider to canonical StateStore events with atomic CAS/idempotency, lifecycle projections, encrypted backup/restore, protocol fixtures, and end-to-end real-provider flow.
 
 **决策：**
 - Q: SQLite StateStore、ArtifactStore与loopback Relay的施工顺序是什么？ → 采用先SQLite-compatible StateStore，再ArtifactStore，最后loopback Relay。StateStore先钉住身份、授权、生命周期、幂等与CAS canonical facts；ArtifactStore随后承载不可变验证产物；Relay最后依赖前两者提供认证、投递与恢复事实。 (Human accepted this implementation order.)
