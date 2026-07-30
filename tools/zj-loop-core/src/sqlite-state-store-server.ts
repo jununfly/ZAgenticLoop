@@ -2,6 +2,7 @@ import { createServer, type Server, type ServerOptions } from 'node:https';
 import { createHash } from 'node:crypto';
 import type { TLSSocket } from 'node:tls';
 import type { SqliteStateStore, StateEventInput } from './sqlite-state-store.js';
+import { validateHumanAuthorityV2Binding } from './human-authority.js';
 
 export const STATE_STORE_HTTP_SCHEMA = 'zj-loop.state_store_http.v1' as const;
 const MAX_HTTP_BODY_BYTES = 512 * 1024;
@@ -24,6 +25,8 @@ export type HumanAuthorityVerificationRequest = {
   context: string;
   action: string;
   request_body: unknown;
+  require_v2?: boolean;
+  peer_fingerprint?: string;
 };
 
 export type HumanAuthorityVerifier = {
@@ -91,6 +94,12 @@ export function createStateStoreServer(input: {
         return;
       }
       const context = contextHeader;
+      const peer = (request.socket as TLSSocket).getPeerCertificate();
+      if (!peer.raw) {
+        sendJson(response, 401, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'client-identity-unavailable', side_effects_executed: false });
+        return;
+      }
+      const peerFingerprint = createHash('sha256').update(peer.raw).digest('hex');
       if (!input.humanAuthorityVerifier) {
         sendJson(response, 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'human-verifier-unavailable', side_effects_executed: false });
         return;
@@ -107,7 +116,13 @@ export function createStateStoreServer(input: {
         sendJson(response, 400, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'network-request-invalid', side_effects_executed: false });
         return;
       }
-      const human = await Promise.resolve(input.humanAuthorityVerifier.verify({ context, action: 'network.create', request_body: body }));
+      const networkId = (body as { network_id: string }).network_id;
+      const binding = validateHumanAuthorityV2Binding({ context, network_id: networkId, peer_fingerprint: peerFingerprint, require_current_v2: true });
+      if (binding.status !== 'allowed') {
+        sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: binding.reason, side_effects_executed: false });
+        return;
+      }
+      const human = await Promise.resolve(input.humanAuthorityVerifier.verify({ context, action: 'network.create', request_body: body, require_v2: true, peer_fingerprint: peerFingerprint }));
       if (human.status !== 'allowed') {
         sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: human.reason ?? 'human-context-invalid', side_effects_executed: false });
         return;
@@ -121,11 +136,11 @@ export function createStateStoreServer(input: {
         return;
       }
       try {
-        const result = await input.store.createNetwork({ network_id: (body as { network_id: string }).network_id, owner_id: human.human_id });
+        const result = await input.store.createNetwork({ network_id: networkId, owner_id: human.human_id });
         if (result.status === 'conflict') {
           sendJson(response, 409, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: result.reason ?? 'network-conflict', side_effects_executed: false });
         } else {
-          sendJson(response, result.status === 'recorded' ? 201 : 200, { schema: STATE_STORE_HTTP_SCHEMA, status: 'ok', network_id: (body as { network_id: string }).network_id, owner_id: human.human_id, revision: result.revision, side_effects_executed: result.status === 'recorded' });
+          sendJson(response, result.status === 'recorded' ? 201 : 200, { schema: STATE_STORE_HTTP_SCHEMA, status: 'ok', network_id: networkId, owner_id: human.human_id, revision: result.revision, side_effects_executed: result.status === 'recorded' });
         }
       } catch {
         sendJson(response, 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'state-store-failure', side_effects_executed: false });
@@ -156,6 +171,12 @@ export function createStateStoreServer(input: {
         return;
       }
       const networkId = decodeURIComponent(issueIntentMatch[1]);
+      const peer = (request.socket as TLSSocket).getPeerCertificate();
+      if (!peer.raw) {
+        sendJson(response, 401, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'client-identity-unavailable', side_effects_executed: false });
+        return;
+      }
+      const peerFingerprint = createHash('sha256').update(peer.raw).digest('hex');
       const requestBody = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : null;
       const bodyKeys = requestBody ? Object.keys(requestBody).sort().join(',') : '';
       const requiredKeys = 'capabilities,event_id,expected_revision,expires_at,issued_at,node_id,request_id,task_id';
@@ -163,7 +184,12 @@ export function createStateStoreServer(input: {
         sendJson(response, 400, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'credential-issue-intent-invalid', side_effects_executed: false });
         return;
       }
-      const human = await Promise.resolve(input.humanAuthorityVerifier.verify({ context: contextHeader, action: 'credential.issue', request_body: { network_id: networkId, ...requestBody } }));
+      const binding = validateHumanAuthorityV2Binding({ context: contextHeader, network_id: networkId, peer_fingerprint: peerFingerprint, require_current_v2: true });
+      if (binding.status !== 'allowed') {
+        sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: binding.reason, side_effects_executed: false });
+        return;
+      }
+      const human = await Promise.resolve(input.humanAuthorityVerifier.verify({ context: contextHeader, action: 'credential.issue', request_body: { network_id: networkId, ...requestBody }, require_v2: true, peer_fingerprint: peerFingerprint }));
       if (human.status !== 'allowed') {
         sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: human.reason ?? 'human-context-invalid', side_effects_executed: false });
         return;

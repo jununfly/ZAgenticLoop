@@ -1,10 +1,10 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, X509Certificate } from 'node:crypto';
 import { createServer } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { HUMAN_AUTHORITY_SCHEMA } from './human-authority.js';
+import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload } from './human-authority.js';
 export const HUMAN_APPROVAL_UI_SCHEMA = 'zj-loop.human_approval_ui.v1';
 function json(response, statusCode, body) {
     const encoded = JSON.stringify(body);
@@ -33,9 +33,15 @@ function digest(value) {
 async function signApprovalContext(input) {
     const identity = await Promise.resolve(input.signer.getPublicIdentity());
     const capabilities = [...new Set(input.approved_capabilities)].sort();
-    const payloadDigest = digest(canonicalJson({ action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, human_id: identity.human_id, issued_at: input.issued_at, expires_at: input.expires_at }));
+    const schema = input.human_device ? HUMAN_AUTHORITY_V2_SCHEMA : HUMAN_AUTHORITY_SCHEMA;
+    if (input.human_device) {
+        const payload = humanAuthorityV2SigningPayload({ action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, human_id: identity.human_id, issued_at: input.issued_at, expires_at: input.expires_at, network_id: input.network_id, device_key_id: input.human_device.device_key_id, device_fingerprint: input.human_device.device_fingerprint });
+        const signature = await input.signer.sign({ payload: payload.signing_payload });
+        return { schema, human_id: identity.human_id, public_key_fingerprint: identity.public_key_fingerprint, action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, issued_at: input.issued_at, expires_at: input.expires_at, payload_digest: payload.payload_digest, signature_base64: signature.signature_base64, network_id: input.network_id, device_key_id: input.human_device.device_key_id, device_fingerprint: input.human_device.device_fingerprint, canonicalization: 'jcs-rfc8785', canonicalization_profile: 'approval-v2-default-2026-07', profile_sha256: payload.profile_sha256 };
+    }
+    const payloadDigest = digest(canonicalJson({ action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, human_id: identity.human_id, issued_at: input.issued_at, expires_at: input.expires_at, network_id: input.network_id, device_key_id: undefined, device_fingerprint: undefined }));
     const signature = await input.signer.sign({ payload: Buffer.from(payloadDigest, 'utf8') });
-    return { schema: HUMAN_AUTHORITY_SCHEMA, human_id: identity.human_id, public_key_fingerprint: identity.public_key_fingerprint, action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, issued_at: input.issued_at, expires_at: input.expires_at, payload_digest: payloadDigest, signature_base64: signature.signature_base64 };
+    return { schema, human_id: identity.human_id, public_key_fingerprint: identity.public_key_fingerprint, action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, issued_at: input.issued_at, expires_at: input.expires_at, payload_digest: payloadDigest, signature_base64: signature.signature_base64 };
 }
 function blocked(response, statusCode, reason) {
     json(response, statusCode, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
@@ -193,7 +199,11 @@ export function createHumanApprovalUiServer(input) {
                 return;
             }
             const expiresAt = new Date(Math.min(Date.parse(current.expires_at), Date.parse(now()) + 5 * 60 * 1000)).toISOString();
-            const context = await signApprovalContext({ signer: input.signer, action: 'pairing.approve', request_id: requestId, request_digest: requestDigest, approved_capabilities: capabilities, issued_at: now(), expires_at: expiresAt });
+            if (!input.human_device?.device_key_id?.trim() || !/^[0-9a-f]{64}$/.test(input.human_device.device_fingerprint)) {
+                blocked(response, 400, 'human-device-binding-required');
+                return;
+            }
+            const context = await signApprovalContext({ signer: input.signer, network_id: input.network_id, human_device: input.human_device, action: 'pairing.approve', request_id: requestId, request_digest: requestDigest, approved_capabilities: capabilities, issued_at: now(), expires_at: expiresAt });
             let result;
             try {
                 result = await input.upstream.approve({ network_id: input.network_id, request_id: requestId, request_digest: requestDigest, approved_capabilities: capabilities, context });
@@ -323,6 +333,17 @@ export function createPairingHttpUpstream(input) {
             return { requests: Array.isArray(result.requests) ? result.requests : [] };
         },
         async approve(value) {
+            if (!input.device_fingerprint || !input.cert)
+                throw new Error('human-device-binding-unavailable');
+            let peerFingerprint;
+            try {
+                peerFingerprint = createHash('sha256').update(new X509Certificate(input.cert).raw).digest('hex');
+            }
+            catch {
+                throw new Error('human-device-binding-invalid');
+            }
+            if (peerFingerprint !== input.device_fingerprint)
+                throw new Error('human-device-binding-mismatch');
             return requestPairingApi(input, pathFor(`/v1/owner/pairing-requests/${encodeURIComponent(value.request_id)}/approve`), 'POST', { network_id: value.network_id, request_digest: value.request_digest, approved_capabilities: value.approved_capabilities, context: value.context });
         },
         async reject(value) {

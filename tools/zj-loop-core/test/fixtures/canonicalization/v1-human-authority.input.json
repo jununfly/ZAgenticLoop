@@ -1,0 +1,9 @@
+{
+  "action": "credential.issue",
+  "request_id": "request-1",
+  "request_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "approved_capabilities": ["event.append", "event.consume"],
+  "human_id": "human-1",
+  "issued_at": "2026-07-30T00:00:00.000Z",
+  "expires_at": "2026-07-30T00:05:00.000Z"
+}

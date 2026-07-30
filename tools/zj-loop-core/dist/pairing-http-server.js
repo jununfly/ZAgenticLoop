@@ -4,6 +4,7 @@ import { createPairingApprovedRecord, createPairingRejectedRecord, createPairing
 import { projectPairingRequests } from './pairing-projection.js';
 import { approvePairingRequest, pairingRequestDigest } from './node-enrollment.js';
 import { verifyPairingRequestProof } from './node-enrollment.js';
+import { validateHumanAuthorityV2Binding } from './human-authority.js';
 export const PAIRING_HTTP_SCHEMA = 'zj-loop.pairing_http.v1';
 const MAX_BODY_BYTES = 64 * 1024;
 function json(response, statusCode, body) {
@@ -123,7 +124,22 @@ export function createPairingHttpServer(input) {
             }
             const requestDigest = typeof value?.request_digest === 'string' ? value.request_digest : undefined;
             const action = ownerList ? 'pairing.list' : ownerApprove ? 'pairing.approve' : 'pairing.reject';
-            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action, authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null, ...(requestId ? { request_id: requestId } : {}), ...(requestDigest ? { request_digest: requestDigest } : {}), ...(value?.context ? { context: value.context } : {}) }));
+            let peerFingerprint;
+            if (ownerApprove) {
+                const socket = request.socket;
+                const peer = socket.getPeerCertificate();
+                if (!socket.authorized || !peer.raw) {
+                    blocked(response, 'client-certificate-required');
+                    return;
+                }
+                peerFingerprint = createHash('sha256').update(peer.raw).digest('hex');
+                const binding = validateHumanAuthorityV2Binding({ context: value.context, network_id: networkId, peer_fingerprint: peerFingerprint, require_current_v2: true });
+                if (binding.status !== 'allowed') {
+                    blocked(response, binding.reason);
+                    return;
+                }
+            }
+            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action, authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null, ...(requestId ? { request_id: requestId } : {}), ...(requestDigest ? { request_digest: requestDigest } : {}), ...(value?.context ? { context: value.context } : {}), ...(ownerApprove ? { require_v2: true, peer_fingerprint: peerFingerprint } : {}) }));
             if (auth.status !== 'allowed') {
                 blocked(response, auth.reason ?? 'owner-not-authorized');
                 return;

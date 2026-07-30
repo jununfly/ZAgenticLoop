@@ -23,6 +23,8 @@ export type HumanAuthorityVerificationRequest = {
     context: string;
     action: string;
     request_body: unknown;
+    require_v2?: boolean;
+    peer_fingerprint?: string;
 };
 export type HumanAuthorityVerifier = {
     verify(input: HumanAuthorityVerificationRequest): Promise<{

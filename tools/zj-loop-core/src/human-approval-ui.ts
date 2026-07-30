@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, X509Certificate } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { request as httpsRequest, type RequestOptions } from 'node:https';
 import { readFile } from 'node:fs/promises';
@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner, HumanSignerIdentity } from './human-signer.js';
-import { HUMAN_AUTHORITY_SCHEMA, type HumanApprovalContext } from './human-authority.js';
+import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload, type HumanApprovalContext } from './human-authority.js';
 
 export const HUMAN_APPROVAL_UI_SCHEMA = 'zj-loop.human_approval_ui.v1' as const;
 
@@ -24,6 +24,7 @@ export type HumanApprovalUiServerInput = {
   bootstrap_token?: string;
   session_ttl_ms?: number;
   now?: () => string;
+  human_device?: { device_key_id: string; device_fingerprint: string };
 };
 
 export type PairingHttpUpstreamInput = {
@@ -32,6 +33,7 @@ export type PairingHttpUpstreamInput = {
   ca?: string;
   cert?: string;
   key?: string;
+  device_fingerprint?: string;
 };
 
 type UiSession = { token_hash: string; expires_at: string };
@@ -58,7 +60,7 @@ function publicIdentity(identity: HumanSignerIdentity): Record<string, string> {
   return { human_id: identity.human_id, algorithm: identity.algorithm, public_key_fingerprint: identity.public_key_fingerprint };
 }
 
-function canonicalJson(value: Record<string, string | string[]>): string {
+function canonicalJson(value: Record<string, string | string[] | undefined>): string {
   return JSON.stringify(Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right))));
 }
 
@@ -66,12 +68,18 @@ function digest(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
-async function signApprovalContext(input: { signer: HumanSigner; action: string; request_id: string; request_digest: string; approved_capabilities: string[]; issued_at: string; expires_at: string }): Promise<HumanApprovalContext> {
+async function signApprovalContext(input: { signer: HumanSigner; network_id?: string; action: string; request_id: string; request_digest: string; approved_capabilities: string[]; issued_at: string; expires_at: string; human_device?: { device_key_id: string; device_fingerprint: string } }): Promise<HumanApprovalContext> {
   const identity = await Promise.resolve(input.signer.getPublicIdentity());
   const capabilities = [...new Set(input.approved_capabilities)].sort();
-  const payloadDigest = digest(canonicalJson({ action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, human_id: identity.human_id, issued_at: input.issued_at, expires_at: input.expires_at }));
+  const schema = input.human_device ? HUMAN_AUTHORITY_V2_SCHEMA : HUMAN_AUTHORITY_SCHEMA;
+  if (input.human_device) {
+    const payload = humanAuthorityV2SigningPayload({ action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, human_id: identity.human_id, issued_at: input.issued_at, expires_at: input.expires_at, network_id: input.network_id as string, device_key_id: input.human_device.device_key_id, device_fingerprint: input.human_device.device_fingerprint });
+    const signature = await input.signer.sign({ payload: payload.signing_payload });
+    return { schema, human_id: identity.human_id, public_key_fingerprint: identity.public_key_fingerprint, action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, issued_at: input.issued_at, expires_at: input.expires_at, payload_digest: payload.payload_digest, signature_base64: signature.signature_base64, network_id: input.network_id, device_key_id: input.human_device.device_key_id, device_fingerprint: input.human_device.device_fingerprint, canonicalization: 'jcs-rfc8785', canonicalization_profile: 'approval-v2-default-2026-07', profile_sha256: payload.profile_sha256 };
+  }
+  const payloadDigest = digest(canonicalJson({ action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, human_id: identity.human_id, issued_at: input.issued_at, expires_at: input.expires_at, network_id: input.network_id, device_key_id: undefined, device_fingerprint: undefined }));
   const signature = await input.signer.sign({ payload: Buffer.from(payloadDigest, 'utf8') });
-  return { schema: HUMAN_AUTHORITY_SCHEMA, human_id: identity.human_id, public_key_fingerprint: identity.public_key_fingerprint, action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, issued_at: input.issued_at, expires_at: input.expires_at, payload_digest: payloadDigest, signature_base64: signature.signature_base64 };
+  return { schema, human_id: identity.human_id, public_key_fingerprint: identity.public_key_fingerprint, action: input.action, request_id: input.request_id, request_digest: input.request_digest, approved_capabilities: capabilities, issued_at: input.issued_at, expires_at: input.expires_at, payload_digest: payloadDigest, signature_base64: signature.signature_base64 };
 }
 
 function blocked(response: ServerResponse, statusCode: number, reason: string): void {
@@ -172,7 +180,8 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       if (current.status !== 'pending' || current.request_digest !== requestDigest) { blocked(response, 409, 'pairing-state-conflict'); return; }
       if (capabilities.some((capability) => !current.requested_capabilities.includes(capability))) { blocked(response, 400, 'approved-capabilities-exceed-request'); return; }
       const expiresAt = new Date(Math.min(Date.parse(current.expires_at), Date.parse(now()) + 5 * 60 * 1000)).toISOString();
-      const context = await signApprovalContext({ signer: input.signer, action: 'pairing.approve', request_id: requestId, request_digest: requestDigest, approved_capabilities: capabilities, issued_at: now(), expires_at: expiresAt });
+      if (!input.human_device?.device_key_id?.trim() || !/^[0-9a-f]{64}$/.test(input.human_device.device_fingerprint)) { blocked(response, 400, 'human-device-binding-required'); return; }
+      const context = await signApprovalContext({ signer: input.signer, network_id: input.network_id, human_device: input.human_device, action: 'pairing.approve', request_id: requestId, request_digest: requestDigest, approved_capabilities: capabilities, issued_at: now(), expires_at: expiresAt });
       let result: Record<string, unknown>;
       try { result = await input.upstream.approve({ network_id: input.network_id, request_id: requestId, request_digest: requestDigest, approved_capabilities: capabilities, context }); } catch { blocked(response, 503, 'pairing-upstream-unavailable'); return; }
       json(response, 201, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'recorded', request_id: requestId, result, side_effects_executed: true });
@@ -250,6 +259,10 @@ export function createPairingHttpUpstream(input: PairingHttpUpstreamInput): Huma
       return { requests: Array.isArray(result.requests) ? result.requests as PairingRequestProjection[] : [] };
     },
     async approve(value) {
+      if (!input.device_fingerprint || !input.cert) throw new Error('human-device-binding-unavailable');
+      let peerFingerprint: string;
+      try { peerFingerprint = createHash('sha256').update(new X509Certificate(input.cert).raw).digest('hex'); } catch { throw new Error('human-device-binding-invalid'); }
+      if (peerFingerprint !== input.device_fingerprint) throw new Error('human-device-binding-mismatch');
       return requestPairingApi(input, pathFor(`/v1/owner/pairing-requests/${encodeURIComponent(value.request_id)}/approve`), 'POST', { network_id: value.network_id, request_digest: value.request_digest, approved_capabilities: value.approved_capabilities, context: value.context });
     },
     async reject(value) {

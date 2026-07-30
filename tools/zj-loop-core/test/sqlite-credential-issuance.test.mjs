@@ -18,9 +18,11 @@ const base = {
   expires_at: '2026-07-30T02:00:00.000Z',
 };
 
+const createCredentialAuthority = () => createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: 'network-1', device_key_id: 'device-key-1', device_fingerprint: 'd'.repeat(64) });
+
 test('SQLite credential issuance binds issue intent to signed Human approval and claims an opaque token once', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-'));
-  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const authority = createCredentialAuthority();
   const digestInput = { ...base, approval: { request_digest: '' }, human_identity: authority.getPublicIdentity() };
   const digest = credentialIssuanceDigest({ ...digestInput, approval: await authority.signApprovalContext({ action: 'credential.issue', request_id: base.request_id, request_digest: 'sha256:' + '0'.repeat(64), approved_capabilities: base.capabilities, issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T01:05:00.000Z' }) });
   const approval = await authority.signApprovalContext({ action: 'credential.issue', request_id: base.request_id, request_digest: digest, approved_capabilities: base.capabilities, issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T01:05:00.000Z' });
@@ -48,9 +50,19 @@ test('SQLite credential issuance binds issue intent to signed Human approval and
   }
 });
 
+test('SQLite credential issuance rejects a historical v1 approval context', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-v1-'));
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const approval = await authority.signApprovalContext({ action: 'credential.issue', request_id: base.request_id, request_digest: 'sha256:' + '0'.repeat(64), approved_capabilities: base.capabilities, issued_at: base.issued_at, expires_at: '2026-07-30T01:05:00.000Z' });
+  const issuance = createSqliteCredentialIssuance({ filename: path.join(root, 'state.db'), now: () => '2026-07-30T01:01:00.000Z' });
+  await assert.rejects(() => issuance.issueIntent({ ...base, approval, human_identity: authority.getPublicIdentity() }), { message: 'approval-context-invalid' });
+  await issuance.close();
+  await rm(root, { recursive: true, force: true });
+});
+
 test('SQLite credential issuance rejects an approval bound to a different digest', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-'));
-  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const authority = createCredentialAuthority();
   const approval = await authority.signApprovalContext({ action: 'credential.issue', request_id: base.request_id, request_digest: 'sha256:' + 'f'.repeat(64), approved_capabilities: base.capabilities, issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T01:05:00.000Z' });
   const issuance = createSqliteCredentialIssuance({ filename: path.join(root, 'state.db'), now: () => '2026-07-30T01:01:00.000Z' });
   await assert.rejects(() => issuance.issueIntent({ ...base, approval, human_identity: authority.getPublicIdentity() }), { message: 'approval-context-mismatch' });
@@ -60,7 +72,7 @@ test('SQLite credential issuance rejects an approval bound to a different digest
 
 test('SQLite credential claim fails closed for node mismatch and intent expiry', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-'));
-  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const authority = createCredentialAuthority();
   const unsignedApproval = await authority.signApprovalContext({ action: 'credential.issue', request_id: base.request_id, request_digest: 'sha256:' + '0'.repeat(64), approved_capabilities: base.capabilities, issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T01:01:30.000Z' });
   const digest = credentialIssuanceDigest({ ...base, approval: unsignedApproval, human_identity: authority.getPublicIdentity() });
   const approval = await authority.signApprovalContext({ action: 'credential.issue', request_id: base.request_id, request_digest: digest, approved_capabilities: base.capabilities, issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T01:01:30.000Z' });
@@ -77,7 +89,7 @@ test('SQLite credential claim fails closed for node mismatch and intent expiry',
 
 test('SQLite credential claim fails closed after credential expiry or revoke', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-'));
-  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const authority = createCredentialAuthority();
   const request = { ...base, request_id: 'issue-request-expiring', expires_at: '2026-07-30T01:01:30.000Z' };
   const draft = await authority.signApprovalContext({ action: 'credential.issue', request_id: request.request_id, request_digest: 'sha256:' + '0'.repeat(64), approved_capabilities: request.capabilities, issued_at: request.issued_at, expires_at: '2026-07-30T01:05:00.000Z' });
   const digest = credentialIssuanceDigest({ ...request, approval: draft, human_identity: authority.getPublicIdentity() });
@@ -95,7 +107,7 @@ test('SQLite credential claim fails closed after credential expiry or revoke', a
 test('StateStore-backed credential issuance atomically appends canonical issue facts with CAS', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-atomic-'));
   const filename = path.join(root, 'state.db');
-  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const authority = createCredentialAuthority();
   const stateStore = createSqliteStateStore({ filename });
   const issuance = createSqliteCredentialIssuance({ filename, stateStore, now: () => '2026-07-30T01:01:00.000Z' });
   const approvedRequest = async (request) => {
@@ -138,7 +150,7 @@ test('StateStore-backed credential issuance atomically appends canonical issue f
 
 test('credential issue HTTP adapter decodes a Human envelope and delegates typed issuance', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-adapter-'));
-  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
+  const authority = createCredentialAuthority();
   const issuance = createSqliteCredentialIssuance({ filename: path.join(root, 'state.db'), now: () => '2026-07-30T01:01:00.000Z' });
   try {
     const request = { ...base, request_id: 'issue-request-adapter' };

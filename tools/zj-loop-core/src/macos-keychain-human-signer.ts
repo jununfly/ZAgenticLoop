@@ -1,7 +1,7 @@
 import { createHash, createPublicKey } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import type { HumanSigner, HumanSignerIdentity, HumanSignature } from './human-signer.js';
-import { HUMAN_SIGNATURE_SCHEMA, HUMAN_SIGNER_SCHEMA } from './human-signer.js';
+import { HUMAN_SIGNATURE_SCHEMA, HUMAN_SIGNER_SCHEMA, normalizeP256EcdsaDer } from './human-signer.js';
 
 type BridgeResponse = { public_key_spki_base64: string; public_key_fingerprint: string; signature_base64?: string };
 
@@ -66,7 +66,7 @@ export function createMacOSKeychainHumanSigner(input: { human_id: string; key_ta
       const current = cachedIdentity ?? await identity();
       if (current.public_key_fingerprint !== key.fingerprint) throw new Error('macos-keychain-identity-changed');
       if (!response.signature_base64) throw new Error('macos-keychain-signature-missing');
-      const signature: HumanSignature = { schema: HUMAN_SIGNATURE_SCHEMA, algorithm: 'ECDSA-P256', public_key_fingerprint: key.fingerprint, signature_base64: response.signature_base64 };
+      const signature: HumanSignature = { schema: HUMAN_SIGNATURE_SCHEMA, algorithm: 'ECDSA-P256', public_key_fingerprint: key.fingerprint, signature_base64: Buffer.from(normalizeP256EcdsaDer(Buffer.from(response.signature_base64, 'base64'))).toString('base64') };
       return signature;
     },
   };

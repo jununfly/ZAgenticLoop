@@ -1,6 +1,6 @@
 import { type Server, type ServerOptions } from 'node:https';
 import type { PairingRecordStore } from './pairing-record-store.js';
-import type { HumanApprovalContext } from './human-authority.js';
+import { type HumanApprovalContext } from './human-authority.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
@@ -9,6 +9,8 @@ export type PairingOwnerAuthenticator = {
         request_id?: string;
         request_digest?: string;
         context?: HumanApprovalContext;
+        require_v2?: boolean;
+        peer_fingerprint?: string;
     }): Promise<{
         status: 'allowed' | 'blocked';
         human_id?: string;

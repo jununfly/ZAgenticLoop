@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash, X509Certificate } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import https from 'node:https';
@@ -165,20 +166,23 @@ test('Pairing credential claim derives network and node from the authenticated s
 
 test('Owner approval binds signed capabilities and is CAS-protected', async () => {
   const serverMaterial = await certificate('localhost');
+  const clientMaterial = await certificate('human-device');
   const store = createInMemoryPairingRecordStore();
   const record = { type: 'pairing-requested', event_id: 'pairing-requested:owner-pair-1', occurred_at: '2026-07-29T03:00:00.000Z', network_id: 'network-1', request_digest: 'a'.repeat(64), request: { request_id: 'owner-pair-1', network_id: 'network-1', node_id: 'node-1', endpoint: 'loopback://127.0.0.1:1', requested_capabilities: ['event.consume', 'evidence.write'], expires_at: '2026-07-29T04:00:00.000Z', identity: { certificate_sha256: 'b'.repeat(64) } } };
   await store.append(record);
-  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1' });
-  const server = createPairingHttpServer({ tls: serverMaterial, recordStore: store, now: () => '2026-07-29T03:10:00.000Z', ownerAuthenticator: { authenticate: ({ action, context }) => context && verifyHumanApprovalContext({ identity: authority.getPublicIdentity(), context, now: '2026-07-29T03:10:00.000Z' }) && context.action === action ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } } });
+  const peerFingerprint = createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex');
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: 'network-1', device_key_id: 'human-device-key-1', device_fingerprint: peerFingerprint });
+  const server = createPairingHttpServer({ tls: { ...serverMaterial, ca: clientMaterial.cert }, recordStore: store, now: () => '2026-07-29T03:10:00.000Z', ownerAuthenticator: { authenticate: ({ action, context, require_v2, peer_fingerprint }) => require_v2 && peer_fingerprint === peerFingerprint && context && verifyHumanApprovalContext({ identity: authority.getPublicIdentity(), context, now: '2026-07-29T03:10:00.000Z', require_v2: true }) && context.action === action ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } } });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const context = await authority.signApprovalContext({ action: 'pairing.approve', request_id: 'owner-pair-1', request_digest: 'a'.repeat(64), approved_capabilities: ['event.consume'], issued_at: '2026-07-29T03:10:00.000Z', expires_at: '2026-07-29T03:20:00.000Z' });
   const body = { network_id: 'network-1', request_digest: 'a'.repeat(64), approved_capabilities: ['event.consume'], context };
-  const first = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body });
+  const first = await request({ address: server.address(), server: serverMaterial, client: clientMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body });
   assert.equal(first.statusCode, 201, JSON.stringify(first.body));
   assert.equal(first.body.lifecycle.type, 'human-approved');
-  const second = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body });
+  const second = await request({ address: server.address(), server: serverMaterial, client: clientMaterial, path: '/v1/owner/pairing-requests/owner-pair-1/approve', method: 'POST', body });
   assert.equal(second.statusCode, 200);
   assert.equal(second.body.status, 'existing');
   await new Promise((resolve) => server.close(resolve));
   await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
 });

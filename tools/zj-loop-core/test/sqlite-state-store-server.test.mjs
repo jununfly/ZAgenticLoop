@@ -9,6 +9,7 @@ import path from 'node:path';
 import { createStateStoreServer } from '../dist/sqlite-state-store-server.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createSqliteCredentialVerifier } from '../dist/sqlite-credential-verifier.js';
+import { approvalProfileSha256 } from '../dist/approval-canonicalization.js';
 
 async function serverCertificate(commonName = 'localhost') {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-server-'));
@@ -32,6 +33,11 @@ function requestJson({ address, serverMaterial, clientMaterial, path: requestPat
     if (payload) request.end(payload);
     else request.end();
   });
+}
+
+function v2HumanContext(clientMaterial, networkId) {
+  const peerFingerprint = createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex');
+  return JSON.stringify({ approval: { schema: 'zj-loop.human_authority.v2', network_id: networkId, device_key_id: 'device-key-1', device_fingerprint: peerFingerprint, canonicalization: 'jcs-rfc8785', canonicalization_profile: 'approval-v2-default-2026-07', profile_sha256: approvalProfileSha256() } });
 }
 
 test('StateStore service exposes a pinned TLS health response without side effects', async () => {
@@ -186,17 +192,18 @@ test('StateStore creates a network from verified Human context without trusting 
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-service-'));
   const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
   let observedBody;
+  let observedAuth;
   const server = createStateStoreServer({
     tls: { ...serverMaterial, ca: clientMaterial.cert },
     store,
     credentialVerifier: null,
-    humanAuthorityVerifier: { verify: (input) => { observedBody = input.request_body; return { status: 'allowed', human_id: 'human-1' }; } },
+    humanAuthorityVerifier: { verify: (input) => { observedBody = input.request_body; observedAuth = input; return { status: 'allowed', human_id: 'human-1' }; } },
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   const payload = JSON.stringify({ network_id: 'network-1' });
   const response = await new Promise((resolve, reject) => {
-    const request = https.request({ hostname: '127.0.0.1', port: address.port, path: '/v1/networks', method: 'POST', ca: serverMaterial.cert, cert: clientMaterial.cert, key: clientMaterial.key, servername: 'localhost', headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload), 'x-zj-loop-human-approval': 'human-context-1' } }, (res) => {
+    const request = https.request({ hostname: '127.0.0.1', port: address.port, path: '/v1/networks', method: 'POST', ca: serverMaterial.cert, cert: clientMaterial.cert, key: clientMaterial.key, servername: 'localhost', headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload), 'x-zj-loop-human-approval': v2HumanContext(clientMaterial, 'network-1') } }, (res) => {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', (chunk) => { body += chunk; });
@@ -208,6 +215,8 @@ test('StateStore creates a network from verified Human context without trusting 
   assert.equal(response.statusCode, 201);
   assert.deepEqual(response.body, { schema: 'zj-loop.state_store_http.v1', status: 'ok', network_id: 'network-1', owner_id: 'human-1', revision: 1, side_effects_executed: true });
   assert.deepEqual(observedBody, { network_id: 'network-1' });
+  assert.equal(observedAuth.require_v2, true);
+  assert.equal(observedAuth.peer_fingerprint, createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex'));
   assert.equal(await store.getRevision('network-1'), 1);
   await new Promise((resolve) => server.close(resolve));
   await store.close();
@@ -347,10 +356,12 @@ test('StateStore issue-intent route requires Human context and forwards only bou
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const body = { request_id: 'request-1', node_id: 'node-1', event_id: 'event-1', task_id: 'task-1', capabilities: ['state.read'], issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T02:00:00.000Z', expected_revision: 1 };
-  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/credentials/issue-intent', method: 'POST', body, headers: { 'x-zj-loop-human-approval': 'signed-context' } });
+  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/credentials/issue-intent', method: 'POST', body, headers: { 'x-zj-loop-human-approval': v2HumanContext(clientMaterial, 'network-1') } });
   assert.equal(response.statusCode, 201);
   assert.deepEqual(response.body, { schema: 'zj-loop.state_store_http.v1', status: 'recorded', network_id: 'network-1', credential_id: 'credential-1', issuance_digest: 'sha256:' + 'a'.repeat(64), intent_expires_at: '2026-07-30T01:05:00.000Z', side_effects_executed: true });
   assert.equal(observed.issuance.network_id, 'network-1');
+  assert.equal(observed.require_v2, true);
+  assert.equal(observed.peer_fingerprint, createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex'));
   assert.equal(observed.issuance.expected_revision, 1);
   assert.equal(observed.issuance.request.network_id, undefined);
   assert.equal(JSON.stringify(response.body).includes('token'), false);

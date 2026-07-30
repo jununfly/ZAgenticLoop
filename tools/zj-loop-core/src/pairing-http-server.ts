@@ -6,7 +6,7 @@ import { projectPairingRequests, type PairingLifecycleRecord } from './pairing-p
 import type { PairingRecordStore } from './pairing-record-store.js';
 import { approvePairingRequest, pairingRequestDigest, type PairingRequest, type PairingRequestProof } from './node-enrollment.js';
 import { verifyPairingRequestProof } from './node-enrollment.js';
-import type { HumanApprovalContext } from './human-authority.js';
+import { validateHumanAuthorityV2Binding, type HumanApprovalContext } from './human-authority.js';
 
 export const PAIRING_HTTP_SCHEMA = 'zj-loop.pairing_http.v1' as const;
 const MAX_BODY_BYTES = 64 * 1024;
@@ -23,7 +23,7 @@ type PairingSession = {
 };
 
 export type PairingOwnerAuthenticator = {
-  authenticate(input: { action: 'pairing.list' | 'pairing.approve' | 'pairing.reject'; authorization: string | null; request_id?: string; request_digest?: string; context?: HumanApprovalContext }): Promise<{ status: 'allowed' | 'blocked'; human_id?: string; reason?: string }> | { status: 'allowed' | 'blocked'; human_id?: string; reason?: string };
+  authenticate(input: { action: 'pairing.list' | 'pairing.approve' | 'pairing.reject'; authorization: string | null; request_id?: string; request_digest?: string; context?: HumanApprovalContext; require_v2?: boolean; peer_fingerprint?: string }): Promise<{ status: 'allowed' | 'blocked'; human_id?: string; reason?: string }> | { status: 'allowed' | 'blocked'; human_id?: string; reason?: string };
 };
 
 export type CredentialClaimService = {
@@ -129,7 +129,16 @@ export function createPairingHttpServer(input: {
       if (!networkId?.trim()) { blocked(response, 'network-id-required'); return; }
       const requestDigest = typeof value?.request_digest === 'string' ? value.request_digest : undefined;
       const action = ownerList ? 'pairing.list' : ownerApprove ? 'pairing.approve' : 'pairing.reject';
-      const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action, authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null, ...(requestId ? { request_id: requestId } : {}), ...(requestDigest ? { request_digest: requestDigest } : {}), ...(value?.context ? { context: value.context } : {}) }));
+      let peerFingerprint: string | undefined;
+      if (ownerApprove) {
+        const socket = request.socket as TLSSocket;
+        const peer = socket.getPeerCertificate();
+        if (!socket.authorized || !peer.raw) { blocked(response, 'client-certificate-required'); return; }
+        peerFingerprint = createHash('sha256').update(peer.raw).digest('hex');
+        const binding = validateHumanAuthorityV2Binding({ context: value.context as HumanApprovalContext, network_id: networkId, peer_fingerprint: peerFingerprint, require_current_v2: true });
+        if (binding.status !== 'allowed') { blocked(response, binding.reason); return; }
+      }
+      const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action, authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null, ...(requestId ? { request_id: requestId } : {}), ...(requestDigest ? { request_digest: requestDigest } : {}), ...(value?.context ? { context: value.context } : {}), ...(ownerApprove ? { require_v2: true, peer_fingerprint: peerFingerprint } : {}) }));
       if (auth.status !== 'allowed') { blocked(response, auth.reason ?? 'owner-not-authorized'); return; }
       const records = await input.recordStore.list(networkId);
       if (ownerList) {

@@ -70,6 +70,8 @@ export * from './agent-context-capability-review.js';
 export * from './node-enrollment.js';
 export * from './human-authority.js';
 export * from './human-signer.js';
+export * from './parse-bounded-json.js';
+export * from './approval-canonicalization.js';
 export * from './macos-keychain-human-signer.js';
 export * from './pairing-projection.js';
 export * from './pairing-records.js';

@@ -69,6 +69,7 @@ test('Human approval UI signs and forwards one approval only after same-origin a
   const server = createHumanApprovalUiServer({
     signer,
     network_id: 'network-1',
+    human_device: { device_key_id: 'device-key-1', device_fingerprint: 'd'.repeat(64) },
     bootstrap_token: 'bootstrap-2',
     upstream: {
       async list() { return { requests: [request] }; },
@@ -86,7 +87,10 @@ test('Human approval UI signs and forwards one approval only after same-origin a
     assert.equal(approved.status, 201);
     assert.equal(approvals.length, 1);
     const identity = await signer.getPublicIdentity();
-    assert.equal(verifyHumanApprovalContext({ identity: { ...identity, schema: 'zj-loop.human_authority.v1' }, context: approvals[0].context, now: '2026-07-30T00:01:00.000Z' }), true);
+    assert.equal(verifyHumanApprovalContext({ identity: { ...identity, schema: 'zj-loop.human_authority.v2' }, context: approvals[0].context, now: '2026-07-30T00:01:00.000Z', require_v2: true }), true);
+    assert.equal(approvals[0].context.network_id, 'network-1');
+    assert.equal(approvals[0].context.device_key_id, 'device-key-1');
+    assert.equal(approvals[0].context.device_fingerprint, 'd'.repeat(64));
     assert.deepEqual(approvals[0].approved_capabilities, ['event.consume']);
     const badOrigin = await requestHttp({ address, path: '/ui/pairing-requests/request-1/approve', method: 'POST', headers: { cookie, origin: 'https://evil.example' }, body: { request_digest: request.request_digest, approved_capabilities: ['event.consume'] } });
     assert.equal(badOrigin.status, 403);

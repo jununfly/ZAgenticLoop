@@ -35,6 +35,10 @@ export type HumanApprovalUiServerInput = {
     bootstrap_token?: string;
     session_ttl_ms?: number;
     now?: () => string;
+    human_device?: {
+        device_key_id: string;
+        device_fingerprint: string;
+    };
 };
 export type PairingHttpUpstreamInput = {
     endpoint: string;
@@ -42,6 +46,7 @@ export type PairingHttpUpstreamInput = {
     ca?: string;
     cert?: string;
     key?: string;
+    device_fingerprint?: string;
 };
 export declare function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): Server;
 export declare function createPairingHttpUpstream(input: PairingHttpUpstreamInput): HumanApprovalUiUpstream;

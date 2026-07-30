@@ -1,0 +1,15 @@
+{
+  "schema": "zj-loop.canonicalization_vector.v1",
+  "protocol": "zj-loop.human_authority.v2",
+  "canonicalization": "jcs-rfc8785",
+  "canonicalization_profile": "approval-v2-default-2026-07",
+  "input_path": "v2-human-authority.input.json",
+  "canonical_path": null,
+  "input_sha256": "sha256:65c8f3decfb5bfa9c36b5efefd2284163ede96b80e1132c179310e25a277fbbf",
+  "canonical_length": 647,
+  "canonical_sha256": "sha256:4729beb74a68c288129a26a06474b83782f27271a41ef1af314ce369b47406e5",
+  "digest": "sha256:4729beb74a68c288129a26a06474b83782f27271a41ef1af314ce369b47406e5",
+  "profile_sha256": "sha256:58e6aa7c8ca695ad771ed8ca63ab6e68cf3d88d053146c2744ef12a150aada66",
+  "canonical_utf8": "{\"action\":\"credential.issue\",\"approved_capabilities\":[\"event.append\",\"event.consume\"],\"canonicalization\":\"jcs-rfc8785\",\"canonicalization_profile\":\"approval-v2-default-2026-07\",\"device_fingerprint\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"device_key_id\":\"device-key-1\",\"expires_at\":\"2026-07-30T00:05:00.000Z\",\"human_id\":\"human-1\",\"issued_at\":\"2026-07-30T00:00:00.000Z\",\"network_id\":\"network-1\",\"profile_sha256\":\"sha256:58e6aa7c8ca695ad771ed8ca63ab6e68cf3d88d053146c2744ef12a150aada66\",\"request_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"request_id\":\"00000000-0000-4000-8000-000000000001\"}",
+  "expected_status": "passed"
+}

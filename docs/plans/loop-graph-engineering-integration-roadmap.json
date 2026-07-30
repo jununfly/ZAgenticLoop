@@ -1851,6 +1851,721 @@
           "q": "加入device字段后，Human authority协议如何版本化？",
           "answer": "引入 zj-loop.human_authority.v2，保留 v1 作为只读历史协议；v2 将 network_id、device_key_id、device_fingerprint 纳入规范化签名载荷；高风险动作只接受 v2；补齐 v1/v2 版本化 fixture 与兼容性测试；不从 npm 包版本推断协议版本。",
           "note": "采用：v2 承载设备绑定字段并限制高风险动作，v1 仅用于历史验证。"
+        },
+        {
+          "q": "哪些入口现在强制使用 human_authority.v2？",
+          "answer": "credential.issue 与 network bootstrap 立即强制 require_v2=true；v1 仅保留给历史记录验证和低风险兼容场景；同步升级 E2E fixture，并要求 device_fingerprint 与当前 mTLS peer 一致。",
+          "note": "采用严格迁移，避免高风险入口继续接受缺少设备绑定的 v1 批准。"
+        },
+        {
+          "q": "是否连内部 createSqliteCredentialIssuance().issueIntent() 也强制 v2？",
+          "answer": "是。内部凭证签发 API 同样调用 verifyHumanApprovalContext(..., require_v2=true)，避免任何非 HTTP 调用绕过高风险协议边界；同步升级 credential issuance 测试 fixture。",
+          "note": "确认：所有 credential.issue 路径统一要求 v2。"
+        },
+        {
+          "q": "pairing.approve 是否也强制使用 v2？",
+          "answer": "是。pairing.approve 属于授予节点能力的高风险动作，强制 Human authority v2，并绑定 network_id、device_key_id、device_fingerprint；授权时校验批准上下文设备指纹与当前 mTLS peer。",
+          "note": "确认：network bootstrap、credential.issue、pairing.approve 统一采用 v2 高风险边界。"
+        },
+        {
+          "q": "pairing.reject 是否保持低风险兼容策略？",
+          "answer": "是。pairing.reject 暂时保持 v1/旧授权兼容，因为它不授予节点能力；pairing.list 继续作为只读兼容路径；后续统一迁移到 v2 以完整审计 Human 决策来源。",
+          "note": "同意：当前只对能力授予路径 pairing.approve 强制 v2。"
+        },
+        {
+          "q": "Human Approval UI 如何获得并绑定 device_key_id/device_fingerprint？",
+          "answer": "UI 启动时显式注入 Human-device binding；生成 v2 approval context 并将 device_key_id、device_fingerprint 纳入签名载荷；upstream mTLS 客户端证书指纹必须匹配 device_fingerprint，否则 UI 本地拒绝发送；pairing.reject 继续 v1 兼容。",
+          "note": "确认：Human-device 是独立于 Human signing key 的 UI 设备身份。"
+        },
+        {
+          "q": "Human Approval UI CLI 如何配置 Human-device 身份？",
+          "answer": "新增 --device-key-id；--client-cert/--client-key 作为 Human-device mTLS 凭证并设为必填；CLI 从客户端证书 DER 派生 SHA-256 device_fingerprint，同时传给 HumanApproval UI 与 Pairing HTTP upstream；缺失或证书无效时启动失败。",
+          "note": "采用：Human signing key 与 Human-device mTLS 身份分离，CLI 显式绑定二者。"
+        },
+        {
+          "q": "device_fingerprint 的规范化输入采用哪一种？",
+          "answer": "采用 SHA-256(peer certificate DER)。device_key_id 作为稳定生命周期标识；证书轮换产生新的 fingerprint，并通过重新绑定更新信任关系。",
+          "note": "同意：服务端从 mTLS peer.raw 独立计算 fingerprint。"
+        },
+        {
+          "q": "证书轮换时，旧 fingerprint 应如何处理？",
+          "answer": "新 fingerprint 重新绑定成功后立即撤销旧 fingerprint；轮换期间不允许新旧 fingerprint 并行执行高风险操作。",
+          "note": "同意：旧设备证书不保留重叠信任窗口。"
+        },
+        {
+          "q": "Human-device 重新绑定应通过哪个入口完成？",
+          "answer": "新增独立 POST /v1/networks/{network_id}/human-devices/rebind 高风险接口；旧设备不能授权新设备；新设备先完成 mTLS 身份证明；Human signing key 签署 v2 rebind approval；事务内写入 human-device-bound 与 human-device-revoked；成功后旧 fingerprint 立即失效，不复用 bootstrap。",
+          "note": "同意：初始化与设备轮换属于不同生命周期操作。"
+        },
+        {
+          "q": "Human-device rebind 的批准上下文需要绑定哪些字段？",
+          "answer": "绑定 network_id、human_id、old_device_key_id、old_device_fingerprint、new_device_key_id、new_device_fingerprint、request_id、issued_at、expires_at、action=human-device.rebind；StateStore 原子校验旧绑定仍有效、新 mTLS peer 匹配新 fingerprint、v2 签名覆盖全部字段，并 CAS 写入 human-device-bound 与 human-device-revoked。",
+          "note": "同意：rebind 是完整的旧设备到新设备变更关系，而非单字段更新。"
+        },
+        {
+          "q": "rebind 请求的幂等与冲突语义如何定义？",
+          "answer": "相同 request_id 与完整 digest 返回原结果且不重复写事件；相同 request_id 不同 digest 返回 409 request-id-conflict；旧绑定失效或被替换返回 409 human-device-binding-conflict；CAS 失败不写入任何 bind/revoke 事件，重试不得恢复旧 fingerprint 信任。",
+          "note": "同意：rebind 必须是可重试但不可覆盖的原子变更。"
+        },
+        {
+          "q": "新 Human-device 在 rebind 前如何预注册？",
+          "answer": "新设备先调用 POST /v1/networks/{network_id}/human-devices/rebind-intents；mTLS 获取新设备 fingerprint；StateStore 记录短期一次性 intent；Human 只能批准未过期 intent；正式 rebind 成功后消费 intent；intent 不改变当前信任关系且不能执行业务操作。",
+          "note": "同意：intent 是预注册材料，不是信任授权。"
+        },
+        {
+          "q": "未信任的新设备如何创建 rebind-intent？",
+          "answer": "新设备只通过 mTLS 创建 opaque intent；请求仅提交 device_key_id、设备声明、request_id；服务端从当前 peer 计算 fingerprint，不信任客户端值；不要求旧设备或 Agent credential；只返回 opaque intent_id；不读取网络状态、不执行其他业务操作。",
+          "note": "同意：未信任设备只能留下待审批材料，不能获得网络能力。"
+        },
+        {
+          "q": "rebind-intent 的 TTL 与重复创建策略如何定义？",
+          "answer": "TTL 5 分钟；同一 request_id 与相同 fingerprint 返回原 intent；同一 request_id 不同 fingerprint 返回 409 request-id-conflict；同一 device_key_id 存在未过期 intent 返回 409 rebind-intent-pending；过期 intent 只保留审计记录不可复活；每个 network/device_key_id 最多一个 pending intent。",
+          "note": "同意：intent 短期、单次、不可复活。"
+        },
+        {
+          "q": "Human 如何查看待批准的 rebind-intent？",
+          "answer": "新增 GET /v1/networks/{network_id}/human-devices/rebind-intents；仅可信 Human-device mTLS 与 Human authority 可访问；只返回 intent_id、device_key_id、device_fingerprint、created_at、expires_at、设备声明等非敏感元数据；默认仅 pending，过期记录单独审计查询。",
+          "note": "确认：Human 只通过受控元数据视图选择待批准 intent。"
+        },
+        {
+          "q": "rebind approval 是否必须绑定 intent_id？",
+          "answer": "必须绑定。intent_id 纳入 v2 签名载荷；StateStore 原子校验 intent pending、未过期、未消费，且 intent 的旧/新设备字段与 approval 完全一致，并绑定同一 network_id/request_id。",
+          "note": "必须绑定：防止批准重放与 intent 错配。"
+        },
+        {
+          "q": "rebind-intent 是否在创建时记录旧设备绑定？",
+          "answer": "不记录。intent 仅保存新设备 key/fingerprint、设备声明、request_id 等预注册材料；Human approval 时读取当前旧绑定并签署完整旧到新变更；StateStore 消费时再次校验当前旧绑定，变化则返回 409 human-device-binding-conflict。",
+          "note": "不记录：避免 intent 持有过期旧绑定快照。"
+        },
+        {
+          "q": "Human Approval UI 是否承载 rebind 流程？",
+          "answer": "是。在现有 UI 中新增 GET /ui/rebind-intents 与 POST /ui/rebind-intents/{intent_id}/approve；Human 选择 intent，UI 获取当前有效旧绑定，生成完整旧/新关系的 v2 approval，由 upstream 原子执行；Agent 与新设备不能触发批准。",
+          "note": "确认：rebind 是 Human UI 的显式高风险工作流。"
+        },
+        {
+          "q": "UI 获取当前有效旧设备绑定的接口如何设计？",
+          "answer": "复用 Human-only 状态接口 GET /v1/networks/{network_id}/human-devices/bindings；要求 Human-device mTLS 与 Human authority v2；只返回当前有效绑定的非敏感元数据；UI 返回不可信，StateStore 在最终 rebind 消费时重新读取并校验旧绑定。",
+          "note": "确认：查询用于展示和准备签名，最终一致性由 StateStore 保证。"
+        },
+        {
+          "q": "rebind approval 是否复用 zj-loop.human_authority.v2？",
+          "answer": "是。复用 v2，使用 action=human-device.rebind 区分；intent_id 与完整旧/新设备字段纳入 canonical signed payload；沿用现有 ECDSA P-256、过期、验证规则；只有改变签名语义或安全边界时才引入 v3。",
+          "note": "确认：协议版本与业务动作正交。"
+        },
+        {
+          "q": "HumanAuthority verifier 是否应内置 action allowlist？",
+          "answer": "不内置。通用 verifier 只负责密码学、身份、时间和签名载荷完整性；高风险入口分别显式允许 network.create、credential.issue、pairing.approve、human-device.rebind；未知 action 由入口拒绝。",
+          "note": "同意：协议验证与业务授权策略分层。"
+        },
+        {
+          "q": "action 与请求体的绑定由谁负责？",
+          "answer": "由高风险入口负责。network.create、credential.issue、pairing.approve、human-device.rebind 分别将签名上下文与真实请求的 network、request、digest、capabilities、intent、设备变更字段逐项绑定；通用 verifier 只验证上下文自身完整性。",
+          "note": "同意：入口承担业务语义绑定，协议层保持通用。"
+        },
+        {
+          "q": "高风险失败响应是否需要统一错误分类？",
+          "answer": "需要。统一为 protocol-invalid、authorization-denied、state-conflict 三类；HTTP 状态使用 400/401/403/409；保留稳定 machine-readable reason，不返回签名材料、token 或私有状态。",
+          "note": "同意：失败可解释，但不扩大敏感信息暴露面。"
+        },
+        {
+          "q": "StateStore 审计中是否保存完整 Human approval？",
+          "answer": "不直接保存。canonical StateStore 事件只保存 approval digest、Human identity fingerprint、action、network/device fingerprint、时间等最小元数据；完整 signed approval 保存为受控不可变 artifact，事件仅引用 artifact digest；默认查询不返回完整签名、public key PEM 或敏感设备声明。",
+          "note": "同意：不可抵赖材料与业务状态分离存储。"
+        },
+        {
+          "q": "完整 signed approval artifact 的保留策略是什么？",
+          "answer": "默认与 canonical 事件同生命周期保留，不因 credential revoke 删除；仅显式审计权限可读取；artifact 不可原地修改，删除必须产生 approval-artifact-redacted 审计事件；物理清理由统一 retention policy 处理；approval digest 永久保留。",
+          "note": "同意：业务撤销与审计材料生命周期分离。"
+        },
+        {
+          "q": "signed approval artifact 是否需要加密存储？",
+          "answer": "需要。artifact 使用 envelope encryption；StateStore 只保存 digest、密钥版本和最小元数据，不持有解密能力；只有 Human/审计角色经独立授权读取；密钥轮换只重包裹数据密钥，不改变 artifact digest；日志和普通响应不得泄露内容。",
+          "note": "同意：不可抵赖材料与解密权限分离。"
+        },
+        {
+          "q": "approval artifact 的 envelope encryption 主密钥由谁持有？",
+          "answer": "由外部 KMS 或平台安全存储持有；StateStore 只保存密钥版本与 wrapped data key，不保存主密钥、不实现解包；macOS Keychain、Windows CNG/DPAPI、Linux PKCS#11/TPM2 或外部 KMS 通过 provider-neutral wrapDataKey、unwrapDataKey、rotateKeyVersion 接入；无解密 provider 时仍可验证 digest，但不可读取 artifact。",
+          "note": "同意：密钥控制权不进入 StateStore。"
+        },
+        {
+          "q": "加密 provider 不可用时，高风险流程如何失败？",
+          "answer": "全部 fail closed：artifact 加密失败不写 canonical event、不执行 side effect；已有 artifact 无法解密时仅允许 digest/签名元数据验证，拒绝内容读取；KMS 超时或 key version 缺失返回 503，不降级明文；重试复用同一 digest/request_id。",
+          "note": "同意：加密能力是高风险副作用的前置 gate。"
+        },
+        {
+          "q": "artifact 写入与 StateStore canonical event 如何保证一致性？",
+          "answer": "采用两阶段、StateStore 为最终提交边界：先以 digest 写入加密 artifact 为 prepared，再在同一 StateStore 事务写 approval event 并标记 committed；事务失败留下 orphan 供后台 TTL 清理；禁止先写 event 再补 artifact，不追求跨数据库分布式事务。",
+          "note": "同意：用明确恢复机制换取可审计的一致性边界。"
+        },
+        {
+          "q": "orphan approval artifact 的清理 TTL 与审计策略是什么？",
+          "answer": "prepared artifact TTL 30 分钟；过期且无 committed event 时标记 orphan-expired；清理只删除加密内容，保留 digest、created_at、原因、request_id，并产生审计记录；相同 digest 重试重新准备；清理只能处理无 canonical event 引用的 artifact。",
+          "note": "同意：orphan 可回收，但证明链元数据不可静默消失。"
+        },
+        {
+          "q": "approval artifact 的 digest 如何计算？",
+          "answer": "对完整 signed approval envelope 做递归 canonical JSON 序列化，UTF-8 后计算 sha256:<64 hex>；对象 key 字典序，集合字段入口去重排序；digest 不包含 nonce、wrapped key、存储路径或外部元数据，跨 provider/platform/storage 必须一致。",
+          "note": "同意：digest 绑定业务签名材料，不绑定存储实现。"
+        },
+        {
+          "q": "完整 approval artifact 是否保存 Human public identity？",
+          "answer": "保存，但仅在加密 artifact 内保存完整 human_identity（public key PEM、algorithm、fingerprint、schema）；canonical event 只保留 human_id 与 public key fingerprint；普通查询不返回 public key PEM；审计读取时可重建历史验证上下文，当前 identity 轮换/撤销不影响历史批准验证。",
+          "note": "同意：历史可验证性优先于当前身份可见性。"
+        },
+        {
+          "q": "approval artifact envelope 是否需要独立版本？",
+          "answer": "需要独立 zj-loop.approval_artifact.v1；与 human_authority.v2 解耦；加密算法、KMS key version、ciphertext、nonce、wrapped data key 属于 artifact envelope；未知 schema 必须拒绝解析。",
+          "note": "同意：签名协议与存储加密协议分别版本化。"
+        },
+        {
+          "q": "approval artifact v1 采用哪种对称加密与 AAD？",
+          "answer": "采用 AES-256-GCM；每个 artifact 随机 32-byte data key 与 12-byte nonce；AAD 绑定 artifact schema、digest、network_id、key_version；保存 GCM tag；AAD 任一字段变化必须解密失败；禁止自定义或无认证加密。",
+          "note": "同意：使用标准认证加密，不自行发明密码学。"
+        },
+        {
+          "q": "data key 的 wrapping 如何跨平台？",
+          "answer": "采用 provider-neutral wrapDataKey/unwrapDataKey contract；wrapped_key 由 provider 生成且 opaque；key_version 显式保存并参与 AAD；provider 不可用时 fail closed；raw data key 不进入日志、StateStore 或 artifact metadata；不要求跨 provider wrapped key 互换。",
+          "note": "同意：统一生命周期接口，不统一底层密钥系统。"
+        },
+        {
+          "q": "是否提供纯内存加密 provider 作为协议测试 fixture？",
+          "answer": "提供，但仅用于测试；实现相同 wrap/unwrap contract，每次测试独立且不可持久化；支持注入 wrap、unwrap、key version 故障，覆盖 fail-closed、AAD 篡改、key rotation、重试；不作为生产默认实现，也不模拟平台安全边界。",
+          "note": "同意：测试 fixture 验证协议，不冒充安全边界。"
+        },
+        {
+          "q": "加密 approval artifact 是否复用现有 ArtifactStore？",
+          "answer": "复用现有 content-addressed ArtifactStore 抽象并增加 ApprovalArtifactAdapter；ArtifactStore 负责 immutable bytes、digest、network scope、生命周期；adapter 负责 canonical envelope、AES-GCM、KMS wrapping、prepared/committed；普通业务 artifact 与 approval artifact 通过 kind/type 隔离。",
+          "note": "同意：复用存储能力，隔离安全语义。"
+        },
+        {
+          "q": "approval artifact 的 kind 是否固定为协议枚举？",
+          "answer": "固定为 approval-context；adapter 同时记录 approval_action、authority_schema、artifact_schema；未知 kind 直接拒绝；调用方不可自定义 kind 绕过权限分类；新增敏感 artifact 类型必须显式增加枚举与权限策略。",
+          "note": "同意：敏感材料分类必须可审计、不可由调用方自由扩展。"
+        },
+        {
+          "q": "谁可以读取解密后的 approval artifact？",
+          "answer": "Human 本人可读取自己 network 范围内、自己签署的批准；审计角色需独立 audit capability 与 reason；Agent 默认只读 digest/schema/action/时间等元数据；业务服务默认不可解密；每次解密读取写 approval-artifact-read 审计事件且不记录明文。",
+          "note": "同意：内容读取是独立高权限操作，不随业务 credential 继承。"
+        },
+        {
+          "q": "Human 本人读取 artifact 时如何证明本人身份？",
+          "answer": "Human 读取自己的 artifact 必须同时具备 Human authority v2 签署的 approval-artifact.read、当前有效 Human-device mTLS，并绑定 network_id、artifact_digest、human_id、reason、request_id、过期时间；StateStore 校验归属；审计角色使用独立 audit capability。",
+          "note": "同意：artifact 内容读取本身也必须可验证、可审计。"
+        },
+        {
+          "q": "审计 capability 由谁授予？",
+          "answer": "由独立 Human authority 签署 audit-role grant，不由 Agent 或普通 network owner 自动授予；grant 绑定 auditor_id、network scope、artifact kinds、允许动作、过期时间；StateStore 记录 grant digest 与生命周期事件；读取需有效 grant 与 read request；撤销立即阻止后续解密读取。",
+          "note": "同意：审计权限是独立、可撤销、可追溯的授权。"
+        },
+        {
+          "q": "audit-role grant 的有效期与续期策略是什么？",
+          "answer": "单个 grant 最长 24 小时；不支持静默或自动续期；续期必须创建新 grant 并重新 Human 签署；grant 固定 network scope 与 artifact kind，不可扩大；过期立即拒绝解密读取，历史 approval-artifact-read 事件保留。",
+          "note": "同意：审计权限短期、显式、不可隐式扩张。"
+        },
+        {
+          "q": "audit grant 撤销后的缓存策略如何定义？",
+          "answer": "不缓存解密授权正向结果、明文或 data key；只可短暂缓存公开元数据；revoke 后每次读取重新检查 StateStore；已开始读取可完成但记录开始/完成；KMS unwrap 每次读取重新授权，避免 revoked grant 继续使用缓存 key。",
+          "note": "同意：撤销影响后续读取，不制造隐蔽的授权缓存。"
+        },
+        {
+          "q": "解密读取与 grant revoke 并发时，采用什么线性化点？",
+          "answer": "读取先在 StateStore 原子校验 grant 并写 approval-artifact-read-started，取得 revision/授权快照后调用 KMS unwrap/decrypt；写 completed 或 failed；started 后 revoke 不回滚已开始读取但阻止新读取；started 与 revoke CAS 冲突时不调用 KMS。",
+          "note": "同意：读取授权先落 canonical 状态，再允许解密副作用。"
+        },
+        {
+          "q": "解密后的 approval 内容如何处理？",
+          "answer": "仅短暂存在受控进程内存，使用大小上限，禁止临时文件、日志、tracing；返回前脱敏，禁止暴露 private key、raw data key、wrapped key；尽可能释放 Buffer，不承诺运行时可靠 zeroize；失败路径不输出明文。",
+          "note": "同意：解密内容按高敏感短生命周期处理。"
+        },
+        {
+          "q": "approval artifact 的最大明文大小是多少？",
+          "answer": "64 KiB。超过上限在 prepared 阶段拒绝，不调用 KMS unwrap、不创建 canonical approval event，返回 400 approval-artifact-too-large。",
+          "note": "同意：approval 只承载结构化证据，不承载业务 payload。"
+        },
+        {
+          "q": "approval artifact 是否允许压缩？",
+          "answer": "不允许。artifact envelope 固定 content_encoding=identity；digest 基于未压缩 approval envelope；非 identity 直接拒绝，避免 decompression bomb、兼容性和 side-channel 风险。",
+          "note": "同意：approval artifact 保持小、透明、可确定。"
+        },
+        {
+          "q": "approval envelope 的校验顺序如何定义？",
+          "answer": "固定顺序：限制原始输入大小；解析 JSON 并拒绝重复 key/非预期类型；校验 human_authority.v2 schema 与字段；canonicalize 并计算 digest；校验签名、时间、action 与请求绑定；加密写 prepared artifact；StateStore 原子提交 canonical event。任一步失败不执行后续副作用。",
+          "note": "同意：先验证，后加密，最后提交事实。"
+        },
+        {
+          "q": "重复 JSON key 如何可靠拒绝？",
+          "answer": "使用带 duplicate-key 检测的结构化 token parser；JSON.parse 后检查不可接受，因为重复 key 已丢失；同时限制解析深度、对象成员数、字符串长度、数组边界并拒绝 prototype pollution 特殊 key；补齐对应异常 fixture。",
+          "note": "同意：安全解析必须发生在对象构造之前。"
+        },
+        {
+          "q": "安全 JSON parser 采用哪种实现？",
+          "answer": "先定义 provider-neutral parseBoundedJson 接口，优先成熟 parser；若依赖无法检测 duplicate key，再实现范围受限 tokenizer；第一版拒绝 duplicate key，限制 depth/member/string/array，不支持 comments、trailing commas、JSON5，错误不回显输入。",
+          "note": "同意：先固定安全语义，再决定底层实现。"
+        },
+        {
+          "q": "是否引入 jsonc-parser 作为底层安全 parser？",
+          "answer": "是。引入成熟 jsonc-parser，通过 parseBoundedJson 配置严格 JSON 语义：拒绝 duplicate key、comments、trailing comma，限制深度/成员/字符串/数组规模，对外统一 approval-json-invalid；若能力不足再退回受限 tokenizer。",
+          "note": "同意：优先成熟 parser，安全语义由本项目封装固定。"
+        },
+        {
+          "q": "parseBoundedJson 首个应用范围是什么？",
+          "answer": "先用于 credential.issue、network.create、pairing.approve、human-device.rebind、approval-artifact.read 等高风险 Human approval 输入；普通业务 JSON 暂不迁移，后续按风险等级扩展。",
+          "note": "同意：先收紧高风险边界，避免无关 API 扩散。"
+        },
+        {
+          "q": "下一条实现纵切片先做什么？",
+          "answer": "先实现 parseBoundedJson + jsonc-parser 与异常 fixture；再实现 ApprovalArtifactAdapter（canonical digest、AES-256-GCM、内存 provider、prepared/committed）；随后迁移高风险流程的 approval_json 到 digest + artifact reference；最后实现 Human-device rebind intent/bind/revoke endpoint。",
+          "note": "同意：共同安全基础先于 rebind 业务流程。"
+        },
+        {
+          "q": "本轮实现是否保持在单个 package 与单个 roadmap focus 内？",
+          "answer": "是。只修改 tools/zj-loop-core/src、对应 test、build 生成的 dist，以及通过 roadmap_cli 更新的 JSON/Markdown；不扩展 GitLab bridge、平台 provider 或其他 package。",
+          "note": "同意：安全边界改动保持单 package、单 focus、可审查。"
+        },
+        {
+          "q": "本轮提交粒度如何划分？",
+          "answer": "拆成两个独立提交：feat: add bounded approval json parser；feat: add encrypted approval artifact adapter。每个提交独立通过测试、build、git diff --check；高风险流程迁移与 rebind endpoint 后续单独提交。",
+          "note": "同意：基础安全能力按可独立审查的纵切片提交。"
+        },
+        {
+          "q": "jsonc-parser 依赖版本如何管理？",
+          "answer": "固定当前验证过的 minor 版本范围并提交 lockfile；CI 持续运行 duplicate-key、strict JSON 与边界 fixture；依赖升级必须重新验证 parser 行为；未来移除依赖仍保持 parseBoundedJson contract 与兼容 fixture。",
+          "note": "同意：依赖可升级，但 parser 安全语义不可漂移。"
+        },
+        {
+          "q": "parseBoundedJson 的测试策略是否加入 property/fuzz testing？",
+          "answer": "分两层：首个提交使用确定性 fixture matrix，覆盖重复 key、深度、成员数、超长字符串、数组、comments、trailing comma、prototype key；第二阶段加入 bounded fuzz/property tests，任意输入只能产生合法值或稳定错误，不抛未捕获异常、不产生副作用；fuzz 不替代确定性 fixture，也不作为唯一 CI gate。",
+          "note": "同意：先保证可解释确定性，再扩展随机探索。"
+        },
+        {
+          "q": "第一版 parseBoundedJson 的边界上限取值？",
+          "answer": "固定最大输入 64 KiB、最大深度 16、单对象成员 128、单数组元素 128、单字符串 UTF-8 16 KiB、最大复合节点 512；超限返回稳定 limit error，不进入 schema、signature、KMS 流程。",
+          "note": "同意：边界固定并由共享 parser 统一执行。"
+        },
+        {
+          "q": "parser 错误 reason 是否统一？",
+          "answer": "统一为 approval-json-invalid（语法、重复 key、comments、trailing comma、非法 token）与 approval-json-limit-exceeded（输入、深度、成员、数组、字符串、节点数超限）；不暴露底层 parser 错误码或原文片段。",
+          "note": "同意：API 错误稳定，内部实现可替换。"
+        },
+        {
+          "q": "JSON number token 如何限制？",
+          "answer": "approval schema 业务字段不允许 number；通用 parser number token 最长 128 字节且只接受 finite number；超长为 approval-json-limit-exceeded，非法/溢出为 approval-json-invalid；signed approval 不引入浮点精度差异。",
+          "note": "同意：签名载荷避免语言相关的数字语义。"
+        },
+        {
+          "q": "approval canonical JSON 的 Unicode 规则如何定义？",
+          "answer": "统一 UTF-8，不做 Unicode normalization，拒绝未配对 surrogate 与非法 UTF-8，采用 RFC 8259 JSON escape；digest 基于 UTF-8 bytes；fixture 覆盖中文、emoji、组合字符和 escaped/unescaped 输入。",
+          "note": "同意：签名绑定规范化 bytes，而非 UI 展示文本。"
+        },
+        {
+          "q": "canonical serializer 是否定义为独立公共 contract？",
+          "answer": "定义 canonicalizeApproval(value): Uint8Array 与 approvalDigest(value): sha256 contract；parser、HumanAuthority、ApprovalArtifactAdapter 共用；禁止入口自行拼 JSON/hash；输出 bytes 直接用于签名、artifact digest、审计比对；contract fixture 作为跨平台互操作基线。",
+          "note": "同意：规范化是协议基础能力，不属于单个业务入口。"
+        },
+        {
+          "q": "共享 canonical serializer 与历史 v1 签名如何兼容？",
+          "answer": "v1 保留独立 legacy canonicalization，仅用于历史验证；v2 与新 artifact 使用公共 canonicalizeApproval；不重签/重写历史 v1；fixture 同时固定历史 v1 与 v2 contract；canonicalization 版本由 protocol schema 决定，不由 npm 版本推断。",
+          "note": "同意：历史协议只读兼容，新协议使用统一基础能力。"
+        },
+        {
+          "q": "legacy v1 与 v2 canonicalization 的代码如何隔离？",
+          "answer": "新建 approval-canonicalization.ts 承载 v2/public contract；v1 verifier 保留明确命名的 canonicalizeHumanAuthorityV1，v1 不调用可变 v2 serializer；v2 provider 与 approval artifact adapter 只依赖新 contract，并用两套 known-answer vectors 固定兼容性。",
+          "note": "采用双轨隔离：v1 作为历史只读协议保持稳定，v2 与 artifact 使用公共 canonical contract，避免后续演进意外改变旧签名验证。"
+        },
+        {
+          "q": "canonicalizer 接受哪些输入值？",
+          "answer": "只接受严格 JSON 值：null、boolean、string、finite number、array 和无原型污染风险的 plain object；拒绝 Date、Map、Set、BigInt、函数、undefined、NaN、Infinity、循环引用及带自定义原型对象。",
+          "note": "采用严格 JSON 值域，确保 digest 只依赖跨语言可复现的数据模型。"
+        },
+        {
+          "q": "canonicalizer 如何定义数字语义？",
+          "answer": "approval schema 的业务字段禁止 number，时间、TTL、版本等使用明确格式的字符串或整数文本；公共 canonicalizer 仍支持有限 number，按 RFC 8785/JCS 的确定性规则序列化；拒绝 NaN、Infinity、-Infinity 和超出安全互操作范围的数值；增加跨语言 known-answer vectors。",
+          "note": "采用 JCS 数字语义与 schema 层保守限制，避免不同语言运行时产生不同 digest。"
+        },
+        {
+          "q": "JCS canonicalization 的底层实现采用什么方式？",
+          "answer": "优先采用成熟、维护中的 RFC 8785/JCS 实现；通过本项目的 canonicalizeApproval 公共 contract 包装，禁止业务入口直接调用第三方库；固定依赖版本并加入 RFC 8785 vectors、跨语言 vectors 和错误边界测试；若依赖无法满足安全输入约束，则实现范围受限的内部 serializer，不降低协议要求。",
+          "note": "采用成熟实现与本项目 contract 隔离，保证可替换而不让协议语义漂移。"
+        },
+        {
+          "q": "签名载荷是否必须显式声明 canonicalization 版本？",
+          "answer": "human_authority.v2 和 approval_artifact.v1 都显式携带 canonicalization: jcs-rfc8785；该字段参与 canonicalization、签名和 digest；verifier 只接受已知版本，未知版本 fail-closed；禁止根据 npm 版本、服务端默认配置或上下文猜测规则；未来升级通过新协议版本或新 canonicalization 标识实现。",
+          "note": "采用显式 canonicalization 版本绑定，避免协议语义依赖实现默认值。"
+        },
+        {
+          "q": "known-answer vectors 放在哪里、如何维护？",
+          "answer": "放在 tools/zj-loop-core/test/fixtures/canonicalization/；每个 vector 包含输入 JSON、canonical UTF-8 表示和 sha256:<64 hex> digest；同时覆盖 v1 legacy、v2 JCS、Unicode、数字、集合字段和拒绝样例；测试直接读取 fixtures，expected digest 不散落在业务测试中；fixture 变更按协议变更审查，不能随依赖升级自动刷新。",
+          "note": "采用集中式协议 fixtures，固定跨实现兼容性并避免测试期望值分散漂移。"
+        },
+        {
+          "q": "拒绝样例（重复 key、comments、trailing comma）如何表示？",
+          "answer": "fixture 同时支持 raw 原始 JSON 文本和 value 结构化输入；重复 key、comments、trailing comma、非法 UTF-8 等只使用 raw，在对象构造前测试 parser；canonicalization 成功样例使用结构化 value；禁止先用 JSON.parse 生成拒绝样例。",
+          "note": "采用 raw/value 双形态 fixtures，保留安全 parser 必须观察的原始语义。"
+        },
+        {
+          "q": "parseBoundedJson 的输入类型是什么？",
+          "answer": "对外接受 Uint8Array，而不是已经解码的 JavaScript string；先严格验证 UTF-8，再执行大小限制和 JSON token 解析；string 仅作为测试便捷重载，内部立即转为 UTF-8 bytes；拒绝非法 UTF-8、未配对 surrogate 和超限输入，Node、浏览器及其他语言实现共享同一输入边界。",
+          "note": "采用 bytes-first parser contract，避免预解码改变安全边界。"
+        },
+        {
+          "q": "解析器构造 object 时采用什么原型策略？",
+          "answer": "parseBoundedJson 构造的对象统一使用 Object.create(null)；允许 __proto__ 作为普通 JSON key，但不能改变对象原型；canonicalizer 同时接受 Object.prototype 和 null prototype 的纯对象；拒绝自定义 prototype、getter/setter、代理对象等运行时对象；增加 prototype-pollution 回归测试。",
+          "note": "采用 null-prototype parser 输出，隔离 JSON 数据与 JavaScript 对象行为。"
+        },
+        {
+          "q": "canonicalizer 如何处理稀疏数组和数组上的额外属性？",
+          "answer": "只接受 dense array，禁止 hole；只序列化 0..length-1 的元素；数组上的自定义 enumerable properties、getter、非默认 descriptor 一律拒绝；parser 生成的数组天然满足约束；增加稀疏数组、额外属性和 getter 的拒绝测试。",
+          "note": "采用 dense array 约束，避免 JavaScript 数组运行时特性进入跨语言 digest。"
+        },
+        {
+          "q": "canonicalizer 如何处理 object 的 symbol、非 enumerable 属性和 toJSON？",
+          "answer": "只接受 own enumerable string keys；存在 symbol key、非 enumerable own property 或 toJSON 一律拒绝；不调用用户定义方法、getter 或 coercion；key 排序只针对实际 JSON string keys；增加运行时对象污染场景的拒绝测试。",
+          "note": "采用纯数据对象规则，阻断 JavaScript 运行时行为进入 canonicalization。"
+        },
+        {
+          "q": "canonicalizer 自身拒绝输入时，错误 reason 如何定义？",
+          "answer": "parser 错误继续使用 approval-json-invalid 与 approval-json-limit-exceeded；canonicalizer 运行时值域错误统一使用 approval-canonicalization-invalid；不暴露属性名、对象内容、堆栈或第三方库错误；所有拒绝保证无签名、无 KMS、无 StateStore 写入等副作用。",
+          "note": "采用解析错误与 canonicalization 错误分层，稳定对外且 fail-closed。"
+        },
+        {
+          "q": "canonicalization 输出的 bytes 如何避免被调用方修改？",
+          "answer": "canonicalizeApproval 每次返回独立的新 Uint8Array；approvalDigest 在内部重新生成 canonical bytes，不接受调用方传入的 digest 作为可信值；签名、artifact 写入和审计记录都从同一份已验证 canonical bytes 计算；禁止缓存可变 bytes、digest 或中间对象；测试覆盖调用方修改返回 buffer 后后续 digest 不受影响。",
+          "note": "采用独立 bytes 与内部重算 digest，避免调用方篡改共享结果。"
+        },
+        {
+          "q": "canonicalized 输出 bytes 是否需要独立大小上限？",
+          "answer": "需要，不能只限制原始 JSON 输入；parseBoundedJson 限制原始输入最大 64 KiB，canonicalizeApproval 限制输出最大 64 KiB；UTF-8 转义展开导致输出超限时返回 approval-json-limit-exceeded；超限不得进入签名、加密 artifact 或 StateStore 提交流程。",
+          "note": "采用输入与 canonical 输出双重上限，防止编码展开绕过资源边界。"
+        },
+        {
+          "q": "canonicalizeApproval 是否必须是纯函数？",
+          "answer": "必须是纯函数：相同输入和 canonicalization 版本得到相同 bytes；不读取时间、环境变量、网络、文件或随机数；不修改输入对象，也不依赖全局可变状态；不执行签名、加密、日志或 StateStore 操作。",
+          "note": "采用无副作用 pure canonicalization，便于复用、测试和跨 provider 一致验证。"
+        },
+        {
+          "q": "在重构前是否先冻结 v1 legacy canonicalization 的已知答案？",
+          "answer": "先从当前实现生成并人工复核一组 v1 known-answer vectors；将 canonical bytes、digest 和签名验证结果固化到 fixture；再提取 canonicalizeHumanAuthorityV1，重构后逐项一致；禁止用 v2/JCS 结果替换 v1 fixture；若发现历史实现缺陷，新增兼容说明或 v1 只读例外，不静默改写历史协议。",
+          "note": "采用先冻结历史行为再重构，保证 v1 只读兼容不被新 serializer 意外改变。"
+        },
+        {
+          "q": "非法 UTF-8 和边界 bytes 的 fixture 如何保存？",
+          "answer": "正常 JSON raw/value fixture 使用 UTF-8 JSON 文件；非法 UTF-8、截断多字节序列和零字节等 bytes 使用 .bin 文件；旁边用 metadata JSON 声明期望 reason、输入长度和场景；fixture 不包含 token、证书私钥或真实业务数据；测试直接读取 bytes，避免文本工具或 Git 换行转换改变输入。",
+          "note": "采用文本与二进制 fixture 分离，保持原始输入 bytes 不被工具链改写。"
+        },
+        {
+          "q": ".bin fixture 是否显式标记为二进制？",
+          "answer": "在 tools/zj-loop-core/test/fixtures/.gitattributes 中声明 *.bin binary；禁止换行转换、文本 diff 和自动编码处理；metadata JSON 保持可审查；CI 校验 fixture SHA-256，防止边界 bytes 被意外改写。",
+          "note": "采用显式 binary 属性与 hash 校验，保护 parser 边界测试输入。"
+        },
+        {
+          "q": "canonical UTF-8 输出 bytes 如何保存为 known-answer vector？",
+          "answer": "canonical 输出也保存为 .bin，避免 JSON 字符串转义或换行改变 bytes；vector metadata JSON 保存输入引用、canonical 文件引用、digest、版本和场景；测试同时比较 canonical bytes 长度、逐字节内容和 digest；不把 canonical bytes 只保存为可读字符串。",
+          "note": "采用 byte-level canonical fixtures，确保展示层不能掩盖协议差异。"
+        },
+        {
+          "q": "known-answer vector 是否同时记录输入 bytes 的 SHA-256？",
+          "answer": "metadata 同时记录 input_sha256、canonical_sha256 和声明的 digest；canonical_sha256 与 digest 必须相互校验；测试先验证 fixture 文件 hash，再执行 parser/canonicalizer；输入或输出 fixture 被改动时立即失败，不自动更新 expected value。",
+          "note": "采用 vector 双端 hash 校验，阻止协议 fixtures 静默漂移。"
+        },
+        {
+          "q": "known-answer vector metadata 是否需要独立 schema？",
+          "answer": "定义 zj-loop.canonicalization_vector.v1；metadata 必须包含 protocol、canonicalization、input_path、input_sha256、canonical_path、canonical_sha256、digest、expected_status；未知字段、缺字段或未知版本使 fixture 校验失败；fixture schema 与被测协议 schema 分开版本化。",
+          "note": "采用独立、严格版本化的 vector metadata contract。"
+        },
+        {
+          "q": "known-answer vectors 是否允许由脚本生成？",
+          "answer": "允许提供离线生成脚本，便于新增协议样例；生成脚本不能被测试自动调用，也不能覆盖现有 fixture；生成前必须显式指定 --update-vectors 并输出变更摘要；CI 只消费已提交 vectors，不接受运行时生成；新增或修改 vector 必须人工审查 canonical bytes 和 digest。",
+          "note": "采用显式离线生成与人工审查，禁止测试自动刷新协议期望值。"
+        },
+        {
+          "q": "HumanSigner 应该签名 canonical bytes，还是只签名 digest？",
+          "answer": "HumanSigner 接受完整 canonical bytes；签名协议内部对 bytes 做标准哈希后执行 P-256 ECDSA；envelope 同时保存 payload_digest，由 verifier 重新计算；不允许调用方先自行 hash 再把 hash 当作普通 payload 签名；signer API 保持 provider-neutral，避免双重 hash、算法误用和跨平台歧义。",
+          "note": "采用 bytes-first signer contract，digest 作为可验证引用而不是待签名替代物。"
+        },
+        {
+          "q": "签名是否需要显式 domain separation？",
+          "answer": "需要；签名输入为 ZJ-LOOP/HUMAN-AUTHORITY/V2\\0 + canonical bytes；artifact、rebind、audit-read 等不同用途使用不同固定 domain；domain 参与签名验证但不重复放入业务 payload；verifier 严格匹配协议、动作和 domain，防止跨入口或跨协议重放。",
+          "note": "采用固定 domain-separated signing input，隔离不同高风险协议用途。"
+        },
+        {
+          "q": "P-256 ECDSA 签名的 wire format 采用哪种编码？",
+          "answer": "统一采用 ASN.1 DER Ecdsa-Sig-Value；r、s 必须是正整数和最小编码；verifier 拒绝 trailing bytes、非最小 DER 和越界值；统一执行 low-S 规则，拒绝或规范化 high-S 签名；provider-neutral API 不暴露 Node.js 特有的 raw r‖s 格式。",
+          "note": "采用严格 DER 与 low-S 规则，固定跨平台签名 wire contract。"
+        },
+        {
+          "q": "high-S 签名应拒绝，还是在验证时规范化？",
+          "answer": "直接拒绝 high-S；verifier 不修改外部签名材料；artifact、审计记录和 digest 保持原样；signer provider 在生成时保证 low-S；high-S 返回稳定的 signature-noncanonical；避免不同 provider 出现不同规范化行为。",
+          "note": "采用验证时拒绝 high-S，签名 canonicalization 只发生在 signer 生成侧。"
+        },
+        {
+          "q": "P-256 ECDSA signer 是否要求 RFC 6979 确定性 nonce？",
+          "answer": "不把确定性签名作为 provider-neutral 必须条件；HumanSigner 只保证安全随机或平台安全实现、DER、low-S；macOS Keychain、Windows CNG、PKCS#11/TPM2 可使用各自安全实现；同一 payload 的签名 bytes 不要求跨设备相同；vectors 固定 canonical bytes、digest 和验签结果，不固定签名 bytes；RFC 6979 可作为 provider 内部优化但不影响协议互操作。",
+          "note": "采用验签互操作而非签名字节相同，保留各平台安全密钥 provider 的实现自由。"
+        },
+        {
+          "q": "Human public key 在协议中的编码采用什么形式？",
+          "answer": "协议字段使用 DER SubjectPublicKeyInfo (SPKI)，外层使用 base64url 无 padding；fingerprint 对 SPKI DER 原始 bytes 做 SHA-256；PEM 仅用于 CLI/UI 展示或导入导出，不作为 canonical 协议字段；verifier 拒绝非 P-256 曲线、压缩点和多余编码。",
+          "note": "采用固定 SPKI bytes contract，隔离 PEM 文本格式差异。"
+        },
+        {
+          "q": "device_key_id 是否由 fingerprint 派生？",
+          "answer": "不直接派生；device_key_id 是网络内由 Human 注册的稳定 opaque identifier，fingerprint 是当前公钥材料的密码学绑定；key rotation 创建新的 device_key_id 或显式 replacement record；禁止调用方自报 key id 后替换 fingerprint；StateStore 同时校验 network_id、device_key_id、human_id 和 fingerprint 的当前绑定状态。",
+          "note": "采用逻辑 key id 与密码学 fingerprint 分离，支持可审计轮换且避免身份混淆。"
+        },
+        {
+          "q": "Human signing key 轮换后，旧 key 如何处理？",
+          "answer": "旧 key 立即禁止签发新的高风险 approval；历史 approval 仍可用旧 public key 验证，不重签、不改写；StateStore 保存 key lifecycle：active、retired、revoked；retired 表示不可新签但可验证历史材料；revoked 表示密钥材料被判定不可信，历史验证结果标记为签名曾有效但当前 key 已撤销，不静默删除历史事实。",
+          "note": "采用 active/retired/revoked 生命周期，分离新签授权与历史可验证性。"
+        },
+        {
+          "q": "撤销 key 后，历史 approval 的验证如何判断签署时有效？",
+          "answer": "key lifecycle 事件保存 effective_at 与 StateStore revision；历史验证同时返回 signature_valid_at_signing 与 key_currently_trusted；approval 签署时间早于撤销生效时间时，签名仍可证明当时有效；compromise 是否影响历史材料由 Human/审计策略决定；禁止只看当前 key 状态或 approval 自报时间。",
+          "note": "采用 revision/effective-time 双依据，分离历史签署有效性与当前信任状态。"
+        },
+        {
+          "q": "approval 的签署时间由谁提供并作为可信依据？",
+          "answer": "Human approval 内的 issued_at 必须被签名绑定，但不是唯一可信时间；StateStore 接收并提交 approval 时记录 provider received_at 和 revision；verifier 要求 issued_at 与 received_at 的偏差在允许窗口内；生命周期判断优先使用 StateStore revision 与事件生效时间；MVP 不引入外部 TSA，未来跨组织审计再增加可信时间戳 provider。",
+          "note": "采用 signed issued_at、provider received_at 与 revision 的组合时间证据。"
+        },
+        {
+          "q": "issued_at 与 received_at 的允许偏差窗口取多大？",
+          "answer": "默认允许 ±5 分钟；approval 自身有效期不超过 10 分钟；服务端时钟异常或无法可靠获取时间时，高风险操作 fail-closed；时间窗口由 StateStore service 配置但不能放宽超过协议上限；超窗返回 approval-time-window-invalid。",
+          "note": "采用短时、受协议上限约束的时间窗口，减少重放与时钟漂移风险。"
+        },
+        {
+          "q": "如何防止同一 approval 在不同请求中重放？",
+          "answer": "approval 必须绑定 request_id、network_id、action、body digest 和 device_key_id；request_id 由中心责任单元生成且至少 128-bit 随机；StateStore 在 network 内记录已消费的 (request_id, approval_digest)；同一组合重复提交返回幂等结果，不重复执行副作用；同一 request_id 绑定不同 digest、action 或 network 返回 409。",
+          "note": "采用 request-level replay 防护与 StateStore 幂等事实。"
+        },
+        {
+          "q": "StateStore 请求超时但提交结果未知时，客户端如何重试？",
+          "answer": "只能使用完全相同的 request_id、approval digest、action、body digest 和签名 envelope 重试；StateStore 先查询 request idempotency record，再决定已提交、未提交或冲突；不重新生成 approval，不更换 request id；状态无法判定时返回可重试的 commit-status-unknown，不重复执行副作用；确认未提交后才允许同一 request 继续尝试。",
+          "note": "采用原 envelope 幂等重试，避免网络不确定性导致重复批准或重复副作用。"
+        },
+        {
+          "q": "request_id 幂等记录保留多久？",
+          "answer": "幂等事实至少保留到对应 approval artifact 与 canonical event 生命周期结束；request_id、approval digest、action、最终状态和 revision 长期保留；未来 retention policy 可清理完整请求上下文，但不能清理冲突/重复提交的审计摘要；清理后相同 request 不得重新执行，返回 request-history-expired 或进入人工恢复流程。",
+          "note": "采用长期保留最小幂等事实，防止历史清理重新打开副作用窗口。"
+        },
+        {
+          "q": "request_id 的格式和生成边界如何定义？",
+          "answer": "由中心责任单元生成，不由 Agent 或远端服务生成；使用至少 128-bit CSPRNG 随机值；采用不含歧义字符的 base64url 无 padding 或 UUIDv4；只允许 [A-Za-z0-9_-]，长度上限 128；StateStore 将其作为 opaque identifier，不解析时间、节点或业务含义。",
+          "note": "采用中心生成、随机、无业务语义的 request_id，降低伪造与重放风险。"
+        },
+        {
+          "q": "request_id 在 base64url 和 UUIDv4 中最终选哪一种？",
+          "answer": "最终采用 UUIDv4；使用跨语言标准小写 UUID 文本格式，提供广泛库支持并便于 Human 排查；StateStore 按 opaque string 处理，不解析 UUID 内容。",
+          "note": "固定 UUIDv4 作为 request_id wire format。"
+        },
+        {
+          "q": "签名 domain 与 action 的映射如何维护？",
+          "answer": "在代码中定义不可变 protocol registry；每个高风险 action 显式绑定唯一 domain、schema version 和 required fields；禁止调用方自定义 domain 或通过字符串拼接推导；未注册 action、domain 不匹配、版本不匹配均 fail-closed；registry 变更必须有协议 fixture 和人工审查。",
+          "note": "采用显式不可变 registry，固定高风险动作的签名语义。"
+        },
+        {
+          "q": "protocol registry 的唯一真相源放在哪里？",
+          "answer": "放在 tools/zj-loop-core/src/protocol-registry.ts；通过 Object.freeze 或等价方式保证运行时不可变；协议测试从 registry 读取，不在各入口重复声明；文档和 fixture 只引用 registry 稳定标识，不成为第二套配置；registry 新增、删除或 domain 变更必须单独测试并人工审查。",
+          "note": "采用单一代码真相源与冻结 registry，避免协议配置分叉。"
+        },
+        {
+          "q": "action 和 domain 的 wire naming 规范是什么？",
+          "answer": "action 使用小写、ASCII、点分隔的稳定标识，例如 network.create、artifact.read；区分大小写，禁止 Unicode、空白、别名和隐式大小写转换；domain 使用独立固定前缀，例如 ZJ-LOOP/HUMAN-AUTHORITY/V2；协议只允许 registry 已登记的精确字符串；改名视为新协议标识，不覆盖旧 action。",
+          "note": "采用稳定 ASCII wire identifiers，防止命名差异进入签名语义。"
+        },
+        {
+          "q": "高风险 signed envelope 是否拒绝未知字段？",
+          "answer": "human_authority.v2 和 approval_artifact.v1 都采用 strict schema；缺少必需字段、出现未知字段或字段类型不匹配都 fail-closed；向后兼容通过新 schema/version 实现，不静默忽略未知字段；canonicalizer 先处理通用 JSON 值域，schema validator 再执行协议字段约束。",
+          "note": "采用 strict envelope schema，避免未来扩展改变签名范围。"
+        },
+        {
+          "q": "哪些数组字段需要按集合去重排序？",
+          "answer": "默认所有数组保持顺序且顺序参与 digest；只有 protocol registry 显式声明的字段路径按集合语义处理；集合字段元素类型必须明确，并在 canonicalization 前去重、排序；未声明数组不得自动推断为集合。",
+          "note": "采用 registry 显式集合字段，保护数组顺序与 Human 意图。"
+        },
+        {
+          "q": "集合字段的去重和排序依据是什么？",
+          "answer": "先对每个元素独立 canonicalize；以元素 canonical UTF-8 bytes 的字典序排序；以 canonical bytes 完全相同判定重复；集合元素必须是 registry 允许的 JSON 类型；禁止使用 JavaScript 默认比较、localeCompare 或展示文本排序。",
+          "note": "采用 byte-level set canonicalization，保证跨语言确定性。"
+        },
+        {
+          "q": "canonicalizer 如何获得 action-specific 的集合字段规则？",
+          "answer": "canonicalizeApproval 接受 registry 返回的只读 protocol descriptor；descriptor 绑定 protocol、schema version、domain、action 和集合字段路径；调用方不能传入自定义排序规则或任意 descriptor；未注册 descriptor、descriptor 与 envelope 不匹配时直接拒绝；通用 JSON canonicalizer 保持无业务语义，approval contract 负责应用 registry 规则。",
+          "note": "采用 registry descriptor 驱动的受控 canonicalization，避免业务入口注入规则。"
+        },
+        {
+          "q": "集合字段规则的 registry 版本是否需要进入签名载荷？",
+          "answer": "需要增加显式 canonicalization_profile，例如 approval-v2-default-2026-07；profile 参与 canonicalization、签名和 digest；registry 规则变更必须创建新 profile，不能原地修改旧 profile；verifier 按 profile 选择不可变 descriptor，未知 profile fail-closed。",
+          "note": "采用 profile 绑定不可变 canonicalization 规则集，保证历史 digest 可重现。"
+        },
+        {
+          "q": "是否需要对 canonicalization profile 本身做 hash 绑定？",
+          "answer": "需要；registry 为每个 profile 生成 profile_sha256；signed envelope 携带 canonicalization_profile 和 profile_sha256；verifier 校验 profile ID 对应 descriptor hash；profile 名称复用或 descriptor 原地修改直接失败；实现版本变化时仍能确认使用同一套 canonicalization 规则。",
+          "note": "采用 profile ID 与 descriptor hash 双重绑定，阻止规则漂移。"
+        },
+        {
+          "q": "profile_sha256 如何计算？",
+          "answer": "对 profile descriptor 的严格 JSON 表示做固定 JCS canonicalization；descriptor 只允许稳定协议数据，不含函数、路径、运行时版本、时间或环境变量；profile_sha256 = sha256(canonical_profile_descriptor_bytes)；profile hash 不包含自身，避免循环；增加 profile descriptor known-answer vector。",
+          "note": "采用纯协议数据的 JCS descriptor hash，固定 canonicalization profile 身份。"
+        },
+        {
+          "q": "profile descriptor 是否包含自己的 profile_sha256 字段？",
+          "answer": "不包含；descriptor 只包含 profile_id、canonicalization 算法、schema version、集合字段路径及其他稳定规则；profile_sha256 是 descriptor 的外部绑定值；signed envelope 同时携带 profile ID 和 profile hash；verifier 根据 ID 找 descriptor 后重新计算 hash。",
+          "note": "采用非自引用 profile descriptor，避免 hash 计算循环。"
+        },
+        {
+          "q": "canonicalization profile 是否允许运行时从配置文件加载？",
+          "answer": "MVP 不允许；profile descriptor 内置于 tools/zj-loop-core/src/protocol-registry.ts；运行时不读取远程配置、环境变量或可变文件；profile 变更必须通过代码审查、测试和版本提交；未来动态扩展必须由签名 registry artifact 和显式 Human approval 授权。",
+          "note": "采用代码内置 immutable profile，阻断运行时配置篡改。"
+        },
+        {
+          "q": "旧 canonicalization profile 是否允许从 registry 删除？",
+          "answer": "不删除，只标记 retired；retired profile 禁止生成新的 approval，但保留 descriptor、profile_sha256 和 known-answer vectors；verifier 继续支持历史 artifact 和 approval 验证；确认没有历史引用后才可由 Human 审批永久禁用，但不改写或删除历史 digest。",
+          "note": "采用 profile retired 生命周期，保持历史验证能力。"
+        },
+        {
+          "q": "profile 的 retired 状态是否进入签名载荷？",
+          "answer": "不进入 approval 的业务签名字段；profile 状态由 verifier 当前 registry 读取；approval 只绑定 profile ID 与 profile hash；retired 只影响能否新生成，不影响历史验签；新签请求在生成前由 registry gate 拒绝 retired profile。",
+          "note": "采用 profile lifecycle 与 signed bytes 解耦，保护历史验签稳定性。"
+        },
+        {
+          "q": "历史 approval 在 retired profile 下是否允许重新提交幂等重试？",
+          "answer": "允许，但只限同一 request 的幂等恢复；retired profile 禁止创建新 approval；已存在且已签名的 approval 可以用原 request_id 查询状态或恢复未确认的提交；不允许创建新的 request、扩大 action 或修改 body digest；已完成请求返回既有结果，不重复执行副作用；request 记录过期则进入人工恢复流程。",
+          "note": "采用 retired profile 的受限幂等恢复，兼顾可用性与历史协议冻结。"
+        },
+        {
+          "q": "canonicalization profile 的发布、retired 和永久禁用由谁决定？",
+          "answer": "profile 发布必须经过 Human authority 批准；进入 retired 也必须记录 Human-authorized lifecycle event；永久禁用需要独立 Human approval 并说明影响范围；Agent 只能读取 profile 状态，不能创建、修改、retire 或禁用 profile；StateStore 保存 profile lifecycle revision、操作者 Human identity、profile hash 和原因。",
+          "note": "采用 Human-owned profile lifecycle，Agent 只读规则集状态。"
+        },
+        {
+          "q": "profile 生命周期事件本身使用哪个 canonicalization profile？",
+          "answer": "使用独立、永久保留的 governance profile，例如 profile.lifecycle.v1，不依赖正在发布或 retired 的业务 profile；governance profile 只允许固定字段和固定 action；profile lifecycle 不能由自身规则签名，避免规则变更授权规则的循环；该 profile 只能由 Human authority 批准，Agent 不可触发。",
+          "note": "采用独立 governance profile，隔离规则集生命周期治理。"
+        },
+        {
+          "q": "profile.lifecycle.v1 是否允许 retired 或永久禁用？",
+          "answer": "MVP 不允许；governance profile 是最小治理根，不参与普通 profile 淘汰；变更只能通过新 governance profile 版本发布，并保留旧版本用于历史验证；不允许业务 profile 或 Agent credential 替代治理根；治理根 compromise 时走独立 Human-led recovery，不在线自动替换。",
+          "note": "采用不可淘汰 governance root，避免 profile lifecycle 失去可信根。"
+        },
+        {
+          "q": "governance profile 版本升级需要几名 Human 批准？",
+          "answer": "MVP 采用单一 Human authority，但要求显式二次确认；同一 Human 责任单元完成 review、确认和签名；不允许 Agent 单独升级治理根；多人 quorum、双钥匙或组织级审批后置；升级 approval 绑定旧 profile hash、新 profile hash、变更摘要、影响范围和 recovery plan；StateStore 以 CAS 记录治理根版本切换，冲突时停止。",
+          "note": "采用 MVP 单 Human 双确认与 CAS 切换，后续再扩展多人 quorum。"
+        },
+        {
+          "q": "governance profile compromise 时的 recovery plan 由谁执行？",
+          "answer": "recovery 必须由 Human 手工发起并确认；Agent 只能提供只读诊断、证据摘要和候选恢复步骤；recovery approval 使用预先固定的 emergency governance profile，不依赖已失陷 profile；StateStore 进入 governance-recovery-blocked 后暂停新高风险操作；恢复完成前只允许审计、状态读取和人工验证。",
+          "note": "采用 Human-led recovery 与显式 recovery-blocked 状态，避免治理根自动自愈越权。"
+        },
+        {
+          "q": "emergency governance profile 放在哪里、允许做什么？",
+          "answer": "内置于 tools/zj-loop-core/src/protocol-registry.ts，与普通 profile 分离；只允许 recovery、治理根替换和恢复状态解除；不允许签发普通 network、credential、pairing 或 artifact approval；descriptor 与 hash 固定在代码和 fixtures 中；只能由 Human authority 使用，每次 recovery 记录完整审计事实。",
+          "note": "采用能力最小化的内置 emergency profile，隔离治理恢复权限。"
+        },
+        {
+          "q": "emergency governance profile 使用哪把 Human signing key？",
+          "answer": "使用独立的 emergency Human key，不复用普通 approval key；key material 默认离线或受更强平台保护；emergency key 只允许 recovery domain；普通 key compromise 不影响 recovery 能力，emergency key compromise 也不扩大普通业务授权；key fingerprint、使用原因、恢复范围和结果进入审计记录。",
+          "note": "采用独立 emergency key，隔离正常批准与治理恢复权限。"
+        },
+        {
+          "q": "emergency key 是否暴露给正常 Web UI？",
+          "answer": "不暴露；普通 Human Approval UI 不显示、加载或调用 emergency key；recovery 采用独立显式 CLI/离线流程；不提供通用 signer API 或远程 recovery endpoint；CLI 展示 recovery 范围、旧/新 profile hash、影响范围并二次确认；完成后销毁临时 session 和材料，只保留结构化审计摘要。",
+          "note": "采用 emergency key 与正常批准面彻底隔离，缩小治理恢复攻击面。"
+        },
+        {
+          "q": "离线 recovery CLI 如何把恢复结果写入 StateStore？",
+          "answer": "CLI 仅在 Human 明确确认后，通过受信任 mTLS 连接 StateStore；使用独立 emergency key 签署 recovery envelope；StateStore 仅允许 emergency domain 的固定 recovery actions；当前普通设备身份失效时必须先完成 Human-device recovery binding；网络不可用时只生成待提交 recovery artifact，不声称恢复已完成。",
+          "note": "采用离线准备、在线 canonical commit 的 recovery 边界，避免未落 StateStore 的操作被误判为完成。"
+        },
+        {
+          "q": "普通 Human-device mTLS 失效时，emergency recovery 如何建立传输身份？",
+          "answer": "使用独立 emergency device certificate，不复用普通设备证书；certificate 只允许连接 recovery endpoint，不允许普通 StateStore API；由 Human 在本机离线确认后生成一次性 recovery binding；binding 绑定 emergency key fingerprint、device certificate fingerprint、network、request id 和短 TTL；recovery 完成后立即撤销 emergency certificate 和 binding。",
+          "note": "采用 recovery-only transport identity，隔离普通设备身份失效场景。"
+        },
+        {
+          "q": "emergency device certificate 由谁签发、StateStore 如何信任？",
+          "answer": "使用独立、内置的 recovery CA，不复用普通 network CA；recovery CA public key 作为治理根一部分固定在 StateStore 配置/代码中；emergency CLI 生成设备密钥与 CSR，recovery CA 仅签发短期、限定用途证书；certificate EKU、SAN、network 和 recovery binding 严格匹配；recovery CA 私钥不在线、不由 StateStore 持有，签发需 Human 明确操作。",
+          "note": "采用独立 recovery trust root，隔离普通网络证书体系。"
+        },
+        {
+          "q": "recovery CA 轮换如何进行？",
+          "answer": "通过独立 emergency governance approval 发布新 recovery CA；StateStore 支持明确的 current 与 previous trust roots；轮换窗口内旧 CA 只允许撤销/收尾既有 recovery binding，不签发新 certificate；新 CA 生效后旧 CA 进入 retired，仅保留历史验证；不能通过普通 profile、普通 Human approval 或 Agent credential 轮换 recovery CA。",
+          "note": "采用 emergency-governed 双根轮换窗口，避免恢复信任根切换中断或扩大权限。"
+        },
+        {
+          "q": "emergency recovery binding 的 TTL 取多长？",
+          "answer": "默认 TTL 15 分钟，协议硬上限 30 分钟；绑定只允许一次 recovery request；超时、使用完成或任何校验冲突立即失效；不支持续期，过期后必须重新 Human 确认并生成新 binding。",
+          "note": "采用短时一次性 recovery binding，缩小紧急权限窗口。"
+        },
+        {
+          "q": "同一 network 同时出现两个 emergency recovery 请求时如何处理？",
+          "answer": "StateStore 只允许一个 active recovery session；第一个通过 CAS 抢占 recovery lease；后续请求返回 409 recovery-already-active，不调用 signer、KMS 或写普通业务事件；lease 绑定 request id、emergency key、device fingerprint 和 TTL；lease 过期只能由 Human 重新确认后创建，不自动接管。",
+          "note": "采用 network-level single active recovery lease，避免恢复竞态。"
+        },
+        {
+          "q": "StateStore 在 recovery lease 持有期间崩溃，重启后如何处理？",
+          "answer": "lease 持久化在 StateStore canonical facts 中并带过期时间；重启后只恢复未过期 lease，不自动继续执行副作用；已提交 recovery step 按 request id 幂等返回；未提交 step 必须由 Human 重新确认；状态不确定时保持 governance-recovery-blocked，不自动解锁。",
+          "note": "采用 recovery crash fail-closed，禁止重启隐式继续治理副作用。"
+        },
+        {
+          "q": "一次 recovery request 是否允许包含多个治理动作？",
+          "answer": "MVP 一次只允许一个原子治理动作；例如切换 governance profile 或解除 recovery-blocked，不能同时包含多个动作；每个动作独立绑定 request id、旧状态 revision、新状态 digest 和 Human approval；多步恢复由多个显式 request 串联，每一步重新检查前置状态；任一步失败不自动执行后续步骤。",
+          "note": "采用单动作 recovery request，降低部分完成和重试歧义。"
+        },
+        {
+          "q": "recovery 动作的合法顺序由谁定义？",
+          "answer": "由内置 emergency recovery state machine 固定；典型顺序：确认 compromise、建立 recovery lease、绑定 emergency device、切换治理根、验证 StateStore、解除 blocked；每一步声明允许的前置状态和目标状态；调用方不能跳步、回退或自定义 transition；未知 transition 和状态不匹配返回 409。",
+          "note": "采用固定 recovery state machine，禁止治理恢复流程被调用方重排。"
+        },
+        {
+          "q": "emergency recovery state machine 是否也需要 profile/hash 绑定？",
+          "answer": "需要，定义不可变 recovery_machine_profile；profile 包含合法状态、transition、required evidence 和 side-effect gate；StateStore 记录 machine profile ID 与 hash；recovery request 必须绑定该 profile；machine 规则变更通过新 profile 版本发布，旧版本保留用于历史解释。",
+          "note": "采用 recovery machine profile/hash 绑定，固定治理恢复解释语义。"
+        },
+        {
+          "q": "recovery_machine_profile_sha256 如何计算？",
+          "answer": "对 machine profile 的严格 JSON descriptor 使用固定 JCS canonicalization；hash 只包含稳定协议数据：状态、transition、evidence、gate 和版本；不包含运行时路径、代码版本、环境变量或 profile hash 自身；使用独立 known-answer vector；verifier 根据 profile ID 找 descriptor 并重算 hash。",
+          "note": "采用 profile descriptor JCS hash，固定 recovery state machine 的协议身份。"
+        },
+        {
+          "q": "本轮实现范围是否冻结为 canonicalization 基础，不实现完整 emergency recovery？",
+          "answer": "冻结范围。本轮只实现 parseBoundedJson、v1/v2 canonicalization 隔离、JCS profile/descriptor/hash、known-answer vectors，以及 HumanSigner 的 bytes-first、domain separation、P-256 DER/low-S contract 测试；暂不实现 emergency governance profile、recovery CA/device certificate、recovery state machine、profile lifecycle endpoint 和完整 recovery CLI。相关决策先沉淀为下一阶段架构约束。",
+          "note": "采用范围冻结，先完成可验证的 canonicalization 基础，避免 roadmap 无限扩展。"
+        },
+        {
+          "q": "冻结范围内的 TDD 实现顺序是什么？",
+          "answer": "先从现有实现冻结 v1 legacy vectors；再引入 parseBoundedJson 和 jsonc-parser，完成 raw/value、边界与拒绝 fixture；随后实现 approval-canonicalization.ts 与 JCS profile/hash；再实现 v2 known-answer vectors；最后接入 HumanSigner 的 bytes-first、domain separation、DER/low-S contract 测试。每一步独立通过测试、build 和 git diff --check 后再进入下一步。",
+          "note": "采用先冻结历史协议、再实现公共基础、最后接入 signer contract 的 TDD 顺序。"
+        },
+        {
+          "q": "v2 新 canonicalization 如何兼容现有协议？",
+          "answer": "保留 human_authority.v2 schema 名称；新增并签名绑定 canonicalization、canonicalization_profile、profile_sha256；旧 v2 只保留 verifier 只读兼容，不再用于新的高风险签发。",
+          "note": "采用原地升级 v2 wire shape，保留旧 v2 只读验证，避免新增协议版本分叉。"
+        },
+        {
+          "q": "旧 v2 verifier 是否需要区分返回 legacy-v2 accepted？",
+          "answer": "保留现有 boolean API 兼容，同时新增详细验证 API，返回 accepted、legacy-v2-accepted、current-v2-accepted 或 blocked；高风险入口可禁止 legacy-v2-accepted，历史审计仍可验证旧 v2。",
+          "note": "采用 boolean 兼容层加详细验证结果，区分当前 v2 与历史 v2。"
+        },
+        {
+          "q": "高风险入口是否立即改用 detailed verifier？",
+          "answer": "是。高风险入口只接受 current-v2-accepted；历史 v2 仅允许审计/迁移读取，不允许执行新的 network、credential、pairing 或 rebind 副作用。",
+          "note": "采用 current-v2-only 高风险 gate，历史 v2 保留只读兼容。"
+        },
+        {
+          "q": "是否现在冻结一组真正的 v2 known-answer vector？",
+          "answer": "是。固定 v2 payload JSON、JCS canonical UTF-8 bytes、domain-separated signing bytes、payload_digest 和 profile_sha256；签名 bytes 本身不固定，只验证 DER 签名可被对应公钥验过。",
+          "note": "采用 v2 byte-level known-answer vector，固定协议互操作结果而不绑定 ECDSA nonce。"
+        },
+        {
+          "q": "是否将当前 v1/v2 hardcoded vector 迁移为统一 metadata fixture？",
+          "answer": "是。统一使用 zj-loop.canonicalization_vector.v1 metadata，记录输入引用、canonical bytes、input hash、canonical hash、digest、profile 和 expected status，避免协议期望值散落在测试代码中。",
+          "note": "采用统一 metadata fixture，固定 v1/v2 协议向量并集中管理兼容性期望。"
+        },
+        {
+          "q": "下一步是否实现严格的 vector metadata loader？",
+          "answer": "是。校验 zj-loop.canonicalization_vector.v1 的必需字段、类型、未知字段和 hash 引用，避免测试 fixture 自身格式漂移。",
+          "note": "采用严格 fixture loader，测试先验证协议向量完整性再消费 canonicalization 结果。"
         }
       ],
       "notes": "范围已冻结；本次完成并验证：StateStore-backed SQLite credential provider复用StateStore同一BEGIN IMMEDIATE事务；issue intent、一次性claim、revoke的本地凭证索引与credential-issued、credential-claimed、credential-revoked canonical事件原子提交；network-level CAS冲突整体回滚；重复issue/claim/revoke不推进revision；新增createCredentialIssueIntentService，将已验证HumanApprovalEnvelope接入typed SQLite issuer并保持human_id、签名和digest fail-closed校验。独立provider兼容路径仍保留。验证：npm run test:agent-local（本次改动前）= 120 passed, 1 skipped, 0 failed；本次adapter targeted = 6 passed, 0 failed；git diff --check通过。Remaining：HTTP server真实provider wiring测试、pairing claim真实provider adapter、lifecycle projections、canonicalization v1 fixtures、加密backup/restore、真实双Agent端到端流程。自动HA/failover、平台级沙箱、硬件隔离、离线授权与复杂策略引擎后置。"
@@ -2071,7 +2786,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-30 12:07:13",
+    "updated": "2026-07-30 20:58:04",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { sha256CanonicalJson } from './sqlite-state-store.js';
 import type { SqliteStateStore, StateEventInput } from './sqlite-state-store.js';
 import { createCredentialClaimEvent, createCredentialIssueIntentEvent, createCredentialRevokeEvent } from './credential-issuance-events.js';
-import { verifyHumanApprovalContext, type HumanApprovalContext, type HumanPublicIdentity } from './human-authority.js';
+import { verifyHumanApprovalContextDetailed, type HumanApprovalContext, type HumanPublicIdentity } from './human-authority.js';
 
 export const SQLITE_CREDENTIAL_ISSUANCE_SCHEMA = 'zj-loop.sqlite_credential_issuance.v1' as const;
 
@@ -193,7 +193,7 @@ export function createSqliteCredentialIssuance(input: { filename: string; now?: 
       if (capabilities.some((capability) => !capability.trim())) throw new Error('credential-capability-invalid');
       const current = now();
       parseTime(current, 'credential-clock-invalid');
-      if (!verifyHumanApprovalContext({ identity: request.human_identity, context: request.approval, now: current })) throw new Error('approval-context-invalid');
+      if (verifyHumanApprovalContextDetailed({ identity: request.human_identity, context: request.approval, now: current, require_v2: true }).status !== 'current-v2-accepted') throw new Error('approval-context-invalid');
       if (request.approval.action !== 'credential.issue' || request.approval.request_id !== request.request_id) throw new Error('approval-context-mismatch');
       if (JSON.stringify([...new Set(request.approval.approved_capabilities)].sort()) !== JSON.stringify(capabilities.sort())) throw new Error('approval-capability-mismatch');
       const issuanceDigest = credentialIssuanceDigest(request);

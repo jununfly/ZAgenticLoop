@@ -19,6 +19,7 @@ export type HumanSigner = {
         payload: Uint8Array;
     }): Promise<HumanSignature>;
 };
+export declare function normalizeP256EcdsaDer(signature: Uint8Array): Uint8Array;
 export declare function createInMemoryHumanSigner(input: {
     human_id: string;
 }): HumanSigner;

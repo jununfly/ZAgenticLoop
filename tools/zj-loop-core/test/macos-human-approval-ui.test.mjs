@@ -40,7 +40,7 @@ test('macOS Keychain signer completes the real Human approval UI signing path', 
   const signer = createMacOSKeychainHumanSigner({ human_id: 'human-1', key_tag: tag, helper_path: binary });
   const requestValue = { request_id: 'request-keychain', status: 'pending', request_digest: 'a'.repeat(64), node_id: 'node-keychain', requested_capabilities: ['event.consume'], expires_at: '2026-07-30T01:00:00.000Z' };
   let approval;
-  const server = createHumanApprovalUiServer({ signer, network_id: 'network-1', bootstrap_token: 'bootstrap-keychain', upstream: { async list() { return { requests: [requestValue] }; }, async approve(value) { approval = value; return { status: 'recorded' }; } }, now: () => '2026-07-30T00:00:00.000Z' });
+  const server = createHumanApprovalUiServer({ signer, network_id: 'network-1', human_device: { device_key_id: 'device-keychain-1', device_fingerprint: 'd'.repeat(64) }, bootstrap_token: 'bootstrap-keychain', upstream: { async list() { return { requests: [requestValue] }; }, async approve(value) { approval = value; return { status: 'recorded' }; } }, now: () => '2026-07-30T00:00:00.000Z' });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   try {
     const address = server.address();
@@ -49,7 +49,7 @@ test('macOS Keychain signer completes the real Human approval UI signing path', 
     const result = await request(address, '/ui/pairing-requests/request-keychain/approve', { method: 'POST', headers: { cookie, origin: `http://127.0.0.1:${address.port}` }, body: { request_digest: requestValue.request_digest, approved_capabilities: ['event.consume'] } });
     assert.equal(result.status, 201);
     const identity = await signer.getPublicIdentity();
-    assert.equal(verifyHumanApprovalContext({ identity: { ...identity, schema: 'zj-loop.human_authority.v1' }, context: approval.context, now: '2026-07-30T00:01:00.000Z' }), true);
+    assert.equal(verifyHumanApprovalContext({ identity: { ...identity, schema: 'zj-loop.human_authority.v2' }, context: approval.context, now: '2026-07-30T00:01:00.000Z', require_v2: true }), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     try { execFileSync(binary, ['delete', tag], { stdio: 'ignore' }); } catch { /* cleanup is best effort after test failure */ }

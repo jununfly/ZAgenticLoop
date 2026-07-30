@@ -1,0 +1,13 @@
+{
+  "schema": "zj-loop.canonicalization_vector.v1",
+  "protocol": "zj-loop.human_authority.v1",
+  "canonicalization": "legacy-human-authority-v1",
+  "input_path": "v1-human-authority.input.json",
+  "canonical_path": null,
+  "input_sha256": "sha256:d680d8c0578095bb6a1011354a282751207fb75185c135c11c1beda77a884feb",
+  "canonical_length": 295,
+  "canonical_sha256": "sha256:fdcc82245557e6c9ba3b1d0cc75293e26b67d2ae3178348cde3bec08a242e59f",
+  "canonical_utf8": "{\"action\":\"credential.issue\",\"approved_capabilities\":[\"event.append\",\"event.consume\"],\"expires_at\":\"2026-07-30T00:05:00.000Z\",\"human_id\":\"human-1\",\"issued_at\":\"2026-07-30T00:00:00.000Z\",\"request_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"request_id\":\"request-1\"}",
+  "digest": "sha256:fdcc82245557e6c9ba3b1d0cc75293e26b67d2ae3178348cde3bec08a242e59f",
+  "expected_status": "passed"
+}

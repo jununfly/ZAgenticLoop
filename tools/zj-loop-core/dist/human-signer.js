@@ -1,6 +1,8 @@
 import { createHash, createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
 export const HUMAN_SIGNER_SCHEMA = 'zj-loop.human_signer.v1';
 export const HUMAN_SIGNATURE_SCHEMA = 'zj-loop.human_signature.v1';
+const P256_ORDER = BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551');
+const P256_HALF_ORDER = P256_ORDER / 2n;
 function requireText(value, error) {
     if (!value.trim())
         throw new Error(error);
@@ -11,6 +13,53 @@ function fingerprint(publicKey) {
 }
 function cloneIdentity(identity) {
     return { ...identity };
+}
+function readDerInteger(bytes, offset) {
+    if (bytes[offset] !== 0x02)
+        return null;
+    const length = bytes[offset + 1];
+    if (length === undefined || length === 0 || length > 33 || offset + 2 + length > bytes.length)
+        return null;
+    const start = offset + 2;
+    const end = start + length;
+    const value = bytes.subarray(start, end);
+    if (value[0] === 0 && (length === 1 || (value[1] & 0x80) === 0))
+        return null;
+    if ((value[0] & 0x80) !== 0)
+        return null;
+    return { value: BigInt(`0x${Buffer.from(value).toString('hex')}`), next: end };
+}
+function isCanonicalLowSEcdsaDer(signature) {
+    if (signature.length < 8 || signature[0] !== 0x30 || signature[1] !== signature.length - 2)
+        return false;
+    const r = readDerInteger(signature, 2);
+    if (!r)
+        return false;
+    const s = readDerInteger(signature, r.next);
+    if (!s || s.next !== signature.length || r.value <= 0n || r.value >= P256_ORDER || s.value <= 0n || s.value > P256_HALF_ORDER)
+        return false;
+    return true;
+}
+function encodeDerInteger(value) {
+    let hex = value.toString(16);
+    if (hex.length % 2)
+        hex = `0${hex}`;
+    const bytes = Buffer.from(hex, 'hex');
+    const content = bytes[0] >= 0x80 ? Buffer.concat([Buffer.from([0]), bytes]) : bytes;
+    return Buffer.concat([Buffer.from([0x02, content.length]), content]);
+}
+export function normalizeP256EcdsaDer(signature) {
+    if (signature.length < 8 || signature[0] !== 0x30 || signature[1] !== signature.length - 2)
+        throw new Error('human-signature-der-invalid');
+    const r = readDerInteger(signature, 2);
+    if (!r)
+        throw new Error('human-signature-der-invalid');
+    const s = readDerInteger(signature, r.next);
+    if (!s || s.next !== signature.length || r.value <= 0n || r.value >= P256_ORDER || s.value <= 0n || s.value >= P256_ORDER)
+        throw new Error('human-signature-der-invalid');
+    const lowS = s.value > P256_HALF_ORDER ? P256_ORDER - s.value : s.value;
+    const body = Buffer.concat([encodeDerInteger(r.value), encodeDerInteger(lowS)]);
+    return Buffer.concat([Buffer.from([0x30, body.length]), body]);
 }
 export function createInMemoryHumanSigner(input) {
     const humanId = requireText(input.human_id, 'human-id-required');
@@ -24,7 +73,8 @@ export function createInMemoryHumanSigner(input) {
         async sign(input) {
             if (!(input.payload instanceof Uint8Array))
                 throw new Error('human-signature-payload-required');
-            return { schema: HUMAN_SIGNATURE_SCHEMA, algorithm: 'ECDSA-P256', public_key_fingerprint: publicKeyFingerprint, signature_base64: sign('sha256', Buffer.from(input.payload), keys.privateKey).toString('base64') };
+            const signature = normalizeP256EcdsaDer(sign('sha256', Buffer.from(input.payload), keys.privateKey));
+            return { schema: HUMAN_SIGNATURE_SCHEMA, algorithm: 'ECDSA-P256', public_key_fingerprint: publicKeyFingerprint, signature_base64: Buffer.from(signature).toString('base64') };
         },
     };
 }
@@ -34,10 +84,13 @@ export function verifyHumanSignature(input) {
     if (!(input.payload instanceof Uint8Array) || !/^[0-9a-f]{64}$/.test(input.identity.public_key_fingerprint) || input.signature.public_key_fingerprint !== input.identity.public_key_fingerprint)
         return false;
     try {
+        const signatureBytes = Buffer.from(input.signature.signature_base64, 'base64');
+        if (!isCanonicalLowSEcdsaDer(signatureBytes))
+            return false;
         const publicKey = createPublicKey(input.identity.public_key_pem);
         if (publicKey.asymmetricKeyType !== 'ec' || publicKey.asymmetricKeyDetails?.namedCurve !== 'prime256v1' || fingerprint(publicKey) !== input.identity.public_key_fingerprint)
             return false;
-        return verify('sha256', Buffer.from(input.payload), publicKey, Buffer.from(input.signature.signature_base64, 'base64'));
+        return verify('sha256', Buffer.from(input.payload), publicKey, signatureBytes);
     }
     catch {
         return false;
