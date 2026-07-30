@@ -10,6 +10,8 @@ import { createStateStoreServer } from '../dist/sqlite-state-store-server.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createSqliteCredentialVerifier } from '../dist/sqlite-credential-verifier.js';
 import { approvalProfileSha256 } from '../dist/approval-canonicalization.js';
+import { createInMemoryHumanAuthorityProvider, verifyHumanApprovalContext } from '../dist/human-authority.js';
+import { createCredentialIssueIntentService, createSqliteCredentialIssuance, credentialIssuanceDigest } from '../dist/sqlite-credential-issuance.js';
 
 async function serverCertificate(commonName = 'localhost') {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-server-'));
@@ -366,6 +368,56 @@ test('StateStore issue-intent route requires Human context and forwards only bou
   assert.equal(observed.issuance.request.network_id, undefined);
   assert.equal(JSON.stringify(response.body).includes('token'), false);
   await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('StateStore issue-intent route writes a real Human-approved credential intent atomically', async () => {
+  const serverMaterial = await serverCertificate();
+  const clientMaterial = await serverCertificate('codex');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-state-service-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-30T01:00:00.000Z' });
+  const peerFingerprint = createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex');
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: 'network-1', device_key_id: 'device-key-1', device_fingerprint: peerFingerprint });
+  const identity = authority.getPublicIdentity();
+  const issuance = createSqliteCredentialIssuance({ filename: path.join(root, 'unused-credential.db'), stateStore, now: () => '2026-07-30T01:01:00.000Z' });
+  const request = { request_id: 'issue-1', node_id: 'node-1', event_id: 'event-1', task_id: 'task-1', capabilities: ['event.append'], issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T02:00:00.000Z', expected_revision: 1 };
+  const draft = { ...request, network_id: 'network-1', approval: { human_id: 'human-1' } };
+  const approval = await authority.signApprovalContext({ action: 'credential.issue', request_id: request.request_id, request_digest: credentialIssuanceDigest(draft), approved_capabilities: request.capabilities, issued_at: request.issued_at, expires_at: request.expires_at });
+  const humanContext = JSON.stringify({ approval, human_identity: identity });
+  const service = createCredentialIssueIntentService({ issuance });
+  const server = createStateStoreServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    store: stateStore,
+    credentialVerifier: null,
+    humanAuthorityVerifier: {
+      verify: ({ context, action, peer_fingerprint }) => {
+        const envelope = JSON.parse(context);
+        const verified = verifyHumanApprovalContext({ identity: envelope.human_identity, context: envelope.approval, now: '2026-07-30T01:01:00.000Z', require_v2: true });
+        return verified && envelope.approval.action === action && envelope.approval.device_fingerprint === peer_fingerprint
+          ? { status: 'allowed', human_id: envelope.approval.human_id }
+          : { status: 'blocked', reason: 'human-context-invalid' };
+      },
+    },
+    credentialIssuance: service,
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/credentials/issue-intent', method: 'POST', body: request, headers: { 'x-zj-loop-human-approval': humanContext } });
+
+  assert.equal(response.statusCode, 201);
+  assert.equal(response.body.status, 'recorded');
+  assert.equal(response.body.side_effects_executed, true);
+  assert.equal(await stateStore.getRevision('network-1'), 2);
+  const events = await stateStore.readEvents({ network_id: 'network-1', after_revision: 1 });
+  assert.equal(events.events.length, 1);
+  assert.equal(events.events[0].event_type, 'credential-issued');
+  assert.equal(events.events[0].payload.credential_id, response.body.credential_id);
+
+  await new Promise((resolve) => server.close(resolve));
+  await issuance.close();
+  await stateStore.close();
+  await rm(root, { recursive: true, force: true });
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
 });
