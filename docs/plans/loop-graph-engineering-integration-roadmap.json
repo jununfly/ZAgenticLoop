@@ -21,7 +21,7 @@
     "1-1": {
       "id": "1-1",
       "label": "Loop Engineering与Graph Engineering统一心智模型",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [],
@@ -90,9 +90,124 @@
           "q": "Multi-node Graph Atom相对Single-Agent baseline必须新增什么？",
           "answer": "至少包含Human-held center responsibility unit、两个独立enrolled Agent execution nodes、两个不同但有依赖关系的任务、Directed Task Graph、明确资源隔离、中间Evidence、canonical aggregation或verification和一个Review Handoff。仅增加第二个Agent而没有新增可组合能力，不算Graph Atom。",
           "note": "Graph Atom必须证明任务分工、依赖、隔离和聚合能力，而不是把多Agent聊天或并行数量当作产品升级。"
+        },
+        {
+          "q": "Loop Engineering与Graph Engineering的统一总定义是什么？",
+          "answer": "采用：ZAgenticLoop用Graph Engineering组织Human负责的OPN，用Loop Engineering让每个被编排节点完成可验证、可恢复的目标闭环；Graph负责组合，Loop负责闭环，Human负责最终责任。",
+          "note": "作为产品、架构、协议和路线图的总定义。中心责任单元是Human或Human+Agent；Codex、Workbuddy等Agent是被编排执行节点。"
+        },
+        {
+          "q": "Graph中的Task与Loop的关系是什么？",
+          "answer": "采用：Graph不替代Loop；每个可执行Task都必须落入一个有界的Loop Execution。Graph负责创建任务关系、授权、依赖、隔离、路由和聚合；Loop负责单个Task的发现、执行、验证、证据和停止。Graph级完成由子任务证据的canonical aggregation与Human Review Handoff决定。",
+          "note": "对象链固定为Human Goal -> MessageEvent -> DirectedTaskGraph -> Task -> Agent Execution -> Evidence -> Review Handoff -> Human Decision；Graph是组合层，Loop是执行闭环。"
+        },
+        {
+          "q": "被编排执行节点如何抽象？",
+          "answer": "采用通配抽象：Agent1、Agent2……表示被编排执行节点；Codex、Workbuddy只是当前Mac上安装的具体实例，不写入产品抽象。中心责任单元仍为Human或Human+Agent，具体由哪个Agent协作、哪些Agent执行由每次任务编排决定。",
+          "note": "避免把当前设备上的Codex/Workbuddy误读为协议内置角色或固定节点；后续文档和协议使用Agent1、Agent2等抽象名称，示例中再映射到具体Agent。"
+        },
+        {
+          "q": "中心协作Agent同时作为执行节点时，如何保持责任边界？",
+          "answer": "采用：同一Agent可以同时承担中心协作角色和某个Task的执行角色，但两种角色在Task Graph、授权、执行记录和Evidence中显式区分；中心Agent不得因编排身份自动扩大权限，也不得独立完成最终验收。涉及最终接受、风险放行或自我产出验证时，必须回到Human。",
+          "note": "支持Human+Agent中心责任单元参与工作，同时防止中心Agent自我授权、自我验收和责任混淆。Codex/Workbuddy只作为实例，抽象使用Agent1/Agent2。"
+        },
+        {
+          "q": "任务图、事件、运行状态和证据如何分层？",
+          "answer": "采用：DirectedTaskGraph是中心责任单元批准的版本化编排计划；MessageEvent及生命周期事件是不可变事实；StateStore保存轻量状态事实并形成当前状态投影；ArtifactStore保存完整证据和大对象；当前运行图由计划版本、事件事实和状态投影派生，不直接覆盖历史。",
+          "note": "固定Plan/Fact/Projection/Artifact四层边界：计划表达应该如何做，事件表达发生了什么，状态表达当前到哪一步，Artifact保存可审查的完整材料。"
+        },
+        {
+          "q": "StateStore与ArtifactStore在OPN中的资源属性是什么？",
+          "answer": "采用：StateStore与ArtifactStore都是网络级逻辑资源，中心责任单元只拥有事件协调权，不因成为中心而自动拥有存储权、读取全部数据的权力或改变存储位置的权力。物理存储位置可替换并可跨设备部署，访问必须绑定身份、作用域、能力、授权和审计。StateStore保存轻量事实/索引/状态投影；ArtifactStore保存完整证据/报告/大对象。",
+          "note": "保持StateStore网络级资源决策，并将ArtifactStore纳入相同的逻辑资源边界；中心与存储位置解耦。"
+        },
+        {
+          "q": "MessageEvent的统一生命周期和副作用边界是什么？",
+          "answer": "采用：published -> preflighted -> claimed -> dispatched -> executing -> verified -> review-pending -> accepted；异常进入blocked、human-review-required、needs-revision、recovery-required、rejected或provider-outcome-uncertain。所有变化追加为不可变事实；只有进入dispatched后允许对应外部副作用；Provider结果不确定时必须停止，禁止盲目重试或假设成功。",
+          "note": "明确事件生命周期、状态事实和副作用门槛，作为Loop与Graph共同遵守的运行时底线。"
+        },
+        {
+          "q": "Graph Engineering是否采用Identity/Capability/Authority/Event/State五层图？",
+          "answer": "采用：Identity Graph、Capability Graph、Authority Graph、Event Graph、State Graph分别表达身份、能力、授权、事件参与和生命周期状态；Network Graph表达相对稳定的组网关系，Event Graph是其上的临时运行投影，State Graph由事实和投影派生。用户不能通过直接绘边获得权限，每条有效关系必须有来源、作用域、有效期和撤销记录。",
+          "note": "避免把拓扑连通、网络成员身份、事件参与和运行权限混为一谈；Graph UI是可审查投影，不是直接授权入口。"
+        },
+        {
+          "q": "网络成员资格与MessageEvent参与资格是否严格分离？",
+          "answer": "采用：Network Enrollment只证明节点身份和网络关系，不自动授予任务、Artifact、StateStore或外部资源权限；参与某个MessageEvent必须获得事件范围内明确、有限、可过期、可撤销的CapabilityGrant；Task Claim再授予某个具体任务的执行资格。加入网络不等于可读取全部状态、参与所有事件或执行所有任务。",
+          "note": "固定跨设备组网的最小安全边界，避免Network Graph连通被误解为运行时授权。"
+        },
+        {
+          "q": "OPN中的授权传递是否必须单调收敛、不可越权？",
+          "answer": "采用：中心责任单元只能在Human已授权范围内编排和分派，不能把自己没有的权限授予Agent，也不能通过任务拆分、事件转发或多级委托扩大原始权限。每一级授权都不得扩大作用域、延长有效期、降低风险等级或绕过Human Gate与task.dispatched。",
+          "note": "固定Human Authority -> Event Scope -> Capability Grant -> Task Claim -> Provider Adapter的单调权限链，协调权不等于资源所有权。"
+        },
+        {
+          "q": "遇到未知、歧义或无法验证时，OPN的统一默认行为是什么？",
+          "answer": "采用：资源隔离、权限、风险、成本、目标验收、验证、计划/授权/身份一致性或Provider结果任一无法确认时，必须停止当前路径，输出结构化Evidence和原因，进入blocked或human-review-required并返回Human；不得通过猜测、隐式授权或盲目重试继续扩大执行。",
+          "note": "将“未知即停止并回到Human”作为中心责任、Agent自治和安全边界的共同底线。"
+        },
+        {
+          "q": "OPN任务何时才算真正完成？",
+          "answer": "采用：只有必需Task达到终态、验证通过、Evidence完整且绑定一致、Review Handoff可审查、无未授权副作用，并由Human明确接受后才算accepted。Agent报告完成只是执行输出，不等于产品完成；否则进入blocked、needs-revision、recovery-required、rejected或provider-outcome-uncertain。",
+          "note": "将Human最终接受作为完成闭环，避免以Agent动作数量、执行结束或单次Provider返回替代产品完成。"
+        },
+        {
+          "q": "OPN的产品价值如何衡量？",
+          "answer": "采用：价值不以Agent数量、并发数、Token数或自动执行次数衡量，而以Human在责任不转移前提下获得的可验证、可负责、可恢复有效产出和更低协调成本衡量。Single-Agent OPN Atom是内部baseline，Graph Atom必须比较新增能力、协调成本、证据质量、恢复能力和未授权副作用（必须为零）。",
+          "note": "将产品目标从单Agent性能Benchmark转为Human负责的能力杠杆和可组合生产网络。"
+        },
+        {
+          "q": "何时允许从Single-Agent OPN Atom递归组合并ScaleUp/ScaleOut？",
+          "answer": "采用：只有子任务边界和Contract兼容、身份与CapabilityGrant独立有界、资源隔离可验证、执行独立或幂等、存在canonical aggregation/verification、fan-out与资源预算有上限、Human承担恢复路径时才允许扩张。任一条件未知就停止扩张，退回更小的已验证组合或Grill Human。",
+          "note": "Scale只复制已证明可组合的原子能力，不用节点数量掩盖责任、权限、隔离、幂等或验证未知。"
+        },
+        {
+          "q": "ZAgenticLoop的产品边界是什么？",
+          "answer": "采用：ZAgenticLoop负责OPN协议、身份/能力/授权、MessageEvent与DirectedTaskGraph、编排/路由/派发、Preflight/Claim/Dispatch门槛、Evidence/Review Handoff/Human决策、网络级StateStore/ArtifactStore契约、幂等/恢复/停止/审计；不负责Agent内部推理，不替Git/文件系统/外部服务实现通用并发锁，不替Human承担最终责任，不以Graph UI直接授予权限。资源隔离由中心责任单元在编排时决策并验证，未知就停并回Human。",
+          "note": "固定产品核心边界，避免从OPN协议产品漂移为Agent运行时、通用锁服务或自动责任代理。"
+        },
+        {
+          "q": "ZAgenticLoop核心协议与外部Agent/Workflow框架是什么关系？",
+          "answer": "采用内核加Extension：ZAgenticLoop维护最小稳定的provider-neutral OPN/Loop/Graph协议内核；LangGraph、AutoGen、CrewAI、LlamaIndex Workflows及其他Agent runtime作为未来可选Extension，通过Adapter接入。Extension不能替换Human责任、CapabilityGrant、Task Claim、task.dispatched、Evidence、Review Handoff、StateStore/ArtifactStore契约及未知即停止底线。",
+          "note": "先验证自有OPN产品、Loop Engineering和Graph Engineering实践，再扩展到成熟框架适配；避免核心协议被某个Agent框架绑架。"
+        },
+        {
+          "q": "ZAgenticLoop的产品演进阶梯如何定义？",
+          "answer": "采用：Loop Atom是协议最小闭环；Single-Agent OPN Atom是产品内部baseline；Multi-node Graph Atom是Graph Engineering首个验证目标；Multi-device OPN Network是跨设备/多Agent实际产品形态；ScaleUp/ScaleOut只扩展已证明可组合的协议和能力，不是默认目标。",
+          "note": "区分概念原子、产品基线、Graph验证场景、跨设备网络形态和规模化扩展，避免用一个成熟度词覆盖不同问题。"
+        },
+        {
+          "q": "OPN的三种组网模式和跨子网责任如何定义？",
+          "answer": "采用：模式A是Single-Agent OPN Atom；模式B是Human或Human+Agent作为中心责任单元编排Agent1、Agent2等执行节点的临时子网；模式C是本Human对自己的节点和授权负责，节点作为消费者加入其他中心责任单元发起的临时子网。外部中心只有该子网协调权，不自动取得本Human私有资源或扩大Agent权限；事件结束后临时关系和授权可撤销。",
+          "note": "明确网络中心的协调边界与节点原属Human的责任边界，避免临时组网变成所有权转移。"
+        },
+        {
+          "q": "OPN中的Network如何定义？",
+          "answer": "采用：Network不是设备清单或永久连接，而是具有作用域和生命周期、由Identity/Capability/Authority/Event/State/Resource Scope关系组成的协议关系集合。节点可参与多个网络或临时子网；加入网络不等于永久信任、所有权或无限授权；每个MessageEvent必须绑定明确的责任上下文，并在结束后撤销临时关系和授权。",
+          "note": "支持跨设备、多网络参与和临时子网，同时保持网络连通、资源所有权、事件参与和权限授予的严格分离。"
+        },
+        {
+          "q": "每个MessageEvent是否只能有一个最终责任中心？",
+          "answer": "采用：每个MessageEvent绑定一个Human或Human+Agent中心责任单元；其他Human、Agent、设备和服务只能作为事件范围内的协作者、执行者、验证者或资源提供者。中心可以委托执行权，但不能委托掉最终责任；多个Human可参与输入或审批，但必须明确最终接受权。",
+          "note": "避免共同负责导致无人负责；跨子网参与不改变事件的责任绑定。"
+        },
+        {
+          "q": "执行、Verification和Human Review是否必须逻辑分离？",
+          "answer": "采用：执行节点生成Result和Evidence，Verification检查是否满足Contract，Human做最终接受/修改/恢复/拒绝/停止。低风险可允许执行节点self-check，但必须显式标记；review-required必须有独立Verification和accepted Review Handoff；执行节点不能单独把结果标记为最终接受，中心Agent参与执行时同样不能自我最终验收。",
+          "note": "保留Agent效率，同时避免自己执行、自己证明、自己批准；最终责任始终回到Human。"
+        },
+        {
+          "q": "Review Handoff在OPN中的协议地位是什么？",
+          "answer": "采用：Review Handoff是结构化、可验证、可审计、可重放的协议对象，不是自然语言总结。它绑定MessageEvent、Plan、Task、Executor、Execution和Evidence，明确执行状态、Verification状态、结果摘要、外部副作用、未决风险、阻塞/恢复信息和请求Human决策，并支持继续、修改、恢复或拒绝。",
+          "note": "把Agent把工作交还给Human的边界固定为正式协议，区分执行结果、Verification结果和Human最终决策，同时避免泄露不必要的秘密。"
+        },
+        {
+          "q": "是否将统一心智模型锁定为1-1正式基线？",
+          "answer": "同意：锁定。后续产品、架构、协议和长期文档以本轮统一模型为准；当前1-1不再无限扩展新事项，下一步另建文档沉淀与下一里程碑路线图。",
+          "note": "Loop负责目标闭环，Graph负责关系组合，Human负责最终责任；后续沉淀产品边界、架构状态、已实现/未实现边界和下一路线图。"
         }
       ],
-      "notes": ""
+      "notes": "统一心智模型已锁定：ZAgenticLoop用Graph Engineering组织Human负责的OPN，用Loop Engineering让每个被编排节点完成可验证、可恢复的目标闭环；Graph负责组合，Loop负责闭环，Human负责最终责任。已确认核心对象链、中心责任单元与Agent执行节点边界、Plan/Fact/Projection/Artifact分层、网络级StateStore/ArtifactStore、事件生命周期、权限不可越权、未知即停止、Review Handoff、组网模式、产品边界、内核+Extension和产品演进阶梯。当前节点不再扩展新事项，下一步转入长期文档沉淀、实现边界盘点和下一里程碑规划。"
     },
     "1-2": {
       "id": "1-2",
@@ -3186,7 +3301,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-30 23:33:28",
+    "updated": "2026-07-31 00:00:49",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }
