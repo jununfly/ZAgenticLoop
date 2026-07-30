@@ -93,6 +93,58 @@ export function createStateStoreServer(input) {
             }
             return;
         }
+        const issueIntentMatch = request.method === 'POST' ? url.pathname.match(/^\/v1\/networks\/([^/]+)\/credentials\/issue-intent$/) : null;
+        if (issueIntentMatch) {
+            const contextHeader = request.headers['x-zj-loop-human-approval'];
+            if (typeof contextHeader !== 'string' || !contextHeader) {
+                sendJson(response, 401, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'human-context-required', side_effects_executed: false });
+                return;
+            }
+            if (!input.humanAuthorityVerifier) {
+                sendJson(response, 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'human-verifier-unavailable', side_effects_executed: false });
+                return;
+            }
+            if (!input.credentialIssuance) {
+                sendJson(response, 503, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'credential-issuance-unavailable', side_effects_executed: false });
+                return;
+            }
+            let body;
+            try {
+                body = await readJsonBody(request);
+            }
+            catch (error) {
+                const reason = error instanceof Error ? error.message : 'json-invalid';
+                sendJson(response, reason === 'payload-too-large' ? 413 : 400, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
+                return;
+            }
+            const networkId = decodeURIComponent(issueIntentMatch[1]);
+            const requestBody = body && typeof body === 'object' && !Array.isArray(body) ? body : null;
+            const bodyKeys = requestBody ? Object.keys(requestBody).sort().join(',') : '';
+            const requiredKeys = 'capabilities,event_id,expected_revision,expires_at,issued_at,node_id,request_id,task_id';
+            if (!requestBody || bodyKeys !== requiredKeys || requestBody.network_id !== undefined || !Number.isInteger(requestBody.expected_revision) || requestBody.expected_revision < 1 || !['request_id', 'node_id', 'event_id', 'task_id', 'issued_at', 'expires_at'].every((key) => typeof requestBody[key] === 'string') || !Array.isArray(requestBody.capabilities) || !requestBody.capabilities.every((value) => typeof value === 'string')) {
+                sendJson(response, 400, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'credential-issue-intent-invalid', side_effects_executed: false });
+                return;
+            }
+            const human = await Promise.resolve(input.humanAuthorityVerifier.verify({ context: contextHeader, action: 'credential.issue', request_body: { network_id: networkId, ...requestBody } }));
+            if (human.status !== 'allowed') {
+                sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: human.reason ?? 'human-context-invalid', side_effects_executed: false });
+                return;
+            }
+            if (!human.human_id) {
+                sendJson(response, 403, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason: 'human-identity-missing', side_effects_executed: false });
+                return;
+            }
+            try {
+                const result = await input.credentialIssuance.issueIntent({ network_id: networkId, expected_revision: requestBody.expected_revision, human_id: human.human_id, human_context: contextHeader, request: requestBody });
+                sendJson(response, result.status === 'recorded' ? 201 : 200, { schema: STATE_STORE_HTTP_SCHEMA, status: result.status, network_id: networkId, credential_id: result.credential_id, issuance_digest: result.issuance_digest, intent_expires_at: result.intent_expires_at, side_effects_executed: result.status === 'recorded' });
+            }
+            catch (error) {
+                const reason = error instanceof Error ? error.message : 'credential-issuance-failure';
+                const statusCode = reason === 'revision-mismatch' ? 409 : ['network-not-found', 'state-store-unavailable', 'credential-issuance-unavailable'].includes(reason) ? 503 : ['credential-issue-intent-invalid', 'approval-context-invalid', 'approval-context-mismatch', 'approval-capability-mismatch'].includes(reason) ? 400 : 503;
+                sendJson(response, statusCode, { schema: STATE_STORE_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
+            }
+            return;
+        }
         const eventMatch = url.pathname.match(/^\/v1\/networks\/([^/]+)\/events$/);
         if (request.method === 'POST' && eventMatch) {
             let body;

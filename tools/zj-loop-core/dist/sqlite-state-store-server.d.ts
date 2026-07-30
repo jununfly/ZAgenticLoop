@@ -35,9 +35,24 @@ export type HumanAuthorityVerifier = {
         reason?: string;
     };
 };
+export type CredentialIssueIntentService = {
+    issueIntent(input: {
+        network_id: string;
+        expected_revision: number;
+        human_id: string;
+        human_context: string;
+        request: Record<string, unknown>;
+    }): Promise<{
+        status: 'recorded' | 'duplicate';
+        credential_id: string;
+        issuance_digest: string;
+        intent_expires_at: string;
+    }>;
+};
 export declare function createStateStoreServer(input: {
     tls: ServerOptions;
     store: SqliteStateStore | null;
     credentialVerifier: CredentialVerifier | null;
     humanAuthorityVerifier?: HumanAuthorityVerifier | null;
+    credentialIssuance?: CredentialIssueIntentService | null;
 }): Server;

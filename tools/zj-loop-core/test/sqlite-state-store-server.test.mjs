@@ -333,3 +333,28 @@ test('StateStore service authorizes a real SQLite opaque credential against the 
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
 });
+
+test('StateStore issue-intent route requires Human context and forwards only bounded metadata', async () => {
+  const serverMaterial = await serverCertificate();
+  const clientMaterial = await serverCertificate('codex');
+  let observed;
+  const server = createStateStoreServer({
+    tls: { ...serverMaterial, ca: clientMaterial.cert },
+    store: null,
+    credentialVerifier: null,
+    humanAuthorityVerifier: { verify: (input) => { observed = input; return { status: 'allowed', human_id: 'human-1' }; } },
+    credentialIssuance: { issueIntent: async (input) => { observed = { ...observed, issuance: input }; return { status: 'recorded', credential_id: 'credential-1', issuance_digest: 'sha256:' + 'a'.repeat(64), intent_expires_at: '2026-07-30T01:05:00.000Z' }; } },
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const body = { request_id: 'request-1', node_id: 'node-1', event_id: 'event-1', task_id: 'task-1', capabilities: ['state.read'], issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T02:00:00.000Z', expected_revision: 1 };
+  const response = await requestJson({ address: server.address(), serverMaterial, clientMaterial, path: '/v1/networks/network-1/credentials/issue-intent', method: 'POST', body, headers: { 'x-zj-loop-human-approval': 'signed-context' } });
+  assert.equal(response.statusCode, 201);
+  assert.deepEqual(response.body, { schema: 'zj-loop.state_store_http.v1', status: 'recorded', network_id: 'network-1', credential_id: 'credential-1', issuance_digest: 'sha256:' + 'a'.repeat(64), intent_expires_at: '2026-07-30T01:05:00.000Z', side_effects_executed: true });
+  assert.equal(observed.issuance.network_id, 'network-1');
+  assert.equal(observed.issuance.expected_revision, 1);
+  assert.equal(observed.issuance.request.network_id, undefined);
+  assert.equal(JSON.stringify(response.body).includes('token'), false);
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});
