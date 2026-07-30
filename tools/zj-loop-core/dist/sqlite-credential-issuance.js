@@ -57,8 +57,11 @@ function bootstrap(db) {
       result_json TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS credential_issue_events_request_idx
-      ON credential_issue_events (request_id, sequence);
+    ON credential_issue_events (request_id, sequence);
   `);
+    const columns = db.prepare('PRAGMA table_info(credential_issue_intents)').all();
+    if (!columns.some((column) => column.name === 'revoked_at'))
+        db.exec('ALTER TABLE credential_issue_intents ADD COLUMN revoked_at TEXT');
 }
 function transaction(db, work) {
     db.exec('BEGIN IMMEDIATE');
@@ -129,11 +132,15 @@ export function createSqliteCredentialIssuance(input) {
             const current = request.now ?? now();
             const currentTime = parseTime(current, 'credential-clock-invalid');
             return transaction(db, () => {
-                const row = db.prepare('SELECT request_id, credential_id, network_id, node_id, intent_expires_at, claimed_at, token_hash FROM credential_issue_intents WHERE request_id = ?').get(request.request_id);
+                const row = db.prepare('SELECT request_id, credential_id, network_id, node_id, intent_expires_at, expires_at, claimed_at, token_hash, revoked_at FROM credential_issue_intents WHERE request_id = ?').get(request.request_id);
                 if (!row || row.credential_id !== request.credential_id || row.network_id !== request.network_id || row.node_id !== request.node_id)
                     throw new Error('credential-not-available');
+                if (row.revoked_at)
+                    throw new Error('credential-revoked');
                 if (currentTime >= parseTime(row.intent_expires_at, 'intent-expiry-invalid'))
                     throw new Error('intent-expired');
+                if (currentTime >= parseTime(row.expires_at, 'credential-expiry-invalid'))
+                    throw new Error('credential-expired');
                 if (row.claimed_at)
                     return { status: 'duplicate', credential_id: row.credential_id, claimed_at: row.claimed_at };
                 const claimedAt = current;
@@ -141,6 +148,31 @@ export function createSqliteCredentialIssuance(input) {
                 db.prepare('UPDATE credential_issue_intents SET claimed_at = ?, token_hash = ? WHERE request_id = ? AND claimed_at IS NULL').run(claimedAt, hashToken(token), request.request_id);
                 db.prepare('INSERT INTO credential_issue_events (request_id, event_type, occurred_at, result_json) VALUES (?, ?, ?, ?)').run(request.request_id, 'credential-claimed', claimedAt, JSON.stringify({ credential_id: row.credential_id, claimed_at: claimedAt }));
                 return { status: 'claimed', credential_id: row.credential_id, claimed_at: claimedAt, token };
+            });
+        },
+        async claimForPairingSession(request) {
+            for (const [value, error] of [[request.request_id, 'request-id-required'], [request.network_id, 'network-id-required'], [request.node_id, 'node-id-required'], [request.session_id, 'pairing-session-id-required']])
+                requireText(value, error);
+            const row = db.prepare('SELECT credential_id FROM credential_issue_intents WHERE request_id = ? AND network_id = ? AND node_id = ?').get(request.request_id, request.network_id, request.node_id);
+            if (!row)
+                throw new Error('credential-not-available');
+            return this.claim({ ...request, credential_id: row.credential_id });
+        },
+        async revoke(request) {
+            requireText(request.credential_id, 'credential-id-required');
+            requireText(request.request_id, 'request-id-required');
+            requireText(request.reason, 'credential-revoke-reason-required');
+            const revokedAt = request.now ?? now();
+            parseTime(revokedAt, 'credential-revoked-time-invalid');
+            return transaction(db, () => {
+                const row = db.prepare('SELECT revoked_at FROM credential_issue_intents WHERE credential_id = ?').get(request.credential_id);
+                if (!row)
+                    throw new Error('credential-not-found');
+                if (row.revoked_at)
+                    return { status: 'duplicate', credential_id: request.credential_id, revoked_at: row.revoked_at };
+                db.prepare('UPDATE credential_issue_intents SET revoked_at = ? WHERE credential_id = ?').run(revokedAt, request.credential_id);
+                db.prepare('INSERT INTO credential_issue_events (request_id, event_type, occurred_at, result_json) SELECT request_id, ?, ?, ? FROM credential_issue_intents WHERE credential_id = ?').run('credential-revoked', revokedAt, JSON.stringify({ credential_id: request.credential_id, reason: request.reason }), request.credential_id);
+                return { status: 'revoked', credential_id: request.credential_id, revoked_at: revokedAt };
             });
         },
         async close() {

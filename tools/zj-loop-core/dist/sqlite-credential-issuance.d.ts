@@ -33,6 +33,23 @@ export type SqliteCredentialIssuance = {
         credential_id: string;
         now?: string;
     }): Promise<CredentialClaimResult>;
+    claimForPairingSession(input: {
+        request_id: string;
+        network_id: string;
+        node_id: string;
+        session_id: string;
+        now?: string;
+    }): Promise<CredentialClaimResult>;
+    revoke(input: {
+        credential_id: string;
+        request_id: string;
+        reason: string;
+        now?: string;
+    }): Promise<{
+        status: 'revoked' | 'duplicate';
+        credential_id: string;
+        revoked_at?: string;
+    }>;
     close(): Promise<void>;
 };
 export declare function credentialIssuanceDigest(input: CredentialIssuanceRequest): string;
