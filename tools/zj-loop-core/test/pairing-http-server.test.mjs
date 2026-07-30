@@ -54,13 +54,13 @@ function request({ address, server, client, path: requestPath, method = 'GET', b
   });
 }
 
-async function fixture() {
+async function fixture(options = {}) {
   const serverMaterial = await certificate('localhost');
   const clientMaterial = await certificate('workbuddy', true);
   const identity = buildNodeIdentity({ certificate_pem: clientMaterial.cert, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
   const requestBody = createPairingRequest({ request_id: 'pair-1', network_id: 'network-1', identity, endpoint: 'loopback://127.0.0.1:43123', requested_capabilities: ['event.consume'], expires_at: '2026-07-29T04:00:00.000Z' });
   const proof = createPairingRequestProof({ request: requestBody, private_key_pem: clientMaterial.key });
-  const server = createPairingHttpServer({ tls: { key: serverMaterial.key, cert: serverMaterial.cert, ca: clientMaterial.cert }, recordStore: createInMemoryPairingRecordStore(), now: () => '2026-07-29T03:00:00.000Z' });
+  const server = createPairingHttpServer({ tls: { key: serverMaterial.key, cert: serverMaterial.cert, ca: clientMaterial.cert }, recordStore: createInMemoryPairingRecordStore(), now: () => '2026-07-29T03:00:00.000Z', ...options });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   return { server, address: server.address(), serverMaterial, clientMaterial, requestBody, proof };
 }
@@ -146,6 +146,20 @@ test('Pairing session is bound to the client node and token', { skip: !supportsE
   const wrongToken = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: `/v1/pairing-requests/${created.body.session.session_id}/status`, headers: { authorization: 'Bearer wrong' } });
   assert.equal(wrongToken.statusCode, 401);
   assert.equal(wrongToken.body.reason, 'pairing-session-invalid');
+  await close(value);
+});
+
+test('Pairing credential claim derives network and node from the authenticated session', { skip: !supportsEd25519Certificates }, async () => {
+  let observed;
+  let claimCount = 0;
+  const value = await fixture({ credentialClaim: { claim: async (input) => { observed = input; claimCount += 1; return claimCount === 1 ? { status: 'claimed', credential_id: 'credential-1', claimed_at: '2026-07-29T03:01:00.000Z', token: 'opaque-token-value' } : { status: 'duplicate', credential_id: 'credential-1', claimed_at: '2026-07-29T03:01:00.000Z' }; } } });
+  const created = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
+  const claimed = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: `/v1/pairing-requests/${value.requestBody.request_id}/credential/claim`, method: 'POST', body: {}, headers: { authorization: `Bearer ${created.body.session_token}` } });
+  assert.equal(claimed.statusCode, 200);
+  assert.equal(claimed.body.token, 'opaque-token-value');
+  assert.deepEqual(observed, { request_id: value.requestBody.request_id, session_id: created.body.session.session_id, network_id: 'network-1', node_id: value.requestBody.node_id });
+  const retry = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: `/v1/pairing-requests/${value.requestBody.request_id}/credential/claim`, method: 'POST', body: {}, headers: { authorization: `Bearer ${created.body.session_token}` } });
+  assert.equal('token' in retry.body, false);
   await close(value);
 });
 

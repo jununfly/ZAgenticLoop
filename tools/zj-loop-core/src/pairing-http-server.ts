@@ -26,6 +26,10 @@ export type PairingOwnerAuthenticator = {
   authenticate(input: { action: 'pairing.list' | 'pairing.approve' | 'pairing.reject'; authorization: string | null; request_id?: string; request_digest?: string; context?: HumanApprovalContext }): Promise<{ status: 'allowed' | 'blocked'; human_id?: string; reason?: string }> | { status: 'allowed' | 'blocked'; human_id?: string; reason?: string };
 };
 
+export type CredentialClaimService = {
+  claim(input: { request_id: string; session_id: string; network_id: string; node_id: string }): Promise<{ status: 'claimed' | 'duplicate'; credential_id: string; claimed_at: string; token?: string }>;
+};
+
 function json(response: import('node:http').ServerResponse, statusCode: number, body: Record<string, unknown>): void {
   const encoded = JSON.stringify(body);
   response.statusCode = statusCode;
@@ -62,6 +66,8 @@ function errorStatus(reason: string): number {
   if (reason === 'owner-authenticator-unavailable') return 503;
   if (reason === 'owner-authentication-required' || reason === 'owner-not-authorized') return 403;
   if (reason === 'pairing-request-conflict' || reason === 'pairing-projection-conflict') return 409;
+  if (reason === 'credential-claim-unavailable') return 503;
+  if (reason === 'credential-not-available' || reason === 'intent-expired' || reason === 'credential-claim-conflict') return 409;
   if (reason === 'pairing-service-not-ready') return 503;
   return 400;
 }
@@ -91,6 +97,7 @@ export function createPairingHttpServer(input: {
   readinessCheck?: { check(): Promise<{ status: 'ready' | 'not-ready'; reason?: string }> | { status: 'ready' | 'not-ready'; reason?: string } } | null;
   now?: () => string;
   session_ttl_ms?: number;
+  credentialClaim?: CredentialClaimService | null;
 }): Server {
   const now = input.now ?? (() => new Date().toISOString());
   const sessionTtl = input.session_ttl_ms ?? 5 * 60 * 1000;
@@ -189,6 +196,31 @@ export function createPairingHttpServer(input: {
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'pairing-request-invalid';
         blocked(response, reason === 'pairing-event-conflict' ? 'pairing-request-conflict' : reason);
+      }
+      return;
+    }
+    const claimMatch = request.method === 'POST' ? url.pathname.match(/^\/v1\/pairing-requests\/([^/]+)\/credential\/claim$/) : null;
+    if (claimMatch) {
+      if (!input.credentialClaim) { blocked(response, 'credential-claim-unavailable'); return; }
+      const requestId = decodeURIComponent(claimMatch[1]);
+      const authorization = request.headers.authorization;
+      const session = [...sessions.values()].find((candidate) => candidate.request_id === requestId);
+      if (!session || !authorization?.startsWith('Bearer ') || tokenHash(authorization.slice(7)) !== session.session_token_hash) { blocked(response, 'pairing-session-invalid'); return; }
+      if (session.node_id !== nodeId) { blocked(response, 'pairing-session-node-mismatch'); return; }
+      if (Date.parse(now()) >= Date.parse(session.expires_at)) { blocked(response, 'pairing-session-expired'); return; }
+      let body: unknown = null;
+      try {
+        body = await readBody(request);
+      } catch (error) {
+        blocked(response, error instanceof Error ? error.message : 'json-invalid');
+        return;
+      }
+      if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 0) { blocked(response, 'credential-claim-request-invalid'); return; }
+      try {
+        const result = await input.credentialClaim.claim({ request_id: requestId, session_id: session.session_id, network_id: session.network_id, node_id: nodeId });
+        json(response, result.status === 'claimed' ? 200 : 200, { schema: PAIRING_HTTP_SCHEMA, status: result.status, request_id: requestId, credential_id: result.credential_id, claimed_at: result.claimed_at, ...(result.token ? { token: result.token } : {}), side_effects_executed: result.status === 'claimed' });
+      } catch (error) {
+        blocked(response, error instanceof Error ? error.message : 'credential-claim-conflict');
       }
       return;
     }

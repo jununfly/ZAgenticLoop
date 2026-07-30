@@ -19,6 +19,19 @@ export type PairingOwnerAuthenticator = {
         reason?: string;
     };
 };
+export type CredentialClaimService = {
+    claim(input: {
+        request_id: string;
+        session_id: string;
+        network_id: string;
+        node_id: string;
+    }): Promise<{
+        status: 'claimed' | 'duplicate';
+        credential_id: string;
+        claimed_at: string;
+        token?: string;
+    }>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -34,4 +47,5 @@ export declare function createPairingHttpServer(input: {
     } | null;
     now?: () => string;
     session_ttl_ms?: number;
+    credentialClaim?: CredentialClaimService | null;
 }): Server;
