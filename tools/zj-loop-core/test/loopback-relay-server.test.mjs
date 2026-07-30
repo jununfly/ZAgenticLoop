@@ -1,11 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash, X509Certificate } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import https from 'node:https';
 import os from 'node:os';
 import path from 'node:path';
 import { createLoopbackRelayServer } from '../dist/loopback-relay-server.js';
+import { createSqliteCredentialVerifier } from '../dist/sqlite-credential-verifier.js';
 
 async function certificate(commonName = 'localhost') {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-relay-'));
@@ -64,6 +66,27 @@ test('Relay creates a bounded session after mTLS and credential authorization', 
   await new Promise((resolve) => server.close(resolve));
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
+});
+
+test('Relay creates a session from the real SQLite credential verifier', async () => {
+  const serverMaterial = await certificate();
+  const clientMaterial = await certificate('workbuddy');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-relay-credential-'));
+  const credentialStore = createSqliteCredentialVerifier({ filename: path.join(root, 'credentials.db'), now: () => '2026-07-29T03:00:00.000Z' });
+  const nodeId = createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex');
+  const issued = await credentialStore.issueCredential({ credential: { schema: 'zj-loop.scoped_credential.v1', credential_id: 'credential-1', issuer: 'state-store', network_id: 'network-1', node_id: nodeId, event_id: 'event-1', task_id: 'task-1', capabilities: ['event.consume'], issued_at: '2026-07-29T02:00:00.000Z', expires_at: '2026-07-29T04:00:00.000Z' } });
+  const server = createLoopbackRelayServer({ tls: { ...serverMaterial, ca: clientMaterial.cert }, sessionVerifier: credentialStore, now: () => '2026-07-29T03:00:00.000Z', session_ttl_ms: 15 * 60 * 1000 });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const response = await request({ address: server.address(), server: serverMaterial, client: clientMaterial, body: { network_id: 'network-1', protocol_version: 'relay.v1' }, headers: { authorization: `Bearer ${issued.token}` } });
+
+  assert.equal(response.statusCode, 201, JSON.stringify(response.body));
+  assert.equal(response.body.session.credential_id, 'credential-1');
+  assert.equal(response.body.session.node_id, nodeId);
+  await new Promise((resolve) => server.close(resolve));
+  await credentialStore.close();
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+  await rm(root, { recursive: true, force: true });
 });
 
 test('Relay healthz is unauthenticated and contains no network or credential state', async () => {

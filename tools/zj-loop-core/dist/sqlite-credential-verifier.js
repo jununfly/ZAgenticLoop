@@ -88,7 +88,7 @@ export function createSqliteCredentialVerifier(input) {
             return { status: 'revoked' };
         },
         async verify(request) {
-            const row = db.prepare('SELECT network_id, node_id, event_id, task_id, capabilities_json, issued_at, expires_at, revoked_at FROM credential_metadata WHERE token_hash = ?').get(hashToken(request.token));
+            const row = db.prepare('SELECT credential_id, network_id, node_id, event_id, task_id, capabilities_json, issued_at, expires_at, revoked_at FROM credential_metadata WHERE token_hash = ?').get(hashToken(request.token));
             if (!row)
                 return { status: 'blocked', reason: 'credential-invalid' };
             if (row.revoked_at)
@@ -109,7 +109,7 @@ export function createSqliteCredentialVerifier(input) {
             const capabilities = new Set(JSON.parse(row.capabilities_json));
             if ((request.required_capabilities ?? []).some((capability) => !capabilities.has(capability)))
                 return { status: 'blocked', reason: 'credential-capability-mismatch' };
-            return { status: 'allowed' };
+            return { status: 'allowed', credential_id: row.credential_id, expires_at: row.expires_at };
         },
         async close() {
             if (db.open)

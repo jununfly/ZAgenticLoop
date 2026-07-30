@@ -13,9 +13,13 @@ export type CredentialVerificationRequest = {
 export type CredentialVerifier = {
     verify(input: CredentialVerificationRequest): Promise<{
         status: 'allowed' | 'blocked';
+        credential_id?: string;
+        expires_at?: string;
         reason?: string;
     }> | {
         status: 'allowed' | 'blocked';
+        credential_id?: string;
+        expires_at?: string;
         reason?: string;
     };
 };

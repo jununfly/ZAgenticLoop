@@ -93,7 +93,7 @@ export function createSqliteCredentialVerifier(input: { filename: string; now?: 
       return { status: 'revoked' };
     },
     async verify(request: CredentialVerificationRequest) {
-      const row = db.prepare('SELECT network_id, node_id, event_id, task_id, capabilities_json, issued_at, expires_at, revoked_at FROM credential_metadata WHERE token_hash = ?').get(hashToken(request.token)) as { network_id: string; node_id: string; event_id: string; task_id: string; capabilities_json: string; issued_at: string; expires_at: string; revoked_at: string | null } | undefined;
+      const row = db.prepare('SELECT credential_id, network_id, node_id, event_id, task_id, capabilities_json, issued_at, expires_at, revoked_at FROM credential_metadata WHERE token_hash = ?').get(hashToken(request.token)) as { credential_id: string; network_id: string; node_id: string; event_id: string; task_id: string; capabilities_json: string; issued_at: string; expires_at: string; revoked_at: string | null } | undefined;
       if (!row) return { status: 'blocked', reason: 'credential-invalid' as const };
       if (row.revoked_at) return { status: 'blocked', reason: 'credential-revoked' as const };
       const current = parseTime(now(), 'credential-clock-invalid');
@@ -105,7 +105,7 @@ export function createSqliteCredentialVerifier(input: { filename: string; now?: 
       if (request.task_id !== undefined && request.task_id !== row.task_id) return { status: 'blocked', reason: 'credential-task-mismatch' as const };
       const capabilities = new Set(JSON.parse(row.capabilities_json) as string[]);
       if ((request.required_capabilities ?? []).some((capability) => !capabilities.has(capability))) return { status: 'blocked', reason: 'credential-capability-mismatch' as const };
-      return { status: 'allowed' as const };
+      return { status: 'allowed' as const, credential_id: row.credential_id, expires_at: row.expires_at };
     },
     async close() {
       if (db.open) db.close();
