@@ -24,7 +24,7 @@ test('runtime claim revalidates persisted context and is idempotent through Stat
     await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-30T00:00:00.000Z' });
     const grant = plan.nodes[0].task.capability_grant;
     const stored = await artifactStore.putArtifact({ network_id: 'network-1', content: new TextEncoder().encode(JSON.stringify({ schema: 'zj-loop.orchestration_preflight.v1', status: 'execution-ready', side_effects_executed: false, network_id: 'network-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: plan.plan_digest, expires_at: '2026-07-30T01:00:00.000Z', errors: [], task_grants: [{ task_id: grant.task_id, node_id: 'center', capabilities: [], resource_scope: grant.resource_scope, grant_digest: grant.grant_digest }], isolation: [] })), content_type: 'application/json', now: '2026-07-30T00:30:00.000Z' });
-    const input = { stateStore, artifactStore, network_id: 'network-1', expected_revision: 1, preflight_artifact_id: stored.metadata.artifact_id, plan, task_id: 'center-task', node_id: 'center', enrollment: { node_id: 'codex', network_id: 'network-1', status: 'approved', capability_ceiling: [] }, now: '2026-07-30T00:30:00.000Z' };
+    const input = { stateStore, artifactStore, network_id: 'network-1', execution_id: 'execution-1', expected_revision: 1, preflight_artifact_id: stored.metadata.artifact_id, plan, task_id: 'center-task', node_id: 'center', enrollment: { node_id: 'codex', network_id: 'network-1', status: 'approved', capability_ceiling: [] }, now: '2026-07-30T00:30:00.000Z' };
     const first = await claimOrchestrationTask(input);
     assert.equal(first.status, 'claimed', first.reason);
     assert.equal(first.revision, 2);
@@ -37,4 +37,49 @@ test('runtime claim revalidates persisted context and is idempotent through Stat
     await stateStore.close();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('runtime claims with the same task id are isolated by execution and plan scope', async () => {
+  const makePlan = (plan_id, plan_revision, event_id) => {
+    const plan = createOrchestrationPlan({ schema: 'zj-loop.orchestration_plan.v1', protocol_version: 'orchestration-plan.v1', plan_id, plan_revision, network_id: 'network-1', event_id, status: 'draft', canonicalization: 'jcs-rfc8785', canonicalization_profile: 'orchestration-plan-v1-2026-07', profile_sha256: orchestrationPlanProfileSha256(), center_node_id: 'center', review_handoff_node_id: 'handoff', nodes: [{ node_id: 'center', role: 'center', assigned_node: 'codex', task: task('same-task', 'codex') }, { node_id: 'handoff', role: 'review-handoff', assigned_node: 'codex', task: task('handoff-task', 'codex') }], edges: [{ edge_id: 'edge-1', from_node_id: 'center', to_node_id: 'handoff', type: 'control' }] });
+    for (const node of plan.nodes) { node.task.capability_grant.plan_id = plan_id; node.task.capability_grant.plan_revision = plan_revision; node.task.capability_grant.event_id = event_id; node.task.capability_grant.grant_digest = orchestrationCapabilityGrantDigest(node.task.capability_grant); }
+    plan.plan_digest = orchestrationPlanDigest(plan);
+    return plan;
+  };
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-runtime-claim-scope-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  const artifactStore = createContentAddressedArtifactStore({ root: path.join(root, 'artifacts') });
+  try {
+    await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-30T00:00:00.000Z' });
+    const plans = [makePlan('plan-1', 1, 'event-1'), makePlan('plan-2', 1, 'event-2')];
+    const inputs = plans.map((plan, index) => {
+      const grant = plan.nodes[0].task.capability_grant;
+      return artifactStore.putArtifact({ network_id: 'network-1', content: new TextEncoder().encode(JSON.stringify({ schema: 'zj-loop.orchestration_preflight.v1', status: 'execution-ready', side_effects_executed: false, network_id: 'network-1', plan_id: plan.plan_id, plan_revision: plan.plan_revision, plan_digest: plan.plan_digest, expires_at: '2026-07-30T01:00:00.000Z', errors: [], task_grants: [{ task_id: grant.task_id, node_id: 'center', capabilities: [], resource_scope: grant.resource_scope, grant_digest: grant.grant_digest }], isolation: [] })), content_type: 'application/json', now: '2026-07-30T00:30:00.000Z' }).then((stored) => ({ stateStore, artifactStore, network_id: 'network-1', execution_id: `execution-${index + 1}`, expected_revision: index + 1, preflight_artifact_id: stored.metadata.artifact_id, plan, task_id: 'same-task', node_id: 'center', enrollment: { node_id: 'codex', network_id: 'network-1', status: 'approved', capability_ceiling: [] }, now: '2026-07-30T00:30:00.000Z' }));
+    });
+    const first = await inputs[0];
+    const second = await inputs[1];
+    assert.equal((await claimOrchestrationTask(first)).status, 'claimed');
+    assert.equal((await claimOrchestrationTask(second)).status, 'claimed');
+    assert.equal((await claimOrchestrationTask({ ...first, expected_revision: 3 })).status, 'duplicate');
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('concurrent claims in one execution scope produce one winner', async () => {
+  const plan = createOrchestrationPlan({ schema: 'zj-loop.orchestration_plan.v1', protocol_version: 'orchestration-plan.v1', plan_id: 'plan-concurrent', plan_revision: 1, network_id: 'network-1', event_id: 'event-concurrent', status: 'draft', canonicalization: 'jcs-rfc8785', canonicalization_profile: 'orchestration-plan-v1-2026-07', profile_sha256: orchestrationPlanProfileSha256(), center_node_id: 'center', review_handoff_node_id: 'handoff', nodes: [{ node_id: 'center', role: 'center', assigned_node: 'codex', task: task('concurrent-task', 'codex') }, { node_id: 'handoff', role: 'review-handoff', assigned_node: 'codex', task: task('handoff-task', 'codex') }], edges: [{ edge_id: 'edge-1', from_node_id: 'center', to_node_id: 'handoff', type: 'control' }] });
+  for (const node of plan.nodes) { node.task.capability_grant.plan_id = plan.plan_id; node.task.capability_grant.event_id = plan.event_id; node.task.capability_grant.grant_digest = orchestrationCapabilityGrantDigest(node.task.capability_grant); }
+  plan.plan_digest = orchestrationPlanDigest(plan);
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-runtime-claim-concurrent-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  const artifactStore = createContentAddressedArtifactStore({ root: path.join(root, 'artifacts') });
+  try {
+    await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-30T00:00:00.000Z' });
+    const grant = plan.nodes[0].task.capability_grant;
+    const stored = await artifactStore.putArtifact({ network_id: 'network-1', content: new TextEncoder().encode(JSON.stringify({ schema: 'zj-loop.orchestration_preflight.v1', status: 'execution-ready', side_effects_executed: false, network_id: 'network-1', plan_id: plan.plan_id, plan_revision: 1, plan_digest: plan.plan_digest, expires_at: '2026-07-30T01:00:00.000Z', errors: [], task_grants: [{ task_id: grant.task_id, node_id: 'center', capabilities: [], resource_scope: grant.resource_scope, grant_digest: grant.grant_digest }], isolation: [] })), content_type: 'application/json', now: '2026-07-30T00:30:00.000Z' });
+    const input = { stateStore, artifactStore, network_id: 'network-1', execution_id: 'execution-concurrent', expected_revision: 1, preflight_artifact_id: stored.metadata.artifact_id, plan, task_id: 'concurrent-task', node_id: 'center', enrollment: { node_id: 'codex', network_id: 'network-1', status: 'approved', capability_ceiling: [] }, now: '2026-07-30T00:30:00.000Z' };
+    const results = await Promise.all([claimOrchestrationTask(input), claimOrchestrationTask(input)]);
+    assert.equal(results.filter((result) => result.status === 'claimed').length, 1);
+    assert.equal(results.filter((result) => result.status === 'duplicate' || result.status === 'blocked').length, 1);
+    const events = await stateStore.readEvents({ network_id: 'network-1', after_revision: 1 });
+    assert.equal(events.events.length, 1);
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });

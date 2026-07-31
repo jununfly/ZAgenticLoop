@@ -3067,9 +3067,199 @@
           "q": "密钥轮换或撤销后，历史Human Decision如何处理？",
           "answer": "采用：撤销或轮换默认只阻止该Key产生新的批准，不回溯否定在有效时间窗内已验证并进入不可变记录的历史决策；尚未完成re-preflight的待执行Plan必须重新检查Key状态，必要时重新Human Grill。若撤销原因是密钥泄露或批准证据被判定无效，则作为安全事件冻结相关Plan和Execution，要求新的HumanSigner重新批准。",
           "note": "区分凭证生命周期与历史责任证据；安全事件可以触发更严格的冻结和重新授权，不能静默继续执行。"
+        },
+        {
+          "q": "Human Decision记录后，谁负责创建新的Plan revision？",
+          "answer": "采用协议协调器创建不可变的新OrchestrationPlan revision：复制原Plan并只应用已选择的隔离策略或约束变化，重新计算全部CapabilityGrant、grant_digest和plan_digest。新Plan只能处于待重新校验状态，不能直接dispatchable；只有re-preflight成功后才进入execution-ready。CLI、Web UI和Agent不能手工修改旧Plan或直接放行任务。",
+          "note": "Human Decision是授权输入；Plan revision生成和放行属于协议协调职责。旧Plan保持审计只读，re-preflight是唯一执行资格门禁。"
+        },
+        {
+          "q": "新Plan revision必须绑定哪些不可变关联？",
+          "answer": "采用：新Plan revision至少绑定parent_plan_id、parent_plan_revision、grill_id、decision_id、decision_digest、event_id、resource_isolation_profile、新grant_digest、plan_digest、创建者责任单元和创建时间。该关联集合证明计划变化的责任来源、原始阻塞上下文和新的授权边界，禁止生成脱离原始Grill/Decision的孤立Plan。",
+          "note": "旧Plan和原始Grill/Decision保持审计只读；新Plan的来源关系必须可重放、可验证。"
+        },
+        {
+          "q": "同一Human Decision被重复处理时，Plan revision如何幂等？",
+          "answer": "采用decision_id或decision_digest作为唯一幂等键：第一次处理创建唯一新Plan revision并记录plan-revision-created；相同digest重试返回duplicate并返回原revision，不创建第二个Plan；同一grill_id的不同Decision返回conflict；改变策略必须创建新的Grill或基于新事实创建新的Decision，不能覆盖已有revision。",
+          "note": "Plan revision创建本身也必须是append-only、可重放和无副作用的协议事实；重复请求不能产生新的授权边界或执行分支。"
+        },
+        {
+          "q": "从Human Decision到新Plan revision再到re-preflight期间，是否必须保持零外部副作用？",
+          "answer": "采用：整个阶段只写StateStore和ArtifactStore的append-only协议事实与审计证据，不访问目标代码库、不创建branch/worktree、不调用Provider、不发送执行请求。只有re-preflight返回execution-ready后，claim/dispatch才允许产生被授权的外部副作用；通知仍只作为至少一次唤醒信号。",
+          "note": "计划修订和门禁重算是纯协议阶段，避免Human一次选择被隐式执行两次或在未重新验证时产生资源变化。"
+        },
+        {
+          "q": "re-preflight是否必须重新验证全部资源隔离证据？",
+          "answer": "采用：新Plan revision的全部task/resource binding必须重新验证；证据必须绑定新plan_revision，或明确证明仍处于有效事实窗口并且资源版本、隔离策略digest和作用域仍匹配。任何证据过期、作用域不匹配、策略变化或外部事实不确定，都返回blocked或needs-human-grill，不能继承旧Plan的execution-ready。",
+          "note": "旧Plan的verified只证明旧版本和旧事实，不自动证明新版本；re-preflight必须是新授权边界的完整门禁。"
+        },
+        {
+          "q": "旧资源隔离证据声明仍适用时，最低需要哪些绑定字段？",
+          "answer": "采用最低绑定集合：evidence_id、evidence_digest、resource_id与资源版本或快照标识、isolation_strategy与strategy_digest、plan_id和plan_revision或有效事实窗口、适用task_id与resource_scope、生成者身份、生成时间与过期时间、side_effects_executed及证据状态。缺少关键绑定不能继承verified，必须重新取证或blocked。",
+          "note": "证据必须证明具体资源、策略、计划和时间边界；仅有一条旧的verified标记不足以支撑新授权。"
+        },
+        {
+          "q": "re-preflight结果如何持久化并供runtime claim消费？",
+          "answer": "采用双层持久化：ArtifactStore保存完整re-preflight输入摘要、错误、证据引用、Plan/Decision绑定和side_effects_executed；StateStore只追加orchestration.re-preflight.execution-ready或orchestration.re-preflight.blocked轻量事实。两者必须绑定plan_id、plan_revision、plan_digest、decision_digest和grant_digest；runtime claim只能接受对应新revision的execution-ready Artifact，不能复用旧Artifact。",
+          "note": "完整证据与当前状态投影分离；Artifact是可重放事实，StateStore是CAS生命周期索引，二者缺一不可。"
+        },
+        {
+          "q": "execution-ready Artifact的消费窗口如何定义？",
+          "answer": "采用短时、单task/grant授权窗口：Artifact绑定expires_at；首次合法claim后原子记录对应task/grant已消费；相同task/grant重复claim返回duplicate；过期、Plan revision不匹配、grant_digest不匹配或授权撤销时blocked；其他独立task可继续claim，单个task claim不能被当成整个Plan放行。",
+          "note": "授权过期和按任务消费防止旧Artifact重放，同时保留Graph中独立任务的并行性；claim仍是协议事实，不等于Provider副作用已执行。"
+        },
+        {
+          "q": "claim与真正dispatch的原子性边界如何定义？",
+          "answer": "采用两阶段：claim只在StateStore原子记录task/grant获得执行资格，side_effects_executed=false，不调用Provider；dispatch前再次校验claim、Plan/Grant/Artifact绑定、过期、撤销和依赖条件，只有dispatch允许进入Provider adapter。dispatch前后的request、response和uncertainty分别追加Evidence；Provider不确定时冻结task/resource，不自动重放claim。",
+          "note": "claim是授权事实，不是外部执行完成；分离两阶段以避免claim成功但Provider失败被误判完成，也避免重复claim直接产生副作用。"
+        },
+        {
+          "q": "dispatch调用Provider时是否必须使用稳定的provider_request_id幂等键？",
+          "answer": "采用：provider_request_id由network_id、event_id、plan_revision、task_id、grant_digest和dispatch_attempt_scope稳定计算。Provider adapter必须将其作为幂等请求键；同一安全执行尝试重试复用同一键。明确成功补录receipt，明确失败且无副作用进入recovery，不确定则冻结资源进入outcome-uncertain，禁止换新键盲目重试。只有新的recovery Execution才生成新的request_id。",
+          "note": "幂等键绑定执行责任边界；新request_id意味着新的Execution和新的授权/事实判断，不能把它当作普通网络重试。"
+        },
+        {
+          "q": "Provider adapter是否统一返回四类协议结果？",
+          "answer": "采用固定四类：confirmed-success（可验证receipt并可推进依赖）、confirmed-failure-no-side-effect（明确无副作用并可recovery）、partial-success（部分资源或步骤已生效，必须Human Grill）、outcome-uncertain（无法判断结果，冻结相关scope并禁止盲重试）。HTTP状态、SDK异常和本地错误必须映射到这四类之一，Provider不能自定义绕过核心协议的继续或自动重试语义。",
+          "note": "统一结果分类让核心协议掌握责任、恢复和依赖推进；Provider adapter只负责事实适配，不负责决定是否继续。"
+        },
+        {
+          "q": "Provider四类结果各自需要哪些最小Evidence？",
+          "answer": "采用：全部结果绑定execution_id、provider_request_id、Provider identity、时间、request/response digest、resource scope和side_effects_executed。confirmed-success必须有可验证receipt或provider observation；confirmed-failure-no-side-effect必须有明确失败事实和无副作用证明；partial-success必须列出已生效与未完成资源或步骤及归属/状态观察；outcome-uncertain必须记录不确定原因、最后已知事实、冻结scope、允许查询动作和禁止重试动作。缺少对应Evidence只能blocked，不能仅凭返回码升级为成功或无副作用失败。",
+          "note": "Provider返回分类与证明材料分离；结果字段描述分类，Evidence证明事实和作用域，避免把HTTP状态冒充业务事实。"
+        },
+        {
+          "q": "outcome-uncertain的Provider状态查询是否必须有界？",
+          "answer": "采用有界reconciliation_budget：每次uncertainty绑定最大查询次数、截止时间、查询scope、允许的只读接口、单次超时和成本上限。预算耗尽仍无法确认时保持blocked并提交Human Grill；查询不能创建或修改资源、推进依赖或生成新的dispatch request。只有Human Decision创建新的recovery Execution后，才可获得新的查询预算。",
+          "note": "查询是事实收敛动作，不是隐式重试；预算约束防止Agent无限放大成本和权限，超限必须回到Human责任链。"
+        },
+        {
+          "q": "初始reconciliation_budget由谁制定并承担责任？",
+          "answer": "采用：中心责任单元（Human或Human+Agent）在Plan/preflight阶段提出预算候选与推荐值；协议根据CapabilityGrant、Provider capability、风险等级和成本上限做确定性校验。提高预算、扩大scope、增加权限或允许非只读查询必须重新Human Grill；Provider不能自行提高，Agent不能静默扩大。",
+          "note": "预算是资源隔离和责任边界的一部分，不是Provider内部实现细节；中心责任单元负责提出，Human负责需要升级时的最终责任选择。"
+        },
+        {
+          "q": "reconciliation budget发生变化时，是否必须创建新的Plan revision？",
+          "answer": "采用：任何影响查询次数、时间、scope、接口、超时、成本或权限的预算变化，都视为授权边界变化，必须创建新的Plan revision、重新计算grant_digest、必要时重新Human Grill并re-preflight。原Plan预算只可审计不可原地修改；运行计数和已消耗额度等事实投影可以追加StateStore事件，不创建新Plan。",
+          "note": "预算不是普通运行参数，而是Capability、风险、成本和责任边界；只有消耗事实变化不改变授权边界时才允许留在StateStore投影层。"
+        },
+        {
+          "q": "recovery decision是否建立独立类型？",
+          "answer": "采用独立RecoveryDecision类型，同时复用HumanGrill的签名、CAS、审计和re-preflight基础；额外绑定parent_execution_id、uncertainty_evidence_id、recovery_action（adopt/reconcile/compensate/abandon）、recovery_reason及新Execution/Plan生成约束。普通资源隔离选择与外部副作用不确定后的责任处置不混用同一语义。",
+          "note": "RecoveryDecision仍是Human责任决策，但它处理的是既有Execution和Provider事实，不是首次编排选择；独立类型让恢复证据和责任关系可重放。"
+        },
+        {
+          "q": "Recovery action的幂等与互斥如何处理？",
+          "answer": "采用单winner互斥规则：recovery_decision_id或recovery_decision_digest作为幂等键；相同action/digest重试返回duplicate并返回原recovery Execution；同一parent_execution_id的不同action/digest返回conflict；adopt、reconcile、compensate、abandon四者只能有一个winner。进入abandon后不得继续恢复，事实变化必须创建新的事件或Grill。",
+          "note": "同一Provider uncertainty只能形成一条责任处置路径，避免补偿、采纳和放弃并发产生相互矛盾的外部动作。"
+        },
+        {
+          "q": "四类Recovery action的后续生命周期状态是否必须区分？",
+          "answer": "采用明确状态映射：adopt进入recovery-adopted，补录已确认结果并允许进入验证或Review Handoff但不自动重做Provider动作；reconcile进入reconciliation-required，只能按新预算执行只读事实收敛；compensate进入recovery-planned，必须创建新Execution、Plan revision并re-preflight；abandon进入abandoned，冻结相关资源与证据、停止依赖推进并转人工处置。不能统一返回recovered。",
+          "note": "生命周期状态必须表达不同的事实、权限和后续门禁，避免界面或Agent把采纳、不确定收敛、补偿执行和放弃混成同一种完成。"
+        },
+        {
+          "q": "adopt是否仍必须经过完整验证与Review Handoff？",
+          "answer": "采用：adopt必须经过独立语义验证、确定性gate、依赖闭合检查和Review Handoff。adopt只表示采纳Provider已确认且Evidence足够的结果，禁止重复执行原Provider动作；不等于结果天然正确，也不能直接把事件标记为完成。",
+          "note": "Provider事实确认与产品目标验证是两件事；采纳结果仍需证明任务输出满足验证条件和整体Review责任。"
+        },
+        {
+          "q": "reconcile只读收敛出新事实后，是否必须重新触发独立验证？",
+          "answer": "采用：必须重新验证。reconcile只能更新Provider observation或Evidence，不得直接推进依赖；新事实必须重新匹配task verification conditions、资源归属、策略digest和Plan revision。验证失败回到blocked或新的Human Grill，验证通过后才能进入Review Handoff或下一阶段。",
+          "note": "事实收敛不等于任务结果正确；reconcile改变了可用事实，必须重新证明任务目标、资源和依赖仍成立。"
+        },
+        {
+          "q": "compensate补偿动作是否必须先经过独立资源隔离preflight？",
+          "answer": "采用：必须。compensate是新的外部副作用，不是撤销按钮；必须创建新的recovery Execution和Plan revision，明确补偿读写资源、隔离策略、CapabilityGrant、Provider request_id、回滚和失败后果，并重新执行Human approval（若授权边界变化）与resource-isolation preflight。未通过前保持recovery-planned，不得调用Provider。",
+          "note": "补偿动作与原始动作具有独立风险和资源边界，不能继承原Execution的放行资格或隐式使用旧幂等键。"
+        },
+        {
+          "q": "abandon是否允许系统自动关闭事件？",
+          "answer": "采用：不允许静默自动关闭。abandon只能将相关Task或Resource置为abandoned、冻结Evidence并停止依赖推进；若要结束事件，必须由Human明确确认终止或转人工，记录终止原因、剩余风险、资源归属和后续责任人。仍有未确认外部资源时事件保持blocked或human-attention-required，不能伪装正常完成。",
+          "note": "abandon结束的是当前自动推进路径，不等于外部世界已清理或风险已消失；事件终止必须保留责任和后续处置入口。"
+        },
+        {
+          "q": "事件进入abandoned或Human终止后，资源与证据如何保留？",
+          "answer": "采用：Grill、Decision、Plan、Execution、Provider request/response digest、Evidence和Receipt永久append-only保留；敏感原文按ArtifactStore脱敏、加密和访问策略保存，不在StateStore重复存放。外部资源不由ZAgenticLoop自动删除或假设已清理，只记录最后已知状态和责任人。可按策略归档或加密销毁，但必须保留不可篡改摘要、时间线和销毁证明。",
+          "note": "终止自动推进不等于外部资源完成清理；证据保留保证责任、复盘和未来人工处置可追溯。"
+        },
+        {
+          "q": "事件对外呈现completed或abandoned前，是否都必须经过最终Review Handoff？",
+          "answer": "采用：必须。Review Handoff独立汇总目标与验收条件、Plan/Task/依赖最终状态、Provider结果与副作用事实、验证gate、未解决风险、外部资源最后已知状态、Human决策和责任主体。只有Review Handoff成功才允许对外显示completed或abandoned，否则保持blocked或human-attention-required。",
+          "note": "最终状态不是Provider返回值或单个Task状态；Review Handoff是对外责任交付和证据闭合的独立门禁。"
+        },
+        {
+          "q": "是否冻结recovery设计并进入下一条TDD纵切？",
+          "answer": "采用：冻结recovery设计，进入下一条TDD纵切。只实现RecoveryDecision结构化协议、四类action的CAS winner/duplicate/conflict、parent_execution_id与uncertainty Evidence绑定、recovery生命周期状态、新recovery Execution/Plan revision创建记录和re-preflight阻断测试；暂不实现真实Provider补偿、完整Review Handoff UI或跨设备传输。",
+          "note": "Human Grill/recovery设计分支已收敛，后续以测试证明协议边界，不继续扩展产品范围。"
+        },
+        {
+          "q": "新recovery Execution/Plan的关联如何建模？",
+          "answer": "采用独立RecoveryPlanRevisionRecord envelope：内部引用标准闭合的OrchestrationPlan；envelope保存parent_plan_id/parent_plan_revision、parent_execution_id、recovery_decision_id、uncertainty_evidence_id、新plan_digest、grant_digest、resource_isolation_profile、status=recovery-planned和re-preflight_artifact_id（生成后）。不修改旧Plan，也不向既有Plan schema注入recovery专用字段。",
+          "note": "保持OrchestrationPlan协议兼容；recovery责任关系通过独立、可重放的关联记录表达，只有对应re-preflight通过后才允许消费。"
+        },
+        {
+          "q": "RecoveryPlanRevisionRecord如何与ArtifactStore、StateStore和runtime claim绑定？",
+          "answer": "采用双层持久化：ArtifactStore保存完整RecoveryPlanRevisionRecord及关联标准OrchestrationPlan摘要；StateStore追加唯一recovery.plan-revision.created事实，幂等键为recovery_plan_id或recovery_decision_id。re-preflight成功后追加recovery.plan-revision.execution-ready事实并绑定repreflight_artifact_id。runtime claim必须同时验证RecoveryPlanRevisionRecord、re-preflight Artifact、Task Grant和parent_execution_id；recovery-planned、recovery-decision-recorded或digest不匹配一律blocked。",
+          "note": "完整envelope是可重放证据，StateStore是CAS生命周期索引；recovery claim不能只看某一层或复用原Execution的放行事实。"
+        },
+        {
+          "q": "Recovery runtime claim如何复用现有claim？",
+          "answer": "采用新增薄适配器claimRecoveryTask：先验证RecoveryPlanRevisionRecord、repreflight_artifact_id、parent_execution_id、Plan/Grant digest和re-preflight execution-ready，再委托现有claimOrchestrationTask完成StateStore CAS claim。不复制claim逻辑，不绕过enrollment、grant和过期检查；recovery-planned、recovery decision未记录或re-preflight不匹配直接blocked；claim不调用Provider并保持side_effects_executed=false。",
+          "note": "Recovery只增加来源和父Execution绑定，通用claim门禁仍是唯一执行资格实现，避免两套生命周期语义漂移。"
+        },
+        {
+          "q": "parent_execution_id的存在性证明采用什么来源？",
+          "answer": "采用：StateStore必须已有不可变execution.started或等价父Execution事实，绑定network_id、event_id、plan_id/plan_revision、execution_id、原始grant_digest和执行节点身份。claimRecoveryTask在委托通用claim前读取并校验该事实；缺失、跨network、Plan/revision不匹配或父Execution已终止时blocked。不接受只在Recovery envelope中自报parent_execution_id。",
+          "note": "Recovery父子关系属于StateStore生命周期事实，不能由Recovery artifact自证；这样才能证明恢复确实针对原Execution，而不是伪造一个可用父ID。"
+        },
+        {
+          "q": "task claim的唯一身份是否必须包含Plan与Execution scope？",
+          "answer": "采用复合claim identity：network_id、event_id、plan_id、plan_revision、execution_id、task_id和node_id。相同scope重试返回duplicate，不同Plan、Execution或Graph event中的同名task_id可独立claim；StateStore aggregate和query按该复合身份判重，不能只按task_id。",
+          "note": "恢复任务可能复用逻辑task_id；复合身份防止旧Execution误判新Recovery claim，同时保留同一scope的幂等语义。"
+        },
+        {
+          "q": "ProviderOutcome记录后如何映射生命周期状态？",
+          "answer": "采用：confirmed-success只进入verification-required并等待独立验证与Review Handoff；confirmed-failure-no-side-effect进入recovery-required；partial-success冻结相关资源并进入needs-human-grill；outcome-uncertain冻结相关资源并保持blocked。任何结果都不自动标记任务完成、不自动创建RecoveryDecision、不自动调用补偿动作。",
+          "note": "Provider outcome是事实分类，不是继续执行授权；生命周期映射保持纯协议，后续动作必须重新经过Human责任链与Plan/re-preflight门禁。"
+        },
+        {
+          "q": "生命周期状态是否作为独立StateStore事件追加？",
+          "answer": "采用：不单独追加状态事件。只追加不可变provider.outcome.recorded事实，生命周期状态由ProviderOutcome与当前任务事实确定性派生；只有Human Decision、Recovery Plan、Verification或Review Handoff等新的责任/事实动作才追加对应事件。",
+          "note": "避免Provider outcome事实与状态事件出现双重真相；状态是投影，不是第二条可竞争的事实链。"
+        },
+        {
+          "q": "confirmed-success的独立验证责任如何划分？",
+          "answer": "采用：Provider只能证明外部执行结果；confirmed-success只进入verification-required，由独立Verification节点/Verifier追加绑定outcome_digest、task/plan/revision/execution和验收条件的verification.passed或verification.failed事实。只有独立验证通过后才允许Review Handoff；验证失败进入blocked或新的Human Grill，不能自动重试Provider。",
+          "note": "将Provider事实确认与产品目标验收分离，避免Provider自证完成或验证失败触发未授权重试。"
+        },
+        {
+          "q": "VerificationRecord如何持久化？",
+          "answer": "采用：VerificationRecord以append-only StateStore事实持久化为verification.passed或verification.failed；相同verification_digest重试返回duplicate，同一outcome scope的不同验证结果返回conflict；不直接追加task.completed、不自动推进Review Handoff，只有后续独立Review Handoff事实才能改变对外完成状态。",
+          "note": "保持Provider outcome、Verification和Review Handoff三层事实边界，避免验证结果越级成为任务完成。"
+        },
+        {
+          "q": "Review Handoff的最小放行条件是什么？",
+          "answer": "采用：Review Handoff只接受verification.passed；必须绑定outcome_digest、verification_digest、Plan/Execution/Task scope，确认任务依赖闭合，列出剩余风险、外部资源最后已知状态和责任主体；未解决风险不能静默忽略。Handoff追加独立事实，只有review-handoff.accepted后事件才允许对外显示completed；verification.failed、Provider uncertainty或未闭合依赖一律blocked。",
+          "note": "将Provider事实、独立验证、Review责任交付和对外completed严格分层。"
+        },
+        {
+          "q": "Review Handoff存在剩余风险时是否允许accepted？",
+          "answer": "采用：MVP不允许。remaining_risks非空时Handoff必须blocked并进入新的Human Grill或人工处置；不能通过已知风险字段直接标记完成。未来如支持Human明确接受风险，新增独立risk-acceptance协议；当前只有remaining_risks为空、依赖闭合且Verification passed才允许review-handoff.accepted。",
+          "note": "把风险接受与普通交付分开，避免未解决风险被字段化后静默完成。"
+        },
+        {
+          "q": "Review Handoff如何持久化？",
+          "answer": "采用：Review Handoff以append-only StateStore事实持久化为review-handoff.accepted或review-handoff.blocked；事实绑定outcome/verification/Plan/Execution/Task scope和handoff_digest。同一Verification scope同一handoff_digest重试返回duplicate，不同Handoff返回conflict；任何Handoff事实都不得直接写task.completed或event.completed，最终对外completed投影必须继续与独立完成门禁分离。",
+          "note": "保持Review Handoff独立于Provider outcome与Verification；接受或阻塞都是可审计事实，不是自动完成命令。"
+        },
+        {
+          "q": "Review Handoff事实的并发语义是什么？",
+          "answer": "采用：同一outcome/verification/Plan/Execution/Task scope只允许一个Review Handoff winner；相同handoff_digest重试返回duplicate，不同handoff_digest返回conflict，CAS revision冲突不得静默重试或覆盖既有事实。不同scope可以独立记录accepted或blocked。",
+          "note": "把Review Handoff视为责任交付边界上的并发资源，避免多设备或多界面最后一次提交覆盖已形成的责任事实。"
         }
       ],
-      "notes": "协议设计已冻结，进入TDD实现。已完成第一条纵切：HumanGrill结构化对象、HumanGrillDecision、内存CAS coordinator、SQLite append-only StateStore CAS持久化；覆盖accepted/duplicate/conflict/stale-decision、跨连接并发winner收敛和side_effects_executed=false。MVP范围：Human Grill、Human Decision、Plan revision、CAS幂等/冲突/stale、blocked/recovery、Provider outcome uncertainty、re-preflight唯一放行、HumanSigner验证与Key撤销检查、内存/SQLite StateStore与ArtifactStore、模拟Provider、并发/离线stale/跨设备通知协议测试。暂不实现完整Web UI、真实多平台签名provider全适配、生产Provider副作用、P2P传输和复杂同步冲突自动合并。"
+      "notes": "协议设计已冻结，进入TDD实现。已完成第一条纵切：HumanGrill结构化对象、HumanGrillDecision、内存CAS coordinator、SQLite append-only StateStore CAS持久化；覆盖accepted/duplicate/conflict/stale-decision、跨连接并发winner收敛和side_effects_executed=false。已完成第二条recovery纵切：独立RecoveryDecision、adopt/reconcile/compensate/abandon单winner CAS、parent_execution_id与uncertainty Evidence绑定、SQLite append-only recovery decision persistence、RecoveryPlanRevisionRecord envelope（含event_id、parent plan/execution、decision/evidence和digest绑定）、ArtifactStore/StateStore双层创建持久化、re-preflight readiness gate、claimRecoveryTask fail-closed适配器和StateStore parent execution.started事实校验；覆盖accepted/duplicate/conflict/stale-decision、跨连接并发、parent binding、旧revision阻断、Artifact绑定、Plan/Grant digest匹配、不同重试时间的幂等、父Execution缺失/终止阻断、完整正向委托和side_effects_executed=false。下一步先解决通用claim的task identity是否需要包含Plan/Execution scope，再继续 recovery claim 的重复/并发验证。MVP范围：Human Grill、Human Decision、Plan revision、CAS幂等/冲突/stale、blocked/recovery、Provider outcome uncertainty、re-preflight唯一放行、HumanSigner验证与Key撤销检查、内存/SQLite StateStore与ArtifactStore、模拟Provider、并发/离线stale/跨设备通知协议测试。暂不实现完整Web UI、真实多平台签名provider全适配、生产Provider副作用、P2P传输和复杂同步冲突自动合并。已完成通用claim identity纵切：claim scope固定包含network_id、event_id、plan_id、plan_revision、execution_id、task_id、node_id；StateStore聚合查询不再只按task_id，旧Execution/Plan不会污染新Recovery claim；同scope retry返回duplicate，不同scope可独立claimed，并发scope只有一个winner。已构建并通过18项Human Grill/recovery/runtime claim聚焦测试，覆盖隔离、CAS并发、正向recovery委托和side_effects_executed=false。已完成Provider outcome协议纵切：新增闭合provider-neutral ProviderOutcome，固定confirmed-success、confirmed-failure-no-side-effect、partial-success、outcome-uncertain四类结果；各类必须携带对应receipt、无副作用证明、部分资源观察或不确定冻结scope与有界reconciliation_budget；结果绑定network/event/plan/revision/execution/task/provider_request/resource scope并生成canonical digest；跨scope绑定不匹配fail-closed。3项ProviderOutcome测试通过，模拟结果与真实Provider边界保持分离。已完成Provider outcome事实记录纵切：recordProviderOutcome将合法结果追加为provider.outcome.recorded StateStore事实；相同provider_request_id与相同outcome_digest幂等duplicate，不同结果conflict，非法结果blocked；事实记录不推进Task、不调用Provider且自身side_effects_executed=false。Provider协议与事实层共5项测试通过。已完成isolated SimulatedProvider fixture纵切：通过同一provider-neutral adapter边界生成四类ProviderOutcome；fixture使用独立namespace和可重置虚拟资源状态，结果显式标记provider_kind=simulated、fixture_state_digest、virtual_side_effects和real_provider_calls=0；同provider_request_id重试复用结果，request digest冲突fail-closed，不产生真实外部调用。新增7项Provider协议/事实/fixture测试。已完成Provider outcome到生命周期映射纵切：confirmed-success仅进入verification-required；confirmed-failure-no-side-effect进入recovery-required；partial-success冻结资源并进入needs-human-grill；outcome-uncertain冻结资源并保持blocked；非法outcome进入blocked-input。映射纯协议、task_completed恒为false、side_effects_executed恒为false，不自动创建RecoveryDecision或补偿动作；相关回归9项通过。已完成独立Provider outcome verification纵切：只有confirmed-success可创建VerificationRecord；verifier_id必须不同于Provider，记录绑定outcome_digest、Plan/Execution/Task scope、完整验收条件、满足/失败条件和evidence_digest；结果为passed或failed，均要求Review Handoff，provider_retry_allowed=false、side_effects_executed=false；非法或非success outcome一律blocked。相关回归11项通过。已完成Verification事实持久化纵切：recordProviderOutcomeVerification追加verification.passed或verification.failed；相同verification_digest返回duplicate，同一outcome scope不同验证结果返回conflict；非法记录blocked；不追加task.completed、不自动推进Review Handoff，记录接口自身side_effects_executed=false。相关回归13项通过。已完成Review Handoff纯协议纵切：仅verification.passed、dependencies_closed=true且remaining_risks为空时accepted；verification.failed、未闭合依赖或剩余风险返回blocked并保留reason；记录绑定outcome/verification/Plan/Execution/Task scope、外部资源最后已知状态和责任主体；event_completed/task_completed/side_effects_executed均为false。相关回归15项通过。"
     },
     "1-4-7": {
       "id": "1-4-7",
@@ -3423,7 +3613,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-31 00:57:39",
+    "updated": "2026-07-31 18:05:31",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

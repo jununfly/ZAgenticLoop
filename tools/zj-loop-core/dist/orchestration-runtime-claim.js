@@ -1,12 +1,16 @@
 import { parseBoundedJson } from './parse-bounded-json.js';
 import { orchestrationCapabilityGrantDigest } from './orchestration-preflight.js';
 export const ORCHESTRATION_TASK_CLAIM_SCHEMA = 'zj-loop.orchestration_task_claim.v1';
+function claimIdentity(input) {
+    return [input.network_id, input.event_id, input.plan_id, input.plan_revision, input.execution_id, input.task_id, input.node_id].join(':');
+}
 function claimEventId(input) {
-    return `orchestration-task-claimed:${input.network_id}:${input.plan_id}:${input.plan_revision}:${input.task_id}:${input.node_id}`;
+    return `orchestration-task-claimed:${claimIdentity(input)}`;
 }
 function blocked(event_id, reason) { return { schema: ORCHESTRATION_TASK_CLAIM_SCHEMA, status: 'blocked', event_id, side_effects_executed: false, reason }; }
 export async function claimOrchestrationTask(input) {
-    const event_id = claimEventId({ network_id: input.network_id, plan_id: input.plan.plan_id, plan_revision: input.plan.plan_revision, task_id: input.task_id, node_id: input.node_id });
+    const event_id = claimEventId({ network_id: input.network_id, event_id: input.plan.event_id, plan_id: input.plan.plan_id, plan_revision: input.plan.plan_revision, execution_id: input.execution_id, task_id: input.task_id, node_id: input.node_id });
+    const aggregate_id = claimIdentity({ network_id: input.network_id, event_id: input.plan.event_id, plan_id: input.plan.plan_id, plan_revision: input.plan.plan_revision, execution_id: input.execution_id, task_id: input.task_id, node_id: input.node_id });
     let artifact;
     try {
         artifact = await input.artifactStore.readArtifact({ network_id: input.network_id, artifact_id: input.preflight_artifact_id });
@@ -44,10 +48,10 @@ export async function claimOrchestrationTask(input) {
     if (!contextGrant || contextGrant.grant_digest !== grant.grant_digest)
         return blocked(event_id, 'preflight-grant-binding-mismatch');
     const result = await input.stateStore.runAtomic((transaction) => {
-        const existing = transaction.database.prepare('SELECT event_id, payload_json FROM state_events WHERE network_id = ? AND aggregate_type = ? AND aggregate_id = ? AND event_type = ?').get(input.network_id, 'orchestration-task', input.task_id, 'task.claimed');
+        const existing = transaction.database.prepare('SELECT event_id, payload_json FROM state_events WHERE network_id = ? AND aggregate_type = ? AND aggregate_id = ? AND event_type = ?').get(input.network_id, 'orchestration-task', aggregate_id, 'task.claimed');
         if (existing)
             return { status: 'duplicate', current_revision: input.expected_revision, event_id: existing.event_id };
-        const appended = transaction.appendEvent({ network_id: input.network_id, expected_revision: input.expected_revision, now: input.now, event: { event_id, aggregate_type: 'orchestration-task', aggregate_id: input.task_id, event_type: 'task.claimed', occurred_at: input.now, payload: { schema: ORCHESTRATION_TASK_CLAIM_SCHEMA, network_id: input.network_id, plan_id: input.plan.plan_id, plan_revision: input.plan.plan_revision, plan_digest: input.plan.plan_digest, task_id: input.task_id, node_id: input.node_id, grant_digest: grant.grant_digest, preflight_artifact_id: input.preflight_artifact_id } } });
+        const appended = transaction.appendEvent({ network_id: input.network_id, expected_revision: input.expected_revision, now: input.now, event: { event_id, aggregate_type: 'orchestration-task', aggregate_id, event_type: 'task.claimed', occurred_at: input.now, payload: { schema: ORCHESTRATION_TASK_CLAIM_SCHEMA, network_id: input.network_id, event_id: input.plan.event_id, plan_id: input.plan.plan_id, plan_revision: input.plan.plan_revision, execution_id: input.execution_id, plan_digest: input.plan.plan_digest, task_id: input.task_id, node_id: input.node_id, grant_digest: grant.grant_digest, preflight_artifact_id: input.preflight_artifact_id } } });
         return appended.status === 'recorded' ? { status: 'claimed', revision: appended.revision, current_revision: appended.current_revision, event_id } : { status: appended.status === 'duplicate' ? 'duplicate' : 'blocked', current_revision: appended.current_revision, event_id, reason: appended.reason };
     });
     return { schema: ORCHESTRATION_TASK_CLAIM_SCHEMA, status: result.status, event_id: result.event_id, side_effects_executed: false, ...(result.revision === undefined ? {} : { revision: result.revision }), ...(result.current_revision === undefined ? {} : { current_revision: result.current_revision }), ...(result.reason === undefined ? {} : { reason: result.reason }) };
@@ -55,4 +59,4 @@ export async function claimOrchestrationTask(input) {
 function nodeAssignedNode(plan, nodeId) {
     return plan.nodes.find((node) => node.node_id === nodeId)?.assigned_node;
 }
-export { claimEventId as orchestrationTaskClaimEventId };
+export { claimEventId as orchestrationTaskClaimEventId, claimIdentity as orchestrationTaskClaimIdentity };

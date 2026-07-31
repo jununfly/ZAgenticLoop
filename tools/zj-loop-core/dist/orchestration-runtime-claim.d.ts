@@ -11,10 +11,21 @@ export type RuntimeClaimResult = {
     revision?: number;
     current_revision?: number;
 };
-declare function claimEventId(input: {
+declare function claimIdentity(input: {
     network_id: string;
+    event_id: string;
     plan_id: string;
     plan_revision: number;
+    execution_id: string;
+    task_id: string;
+    node_id: string;
+}): string;
+declare function claimEventId(input: {
+    network_id: string;
+    event_id: string;
+    plan_id: string;
+    plan_revision: number;
+    execution_id: string;
     task_id: string;
     node_id: string;
 }): string;
@@ -22,6 +33,7 @@ export declare function claimOrchestrationTask(input: {
     stateStore: SqliteStateStore;
     artifactStore: ContentAddressedArtifactStore;
     network_id: string;
+    execution_id: string;
     expected_revision: number;
     preflight_artifact_id: string;
     plan: OrchestrationPlan;
@@ -35,4 +47,4 @@ export declare function claimOrchestrationTask(input: {
     };
     now: string;
 }): Promise<RuntimeClaimResult>;
-export { claimEventId as orchestrationTaskClaimEventId };
+export { claimEventId as orchestrationTaskClaimEventId, claimIdentity as orchestrationTaskClaimIdentity };
