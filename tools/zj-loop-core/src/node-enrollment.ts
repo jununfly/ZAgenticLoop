@@ -1,5 +1,6 @@
 import { createHash, createPrivateKey, createPublicKey, sign, verify, X509Certificate } from 'node:crypto';
 import type { ConnectionOptions, TlsOptions } from 'node:tls';
+import { normalizeP256EcdsaDer } from './human-signer.js';
 
 export const NODE_IDENTITY_SCHEMA = 'zj-loop.node_identity.v1' as const;
 export const ENROLLMENT_PROJECTION_SCHEMA = 'zj-loop.enrollment_projection.v1' as const;
@@ -13,6 +14,7 @@ export type NodeIdentity = {
   node_id: string;
   certificate_sha256: string;
   certificate_pem: string;
+  algorithm: 'ECDSA-P256';
   display_name: string;
   agent_kind: string;
   agent_version: string;
@@ -118,7 +120,7 @@ export type PairingRequest = {
 };
 
 export type PairingRequestProof = {
-  algorithm: 'Ed25519';
+  algorithm: 'ECDSA-P256';
   request_digest: string;
   signature_base64: string;
 };
@@ -212,26 +214,26 @@ export function pairingRequestDigest(request: PairingRequest): string {
 
 export function createPairingRequestProof(input: { request: PairingRequest; private_key_pem: string }): PairingRequestProof {
   const privateKey = createPrivateKey(input.private_key_pem);
-  if (privateKey.asymmetricKeyType !== 'ed25519') throw new Error('pairing-proof-key-type-invalid');
+  if (privateKey.asymmetricKeyType !== 'ec' || privateKey.asymmetricKeyDetails?.namedCurve !== 'prime256v1') throw new Error('pairing-proof-key-type-invalid');
   const certificate = new X509Certificate(input.request.identity.certificate_pem);
-  if (certificate.publicKey.asymmetricKeyType !== 'ed25519') throw new Error('pairing-proof-certificate-type-invalid');
+  if (certificate.publicKey.asymmetricKeyType !== 'ec' || certificate.publicKey.asymmetricKeyDetails?.namedCurve !== 'prime256v1') throw new Error('pairing-proof-certificate-type-invalid');
   const privatePublicKey = createPublicKey(privateKey).export({ type: 'spki', format: 'der' });
   const certificatePublicKey = certificate.publicKey.export({ type: 'spki', format: 'der' });
   if (!privatePublicKey.equals(certificatePublicKey)) throw new Error('pairing-proof-key-mismatch');
   const digest = pairingRequestDigest(input.request);
-  const signature = sign(null, Buffer.from(digest, 'utf8'), privateKey);
-  return { algorithm: 'Ed25519', request_digest: digest, signature_base64: signature.toString('base64') };
+  const signature = normalizeP256EcdsaDer(sign('sha256', Buffer.from(digest, 'utf8'), privateKey));
+  return { algorithm: 'ECDSA-P256', request_digest: digest, signature_base64: Buffer.from(signature).toString('base64') };
 }
 
 export function verifyPairingRequestProof(input: { request: PairingRequest; proof: PairingRequestProof }): boolean {
-  if (input.proof.algorithm !== 'Ed25519') return false;
+  if (input.proof.algorithm !== 'ECDSA-P256') return false;
   if (!/^[0-9a-f]{64}$/.test(input.proof.request_digest)) return false;
   const digest = pairingRequestDigest(input.request);
   if (digest !== input.proof.request_digest) return false;
   try {
     const certificate = new X509Certificate(input.request.identity.certificate_pem);
-    if (certificate.publicKey.asymmetricKeyType !== 'ed25519') return false;
-    return verify(null, Buffer.from(digest, 'utf8'), certificate.publicKey, Buffer.from(input.proof.signature_base64, 'base64'));
+    if (certificate.publicKey.asymmetricKeyType !== 'ec' || certificate.publicKey.asymmetricKeyDetails?.namedCurve !== 'prime256v1') return false;
+    return verify('sha256', Buffer.from(digest, 'utf8'), certificate.publicKey, Buffer.from(input.proof.signature_base64, 'base64'));
   } catch {
     return false;
   }
@@ -346,12 +348,14 @@ export function buildNodeIdentity(input: {
   } catch {
     throw new Error('certificate-invalid');
   }
+  if (certificate.publicKey.asymmetricKeyType !== 'ec' || certificate.publicKey.asymmetricKeyDetails?.namedCurve !== 'prime256v1') throw new Error('certificate-key-type-invalid');
   const fingerprint = createHash('sha256').update(certificate.raw).digest('hex');
   return {
     schema: NODE_IDENTITY_SCHEMA,
     node_id: fingerprint,
     certificate_sha256: fingerprint,
     certificate_pem: input.certificate_pem,
+    algorithm: 'ECDSA-P256',
     display_name: input.display_name,
     agent_kind: input.agent_kind,
     agent_version: input.agent_version,

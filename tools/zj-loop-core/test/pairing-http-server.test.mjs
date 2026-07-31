@@ -20,12 +20,12 @@ import { createSqliteCredentialIssuance, credentialIssuanceDigest } from '../dis
 
 const OPENSSL_BIN = process.env.OPENSSL_BIN ?? (existsSync('/opt/homebrew/opt/openssl@3/bin/openssl') ? '/opt/homebrew/opt/openssl@3/bin/openssl' : 'openssl');
 
-const supportsEd25519Certificates = (() => {
+const supportsP256Certificates = (() => {
   try {
     const root = execFileSync('mktemp', ['-d'], { encoding: 'utf8' }).trim();
     const key = path.join(root, 'key.pem');
     const cert = path.join(root, 'cert.pem');
-    execFileSync(OPENSSL_BIN, ['genpkey', '-algorithm', 'Ed25519', '-out', key], { stdio: 'ignore' });
+    execFileSync(OPENSSL_BIN, ['ecparam', '-name', 'prime256v1', '-genkey', '-noout', '-out', key], { stdio: 'ignore' });
     execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', key, '-out', cert, '-subj', '/CN=probe', '-days', '1'], { stdio: 'ignore' });
     return true;
   } catch {
@@ -33,12 +33,11 @@ const supportsEd25519Certificates = (() => {
   }
 })();
 
-async function certificate(commonName, ed25519 = false) {
+async function certificate(commonName) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-pairing-http-'));
   const keyPath = path.join(root, 'key.pem');
   const certPath = path.join(root, 'cert.pem');
-  if (ed25519) execFileSync(OPENSSL_BIN, ['genpkey', '-algorithm', 'Ed25519', '-out', keyPath], { stdio: 'ignore' });
-  else execFileSync(OPENSSL_BIN, ['genrsa', '-out', keyPath, '2048'], { stdio: 'ignore' });
+  execFileSync(OPENSSL_BIN, ['ecparam', '-name', 'prime256v1', '-genkey', '-noout', '-out', keyPath], { stdio: 'ignore' });
   execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${commonName}`, '-days', '1'], { stdio: 'ignore' });
   return { root, key: await readFile(keyPath, 'utf8'), cert: await readFile(certPath, 'utf8') };
 }
@@ -59,7 +58,7 @@ function request({ address, server, client, path: requestPath, method = 'GET', b
 
 async function fixture(options = {}) {
   const serverMaterial = await certificate('localhost');
-  const clientMaterial = options.clientMaterial ?? await certificate('workbuddy', true);
+  const clientMaterial = options.clientMaterial ?? await certificate('workbuddy');
   const identity = buildNodeIdentity({ certificate_pem: clientMaterial.cert, display_name: 'Workbuddy', agent_kind: 'workbuddy', agent_version: 'test' });
   const requestBody = createPairingRequest({ request_id: 'pair-1', network_id: 'network-1', identity, endpoint: 'loopback://127.0.0.1:43123', requested_capabilities: ['event.consume'], expires_at: '2026-07-29T04:00:00.000Z' });
   const proof = createPairingRequestProof({ request: requestBody, private_key_pem: clientMaterial.key });
@@ -100,7 +99,7 @@ test('Pairing rejects business requests without a client certificate', async () 
   await rm(serverMaterial.root, { recursive: true, force: true });
 });
 
-test('Pairing creates a request-scoped session after mTLS and proof-of-possession validation', { skip: !supportsEd25519Certificates }, async () => {
+test('Pairing creates a request-scoped session after mTLS and proof-of-possession validation', { skip: !supportsP256Certificates }, async () => {
   const value = await fixture();
   const created = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
   assert.equal(created.statusCode, 201);
@@ -117,7 +116,7 @@ test('Pairing creates a request-scoped session after mTLS and proof-of-possessio
   await close(value);
 });
 
-test('Pairing request retries return the same session and do not append another record', { skip: !supportsEd25519Certificates }, async () => {
+test('Pairing request retries return the same session and do not append another record', { skip: !supportsP256Certificates }, async () => {
   const value = await fixture();
   const first = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
   const second = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
@@ -129,7 +128,7 @@ test('Pairing request retries return the same session and do not append another 
   await close(value);
 });
 
-test('Pairing blocks altered proof and expired requests before writing records', { skip: !supportsEd25519Certificates }, async () => {
+test('Pairing blocks altered proof and expired requests before writing records', { skip: !supportsP256Certificates }, async () => {
   const value = await fixture();
   const altered = { ...value.proof, request_digest: '0'.repeat(64) };
   const badProof = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: altered } });
@@ -143,7 +142,7 @@ test('Pairing blocks altered proof and expired requests before writing records',
   await close(value);
 });
 
-test('Pairing session is bound to the client node and token', { skip: !supportsEd25519Certificates }, async () => {
+test('Pairing session is bound to the client node and token', { skip: !supportsP256Certificates }, async () => {
   const value = await fixture();
   const created = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/pairing-requests', method: 'POST', body: { request: value.requestBody, proof: value.proof } });
   const wrongToken = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: `/v1/pairing-requests/${created.body.session.session_id}/status`, headers: { authorization: 'Bearer wrong' } });
@@ -152,7 +151,7 @@ test('Pairing session is bound to the client node and token', { skip: !supportsE
   await close(value);
 });
 
-test('Pairing credential claim derives network and node from the authenticated session', { skip: !supportsEd25519Certificates }, async () => {
+test('Pairing credential claim derives network and node from the authenticated session', { skip: !supportsP256Certificates }, async () => {
   let observed;
   let claimCount = 0;
   const value = await fixture({ credentialClaim: { claim: async (input) => { observed = input; claimCount += 1; return claimCount === 1 ? { status: 'claimed', credential_id: 'credential-1', claimed_at: '2026-07-29T03:01:00.000Z', token: 'opaque-token-value' } : { status: 'duplicate', credential_id: 'credential-1', claimed_at: '2026-07-29T03:01:00.000Z' }; } } });
@@ -166,7 +165,7 @@ test('Pairing credential claim derives network and node from the authenticated s
   await close(value);
 });
 
-test('Pairing credential claim completes against the real SQLite issuance provider', { skip: !supportsEd25519Certificates }, async () => {
+test('Pairing credential claim completes against the real SQLite issuance provider', { skip: !supportsP256Certificates }, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-pairing-claim-'));
   const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
   await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-29T03:00:00.000Z' });

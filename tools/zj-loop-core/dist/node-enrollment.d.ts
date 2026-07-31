@@ -10,6 +10,7 @@ export type NodeIdentity = {
     node_id: string;
     certificate_sha256: string;
     certificate_pem: string;
+    algorithm: 'ECDSA-P256';
     display_name: string;
     agent_kind: string;
     agent_version: string;
@@ -67,7 +68,7 @@ export type PairingRequest = {
     expires_at: string;
 };
 export type PairingRequestProof = {
-    algorithm: 'Ed25519';
+    algorithm: 'ECDSA-P256';
     request_digest: string;
     signature_base64: string;
 };

@@ -1,0 +1,119 @@
+{
+  "title": "OPN Cross-device Transport 下一里程碑",
+  "description": "在已完成的 Graph Atom Human Decision 之上，实现同一个人的多设备/Agent 通过 ZAgenticLoop 组网所需的 provider-neutral Transport 基础能力。先完成 pairing、身份绑定、安全通道、重连与 bounded delivery；暂不接入真实 Codex/Workbuddy 进程适配器。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN Cross-device Transport 下一里程碑",
+      "status": "completed",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [
+        {
+          "q": "下一里程碑是否优先实现 Cross-device OPN Transport？",
+          "answer": "是。新路线图只承载 provider-neutral pairing、身份绑定、安全通道、reconnect、session 恢复、bounded delivery、dedupe、replay 与 conformance；暂不接入真实 Codex/Workbuddy 进程适配器，也不解决通用外部资源并发控制。",
+          "note": "与已确认的跨设备/多节点服务优先一致，保持 Transport 与 Concrete Agent Runtime 的边界分离。"
+        },
+        {
+          "q": "当前 OPN Cross-device Transport 路线图是否冻结，不再新增事项，进入 Human review 与提交阶段？",
+          "answer": "是。路线图 6/6 节点完成，冻结当前里程碑；后续新增能力另开路线图。",
+          "note": "冻结范围：Transport contract、P-256 pairing/device binding、TLS 1.3 mTLS adapter、StateStore reconnect/delivery、offline replay conformance。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Transport provider-neutral contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Transport 是否只传输有界协议 Envelope、事件标识和 Evidence/Artifact 引用？",
+          "answer": "是。只传 network/event/plan/task scope、digest、message id 与 artifact refs；大型 Evidence/Artifact 由独立 ArtifactStore 获取；采用 at-least-once，receiver 以 message_id + envelope_digest 去重；支持 offered/accepted/acknowledged、lease retry 与 blocked；不承诺 exactly-once 或全局顺序，也不处理外部资源并发。",
+          "note": "保持 Relay 与 ArtifactStore 边界，适配多种 transport provider。"
+        }
+      ],
+      "notes": "已实现 provider-neutral TransportEnvelope、JCS 摘要、固定字段与 content-addressed Artifact refs 校验，并提供 TransportAdapter 生命周期类型；测试已纳入 npm test。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Pairing identity与device binding",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "节点身份、Pairing 请求签名与设备绑定是否统一迁移为 ECDSA P-256？",
+          "answer": "是。统一使用 P-256，复用 HumanSigner 的算法约束，避免 Transport 与 Human approval 出现两套密码学身份体系。",
+          "note": "Pairing 身份层与 HumanSigner 采用同一 provider-neutral 算法契约；旧 Ed25519 不作为新 Transport pairing 的有效算法。"
+        }
+      ],
+      "notes": "已将 NodeIdentity 与 Pairing proof 统一为 ECDSA-P256；X.509 身份、请求签名、低-S DER 规范化、mTLS 设备绑定与双节点重启恢复均已通过 conformance。"
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Secure cross-device channel adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "首个 Secure cross-device channel adapter 是否采用 TLS 1.3 + 双向 P-256 mTLS，同时保持 TransportEnvelope 与网络实现解耦？",
+          "answer": "是。首个 provider adapter 采用 TLS 1.3 + 双向 P-256 mTLS；Envelope、session 与 delivery 语义不绑定 TLS 或具体网络 provider。",
+          "note": "复用现有 TLS/mTLS 安全边界，先验证安全通道适配能力，再扩展实际跨设备发现与网络 provider。"
+        }
+      ],
+      "notes": "已新增独立 TlsTransportAdapter：强制 HTTPS/TLS 1.3、双向 P-256 mTLS、Bearer credential、session/envelope/ack/close 映射与响应校验；真实本地 HTTPS conformance 通过。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Reconnect session与bounded delivery",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Reconnect session 与 delivery 状态是否持久化到网络级 StateStore，由 adapter 保持无状态？",
+          "answer": "是。StateStore 持久化 session、lease、retry、dedupe 与 blocked 状态；adapter 只负责连接恢复和协议传输。",
+          "note": "复用 RelayDelivery 的 offered/accepted/acknowledged、lease retry 与 bounded retry 语义，StateStore 是网络级事实来源。"
+        }
+      ],
+      "notes": "已新增 SQLite StateStore-backed TransportDeliveryStore：事件溯源恢复 session/delivery，支持 lease、accept、ack、bounded retry、dedupe 与 blocked 持久化；重启 conformance 通过。"
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Cross-device replay与conformance验证",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Replay 是否采用断线、重复投递、乱序到达、恢复、最终 ack 的确定性离线 fixture，不依赖真实外部网络 provider？",
+          "answer": "是。使用确定性离线 fixture 验证 reconnect、duplicate、out-of-order、bounded retry 与最终 ack；不把真实网络 provider 纳入本节点 conformance。",
+          "note": "Replay 只验证 Transport contract 与 StateStore projection 的可重放事实，外部网络 provider 另行适配。"
+        }
+      ],
+      "notes": "已新增确定性 Transport replay conformance：断线、lease retry、reoffer、重复投递 dedupe、乱序 accept、恢复与最终 ack；不依赖真实外部网络 provider，测试通过。"
+    }
+  },
+  "metadata": {
+    "created": "2026-07-31 23:30:42",
+    "updated": "2026-08-01 00:44:22",
+    "md_file": "docs/plans/opn-cross-device-transport-next-milestone-roadmap.md"
+  }
+}
