@@ -1,0 +1,251 @@
+{
+  "title": "OPN Native Agent Runtime 下一里程碑",
+  "description": "连接既有 Transport、Graph、Loop 的 provider-neutral Native OPN Agent Runtime 最小可验证闭环。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN Native Agent Runtime 下一里程碑",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [
+        {
+          "q": "下一里程碑是否优先实现 Native OPN Agent Runtime / Execution Adapter 的最小纵切，连接既有 Transport、Graph、Loop，并暂不适配第三方框架？",
+          "answer": "是",
+          "note": "先验证 ZAgenticLoop 自有 OPN 产品闭环；第三方框架作为未来 extension。"
+        },
+        {
+          "q": "Native Agent Runtime 路线图是否以 contract tests、Agent1→Agent2 happy path、failure/retry/review path、offline replay/conformance 四类证据作为完成门槛？",
+          "answer": "采用方案 A：最小纵切的四类验收证据",
+          "note": "真实 Codex/Workbuddy adapter、并行图、长期 session、第三方框架留作后续路线图。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Agent 节点注册与 capability contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Agent 节点注册的最小 capability contract 是否只包含 agent_id、display_name、capabilities、accepted_task_kinds、evidence_kinds、protocol_version、identity_ref，不绑定具体 provider 与运行环境？",
+          "answer": "采用方案 A：最小可执行契约",
+          "note": "provider、模型、CLI、设备和私有配置留在后续 adapter/session 层。"
+        }
+      ],
+      "notes": "AgentRegistration provider-neutral contract implemented with canonical normalization, digest binding, strict field validation, and focused tests."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "TransportEnvelope 到有界 Loop task 的执行适配",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3"
+      ],
+      "decisions": [
+        {
+          "q": "第一版 Native Agent Runtime 是否先采用 provider-neutral Runtime 加 deterministic fixture，不直接启动真实 Agent 进程？",
+          "answer": "采用方案 A：provider-neutral Runtime + deterministic fixture",
+          "note": "Codex、Workbuddy 等作为后续独立 provider adapter；核心协议不绑定具体 Agent。"
+        },
+        {
+          "q": "Loop task 进入 Runtime 前是否必须具备目标、成功标准、预算/超时、资源隔离声明、Evidence 预期、依赖引用、幂等键和取消语义等有界契约？",
+          "answer": "采用方案 A：有界任务契约",
+          "note": "中心责任单元在编排前决定资源隔离；Runtime 验证并执行，不实现通用外部资源锁。"
+        },
+        {
+          "q": "Native Agent Runtime 是否采用显式单向状态机，区分 received、validated、dispatched、running、succeeded、evidence-recorded、review-pending、accepted/rejected/blocked，并以 attempt 表示重试？",
+          "answer": "采用方案 A：显式、终态单向状态机",
+          "note": "终态不可覆盖；重试生成新 attempt；blocked 必须带原因与 Evidence refs；Human 验收前不能宣称最终完成。"
+        },
+        {
+          "q": "Runtime 是否在 validated 到 dispatched 前强制验证资源隔离声明，缺失或不一致即 blocked，但不实现通用外部资源锁？",
+          "answer": "采用方案 A：分派前强制验证，缺失即阻塞",
+          "note": "隔离方案由中心责任单元决定；Runtime 只验证、记录和 fail-closed。"
+        },
+        {
+          "q": "第一版 Agent session 是否按 execution attempt 创建 task-scoped session，任务终态后关闭，不在核心 Runtime 管理长期驻留 Agent 进程？",
+          "answer": "采用方案 A：task-scoped session",
+          "note": "长期 session 留给后续 provider adapter；核心任务协议保持可重放和隔离。"
+        },
+        {
+          "q": "Runtime 是否在每次关键状态迁移前持久化 StateStore projection，Evidence 只保存 Artifact ref/digest，并据此支持断线恢复？",
+          "answer": "采用方案 A：状态迁移先持久化",
+          "note": "StateStore 是执行事实的 canonical projection；adapter 保持无状态。"
+        },
+        {
+          "q": "Transport 重复投递是否以 message_id + envelope_digest 去重，Runtime 以 task_id + execution_id + attempt 去重，只有显式重试才创建新 attempt？",
+          "answer": "采用方案 A：重复 Envelope 不创建新执行",
+          "note": "输入事实、成功标准或资源隔离声明改变时拒绝静默覆盖并进入 blocked。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Evidence 与 Review Handoff 返回协议",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2"
+      ],
+      "decisions": [
+        {
+          "q": "Agent 执行结果是否只返回结构化 Evidence refs、digest、来源 identity、成功标准映射和阻塞原因，大型内容通过 ArtifactStore 引用？",
+          "answer": "采用方案 A：结构化 Evidence refs",
+          "note": "TransportEnvelope 保持有界；Agent 不直接宣称 Human 最终接受。"
+        }
+      ],
+      "notes": "NativeAgentEvidence and AgentReviewHandoff proposal contracts are implemented; Agent proposal remains review-pending and final Human acceptance stays on existing verified ReviewHandoff."
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Human 中心责任单元的验收闭环",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2"
+      ],
+      "decisions": [
+        {
+          "q": "Review Handoff 是否只能由 Agent 提议，而由 Human 或 Human+Agent 中心责任单元产生 accepted、rejected、rework-requested、blocked 等最终决策？",
+          "answer": "采用方案 A：Agent 提议，中心责任单元决定",
+          "note": "执行成功不等于业务结果最终接受；责任、伦理、风险和最终决策仍归 Human。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "双节点 fixture 与端到端 conformance",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-5-1"
+      ],
+      "decisions": [
+        {
+          "q": "双节点 conformance 是否将 Human/Human+Agent 作为中心责任单元，将 Agent1、Agent2 保持为被编排执行节点，不把中心混入普通 Agent 身份？",
+          "answer": "采用方案 A：中心责任单元与执行节点协议分离",
+          "note": "验证分派、依赖、Evidence relay、聚合、Review Handoff 和 Human 最终验收。"
+        },
+        {
+          "q": "第一条双节点 conformance 是否采用 Agent1 任务 A -> Evidence ref -> Agent2 任务 B -> Aggregation -> Verification -> Review Handoff -> Human 验收的最小串行依赖图？",
+          "answer": "采用方案 A：最小串行依赖图",
+          "note": "先验证依赖、Evidence 消费、阻塞传播和 Human 验收；并行调度另开路线图。"
+        },
+        {
+          "q": "前置 Agent 任务 blocked 或终态失败时，后继节点是否 fail-closed，不得分派，并返回带原因与 Evidence refs 的 Review Handoff？",
+          "answer": "采用方案 A：fail-closed 传播",
+          "note": "重试创建新 attempt；后继节点只能消费新 attempt 的 Evidence；原始失败事实不可覆盖。"
+        }
+      ],
+      "notes": "Deterministic conformance proves TransportEnvelope -> bounded task -> two execution nodes -> Graph aggregation -> independent verification -> Review Handoff -> HumanSigner acceptance."
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "有界 Loop task contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "BoundedLoopTask contract implemented with objective, success criteria, refs, isolation declaration, budget, evidence expectations, idempotency, cancellation, and digest validation."
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "Execution lifecycle state machine",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "NativeAgentExecution state machine implemented with fail-closed transitions, terminal protection, evidence requirements, and Human decision reasons."
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "Provider-neutral fixture execution adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Provider-neutral deterministic fixture runtime accepts validated TransportEnvelope + BoundedLoopTask, persists lifecycle facts to StateStore, deduplicates execution_id, and recovers duplicate execution state after Runtime reconstruction."
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Structured Agent Evidence ref",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "NativeAgentEvidence binds execution/task/attempt/agent identity to Artifact ref and content digest with closed validation."
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "Agent Review Handoff proposal",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "AgentReviewHandoff remains review-pending and carries recommendation only; Human final decisions remain in existing ReviewHandoff."
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Native Agent execution to Graph execution bridge",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": "NativeAgentExecution + NativeAgentEvidence maps into existing NativeOpnTracerExecution scope without creating a competing Graph fact model."
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "Existing HumanSigner final acceptance conformance",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "Agent1 to Agent2 end-to-end conformance",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-08-01 00:53:08",
+    "updated": "2026-08-01 02:03:44",
+    "md_file": "docs/plans/opn-native-agent-runtime-next-milestone-roadmap.md"
+  }
+}
