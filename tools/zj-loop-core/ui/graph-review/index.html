@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZAgenticLoop Graph Review</title>
+  <link rel="stylesheet" href="/assets/graph-review-ui.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">ZAgenticLoop <span>Graph Review</span></a>
+    <div id="connection-status" class="status status-pending" role="status">连接中</div>
+  </header>
+  <main class="shell">
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">MESSAGE EVENT / GRAPH REVIEW</p>
+        <h1>看懂这次协作，决定下一步</h1>
+        <p class="lede">从任务依赖到证据交接，先理解整体结果，再做 Human 决策。</p>
+      </div>
+      <div id="human-summary" class="human-summary">加载 Human 会话...</div>
+    </section>
+    <div id="error-state" class="notice notice-error" role="alert" hidden></div>
+    <div class="review-layout">
+      <aside class="event-panel" aria-label="MessageEvent 列表">
+        <div class="panel-heading"><div><p class="eyebrow">EVENTS</p><h2>待处理事件</h2></div><button id="refresh" class="button button-secondary" type="button">刷新</button></div>
+        <div id="event-list" class="event-list" aria-live="polite"></div>
+        <div id="empty-state" class="notice" hidden>当前没有可查看的 MessageEvent。</div>
+      </aside>
+      <section id="detail-panel" class="detail-panel" aria-live="polite">
+        <div id="loading-state" class="notice">正在加载 Graph Review...</div>
+      </section>
+    </div>
+  </main>
+  <script src="/assets/graph-review-ui.js" defer></script>
+</body>
+</html>

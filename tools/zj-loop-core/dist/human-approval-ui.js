@@ -47,6 +47,12 @@ function blocked(response, statusCode, reason) {
     json(response, statusCode, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
 }
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/human-approval');
+const GRAPH_UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/graph-review');
+const GRAPH_UI_ASSETS = {
+    '/ui/graph-review': { file: 'index.html', contentType: 'text/html; charset=utf-8' },
+    '/assets/graph-review-ui.css': { file: 'graph-review-ui.css', contentType: 'text/css; charset=utf-8' },
+    '/assets/graph-review-ui.js': { file: 'graph-review-ui.js', contentType: 'text/javascript; charset=utf-8' },
+};
 const UI_ASSETS = {
     '/': { file: 'index.html', contentType: 'text/html; charset=utf-8' },
     '/assets/human-approval-ui.css': { file: 'human-approval-ui.css', contentType: 'text/css; charset=utf-8' },
@@ -112,6 +118,82 @@ export function createHumanApprovalUiServer(input) {
             }
             const identity = await Promise.resolve(input.signer.getPublicIdentity());
             json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', human: publicIdentity(identity), network_id: input.network_id, side_effects_executed: false });
+            return;
+        }
+        if (request.method === 'GET' && url.pathname === '/ui/events') {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.graph) {
+                blocked(response, 503, 'graph-upstream-unavailable');
+                return;
+            }
+            try {
+                const result = await input.graph.list();
+                const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, created_at: event.event.created_at, status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, events, side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'graph-upstream-unavailable');
+            }
+            return;
+        }
+        const graphEventMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/events\/([^/]+)$/) : null;
+        if (graphEventMatch) {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.graph) {
+                blocked(response, 503, 'graph-upstream-unavailable');
+                return;
+            }
+            try {
+                const result = await input.graph.get({ event_id: decodeURIComponent(graphEventMatch[1]) });
+                if (!result.event || result.event.network_id !== input.network_id || result.event.event.event_id !== decodeURIComponent(graphEventMatch[1])) {
+                    blocked(response, 404, 'graph-event-not-found');
+                    return;
+                }
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, event: result.event, side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'graph-upstream-unavailable');
+            }
+            return;
+        }
+        const graphEvidenceMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/events\/([^/]+)\/evidence$/) : null;
+        if (graphEvidenceMatch) {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.graph) {
+                blocked(response, 503, 'graph-upstream-unavailable');
+                return;
+            }
+            try {
+                const eventId = decodeURIComponent(graphEvidenceMatch[1]);
+                const result = await input.graph.evidence({ event_id: eventId });
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, event_id: eventId, evidence: result.evidence, side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'graph-upstream-unavailable');
+            }
+            return;
+        }
+        if (request.method === 'GET' && GRAPH_UI_ASSETS[url.pathname]) {
+            const asset = GRAPH_UI_ASSETS[url.pathname];
+            try {
+                const content = await readFile(path.join(GRAPH_UI_ROOT, asset.file));
+                response.statusCode = 200;
+                response.setHeader('content-type', asset.contentType);
+                response.setHeader('content-length', content.byteLength);
+                response.end(content);
+            }
+            catch {
+                blocked(response, 503, 'graph-ui-assets-unavailable');
+            }
             return;
         }
         if (request.method === 'GET' && url.pathname === '/ui/pairing-requests') {

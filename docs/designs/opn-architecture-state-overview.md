@@ -1,6 +1,6 @@
 # OPN Architecture State Overview
 
-Status: architecture baseline locked on 2026-07-31.
+Status: architecture baseline locked on 2026-07-31; Graph Engineering milestone 1-4 closed.
 
 This document is the durable architecture view of the OPN product model. It
 describes the current implementation boundary, not a promise that every
@@ -153,24 +153,34 @@ Implemented and tested in `@jununfly/zj-loop-core`:
 - provider-neutral `DispatchIntent` and deterministic validator
 - immutable Capability/Risk Registry with fail-closed unknown capabilities
 - `task.dispatched` risk gate and idempotent CAS fact recording
+- Native OPN Tracer provider-neutral two-stage Agent1/Agent2 fixture
+- reference-only Relay Evidence delivery with inbox idempotency and scope rejection
+- persisted Aggregation and independent Native OPN Graph Verification
+- provider-neutral Dispatch Semantic Review and accepted Review Handoff binding
+- deterministic Graph Engineering Evidence Set and final conformance report
 - Relay session binding with `session_request_id` idempotency and conflict detection
 - HumanSigner provider-neutral contract and memory fixture
 - SQLite StateStore, content-addressed ArtifactStore, and loopback Relay reference pieces
 
 The latest implementation verification is recorded by the repository test
-suite and the roadmap `1-4-1` through `1-4-5` evidence.
+suite and the roadmap `1-4-1` through `1-4-9` evidence. The core package
+regression currently passes 384 tests.
 
 ## Not Yet Implemented Boundary
 
 The following remain outside the completed boundary:
 
-- complete Human Grill, blocked/recovery, and re-preflight user path
-- a real two-agent Native OPN Tracer using abstract Agent1/Agent2 roles
-- independent semantic review and complete Review Handoff conformance gate
-- final Graph Engineering Evidence Set and end-to-end conformance acceptance
-- general-purpose external Provider adapters beyond the reference Relay
+- real Codex/Workbuddy process adapters and production-grade multi-agent runtime
 - cross-device discovery, transport, and multi-device production hardening
+- general-purpose external Provider adapters beyond the reference Relay
 - Extension adapters for external workflow frameworks
+- production UI for visualizing the complete DirectedTaskGraph and Evidence Set
+- durable retention, export, and operational tooling for cross-network Evidence
+
+These are explicit next-milestone candidates, not implicit promises of the
+current baseline. The current fixture proves protocol composition with abstract
+Agent1/Agent2 roles; it does not claim that concrete agent processes have been
+networked or that external resources have universal concurrency control.
 
 These are next-milestone candidates, not implicit promises of the current
 baseline.
@@ -187,3 +197,4 @@ baseline.
 8. StateStore and ArtifactStore are network-level logical resources.
 9. Review Handoff separates execution output from Human final acceptance.
 10. Scale is allowed only after composition invariants are proven.
+11. Evidence Set is a report-layer composition, not a second business fact source.

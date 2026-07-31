@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner, HumanSignerIdentity } from './human-signer.js';
+import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
 import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload, type HumanApprovalContext } from './human-authority.js';
 
 export const HUMAN_APPROVAL_UI_SCHEMA = 'zj-loop.human_approval_ui.v1' as const;
@@ -17,10 +18,17 @@ export type HumanApprovalUiUpstream = {
   evidence?(input: { network_id: string; evidence_id: string }): Promise<Record<string, unknown>>;
 };
 
+export type HumanApprovalUiGraphUpstream = {
+  list(): Promise<{ events: GraphAtomUiReadModel[] }>;
+  get(input: { event_id: string }): Promise<{ event: GraphAtomUiReadModel | null }>;
+  evidence(input: { event_id: string }): Promise<{ evidence: Array<{ kind: string; artifact_id: string; digest: string }> }>;
+};
+
 export type HumanApprovalUiServerInput = {
   signer: HumanSigner;
   network_id: string;
   upstream: HumanApprovalUiUpstream;
+  graph?: HumanApprovalUiGraphUpstream;
   bootstrap_token?: string;
   session_ttl_ms?: number;
   now?: () => string;
@@ -87,6 +95,12 @@ function blocked(response: ServerResponse, statusCode: number, reason: string): 
 }
 
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/human-approval');
+const GRAPH_UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/graph-review');
+const GRAPH_UI_ASSETS: Record<string, { file: string; contentType: string }> = {
+  '/ui/graph-review': { file: 'index.html', contentType: 'text/html; charset=utf-8' },
+  '/assets/graph-review-ui.css': { file: 'graph-review-ui.css', contentType: 'text/css; charset=utf-8' },
+  '/assets/graph-review-ui.js': { file: 'graph-review-ui.js', contentType: 'text/javascript; charset=utf-8' },
+};
 const UI_ASSETS: Record<string, { file: string; contentType: string }> = {
   '/': { file: 'index.html', contentType: 'text/html; charset=utf-8' },
   '/assets/human-approval-ui.css': { file: 'human-approval-ui.css', contentType: 'text/css; charset=utf-8' },
@@ -144,6 +158,49 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
       const identity = await Promise.resolve(input.signer.getPublicIdentity());
       json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', human: publicIdentity(identity), network_id: input.network_id, side_effects_executed: false });
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/ui/events') {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
+      try {
+        const result = await input.graph.list();
+        const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, created_at: event.event.created_at, status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));
+        json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, events, side_effects_executed: false });
+      } catch { blocked(response, 503, 'graph-upstream-unavailable'); }
+      return;
+    }
+    const graphEventMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/events\/([^/]+)$/) : null;
+    if (graphEventMatch) {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
+      try {
+        const result = await input.graph.get({ event_id: decodeURIComponent(graphEventMatch[1]) });
+        if (!result.event || result.event.network_id !== input.network_id || result.event.event.event_id !== decodeURIComponent(graphEventMatch[1])) { blocked(response, 404, 'graph-event-not-found'); return; }
+        json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, event: result.event, side_effects_executed: false });
+      } catch { blocked(response, 503, 'graph-upstream-unavailable'); }
+      return;
+    }
+    const graphEvidenceMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/events\/([^/]+)\/evidence$/) : null;
+    if (graphEvidenceMatch) {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
+      try {
+        const eventId = decodeURIComponent(graphEvidenceMatch[1]);
+        const result = await input.graph.evidence({ event_id: eventId });
+        json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, event_id: eventId, evidence: result.evidence, side_effects_executed: false });
+      } catch { blocked(response, 503, 'graph-upstream-unavailable'); }
+      return;
+    }
+    if (request.method === 'GET' && GRAPH_UI_ASSETS[url.pathname]) {
+      const asset = GRAPH_UI_ASSETS[url.pathname];
+      try {
+        const content = await readFile(path.join(GRAPH_UI_ROOT, asset.file));
+        response.statusCode = 200;
+        response.setHeader('content-type', asset.contentType);
+        response.setHeader('content-length', content.byteLength);
+        response.end(content);
+      } catch { blocked(response, 503, 'graph-ui-assets-unavailable'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/pairing-requests') {

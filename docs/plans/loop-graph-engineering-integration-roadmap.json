@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "Loop Engineering与Graph Engineering产品融合",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -370,7 +370,7 @@
     "1-4": {
       "id": "1-4",
       "label": "下一实现里程碑与行为验收边界",
-      "status": "pending",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [
@@ -439,6 +439,106 @@
           "q": "本机双Agent如何完成Human-controlled enrollment和撤销？",
           "answer": "即使同一设备也不默认进程可信：Human通过一次本地pairing流程分别批准Codex和Workbuddy加入Network，每个Agent生成独立非对称Node Identity，Relay或StateStore只接受Human批准的enrollment record；运行时使用短期scoped session credential。撤销按Node Identity单独生效，撤销后不能领取新事件或获取新Artifact，所有enrollment、授权和撤销动作留下审计记录。",
           "note": "验证Graph Engineering的身份与责任边界，而不是把同机部署简化成共享token。"
+        },
+        {
+          "q": "1-4 完成后是否继续向当前路线图追加实现事项？",
+          "answer": "冻结 1-4，进入里程碑收口与整体审查；不再向当前路线图追加实现事项。后续只处理结果整理、长期文档沉淀、已实现/未实现边界复核、产品体验与技术架构优化，以及下一里程碑规划。",
+          "note": "当前 1-4 的 Graph Engineering 最小闭环已完成并通过 384/384 核心包测试。"
+        },
+        {
+          "q": "里程碑收口需要哪些产物？",
+          "answer": "采用三类产物：已实现边界与验证证据总览、未实现边界/风险/技术债清单、下一里程碑候选地图与优先级。",
+          "note": "收口阶段不新增当前 1-4 的实现事项，只沉淀结果并为下一路线图做准备。"
+        },
+        {
+          "q": "下一里程碑优先做什么？",
+          "answer": "优先做 Graph Atom Web UI：让 Human 直观看懂并操作 Goal → Graph → Agent Execution → Evidence → Review Handoff，再引入跨设备传输和真实 Agent 适配。",
+          "note": "优先验证产品体验闭环，避免先扩展传输或 Provider 复杂度。当前 1-4 保持冻结。"
+        },
+        {
+          "q": "Graph Atom Web UI 采用什么前端实现策略？",
+          "answer": "采用现有静态 HTML/CSS/JS Human Approval UI 逐步扩展：先增加 Graph、任务状态、Evidence、Verification、Review Handoff 与 blocked/recovery 视图，不把前端框架作为下一里程碑前提；待真实交互复杂度验证后再评估框架化。",
+          "note": "保持 MVP 低依赖、易运行、易验证，优先验证产品心智模型与 Human 工作流。"
+        },
+        {
+          "q": "Graph Atom Web UI 首屏主流程是什么？",
+          "answer": "以当前 MessageEvent / Graph Review 为中心：选择事件、查看 DirectedTaskGraph、查看节点状态与依赖、查看 Evidence/Verification，并执行接受、要求修订、恢复或停止。Pairing/Enrollment 作为前置入口，不占据主屏。",
+          "note": "首屏直接验证 OPN 核心价值：Human 能看懂网络如何协同，并知道下一步该做什么。"
+        },
+        {
+          "q": "Graph Review 首版采用什么图形呈现方式？",
+          "answer": "采用结构化任务列表 + 依赖关系视图 + 选中节点详情，不先做自由拖拽画布。首屏展示任务状态、上下游依赖、阻塞点和下一动作；详情展示 Agent、权限、资源隔离、Evidence、Verification 与 Review Handoff。",
+          "note": "优先可读性、扫描和审查效率，避免图形布局复杂度遮蔽产品心智模型。"
+        },
+        {
+          "q": "Human 的 Graph Review 决策粒度是什么？",
+          "answer": "采用节点级审查、事件级最终接受：Human 可逐节点查看并要求修订/恢复/停止；只有整个 MessageEvent 的 Review Handoff 才能最终接受。UI 明确区分节点执行成功、Verification 通过和 Human 接受整体结果。",
+          "note": "保持 Human 的最终责任边界，避免单个 Agent 节点完成被误认为整体目标完成。"
+        },
+        {
+          "q": "Graph Atom Web UI 首版采用什么数据来源？",
+          "answer": "采用 fixture-first + provider-neutral StateStore adapter：先用可重放协议 fixture 驱动体验，同时定义读取适配边界，后续接入 SQLite StateStore/ArtifactStore 不改变 UI 心智模型。页面不直接读取任意本地文件或散落 JSON。",
+          "note": "优先保证体验可重放、验证稳定和存储实现可替换。"
+        },
+        {
+          "q": "Graph Atom UI 是否复用现有 Human Approval UI server？",
+          "answer": "复用现有 server、bootstrap token、session cookie、CORS 校验和 Human authority boundary；增加 Graph Review 的只读路由，最终接受/修订/恢复/停止继续复用同一 Human session 和签名入口，不创建第二套认证。",
+          "note": "避免出现两套 Human authority 协议，保持安全边界和实现路径一致。"
+        },
+        {
+          "q": "Graph Atom UI 的实现顺序是什么？",
+          "answer": "采用只读先行、决策动作后接入：第一条纵切只实现 fixture、Graph Review read adapter、任务/依赖/Evidence/Verification 展示；Human 能正确理解状态后，再接入接受、修订、恢复、停止，并复用既有签名与 authority boundary。",
+          "note": "避免 UI 展示模型和决策写入同时变化，降低验证难度和副作用风险。"
+        },
+        {
+          "q": "Graph Atom UI fixture 如何与现有事实链绑定？",
+          "answer": "UI fixture 只组合现有 OrchestrationPlan、Execution、Relay Receipt、Aggregation、Verification、Semantic Review、Review Handoff 与 Evidence Set，作为 read-model projection；不新增业务状态源，不复制事实，每个展示对象保留原始 scope、digest 和 Evidence 引用。",
+          "note": "保证 UI 与 canonical StateStore/ArtifactStore 语义一致，并支持从页面追溯证据。"
+        },
+        {
+          "q": "Graph Atom UI 首版必须覆盖哪些状态？",
+          "answer": "至少覆盖 review-ready、blocked、scope-drift/evidence-invalid 三类状态：成功路径等待 Human 最终接受；blocked 展示阻塞阶段、原因、责任边界和下一步；scope/digest 失败明确禁止接受。",
+          "note": "验证产品最重要的 stop-and-explain 能力，而不是只展示 happy path。"
+        },
+        {
+          "q": "Graph Atom UI 依赖关系视图采用什么实现？",
+          "answer": "保持零运行时依赖，用 HTML/CSS 结构化呈现：任务列表显示上下游节点，状态标记和连接线表达依赖，选中态展示详情；Mermaid 只用于长期文档和静态导出，不作为 UI runtime 依赖。",
+          "note": "避免把布局引擎复杂度引入首版产品验证，并保持现有静态 UI 可直接运行。"
+        },
+        {
+          "q": "Graph Atom UI fixture/read adapter 的代码边界是什么？",
+          "answer": "采用分层放置：src/graph-atom-ui-read-model.ts 负责 provider-neutral read model 与 fixture 组合；ui/graph-review/ 负责 HTML/CSS/JS 静态资源；test/graph-atom-ui-read-model.test.mjs 负责 projection、状态、scope 与 digest 测试；Human Approval server 负责路由和 session，页面不直接读取本地文件。",
+          "note": "保持协议组合、展示资源和服务端边界清晰分离。"
+        },
+        {
+          "q": "Graph Atom UI 的 URL/API 路由如何命名？",
+          "answer": "沿用现有 /ui/* 边界：页面 GET /ui/graph-review，事件列表 GET /ui/events，事件详情 GET /ui/events/:event_id，Evidence GET /ui/events/:event_id/evidence；全部受现有 bootstrap/session 保护，首版只读。",
+          "note": "不创建第二套认证、签名或写入协议。"
+        },
+        {
+          "q": "Graph Atom UI 首屏如何选择 MessageEvent？",
+          "answer": "采用事件列表 + 默认选中最近的 review-ready 事件；列表只展示当前 Human 有权查看的事件，按状态和更新时间排序；没有 review-ready 时展示最近的 blocked 事件及原因。首版不做跨网络全局 dashboard，不自动替 Human 选择或接受事件。",
+          "note": "保持首屏聚焦当前责任范围和下一动作。"
+        },
+        {
+          "q": "Graph Atom UI fixture 如何覆盖多状态？",
+          "answer": "采用一个 canonical Graph fixture 派生 review-ready、blocked、scope-drift 三份只读状态变体；共享同一对象结构和渲染代码，不为每种状态维护独立页面。",
+          "note": "保证状态差异来自事实与诊断，不来自多套 UI 实现。"
+        },
+        {
+          "q": "Graph Atom UI 的默认语言和术语策略是什么？",
+          "answer": "默认 zh-CN，面向 Human 的状态、动作和阻塞原因使用中文；plan_digest、verification_digest 等协议字段保留英文 canonical 名称，并提供中文解释。",
+          "note": "兼顾 Human 可读性、产品心智统一和技术证据可追溯性。"
+        },
+        {
+          "q": "Graph Atom UI 首版的可用性底线是什么？",
+          "answer": "桌面端和移动端都可读、可操作，并支持键盘导航与语义化状态：窄屏不横向溢出，状态不只依赖颜色，节点选择/Evidence/阻塞原因可键盘完成，并覆盖 loading、empty、error、blocked 状态。",
+          "note": "Human Review 页面必须具备真实可用性，不能只做静态展示截图。"
+        },
+        {
+          "q": "Graph Atom Web UI 第一条实现纵切的范围是什么？",
+          "answer": "只实现只读 Graph Review vertical slice：新建下一里程碑路线图；实现 graph-atom-ui-read-model 与 canonical fixture；接入现有 Human Approval server 的只读 Graph 路由；新增 ui/graph-review 中文响应式页面；覆盖 review-ready、blocked、scope-drift、loading/empty/error；通过 read-model、server route、页面资源和静态检查测试。暂不实现最终接受、修订、恢复、停止等写入动作。",
+          "note": "先验证 Human 能理解 Graph 和 Evidence，再接入决策副作用。"
         }
       ],
       "notes": ""
@@ -3316,12 +3416,18 @@
     "1-4-9": {
       "id": "1-4-9",
       "label": "Graph Engineering Evidence Set与最终conformance验收",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "最终 Graph Engineering conformance 的完成标准是什么？",
+          "answer": "采用同一 Graph scope 的全链路最小闭环：Human 中心责任单元、Plan/Preflight、Agent1/Agent2 Execution、Relay 引用传输、Aggregation、独立 Verification、Semantic Review、accepted Review Handoff 和 conformance Evidence Set 必须全部闭合；scope/digest 漂移、阶段缺失、重复冲突、Relay 乱序/重复、执行节点自证和未解决风险必须 fail-closed。",
+          "note": "只做协议级 provider-neutral fixture，不启动真实 Codex/Workbuddy 进程，不扩展当前路线图之外的产品事项。"
+        }
+      ],
+      "notes": "已实现 Native OPN Tracer Evidence Set v1：以 conformance report、独立 semantic review、Evidence 引用和 Relay 收敛诊断组成可重放验收产物；同一 network/event/plan/revision/digest scope 才能通过，Relay duplicate/conflict/out-of-order、scope 漂移、未闭合 conformance 或 semantic review 均 fail-closed。Evidence Set 仅为报告层组合，不成为新的业务事实源，不执行副作用。核心包 384/384 测试通过。"
     },
     "1-4-2-1": {
       "id": "1-4-2-1",
@@ -3645,7 +3751,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-31 18:44:15",
+    "updated": "2026-07-31 21:26:24",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

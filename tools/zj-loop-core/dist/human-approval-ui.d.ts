@@ -1,6 +1,7 @@
 import { type Server } from 'node:http';
 import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner } from './human-signer.js';
+import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
 import { type HumanApprovalContext } from './human-authority.js';
 export declare const HUMAN_APPROVAL_UI_SCHEMA: "zj-loop.human_approval_ui.v1";
 export type HumanApprovalUiUpstream = {
@@ -28,10 +29,30 @@ export type HumanApprovalUiUpstream = {
         evidence_id: string;
     }): Promise<Record<string, unknown>>;
 };
+export type HumanApprovalUiGraphUpstream = {
+    list(): Promise<{
+        events: GraphAtomUiReadModel[];
+    }>;
+    get(input: {
+        event_id: string;
+    }): Promise<{
+        event: GraphAtomUiReadModel | null;
+    }>;
+    evidence(input: {
+        event_id: string;
+    }): Promise<{
+        evidence: Array<{
+            kind: string;
+            artifact_id: string;
+            digest: string;
+        }>;
+    }>;
+};
 export type HumanApprovalUiServerInput = {
     signer: HumanSigner;
     network_id: string;
     upstream: HumanApprovalUiUpstream;
+    graph?: HumanApprovalUiGraphUpstream;
     bootstrap_token?: string;
     session_ttl_ms?: number;
     now?: () => string;

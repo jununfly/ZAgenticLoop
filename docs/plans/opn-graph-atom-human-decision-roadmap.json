@@ -1,0 +1,96 @@
+{
+  "title": "OPN Graph Atom Human Decision 下一里程碑",
+  "description": "在已完成的只读 Graph Review 之上，先实现事件级最终接受 Review Handoff。复用现有 HumanSigner、session 和 authority boundary；暂不实现要求修订、恢复或停止。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN Graph Atom Human Decision 下一里程碑",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Human Acceptance Authority Contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "事件级最终接受请求需要绑定哪些内容？",
+          "answer": "必须绑定 network_id、event_id、plan_id、plan_revision、plan_digest、review_handoff_digest、verification_digest、Human identity、signer fingerprint、decision=accepted、accepted_at、HumanSigner 签名和 canonical payload digest。接受事实只表示 Human 接受当前 Review Handoff，不伪装 Agent 执行成功或绕过 Verification。",
+          "note": "保持 Human 决策、Agent Execution、独立 Verification 三层责任分离。"
+        }
+      ],
+      "notes": "已实现 provider-neutral Human Acceptance Contract：canonical payload 绑定 network/event/plan/revision/digests、Human identity、signer fingerprint、decision=accepted、accepted_at；使用 HumanSigner 签名并 fail-closed 验证 review-ready handoff、scope、digest、签名和 safety boundary。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Review Handoff Acceptance CAS Fact",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Human Acceptance Fact 的 CAS 与幂等语义是什么？",
+          "answer": "同一 event_id、review_handoff_digest 和 decision digest 重放返回 duplicate；同一事件不同 Handoff 或 payload 返回 conflict；非 review-ready、digest 不匹配或签名无效返回 blocked；StateStore revision 不匹配返回 CAS conflict，不覆盖既有事实；只有 canonical acceptance fact 追加成功后 UI 才显示已接受。",
+          "note": "防止重复接受、旧结果覆盖新结果和 UI 乐观显示造成事实漂移。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Graph Review Event-level Accept UI",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "事件级接受写入 endpoint 如何设计？",
+          "answer": "新增专用 POST /ui/events/:event_id/accept；强制现有 Human session、同源 Origin 校验、完整 scope/Handoff/Verification digest 和 signed approval context；服务端重新读取当前事件并校验 review-ready；不提供通用 action endpoint 或绕过 HumanSigner 的路径。成功只返回 canonical acceptance fact，失败返回结构化 blocked/conflict/duplicate。",
+          "note": "把 Human acceptance 限定在明确的责任边界和可审计写入路径内。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Acceptance Negative Matrix与Replay验证",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Human Acceptance End-to-end Conformance",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-07-31 22:36:57",
+    "updated": "2026-07-31 22:41:54",
+    "md_file": "docs/plans/opn-graph-atom-human-decision-roadmap.md"
+  }
+}

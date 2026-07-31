@@ -1,0 +1,90 @@
+{
+  "title": "OPN Graph Atom 下一里程碑",
+  "description": "在冻结的 1-4 Graph Engineering 闭环之上，优先验证 Human 可理解、可审查 Graph Atom 的只读 Web UI。第一条纵切不引入真实 Agent、跨设备传输或写入动作。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN Graph Atom 下一里程碑",
+      "status": "completed",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Graph Atom Read Model与Canonical Fixture",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Graph Atom Read Model 如何避免成为第二事实源？",
+          "answer": "采用 provider-neutral read-model projection：canonical fixture 只组合既有 Graph/Execution/Relay/Aggregation/Verification/Review Handoff/Evidence Set 事实，保留 scope、digest 和 Evidence 引用；UI projection 不写 StateStore、不执行副作用，并对重复事实、非法 digest 和 scope drift fail-closed。",
+          "note": "先固定展示语义，再接入 StateStore/ArtifactStore adapter。"
+        }
+      ],
+      "notes": "已实现 src/graph-atom-ui-read-model.ts 与三状态 canonical fixture：review-ready、blocked、scope-drift。read model 保留依赖、scope、digest、Evidence 引用和 next_action，side_effects_executed=false；3/3 focused tests 通过。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Human Approval Server只读Graph路由",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Graph Review 只读 API 如何分层？",
+          "answer": "采用摘要/详情/Evidence 三层响应：GET /ui/events 返回事件摘要、状态、更新时间和 next_action；GET /ui/events/:event_id 返回完整 Graph Atom read model；GET /ui/events/:event_id/evidence 返回 Evidence 引用与 digest，不默认返回完整 Evidence 内容。所有响应绑定 network_id/event_id/plan_id/plan_revision/plan_digest。",
+          "note": "避免列表摘要和详情来自不同 Graph scope，并保持 Evidence 最小披露。"
+        }
+      ],
+      "notes": "已扩展现有 Human Approval UI server：复用 bootstrap/session/auth boundary，新增 /ui/events、/ui/events/:event_id、/ui/events/:event_id/evidence 只读路由；摘要/详情/Evidence 引用均绑定 Graph scope，未登录/无 upstream fail-closed。相关 server 回归通过。"
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Graph Review中文响应式界面",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": "已新增 ui/graph-review/index.html、graph-review-ui.css、graph-review-ui.js，复用现有 Human Approval UI server 提供静态页面与资源。页面默认 zh-CN，结构化展示事件、任务依赖、阶段、Evidence 和 next_action，首版无写操作。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Review-ready、Blocked与Scope Drift状态展示",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": "read model 与页面覆盖 review-ready、blocked、scope-drift；页面包含 loading、empty、error、blocked 状态，使用文字状态而非仅颜色，并提供窄屏布局与可键盘聚焦控件。"
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Read-only Graph Review验收与可用性验证",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": "只读 Graph Review vertical slice 完成。协议/read model/server/static assets 回归 389/389 通过；系统 Chrome 视觉验证通过：桌面 1440px 页面正常渲染并展示 Graph、任务依赖、阶段、Evidence 与 Human 状态；移动端独立 390px context 正常渲染，scrollWidth=390、clientWidth=390，无横向溢出，状态文案可见。未实现任何写入动作。"
+    }
+  },
+  "metadata": {
+    "created": "2026-07-31 21:26:24",
+    "updated": "2026-07-31 21:46:26",
+    "md_file": "docs/plans/opn-graph-atom-next-milestone-roadmap.md"
+  }
+}
