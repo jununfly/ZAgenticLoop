@@ -22,6 +22,7 @@ export type HumanApprovalUiGraphUpstream = {
   list(): Promise<{ events: GraphAtomUiReadModel[] }>;
   get(input: { event_id: string }): Promise<{ event: GraphAtomUiReadModel | null }>;
   evidence(input: { event_id: string }): Promise<{ evidence: Array<{ kind: string; artifact_id: string; digest: string }> }>;
+  accept?(input: { network_id: string; event_id: string; plan_id: string; plan_revision: number; plan_digest: string; review_handoff_digest: string; verification_digest: string; accepted_at: string; signer: HumanSigner }): Promise<Record<string, unknown>>;
 };
 
 export type HumanApprovalUiServerInput = {
@@ -168,6 +169,28 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
         const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, created_at: event.event.created_at, status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));
         json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, events, side_effects_executed: false });
       } catch { blocked(response, 503, 'graph-upstream-unavailable'); }
+      return;
+    }
+    const graphAcceptMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/events\/([^/]+)\/accept$/) : null;
+    if (graphAcceptMatch) {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
+      if (!input.graph?.accept) { blocked(response, 503, 'graph-upstream-acceptance-unavailable'); return; }
+      let body: Record<string, unknown>;
+      try { body = await readBody(request); } catch (error) { blocked(response, 400, error instanceof Error ? error.message : 'ui-json-invalid'); return; }
+      const eventId = decodeURIComponent(graphAcceptMatch[1]);
+      const fields = ['network_id', 'plan_id', 'plan_digest', 'review_handoff_digest', 'verification_digest'];
+      if (fields.some((field) => typeof body[field] !== 'string' || !(body[field] as string).trim()) || !Number.isInteger(body.plan_revision)) { blocked(response, 400, 'ui-acceptance-input-invalid'); return; }
+      let current: GraphAtomUiReadModel | null;
+      try { current = (await input.graph.get({ event_id: eventId })).event; } catch { blocked(response, 503, 'graph-upstream-unavailable'); return; }
+      if (!current || current.network_id !== input.network_id || current.event.event_id !== eventId) { blocked(response, 404, 'graph-event-not-found'); return; }
+      if (current.status !== 'review-ready') { blocked(response, 409, 'graph-event-not-review-ready'); return; }
+      if (body.network_id !== current.network_id || body.plan_id !== current.plan.plan_id || body.plan_revision !== current.plan.plan_revision || body.plan_digest !== current.plan.plan_digest || body.review_handoff_digest !== current.review_handoff.handoff_digest || body.verification_digest !== current.verification.verification_digest) { blocked(response, 409, 'graph-acceptance-scope-conflict'); return; }
+      let result: Record<string, unknown>;
+      try { result = await input.graph.accept({ network_id: input.network_id, event_id: eventId, plan_id: current.plan.plan_id, plan_revision: current.plan.plan_revision, plan_digest: current.plan.plan_digest, review_handoff_digest: current.review_handoff.handoff_digest, verification_digest: current.verification.verification_digest, accepted_at: now(), signer: input.signer }); } catch { blocked(response, 503, 'graph-upstream-acceptance-unavailable'); return; }
+      const status = result.status;
+      const statusCode = status === 'recorded' ? 201 : status === 'duplicate' ? 200 : status === 'conflict' || status === 'blocked' ? 409 : 503;
+      json(response, statusCode, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...result, side_effects_executed: false });
       return;
     }
     const graphEventMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/events\/([^/]+)$/) : null;

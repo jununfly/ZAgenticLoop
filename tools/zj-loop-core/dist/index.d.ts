@@ -124,3 +124,4 @@ export * from './dispatch-intent.js';
 export * from './dispatch-gate.js';
 export * from './dispatch-fact.js';
 export * from './human-acceptance.js';
+export * from './human-acceptance-fact.js';

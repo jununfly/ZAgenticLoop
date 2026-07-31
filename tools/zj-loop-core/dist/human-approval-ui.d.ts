@@ -47,6 +47,17 @@ export type HumanApprovalUiGraphUpstream = {
             digest: string;
         }>;
     }>;
+    accept?(input: {
+        network_id: string;
+        event_id: string;
+        plan_id: string;
+        plan_revision: number;
+        plan_digest: string;
+        review_handoff_digest: string;
+        verification_digest: string;
+        accepted_at: string;
+        signer: HumanSigner;
+    }): Promise<Record<string, unknown>>;
 };
 export type HumanApprovalUiServerInput = {
     signer: HumanSigner;

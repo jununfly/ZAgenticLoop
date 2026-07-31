@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Graph Atom Human Decision 下一里程碑",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -38,7 +38,7 @@
     "1-2": {
       "id": "1-2",
       "label": "Review Handoff Acceptance CAS Fact",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
@@ -47,14 +47,19 @@
           "q": "Human Acceptance Fact 的 CAS 与幂等语义是什么？",
           "answer": "同一 event_id、review_handoff_digest 和 decision digest 重放返回 duplicate；同一事件不同 Handoff 或 payload 返回 conflict；非 review-ready、digest 不匹配或签名无效返回 blocked；StateStore revision 不匹配返回 CAS conflict，不覆盖既有事实；只有 canonical acceptance fact 追加成功后 UI 才显示已接受。",
           "note": "防止重复接受、旧结果覆盖新结果和 UI 乐观显示造成事实漂移。"
+        },
+        {
+          "q": "同一个 event_id 是否只允许一个最终 Human Acceptance？",
+          "answer": "是。同一 event_id + review_handoff_digest + acceptance payload digest 重放返回 duplicate；同一 event_id 但不同 handoff、plan_revision 或 payload 返回 conflict；不覆盖既有 Acceptance Fact；修订必须产生新 event_id；StateStore expected_revision 不匹配返回 CAS conflict。",
+          "note": "Acceptance 是不可覆盖的责任事实，避免旧结果与新结果相互覆盖。"
         }
       ],
-      "notes": ""
+      "notes": "已实现 recordHumanAcceptance：追加 canonical human-acceptance.accepted fact；同一 event/payload 返回 duplicate；同一 event 不同 handoff/payload 返回 conflict；stale revision 返回 revision-mismatch；非法 acceptance 在 append 前 blocked；并发竞争单一 winner。"
     },
     "1-3": {
       "id": "1-3",
       "label": "Graph Review Event-level Accept UI",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
@@ -63,34 +68,51 @@
           "q": "事件级接受写入 endpoint 如何设计？",
           "answer": "新增专用 POST /ui/events/:event_id/accept；强制现有 Human session、同源 Origin 校验、完整 scope/Handoff/Verification digest 和 signed approval context；服务端重新读取当前事件并校验 review-ready；不提供通用 action endpoint 或绕过 HumanSigner 的路径。成功只返回 canonical acceptance fact，失败返回结构化 blocked/conflict/duplicate。",
           "note": "把 Human acceptance 限定在明确的责任边界和可审计写入路径内。"
+        },
+        {
+          "q": "Graph Review UI 的接受交互是否采用单一主操作与明确结果状态？",
+          "answer": "采用。review-ready 仅显示接受当前 Review Handoff；确认前展示 event、plan revision、handoff digest、verification digest；成功后显示已接受并禁止重复提交；duplicate 显示已接受；conflict/blocked 显示结构化原因；非 review-ready 不提供接受按钮。",
+          "note": "避免查看、接受、执行完成三个责任层次在 UI 中混淆。"
         }
       ],
-      "notes": ""
+      "notes": "已实现专用 POST /ui/events/:event_id/accept 与 Graph Review UI：session+同源校验、当前 read-model scope 重读、review-ready gate、HumanSigner 注入、recorded/duplicate/conflict/blocked 状态映射；UI 仅在 review-ready 显示单一接受操作并展示绑定摘要。"
     },
     "1-4": {
       "id": "1-4",
       "label": "Acceptance Negative Matrix与Replay验证",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Acceptance Negative Matrix 与 Replay 验证应覆盖哪些边界？",
+          "answer": "覆盖 API 与 StateStore 两层：未登录、Origin 不匹配、event 不存在、非 review-ready、scope/digest/signature/identity 不匹配、stale revision、相同 acceptance replay duplicate、不同 handoff/payload replay conflict；所有 blocked/conflict 路径不得新增 StateStore revision。",
+          "note": "验证完整责任边界与 replay 语义，而非只验证单元函数返回值。"
+        }
+      ],
+      "notes": "已完成 API 与 StateStore 双层 negative matrix/replay：session、Origin、event、review-ready、scope/digest、signature/identity、stale revision、duplicate、conflict、blocked、并发 winner；所有拒绝路径无 StateStore 副作用。"
     },
     "1-5": {
       "id": "1-5",
       "label": "Human Acceptance End-to-end Conformance",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Human Acceptance End-to-end Conformance 如何验收？",
+          "answer": "采用真实 SQLite StateStore + 真实 HumanSigner + HTTP UI endpoint：写入 Graph event 与 Review Handoff，Human 建立 session 后接受；服务端重读 scope、签名并追加 canonical Acceptance Fact；重新读取确认可 replay；重复接受返回 duplicate；不得产生 event.completed、task.completed 或伪造 Agent execution success。",
+          "note": "验证真实产品闭环，而非模块分别通过。"
+        }
+      ],
+      "notes": "端到端 conformance 通过：真实 SQLite StateStore 写入 event/handoff，真实 HumanSigner 经 HTTP UI session 接受，追加并 replay canonical Acceptance Fact；重复请求 duplicate；未产生 event.completed、task.completed 或 Agent execution success。"
     }
   },
   "metadata": {
     "created": "2026-07-31 22:36:57",
-    "updated": "2026-07-31 22:41:54",
+    "updated": "2026-07-31 23:21:24",
     "md_file": "docs/plans/opn-graph-atom-human-decision-roadmap.md"
   }
 }
