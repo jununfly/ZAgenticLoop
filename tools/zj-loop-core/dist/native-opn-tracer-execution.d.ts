@@ -1,0 +1,40 @@
+import type { SqliteStateStore } from './sqlite-state-store.js';
+export declare const NATIVE_OPN_TRACER_EXECUTION_SCHEMA: "zj-loop.native_opn_tracer_execution.v1";
+export declare const NATIVE_OPN_TRACER_EXECUTION_RECORDED_SCHEMA: "zj-loop.native_opn_tracer_execution_recorded.v1";
+export type NativeOpnTracerExecution = {
+    schema: typeof NATIVE_OPN_TRACER_EXECUTION_SCHEMA;
+    network_id: string;
+    event_id: string;
+    plan_id: string;
+    plan_revision: number;
+    plan_digest: string;
+    node_id: string;
+    task_id: string;
+    execution_id: string;
+    assigned_node: string;
+    status: 'succeeded' | 'blocked';
+    input_evidence_digests: string[];
+    output_evidence_digest?: string;
+    recorded_at: string;
+    side_effects_executed: false;
+    execution_digest: string;
+};
+export type NativeOpnTracerExecutionFactResult = {
+    schema: typeof NATIVE_OPN_TRACER_EXECUTION_RECORDED_SCHEMA;
+    status: 'recorded' | 'duplicate' | 'conflict' | 'blocked';
+    event_id: string;
+    side_effects_executed: false;
+    revision?: number;
+    current_revision?: number;
+    reason?: string;
+};
+type Input = Omit<NativeOpnTracerExecution, 'schema' | 'side_effects_executed' | 'execution_digest'>;
+export declare function createNativeOpnTracerExecution(input: Input): NativeOpnTracerExecution;
+export declare function nativeOpnTracerExecutionDigest(execution: NativeOpnTracerExecution): string;
+export declare function recordNativeOpnTracerExecution(input: {
+    stateStore: SqliteStateStore;
+    expected_revision: number;
+    execution: NativeOpnTracerExecution;
+    now: string;
+}): Promise<NativeOpnTracerExecutionFactResult>;
+export {};

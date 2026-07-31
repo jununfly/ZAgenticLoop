@@ -2948,7 +2948,7 @@
     "1-4-6": {
       "id": "1-4-6",
       "label": "Human Grill、blocked/recovery与重新preflight",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
@@ -3264,22 +3264,54 @@
     "1-4-7": {
       "id": "1-4-7",
       "label": "Codex与Workbuddy两阶段Native OPN Tracer",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "Native OPN Tracer第一阶段是否启动真实Agent进程？",
+          "answer": "采用：第一阶段冻结为协议级fixture + provider-neutral adapter boundary，不启动真实Codex/Workbuddy进程；使用抽象Agent1、Agent2的独立Execution记录验证Graph Atom、依赖、资源隔离、Evidence、Aggregation、Verification和Review Handoff。真实Agent进程接入作为后续extension，不能反向改变核心协议语义。",
+          "note": "先验证OPN产品自己的责任、依赖、证据和停止边界，再把具体Agent runtime作为适配器接入，避免将Codex/Workbuddy实现细节写入协议角色。"
+        },
+        {
+          "q": "Native OPN Tracer的独立Verification如何绑定？",
+          "answer": "采用：Verification必须消费已落库的Aggregation事实，绑定network/event/Plan/revision/aggregation_id/aggregation_digest；verifier_id必须不同于所有执行节点和Aggregation节点；Verification可为passed或failed，均追加独立事实，不能由Aggregation自证，也不能自动追加Review Handoff、task.completed或event.completed。",
+          "note": "保持Execution、Aggregation、独立Verification和Human Review Handoff四层责任边界，避免多节点协作中由产出节点自我宣布完成。"
+        },
+        {
+          "q": "Review Handoff如何接入Native OPN Graph Verification？",
+          "answer": "采用兼容式抽象：保留Provider Verification的Review Handoff v1字段与语义，同时允许verification_source=native-opn-graph，并额外绑定aggregation_digest；两种来源共享依赖闭合、remaining_risks为空、责任主体、CAS幂等/冲突和不直接写task.completed/event.completed的边界。暂不复制第二套Human Review协议，也不让Aggregation自证。",
+          "note": "以兼容扩展吸收Graph Verification，避免破坏已有Provider事实链；Review Handoff仍是独立责任交付事实。"
+        },
+        {
+          "q": "Native OPN Tracer跨节点最小传输如何设计？",
+          "answer": "采用：复用现有provider-neutral loopback Relay，只传输绑定network/event/Plan/revision/task/node scope的Evidence引用、digest和状态通知；不传完整Evidence内容、不传私钥/token、不让Relay读取或修改ArtifactStore。采用至少一次投递、接收端按message_id/digest幂等，乱序/重复/过期/跨scope消息fail-closed；StateStore事实仍由授权接收端追加。暂不实现P2P发现、复杂同步冲突自动合并或真实Agent进程传输。",
+          "note": "把Relay定位为受限通知与引用传输层，canonical Evidence仍由ArtifactStore/StateStore持有，避免网络传输层成为第二个事实源。"
+        },
+        {
+          "q": "Native OPN Tracer conformance fixture如何组装已有事实？",
+          "answer": "采用报告层组合：不重复实现enrollment、Plan/preflight、Execution、Relay、Aggregation、Verification或Review Handoff；fixture只读取并校验各阶段的结构化事实、scope/digest和两个Agent的enrolled-active状态，生成一份可重放的conformance report。只有双节点、Human中心、preflight execution-ready、两阶段Execution、Relay receipt、Aggregation、独立Verification和共享Review Handoff全部闭合时整体passed，否则blocked；报告自身side_effects_executed=false。",
+          "note": "保持各协议组件单一职责，最终验收层只做组合验证和证据索引，不成为新的业务事实源。"
+        }
+      ],
       "notes": "范围采用抽象Agent1、Agent2，不将Codex/Workbuddy写入协议角色；验证Human或Human+Agent中心责任单元编排双Agent Native OPN Tracer，并覆盖跨设备网络协议边界与最小可验证传输。具体包括双阶段任务分工、资源隔离、独立Execution、Evidence、聚合、Review Handoff和Human决策；不推送、不创建真实MR。"
     },
     "1-4-8": {
       "id": "1-4-8",
       "label": "deterministic gate、独立语义审查与Review Handoff",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "deterministic gate如何绑定独立语义审查与Review Handoff？",
+          "answer": "采用纯读、provider-neutral gate：低风险 capability 在 claim、runtime revalidation、scope、grant digest、plan revision/digest 与有效期一致时进入 dispatch-ready；review-required capability 必须同时绑定已持久化 Aggregation、独立 Verification、accepted Review Handoff 和独立语义审查报告；任何漂移、过期、自证或未知 capability fail-closed。",
+          "note": "gate 不写 StateStore，不写 task.completed/event.completed；task.dispatched 仍由 CAS-backed fact writer 在 gate 通过后单独记录。"
+        }
+      ],
+      "notes": "已实现 deterministic Dispatch Gate 与 provider-neutral Dispatch Semantic Review。Gate 校验 intent 有效期、claim/revalidation 的 network/plan/revision/task/node/grant 绑定；review-required 必须有独立 verifier、aggregation/verification/review-handoff digest、accepted handoff 与 passed semantic review；未知 capability、scope/digest 漂移、过期和自证 fail-closed。Semantic Review 仅组合已持久化 Aggregation、Verification 和 Review Handoff，不成为事实源，不写 task.completed/event.completed。dispatch fact 继续通过 StateStore CAS 幂等记录。"
     },
     "1-4-9": {
       "id": "1-4-9",
@@ -3613,7 +3645,7 @@
   },
   "metadata": {
     "created": "2026-07-29 10:55:22",
-    "updated": "2026-07-31 18:05:31",
+    "updated": "2026-07-31 18:44:15",
     "md_file": "docs/plans/loop-graph-engineering-integration-roadmap.md"
   }
 }

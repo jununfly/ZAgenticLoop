@@ -1,0 +1,38 @@
+import type { SqliteStateStore } from './sqlite-state-store.js';
+export declare const NATIVE_OPN_TRACER_AGGREGATION_SCHEMA: "zj-loop.native_opn_tracer_aggregation.v1";
+export declare const NATIVE_OPN_TRACER_AGGREGATION_RECORDED_SCHEMA: "zj-loop.native_opn_tracer_aggregation_recorded.v1";
+export type NativeOpnTracerAggregation = {
+    schema: typeof NATIVE_OPN_TRACER_AGGREGATION_SCHEMA;
+    network_id: string;
+    event_id: string;
+    plan_id: string;
+    plan_revision: number;
+    plan_digest: string;
+    aggregation_id: string;
+    status: 'passed';
+    execution_ids: string[];
+    input_evidence_digests: string[];
+    output_evidence_digest: string;
+    aggregated_at: string;
+    side_effects_executed: false;
+    aggregation_digest: string;
+};
+export type NativeOpnTracerAggregationFactResult = {
+    schema: typeof NATIVE_OPN_TRACER_AGGREGATION_RECORDED_SCHEMA;
+    status: 'recorded' | 'duplicate' | 'conflict' | 'blocked';
+    event_id: string;
+    side_effects_executed: false;
+    revision?: number;
+    current_revision?: number;
+    reason?: string;
+};
+type Input = Omit<NativeOpnTracerAggregation, 'schema' | 'status' | 'side_effects_executed' | 'aggregation_digest'>;
+export declare function createNativeOpnTracerAggregation(input: Input): NativeOpnTracerAggregation;
+export declare function nativeOpnTracerAggregationDigest(aggregation: NativeOpnTracerAggregation): string;
+export declare function recordNativeOpnTracerAggregation(input: {
+    stateStore: SqliteStateStore;
+    expected_revision: number;
+    aggregation: NativeOpnTracerAggregation;
+    now: string;
+}): Promise<NativeOpnTracerAggregationFactResult>;
+export {};
