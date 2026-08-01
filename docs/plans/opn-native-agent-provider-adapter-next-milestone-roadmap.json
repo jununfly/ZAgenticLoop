@@ -1,0 +1,167 @@
+{
+  "title": "OPN Native Agent Provider Adapter 下一里程碑",
+  "description": "在已完成 Native Agent Runtime 上，接入一个真实本地 Agent 进程的 provider-neutral adapter，验证任务边界、生命周期、Evidence 和 Human Review。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN Native Agent Provider Adapter 下一里程碑",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [
+        {
+          "q": "下一里程碑是否优先实现一个 provider-neutral 的真实本地 Agent Provider Adapter，接通一个真实 Agent，Codex/Workbuddy 仅作为具体 provider extension？",
+          "answer": "是",
+          "note": "先证明 Runtime 能驱动真实 Agent；多设备部署、运维 UI 和第三方框架另开路线图。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Provider-neutral local process adapter contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-1-1",
+        "1-1-2"
+      ],
+      "decisions": [
+        {
+          "q": "本地进程 Adapter 是否采用 executable + args[] + 明确 cwd + 环境变量 allowlist + 管道 + timeout/output bound/cancel 句柄的结构化启动契约，禁止 shell command string？",
+          "answer": "采用方案 A：结构化 argv + 明确运行上下文",
+          "note": "具体 Agent 的 CLI、输入格式和 provider 细节由 extension adapter 负责。"
+        },
+        {
+          "q": "进程 Adapter 第一版是否采用单次 bounded request + bounded stdout/stderr + exit metadata，由 provider adapter 转换为统一结果；NDJSON/PTY 另开路线图？",
+          "answer": "采用方案 A：单次 bounded request + structured result",
+          "note": "Runtime 不直接解释自然语言输出；流式事件和 PTY 交互不进入本里程碑。"
+        },
+        {
+          "q": "首个真实 Provider Adapter 是否先接 Codex，Codex 只存在于 extension 层，Workbuddy 后续复用同一 LocalProcessAdapter contract？",
+          "answer": "采用方案 A：先接 Codex",
+          "note": "Core 不依赖 Codex 名称、CLI 或输出格式。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Real Agent process lifecycle and bounded execution",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "第一版 Codex Adapter 是否固定使用 codex exec --json --ephemeral --sandbox read-only --ask-for-approval never --cd <task cwd>，通过 stdin 接收任务并只读执行？",
+          "answer": "采用方案 A：只读、非交互、可重放执行",
+          "note": "先验证真实 Agent 驱动和 Evidence 转换；写入任务另开路线图。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Process output to structured Evidence",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Codex JSONL 是否采用严格 allowlist 事件解析、大小边界、明确终态、退出码和成功标准映射；未知事件/解析失败/缺终态/超限均 fail-closed？",
+          "answer": "采用方案 A：严格事件解析 + 明确终态",
+          "note": "原始事件流和最终消息通过 ArtifactStore 引用，Transport/StateStore 不承载无限制 stdout。"
+        },
+        {
+          "q": "Codex stdout/stderr 和最终响应是否先经过 deterministic secret redaction，再写 ArtifactStore；无法安全脱敏时 blocked，不保存原始未脱敏输出？",
+          "answer": "采用方案 A：先脱敏，再写 ArtifactStore",
+          "note": "Evidence 记录 redaction 规则版本与不确定性风险；Transport/StateStore 不承载原始 Agent 输出。"
+        },
+        {
+          "q": "脱敏器是否采用版本化 RedactionPolicy，包含内置常见 secret 规则、中心提供的额外 literals/patterns、命中规则和不确定性状态；无法判断安全时不保存原始输出并 blocked？",
+          "answer": "采用方案 A：显式 RedactionPolicy + fail-closed",
+          "note": "不把固定正则替代当作完整安全保证；外部 DLP 服务另开范围。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Permission side-effect and cancellation gates",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Codex Adapter 是否要求任务声明 sandbox/approval/cwd/访问范围和资源隔离，记录 argv/context digest 与可观测策略；无法证明策略一致即 blocked？",
+          "answer": "采用方案 A：请求策略与观测证据双重绑定",
+          "note": "第一阶段固定 read-only + never；不把 provider 自身权限保证当作产品安全边界。"
+        },
+        {
+          "q": "Codex 超时/取消是否采用 cancellation-requested/timed-out -> SIGTERM -> grace period -> 必要时 SIGKILL，并持久化最终退出事实；无法确认退出即 blocked？",
+          "answer": "采用方案 A：分阶段终止 + 持久化终态",
+          "note": "不生成成功 Evidence；重试创建新 execution attempt。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Real Agent conformance and Human review",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "真实 Codex dogfood 是否默认 deterministic、真实调用显式 opt-in，固定 read-only/never/ephemeral/cwd，未满足环境时 skipped 或 blocked 而非 passed？",
+          "answer": "采用方案 A：默认 deterministic，真实 Codex 显式 opt-in",
+          "note": "真实测试独立于默认回归，输出只保留脱敏 Evidence。"
+        },
+        {
+          "q": "第一条真实 Codex dogfood 是否采用只读仓库分析/Review Evidence 任务，禁止修改文件、网络操作和外部资源创建，结果绑定文件引用与成功标准？",
+          "answer": "采用方案 A：只读仓库分析并生成 Review Evidence",
+          "note": "先证明真实 Agent 做有价值工作；写入开发任务另开路线图。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "Structured local process launch contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "Bounded process result and termination contract",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-08-01 02:07:17",
+    "updated": "2026-08-01 02:26:23",
+    "md_file": "docs/plans/opn-native-agent-provider-adapter-next-milestone-roadmap.md"
+  }
+}

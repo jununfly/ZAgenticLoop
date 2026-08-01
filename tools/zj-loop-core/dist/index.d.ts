@@ -136,3 +136,5 @@ export * from './transport-contract.js';
 export * from './tls-transport-adapter.js';
 export * from './sqlite-transport-delivery-store.js';
 export * from './transport-replay-conformance.js';
+export * from './local-process-adapter.js';
+export * from './codex-agent-provider-adapter.js';
