@@ -1,9 +1,13 @@
 import { createHash } from 'node:crypto';
 import { appendRealAgentDogfoodEvent, createRealAgentDogfoodTransition } from './real-agent-dogfood-lifecycle.js';
+import { validateRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 function digest(value) { return `sha256:${createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex')}`; }
 export async function executeRealAgentDogfoodWorker(input) {
     if (input.lifecycle.status !== 'running')
         throw new Error('worker-lifecycle-not-running');
+    const binding = await validateRealAgentDogfoodExecutionBinding({ binding: input.binding, executable: input.executable, args: input.binding.args, cwd: input.worktree_path, worktree_path: input.worktree_path, lease_id: input.lease_id });
+    if (binding.status === 'blocked')
+        throw new Error(`worker-${binding.reason}`);
     const now = input.now ?? new Date().toISOString();
     const result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
     const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });

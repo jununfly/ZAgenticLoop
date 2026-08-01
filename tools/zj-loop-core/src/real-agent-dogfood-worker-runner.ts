@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { ContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
 import { appendRealAgentDogfoodEvent, createRealAgentDogfoodTransition, type RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
+import { validateRealAgentDogfoodExecutionBinding, type RealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 
 type ProviderResult = { status: 'completed' | 'failed' | 'cancelled' | 'timed-out'; success: boolean; pid: number; exit_code: number | null; signal: string | null; stdout: string; stderr: string; reason?: string };
 type Provider = { run(input: { cwd: string; prompt: string; executable: string }): Promise<ProviderResult> };
@@ -19,8 +20,10 @@ export type RealAgentDogfoodWorkerResult = {
   next_action: string;
 };
 
-export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; worktree_path: string; executable: string; goal: string; provider: Provider; post_run_observation?: PostRunObservation; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
+export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; worktree_path: string; executable: string; goal: string; provider: Provider; post_run_observation?: PostRunObservation; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
   if (input.lifecycle.status !== 'running') throw new Error('worker-lifecycle-not-running');
+  const binding = await validateRealAgentDogfoodExecutionBinding({ binding: input.binding, executable: input.executable, args: input.binding.args, cwd: input.worktree_path, worktree_path: input.worktree_path, lease_id: input.lease_id });
+  if (binding.status === 'blocked') throw new Error(`worker-${binding.reason}`);
   const now = input.now ?? new Date().toISOString();
   const result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
   const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });

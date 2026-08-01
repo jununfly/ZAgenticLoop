@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { runRealAgentDogfoodCli } from '../dist/real-agent-dogfood-cli.js';
@@ -132,6 +132,49 @@ test('resume consumes a persisted signed approval reference and enters running e
     const repeated = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-1', '--state-store', statePath, '--evidence-store', evidencePath]);
     assert.equal(repeated.exitCode, 0, repeated.stderr);
     assert.equal(JSON.parse(repeated.stdout).status, 'running');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('resume starts a detached Codex worker with a persisted execution context', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-detached-worker-'));
+  const repo = path.join(root, 'repo');
+  const runtime = path.join(root, 'runtime');
+  const executable = path.join(root, 'codex-fixture.sh');
+  await mkdir(repo);
+  await mkdir(runtime);
+  await initGitRepo(repo);
+  await writeFile(executable, '#!/bin/sh\ncat >/dev/null\nprintf detached-output\n');
+  await chmod(executable, 0o700);
+  const statePath = path.join(runtime, 'state.db');
+  const evidencePath = path.join(runtime, 'evidence');
+  try {
+    const started = await invoke(['start', '--goal', 'run detached atom', '--repo', repo, '--provider-id', 'codex', '--adapter', 'codex-agent-provider.v1', '--executable', executable, '--network-policy', 'network-denied', '--state-store', statePath, '--evidence-store', evidencePath, '--worktree-root', path.join(runtime, 'worktrees')]);
+    const created = JSON.parse(started.stdout);
+    const summary = JSON.parse(await readFile(created.approval_summary_path, 'utf8'));
+    const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64) });
+    const approval = await authority.signApprovalContext({ action: 'real-agent-dogfood.approve', request_id: created.dogfood_id, request_digest: summary.summary_digest, network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64), issued_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() });
+    await writeFile(path.join(evidencePath, 'approval-detached.json'), JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, lifecycle_revision: 4, policy_digest: summary.policy_digest, approval_summary_digest: summary.summary_digest, approval, identity: authority.getPublicIdentity() }));
+    const resumed = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-detached', '--state-store', statePath, '--evidence-store', evidencePath]);
+    assert.equal(resumed.exitCode, 0, resumed.stderr);
+    const output = JSON.parse(resumed.stdout);
+    assert.equal(output.status, 'running');
+    assert.equal(output.worker_started, true);
+    assert.match(output.worker_context_path, /worker-context\.json$/);
+    const store = createSqliteStateStore({ filename: statePath });
+    try {
+      let latest;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const snapshot = await store.readEvents({ network_id: created.network_id, aggregate_type: 'real-agent-dogfood', aggregate_id: created.dogfood_id });
+        latest = snapshot.events.at(-1)?.payload?.to_status;
+        if (latest === 'outcome-uncertain' || latest === 'blocked') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      assert.equal(latest, 'outcome-uncertain');
+    } finally {
+      await store.close();
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

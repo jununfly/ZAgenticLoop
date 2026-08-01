@@ -1,6 +1,7 @@
 import type { ContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
 import { type RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
+import { type RealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 type ProviderResult = {
     status: 'completed' | 'failed' | 'cancelled' | 'timed-out';
     success: boolean;
@@ -41,6 +42,7 @@ export declare function executeRealAgentDogfoodWorker(input: {
     lifecycle: RealAgentDogfoodLifecycle;
     worker_id: string;
     lease_id: string;
+    binding: RealAgentDogfoodExecutionBinding;
     worktree_path: string;
     executable: string;
     goal: string;

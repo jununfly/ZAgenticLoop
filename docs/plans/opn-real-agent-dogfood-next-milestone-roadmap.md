@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-01 20:54:26
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-01 21:27:17
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -13,7 +13,7 @@
 
 ### 当前施工：1-3. Provider-neutral real-agent-dogfood CLI entry
 
-Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner now persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Detached worker process startup, full trusted proof adapters, independent verification, review, acceptance and closeout remain.
+Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker process startup, full trusted proof adapters, independent verification, review, acceptance and closeout remain.
 
 **决策：**
 - Q: 问题5：首个真实 dogfood 是否只实现一个具体 Provider adapter 作为垂直切片，但入口、协议和 review package 全部保持 provider-neutral？ → 同意 (产品不绑定 Codex、Workbuddy 或其他 Agent；首个实现仅选择当前可用 Provider 做真实验证，显式记录 provider_id/adapter，后续 Provider 复用同一 contract，切换 Provider 必须重新执行 preflight 和 Human approval。)
@@ -92,4 +92,7 @@ Lifecycle contract, pure projection, replay admission, network-level StateStore 
 - Q: 问题115：post-run worktree 是否必须重新检查并记录 clean 状态、HEAD、branch、diff digest 和 untracked 文件；发现未预期改动或无法读取状态时进入 outcome-uncertain，不得继续自动合并或清理？ → 同意 (post-run 必须保存 worktree clean/HEAD/branch/diff/untracked 事实；任何异常进入 outcome-uncertain，禁止自动合并、覆盖或清理。)
 - Q: 问题116：Provider stdout/stderr 是否必须使用固定上限（字节数与事件数量），超限立即停止或标记截断并持久化 reason；超限事实未被完整记录时进入 blocked，禁止无限等待或无限写入 EvidenceStore？ → 同意 (Provider 输出设置固定 byte/event 上限；超限停止或明确标记截断并保存 reason，无法完整持久化时 blocked，不允许无限输出或等待。)
 - Q: 问题117：Provider timeout 是否必须由 preflight 固定 timeout_ms 与 termination_grace_ms；超时后按受控顺序终止整个 process tree，记录 timeout/termination facts，无法证明所有 descendants 终止时进入 outcome-uncertain？ → 同意 (timeout 与 termination grace 在 preflight 固定；超时按受控顺序终止 process tree 并记录事实，无法证明 descendants 全部终止时 outcome-uncertain。)
+- Q: 问题118：下一条 TDD 垂直切片是否实现 zj-loop-real-agent-dogfood worker 入口，并以现有 CodexAgentProviderAdapter 作为首个真实 Provider？worker 从 StateStore 读取 running lifecycle、lease 和 execution binding，真实调用一次 Codex，保存 bounded output evidence，并按结果推进 lifecycle；禁止 fake runner？ → 同意 (下一条切片实现独立 worker 入口；首个真实 Provider 复用 CodexAgentProviderAdapter/LocalProcessAdapter，读取并校验 StateStore lifecycle、lease、binding，真实执行并持久化结果，禁止 fake runner。)
+- Q: 问题119：是否将 1-3 的下一条垂直切片落为显式 worker context 入口：读取并校验 running lifecycle、单 worker lease、execution binding 和持久化 StateStore/EvidenceStore，通过真实 CodexAgentProviderAdapter/LocalProcessAdapter 执行一次；缺失上下文、lease 或绑定漂移时 blocked，禁止 fake fallback？ → 同意 (已实现 provider registry、显式 worker context、真实本地进程调用和 bounded evidence；缺少 post-run proof 时进入 outcome-uncertain。)
+- Q: 问题120：Codex approval resume 是否应在 lifecycle 进入 running 后生成持久化 worker context，并以受控 detached 子进程启动独立 worker；resume 终端退出不影响 worker，worker 启动失败必须记录 blocked，禁止把未启动伪装成 running？ → 同意 (已实现 Codex 专用 detached worker 启动；worker context 绑定 lifecycle、lease、execution binding、StateStore/EvidenceStore 和 goal，集成测试验证独立进程最终写入 outcome-uncertain。)
 <!-- ROADMAP_SECTION_END -->

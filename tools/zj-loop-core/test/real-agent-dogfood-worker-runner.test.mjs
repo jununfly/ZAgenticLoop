@@ -7,6 +7,7 @@ import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createContentAddressedEvidenceStore } from '../dist/content-addressed-evidence-store.js';
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition, appendRealAgentDogfoodEvent, projectRealAgentDogfoodLifecycle } from '../dist/real-agent-dogfood-lifecycle.js';
 import { executeRealAgentDogfoodWorker } from '../dist/real-agent-dogfood-worker-runner.js';
+import { createRealAgentDogfoodExecutionBinding } from '../dist/real-agent-dogfood-binding.js';
 
 const d = (letter) => `sha256:${letter.repeat(64)}`;
 
@@ -26,9 +27,12 @@ test('worker persists bounded output evidence and advances only with post-run pr
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-runner-'));
   const evidenceStore = await createContentAddressedEvidenceStore({ root: path.join(root, 'evidence') });
   const { stateStore, lifecycle } = await runningFixture(root);
+  const executable = path.join(root, 'provider');
+  await (await import('node:fs/promises')).writeFile(executable, 'provider');
+  const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
   let request;
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', worktree_path: '/tmp/worktree', executable: '/usr/bin/codex', goal: 'do the atom', provider: { async run(input) { request = input; return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_observation: { status: 'signed', all_descendants_terminated: true, after_worktree_clean: true, after_network_policy_proved: true, after_credentials_clean: true, side_effects_detected: false }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run(input) { request = input; return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_observation: { status: 'signed', all_descendants_terminated: true, after_worktree_clean: true, after_network_policy_proved: true, after_credentials_clean: true, side_effects_detected: false }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'verification-pending');
     assert.equal(request.cwd, '/tmp/worktree');
     const events = await stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood', aggregate_id: 'dogfood-1' });
@@ -41,8 +45,11 @@ test('worker does not claim verification when post-run proof is missing', async 
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-runner-uncertain-'));
   const evidenceStore = await createContentAddressedEvidenceStore({ root: path.join(root, 'evidence') });
   const { stateStore, lifecycle } = await runningFixture(root);
+  const executable = path.join(root, 'provider');
+  await (await import('node:fs/promises')).writeFile(executable, 'provider');
+  const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', worktree_path: '/tmp/worktree', executable: '/usr/bin/codex', goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'outcome-uncertain');
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });

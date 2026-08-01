@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createHash, randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,6 +17,8 @@ import { createSqliteStateStore } from './sqlite-state-store.js';
 import { verifyHumanApprovalContextDetailed, type HumanApprovalContext, type HumanPublicIdentity } from './human-authority.js';
 import { acquireRealAgentDogfoodWorkerLease } from './real-agent-dogfood-worker.js';
 import { prepareRealAgentDogfoodWorktree } from './real-agent-dogfood-worktree.js';
+import { buildCodexInvocation } from './codex-agent-provider-adapter.js';
+import { createRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 
 const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -153,17 +156,36 @@ async function resume(options: Record<string, string | boolean | undefined>) {
     }
     if (envelope.schema !== 'zj-loop.real_agent_dogfood_approval_envelope.v1' || envelope.dogfood_id !== dogfoodId || envelope.execution_id !== lifecycle.execution_id || envelope.attempt !== lifecycle.attempt || envelope.lifecycle_revision !== snapshot.snapshot_revision || typeof envelope.policy_digest !== 'string' || typeof envelope.approval_summary_digest !== 'string' || !envelope.approval || !envelope.identity) throw new Error('human-approval-binding-invalid');
     const summaryPath = path.join(evidenceStore, `${dogfoodId}.approval-summary.json`);
-    const summary = JSON.parse(await readFile(summaryPath, 'utf8')) as { summary_digest?: unknown; policy_digest?: unknown };
+    const summary = JSON.parse(await readFile(summaryPath, 'utf8')) as { summary_digest?: unknown; policy_digest?: unknown; goal?: unknown; executable?: unknown; worktree_path?: unknown };
     if (summary.summary_digest !== envelope.approval_summary_digest || summary.policy_digest !== envelope.policy_digest) throw new Error('human-approval-summary-mismatch');
     if (envelope.approval.action !== 'real-agent-dogfood.approve' || envelope.approval.request_id !== dogfoodId || envelope.approval.request_digest !== summary.summary_digest || envelope.approval.network_id !== networkId || envelope.approval.schema !== 'zj-loop.human_authority.v2') throw new Error('human-approval-context-mismatch');
     if (verifyHumanApprovalContextDetailed({ identity: envelope.identity, context: envelope.approval, require_v2: true }).status !== 'current-v2-accepted') throw new Error('human-approval-signature-invalid');
     const workerId = `worker-${randomUUID()}`;
     const lease = await acquireRealAgentDogfoodWorkerLease({ stateStore, network_id: networkId, execution_id: lifecycle.execution_id, worker_id: workerId });
     if (lease.status === 'blocked') throw new Error(lease.reason);
+    let workerContext: { path: string; binding: Awaited<ReturnType<typeof createRealAgentDogfoodExecutionBinding>> } | undefined;
+    if (lifecycle.provider_id === 'codex') {
+      if (typeof summary.goal !== 'string' || typeof summary.executable !== 'string' || typeof summary.worktree_path !== 'string') throw new Error('worker-context-source-missing');
+      const invocation = buildCodexInvocation({ executable: summary.executable, cwd: summary.worktree_path });
+      const binding = await createRealAgentDogfoodExecutionBinding({ executable: invocation.executable, args: invocation.args, cwd: invocation.cwd, worktree_path: summary.worktree_path, lease_id: lease.lease_id });
+      workerContext = { path: path.join(evidenceStore, `${dogfoodId}.worker-context.json`), binding };
+    }
     const running = createRealAgentDogfoodTransition({ lifecycle, to: 'running', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:running`, occurred_at: new Date().toISOString(), approval_digest: digest(envelope.approval), next_action: 'provider-execution' });
     const result = await append(stateStore, networkId, running.event, lease.revision);
     if (result.status === 'conflict') throw new Error('lifecycle-revision-conflict');
-    return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
+    if (!workerContext) return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
+    try {
+      await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+      const workerCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-worker-cli.js');
+      const child = spawn(process.execPath, [workerCli, 'worker', '--provider-id', 'codex', '--context', workerContext.path], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
+      child.unref();
+      return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_started: true, worker_context_path: workerContext.path, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
+    } catch (error) {
+      const blocked = createRealAgentDogfoodTransition({ lifecycle: running.lifecycle, to: 'blocked', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:worker-start-blocked`, occurred_at: new Date().toISOString(), fact_digest: digest({ error: error instanceof Error ? error.message : String(error), worker_context_path: workerContext.path }), reason_code: 'worker-start-failed', next_action: 'human-reconciliation' });
+      const blockedResult = await append(stateStore, networkId, blocked.event, result.revision as number);
+      if (blockedResult.status === 'conflict') throw new Error('worker-start-failure-record-conflict');
+      return outputLifecycle(blocked.lifecycle, { provider_invoked: false, worker_started: false, worker_context_path: workerContext.path });
+    }
   } finally {
     await stateStore.close();
   }

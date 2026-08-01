@@ -159,3 +159,5 @@ export * from './real-agent-dogfood-worker.js';
 export * from './real-agent-dogfood-worktree.js';
 export * from './content-addressed-evidence-store.js';
 export * from './real-agent-dogfood-worker-runner.js';
+export * from './real-agent-dogfood-binding.js';
+export * from './real-agent-dogfood-provider-registry.js';
