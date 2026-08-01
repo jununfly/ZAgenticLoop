@@ -118,6 +118,7 @@ export * from './native-opn-tracer-relay.js';
 export * from './native-opn-tracer-relay-fact.js';
 export * from './native-opn-tracer-conformance.js';
 export * from './dispatch-semantic-review.js';
+export * from './real-agent-dogfood-post-run-proof.js';
 export * from './native-opn-tracer-evidence-set.js';
 export * from './graph-atom-ui-read-model.js';
 export * from './human-grill.js';

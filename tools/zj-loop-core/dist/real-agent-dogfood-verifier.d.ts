@@ -2,21 +2,14 @@ import type { ContentAddressedEvidenceStore } from './content-addressed-evidence
 import { type RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
 export declare const REAL_AGENT_DOGFOOD_VERIFICATION_SCHEMA: "zj-loop.real_agent_dogfood_verification.v1";
-type PostRunObservation = {
-    status: 'signed';
-    all_descendants_terminated: boolean;
-    after_worktree_clean: boolean;
-    after_network_policy_proved: boolean;
-    after_credentials_clean: boolean;
-    side_effects_detected: boolean;
-};
+import { type RealAgentDogfoodPostRunProof } from './real-agent-dogfood-post-run-proof.js';
 export type RealAgentDogfoodExecutionFact = {
     execution_id: string;
     attempt: number;
     worker_id: string;
     status: 'completed' | 'failed' | 'cancelled' | 'timed-out';
     success: boolean;
-    post_run_observation: PostRunObservation | null;
+    post_run_proof: RealAgentDogfoodPostRunProof | null;
 };
 export type RealAgentDogfoodVerificationResult = {
     status: 'review-pending' | 'blocked' | 'outcome-uncertain';
@@ -36,4 +29,3 @@ export declare function verifyRealAgentDogfoodExecution(input: {
     expected_revision: number;
     now?: string;
 }): Promise<RealAgentDogfoodVerificationResult>;
-export {};

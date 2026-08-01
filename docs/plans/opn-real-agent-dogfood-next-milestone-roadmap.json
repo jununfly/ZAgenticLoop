@@ -590,6 +590,11 @@
           "q": "问题127补正：closeout 通过全部校验后是否必须受控移除已签名绑定的 clean registered isolated worktree，但不删除 EvidenceStore；重复 closeout 幂等返回原事实？",
           "answer": "同意",
           "note": "修正问题127原文笔误：实现为受控移除 worktree，不是“并非强制移除”；EvidenceStore 永不因 closeout 自动删除。"
+        },
+        {
+          "q": "问题128：Provider worker 是否必须只接受 provider-neutral 的 signed post-run proof，且该 proof 必须绑定 execution/attempt、worktree、executable digest、stdout/stderr digest、进程边界、worktree/network/credential 清理状态并完成签名校验；缺失、篡改或绑定漂移时进入 outcome-uncertain？",
+          "answer": "同意",
+          "note": "已实现 real-agent-dogfood-post-run-proof.v1；worker 与独立 verifier 拒绝裸布尔 observation，校验 P-256 签名、摘要与 execution/worktree/output/process/safety 绑定；缺失或失败进入 outcome-uncertain。trusted runner/provider 适配器只负责生成该 provider-neutral proof，具体平台实现另行接入。"
         }
       ],
       "notes": "Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters remain; independent verifier, review package persistence, signed Human review CLI/API, CAS decision path and explicit signed closeout are implemented. Closeout is a separate resource lifecycle: it requires accepted/rejected, no active lease, a clean registered worktree, signed worktree binding, is idempotent, removes only the worktree, and retains EvidenceStore evidence."
@@ -730,7 +735,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-01 23:51:39",
+    "updated": "2026-08-02 00:05:35",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

@@ -2,6 +2,7 @@ import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 import { appendRealAgentDogfoodEvent, createRealAgentDogfoodTransition } from './real-agent-dogfood-lifecycle.js';
 export const REAL_AGENT_DOGFOOD_VERIFICATION_SCHEMA = 'zj-loop.real_agent_dogfood_verification.v1';
+import { verifyRealAgentDogfoodPostRunProof } from './real-agent-dogfood-post-run-proof.js';
 function digest(value) {
     const json = canonicalize(value);
     if (typeof json !== 'string')
@@ -14,11 +15,13 @@ export async function verifyRealAgentDogfoodExecution(input) {
         throw new Error('real-agent-dogfood-verifier-lifecycle-invalid');
     let decision;
     let executionFact;
+    let parsedFact;
     try {
         const parsed = JSON.parse((await input.evidenceStore.read({ digest: input.provider_fact_digest, actor: `verifier:${input.verifier_id}` })).toString('utf8'));
+        parsedFact = parsed;
         if (parsed.schema !== 'zj-loop.real_agent_dogfood_provider_result.v1' || typeof parsed.execution_id !== 'string' || !Number.isInteger(parsed.attempt) || typeof parsed.worker_id !== 'string' || !parsed.result || !['completed', 'failed', 'cancelled', 'timed-out'].includes(String(parsed.result.status)) || typeof parsed.result.success !== 'boolean')
             throw new Error('provider-fact-invalid');
-        executionFact = { execution_id: parsed.execution_id, attempt: parsed.attempt, worker_id: parsed.worker_id, status: parsed.result.status, success: parsed.result.success, post_run_observation: parsed.post_run_observation ?? null };
+        executionFact = { execution_id: parsed.execution_id, attempt: parsed.attempt, worker_id: parsed.worker_id, status: parsed.result.status, success: parsed.result.success, post_run_proof: parsed.post_run_proof ?? null };
     }
     catch {
         decision = { to: 'outcome-uncertain', verificationStatus: 'blocked', reasonCode: 'provider-fact-missing-or-invalid', nextAction: 'human-reconcile-execution' };
@@ -38,8 +41,11 @@ export async function verifyRealAgentDogfoodExecution(input) {
             decision = { to: 'outcome-uncertain', verificationStatus: 'blocked', reasonCode: 'verification-evidence-missing-or-invalid', nextAction: 'human-reconcile-execution' };
         }
         if (!decision) {
-            const observation = executionFact.post_run_observation;
-            if (!observation || observation.status !== 'signed' || !observation.all_descendants_terminated || !observation.after_worktree_clean || !observation.after_network_policy_proved || !observation.after_credentials_clean || observation.side_effects_detected || !validDigest(input.stdout_digest) || !validDigest(input.stderr_digest)) {
+            const proof = executionFact.post_run_proof;
+            const checked = proof && parsedFact && typeof parsedFact.worktree_path === 'string' && typeof parsedFact.executable_digest === 'string' && typeof parsedFact.stdout?.digest === 'string' && typeof parsedFact.stderr?.digest === 'string'
+                ? verifyRealAgentDogfoodPostRunProof({ proof, execution_id: executionFact.execution_id, attempt: executionFact.attempt, worktree_path: parsedFact.worktree_path, executable_digest: parsedFact.executable_digest, stdout_digest: parsedFact.stdout.digest, stderr_digest: parsedFact.stderr.digest })
+                : { status: 'blocked', reasons: ['post-run-proof-missing-or-invalid'] };
+            if (checked.status === 'blocked' || !validDigest(input.stdout_digest) || !validDigest(input.stderr_digest)) {
                 decision = { to: 'outcome-uncertain', verificationStatus: 'blocked', reasonCode: 'verification-proof-incomplete', nextAction: 'human-reconcile-execution' };
             }
             else {

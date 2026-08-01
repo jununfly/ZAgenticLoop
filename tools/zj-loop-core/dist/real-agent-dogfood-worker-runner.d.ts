@@ -2,6 +2,7 @@ import type { ContentAddressedEvidenceStore } from './content-addressed-evidence
 import { type RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { type RealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
+import { type RealAgentDogfoodPostRunProof } from './real-agent-dogfood-post-run-proof.js';
 type ProviderResult = {
     status: 'completed' | 'failed' | 'cancelled' | 'timed-out';
     success: boolean;
@@ -18,14 +19,6 @@ type Provider = {
         prompt: string;
         executable: string;
     }): Promise<ProviderResult>;
-};
-type PostRunObservation = {
-    status: 'signed';
-    all_descendants_terminated: boolean;
-    after_worktree_clean: boolean;
-    after_network_policy_proved: boolean;
-    after_credentials_clean: boolean;
-    side_effects_detected: boolean;
 };
 export type RealAgentDogfoodWorkerResult = {
     status: 'verification-pending' | 'blocked' | 'outcome-uncertain';
@@ -49,7 +42,7 @@ export declare function executeRealAgentDogfoodWorker(input: {
     executable: string;
     goal: string;
     provider: Provider;
-    post_run_observation?: PostRunObservation;
+    post_run_proof?: RealAgentDogfoodPostRunProof;
     expected_revision: number;
     now?: string;
 }): Promise<RealAgentDogfoodWorkerResult>;

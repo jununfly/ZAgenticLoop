@@ -7,6 +7,7 @@ import { createContentAddressedEvidenceStore } from '../dist/content-addressed-e
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition, appendRealAgentDogfoodEvent, projectRealAgentDogfoodLifecycle } from '../dist/real-agent-dogfood-lifecycle.js';
 import { verifyRealAgentDogfoodExecution } from '../dist/real-agent-dogfood-verifier.js';
+import { createFakeRealAgentDogfoodPostRunProof } from '../dist/real-agent-dogfood-post-run-proof.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
 
@@ -42,7 +43,8 @@ test('independent verifier advances complete evidence only to review-pending', a
   try {
     const stdout = await evidenceStore.put({ content: 'stdout', kind: 'provider-stdout' });
     const stderr = await evidenceStore.put({ content: 'stderr', kind: 'provider-stderr' });
-    const fact = await evidenceStore.put({ content: JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: 'execution-1', attempt: 1, worker_id: 'worker-1', result: { status: 'completed', success: true }, post_run_observation: { status: 'signed', all_descendants_terminated: true, after_worktree_clean: true, after_network_policy_proved: true, after_credentials_clean: true, side_effects_detected: false } }), kind: 'provider-result-fact' });
+    const postRunProof = createFakeRealAgentDogfoodPostRunProof({ execution_id: 'execution-1', attempt: 1, worktree_path: '/tmp/worktree', executable_digest: digest('f'), stdout_digest: stdout.digest, stderr_digest: stderr.digest });
+    const fact = await evidenceStore.put({ content: JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: 'execution-1', attempt: 1, worker_id: 'worker-1', worktree_path: '/tmp/worktree', executable_digest: digest('f'), stdout, stderr, result: { status: 'completed', success: true }, post_run_proof: postRunProof }), kind: 'provider-result-fact' });
     const result = await verifyRealAgentDogfoodExecution({ stateStore, evidenceStore, lifecycle, verifier_id: 'verifier-1', provider_fact_digest: fact.digest, stdout_digest: stdout.digest, stderr_digest: stderr.digest, expected_revision: await stateStore.getRevision('network-1'), now: '2026-08-01T12:00:05.000Z' });
     assert.equal(result.status, 'review-pending');
     assert.equal(result.verification_status, 'passed');
