@@ -18,6 +18,21 @@ export type RealAgentDogfoodPostRunProof = {
     issued_at: string;
     signature: TrustedRunnerSignature;
 };
+export type RealAgentDogfoodPostRunProofFactory = (input: {
+    execution_id: string;
+    attempt: number;
+    worktree_path: string;
+    executable_digest: string;
+    stdout_digest: string;
+    stderr_digest: string;
+    provider_result: {
+        status: string;
+        success: boolean;
+        pid: number;
+        exit_code: number | null;
+        signal: string | null;
+    };
+}) => Promise<RealAgentDogfoodPostRunProof>;
 export declare function realAgentDogfoodPostRunProofDigest(proof: Omit<RealAgentDogfoodPostRunProof, 'signature'>): string;
 export declare function verifyRealAgentDogfoodPostRunProof(input: {
     proof: RealAgentDogfoodPostRunProof;

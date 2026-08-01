@@ -6,8 +6,6 @@ import { createContentAddressedEvidenceStore } from '../dist/content-addressed-e
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition, appendRealAgentDogfoodEvent, projectRealAgentDogfoodLifecycle } from '../dist/real-agent-dogfood-lifecycle.js';
 import { acquireRealAgentDogfoodWorkerLease } from '../dist/real-agent-dogfood-worker.js';
 import { createRealAgentDogfoodExecutionBinding } from '../dist/real-agent-dogfood-binding.js';
-import { createFakeRealAgentDogfoodPostRunProof } from '../dist/real-agent-dogfood-post-run-proof.js';
-import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, rm, writeFile, chmod } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -64,27 +62,25 @@ test('worker context invokes the registered provider through the real local proc
     const running = createRealAgentDogfoodTransition({ lifecycle: awaiting.lifecycle, to: 'running', event_id: 'running-cli', occurred_at: '2026-08-01T12:00:04.000Z', approval_digest: 'sha256:' + 'b'.repeat(64), next_action: 'provider-execution' });
     await appendRealAgentDogfoodEvent({ stateStore: store, expected_revision: lease.revision, event: running.event });
     const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', worktree], cwd: worktree, worktree_path: worktree, lease_id: lease.lease_id });
-    const textDigest = (value) => `sha256:${createHash('sha256').update(value, 'utf8').digest('hex')}`;
-    const postRunProof = createFakeRealAgentDogfoodPostRunProof({ execution_id: 'execution-cli', attempt: 1, worktree_path: worktree, executable_digest: binding.executable_digest, stdout_digest: textDigest('worker-output'), stderr_digest: textDigest('') });
     const contextPath = path.join(root, 'worker-context.json');
-    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1, post_run_proof: postRunProof }));
+    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1 }));
     const stdout = [];
     const stderr = [];
     const exitCode = await runRealAgentDogfoodWorkerCli(['worker', '--provider-id', 'codex', '--context', contextPath], { stdout: (message) => stdout.push(message), stderr: (message) => stderr.push(message) });
     assert.deepEqual(stderr, []);
     assert.equal(exitCode, 0);
     const result = JSON.parse(stdout[0]);
-    assert.equal(result.status, 'verification-pending');
-    assert.equal(result.verifier_started, true);
+    assert.equal(result.status, 'outcome-uncertain');
+    assert.equal(result.reason_code, 'post-run-proof-missing-or-invalid');
     assert.match(result.stdout_digest, /^sha256:/);
     let finalStatus;
     for (let attempt = 0; attempt < 30; attempt++) {
       const snapshot = await store.readEvents({ network_id: 'network-cli', aggregate_type: 'real-agent-dogfood', aggregate_id: 'dogfood-cli' });
       finalStatus = projectRealAgentDogfoodLifecycle(snapshot.events).status;
-      if (finalStatus === 'review-pending' || finalStatus === 'outcome-uncertain' || finalStatus === 'blocked') break;
+      if (finalStatus === 'outcome-uncertain' || finalStatus === 'blocked') break;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    assert.equal(finalStatus, 'review-pending');
+    assert.equal(finalStatus, 'outcome-uncertain');
     const evidence = await createContentAddressedEvidenceStore({ root: evidencePath });
     assert.equal((await evidence.read({ digest: result.stdout_digest, actor: 'test' })).toString(), 'worker-output');
   } finally {

@@ -11,7 +11,16 @@ export async function executeRealAgentDogfoodWorker(input) {
     const result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
     const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
     const stderrEvidence = await input.evidenceStore.put({ content: result.stderr, kind: 'provider-stderr' });
-    const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: input.post_run_proof ?? null };
+    let postRunProof;
+    if (input.post_run_proof_factory) {
+        try {
+            postRunProof = await input.post_run_proof_factory({ execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest, provider_result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal } });
+        }
+        catch {
+            postRunProof = null;
+        }
+    }
+    const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
     const factEvidence = await input.evidenceStore.put({ content: JSON.stringify(fact), kind: 'provider-result-fact' });
     const factDigest = factEvidence.digest;
     let to;
@@ -22,13 +31,13 @@ export async function executeRealAgentDogfoodWorker(input) {
         reasonCode = `provider-${result.reason ?? result.status}`;
         nextAction = 'human-review-provider-failure';
     }
-    else if (!input.post_run_proof) {
+    else if (!postRunProof) {
         to = 'outcome-uncertain';
         reasonCode = 'post-run-proof-missing-or-invalid';
         nextAction = 'human-reconcile-execution';
     }
     else {
-        const proof = verifyRealAgentDogfoodPostRunProof({ proof: input.post_run_proof, execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest });
+        const proof = verifyRealAgentDogfoodPostRunProof({ proof: postRunProof, execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest });
         if (proof.status === 'blocked') {
             to = 'outcome-uncertain';
             reasonCode = 'post-run-proof-invalid';

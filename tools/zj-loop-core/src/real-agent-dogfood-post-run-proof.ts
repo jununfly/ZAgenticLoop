@@ -24,6 +24,16 @@ export type RealAgentDogfoodPostRunProof = {
   signature: TrustedRunnerSignature;
 };
 
+export type RealAgentDogfoodPostRunProofFactory = (input: {
+  execution_id: string;
+  attempt: number;
+  worktree_path: string;
+  executable_digest: string;
+  stdout_digest: string;
+  stderr_digest: string;
+  provider_result: { status: string; success: boolean; pid: number; exit_code: number | null; signal: string | null };
+}) => Promise<RealAgentDogfoodPostRunProof>;
+
 function canonicalDigest(value: unknown): string {
   const json = canonicalize(value);
   if (typeof json !== 'string') throw new Error('real-agent-dogfood-post-run-proof-canonicalization-invalid');
