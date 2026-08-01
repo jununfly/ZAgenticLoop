@@ -1,38 +1,95 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-01 17:03:14
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-01 20:54:26
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
 ├── [x][Y+] 1-2. Deterministic Single-Agent OPN Atom conformance fixture
-├── [ ][X+] 1-3. Provider-neutral real-agent-dogfood CLI entry
+├── [~][X+] 1-3. Provider-neutral real-agent-dogfood CLI entry
 ├── [ ][X+] 1-4. Opt-in real Agent read-only execution
 ├── [ ][Y+] 1-5. Dogfood Evidence and independent verification chain
 └── [ ][Y+] 1-6. Human review and acceptance handoff
 
-### 当前施工：1. OPN Real Agent Dogfood 下一里程碑
+### 当前施工：1-3. Provider-neutral real-agent-dogfood CLI entry
+
+Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner now persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Detached worker process startup, full trusted proof adapters, independent verification, review, acceptance and closeout remain.
 
 **决策：**
-- Q: 问题1：是否冻结现有路线图，下一张路线图只聚焦 provider-neutral real-agent dogfood？ → 同意 (范围限定为通用 --real-agent-dogfood 入口、单 Agent OPN Atom、真实 Agent opt-in 执行、TrustedRunner 环境证明、read-only self-audit、Evidence/Verifier/Human review；多 Agent Graph、跨设备组网、写入型开发任务和新扩展框架另开范围。)
-- Q: 问题16：里程碑是否只有在真实 Provider、Human approval、Trusted environment、clean worktree、完整进程边界、bounded output、structured result、独立 verifier、EvidenceStore 和 Human accept 全部通过时才算完成？ → 同意 (采用全量合取；任一 gate 失败只能进入 blocked 或 outcome-uncertain，不能生成最终完成事实。)
-- Q: 问题29：本里程碑的产品成功标准是否是单 Agent OPN Atom 的责任链闭环可用，而不是比较 Agent 速度、Token 成本或 Human 单人效率？ → 同意 (验收用户发起委托、生命周期自动推进、风险可解释停下、证据可复核、Human accept/reject/revise 和中断恢复；Agent 能力、成本优化和多节点 ScaleUp 后置。)
-- Q: 问题48：network-allowed 的首版 coarse 语义是否定义为允许执行期间的网络访问，不做 endpoint、域名或目的地细分，但必须由 Human approval、policy digest、execution/attempt 绑定和 TrustedRunner observation 证明实际采用且未漂移？ → 同意 (首版只实现 network-denied 与 network-allowed 两种可执行粗粒度模式；网络风险由 Human approval 明确承担，TrustedRunner 证明实际 mode 与 digest，endpoint 级治理另开路线图。)
-- Q: 问题49：网络策略契约是否统一改为通用字段 network_policy，而不再使用 network_denied 专字段？ → 同意 (核心协议使用 network_policy.mode（network-denied 或 network-allowed）与 network_policy.policy_digest；TrustedRunner 和 post-run observation 必须绑定实际 mode/digest，network_denied 不再作为核心协议字段。)
-- Q: 问题50：实现顺序是否采用先契约与 deterministic fixture，再改 macOS TrustedRunner/native helper，最后接入 orchestrator？ → 同意 (先固定 provider-neutral contract 与 deterministic fixture，再迁移 macOS TrustedRunner/native helper，最后接入 orchestrator；当前无线上正式用户，直接干净移除旧 network_denied 兼容分支。)
-- Q: 问题51：network-allowed 是否仍必须运行在 macOS Seatbelt 等 TrustedRunner 沙箱中，只把网络规则切换为允许，而不是退化为无沙箱执行？ → 同意 (network-allowed 仅改变网络策略；进程边界、凭据清理、worktree 隔离、输出限制和 TrustedRunner 证明继续生效。)
-- Q: 问题52：policy_digest 是否应覆盖完整的可执行策略，而不只是 network_policy.mode？ → 同意 (digest 至少覆盖网络模式、Seatbelt profile、凭据 allowlist、进程边界、输出限制和超时配置；approval、TrustedRunner、execution 和 verifier 使用同一份 canonical policy digest，任何漂移都进入 blocked。)
-- Q: 问题53：deterministic fixture 是否必须同时覆盖 network-denied 与 network-allowed 两种模式，并覆盖 policy digest 漂移、实际 mode 不一致、TrustedRunner 未证明等失败场景？ → 同意 (fixture 完整锁定双模式成功路径与拒绝路径，再迁移真实 macOS 实现，避免只改字段名而没有实际策略验证。)
-- Q: 问题54：network-allowed 的验证是否分为 deterministic fixture 与 macOS native smoke 两层，且不把外部 endpoint 可达性作为本 milestone 的稳定测试依赖？ → 同意 (fixture 只验证契约、digest、模式绑定和拒绝逻辑；macOS native smoke 验证 TrustedRunner 实际加载 allowed profile 且 observation 中 mode/digest 一致。)
-- Q: 问题55：用户是否必须在 start 时显式选择 network-denied 或 network-allowed，并在 Human approval 摘要中看到该模式及完整 policy_digest？ → 同意 (start 必须显式选择网络模式；审批摘要展示模式和完整 policy_digest；两种模式都不静默默认切换，缺失或上下文不一致直接 blocked。)
-- Q: 问题56：CLI/API 是否都应把网络模式设为必填字段，省略时直接拒绝而不是采用默认值？ → 同意 (CLI 必须显式传 network-denied 或 network-allowed；API 必须传 network_policy.mode；省略即拒绝，避免不同入口产生不同默认行为。)
-- Q: 问题57：是否冻结以上网络策略决策，进入 TDD 实现阶段？ → 同意 (网络策略设计冻结；按先 provider-neutral contract、再 deterministic fixture、再 macOS TrustedRunner/native helper、最后 orchestrator 的顺序实现。)
-
-**当前子树：**
-├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
-├── [x][Y+] 1-2. Deterministic Single-Agent OPN Atom conformance fixture
-├── [ ][X+] 1-3. Provider-neutral real-agent-dogfood CLI entry
-├── [ ][X+] 1-4. Opt-in real Agent read-only execution
-├── [ ][Y+] 1-5. Dogfood Evidence and independent verification chain
-└── [ ][Y+] 1-6. Human review and acceptance handoff
+- Q: 问题5：首个真实 dogfood 是否只实现一个具体 Provider adapter 作为垂直切片，但入口、协议和 review package 全部保持 provider-neutral？ → 同意 (产品不绑定 Codex、Workbuddy 或其他 Agent；首个实现仅选择当前可用 Provider 做真实验证，显式记录 provider_id/adapter，后续 Provider 复用同一 contract，切换 Provider 必须重新执行 preflight 和 Human approval。)
+- Q: 问题6：首个真实 Provider 是否采用现有 Codex adapter 作为实现切片，但将其视为 Provider 实例，而不是产品协议或产品名称？ → 同意 (复用现有 CodexAgentProviderAdapter 与 Codex JSONL parser 验证真实链路；CLI、contract、review package 保持 provider-neutral，后续 Provider 不改变核心协议。)
+- Q: 问题11：真实 Agent 调用是否必须显式 opt-in，永不作为默认测试或普通 CLI 行为；缺少固定确认、Provider 可执行文件或环境证明时直接 blocked？ → 同意 (要求 --real-agent-dogfood、明确 Provider/adapter、固定 Human confirmation、独立 worktree 和 TrustedRunner preflight；不纳入默认 npm test，不允许静默切换 fake runner 或其他 Provider。)
+- Q: 问题12：Provider executable 是否必须由 Human 显式指定，并在 preflight 中固定绝对路径、版本和 digest，禁止自动搜索、自动安装或 shell 拼接？ → 同意 (执行对象必须与 approval 一致；PATH 变化、版本/digest 漂移、路径不可读或参数不安全均在 Agent 启动前 blocked。)
+- Q: 问题25：首个 OPN real-agent-dogfood 是否必须形成一条可实际使用的端到端路径 prepare → preflight → Human approve → execute → verify → review → accept，而不是让用户手工拼底层 CLI？ → 是 (底层 CLI 可保留用于调试和审计，但产品验收以一条清晰、可恢复、可观察的用户路径为标准。)
+- Q: 问题26：首个用户路径是否先实现统一 orchestrator CLI/API，复用现有 Human approval/review UI，暂不新做独立 dogfood Web 页面？ → 同意 (用户只触发一次入口；系统内部完成 prepare、preflight、等待批准、执行、验证和 review handoff；现有 UI 负责展示和签名，后续复用同一 API 扩展 Web UX。)
+- Q: 问题27：统一 orchestrator 是否必须可恢复、幂等，并将每个阶段持久化为 append-only lifecycle facts；中断、CLI 重启或重复触发时不得重复调用真实 Provider？ → 同意 (恢复读取原 execution/attempt，继续等待 approval 或 review；只有明确创建新 attempt 才再次执行 Provider，所有中断和失败证据保留。)
+- Q: 问题30：用户发起 OPN Atom 时，是否只需提供自然语言目标、目标仓库/worktree 和明确 Provider，其余 task contract、preflight、隔离策略、验证条件由系统生成并展示给 Human 审批？ → 同意 (用户不手工填写底层 JSON、digest 或 lifecycle 状态；系统在执行前展示目标、Provider、worktree、权限/网络策略、验证标准、预期 Evidence、风险和阻塞条件。)
+- Q: 问题31：是否由系统自动创建专用 isolated worktree，并在 approval summary 中展示 base commit、worktree path 和前后 clean 检查；用户不需要手工准备隔离目录？ → 同意 (用户指定仓库和基线即可；orchestrator 负责 worktree 创建、路径校验、初始 clean 检查、执行后状态记录和受控回收。)
+- Q: 问题32：真实 Agent 执行结束后，worktree 是否必须在 Human review/acceptance 完成前保留，以支持复核和复现；只有 closeout 后才允许受控清理？ → 同意 (保留 worktree path、base commit、execution/attempt、前后状态、provider output digest 和 review package 引用；closeout 后才允许受控清理。)
+- Q: 问题33：用户可见 lifecycle 是否固定为 draft → preflight-ready → awaiting-human-approval → running → verification-pending → review-pending → accepted，并统一覆盖 blocked/outcome-uncertain/request-revision/rejected？ → 同意 (状态名成为 OPN 稳定用户心智模型，CLI/API/UI 保持一致，不把内部实现细节暴露为用户状态。)
+- Q: 问题34：每个 blocked 或 outcome-uncertain 是否必须同时提供 reason code、Human 可读解释、关联证据和明确 next action，禁止只返回 failed？ → 同意 (每次停止都解释发生了什么、证据在哪里、下一步能做什么；Generic failed 不能作为用户终态。)
+- Q: 问题44：统一 orchestrator 是否只暴露 start、resume、review、accept/reject/request-revision、closeout 等少量用户动作，而不要求用户手工推进内部 lifecycle 状态？ → 同意 (内部状态机由 Core 驱动；用户只表达委托、批准、审查、决策和关闭现场。)
+- Q: 问题45：start 是否应快速返回 execution 摘要和当前状态（通常是 awaiting-human-approval），而不是占用终端等待整个 Agent 生命周期？ → 同意 (后续通过 resume、现有 approval UI 或 review UI 继续；CLI/API、UI 和中断恢复保持一致。)
+- Q: 问题46：Human approval 前，start 是否只做无 Agent 副作用的准备工作：创建 isolated worktree、读取 commit、生成 task/preflight/approval summary；真实 Provider 启动必须等签名 approval 通过？ → 同意 (Human 审批看到实际 execution；批准前不启动 Agent、不执行 Provider、不产生外部副作用。)
+- Q: 问题47：coarse network policy 是否在本 milestone 就实现 network-denied 和 network-allowed 两种可执行模式，而不是只保留接口？ → 同意 (两种模式都必须有签名 proof、policy digest、Human approval 和 execution binding；endpoint 级治理后置。)
+- Q: 问题58：是否新增一个真正由 orchestrator 管理的 provider-neutral RealAgentDogfoodLifecycle 作为 OPN 委托聚合生命周期；现有 NativeAgentExecution、ExecutionLifecycle 和 Human review 状态作为下层事实与子生命周期，通过显式映射连接？ → 同意 (职责解耦、事实绑定、状态单向汇聚；RealAgentDogfoodLifecycle 既是 StateStore 中真实存在的权威聚合生命周期，也是 CLI/API/UI 的用户可见 projection 来源，不能只是展示层。)
+- Q: 问题59：是否规定只有 orchestrator 能推进 RealAgentDogfoodLifecycle；底层 execution、verifier、Human review 只能追加事实或提交带签名的决策，不能直接修改顶层状态？ → 同意 (顶层状态转换集中在 orchestrator；底层组件只能追加事实或签名决策，避免绕过 approval、verification、review gate，并保持幂等、可恢复。)
+- Q: 问题60：RealAgentDogfoodLifecycle 的每次状态推进是否必须以 append-only event/fact 记录，并使用 expected_revision + idempotency_key 做 StateStore CAS；重复投递返回原结果，revision 冲突则重新读取并恢复？ → 同意 (满足审计、崩溃恢复、并发保护和不重复启动 Provider；事实不可覆盖，重复投递幂等返回，revision 冲突走恢复。)
+- Q: 问题61：是否要求建立显式、可测试的子生命周期事实到 RealAgentDogfoodLifecycle 状态的映射表，而不允许 orchestrator 通过散落条件判断自行推断？ → 同意 (映射表集中规定 running、verification-pending、review-pending、blocked、outcome-uncertain，以及签名决策驱动的 accepted、rejected、request-revision 新 attempt 路径。)
+- Q: 问题62：是否统一规定 accepted 是 OPN 委托聚合生命周期的唯一成功终态，completed 只表示底层 execution/provider 过程正常结束，不能直接代表产品任务完成？ → 同意 (只有 HumanSigner 对完整 review package 签署 Accept，RealAgentDogfoodLifecycle 才能进入 accepted；底层 completed 不得绕过 review。)
+- Q: 问题63：Human 选择 Request revision 时，是否必须保留当前 attempt 为不可变事实并记录签名意见，创建 attempt+1 重新经过 draft、preflight-ready、awaiting-human-approval，禁止原地重跑或覆盖？ → 同意 (每次修订都是新的责任边界和审批上下文；旧结果可审计、比较和复现，新 attempt 重新授权。)
+- Q: 问题64：blocked 与 outcome-uncertain 是否都必须保留为可解释停止状态且禁止自动重试；blocked 等待 remediation/补充决策，outcome-uncertain 冻结当前事实并进入 reconciliation 或 Human review，任何重试创建新 attempt 并重新授权？ → 同意 (两种状态都不自动重试；outcome-uncertain 不得再次调用同一 Provider，所有重试都建立新的责任边界和审批上下文。)
+- Q: 问题65：start 创建的第一次事实是否必须是 draft，并严格经过 preflight-ready、awaiting-human-approval、running；approval 前不启动 Provider，禁止直接进入 running？ → 同意 (preflight-ready 不代表获批；awaiting-human-approval 不启动 Provider；只有完整 approval 签名、TrustedRunner proof 和上下文绑定通过后才能 running。)
+- Q: 问题66：start 是否可以一次调用中自动完成 draft、preflight-ready、awaiting-human-approval，但必须逐个追加事实并保留每个状态；preflight 失败就 blocked，不进入 approval 或启动 Provider？ → 同意 (用户体验快速返回，生命周期完整可审计；start 只负责准备和 admission，不负责执行。)
+- Q: 问题67：resume 是否消费独立 Human approval；无有效签名保持 awaiting-human-approval，有效且未漂移才原子进入 running 并只调用一次 Provider，重复 resume 幂等，过期或漂移 blocked？ → 同意 (approval 仍是独立签名事实；resume 只负责验证并推进，不能替代签名，也不能重复调用 Provider。)
+- Q: 问题68：Provider 返回后，是否必须先持久化并验证 execution attempt 结束状态、TrustedRunner post-run observation、bounded output digest、provider result digest、worktree、process boundary、network/credential proof 和失败 reason，才能进入 verification-pending？ → 同意 (任何事实缺失、未签名、漂移或无法持久化，都只能 blocked 或 outcome-uncertain，不得直接进入 verification。)
+- Q: 问题69：独立 verifier 验证失败时，是否进入 blocked，不自动进入 review-pending 或自动创建新 attempt；Human 只能看到失败证据后明确选择 Reject 或 Request revision？ → 同意 (verifier 只报告事实，不能替 Human 决策，也不能把失败包装成可 review 的成功结果。)
+- Q: 问题70：Human Accept 是否必须与顶层生命周期推进原子绑定，由 HumanAcceptance 签名绑定完整 review_package_digest、execution/attempt、policy digest 和当前 lifecycle revision，并以 CAS 进入 accepted；重复 Accept 幂等，漂移提交拒绝？ → 同意 (UI/CLI 只是触发器，不能单独产生完成事实；旧页面或 package/revision 漂移直接拒绝。)
+- Q: 问题71：RealAgentDogfoodLifecycle 是否直接落在现有 SQLite StateStore 的 append-only event/CAS 能力上，不新建另一套 lifecycle 数据库；EvidenceStore 仍独立保存证据内容和 digest 引用？ → 同意 (复用现有 StateStore 的网络级资源模型、revision/CAS 和恢复能力；新增 provider-neutral 聚合协议与 orchestrator，不新增第二套存储基础设施。)
+- Q: 问题72：由于现有 StateStore 的 expected_revision 是网络级 revision，RealAgentDogfoodLifecycle 是否也采用网络级 CAS，不再引入独立 aggregate revision；通过 aggregate_type/aggregate_id 标识聚合，event_id 幂等，状态由事件 replay 得出？ → 同意 (复用网络级 revision 作为唯一并发闸门，不新增第二套 revision 或锁模型。)
+- Q: 问题73：RealAgentDogfoodLifecycle 的 replay/projection 是否必须是纯函数，并对未知事件、非法状态跃迁、execution/attempt/policy/package digest 绑定漂移、event 冲突或缺少前置事实 fail closed？ → 同意 (StateStore 事实不完整或损坏时只能返回 outcome-uncertain 或 blocked，不能尽量恢复成成功状态。)
+- Q: 问题74：是否为 RealAgentDogfoodLifecycle 定义独立版本化的 lifecycle/event schema，使用 aggregate_type=real-agent-dogfood，event payload 绑定 dogfood_id、execution/attempt、from/to status、事实 digest、reason_code、next_action，并拒绝未知字段？ → 同意 (OPN 聚合协议独立演进，不复用 Native Agent 或 Provider outcome schema。)
+- Q: 问题75：是否规定 dogfood_id 在整个委托生命周期中稳定不变，而每次 attempt 都拥有新的 execution_id，从而区分同一用户委托与每次实际执行？ → 同意 (dogfood_id 贯穿 revision、审计、比较和恢复；attempt/execution_id 每次新建。)
+- Q: 问题76：是否冻结当前生命周期模型，进入 1-3 Provider-neutral real-agent-dogfood CLI entry 的 TDD 实现，不再继续扩展状态集合？ → 同意 (冻结 RealAgentDogfoodLifecycle 聚合、SQLite 网络级 revision/CAS、稳定 dogfood_id、独立 attempt/execution、orchestrator 动作、事实映射表和 HumanSigner+CAS accepted gate。)
+- Q: 问题77：appendRealAgentDogfoodEvent 是否必须在写入 StateStore 前先读取并 replay 当前聚合，校验新 event 的 from_status、attempt、execution、provider 和 digest 绑定，再执行网络级 CAS？ → 同意 (StateStore 负责持久化和 revision 并发安全；orchestrator/helper 先阻止非法状态事件落库，避免可持久化但不可解释的坏事实。)
+- Q: 问题78：是否规定 appendRealAgentDogfoodEvent 只作为 orchestrator 的内部 persistence primitive，不作为普通用户或 Provider 可调用的公开动作；对外只暴露 start、resume、review、accept/reject/request-revision 等经过 lifecycle gate 的动作？ → 同意 (底层 append 能力只能由 orchestrator 使用，不能成为绕过 approval、事实映射或 Human review 的第二入口。)
+- Q: 问题79：是否新增独立的 zj-loop-real-agent-dogfood CLI/API 入口，而不把 OPN lifecycle 混入现有 GitLab 绑定的 zj-loop-agent-local CLI？ → 同意 (agent-local 保持 GitLab handoff/claim/worktree 职责；real-agent-dogfood 负责 provider-neutral start/resume/review/accept；代码托管平台只作为可选 adapter。)
+- Q: 问题80：zj-loop-real-agent-dogfood start 是否只要求 goal、repo、provider-id、adapter、executable、network-policy 等高层输入，由系统生成 dogfood/execution/attempt、task contract、preflight、worktree、验证计划和 approval summary？ → 同意 (保留必要安全显式输入，不要求用户手写底层 lifecycle/event JSON；StateStore/EvidenceStore 路径作为运行时配置。)
+- Q: 问题81：StateStore/EvidenceStore 的默认位置是否必须位于目标代码库之外的用户级 runtime data directory，禁止 start 默认把 lifecycle 或原始证据写入目标 repo？ → 同意 (目标 repo 只承载项目内容和必要的脱敏结果引用；存储位置只能通过显式运行时配置覆盖。)
+- Q: 问题82：StateStore/EvidenceStore 的默认路径是否采用平台原生的用户级数据目录，并允许通过 --state-store / --evidence-store 显式覆盖；当配置路径位于目标仓库或 worktree 内时，CLI 是否应直接拒绝执行？ → 同意 (采用平台原生用户级默认目录；支持显式路径覆盖，但目标仓库/worktree 内路径直接拒绝，避免状态、证据与项目文件混杂、误提交或误清理。)
+- Q: 问题83：是否冻结以下跨平台默认目录约定，并在校验前解析绝对路径与符号链接，防止通过 symlink 绕过“不得位于 repo/worktree 内”的限制？macOS 使用 ~/Library/Application Support/ZAgenticLoop/，Windows 使用 %LOCALAPPDATA%\\ZAgenticLoop\\，Linux/Unix 使用 ${XDG_STATE_HOME:-~/.local/state}/zagenticloop/；StateStore 与 EvidenceStore 使用独立子目录，显式覆盖路径也必须经过 canonical path containment 检查。 → 同意 (冻结跨平台默认目录；所有默认或显式路径均先 canonicalize，再拒绝落入目标 repo/worktree，避免符号链接绕过隔离规则。)
+- Q: 问题84：zj-loop-real-agent-dogfood start 在进入 awaiting-human-approval 时，是否应视为正常成功返回（退出码 0），并输出稳定的机器可读 JSON；只有进入 blocked、参数非法或存储不可用时才返回非零退出码？ → 同意 (将等待 Human 批准定义为成功交接；输出稳定 JSON 供脚本和 UI 消费，blocked、非法输入及存储故障使用非零退出码。)
+- Q: 问题85：resume 是否只接受稳定的 dogfood_id 与独立 Human approval 引用，不接受命令行直接传入未持久化的 approval JSON；系统必须从 StateStore/EvidenceStore 读取签名批准并重新校验其绑定关系？ → 同意 (resume 只消费已持久化的签名批准；重新校验 approval 与当前 attempt、policy digest、review/lifecycle revision 的绑定，拒绝临时或篡改的命令行 JSON。)
+- Q: 问题86：是否将 status 作为首个 CLI 的必备只读动作？它接收 dogfood_id，返回当前生命周期状态、当前 attempt/execution、下一步 Human action、reason code、证据引用和最近事件摘要，但不产生任何状态变更或 Provider 副作用？ → 同意 (首个 CLI 必须支持只读 status；它服务于恢复、审计和用户理解，不推进 lifecycle、不调用 Provider、不写入状态。)
+- Q: 问题87：是否规定所有 CLI 输出（包括 start、resume、status、review）默认只返回脱敏摘要和证据引用，禁止输出 token、私钥、凭据、环境敏感值或原始 Provider secret；只有具备明确权限的后续审计动作才能读取受保护证据？ → 同意 (普通 CLI 输出只提供脱敏摘要、digest 和证据引用；敏感原文留在受保护存储中，不因 --json 或错误输出而泄露。)
+- Q: 问题88：closeout 是否必须是显式的 Human 动作？只有在生命周期已进入 accepted、rejected 或其他明确终态，并经过 closeout 校验后，才允许清理 worktree、临时进程和本地运行资源；系统不得因 Provider 完成、CLI 退出或超时而自动清理？ → 同意 (closeout 仅由 Human 显式触发；终态、证据完整性和清理条件校验通过后才受控回收资源，Provider 完成或进程退出不会自动清理。)
+- Q: 问题89：独立 Human approval 是否采用 EvidenceStore 中的受保护 approval envelope 作为唯一来源？resume 只接收 approval_id 或 approval digest 引用；系统读取并验证 HumanAuthority v2/P-256 签名、dogfood_id、attempt、execution、policy digest、approval summary digest 和当前 lifecycle revision，禁止直接传入 approval JSON？ → 同意 (批准只来自 EvidenceStore 受保护 envelope；resume 仅接受 approval 引用并完成签名、上下文、digest、attempt 和 lifecycle revision 校验，拒绝内联 JSON。)
+- Q: 问题90：Human approval 验证通过后，resume 是否应启动一个持久化的 Provider execution worker，立即返回 running；Provider 的完成、失败、超时和 outcome-uncertain 由 worker 继续写入 StateStore，CLI 重启后可通过 status 恢复查看？ → 同意 (批准后由可恢复 worker 执行；resume 快速返回 running，worker 持久化结果和停止事实，CLI 重启不丢失执行状态。)
+- Q: 问题91：是否要求每个 execution_id 只能拥有一个有效 worker lease？worker 启动前通过 StateStore CAS 取得租约，重复 resume 或并发 worker 必须复用已有租约；租约过期后只能进入 outcome-uncertain，禁止自动重新调用 Provider？ → 同意 (每个 execution_id 至多一个有效 worker；租约由 StateStore CAS 控制，重复触发幂等复用，租约失效冻结为 outcome-uncertain，不自动再次调用 Provider。)
+- Q: 问题92：execution worker 是否采用独立的 worker CLI/进程入口，由 resume 只负责创建并持久化 execution lease 后启动它；worker 可被单独恢复、查询和停止，但不能绕过 lifecycle、approval 和 lease 校验直接执行 Provider？ → 同意 (worker 是独立受约束进程；resume 仅完成授权、租约和启动交接，worker 所有动作仍必须经过 lifecycle、approval 与 lease gate。)
+- Q: 问题93：execution lease 是否采用固定 TTL 与心跳机制：默认 TTL 30 秒，worker 每 10 秒续租；连续续租失败或超过 TTL 后，其他 worker 不得接管，顶层 lifecycle 必须进入 outcome-uncertain 并等待 Human reconciliation？ → 同意 (lease 默认 TTL 30 秒、heartbeat 10 秒；续租失败不允许接管或自动重试 Provider，执行事实冻结并由 Human reconciliation 决定后续 attempt。)
+- Q: 问题94：resume 启动 worker 时，是否应使用独立的 worker 子命令和受控 detached 子进程，并在 StateStore 中记录 worker_id、PID、argv digest、启动时间与 lease 信息；worker 不依赖原 CLI 终端存活？ → 同意 (worker 以独立 detached 进程运行；启动事实绑定 worker_id、PID、argv digest、时间和 lease，原 resume 终端退出不影响 worker。)
+- Q: 问题95：首个 worker 是否直接复用现有 CodexAgentProviderAdapter 与 LocalProcessAdapter，只新增 OPN worker 编排和 lifecycle 事实绑定；禁止为 dogfood 另造一套 Provider 执行协议，也禁止用 fake runner 冒充真实执行？ → 同意 (首个真实 Provider worker 复用 CodexAgentProviderAdapter/LocalProcessAdapter；OPN 只负责编排、lease、事实和生命周期，不使用 fake runner 绕过真实验证。)
+- Q: 问题96：Provider worker 的 cwd 是否必须绑定到系统为本次 execution_id 创建的 isolated worktree，并固定其 base commit、branch 与初始 clean 状态；目标 repo 只作为输入，不允许 Provider 直接在目标 repo 执行写入？ → 同意 (Provider 只能在 execution 专属 isolated worktree 中运行；start 固定 base commit、branch 和 clean 事实，目标 repo 不直接承载 Agent 写入。)
+- Q: 问题97：isolated worktree 默认是否放在目标 repo 之外的用户级 worktree 目录（例如 macOS ~/Library/Application Support/ZAgenticLoop/worktrees/<execution_id>/），并允许通过 --worktree-root 覆盖；覆盖路径若位于 repo/worktree 内或无法 canonicalize，则直接 blocked？ → 同意 (worktree 默认位于用户级运行目录；显式覆盖路径必须在 repo 外且 canonicalize 成功，否则 blocked，避免代码与运行状态混杂。)
+- Q: 问题98：目标 repo 在 start 时若存在未提交改动、未跟踪文件或无法确认 clean 状态，是否直接进入 blocked，禁止自动 stash、reset、清理或覆盖；只有 Human 明确处理后才能重新创建 attempt？ → 同意 (start 只接受可验证的 clean Git repo；dirty、未跟踪或状态不可读均 blocked，不替 Human 隐藏、清理或覆盖改动。)
+- Q: 问题99：worker 启动失败或 Provider 进程无法启动时，是否必须持久化完整失败事实（spawn error、executable、argv digest、worktree、lease、时间），并将顶层 lifecycle 置为 blocked；禁止返回 running、静默降级 fake runner 或自动重试？ → 同意 (spawn/启动失败必须记录可审计事实并进入 blocked；不返回假 running、不切换 fake runner、不自动重试 Provider。)
+- Q: 问题100：Provider 进程正常退出时，是否只能进入 verification-pending，并持久化完整 Provider result、stdout/stderr digest、process boundary、worktree 状态、network/credential proof 和 lease 事实；若任一事实缺失，则进入 blocked 或 outcome-uncertain，不得直接进入 review-pending？ → 同意 (Provider 正常退出不等于产品成功；完整事实齐备才 verification-pending，缺失事实只能 blocked/outcome-uncertain，绝不绕过 review。)
+- Q: 问题101：Provider 的 stdout/stderr 是否必须作为受保护 EvidenceStore 内容保存，并只在 lifecycle 中记录 digest、大小、截断状态和引用；普通 CLI/UI 输出仅展示脱敏摘要，禁止直接回显原始输出？ → 同意 (原始 Provider 输出只写受保护 EvidenceStore；生命周期与普通 CLI/UI 仅返回 digest、大小、截断状态和脱敏摘要，不回显原文。)
+- Q: 问题102：EvidenceStore 是否必须使用用户私有权限创建（Unix 0700 目录、0600 文件；Windows 使用用户 ACL），并记录每次原始证据读取的审计事实；权限或审计不可用时直接 blocked？ → 同意 (EvidenceStore 使用用户私有权限；原始证据读取必须可审计，权限或审计能力缺失时阻断，不继续执行。)
+- Q: 问题103：EvidenceStore 是否采用 content-addressed 存储：证据文件按 sha256 digest 命名并校验内容一致性；同一 digest 不重复写入，读取时重新计算 digest，发现漂移立即 blocked？ → 同意 (证据按 sha256 content address 存储并去重；读取重算 digest，内容漂移或索引不一致直接 blocked。)
+- Q: 问题104：EvidenceStore 中的 execution/output/worktree 证据是否必须保留到 closeout 之后，并由 retention policy 决定最终清理时间；closeout 只允许回收 worktree/进程资源，不得立即删除仍被 review、audit 或 reconciliation 引用的证据？ → 同意 (closeout 只回收运行资源；仍被 review、audit 或 reconciliation 引用的证据继续保留，最终删除由明确 retention policy 决定。)
+- Q: 问题105：首个 milestone 是否采用保守的默认 retention：证据永久保留，直到 Human 显式执行受审计的 purge；不因磁盘压力、CLI 退出或 closeout 自动删除？ → 同意 (首个 milestone 默认永久保留 EvidenceStore 内容；删除只能由 Human 显式发起并留下 purge 审计事实，系统不自动清理。)
+- Q: 问题106：EvidenceStore 的 purge 是否必须是独立的 HumanSigner 签名动作，绑定明确的 digest/证据集合、原因、当前引用状态和 retention policy；未签名、范围漂移或仍有活动引用时拒绝删除？ → 同意 (purge 只能由签名 Human action 发起；目标证据集合、原因、引用状态和 retention policy 必须绑定，范围漂移或活动引用存在时拒绝删除。)
+- Q: 问题107：是否要求 purge 采用两步 Human 操作：先生成待 purge summary，再由 HumanSigner 对最终 summary 二次确认签名；签名后若证据引用或文件状态发生变化，必须重新确认，禁止“一次点击即删除”？ → 同意 (purge 先生成待删除摘要，再对最终绑定摘要进行 HumanSigner 二次确认；签名后状态漂移必须重新确认，不允许一次点击直接删除。)
+- Q: 问题108：真实 Provider worker 是否必须在启动前完成 executable 版本、digest、argv、worktree、network policy 和 lease 的最终绑定；任一绑定漂移时直接 blocked，不启动 Provider？ → 同意 (Provider 启动前重新计算并校验 executable/版本/digest、argv、worktree、network policy 和 lease；任何漂移都 blocked，不调用 Provider。)
+- Q: 问题109：executable 绑定是否采用可复现的文件 SHA-256 digest 加显式版本字符串；worker 启动前重新读取 executable 并校验两者，禁止仅依赖路径或 PATH 解析？ → 同意 (执行文件以文件内容 SHA-256 和显式版本双重绑定；worker 启动前重算并比较，禁止自动 PATH 搜索或仅凭路径执行。)
+- Q: 问题110：argv digest 是否基于规范化的完整 argv 数组（包含 executable、所有参数和 cwd），采用稳定 JSON/JCS 编码后计算 SHA-256；worker 禁止通过 shell 拼接或隐式追加参数？ → 同意 (argv 与 cwd 组成稳定规范化输入并计算 digest；Provider 通过数组参数启动，禁止 shell 拼接、PATH 隐式解析或运行时追加未审批参数。)
+- Q: 问题111：worker 是否只允许使用 preflight 固定的环境变量 allowlist，默认清除其余环境变量（尤其 token、secret、credential、代理和用户目录变量）；环境 allowlist 发生漂移时直接 blocked？ → 同意 (worker 仅继承审批绑定的 env allowlist；其余环境变量默认清除，allowlist、值的 policy digest 或运行环境发生漂移时 blocked。)
+- Q: 问题112：network policy proof 是否必须在 worker 启动前重新取得并绑定到当前 execution、worktree、argv、环境 allowlist 和 approval policy digest；proof 缺失、过期或漂移时直接 blocked，不启动 Provider？ → 同意 (worker 启动前重新取得 network policy proof，并绑定全部执行上下文；proof 缺失、过期或 digest 漂移直接 blocked。)
+- Q: 问题113：credentials proof 是否也必须在 worker 启动前取得并绑定当前 execution、approval、env policy 和 network policy；任何未授权凭据、凭据漂移或无法证明“未泄露”时直接 blocked？ → 同意 (credentials proof 与 network/env policy 一起在启动前绑定；未授权、漂移或无法证明凭据未泄露时 blocked，不启动 Provider。)
+- Q: 问题114：Provider worker 结束时，是否必须取得签名的 post-run process-boundary observation，证明所有子进程已终止、无孤儿进程、worktree/network/credential 状态符合预期；无法取得或校验失败时进入 outcome-uncertain，禁止进入 verification-pending？ → 同意 (Provider 结束必须有可校验签名的 process-boundary observation；缺失、过期或校验失败进入 outcome-uncertain，不进入 verification-pending。)
+- Q: 问题115：post-run worktree 是否必须重新检查并记录 clean 状态、HEAD、branch、diff digest 和 untracked 文件；发现未预期改动或无法读取状态时进入 outcome-uncertain，不得继续自动合并或清理？ → 同意 (post-run 必须保存 worktree clean/HEAD/branch/diff/untracked 事实；任何异常进入 outcome-uncertain，禁止自动合并、覆盖或清理。)
+- Q: 问题116：Provider stdout/stderr 是否必须使用固定上限（字节数与事件数量），超限立即停止或标记截断并持久化 reason；超限事实未被完整记录时进入 blocked，禁止无限等待或无限写入 EvidenceStore？ → 同意 (Provider 输出设置固定 byte/event 上限；超限停止或明确标记截断并保存 reason，无法完整持久化时 blocked，不允许无限输出或等待。)
+- Q: 问题117：Provider timeout 是否必须由 preflight 固定 timeout_ms 与 termination_grace_ms；超时后按受控顺序终止整个 process tree，记录 timeout/termination facts，无法证明所有 descendants 终止时进入 outcome-uncertain？ → 同意 (timeout 与 termination grace 在 preflight 固定；超时按受控顺序终止 process tree 并记录事实，无法证明 descendants 全部终止时 outcome-uncertain。)
 <!-- ROADMAP_SECTION_END -->
