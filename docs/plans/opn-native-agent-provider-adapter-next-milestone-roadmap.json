@@ -57,15 +57,42 @@
     "1-2": {
       "id": "1-2",
       "label": "Real Agent process lifecycle and bounded execution",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-2-1"
+      ],
       "decisions": [
         {
           "q": "第一版 Codex Adapter 是否固定使用 codex exec --json --ephemeral --sandbox read-only --ask-for-approval never --cd <task cwd>，通过 stdin 接收任务并只读执行？",
           "answer": "采用方案 A：只读、非交互、可重放执行",
           "note": "先验证真实 Agent 驱动和 Evidence 转换；写入任务另开路线图。"
+        },
+        {
+          "q": "本次 Provider Adapter 是否复用已有 ProviderOutcome / ProviderOutcomeVerification contract，而不是新建平行生命周期协议？",
+          "answer": "采用方案 A：复用已有 Core contract",
+          "note": "Codex Adapter 只负责私有 JSONL 解析和 ProviderOutcome 映射；已有 ProviderOutcomeVerification、review handoff 和 Human acceptance 继续作为统一生命周期。"
+        },
+        {
+          "q": "本地进程执行 preflight 是否应作为独立 contract，组合已有 OrchestrationPreflight，而不是扩展它？",
+          "answer": "采用方案 A：独立 LocalExecutionPreflight，与 OrchestrationPreflight 组合",
+          "note": "OrchestrationPreflight 负责任务授权、节点能力和资源隔离；LocalExecutionPreflight 负责 argv/cwd/env/sandbox/network/timeout/output policy；两者通过 digest 绑定后才能 launch。"
+        },
+        {
+          "q": "LocalExecutionPreflight 是否必须在启动进程前生成不可变 digest，并由后续 Provider result、termination facts 和 Evidence 全部绑定？",
+          "answer": "采用方案 A：preflight digest 先持久化，后续事实全部绑定",
+          "note": "绑定 executable/argv、cwd/worktree、env allowlist、sandbox、network-denied evidence、timeout/output bounds 和 parent OrchestrationPreflight digest；不匹配 blocked。"
+        },
+        {
+          "q": "是否新增独立 LocalExecutionApproval 签名 contract，而不是把 executable/argv/sandbox 细节塞进既有 OrchestrationPlanApproval？",
+          "answer": "采用方案 A：新增独立 LocalExecutionApproval，由同一个 HumanSigner 签名",
+          "note": "OrchestrationPlanApproval 批准任务与资源范围；LocalExecutionApproval 批准具体本地执行策略；最终 Human acceptance 同时绑定两类 approval。"
+        },
+        {
+          "q": "LocalExecutionApproval 是否至少绑定 network/plan/task/execution/attempt、provider/adapter、preflight、argv/cwd/env/sandbox/network evidence、bounds、Human identity 和有效期？",
+          "answer": "采用方案 A：完整绑定一次具体本地执行",
+          "note": "Approval 绑定不可偷换的执行上下文；任一字段或 digest 变化都需重新 HumanSigner 签名，不能用笼统的 Codex 执行许可替代。"
         }
       ],
       "notes": ""
@@ -73,10 +100,13 @@
     "1-3": {
       "id": "1-3",
       "label": "Process output to structured Evidence",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-3-1",
+        "1-3-2"
+      ],
       "decisions": [
         {
           "q": "Codex JSONL 是否采用严格 allowlist 事件解析、大小边界、明确终态、退出码和成功标准映射；未知事件/解析失败/缺终态/超限均 fail-closed？",
@@ -92,6 +122,106 @@
           "q": "脱敏器是否采用版本化 RedactionPolicy，包含内置常见 secret 规则、中心提供的额外 literals/patterns、命中规则和不确定性状态；无法判断安全时不保存原始输出并 blocked？",
           "answer": "采用方案 A：显式 RedactionPolicy + fail-closed",
           "note": "不把固定正则替代当作完整安全保证；外部 DLP 服务另开范围。"
+        },
+        {
+          "q": "Codex JSONL 事件解析是否采用版本化显式 allowlist，并区分生命周期事件、结果事件和终态事件？",
+          "answer": "采用方案 A：版本化显式 allowlist + 明确终态 + 未知事件 fail-closed",
+          "note": "首版允许 thread.started、turn.started、item.started、item.completed、turn.completed、error；事件字段固定校验，未知事件、字段漂移、缺少终态均 blocked。"
+        },
+        {
+          "q": "Codex 返回 turn.completed 时是否可以直接生成成功 Evidence？",
+          "answer": "采用方案 B：Provider 完成与 Task 成功分离",
+          "note": "turn.completed 只证明 Provider execution completed；必须由 Task verifier 检查成功标准、文件引用、权限和副作用约束后，才能生成成功 Evidence。"
+        },
+        {
+          "q": "Task verifier 是否必须是 Core 内的确定性验证器，而不能由 Codex 自己声称任务完成？",
+          "answer": "采用方案 A：Core-owned deterministic verifier",
+          "note": "Verifier 检查成功标准、报告边界、文件引用、worktree 无修改、无网络/外部副作用及策略元数据一致性；Provider 只能提供候选结果。"
+        },
+        {
+          "q": "Agent 最终任务结果是否采用版本化结构化结果，而不是直接把自然语言最终回复当作成功依据？",
+          "answer": "采用方案 A：版本化结构化结果 envelope",
+          "note": "自然语言仅作为可读报告；Core 只信任结构化字段，file_refs/evidence_refs 必须重新核验，解析失败或字段漂移 blocked。"
+        },
+        {
+          "q": "协议分层是否采用 Provider Adapter 负责 Codex 私有事件解析，Core 只接收 provider-neutral agent_task_result.v1？",
+          "answer": "采用方案 A：Provider Adapter 映射统一结果，Core 保持 provider-neutral",
+          "note": "Codex JSONL 的事件名和字段只存在于 Codex extension；Workbuddy 等 Provider 复用 Core 的统一结果与 verifier contract。"
+        },
+        {
+          "q": "agent_task_result.v1 是否要求 Agent 输出固定、可定位的机器结果块；缺失或解析失败直接 blocked？",
+          "answer": "采用方案 A：固定 sentinel 包裹的严格 JSON 结果块",
+          "note": "Codex Adapter 只提取唯一结果块并严格校验 schema；缺失、重复、截断、解析失败均 blocked，禁止从自然语言推断结构化字段。"
+        },
+        {
+          "q": "Agent 输出的 agent_task_result.v1 是否一律视为不可信声明，不能改变任务权限、成功标准、资源范围或 Evidence 授权？",
+          "answer": "采用方案 A：结果块一律不可信，只有 Core verifier 可授予成功",
+          "note": "结果块仅提供候选 summary、claims、file_refs、evidence_refs；权限、成功标准、资源范围和 Human review 由已批准 Task 与 Core 决定。"
+        },
+        {
+          "q": "Codex JSONL 解析是否同时限制总输出、单行大小、事件数量和事件结构深度？",
+          "answer": "采用方案 A：多维 bounded parser",
+          "note": "限制 stdout/stderr 总量、单行、事件数量、JSON 深度、字段数、字符串长度和 envelope 大小；任一超限终止进程并 fail-closed。"
+        },
+        {
+          "q": "Codex JSONL 是否要求严格的事件状态机顺序，而不是只检查最后是否出现 turn.completed？",
+          "answer": "采用方案 A：严格事件状态机",
+          "note": "thread.started 首个且唯一；turn.started 先于 item；turn.completed/error 唯一终态；终态后禁止事件；乱序、重复、未知或缺失均 blocked。"
+        },
+        {
+          "q": "JSONL 事件是否要求可验证的 event id/顺序信息，并拒绝重复或重放事件？",
+          "answer": "采用方案 A：事件 identity + 单调顺序 + replay 拒绝",
+          "note": "每个事件绑定 provider event id；sequence 若可用则严格递增，否则记录 Adapter 到达序号；完整有序事件摘要纳入 execution digest，重复/回退/跨 execution blocked。"
+        },
+        {
+          "q": "脱敏是否先作用于所有持久化输出；结构化结果关键字段命中 secret 时是否直接 blocked，而不是静默替换？",
+          "answer": "采用方案 A：关键机器字段命中 secret 直接 blocked",
+          "note": "bounded parse 和结构校验在内存完成；原始 stdout/stderr 不持久化；普通文本可替换，file_refs/digest/task/execution/claims 等关键字段命中则 blocked；记录策略版本与规则命中。"
+        },
+        {
+          "q": "脱敏 Evidence 是否只能记录规则版本、命中规则 ID、命中数量和 secret literal/pattern 的 digest，禁止记录原文？",
+          "answer": "采用方案 A：只记录脱敏元数据，不记录敏感原文",
+          "note": "Evidence 记录 policy version、rule IDs、match count 和 configured secret digests；禁止保存 literal、token、regex 敏感内容或可恢复上下文。"
+        },
+        {
+          "q": "脱敏后的完整事件流和结构化 agent_task_result.v1 是否必须作为两个独立、不可变 Artifact 保存，并由 verifier output 单独引用？",
+          "answer": "采用方案 A：事件流、结果、验证输出分离 Artifact",
+          "note": "三类 Artifact 分别 content-addressed；ProviderOutcome 引用各自 digest；禁止原地更新，缺少 required artifact 不得成功 Evidence。"
+        },
+        {
+          "q": "Artifact 是否必须同时受 network_id 和授权 scope 约束，只有任务相关 Human/中心责任单元及获授权 review 节点可读取？",
+          "answer": "采用方案 A：network scope + task scope + explicit authorization",
+          "note": "network_id 防跨网；task/execution/attempt 防跨任务；Human responsibility center 读完整 review package；Agent 默认只读授权输入 Artifact，拒绝访问记录 blocked fact 且不泄露存在性。"
+        },
+        {
+          "q": "Artifact 是否在 Human review 完成前禁止删除；review 完成后只能按 retention policy 删除，并产生不可变审计事实？",
+          "answer": "采用方案 A：受控 retention，删除可审计",
+          "note": "review-pending/blocked/outcome-uncertain 期间禁止删除；物理删除只由 retention policy 触发；删除产生不可变审计事实，digest/签名/verifier/lifecycle facts 长期保留。"
+        },
+        {
+          "q": "Artifact 读取是否必须生成 append-only access audit fact？",
+          "answer": "采用方案 A：所有读取均审计",
+          "note": "记录 network/task/execution/attempt、actor、role、purpose、authorization scope digest、时间、allowed/blocked 和 returned content digest；不记录原文或 secret，拒绝访问不泄露存在性。"
+        },
+        {
+          "q": "是否新增独立 ProviderReviewPackage projection，并让 ReviewHandoff 只引用其 digest？",
+          "answer": "采用方案 A：ProviderReviewPackage 负责展示，ReviewHandoff 负责生命周期",
+          "note": "Package 包含任务摘要、验证条件、策略证据、file_refs、Artifact refs、风险和未知项；生成独立 digest，HumanAcceptance 绑定该 digest，不污染 execution contract。"
+        },
+        {
+          "q": "ProviderReviewPackage 是否只允许内嵌有限的脱敏摘要和 bounded excerpts，完整内容一律通过 Artifact refs 读取？",
+          "answer": "采用方案 A：引用优先，内嵌内容严格 bounded",
+          "note": "仅内嵌任务摘要、验证结果、风险未知项、少量脱敏片段和 file ref 位置；完整事件流/报告/机器结果通过授权 Artifact refs 读取。"
+        },
+        {
+          "q": "ProviderReviewPackage 中的每个 excerpt 是否必须包含来源 Artifact digest、内容范围和 excerpt digest，并由 verifier 重新计算？",
+          "answer": "采用方案 A：excerpt 与 source Artifact 强绑定",
+          "note": "excerpt 绑定 artifact_id/source_digest/start_offset/end_offset/content/excerpt_digest；source 变化、范围越界、digest 不匹配或超限均 blocked。"
+        },
+        {
+          "q": "ProviderReviewPackage 是否采用严格版本化 schema 和 canonical digest，未知字段直接拒绝？",
+          "answer": "采用方案 A：严格版本化 schema + canonical digest",
+          "note": "固定 v1 字段 allowlist；列表规范化；未知/缺失/类型漂移 blocked；schema 升级使用新版本；Human acceptance 绑定具体 schema 和 digest。"
         }
       ],
       "notes": ""
@@ -102,7 +232,9 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-4-1"
+      ],
       "decisions": [
         {
           "q": "Codex Adapter 是否要求任务声明 sandbox/approval/cwd/访问范围和资源隔离，记录 argv/context digest 与可观测策略；无法证明策略一致即 blocked？",
@@ -113,6 +245,46 @@
           "q": "Codex 超时/取消是否采用 cancellation-requested/timed-out -> SIGTERM -> grace period -> 必要时 SIGKILL，并持久化最终退出事实；无法确认退出即 blocked？",
           "answer": "采用方案 A：分阶段终止 + 持久化终态",
           "note": "不生成成功 Evidence；重试创建新 execution attempt。"
+        },
+        {
+          "q": "Provider 进程结束后是否必须先持久化不可变 execution result，再开始 Task verifier？",
+          "answer": "采用方案 A：先持久化 Provider result，再运行 verifier",
+          "note": "Provider result、退出元数据、策略 digest 和脱敏 Artifact refs 先 append-only 持久化；持久化失败不得 verifier 或生成成功 Evidence。"
+        },
+        {
+          "q": "如果 Agent 进程已启动但客户端崩溃、连接中断或无法确认最终状态，是否禁止自动重启原 execution？",
+          "answer": "采用方案 A：禁止自动重启，进入 outcome-uncertain",
+          "note": "保留最后已知事实并冻结资源范围；不能确认退出或副作用边界时不得成功 Evidence，后续必须新 attempt 或显式 reconciliation。"
+        },
+        {
+          "q": "outcome-uncertain 是否只允许一个有界 reconciliation 流程，而不能无限查询或自动重试？",
+          "answer": "采用方案 A：bounded reconciliation",
+          "note": "绑定最大查询次数、截止时间、固定查询范围、禁止 Provider 写操作和逐次证据；耗尽后进入 reconciliation-exhausted 并交 Human 决策。"
+        },
+        {
+          "q": "reconciliation 是否只能读取已有执行事实和本地进程观察状态，禁止重新调用 Provider、发送新任务或执行写操作？",
+          "answer": "采用方案 A：reconciliation 只读已有事实",
+          "note": "允许 StateStore execution facts、脱敏 Artifact metadata、本地 PID/退出状态、workspace 状态和已有 digest；禁止 Provider 重启、发送 prompt、旧 execution 继续执行或任何写操作。"
+        },
+        {
+          "q": "network-denied 证据是否必须来自 Provider Adapter 之外的受信运行器或 sandbox capability，而不能由 Codex Adapter 自己声明？",
+          "answer": "采用方案 A：外部受信运行器提供，Adapter 只消费并绑定",
+          "note": "证据必须绑定 execution、argv/context digest、sandbox policy digest 和时间；缺失、过期或 digest 不匹配 blocked。"
+        },
+        {
+          "q": "如果 LocalExecutionApproval 在进程运行期间过期，是否必须停止执行并禁止生成成功 Evidence？",
+          "answer": "采用方案 A：过期即受控取消并 fail-closed",
+          "note": "启动前过期不得 launch；运行中到期触发 SIGTERM/宽限期/SIGKILL，终态只能 timed-out/blocked；继续执行须新 attempt 和新审批。"
+        },
+        {
+          "q": "有效执行截止时间是否取 Task、Orchestration approval、LocalExecutionApproval、Provider timeout 和 reconciliation deadline 的最小值？",
+          "answer": "采用方案 A：earliest deadline wins",
+          "note": "记录所有 deadline 和 effective_deadline；任何下层组件不能延长 Human 批准，最早 deadline 触发受控取消。"
+        },
+        {
+          "q": "执行 timeout 是否使用 monotonic clock，而 approval/evidence 时间戳继续使用 UTC wall clock？",
+          "answer": "采用方案 A：monotonic 控制运行，UTC wall clock 记录审计",
+          "note": "timeout/grace/reconciliation 不受 wall clock 回拨影响；审计字段使用 UTC；时间异常或无法可信比较时 blocked，并记录 elapsed duration 与 deadline 来源。"
         }
       ],
       "notes": ""
@@ -134,6 +306,51 @@
           "q": "第一条真实 Codex dogfood 是否采用只读仓库分析/Review Evidence 任务，禁止修改文件、网络操作和外部资源创建，结果绑定文件引用与成功标准？",
           "answer": "采用方案 A：只读仓库分析并生成 Review Evidence",
           "note": "先证明真实 Agent 做有价值工作；写入开发任务另开路线图。"
+        },
+        {
+          "q": "首个真实 Codex dogfood 是否要求所有成功条件同时满足，任何一项失败都不能生成成功 Evidence？",
+          "answer": "采用方案 A：全量合取，失败即 blocked",
+          "note": "成功必须同时满足进程、JSONL 终态、唯一结果 envelope、报告、file_refs、无修改、无外部副作用、策略一致和脱敏写入等条件。"
+        },
+        {
+          "q": "Review Evidence 中的 file_refs 是否必须绑定到精确 repository commit，并包含路径、行范围和内容 digest？",
+          "answer": "采用方案 A：精确 commit-bound file reference",
+          "note": "Verifier 重新核验 repository、commit、relative path、合法行范围和 content_sha256，禁止引用漂移版本或路径逃逸。"
+        },
+        {
+          "q": "首个只读 Codex dogfood 是否必须运行在启动前干净、运行后仍干净的专用 worktree 中？",
+          "answer": "采用方案 A：专用 isolated worktree，前后状态均需核验",
+          "note": "执行前后绑定 HEAD、status、workspace path 和 task cwd；运行前已有 dirty 状态直接 blocked，不猜测副作用归因。"
+        },
+        {
+          "q": "首个真实 Codex dogfood 是否必须具备网络已禁用的可观测证据；无法证明时 blocked？",
+          "answer": "采用方案 A：必须具备 network-denied capability evidence",
+          "note": "read-only 或 prompt 不等价于无网络；只接受已知 offline sandbox 的 policy digest 或运行器提供的明确 network-denied evidence。"
+        },
+        {
+          "q": "首个真实 Codex dogfood 是否禁止继承父进程环境和本地登录凭据，只允许显式声明的非敏感环境变量？",
+          "answer": "采用方案 A：默认不继承任何环境和凭据",
+          "note": "只允许 Task 显式声明的 allowlist；首个 dogfood 不注入凭据，未登录或环境不满足只能 skipped/blocked。"
+        },
+        {
+          "q": "即使 Provider 执行成功、Task verifier 通过，任务是否仍只能进入 review-pending，必须经过 Human 明确接受后才能标记最终完成？",
+          "answer": "采用方案 A：Provider、Task verifier、Human review、最终完成分层",
+          "note": "只有 Human acceptance 才能生成最终完成事实；拒绝或超时进入 blocked/revision-required。"
+        },
+        {
+          "q": "Human acceptance 是否必须对完整 review package digest 进行签名，并绑定 task、execution、attempt 和 Evidence refs？",
+          "answer": "采用方案 A：绑定完整 review package 并使用 HumanSigner 签名",
+          "note": "签名对象包含 task/execution/attempt、Task digest、verifier digest、review artifact digest、Evidence refs、Human identity 和 timestamp；review package 变化后旧签名失效。"
+        },
+        {
+          "q": "Provider 失败、Task verifier 失败或 Human 拒绝后，是否必须创建新的 execution attempt，禁止覆盖原 execution 的失败事实？",
+          "answer": "采用方案 A：新 attempt 迭代，旧 execution append-only",
+          "note": "失败原因、退出元数据和 Evidence 保留；新 attempt 使用新的 execution_id/idempotency_key，并引用前一失败事实，禁止原地重跑和复用签名。"
+        },
+        {
+          "q": "下一条实现切片是否限定为 deterministic fixtures，不执行真实 Codex？",
+          "answer": "采用方案 A：先完成 deterministic provider contract，再 opt-in dogfood",
+          "note": "先实现 LocalExecutionPreflight、LocalExecutionApproval、Codex JSONL/task result parser、ProviderOutcome 映射、ReviewPackage 和完整失败矩阵；真实 Codex、网络探测、macOS sandbox、Web UI、写入任务后置。"
         }
       ],
       "notes": ""
@@ -157,11 +374,51 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "LocalExecutionPreflight 与 LocalExecutionApproval contract",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Codex JSONL 与 agent_task_result bounded parser",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "脱敏 Artifact 与 ProviderReviewPackage projection",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": "Implemented provider redaction and ProviderReviewPackage projection with fail-closed critical-field handling, bounded excerpts, source-content digest binding, strict schema validation, and canonical package digest. Verified by dedicated tests and full npm test."
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Execution policy、outcome persistence 与 failure gates",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-01 02:07:17",
-    "updated": "2026-08-01 02:26:23",
+    "updated": "2026-08-01 10:54:18",
     "md_file": "docs/plans/opn-native-agent-provider-adapter-next-milestone-roadmap.md"
   }
 }
