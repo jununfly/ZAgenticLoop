@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Native Agent Provider Adapter 下一里程碑",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -292,10 +292,15 @@
     "1-5": {
       "id": "1-5",
       "label": "Real Agent conformance and Human review",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3",
+        "1-5-4"
+      ],
       "decisions": [
         {
           "q": "真实 Codex dogfood 是否默认 deterministic、真实调用显式 opt-in，固定 read-only/never/ephemeral/cwd，未满足环境时 skipped 或 blocked 而非 passed？",
@@ -656,6 +661,116 @@
           "q": "post-run observation 是否必须把 Agent 及其全部子进程绑定到统一 process group/job object，并证明整个 descendant tree 已终止？",
           "answer": "必须绑定并证明",
           "note": "Unix 使用 process group，Windows 使用 job object；记录 boundary id、child_process_count、termination_sequence_digest、all_descendants_terminated、orphan/unknown descendants。孤儿、脱离边界、未知后代或 PID 复用风险均 blocked/outcome-uncertain；Core 只消费统一 observation contract，平台差异由 trusted runner extension 处理。"
+        },
+        {
+          "q": "下一施工切片是否先实现 provider-neutral TrustedRunner 接口与本地 fake runner，再接入真实 Agent？",
+          "answer": "是",
+          "note": "先实现 pre-launch proof、process group/job object 绑定、post-run observation、全后代终止证明、runner 签名与 registry 绑定；fake runner 提供 deterministic 测试，真实 Agent 作为后续 Provider extension。"
+        },
+        {
+          "q": "TrustedRunner 是否只提供最小生命周期接口，不参与 Agent 编排、结果解释或 Human review？",
+          "answer": "是",
+          "note": "接口只负责 prepareExecution 生成签名 pre-launch proof、launch 建立 process group/job object、observe 采集签名 post-run observation、verifyBoundary 证明全后代终止；任务分派、Provider 调用、结果解析、业务验证和 Human review 由上层 Core 负责。"
+        },
+        {
+          "q": "TrustedRunner 是否包装现有 LocalProcessAdapter，而不是重新实现进程启动器？",
+          "answer": "是",
+          "note": "LocalProcessAdapter 负责低层 spawn、stdout/stderr、timeout、exit code；TrustedRunner 负责 preflight/proof、进程边界、后代观察、签名和 fail-closed；execution lifecycle 负责状态、Evidence、verifier 与 Human review。"
+        },
+        {
+          "q": "fake runner 是否必须模拟完整 process boundary 事实，而不只是返回运行成功？",
+          "answer": "是",
+          "note": "fake runner 生成 boundary 类型/ID、子进程数量、termination sequence digest、全后代终止和 orphan/unknown 状态，并允许注入超时、孤儿、未知后代、签名篡改等失败；fake 与 native runner 共用 observation contract。"
+        },
+        {
+          "q": "首个 native TrustedRunner 是否先实现 macOS，Linux/Windows 只保留 provider-neutral 接口与 extension 边界？",
+          "answer": "是",
+          "note": "当前真实 dogfood 环境为 macOS，先验证真实 process group、子进程回收和 post-run observation；Linux/Windows 后续分别接 process-group 与 job-object 实现，共用 Core contract，不提前宣称跨平台 native 已完成。"
+        },
+        {
+          "q": "macOS native TrustedRunner 的 runner signing key 是否必须与 HumanSigner 分离，并由 macOS Keychain 保管且不可导出？",
+          "answer": "是",
+          "note": "HumanSigner 只证明 Human 责任与最终决策；TrustedRunner signer 只证明环境观察来源。两者身份、密钥、registry 和审计事实分离；macOS native 使用 Keychain non-exportable P-256 key，fake runner 使用内存 fixture；Keychain/签名/registry 任一失败即 blocked。"
+        },
+        {
+          "q": "macOS native TrustedRunner 是否必须通过独立 helper 进程运行，而不是与 Core/Agent 共用 Node.js 进程？",
+          "answer": "是",
+          "note": "独立 helper 创建并持有 process group、启动 Agent、追踪 descendants、终止回收、采集 post-run observation 并使用 runner signing key 签名；Core 只消费统一签名 observation，Agent 不能修改 runner、观察逻辑或签名边界。"
+        },
+        {
+          "q": "Core 与 macOS runner helper 之间是否采用严格 provider-neutral bounded JSONL 协议，而不是 shell 命令或自由文本？",
+          "answer": "是",
+          "note": "协议包含 versioned schema、prepare/launch/observe/verify-boundary 生命周期、execution/attempt/proof digest 绑定、唯一终态与消息顺序；stdout/stderr 有上限，未知/重复/乱序/超限/解析失败 blocked；禁止 shell 拼接，参数通过 argv 传递。"
+        },
+        {
+          "q": "runner helper 是否必须纳入 preflight 信任绑定，固定 executable 标识、版本、SHA-256 digest 和协议版本？",
+          "answer": "是",
+          "note": "pre-launch proof 绑定 helper executable 的受控路径/安装标识、helper version、helper digest、runner identity/fingerprint 与 Core protocol version；替换、漂移、版本或 digest 不匹配在 Agent 启动前 blocked。"
+        },
+        {
+          "q": "macOS TrustedRunner helper 是否采用 Swift 独立可执行文件，复用现有 native helper 的构建与测试模式？",
+          "answer": "是",
+          "note": "Swift 负责 macOS process group、descendant 追踪/回收和 Keychain runner signing；Node/TypeScript 只负责启动 helper、bounded JSONL 与 schema/signature 校验；复用 swiftc 测试编译模式，非 macOS 跳过 native test，不伪造通过。"
+        },
+        {
+          "q": "macOS runner 是否必须以 process group 为空作为完整终止证明，无法证明为空就 blocked？",
+          "answer": "是",
+          "note": "execution 专属 process group 由 Agent 及全部后代继承；runner 先温和终止、超 grace period 后强制终止，并重复检查 group 成员。只有确认 group 为空才 all_descendants_terminated=true；成员不明、PID 复用或检查超时为 unknown/blocked，根 PID 退出不等于 execution 完成。"
+        },
+        {
+          "q": "macOS native runner 是否必须把 network-denied 与 credential-clean 作为同一次 launch 的可信 gate，而不是先只验证 process group？",
+          "answer": "必须作为 gate，但允许分阶段实现",
+          "note": "execution-ready proof 必须同时证明 network denied、credential clean 和完整 process boundary；仅 process group 通过时仍 blocked。第一切片可先实现 process boundary helper 与失败矩阵，真实 Agent dogfood 前补齐 macOS sandbox/环境隔离证明；Agent 自报、prompt 限制和通常不联网不能替代 trusted observation。"
+        },
+        {
+          "q": "macOS TrustedRunner 首次启用或 runner key 轮换时，是否必须经过 HumanSigner 授权并写入 trusted-runner registry，不能由 helper 自注册？",
+          "answer": "必须经过 HumanSigner",
+          "note": "helper 只生成/读取 Keychain P-256 identity 并返回 fingerprint；HumanSigner 签署 register/rotate mutation，调用方以 expected_revision append StateStore，projection 成功后 runner 才可用于新 execution；helper 不得自注册、激活、轮换或解除吊销自己。"
+        },
+        {
+          "q": "macOS runner helper 是否采用一次启动对应一次 execution/attempt 的短生命周期模式，而不是长期 daemon？",
+          "answer": "是",
+          "note": "每次 execution 启动新 helper，绑定唯一 execution/attempt/preflight/proof，observation 后退出；不复用旧状态、process group、proof 或签名上下文。helper 崩溃、重启或协议中断时当前 execution 为 outcome-uncertain，必须新建 attempt。"
+        },
+        {
+          "q": "pre-launch proof 是否由 Core 先生成不可变 execution context，再交给 helper 做独立环境检查和签名，而不是由 helper 决定执行范围？",
+          "answer": "是",
+          "note": "Core 固化 execution/attempt、provider、argv、cwd、策略、registry snapshot 和期限；helper 只验证真实环境并补充 worktree/network/credential/process-boundary facts，对完整 proof payload 签名；helper 不得扩大 argv/cwd/env/权限/资源范围，输入 digest 与实际启动上下文不一致时不得启动 Agent。"
+        },
+        {
+          "q": "runner helper 是否只捕获并限界转发 Agent stdout/stderr，不解析业务结果或 JSONL task result？",
+          "answer": "是",
+          "note": "helper 负责捕获、限流、截断检测和转发 bounded 原始输出；Core/Provider adapter 解析 JSONL 与 task result。helper 签名 observation 只证明环境/进程状态，不证明业务正确；输出超限、通道断裂或顺序异常由对应层 blocked，helper 不代替 verifier/Human review。"
+        },
+        {
+          "q": "helper 控制协议与 Agent stdout/stderr 是否必须分离，Agent 输出只能作为带序号的 agent-output protocol event 转发？",
+          "answer": "必须分离",
+          "note": "helper stdout 只输出 helper protocol JSONL；Agent stdout/stderr 封装为带 stream、sequence、byte length、截断状态的 agent-output event，由 Core 重组后交 Provider parser；乱序、重复、缺失、超限 blocked，防止 Agent 输出伪造控制消息或污染 runner 终态。"
+        },
+        {
+          "q": "post-run observation 是否必须绑定 Agent stdout/stderr 的最终 digest，证明转发和解析输出属于同一次 execution/attempt？",
+          "answer": "是",
+          "note": "helper 对每个 stream 的完整 bounded byte stream 计算 digest；post-run observation 记录 stdout/stderr digest、字节数和截断状态，并绑定 execution/attempt/preflight/proof/process boundary；Core task result 必须引用对应 output digest；缺失、不一致、截断或通道中断不得生成成功 conformance。"
+        },
+        {
+          "q": "helper 是否只负责输出限界与 digest，原始输出不落入源码仓库，由 Core 脱敏后写入独立 EvidenceStore？",
+          "answer": "是",
+          "note": "helper 不写目标 worktree、源码仓库或 StateStore，只在内存/受控临时空间保留 bounded stream；Core 执行脱敏、digest 校验和 EvidenceStore 写入，原始敏感输出不得进入 review package；写入/回读失败 blocked，terminal output 不能替代 Evidence。"
+        },
+        {
+          "q": "macOS Swift helper 的首个真实测试是否先使用受控 fixture process tree，而不是直接启动真实 Agent？",
+          "answer": "是",
+          "note": "首个 native slice 只验证 Swift helper 编译/digest、execution process group、root+child+grandchild、正常/超时终止、group 为空证明和 orphan/unknown fail-closed，并输出 Node 可校验 observation；真实 Agent 在 native boundary conformance 通过后接入。"
+        },
+        {
+          "q": "TrustedRunner 独立 P-256 Keychain signing 是否接入 macOS Swift helper，并要求 observation 签名成功后才进入 Core？",
+          "answer": "是",
+          "note": "签名对象为 canonical observation payload，绑定 runner identity/fingerprint、execution/attempt、preflight/proof、stdout/stderr digest、process boundary、termination sequence 和时间；Keychain/签名/fingerprint registry 任一失败返回 blocked，不生成可通过 observation。"
+        },
+        {
+          "q": "是否实现 Node/TypeScript MacOSTrustedRunner adapter，作为启动 helper、校验 digest/协议/signature/active registry 的唯一 Core 入口？",
+          "answer": "是",
+          "note": "adapter 固定 helper path/version/digest，构造不可变 execution context，启动一次性 helper，限制消息大小/唯一终态，校验 observation signature 与 active registry snapshot，并把 helper 失败映射为 blocked 或 outcome-uncertain；adapter 不直接实现 native 进程控制。"
         }
       ],
       "notes": ""
@@ -790,11 +905,51 @@
         }
       ],
       "notes": "Completed provider-neutral execution policy and failure gate contract: pure ExecutionPolicyGate, ProviderOutcome v2 with explicit attempt, append-only idempotency/conflict binding, ordered lifecycle gate requiring independent verification and Human acceptance, and read-only bounded reconciliation plan. Verified by full npm test (428/428). Platform trusted runner, native sandbox, real Agent conformance and Human review UI remain in 1-5."
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "Provider-neutral TrustedRunner contract and fake runner",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "Provider-neutral TrustedRunner contract and deterministic fake runner implemented; signed proof/observation, output digests, process-boundary verification, tamper and unsafe-descendant tests pass. Native macOS helper remains a separate next slice."
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "macOS Swift TrustedRunner helper process-group conformance",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "macOS Swift helper uses posix_spawn POSIX_SPAWN_SETPGROUP, captures bounded stdout/stderr digests, handles normal and timeout fixture trees, and proves process-group emptiness. Runner signing and Node protocol adapter remain separate slices."
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "macOS TrustedRunner Keychain observation signing",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "macOS Swift helper signs canonical observation payload with a separate Keychain P-256 runner key; Node test verifies public-key fingerprint and signature for normal and timeout fixtures. Active registry binding and Core helper adapter remain separate."
+    },
+    "1-5-4": {
+      "id": "1-5-4",
+      "label": "Node macOS TrustedRunner adapter and active registry verification",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "Node adapter launches the one-shot macOS helper, checks helper SHA-256 before spawn, parses bounded JSON, verifies canonical P-256 observation signature, execution binding, process boundary and active registry snapshot. Digest drift is blocked before spawn."
     }
   },
   "metadata": {
     "created": "2026-08-01 02:07:17",
-    "updated": "2026-08-01 14:19:24",
+    "updated": "2026-08-01 15:06:56",
     "md_file": "docs/plans/opn-native-agent-provider-adapter-next-milestone-roadmap.md"
   }
 }

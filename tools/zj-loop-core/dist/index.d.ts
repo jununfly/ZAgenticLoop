@@ -150,3 +150,5 @@ export * from './agent-dogfood-conformance.js';
 export * from './trusted-runner-registry.js';
 export * from './evidence-retention.js';
 export * from './evidence-access-audit.js';
+export * from './trusted-runner.js';
+export * from './macos-trusted-runner-adapter.js';
