@@ -1,6 +1,6 @@
 import { providerOutcomeDigest, validateProviderOutcome } from './provider-outcome.js';
 export const PROVIDER_OUTCOME_RECORDED_SCHEMA = 'zj-loop.provider_outcome_recorded.v1';
-function aggregateId(outcome) { return [outcome.network_id, outcome.event_id, outcome.plan_id, outcome.plan_revision, outcome.execution_id, outcome.task_id, outcome.provider_request_id].join(':'); }
+function aggregateId(outcome) { return [outcome.network_id, outcome.plan_id, outcome.plan_revision, outcome.task_id, outcome.execution_id, outcome.attempt, outcome.provider_id, outcome.provider_request_id].join(':'); }
 function eventId(outcome) { return `provider-outcome-recorded:${aggregateId(outcome)}:${providerOutcomeDigest(outcome)}`; }
 export async function recordProviderOutcome(input) {
     const outcome = input.outcome;

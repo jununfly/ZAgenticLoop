@@ -4,7 +4,7 @@ import type { SqliteStateStore } from './sqlite-state-store.js';
 export const PROVIDER_OUTCOME_RECORDED_SCHEMA = 'zj-loop.provider_outcome_recorded.v1' as const;
 export type ProviderOutcomeFactResult = { schema: typeof PROVIDER_OUTCOME_RECORDED_SCHEMA; status: 'recorded' | 'duplicate' | 'conflict' | 'blocked'; event_id: string; side_effects_executed: false; revision?: number; current_revision?: number; reason?: string };
 
-function aggregateId(outcome: ProviderOutcome): string { return [outcome.network_id, outcome.event_id, outcome.plan_id, outcome.plan_revision, outcome.execution_id, outcome.task_id, outcome.provider_request_id].join(':'); }
+function aggregateId(outcome: ProviderOutcome): string { return [outcome.network_id, outcome.plan_id, outcome.plan_revision, outcome.task_id, outcome.execution_id, outcome.attempt, outcome.provider_id, outcome.provider_request_id].join(':'); }
 function eventId(outcome: ProviderOutcome): string { return `provider-outcome-recorded:${aggregateId(outcome)}:${providerOutcomeDigest(outcome)}`; }
 
 export async function recordProviderOutcome(input: { stateStore: SqliteStateStore; expected_revision: number; outcome: ProviderOutcome; now: string }): Promise<ProviderOutcomeFactResult> {

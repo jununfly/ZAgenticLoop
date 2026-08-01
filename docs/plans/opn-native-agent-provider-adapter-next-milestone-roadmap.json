@@ -229,7 +229,7 @@
     "1-4": {
       "id": "1-4",
       "label": "Permission side-effect and cancellation gates",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -292,7 +292,7 @@
     "1-5": {
       "id": "1-5",
       "label": "Real Agent conformance and Human review",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
       "children": [],
@@ -408,17 +408,88 @@
     "1-4-1": {
       "id": "1-4-1",
       "label": "Execution policy、outcome persistence 与 failure gates",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Provider Adapter、ExecutionPolicyGate、StateStore 和 TaskVerifier 如何划分职责？",
+          "answer": "采用独立职责链：Adapter 只执行进程并归纳终态；ExecutionPolicyGate 校验策略并映射 ProviderOutcome；StateStore append-only 持久化；持久化成功后才允许 verifier。",
+          "note": "Adapter 不直接写 StateStore，也不直接宣称任务成功；失败、取消、超时、策略漂移或持久化失败不得生成成功 Evidence。"
+        },
+        {
+          "q": "失败、取消和超时如何映射 ProviderOutcome？",
+          "answer": "采用 fail-closed：只有独立 no-side-effect-proof 才能 confirmed-failure-no-side-effect；非零退出、取消、超时、策略过期、输出截断或终态异常默认 outcome-uncertain。",
+          "note": "不确定状态冻结资源范围，禁止成功 Evidence，进入 bounded reconciliation 或 Human grill；重试创建新 execution attempt。"
+        },
+        {
+          "q": "outcome-uncertain 后是否允许自动重启原 execution？",
+          "answer": "采用方案 A：禁止自动重启，只允许 bounded reconciliation。",
+          "note": "reconciliation 只读已有 facts、脱敏 Artifact metadata、PID/退出状态和 workspace 状态；固定查询预算；禁止重新调用 Provider、发送 prompt、继续旧 execution 或写资源；后续执行必须新 attempt。"
+        },
+        {
+          "q": "什么条件才允许生成成功 Evidence？",
+          "answer": "采用全量合取闸门：进程、JSONL 终态、唯一结果、脱敏 Artifact、ProviderOutcome 持久化、独立 verifier、ReviewHandoff 和 Human acceptance 全部通过；Adapter 只能报告 provider-completed，最终 completed 必须 Human acceptance。",
+          "note": "任一条件缺失、过期、digest 漂移或持久化失败均不得生成成功 Evidence。"
+        },
+        {
+          "q": "ArtifactStore 与 StateStore 的持久化顺序和冲突如何处理？",
+          "answer": "采用严格顺序：脱敏 Artifact → digest/scope 校验 → append ProviderOutcome fact → verifier；使用 expected_revision；相同 digest 幂等 duplicate，不同 digest conflict。",
+          "note": "Artifact 已写入但 outcome fact 失败时保留并审计，不运行 verifier；禁止覆盖、删除或修改既有事实。"
+        },
+        {
+          "q": "ExecutionPolicyGate 必须绑定哪些输入？",
+          "answer": "采用完整执行上下文绑定：network/plan/task/execution/attempt、provider/adapter、executable/argv/cwd/env、sandbox/network evidence、timeout/output bounds、preflight digest、approval signature/digest、Artifact refs/digests。",
+          "note": "任一字段缺失、变化、过期或 digest 不匹配均 blocked；Agent 结果不得覆盖执行授权。"
+        },
+        {
+          "q": "Approval 或 ExecutionPolicy 在运行中到期如何处理？",
+          "answer": "采用方案 A：启动前过期禁止 launch；运行中过期受控取消；结果不得成功；副作用边界不明则 outcome-uncertain；deadline 用 monotonic clock，UTC 仅作审计时间。",
+          "note": "SIGTERM → grace period → 必要时 SIGKILL；只有 process close 后结束等待；有效 deadline 取所有上层边界最小值。"
+        },
+        {
+          "q": "no-side-effect-proof 与 network-denied 证明由谁提供？",
+          "answer": "采用外部可信运行器/sandbox 提供；Adapter 不得自行声明或升级证明，只能消费并绑定证据。",
+          "note": "证明绑定 execution/attempt、executable/argv/cwd digest、sandbox policy digest、时间边界；缺失、过期、scope 或 digest 不匹配直接 blocked。"
+        },
+        {
+          "q": "ExecutionPolicyGate 的 API 如何隔离纯判断与副作用？",
+          "answer": "采用两层 API：evaluateExecutionPolicy 纯函数返回 PolicyDecision；recordExecutionOutcome 只做 append-only 持久化；取消由执行控制器调用 Adapter；verifier 只消费已持久化 outcome。",
+          "note": "decision/fact 可重放、可测试、可审计；Adapter 不读写 StateStore，不直接宣称成功。"
+        },
+        {
+          "q": "Failure reason 是否采用固定、版本化的 reason code？",
+          "answer": "采用 provider-neutral 的版本化闭合集合；生命周期只依赖 reason code，Provider 特有错误只能作为受限 metadata。",
+          "note": "reason code 纳入 digest；自然语言、敏感信息、原始 stdout/stderr 和命令行 token 不进入 reason detail。"
+        },
+        {
+          "q": "Execution attempt 的幂等键和冲突键如何定义？",
+          "answer": "采用双层绑定：逻辑身份为 network/plan/revision/task/execution/attempt；Provider 身份为 provider_id/provider_request_id。相同 digest duplicate，不同 digest conflict；retry 必须新 attempt。",
+          "note": "fact event id 由完整身份和 outcome digest 派生；同一 provider request 不得绑定不同 execution。"
+        },
+        {
+          "q": "谁有权推进 execution 生命周期？",
+          "answer": "采用严格状态机：provider-completed → task-verified → review-pending → completed；只有 Human acceptance handler 能推进到 completed。",
+          "note": "Adapter、PolicyGate、StateStore、Verifier 各自只能产生自己的事实；不得跳过、覆盖或用 Agent 自报结果推进生命周期。"
+        },
+        {
+          "q": "1-4-1 的实现范围是否先限定为 provider-neutral contract？",
+          "answer": "采用分阶段边界：本节点实现纯 policy decision、failure reason/status mapping、append-only outcome persistence、duplicate/conflict/idempotency、uncertain/reconciliation decision、lifecycle constraints 和 TDD；平台 trusted runner、原生 sandbox、真实 dogfood 与 Human review UI 留到 1-5。",
+          "note": "避免 provider-neutral 核心与平台集成绑死。"
+        },
+        {
+          "q": "如何兼容现有 ProviderOutcome contract 与新的 attempt 幂等模型？",
+          "answer": "采用直接 enrich：ProviderOutcome 升级 v2，增加必填 attempt；不新增 wrapper。内部 factory 在迁移期默认 attempt=1，所有生成的 v2 outcome 显式带 attempt。",
+          "note": "同步更新 verifier/fact/模拟 provider/测试；StateStore aggregate key 绑定 network/plan/revision/task/execution/attempt/provider_id/provider_request_id。"
+        }
+      ],
+      "notes": "Completed provider-neutral execution policy and failure gate contract: pure ExecutionPolicyGate, ProviderOutcome v2 with explicit attempt, append-only idempotency/conflict binding, ordered lifecycle gate requiring independent verification and Human acceptance, and read-only bounded reconciliation plan. Verified by full npm test (428/428). Platform trusted runner, native sandbox, real Agent conformance and Human review UI remain in 1-5."
     }
   },
   "metadata": {
     "created": "2026-08-01 02:07:17",
-    "updated": "2026-08-01 10:54:18",
+    "updated": "2026-08-01 11:21:48",
     "md_file": "docs/plans/opn-native-agent-provider-adapter-next-milestone-roadmap.md"
   }
 }

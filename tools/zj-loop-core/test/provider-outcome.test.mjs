@@ -14,6 +14,7 @@ test('ProviderOutcome accepts and canonically digests all four result classes', 
     outcome('outcome-uncertain', { kind: 'uncertainty', reason: 'provider-timeout', last_known_fact_digest: `sha256:${'6'.repeat(64)}`, frozen_resource_scope: ['resource:1'], allowed_queries: ['provider.read'], forbidden_actions: ['provider.write', 'retry-with-new-request-id'], reconciliation_budget: { max_queries: 3, deadline: '2026-07-31T01:05:00.000Z', query_scope: ['resource:1'], max_cost: 1 } }, false),
   ];
   for (const item of outcomes) { assert.equal(validateProviderOutcome(item).status, 'valid'); assert.match(item.outcome_digest, /^sha256:[0-9a-f]{64}$/); }
+  assert.equal(outcomes[0].attempt, 1);
 });
 
 test('ProviderOutcome rejects evidence that contradicts the classified result', () => {

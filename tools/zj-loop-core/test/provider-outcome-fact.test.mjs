@@ -20,8 +20,10 @@ test('Provider outcome facts are append-only and idempotent without advancing ta
     assert.equal(first.side_effects_executed, false);
     const retry = await recordProviderOutcome({ stateStore, expected_revision: 2, outcome, now: '2026-07-31T01:00:02.000Z' });
     assert.equal(retry.status, 'duplicate');
+    const nextAttempt = createProviderOutcome({ ...base, attempt: 2 });
+    assert.equal((await recordProviderOutcome({ stateStore, expected_revision: 2, outcome: nextAttempt, now: '2026-07-31T01:00:03.000Z' })).status, 'recorded');
     const events = await stateStore.readEvents({ network_id: 'network-1', after_revision: 1 });
-    assert.equal(events.events.length, 1);
+    assert.equal(events.events.length, 2);
     assert.equal(events.events[0].event_type, 'provider.outcome.recorded');
     assert.equal((events.events[0].payload).outcome.outcome, 'confirmed-success');
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }

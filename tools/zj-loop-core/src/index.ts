@@ -143,3 +143,6 @@ export * from './local-execution-approval.js';
 export * from './codex-jsonl-parser.js';
 export * from './provider-redaction.js';
 export * from './provider-review-package.js';
+export * from './execution-policy-gate.js';
+export * from './execution-lifecycle-gate.js';
+export * from './bounded-reconciliation.js';

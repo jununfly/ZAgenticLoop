@@ -1,7 +1,7 @@
 import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 
-export const PROVIDER_OUTCOME_SCHEMA = 'zj-loop.provider_outcome.v1' as const;
+export const PROVIDER_OUTCOME_SCHEMA = 'zj-loop.provider_outcome.v2' as const;
 export type ProviderOutcomeKind = 'confirmed-success' | 'confirmed-failure-no-side-effect' | 'partial-success' | 'outcome-uncertain';
 
 export type ProviderOutcomeEvidence =
@@ -18,6 +18,7 @@ export type ProviderOutcome = {
   plan_id: string;
   plan_revision: number;
   execution_id: string;
+  attempt: number;
   task_id: string;
   provider_id: string;
   provider_kind: string;
@@ -39,7 +40,7 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function text(value: unknown): value is string { return typeof value === 'string' && value.length > 0; }
 function strings(value: unknown): value is string[] { return Array.isArray(value) && value.every(text); }
-function integer(value: unknown): value is number { return typeof value === 'number' && Number.isInteger(value) && value >= 0; }
+function integer(value: unknown, minimum = 0): value is number { return typeof value === 'number' && Number.isInteger(value) && value >= minimum; }
 function digestValue(value: Omit<ProviderOutcome, 'outcome_digest'>): string {
   const json = canonicalize(value);
   if (typeof json !== 'string') throw new Error('provider-outcome-canonicalization-invalid');
@@ -49,11 +50,11 @@ function error(code: string): string { return code; }
 
 function schemaErrors(candidate: unknown): string[] {
   if (!isRecord(candidate)) return [error('schema-invalid')];
-  const common = ['schema', 'outcome', 'network_id', 'event_id', 'plan_id', 'plan_revision', 'execution_id', 'task_id', 'provider_id', 'provider_kind', 'provider_request_id', 'request_digest', 'response_digest', 'resource_scope', 'observed_at', 'side_effects_executed', 'evidence', 'outcome_digest'];
+  const common = ['schema', 'outcome', 'network_id', 'event_id', 'plan_id', 'plan_revision', 'execution_id', 'attempt', 'task_id', 'provider_id', 'provider_kind', 'provider_request_id', 'request_digest', 'response_digest', 'resource_scope', 'observed_at', 'side_effects_executed', 'evidence', 'outcome_digest'];
   if (Object.keys(candidate).some((key) => !common.includes(key))) return [error('schema-unknown-field')];
   for (const key of ['schema', 'network_id', 'event_id', 'plan_id', 'execution_id', 'task_id', 'provider_id', 'provider_kind', 'provider_request_id', 'request_digest', 'response_digest', 'observed_at', 'outcome_digest']) if (!text(candidate[key])) return [error(`required-${key}`)];
   if (candidate.schema !== PROVIDER_OUTCOME_SCHEMA || !KINDS.includes(candidate.outcome as ProviderOutcomeKind)) return [error('outcome-kind-invalid')];
-  if (!integer(candidate.plan_revision) || !strings(candidate.resource_scope) || typeof candidate.side_effects_executed !== 'boolean') return [error('common-field-invalid')];
+  if (!integer(candidate.plan_revision) || !integer(candidate.attempt, 1) || !strings(candidate.resource_scope) || typeof candidate.side_effects_executed !== 'boolean') return [error('common-field-invalid')];
   if (!DIGEST.test(candidate.request_digest as string) || !DIGEST.test(candidate.response_digest as string) || !DIGEST.test(candidate.outcome_digest as string)) return [error('digest-invalid')];
   const evidence = candidate.evidence;
   if (!isRecord(evidence) || typeof evidence.kind !== 'string') return [error('evidence-invalid')];
@@ -67,8 +68,8 @@ function schemaErrors(candidate: unknown): string[] {
   return [];
 }
 
-export function createProviderOutcome(input: Omit<ProviderOutcome, 'schema' | 'outcome_digest'> & { outcome_digest?: string }): ProviderOutcome {
-  const candidate = { schema: PROVIDER_OUTCOME_SCHEMA, ...structuredClone(input), outcome_digest: input.outcome_digest ?? `sha256:${'0'.repeat(64)}` } as ProviderOutcome;
+export function createProviderOutcome(input: Omit<ProviderOutcome, 'schema' | 'outcome_digest' | 'attempt'> & { attempt?: number; outcome_digest?: string }): ProviderOutcome {
+  const candidate = { schema: PROVIDER_OUTCOME_SCHEMA, ...structuredClone(input), attempt: input.attempt ?? 1, outcome_digest: input.outcome_digest ?? `sha256:${'0'.repeat(64)}` } as ProviderOutcome;
   if (schemaErrors(candidate).length > 0) throw new Error('provider-outcome-schema-invalid');
   const { outcome_digest: _, ...unsigned } = candidate;
   candidate.outcome_digest = digestValue(unsigned);

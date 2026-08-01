@@ -1,4 +1,4 @@
-export declare const PROVIDER_OUTCOME_SCHEMA: "zj-loop.provider_outcome.v1";
+export declare const PROVIDER_OUTCOME_SCHEMA: "zj-loop.provider_outcome.v2";
 export type ProviderOutcomeKind = 'confirmed-success' | 'confirmed-failure-no-side-effect' | 'partial-success' | 'outcome-uncertain';
 export type ProviderOutcomeEvidence = {
     kind: 'receipt';
@@ -35,6 +35,7 @@ export type ProviderOutcome = {
     plan_id: string;
     plan_revision: number;
     execution_id: string;
+    attempt: number;
     task_id: string;
     provider_id: string;
     provider_kind: string;
@@ -52,7 +53,8 @@ export type ProviderOutcomeValidation = {
     errors: string[];
     outcome_digest: string;
 };
-export declare function createProviderOutcome(input: Omit<ProviderOutcome, 'schema' | 'outcome_digest'> & {
+export declare function createProviderOutcome(input: Omit<ProviderOutcome, 'schema' | 'outcome_digest' | 'attempt'> & {
+    attempt?: number;
     outcome_digest?: string;
 }): ProviderOutcome;
 export declare function providerOutcomeDigest(outcome: ProviderOutcome): string;

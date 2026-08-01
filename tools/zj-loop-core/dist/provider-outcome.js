@@ -1,12 +1,12 @@
 import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
-export const PROVIDER_OUTCOME_SCHEMA = 'zj-loop.provider_outcome.v1';
+export const PROVIDER_OUTCOME_SCHEMA = 'zj-loop.provider_outcome.v2';
 const KINDS = ['confirmed-success', 'confirmed-failure-no-side-effect', 'partial-success', 'outcome-uncertain'];
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 function isRecord(value) { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function text(value) { return typeof value === 'string' && value.length > 0; }
 function strings(value) { return Array.isArray(value) && value.every(text); }
-function integer(value) { return typeof value === 'number' && Number.isInteger(value) && value >= 0; }
+function integer(value, minimum = 0) { return typeof value === 'number' && Number.isInteger(value) && value >= minimum; }
 function digestValue(value) {
     const json = canonicalize(value);
     if (typeof json !== 'string')
@@ -17,7 +17,7 @@ function error(code) { return code; }
 function schemaErrors(candidate) {
     if (!isRecord(candidate))
         return [error('schema-invalid')];
-    const common = ['schema', 'outcome', 'network_id', 'event_id', 'plan_id', 'plan_revision', 'execution_id', 'task_id', 'provider_id', 'provider_kind', 'provider_request_id', 'request_digest', 'response_digest', 'resource_scope', 'observed_at', 'side_effects_executed', 'evidence', 'outcome_digest'];
+    const common = ['schema', 'outcome', 'network_id', 'event_id', 'plan_id', 'plan_revision', 'execution_id', 'attempt', 'task_id', 'provider_id', 'provider_kind', 'provider_request_id', 'request_digest', 'response_digest', 'resource_scope', 'observed_at', 'side_effects_executed', 'evidence', 'outcome_digest'];
     if (Object.keys(candidate).some((key) => !common.includes(key)))
         return [error('schema-unknown-field')];
     for (const key of ['schema', 'network_id', 'event_id', 'plan_id', 'execution_id', 'task_id', 'provider_id', 'provider_kind', 'provider_request_id', 'request_digest', 'response_digest', 'observed_at', 'outcome_digest'])
@@ -25,7 +25,7 @@ function schemaErrors(candidate) {
             return [error(`required-${key}`)];
     if (candidate.schema !== PROVIDER_OUTCOME_SCHEMA || !KINDS.includes(candidate.outcome))
         return [error('outcome-kind-invalid')];
-    if (!integer(candidate.plan_revision) || !strings(candidate.resource_scope) || typeof candidate.side_effects_executed !== 'boolean')
+    if (!integer(candidate.plan_revision) || !integer(candidate.attempt, 1) || !strings(candidate.resource_scope) || typeof candidate.side_effects_executed !== 'boolean')
         return [error('common-field-invalid')];
     if (!DIGEST.test(candidate.request_digest) || !DIGEST.test(candidate.response_digest) || !DIGEST.test(candidate.outcome_digest))
         return [error('digest-invalid')];
@@ -46,7 +46,7 @@ function schemaErrors(candidate) {
     return [];
 }
 export function createProviderOutcome(input) {
-    const candidate = { schema: PROVIDER_OUTCOME_SCHEMA, ...structuredClone(input), outcome_digest: input.outcome_digest ?? `sha256:${'0'.repeat(64)}` };
+    const candidate = { schema: PROVIDER_OUTCOME_SCHEMA, ...structuredClone(input), attempt: input.attempt ?? 1, outcome_digest: input.outcome_digest ?? `sha256:${'0'.repeat(64)}` };
     if (schemaErrors(candidate).length > 0)
         throw new Error('provider-outcome-schema-invalid');
     const { outcome_digest: _, ...unsigned } = candidate;
