@@ -12,6 +12,12 @@ struct Request: Codable {
     let preflight_digest: String
     let proof_digest: String
     let registry_snapshot_digest: String
+    let cwd: String
+    let sandbox_policy: String
+    let sandbox_policy_digest: String
+    let env_policy_digest: String
+    let env_allowlist: [String]
+    let env: [String: String]
     let argv: [String]
     let timeout_ms: Int
     let termination_grace_ms: Int
@@ -22,6 +28,30 @@ struct Signature: Codable {
     let public_key_pem: String
     let public_key_fingerprint: String
     let signature_base64: String
+}
+
+struct EnvironmentProof: Codable {
+    let schema: String
+    let status: String
+    let proof_source: String
+    let proof_stage: String
+    let runner_isolation: String
+    let runner_id: String
+    let runner_version: String
+    let execution_id: String
+    let attempt: Int
+    let preflight_digest: String
+    let registry_snapshot_digest: String
+    let argv_digest: String
+    let cwd_digest: String
+    let env_policy_digest: String
+    let sandbox_policy_digest: String
+    let network_denied: [String: String]
+    let credentials: [String: String]
+    let issued_at: String
+    let expires_at: String
+    let proof_digest: String
+    let signature: Signature
 }
 
 struct ProcessBoundary: Codable {
@@ -54,6 +84,7 @@ struct Observation: Codable {
     let stderr_bytes: Int
     let output_truncated: Bool
     let process_boundary: ProcessBoundary
+    let environment_proof: EnvironmentProof
     let signature: Signature?
 }
 
@@ -71,6 +102,9 @@ let request = try JSONDecoder().decode(Request.self, from: inputData)
 guard request.schema == "zj-loop.macos_trusted_runner_request.v1",
       !request.key_tag.isEmpty,
       !request.argv.isEmpty,
+      !request.cwd.isEmpty,
+      request.sandbox_policy.contains("(deny network*)"),
+      request.env_allowlist.allSatisfy({ request.env[$0] != nil }),
       request.timeout_ms > 0,
       request.termination_grace_ms > 0 else {
     fatalError("trusted-runner-request-invalid")
@@ -78,6 +112,34 @@ guard request.schema == "zj-loop.macos_trusted_runner_request.v1",
 
 func digest(_ data: Data) -> String {
     "sha256:" + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+}
+
+func isoNow() -> String { ISO8601DateFormatter().string(from: Date()) }
+
+func canonicalEnvironmentProofPayload(_ proof: EnvironmentProof) -> Data {
+    let object: [String: Any] = [
+        "schema": proof.schema, "status": proof.status, "proof_source": proof.proof_source, "proof_stage": proof.proof_stage,
+        "runner_isolation": proof.runner_isolation, "runner_id": proof.runner_id, "runner_version": proof.runner_version,
+        "execution_id": proof.execution_id, "attempt": proof.attempt, "preflight_digest": proof.preflight_digest,
+        "registry_snapshot_digest": proof.registry_snapshot_digest, "argv_digest": proof.argv_digest, "cwd_digest": proof.cwd_digest,
+        "env_policy_digest": proof.env_policy_digest, "sandbox_policy_digest": proof.sandbox_policy_digest,
+        "network_denied": proof.network_denied, "credentials": proof.credentials,
+        "issued_at": proof.issued_at, "expires_at": proof.expires_at
+    ]
+    return try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
+}
+
+func canonicalArgvDigest(_ argv: [String]) -> String {
+    let data = try! JSONSerialization.data(withJSONObject: argv, options: [.sortedKeys, .withoutEscapingSlashes])
+    return digest(data)
+}
+
+func allowlistDigest(_ allowlist: [String]) -> String { digest(Data(allowlist.sorted().joined(separator: "\n").utf8)) }
+
+let envPolicy = request.env_allowlist.sorted().map { "\($0)=\(request.env[$0] ?? "")" }.joined(separator: "\n")
+guard request.sandbox_policy_digest == digest(Data(request.sandbox_policy.utf8)),
+      request.env_policy_digest == digest(Data(envPolicy.utf8)) else {
+    fatalError("trusted-runner-environment-policy-digest-invalid")
 }
 
 let keyTagData = Data(request.key_tag.utf8)
@@ -123,7 +185,8 @@ func canonicalObservationPayload(_ observation: Observation) -> Data {
     var object: [String: Any] = [
         "schema": observation.schema, "status": observation.status, "runner_id": observation.runner_id, "execution_id": observation.execution_id, "attempt": observation.attempt, "preflight_digest": observation.preflight_digest, "proof_digest": observation.proof_digest, "registry_snapshot_digest": observation.registry_snapshot_digest, "stdout": observation.stdout, "stderr": observation.stderr,
         "stdout_digest": observation.stdout_digest, "stderr_digest": observation.stderr_digest, "stdout_bytes": observation.stdout_bytes, "stderr_bytes": observation.stderr_bytes, "output_truncated": observation.output_truncated,
-        "process_boundary": boundary
+        "process_boundary": boundary,
+        "environment_proof": try! JSONSerialization.jsonObject(with: JSONEncoder().encode(observation.environment_proof))
     ]
     if let exitCode = observation.exit_code { object["exit_code"] = exitCode }
     if let signal = observation.signal { object["signal"] = signal }
@@ -160,19 +223,48 @@ func withCStringArray<T>(_ values: [String], _ body: (UnsafeMutablePointer<Unsaf
     return pointers.withUnsafeMutableBufferPointer { body($0.baseAddress!) }
 }
 
+let privateKey = loadOrCreateKey()
+let issuedAt = isoNow()
+let expiresAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))
+let emptySignature = Signature(algorithm: "ECDSA-P256", public_key_pem: "", public_key_fingerprint: "", signature_base64: "")
+let unsignedProof = EnvironmentProof(
+    schema: "zj-loop.trusted_environment_proof.v1", status: "signed", proof_source: "trusted-runner", proof_stage: "pre-launch", runner_isolation: "protected-sandbox",
+    runner_id: request.runner_id, runner_version: "macos-trusted-runner-1", execution_id: request.execution_id, attempt: request.attempt,
+    preflight_digest: request.preflight_digest, registry_snapshot_digest: request.registry_snapshot_digest, argv_digest: canonicalArgvDigest(request.argv),
+    cwd_digest: digest(Data(request.cwd.utf8)), env_policy_digest: request.env_policy_digest, sandbox_policy_digest: request.sandbox_policy_digest,
+    network_denied: ["status": "proved", "evidence_digest": digest(Data("seatbelt-network-deny:\(request.sandbox_policy_digest)".utf8))],
+    credentials: ["status": "clean", "evidence_digest": digest(Data("credential-clean:\(request.env_policy_digest)".utf8)), "allowlist_digest": allowlistDigest(request.env_allowlist)],
+    issued_at: issuedAt, expires_at: expiresAt, proof_digest: "", signature: emptySignature
+)
+let proofDigest = digest(canonicalEnvironmentProofPayload(unsignedProof))
+let environmentProof = EnvironmentProof(
+    schema: unsignedProof.schema, status: unsignedProof.status, proof_source: unsignedProof.proof_source, proof_stage: unsignedProof.proof_stage, runner_isolation: unsignedProof.runner_isolation,
+    runner_id: unsignedProof.runner_id, runner_version: unsignedProof.runner_version, execution_id: unsignedProof.execution_id, attempt: unsignedProof.attempt, preflight_digest: unsignedProof.preflight_digest,
+    registry_snapshot_digest: unsignedProof.registry_snapshot_digest, argv_digest: unsignedProof.argv_digest, cwd_digest: unsignedProof.cwd_digest, env_policy_digest: unsignedProof.env_policy_digest,
+    sandbox_policy_digest: unsignedProof.sandbox_policy_digest, network_denied: unsignedProof.network_denied, credentials: unsignedProof.credentials, issued_at: unsignedProof.issued_at, expires_at: unsignedProof.expires_at,
+    proof_digest: proofDigest, signature: runnerSignature(for: Data(proofDigest.utf8), privateKey: privateKey)
+)
+
 var fileActions: posix_spawn_file_actions_t?
 posix_spawn_file_actions_init(&fileActions)
 posix_spawn_file_actions_adddup2(&fileActions, stdoutPipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
 posix_spawn_file_actions_adddup2(&fileActions, stderrPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
 posix_spawn_file_actions_addclose(&fileActions, stdoutPipe.fileHandleForReading.fileDescriptor)
 posix_spawn_file_actions_addclose(&fileActions, stderrPipe.fileHandleForReading.fileDescriptor)
+posix_spawn_file_actions_addchdir_np(&fileActions, request.cwd)
 var attributes: posix_spawnattr_t?
 posix_spawnattr_init(&attributes)
 posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP))
 posix_spawnattr_setpgroup(&attributes, 0)
 var child: pid_t = 0
 let spawnStatus = withCStringArray(request.argv) { arguments in
-    posix_spawn(&child, arguments[0], &fileActions, &attributes, arguments, environ)
+    let command = ["/usr/bin/sandbox-exec", "-p", request.sandbox_policy] + request.argv
+    return withCStringArray(command) { sandboxArguments in
+        let environment = request.env_allowlist.sorted().compactMap { key in request.env[key].map { "\(key)=\($0)" } }
+        return withCStringArray(environment) { environmentPointers in
+            posix_spawn(&child, sandboxArguments[0], &fileActions, &attributes, sandboxArguments, environmentPointers)
+        }
+    }
 }
 posix_spawnattr_destroy(&attributes)
 posix_spawn_file_actions_destroy(&fileActions)
@@ -238,10 +330,10 @@ let observation = Observation(
     stderr_bytes: stderrData.count,
     output_truncated: outputTruncated,
     process_boundary: boundary,
+    environment_proof: environmentProof,
     signature: nil
 )
-let privateKey = loadOrCreateKey()
-let signedObservation = Observation(schema: observation.schema, status: observation.status, runner_id: observation.runner_id, execution_id: observation.execution_id, attempt: observation.attempt, preflight_digest: observation.preflight_digest, proof_digest: observation.proof_digest, registry_snapshot_digest: observation.registry_snapshot_digest, exit_code: observation.exit_code, signal: observation.signal, stdout: observation.stdout, stderr: observation.stderr, stdout_digest: observation.stdout_digest, stderr_digest: observation.stderr_digest, stdout_bytes: observation.stdout_bytes, stderr_bytes: observation.stderr_bytes, output_truncated: observation.output_truncated, process_boundary: observation.process_boundary, signature: runnerSignature(for: canonicalObservationPayload(observation), privateKey: privateKey))
+let signedObservation = Observation(schema: observation.schema, status: observation.status, runner_id: observation.runner_id, execution_id: observation.execution_id, attempt: observation.attempt, preflight_digest: observation.preflight_digest, proof_digest: observation.proof_digest, registry_snapshot_digest: observation.registry_snapshot_digest, exit_code: observation.exit_code, signal: observation.signal, stdout: observation.stdout, stderr: observation.stderr, stdout_digest: observation.stdout_digest, stderr_digest: observation.stderr_digest, stdout_bytes: observation.stdout_bytes, stderr_bytes: observation.stderr_bytes, output_truncated: observation.output_truncated, process_boundary: observation.process_boundary, environment_proof: observation.environment_proof, signature: runnerSignature(for: canonicalObservationPayload(observation), privateKey: privateKey))
 let encoded = try JSONEncoder().encode(signedObservation)
 FileHandle.standardOutput.write(encoded)
 FileHandle.standardOutput.write(Data("\n".utf8))

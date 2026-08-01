@@ -152,3 +152,4 @@ export * from './evidence-retention.js';
 export * from './evidence-access-audit.js';
 export * from './trusted-runner.js';
 export * from './macos-trusted-runner-adapter.js';
+export * from './trusted-environment-proof.js';

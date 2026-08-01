@@ -3,6 +3,7 @@ import { createHash, createPublicKey, verify } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import type { TrustedRunnerProcessBoundary, TrustedRunnerSignature } from './trusted-runner.js';
+import { macosEnvironmentPolicyDigests, validateMacOSTrustedEnvironmentPolicy, verifyTrustedEnvironmentProof, type TrustedEnvironmentProof } from './trusted-environment-proof.js';
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export const MACOS_TRUSTED_RUNNER_ADAPTER_SCHEMA = 'zj-loop.macos_trusted_runner_adapter.v1' as const;
@@ -26,6 +27,7 @@ export type MacOSTrustedRunnerObservation = {
   stdout_bytes: number;
   stderr_bytes: number;
   output_truncated: boolean;
+  environment_proof: TrustedEnvironmentProof;
   signature: TrustedRunnerSignature;
 };
 
@@ -37,6 +39,8 @@ export type MacOSTrustedRunnerExecution = {
   proof_digest: string;
   registry_snapshot_digest: string;
 };
+
+export type MacOSTrustedEnvironment = { cwd: string; sandbox_policy: string; env_allowlist: string[]; env: Record<string, string> };
 
 export type MacOSTrustedRunnerRegistrySnapshot = {
   revision: number;
@@ -63,8 +67,14 @@ function validSignature(observation: MacOSTrustedRunnerObservation): boolean {
     return fingerprint === signature.public_key_fingerprint && verify('sha256', Buffer.from(canonicalize(observationPayload(observation)) as string, 'utf8'), publicKey, Buffer.from(signature.signature_base64, 'base64'));
   } catch { return false; }
 }
+function digestText(value: string): string { return `sha256:${createHash('sha256').update(value, 'utf8').digest('hex')}`; }
+function digestArgv(argv: string[]): string {
+  const json = canonicalize(argv);
+  if (typeof json !== 'string') throw new Error('macos-trusted-runner-argv-canonicalization-invalid');
+  return digestText(json);
+}
 
-export function verifyMacOSTrustedRunnerObservation(input: { observation: MacOSTrustedRunnerObservation; execution: MacOSTrustedRunnerExecution; registry: MacOSTrustedRunnerRegistrySnapshot }): { status: 'accepted' } | { status: 'blocked'; reasons: string[] } {
+export function verifyMacOSTrustedRunnerObservation(input: { observation: MacOSTrustedRunnerObservation; execution: MacOSTrustedRunnerExecution; registry: MacOSTrustedRunnerRegistrySnapshot; argv: string[]; environment: MacOSTrustedEnvironment }): { status: 'accepted' } | { status: 'blocked'; reasons: string[] } {
   const value = input.observation;
   const reasons: string[] = [];
   if (value.schema !== 'zj-loop.macos_trusted_runner_observation.v1' || value.status !== 'completed' && value.status !== 'timed-out' || value.runner_id !== input.execution.runner_id || value.execution_id !== input.execution.execution_id || value.attempt !== input.execution.attempt || value.preflight_digest !== input.execution.preflight_digest || value.proof_digest !== input.execution.proof_digest || value.registry_snapshot_digest !== input.execution.registry_snapshot_digest) reasons.push('macos-trusted-runner-observation-binding-invalid');
@@ -72,16 +82,28 @@ export function verifyMacOSTrustedRunnerObservation(input: { observation: MacOST
   if (!value.process_boundary.all_descendants_terminated || value.process_boundary.orphan_processes_detected || value.process_boundary.unknown_descendants_detected) reasons.push('macos-trusted-runner-process-boundary-invalid');
   if (input.registry.digest !== canonicalDigest(input.registry.entries) || input.registry.revision < 1 || input.registry.entries.find((entry) => entry.runner_id === value.runner_id && entry.public_key_fingerprint === value.signature.public_key_fingerprint && entry.status === 'active') === undefined) reasons.push('macos-trusted-runner-registry-invalid');
   if (!validSignature(value)) reasons.push('macos-trusted-runner-signature-invalid');
+  if (!value.environment_proof) reasons.push('trusted-environment-proof-missing');
+  else {
+    const environment = verifyTrustedEnvironmentProof({
+      proof: value.environment_proof,
+      execution: { ...input.execution, argv_digest: digestArgv(input.argv), cwd_digest: digestText(input.environment.cwd), env_policy_digest: macosEnvironmentPolicyDigests(input.environment).env_policy_digest, sandbox_policy_digest: macosEnvironmentPolicyDigests(input.environment).sandbox_policy_digest },
+      registry: input.registry,
+    });
+    if (environment.status === 'blocked') reasons.push(...environment.reasons);
+  }
   return reasons.length === 0 ? { status: 'accepted' } : { status: 'blocked', reasons: [...new Set(reasons)].sort() };
 }
 
 export function macosTrustedRunnerRegistryDigest(entries: MacOSTrustedRunnerRegistrySnapshot['entries']): string { return canonicalDigest(entries); }
 
-export function createMacOSTrustedRunnerAdapter(input: { helper_path: string; helper_digest: string; helper_timeout_ms?: number; registry: MacOSTrustedRunnerRegistrySnapshot }): { run(request: { key_tag: string; execution: MacOSTrustedRunnerExecution; argv: string[]; timeout_ms: number; termination_grace_ms: number }): Promise<{ status: 'accepted' | 'blocked' | 'outcome-uncertain'; observation?: MacOSTrustedRunnerObservation; reasons?: string[] }> } {
+export function createMacOSTrustedRunnerAdapter(input: { helper_path: string; helper_digest: string; helper_timeout_ms?: number; registry: MacOSTrustedRunnerRegistrySnapshot }): { run(request: { key_tag: string; execution: MacOSTrustedRunnerExecution; argv: string[]; environment: MacOSTrustedEnvironment; timeout_ms: number; termination_grace_ms: number }): Promise<{ status: 'accepted' | 'blocked' | 'outcome-uncertain'; observation?: MacOSTrustedRunnerObservation; reasons?: string[] }> } {
   return {
     async run(request) {
       if (process.platform !== 'darwin') return { status: 'blocked', reasons: ['macos-trusted-runner-platform-unsupported'] };
-      if (!digest(input.helper_digest) || !request.key_tag || request.argv.length === 0) return { status: 'blocked', reasons: ['macos-trusted-runner-request-invalid'] };
+      if (!digest(input.helper_digest) || !request.key_tag || request.argv.length === 0 || !request.environment?.cwd) return { status: 'blocked', reasons: ['macos-trusted-runner-request-invalid'] };
+      const policy = validateMacOSTrustedEnvironmentPolicy(request.environment);
+      if (policy.status === 'blocked') return policy;
+      const policyDigests = macosEnvironmentPolicyDigests(request.environment);
       const helper = await readFile(input.helper_path).catch(() => null);
       if (!helper || `sha256:${createHash('sha256').update(helper).digest('hex')}` !== input.helper_digest) return { status: 'blocked', reasons: ['macos-trusted-runner-helper-digest-invalid'] };
       return new Promise((resolve) => {
@@ -101,11 +123,11 @@ export function createMacOSTrustedRunnerAdapter(input: { helper_path: string; he
           if (code !== 0) return resolve({ status: 'outcome-uncertain', reasons: ['macos-trusted-runner-helper-exited-nonzero'] });
           try {
             const parsed = JSON.parse(Buffer.concat(stdout).toString('utf8')) as MacOSTrustedRunnerObservation;
-            const checked = verifyMacOSTrustedRunnerObservation({ observation: parsed, execution: request.execution, registry: input.registry });
+            const checked = verifyMacOSTrustedRunnerObservation({ observation: parsed, execution: request.execution, registry: input.registry, argv: request.argv, environment: request.environment });
             resolve(checked.status === 'accepted' ? { status: 'accepted', observation: parsed } : checked);
           } catch { resolve({ status: 'blocked', reasons: ['macos-trusted-runner-protocol-invalid'] }); }
         });
-        child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
+        child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, ...request.environment, ...policyDigests, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
       });
     },
   };

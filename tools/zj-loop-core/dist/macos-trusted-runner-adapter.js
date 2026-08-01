@@ -2,6 +2,7 @@ import canonicalize from 'canonicalize';
 import { createHash, createPublicKey, verify } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { macosEnvironmentPolicyDigests, validateMacOSTrustedEnvironmentPolicy, verifyTrustedEnvironmentProof } from './trusted-environment-proof.js';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export const MACOS_TRUSTED_RUNNER_ADAPTER_SCHEMA = 'zj-loop.macos_trusted_runner_adapter.v1';
 function digest(value) { return typeof value === 'string' && DIGEST.test(value); }
@@ -28,6 +29,13 @@ function validSignature(observation) {
         return false;
     }
 }
+function digestText(value) { return `sha256:${createHash('sha256').update(value, 'utf8').digest('hex')}`; }
+function digestArgv(argv) {
+    const json = canonicalize(argv);
+    if (typeof json !== 'string')
+        throw new Error('macos-trusted-runner-argv-canonicalization-invalid');
+    return digestText(json);
+}
 export function verifyMacOSTrustedRunnerObservation(input) {
     const value = input.observation;
     const reasons = [];
@@ -41,6 +49,17 @@ export function verifyMacOSTrustedRunnerObservation(input) {
         reasons.push('macos-trusted-runner-registry-invalid');
     if (!validSignature(value))
         reasons.push('macos-trusted-runner-signature-invalid');
+    if (!value.environment_proof)
+        reasons.push('trusted-environment-proof-missing');
+    else {
+        const environment = verifyTrustedEnvironmentProof({
+            proof: value.environment_proof,
+            execution: { ...input.execution, argv_digest: digestArgv(input.argv), cwd_digest: digestText(input.environment.cwd), env_policy_digest: macosEnvironmentPolicyDigests(input.environment).env_policy_digest, sandbox_policy_digest: macosEnvironmentPolicyDigests(input.environment).sandbox_policy_digest },
+            registry: input.registry,
+        });
+        if (environment.status === 'blocked')
+            reasons.push(...environment.reasons);
+    }
     return reasons.length === 0 ? { status: 'accepted' } : { status: 'blocked', reasons: [...new Set(reasons)].sort() };
 }
 export function macosTrustedRunnerRegistryDigest(entries) { return canonicalDigest(entries); }
@@ -49,8 +68,12 @@ export function createMacOSTrustedRunnerAdapter(input) {
         async run(request) {
             if (process.platform !== 'darwin')
                 return { status: 'blocked', reasons: ['macos-trusted-runner-platform-unsupported'] };
-            if (!digest(input.helper_digest) || !request.key_tag || request.argv.length === 0)
+            if (!digest(input.helper_digest) || !request.key_tag || request.argv.length === 0 || !request.environment?.cwd)
                 return { status: 'blocked', reasons: ['macos-trusted-runner-request-invalid'] };
+            const policy = validateMacOSTrustedEnvironmentPolicy(request.environment);
+            if (policy.status === 'blocked')
+                return policy;
+            const policyDigests = macosEnvironmentPolicyDigests(request.environment);
             const helper = await readFile(input.helper_path).catch(() => null);
             if (!helper || `sha256:${createHash('sha256').update(helper).digest('hex')}` !== input.helper_digest)
                 return { status: 'blocked', reasons: ['macos-trusted-runner-helper-digest-invalid'] };
@@ -77,14 +100,14 @@ export function createMacOSTrustedRunnerAdapter(input) {
                         return resolve({ status: 'outcome-uncertain', reasons: ['macos-trusted-runner-helper-exited-nonzero'] });
                     try {
                         const parsed = JSON.parse(Buffer.concat(stdout).toString('utf8'));
-                        const checked = verifyMacOSTrustedRunnerObservation({ observation: parsed, execution: request.execution, registry: input.registry });
+                        const checked = verifyMacOSTrustedRunnerObservation({ observation: parsed, execution: request.execution, registry: input.registry, argv: request.argv, environment: request.environment });
                         resolve(checked.status === 'accepted' ? { status: 'accepted', observation: parsed } : checked);
                     }
                     catch {
                         resolve({ status: 'blocked', reasons: ['macos-trusted-runner-protocol-invalid'] });
                     }
                 });
-                child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
+                child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, ...request.environment, ...policyDigests, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
             });
         },
     };

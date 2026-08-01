@@ -1,4 +1,5 @@
 import type { TrustedRunnerProcessBoundary, TrustedRunnerSignature } from './trusted-runner.js';
+import { type TrustedEnvironmentProof } from './trusted-environment-proof.js';
 export declare const MACOS_TRUSTED_RUNNER_ADAPTER_SCHEMA: "zj-loop.macos_trusted_runner_adapter.v1";
 export type MacOSTrustedRunnerObservation = {
     schema: 'zj-loop.macos_trusted_runner_observation.v1';
@@ -19,6 +20,7 @@ export type MacOSTrustedRunnerObservation = {
     stdout_bytes: number;
     stderr_bytes: number;
     output_truncated: boolean;
+    environment_proof: TrustedEnvironmentProof;
     signature: TrustedRunnerSignature;
 };
 export type MacOSTrustedRunnerExecution = {
@@ -28,6 +30,12 @@ export type MacOSTrustedRunnerExecution = {
     preflight_digest: string;
     proof_digest: string;
     registry_snapshot_digest: string;
+};
+export type MacOSTrustedEnvironment = {
+    cwd: string;
+    sandbox_policy: string;
+    env_allowlist: string[];
+    env: Record<string, string>;
 };
 export type MacOSTrustedRunnerRegistrySnapshot = {
     revision: number;
@@ -42,6 +50,8 @@ export declare function verifyMacOSTrustedRunnerObservation(input: {
     observation: MacOSTrustedRunnerObservation;
     execution: MacOSTrustedRunnerExecution;
     registry: MacOSTrustedRunnerRegistrySnapshot;
+    argv: string[];
+    environment: MacOSTrustedEnvironment;
 }): {
     status: 'accepted';
 } | {
@@ -59,6 +69,7 @@ export declare function createMacOSTrustedRunnerAdapter(input: {
         key_tag: string;
         execution: MacOSTrustedRunnerExecution;
         argv: string[];
+        environment: MacOSTrustedEnvironment;
         timeout_ms: number;
         termination_grace_ms: number;
     }): Promise<{

@@ -299,7 +299,8 @@
         "1-5-1",
         "1-5-2",
         "1-5-3",
-        "1-5-4"
+        "1-5-4",
+        "1-5-5"
       ],
       "decisions": [
         {
@@ -945,11 +946,27 @@
       "children": [],
       "decisions": [],
       "notes": "Node adapter launches the one-shot macOS helper, checks helper SHA-256 before spawn, parses bounded JSON, verifies canonical P-256 observation signature, execution binding, process boundary and active registry snapshot. Digest drift is blocked before spawn."
+    },
+    "1-5-5": {
+      "id": "1-5-5",
+      "label": "macOS trusted environment proof and fail-closed launch gate",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "问题24：是否实现 macOS trusted environment proof，包括 Seatbelt/network deny、credential-clean allowlist、sandbox policy digest 和 env policy digest；无法证明则 blocked？",
+          "answer": "同意",
+          "note": "先做 deterministic fixture proof，再接真实 Agent dogfood；proof 必须在 launch 前由 trusted runner 生成并签名，绑定 execution/attempt、argv/cwd/env policy、sandbox policy、registry snapshot 和有效期；缺少或无法独立验证任一环境事实即 blocked。"
+        }
+      ],
+      "notes": "Implemented macOS trusted environment proof and fail-closed launch gate: native Swift helper launches through Seatbelt network-deny policy with explicit credential-clean env allowlist, computes sandbox/env policy digests, signs pre-launch proof with the independent Keychain P-256 runner identity, and Node adapter verifies proof binding, signature, active registry, validity and policy gate. Deterministic proof and native normal/timeout/policy failure tests pass; real Agent dogfood remains a later opt-in slice."
     }
   },
   "metadata": {
     "created": "2026-08-01 02:07:17",
-    "updated": "2026-08-01 15:06:56",
+    "updated": "2026-08-01 15:45:55",
     "md_file": "docs/plans/opn-native-agent-provider-adapter-next-milestone-roadmap.md"
   }
 }

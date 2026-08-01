@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-native-agent-provider-adapter-next-milestone-roadmap.json` | 最后更新: 2026-08-01 15:06:56
+> 数据文件: `opn-native-agent-provider-adapter-next-milestone-roadmap.json` | 最后更新: 2026-08-01 15:45:55
 
 [x][X+] 1. OPN Native Agent Provider Adapter 下一里程碑
 ├── [x][Y+] 1-1. Provider-neutral local process adapter contract
@@ -18,5 +18,6 @@
     ├── [x][Y+] 1-5-1. Provider-neutral TrustedRunner contract and fake runner
     ├── [x][Y+] 1-5-2. macOS Swift TrustedRunner helper process-group conformance
     ├── [x][Y+] 1-5-3. macOS TrustedRunner Keychain observation signing
-    └── [x][Y+] 1-5-4. Node macOS TrustedRunner adapter and active registry verification
+    ├── [x][Y+] 1-5-4. Node macOS TrustedRunner adapter and active registry verification
+    └── [x][Y+] 1-5-5. macOS trusted environment proof and fail-closed launch gate
 <!-- ROADMAP_SECTION_END -->

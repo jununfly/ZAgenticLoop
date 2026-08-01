@@ -9,6 +9,8 @@ import { test } from 'node:test';
 import { randomUUID } from 'node:crypto';
 
 const isMacOS = process.platform === 'darwin';
+const environment = { cwd: process.cwd(), sandbox_policy: '(version 1) (deny network*) (allow process*) (allow file-read*)', env_allowlist: ['PATH', 'LANG'], env: { PATH: '/usr/bin:/bin', LANG: 'C' } };
+const policyDigests = { sandbox_policy_digest: `sha256:${createHash('sha256').update(environment.sandbox_policy).digest('hex')}`, env_policy_digest: `sha256:${createHash('sha256').update('LANG=C\nPATH=/usr/bin:/bin').digest('hex')}` };
 
 async function compileHelper() {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-macos-trusted-runner-'));
@@ -37,6 +39,7 @@ test('macOS TrustedRunner proves a normal descendant tree is terminated', { skip
       proof_digest: `sha256:${'2'.repeat(64)}`,
       registry_snapshot_digest: `sha256:${'3'.repeat(64)}`,
       argv: ['/bin/sh', '-c', 'printf child-output; sleep 0.1 & wait'],
+      ...environment, ...policyDigests,
       timeout_ms: 2_000,
       termination_grace_ms: 100,
     });
@@ -75,6 +78,7 @@ test('macOS TrustedRunner terminates a timed-out descendant tree before claiming
       proof_digest: `sha256:${'5'.repeat(64)}`,
       registry_snapshot_digest: `sha256:${'6'.repeat(64)}`,
       argv: ['/bin/sh', '-c', 'sleep 5 & wait'],
+      ...environment, ...policyDigests,
       timeout_ms: 50,
       termination_grace_ms: 100,
     });
