@@ -580,9 +580,19 @@
           "q": "问题126：review package 是否必须以独立内容寻址 EvidenceStore 证据持久化，并提供 provider-neutral review show/decide 入口；decide 先校验当前 lifecycle、package digest 和网络级 revision，再持久化签名 decision 证据并通过 StateStore CAS 推进 accepted/rejected/request-revision，任何漂移均拒绝写状态？",
           "answer": "同意",
           "note": "已实现并测试：review package 持久化为 EvidenceStore 引用；show 只读展示 package；decide 使用 HumanSigner 生成 P-256 签名，持久化 decision evidence 后调用现有 CAS review API；package/lifecycle/revision 漂移在状态写入前 blocked；不启动 Provider、不执行 closeout。"
+        },
+        {
+          "q": "问题127：closeout 是否作为独立资源生命周期实现：必须由 HumanSigner 绑定当前 accepted/rejected lifecycle、execution/attempt 和 worktree path；无活动 lease 且 worktree clean/registered 时才允许通过 CAS 记录 closeout 并非强制移除 worktree；重复 closeout 幂等，EvidenceStore 永不因 closeout 自动删除？",
+          "answer": "同意",
+          "note": "已实现并测试：closeout CLI/API 独立于顶层业务 lifecycle；签名绑定 worktree path，校验 accepted/rejected、lease、repo 外 registered clean worktree；只执行非 force git worktree remove，closeout 事实幂等，EvidenceStore 明确保留。"
+        },
+        {
+          "q": "问题127补正：closeout 通过全部校验后是否必须受控移除已签名绑定的 clean registered isolated worktree，但不删除 EvidenceStore；重复 closeout 幂等返回原事实？",
+          "answer": "同意",
+          "note": "修正问题127原文笔误：实现为受控移除 worktree，不是“并非强制移除”；EvidenceStore 永不因 closeout 自动删除。"
         }
       ],
-      "notes": "Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters and closeout remain; independent verifier, review package persistence, signed Human review CLI/API and CAS decision path are implemented."
+      "notes": "Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters remain; independent verifier, review package persistence, signed Human review CLI/API, CAS decision path and explicit signed closeout are implemented. Closeout is a separate resource lifecycle: it requires accepted/rejected, no active lease, a clean registered worktree, signed worktree binding, is idempotent, removes only the worktree, and retains EvidenceStore evidence."
     },
     "1-4": {
       "id": "1-4",
@@ -720,7 +730,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-01 23:31:41",
+    "updated": "2026-08-01 23:51:39",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

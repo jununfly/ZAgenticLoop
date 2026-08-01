@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-01 23:31:41
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-01 23:51:39
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -13,7 +13,7 @@
 
 ### 当前施工：1-3. Provider-neutral real-agent-dogfood CLI entry
 
-Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters and closeout remain; independent verifier, review package persistence, signed Human review CLI/API and CAS decision path are implemented.
+Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters remain; independent verifier, review package persistence, signed Human review CLI/API, CAS decision path and explicit signed closeout are implemented. Closeout is a separate resource lifecycle: it requires accepted/rejected, no active lease, a clean registered worktree, signed worktree binding, is idempotent, removes only the worktree, and retains EvidenceStore evidence.
 
 **决策：**
 - Q: 问题5：首个真实 dogfood 是否只实现一个具体 Provider adapter 作为垂直切片，但入口、协议和 review package 全部保持 provider-neutral？ → 同意 (产品不绑定 Codex、Workbuddy 或其他 Agent；首个实现仅选择当前可用 Provider 做真实验证，显式记录 provider_id/adapter，后续 Provider 复用同一 contract，切换 Provider 必须重新执行 preflight 和 Human approval。)
@@ -102,4 +102,6 @@ Lifecycle contract, pure projection, replay admission, network-level StateStore 
 - Q: 问题125：request-revision 的新 execution_id 是否必须由 orchestrator 在记录 Human decision 时生成，而不是由 CLI/UI 或 Human 提供？Human 只提交修订意见和签名，系统生成新 attempt、execution、preflight、worktree 和 approval context？ → 同意 (已实现并测试：request-revision 先追加 request-revision 事实，再由 orchestrator 生成新的 execution- 并追加 draft(attempt+1)；外部不能注入或复用旧 execution。)
 - Q: 问题125补正：新 execution_id 的生成形式是什么？ → execution-${UUID}，由 orchestrator 内部生成 (修正上一条记录中的 shell 展开显示问题；外部不能注入或复用旧 execution。)
 - Q: 问题126：review package 是否必须以独立内容寻址 EvidenceStore 证据持久化，并提供 provider-neutral review show/decide 入口；decide 先校验当前 lifecycle、package digest 和网络级 revision，再持久化签名 decision 证据并通过 StateStore CAS 推进 accepted/rejected/request-revision，任何漂移均拒绝写状态？ → 同意 (已实现并测试：review package 持久化为 EvidenceStore 引用；show 只读展示 package；decide 使用 HumanSigner 生成 P-256 签名，持久化 decision evidence 后调用现有 CAS review API；package/lifecycle/revision 漂移在状态写入前 blocked；不启动 Provider、不执行 closeout。)
+- Q: 问题127：closeout 是否作为独立资源生命周期实现：必须由 HumanSigner 绑定当前 accepted/rejected lifecycle、execution/attempt 和 worktree path；无活动 lease 且 worktree clean/registered 时才允许通过 CAS 记录 closeout 并非强制移除 worktree；重复 closeout 幂等，EvidenceStore 永不因 closeout 自动删除？ → 同意 (已实现并测试：closeout CLI/API 独立于顶层业务 lifecycle；签名绑定 worktree path，校验 accepted/rejected、lease、repo 外 registered clean worktree；只执行非 force git worktree remove，closeout 事实幂等，EvidenceStore 明确保留。)
+- Q: 问题127补正：closeout 通过全部校验后是否必须受控移除已签名绑定的 clean registered isolated worktree，但不删除 EvidenceStore；重复 closeout 幂等返回原事实？ → 同意 (修正问题127原文笔误：实现为受控移除 worktree，不是“并非强制移除”；EvidenceStore 永不因 closeout 自动删除。)
 <!-- ROADMAP_SECTION_END -->
