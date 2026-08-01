@@ -1,14 +1,17 @@
 import { type HumanSignature, type HumanSigner, type HumanSignerIdentity } from './human-signer.js';
 export declare const TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA: "zj-loop.trusted_runner_registry_mutation.v1";
-type MutationAction = 'register' | 'rotate' | 'revoke';
+export type TrustedRunnerRegistryMutationAction = 'register' | 'rotate' | 'revoke' | 'update-capabilities';
 export type TrustedRunnerRegistryMutation = {
     schema: typeof TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA;
     network_id: string;
     mutation_id: string;
-    action: MutationAction;
+    action: TrustedRunnerRegistryMutationAction;
     runner_id: string;
     old_public_key_fingerprint?: string;
     new_public_key_fingerprint?: string;
+    old_capabilities_digest?: string;
+    capabilities?: string[];
+    expected_revision?: number;
     reason: string;
     occurred_at: string;
     human_id: string;
@@ -21,15 +24,20 @@ export type TrustedRunnerRegistryEntry = {
     runner_id: string;
     public_key_fingerprint: string;
     status: 'active' | 'revoked';
+    capabilities?: string[];
 };
+export declare function trustedRunnerCapabilitiesDigest(capabilities?: string[]): string;
 export declare function createTrustedRunnerRegistryMutation(input: {
     signer: HumanSigner;
     network_id: string;
     mutation_id: string;
-    action: MutationAction;
+    action: TrustedRunnerRegistryMutationAction;
     runner_id: string;
     old_public_key_fingerprint?: string;
     new_public_key_fingerprint?: string;
+    old_capabilities_digest?: string;
+    capabilities?: string[];
+    expected_revision?: number;
     reason: string;
     occurred_at: string;
 }): Promise<TrustedRunnerRegistryMutation>;
@@ -51,4 +59,3 @@ export declare function applyTrustedRunnerRegistryMutation(input: {
     registry: TrustedRunnerRegistryEntry[];
     reason?: string;
 };
-export {};

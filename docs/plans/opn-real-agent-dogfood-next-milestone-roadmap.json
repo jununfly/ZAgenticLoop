@@ -605,6 +605,156 @@
           "q": "问题130：post-run proof factory 是否应属于已注册 Provider adapter 的显式能力，而不是由 worker 或 CLI 自行选择；Provider 未声明该能力时必须保持 outcome-uncertain？",
           "answer": "同意",
           "note": "已实现：RealAgentDogfoodProvider 可显式携带 post_run_proof_factory，worker CLI 只消费注册 Provider 暴露的能力；Codex 当前 LocalProcess adapter 未声明真实 TrustedRunner factory，因此仍进入 outcome-uncertain。平台 adapter 接入后可在 registry 层替换，不改变 worker/verifier 协议。"
+        },
+        {
+          "q": "问题131：真实 post-run proof factory 是否必须由 TrustedRunner 边界提供，而不是由 Provider 自己签名？",
+          "answer": "同意",
+          "note": "Provider 只能报告自身执行结果；TrustedRunner 负责绑定 execution、attempt、preflight proof、launch process boundary、实际输出以及 worktree/network/credential 状态，并生成 signed post-run proof。Provider adapter 只消费该能力，不拥有环境证明权。"
+        },
+        {
+          "q": "问题132：post-run proof 是否应由一个统一的 TrustedRunner post-run 观测动作一次性生成，包含进程边界、实际输出、worktree 状态、network policy 和 credential 状态，而不是由 worker 分别拼接多个来源的事实？",
+          "answer": "同意",
+          "note": "worker 不拼接环境事实；TrustedRunner 返回完整、原子绑定的 signed observation。进程、worktree、网络、凭据或输出任一事实缺失、来源不可信或绑定漂移，都进入 outcome-uncertain。"
+        },
+        {
+          "q": "问题133：Provider 的实际进程是否应由 TrustedRunner 统一负责 launch、observe 和 terminate，Provider adapter 只提供逻辑命令与输入输出协议？",
+          "answer": "同意",
+          "note": "TrustedRunner 统一拥有 pre-run proof、进程树、超时终止、输出限制和 post-run proof；Provider adapter 不通过普通 LocalProcessAdapter 自行启动真实进程，避免执行期间存在不可证明的边界或参数漂移。"
+        },
+        {
+          "q": "问题134：实现顺序是否采用先冻结跨平台 TrustedRunner execution contract 与 deterministic fake fixture，再接入 macOS Seatbelt/native helper；Windows CNG、Linux PKCS#11/TPM2 后续复用同一 contract？",
+          "answer": "同意",
+          "note": "核心协议保持 provider/platform-neutral；macOS 作为首个真实 adapter，Windows/Linux 未接入时明确 blocked，不伪造已实现能力，也不让平台差异污染 OPN worker/lifecycle。"
+        },
+        {
+          "q": "问题135：TrustedRunner 的 runner_id、版本、helper digest、registry snapshot digest 和平台能力是否必须在 preflight/approval 时固定，并在实际执行前后重新校验；禁止运行时自动选择、自动升级或自动回退到其他 runner？",
+          "answer": "同意",
+          "note": "TrustedRunner 身份与能力属于 execution contract；preflight/approval 固定后，launch 与 post-run 必须重新校验，任何版本、helper、registry 或能力漂移都 blocked/outcome-uncertain，不自动切换 runner。"
+        },
+        {
+          "q": "问题136：TrustedRunner 是否只负责在执行前后检查并证明 worktree 状态，不负责自动修复、stash、reset、merge 或删除 worktree；worktree 清理继续由 Human 显式 closeout 负责？",
+          "answer": "同意",
+          "note": "TrustedRunner 可读取并证明 worktree clean/HEAD/branch/diff/untracked 等事实，但不得修复或改变资源；merge 与 closeout 仍由 Human 责任单元通过显式动作完成。"
+        },
+        {
+          "q": "问题137：TrustedRunner 对外是否应提供原子 run contract，输入完整 execution policy/argv/worktree/环境/预算，输出 Provider result 与 signed post-run observation；prepare、launch、observe、terminate 作为内部阶段，不让 worker/Provider 拼接？",
+          "answer": "同意",
+          "note": "TrustedRunner 对外提供单一原子执行边界；内部阶段由平台 adapter 管理，worker 只接收结构化 result 与 signed observation，Provider 不直接控制进程或环境。"
+        },
+        {
+          "q": "问题138：TrustedRunner 是否应保持 Provider-agnostic，只返回标准化进程结果与 signed observation；completed、failed、timed-out、cancelled 等业务映射继续由 OPN worker/lifecycle 负责？",
+          "answer": "同意",
+          "note": "TrustedRunner 不包含 Codex 或其他 Provider 语义，只证明受控进程事实；OPN worker/lifecycle 负责将标准化结果映射为 blocked、outcome-uncertain、verification-pending 等业务状态。"
+        },
+        {
+          "q": "问题139：TrustedRunner 收到的 executable、argv、cwd、环境 allowlist、网络策略、输出/超时预算是否必须来自 preflight 固定的 immutable execution binding；Provider 不得运行时追加、修改或隐式注入任何参数？",
+          "answer": "同意",
+          "note": "所有执行输入都来自已批准且不可变的 execution binding；TrustedRunner 在 launch 前重算并校验，任何参数、路径、环境、策略或预算漂移都拒绝启动。"
+        },
+        {
+          "q": "问题140：TrustedRunner 在 launch 前失败时是否进入 blocked；已启动后无法证明进程树、worktree、network 或 credential 终态时是否进入 outcome-uncertain，并尽可能持久化 failure observation？",
+          "answer": "同意",
+          "note": "未启动且无副作用时 blocked；已启动但终态不可证明时 outcome-uncertain；已启动且完整 observation 证明 Provider 失败时由 OPN worker 映射为 blocked。所有可用 failure/result/observation 证据都保留。"
+        },
+        {
+          "q": "问题141：输出是否由 TrustedRunner 负责捕获、限额和计算 digest，worker 只负责将已限额输出写入 EvidenceStore；任何截断、超限或输出 digest 不一致都不得进入 verification-pending？",
+          "answer": "同意",
+          "note": "TrustedRunner 负责 bounded capture、截断/超限事实和 digest；worker 只保存受保护 EvidenceStore 内容并与 signed observation 比对，任何不一致进入 outcome-uncertain。"
+        },
+        {
+          "q": "问题142：TrustedRunner 的签名密钥是否必须与 HumanSigner 分离，并由平台安全存储保护（macOS Keychain、Windows CNG、Linux PKCS#11/TPM2）；HumanSigner 只负责 Human approval/review/closeout，不能替代 TrustedRunner 身份？",
+          "answer": "同意",
+          "note": "TrustedRunner 与 HumanSigner 是两种不同责任主体；平台密钥只证明执行环境事实，HumanSigner 才能批准、审查、接受或关闭。两者不得共用密钥或权限。"
+        },
+        {
+          "q": "问题143：TrustedRunner 是否必须先经过 Human-signed registry enrollment 才能执行；runner 的注册、密钥轮换、撤销和能力变更都必须留下 append-only 记录，并绑定 registry snapshot？",
+          "answer": "同意",
+          "note": "未 enrollment 或 registry snapshot 不一致时禁止执行；注册、轮换、撤销和能力变更都由 Human-signed mutation 驱动并保留历史，execution 绑定当时的 active runner 与 snapshot。"
+        },
+        {
+          "q": "问题144：平台安全存储不可用、用户拒绝授权、密钥不可导出签名失败或 runner helper 无法证明身份时，TrustedRunner 是否必须直接 blocked，禁止退回软件私钥、内存临时密钥、Agent 自报或普通进程签名？",
+          "answer": "同意",
+          "note": "可信执行环境不可证明就不执行；禁止任何软件密钥、临时密钥、Agent 自报或普通进程签名降级。Human 可在明确原因和证据基础上重新配置后创建新 attempt。"
+        },
+        {
+          "q": "问题145：TrustedRunner registry 是否应作为 OPN 网络级资源存储，由网络授权与 append-only CAS 保护；中心责任单元只有协调和发起 enrollment 的权力，不能单方面改变 runner 的注册、密钥或能力状态？",
+          "answer": "同意",
+          "note": "registry 属于网络级 StateStore 资源；中心节点不能绕过 Human-signed mutation、CAS、历史和 active/revoked 规则改变 runner 身份或能力。execution 只引用已验证的 registry snapshot。"
+        },
+        {
+          "q": "问题146：是否先把 TrustedRunner registry mutation/history 持久化到现有网络级 StateStore，并实现 CAS、replay、idempotency，再实现 macOS Keychain/native helper 接入；不为 registry 另引数据库或私有中心节点存储？",
+          "answer": "同意",
+          "note": "复用网络级 StateStore；registry 的 mutation/history、CAS、replay/idempotency 先闭环，平台密钥和 native helper 后接入，不新增 registry 专用数据库或中心私有存储。"
+        },
+        {
+          "q": "问题147：TrustedRunner registry 是否建模为每个 OPN network 下唯一的 trusted-runner-registry aggregate，mutation 作为 append-only events；当前 registry snapshot 由 StateStore replay 生成并通过 revision/digest 固定？",
+          "answer": "同意",
+          "note": "每个 network 只有一个 registry aggregate；StateStore replay 生成当前 snapshot，revision 与 canonical digest 固定 execution 所引用的 registry 状态，禁止旁路修改。"
+        },
+        {
+          "q": "问题148：registry mutation 的最小动作集合是否冻结为 register、rotate、revoke、update-capabilities 四类；每类都必须绑定旧状态摘要、目标状态、Human 签名、原因和 CAS revision，禁止通过泛化 patch 绕过状态机？",
+          "answer": "同意",
+          "note": "mutation 采用显式状态机动作；所有动作绑定旧状态、目标状态、Human 签名、原因、network/registry revision 并经过 replay/idempotency 校验，拒绝泛化 patch。"
+        },
+        {
+          "q": "问题149：TrustedRunner capabilities 是否必须采用 provider/platform-neutral 的显式枚举和版本化 schema（process-boundary、network-policy、credential-cleanup、worktree-observation、output-bounds、secure-signing 等），禁止无法解释的自由字符串；execution 只能请求 active runner 已声明的能力？",
+          "answer": "同意",
+          "note": "capabilities 采用可解释、版本化、可校验的 schema；preflight/approval 固定 capability snapshot，runner 缺少任一必需能力时 blocked，能力字符串不作为隐式授权。"
+        },
+        {
+          "q": "问题150：TrustedRunner capability、helper、密钥或 registry 发生变更时，是否只影响新 execution；已批准或运行中的 execution 继续绑定原 snapshot，发现 snapshot 不一致就停止，不自动迁移到新 runner？",
+          "answer": "同意",
+          "note": "execution 绑定 immutable runner/capability/registry snapshot；新变更只用于新 execution。旧 execution 发现漂移必须停止并记录 outcome-uncertain/blocked，不自动迁移、重试或换 runner。"
+        },
+        {
+          "q": "问题151：如果 TrustedRunner 在 execution 运行中被撤销、密钥轮换或 capability 失效，系统是否应停止或终止该 execution，并将其置为 outcome-uncertain；不得等待 Provider 自然结束或自动续租继续执行？",
+          "answer": "同意",
+          "note": "运行中发现 runner/密钥/capability/registry snapshot 失效时立即停止受控进程、冻结 execution 并进入 outcome-uncertain；不得自动续租、迁移、换 runner 或重试。"
+        },
+        {
+          "q": "问题152：runner 撤销或能力失效是否由 worker heartbeat 和 TrustedRunner lease renewal 期间主动读取 registry snapshot 检查；下一次 heartbeat 必须在续租前发现漂移并停止？",
+          "answer": "同意",
+          "note": "worker/TrustedRunner 在 heartbeat/lease renewal 前检查 registry snapshot；发现漂移不续租、停止进程并进入 outcome-uncertain。系统不宣称 heartbeat 间隔内具备实时强制终止能力。"
+        },
+        {
+          "q": "问题153：当前实现是否先聚焦一个可验证垂直切片：把 TrustedRunner registry/history 持久化到 StateStore，完成 Human-signed mutation、CAS、replay/idempotency、snapshot binding 和 deterministic fake runner；macOS native helper 与平台 Keychain 放到下一子切片？",
+          "answer": "同意",
+          "note": "本切片先闭环网络级 registry/history 与 deterministic fake runner；macOS native helper、Keychain/CNG/PKCS#11/TPM2 只在后续子切片接入，不提前伪造平台能力。"
+        },
+        {
+          "q": "问题154：registry replay 校验 Human 签名时，是否应从网络级 Human identity/authority 资源解析 signer identity，而不是由调用方每次传入一个 identity；identity 不匹配或无法解析时直接 blocked？",
+          "answer": "同意",
+          "note": "当前调用方传入 identity 只作为过渡 fixture；正式实现由网络级 Human authority 解析并校验 signer，调用方不能替换公钥。identity 缺失、未授权、撤销或解析漂移时 blocked。"
+        },
+        {
+          "q": "问题155：网络级 Human authority 是否应建模为可审计的 authority set：网络创建时由 owner Human 初始化，后续可通过 Human-signed mutation 增加、撤销或轮换授权 Human；TrustedRunner registry mutation 只接受当前 active authority set 中的签名者？",
+          "answer": "同意",
+          "note": "authority set 属于网络级资源；owner 负责初始化，后续 authority mutation 也必须 Human 签名、CAS、append-only。registry mutation 只接受 active authority signer。"
+        },
+        {
+          "q": "问题156：本轮 MVP 是否先实现单一 owner Human 的 authority set schema，但从第一天就使用 set、replay、CAS 数据模型；多 Human delegation、threshold approval 和复杂 authority policy 留到后续路线图？",
+          "answer": "同意",
+          "note": "MVP 只有 owner 一个 active authority，但持久化 schema 使用 authority set；后续扩展 delegated Human、threshold 和更复杂 policy 不改变 registry/OPN 核心协议。"
+        },
+        {
+          "q": "问题157：Human authority set 是否应通过独立的 human-authority-set.initialized 事件初始化，而不是把公钥直接塞进 createNetwork(owner_id)；初始化事件绑定 owner identity、Human 签名、network revision 和 authority-set digest？",
+          "answer": "同意",
+          "note": "网络创建与 Human identity 绑定保持两个事实；owner 通过显式 signed initialization 建立 authority set，后续 mutation 复用 append-only/CAS/replay。"
+        },
+        {
+          "q": "问题158：Human authority set 的最小 mutation 是否冻结为 initialize、add、rotate、revoke 四类；每次 mutation 必须由当前 active authority 签名，并绑定旧 authority-set digest、目标 digest、原因和 CAS revision？",
+          "answer": "同意",
+          "note": "authority mutation 使用显式状态机，所有动作由 active authority 签名并经过旧状态、目标状态、network revision、replay/idempotency 校验；禁止泛化 patch。"
+        },
+        {
+          "q": "问题159：是否禁止撤销或轮换最后一个 active Human authority，保证网络永远保留至少一个可负责、可恢复的 Human authority；若需更换最后一个 authority，必须采用单个原子 rotate，而不是先 revoke 再 add？",
+          "answer": "同意",
+          "note": "authority set 不允许归零；最后一个 active authority 只能原子 rotate。任何会使网络失去 Human responsibility 的 mutation 直接 blocked。"
+        },
+        {
+          "q": "问题160：TrustedRunner registry 与 Human authority set 的持久化是否应作为同一条 vertical slice 一起完成：先 replay authority set，再用它验证 registry mutation signer；authority set 未初始化或 signer 非 active 时，registry mutation 直接 blocked？",
+          "answer": "同意",
+          "note": "registry store 先解析网络级 authority set；未初始化、签名者非 active、authority digest 漂移或 authority replay 失败时，TrustedRunner registry mutation 不写入 StateStore，直接 blocked。"
         }
       ],
       "notes": "Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters remain; independent verifier, review package persistence, signed Human review CLI/API, CAS decision path and explicit signed closeout are implemented. Closeout is a separate resource lifecycle: it requires accepted/rejected, no active lease, a clean registered worktree, signed worktree binding, is idempotent, removes only the worktree, and retains EvidenceStore evidence."
@@ -745,7 +895,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-02 00:21:46",
+    "updated": "2026-08-02 01:54:03",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

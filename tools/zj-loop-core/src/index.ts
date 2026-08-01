@@ -149,6 +149,8 @@ export * from './execution-lifecycle-gate.js';
 export * from './bounded-reconciliation.js';
 export * from './agent-dogfood-conformance.js';
 export * from './trusted-runner-registry.js';
+export * from './trusted-runner-registry-store.js';
+export * from './human-authority-set-store.js';
 export * from './evidence-retention.js';
 export * from './evidence-access-audit.js';
 export * from './trusted-runner.js';
