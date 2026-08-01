@@ -37,3 +37,9 @@ test('registry creates the registered codex provider without a fake fallback', a
 test('registry rejects an unregistered provider before constructing a runner', () => {
   assert.throws(() => createRealAgentDogfoodProvider({ provider_id: 'unknown', executable: '/bin/false', process_adapter: { launch() { throw new Error('must-not-launch'); } } }), { message: 'provider-not-registered' });
 });
+
+test('registry preserves a trusted post-run proof factory as provider capability', () => {
+  const factory = async () => ({ status: 'signed' });
+  const provider = createRealAgentDogfoodProvider({ provider_id: 'codex', executable: '/opt/codex/bin/codex', process_adapter: { launch() { throw new Error('must-not-launch'); } }, post_run_proof_factory: factory });
+  assert.equal(provider.post_run_proof_factory, factory);
+});

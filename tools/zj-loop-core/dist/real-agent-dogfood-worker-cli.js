@@ -59,7 +59,7 @@ async function runWorkerContext(contextPath) {
             throw new Error('worker-lease-invalid');
         const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store });
         const provider = createRealAgentDogfoodProvider({ provider_id: context.provider_id, executable: context.executable, process_adapter: createLocalProcessAdapter() });
-        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, expected_revision: context.expected_revision });
+        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, post_run_proof_factory: provider.post_run_proof_factory, expected_revision: context.expected_revision });
         if (result.status !== 'verification-pending')
             return result;
         const verifierContextPath = `${contextPath}.verifier.json`;

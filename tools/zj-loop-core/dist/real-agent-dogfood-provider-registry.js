@@ -9,6 +9,7 @@ export function createRealAgentDogfoodProvider(input) {
     return {
         provider_id: 'codex',
         adapter_version: 'codex-agent-provider.v1',
+        post_run_proof_factory: input.post_run_proof_factory,
         async run(request) {
             if (request.executable !== input.executable)
                 throw new Error('provider-executable-binding-mismatch');

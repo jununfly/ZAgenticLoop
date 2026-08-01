@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 00:18:04
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 00:21:46
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -106,4 +106,5 @@ Lifecycle contract, pure projection, replay admission, network-level StateStore 
 - Q: 问题127补正：closeout 通过全部校验后是否必须受控移除已签名绑定的 clean registered isolated worktree，但不删除 EvidenceStore；重复 closeout 幂等返回原事实？ → 同意 (修正问题127原文笔误：实现为受控移除 worktree，不是“并非强制移除”；EvidenceStore 永不因 closeout 自动删除。)
 - Q: 问题128：Provider worker 是否必须只接受 provider-neutral 的 signed post-run proof，且该 proof 必须绑定 execution/attempt、worktree、executable digest、stdout/stderr digest、进程边界、worktree/network/credential 清理状态并完成签名校验；缺失、篡改或绑定漂移时进入 outcome-uncertain？ → 同意 (已实现 real-agent-dogfood-post-run-proof.v1；worker 与独立 verifier 拒绝裸布尔 observation，校验 P-256 签名、摘要与 execution/worktree/output/process/safety 绑定；缺失或失败进入 outcome-uncertain。trusted runner/provider 适配器只负责生成该 provider-neutral proof，具体平台实现另行接入。)
 - Q: 问题129：post-run proof 是否必须由 Provider 执行完成后调用的 trusted proof factory 生成，禁止从 worker context 或执行前输入直接注入；没有可用 factory 时必须进入 outcome-uncertain？ → 同意 (已实现：worker 在 Provider 返回并保存 stdout/stderr Evidence 后才调用 post_run_proof_factory，并用实际 output digest 与 execution/worktree/executable 绑定后验证；WorkerContext 不再接受 post_run_proof。真实 CLI 尚未接入平台 TrustedRunner factory，因此缺失 factory 明确进入 outcome-uncertain，不伪装为 verification-pending。)
+- Q: 问题130：post-run proof factory 是否应属于已注册 Provider adapter 的显式能力，而不是由 worker 或 CLI 自行选择；Provider 未声明该能力时必须保持 outcome-uncertain？ → 同意 (已实现：RealAgentDogfoodProvider 可显式携带 post_run_proof_factory，worker CLI 只消费注册 Provider 暴露的能力；Codex 当前 LocalProcess adapter 未声明真实 TrustedRunner factory，因此仍进入 outcome-uncertain。平台 adapter 接入后可在 registry 层替换，不改变 worker/verifier 协议。)
 <!-- ROADMAP_SECTION_END -->

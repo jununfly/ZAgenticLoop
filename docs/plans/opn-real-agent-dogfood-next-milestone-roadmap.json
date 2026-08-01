@@ -600,6 +600,11 @@
           "q": "问题129：post-run proof 是否必须由 Provider 执行完成后调用的 trusted proof factory 生成，禁止从 worker context 或执行前输入直接注入；没有可用 factory 时必须进入 outcome-uncertain？",
           "answer": "同意",
           "note": "已实现：worker 在 Provider 返回并保存 stdout/stderr Evidence 后才调用 post_run_proof_factory，并用实际 output digest 与 execution/worktree/executable 绑定后验证；WorkerContext 不再接受 post_run_proof。真实 CLI 尚未接入平台 TrustedRunner factory，因此缺失 factory 明确进入 outcome-uncertain，不伪装为 verification-pending。"
+        },
+        {
+          "q": "问题130：post-run proof factory 是否应属于已注册 Provider adapter 的显式能力，而不是由 worker 或 CLI 自行选择；Provider 未声明该能力时必须保持 outcome-uncertain？",
+          "answer": "同意",
+          "note": "已实现：RealAgentDogfoodProvider 可显式携带 post_run_proof_factory，worker CLI 只消费注册 Provider 暴露的能力；Codex 当前 LocalProcess adapter 未声明真实 TrustedRunner factory，因此仍进入 outcome-uncertain。平台 adapter 接入后可在 registry 层替换，不改变 worker/verifier 协议。"
         }
       ],
       "notes": "Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters remain; independent verifier, review package persistence, signed Human review CLI/API, CAS decision path and explicit signed closeout are implemented. Closeout is a separate resource lifecycle: it requires accepted/rejected, no active lease, a clean registered worktree, signed worktree binding, is idempotent, removes only the worktree, and retains EvidenceStore evidence."
@@ -740,7 +745,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-02 00:18:04",
+    "updated": "2026-08-02 00:21:46",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }
