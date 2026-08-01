@@ -146,3 +146,7 @@ export * from './provider-review-package.js';
 export * from './execution-policy-gate.js';
 export * from './execution-lifecycle-gate.js';
 export * from './bounded-reconciliation.js';
+export * from './agent-dogfood-conformance.js';
+export * from './trusted-runner-registry.js';
+export * from './evidence-retention.js';
+export * from './evidence-access-audit.js';

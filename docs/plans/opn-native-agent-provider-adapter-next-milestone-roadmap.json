@@ -351,6 +351,311 @@
           "q": "下一条实现切片是否限定为 deterministic fixtures，不执行真实 Codex？",
           "answer": "采用方案 A：先完成 deterministic provider contract，再 opt-in dogfood",
           "note": "先实现 LocalExecutionPreflight、LocalExecutionApproval、Codex JSONL/task result parser、ProviderOutcome 映射、ReviewPackage 和完整失败矩阵；真实 Codex、网络探测、macOS sandbox、Web UI、写入任务后置。"
+        },
+        {
+          "q": "真实 Agent 一致性验证是否采用默认注入式 fake runner 加显式 opt-in 真实 Codex conformance test 的两层边界？",
+          "answer": "采用两层验证",
+          "note": "默认测试纳入 provider-neutral fake runner，覆盖完整契约并保持可重复；真实 Codex 仅显式 opt-in，必须通过隔离、凭据、网络和只读 worktree 环境证明，否则 blocked，不纳入默认 npm test。"
+        },
+        {
+          "q": "默认 conformance fixture 是否必须覆盖正常路径与对抗性失败路径？",
+          "answer": "必须覆盖",
+          "note": "固定覆盖 digest 篡改、worktree 越界修改、凭据继承、网络证据缺失、输出超限、JSONL 协议异常、verifier 失败、超时取消不确定和 review package 绑定失败；真实 Codex CLI 行为另由 opt-in dogfood 验证。"
+        },
+        {
+          "q": "首个真实 dogfood 项目是否选择 ZAgenticLoop 自身？",
+          "answer": "选择 ZAgenticLoop 自身",
+          "note": "在真实项目开发中同时试用、验证和迭代产品，但必须把 dogfood 执行证据与产品源码、默认测试和路线图状态分离。"
+        },
+        {
+          "q": "ZAgenticLoop dogfood 的第一阶段是否保持 read-only conformance 基线，并将写入开发作为单独批准的 execution？",
+          "answer": "采用",
+          "note": "只读真实 Codex conformance 验证发现、执行、Evidence、verifier 和 review handoff；写入开发必须独立批准、独立 worktree/branch、授权范围和 Human 合并验收，不因 dogfood 项目是本仓库而绕过 gates。"
+        },
+        {
+          "q": "ZAgenticLoop dogfood 证据是否与产品源码状态分离，并绑定完整执行上下文？",
+          "answer": "采用",
+          "note": "使用专用 dogfood evidence 目录或外部 EvidenceStore；绑定 commit SHA、worktree 摘要、preflight digest、execution/attempt、provider 和时间；只保存脱敏结构化证据与引用，默认测试、真实 dogfood 和 Human review 分开记录；retention 清理保留 digest、状态和审计事实。"
+        },
+        {
+          "q": "第一条真实 ZAgenticLoop dogfood 是否采用只读 conformance self-audit report 作为 Single-Agent OPN Atom？",
+          "answer": "采用",
+          "note": "真实 Codex 读取当前 commit 的路线图、核心契约和测试结果，生成结构化 conformance report；不修改文件、不联网、不继承凭据。Core verifier 检查契约覆盖、引用、worktree 清洁和全链路状态，Human review package 决定最终结果。"
+        },
+        {
+          "q": "真实 dogfood 是否采用 provider-neutral 的 --real-agent-dogfood 入口，而不是 Codex 专属入口？",
+          "answer": "采用",
+          "note": "用户入口不绑定具体 Agent；execution plan 明确 provider_id 和 adapter，review package 展示实际 Agent、版本和环境证据。Provider 不可用时 blocked，不静默降级 fake runner；切换 Provider 必须重新批准 plan/preflight。"
+        },
+        {
+          "q": "真实 Agent 完成后是否必须由 Human 对完整 ProviderReviewPackage 显式 accept，才能进入 completed？",
+          "answer": "必须",
+          "note": "Human 可 accept、reject 或 request-revision；未操作、关闭页面或超时不算接受。决定绑定完整 package digest、execution/attempt、Human identity 和 review 时间，Agent、verifier 和协调逻辑不能代替 Human accept。"
+        },
+        {
+          "q": "Human request-revision 是否创建新的 execution attempt，并保持旧 attempt 全部不可变？",
+          "answer": "采用",
+          "note": "新 attempt 引用前一 attempt 和 Human 修改意见；重新执行 preflight/approval，不复用过期授权，不自动启动；每个 attempt 独立验证和 review，禁止覆盖或静默重试原 attempt。"
+        },
+        {
+          "q": "1-5 是否先提供 provider-neutral 本地 Web Human review UI，并禁止 UI 绕过 Core lifecycle？",
+          "answer": "采用",
+          "note": "UI 展示 network/task/execution/attempt、ProviderReviewPackage、状态、风险和证据，并提供 Accept/Reject/Request revision；所有操作由 Core 校验 digest、Human identity、权限和 lifecycle 后写入不可变事实。UI 不启动 Agent、不直接写 StateStore、不绑定具体 Provider；CLI/API 保留等价入口。"
+        },
+        {
+          "q": "Web UI 的 Accept/Reject/Request revision 是否必须由 HumanSigner 对完整决策上下文签名？",
+          "answer": "必须",
+          "note": "UI 只发起 signing challenge；三种决策均绑定 package digest、execution/attempt、action、Human identity、时间和有效期。浏览器 session/header 不能替代签名；signer 不可用或绑定不匹配则 blocked；首版支持内存测试 signer，真实 signer 复用 P-256 provider-neutral 接口。"
+        },
+        {
+          "q": "首版 Web review UI 是否默认只监听 loopback，并将跨设备访问另开安全范围？",
+          "answer": "采用",
+          "note": "默认监听 127.0.0.1；跨设备模式必须另行实现节点认证、TLS、授权 scope、replay protection 和审计。首版不实现跨设备暴露，只保留 provider-neutral API 边界，HTTP session 不能替代 HumanSigner。"
+        },
+        {
+          "q": "1-5 是否采用 fake runner + 本地 review UI + 内存 HumanSigner 的 tracer-bullet 垂直切片，再接入真实 Agent？",
+          "answer": "采用",
+          "note": "先以注入式 fake runner 走通 preflight→execution→result→redaction→artifact→verifier→review package→Human decision→lifecycle 全链路；随后用同一 contract 接真实 Agent dogfood。默认测试保持可重复，真实 Agent 仍显式 opt-in。"
+        },
+        {
+          "q": "1-5 是否只有在 fake conformance、真实 Agent dogfood 和 HumanSigner acceptance 全部通过后才算完成？",
+          "answer": "必须全部通过",
+          "note": "fake fixture 和 review UI 通过只能称为 Core conformance ready；至少一个真实 Provider 必须通过显式 dogfood 的全部环境、执行、证据、验证和 lifecycle gates，并由 HumanSigner 绑定完整 package accept，否则保持 in_progress 或 blocked。"
+        },
+        {
+          "q": "首个真实 Provider 是否仍选择 Codex extension，但不把 Codex 写入 Core 或用户入口契约？",
+          "answer": "采用",
+          "note": "Codex 仅作为首个可用 provider extension，用于完成 ZAgenticLoop dogfood；用户入口、Core contract、review UI 和完成判据保持 provider-neutral，后续 Provider 复用同一 adapter contract。"
+        },
+        {
+          "q": "网络禁用、凭据清理和 worktree 状态证明是否必须来自独立可信 runner/sandbox，而不能由 Agent 自报？",
+          "answer": "必须来自外部可信 runner/sandbox",
+          "note": "Agent 自报只能作为不可信 observation；只有独立可信 runner/sandbox 产生并绑定 execution/preflight 的环境证明，才能让 conformance gate 通过。"
+        },
+        {
+          "q": "trusted runner 环境证明是否必须绑定 runner identity/version、execution/attempt、preflight、worktree/network/credential evidence、时间有效期和可验证 digest？",
+          "answer": "必须绑定",
+          "note": "环境证明不能只给一个 status；必须携带可验证的 runner identity/version、execution/attempt、preflight digest、worktree/network/credential evidence digests、issued_at/expires_at，并通过 proof digest 校验，过期或上下文漂移 blocked。"
+        },
+        {
+          "q": "trusted runner 环境证明是否必须同时具备 proof_digest 和独立 runner signing identity 的 P-256 签名？",
+          "answer": "必须",
+          "note": "proof_digest 负责内容完整性，独立 trusted runner identity 负责来源认证；gate 必须同时校验签名、digest、上下文绑定和有效期。Agent 自报或仅有 digest 均不能通过。"
+        },
+        {
+          "q": "trusted runner 公钥是否必须预注册并通过 registry fingerprint 校验，未注册或已吊销即 blocked？",
+          "answer": "必须预注册",
+          "note": "proof 携带的公钥不能成为信任根；必须匹配网络/平台 trusted runner registry 中 active 的 runner_id 与 fingerprint。注册、轮换和吊销产生独立审计事实，测试 fixture 显式注入 registry。"
+        },
+        {
+          "q": "trusted runner registry 的注册、轮换和吊销是否必须由 HumanSigner 授权并作为 append-only 治理事实记录？",
+          "answer": "必须",
+          "note": "Human responsibility unit 发起并签名；记录新旧 fingerprint、identity、原因、时间和有效期；Agent、UI session 或 runner 不得改变信任；吊销立即影响后续 dogfood，不改写历史证据。"
+        },
+        {
+          "q": "trusted runner registry mutation 是否必须按当前 registry 状态校验 register/rotate/revoke 迁移，并处理幂等重放与 mutation_id 冲突？",
+          "answer": "必须",
+          "note": "register 只能新增，rotate/revoke 必须匹配当前 active fingerprint；同 digest 重放幂等，不同内容复用 mutation_id 冲突；非法迁移在 StateStore 写入前阻断，历史只追加不覆盖。"
+        },
+        {
+          "q": "registry mutation 是否由调用方在 StateStore append 成功后更新 projection，而不在 registry contract 内引入存储？",
+          "answer": "采用",
+          "note": "apply contract 只做签名、幂等和状态迁移判断；调用方通过 expected_revision 追加原始 mutation fact，写入成功后才更新 projection；禁止先改内存状态再补审计。"
+        },
+        {
+          "q": "真实 dogfood 是否必须从 StateStore snapshot 读取 trusted runner registry，并绑定 snapshot revision/digest 到 preflight/proof？",
+          "answer": "必须",
+          "note": "真实 runner 不信任任意本地配置或 proof 自带 registry；snapshot revision/digest 纳入执行绑定。读取失败、snapshot 漂移或 digest 不匹配 blocked；后续 execution 使用新 snapshot。"
+        },
+        {
+          "q": "trusted environment proof 是否必须在 Agent 启动前生成并签名，启动后禁止替换？",
+          "answer": "必须启动前生成",
+          "note": "preflight 固化 pre-launch proof digest、registry snapshot 和执行上下文；Agent 只能消费 proof，执行后只能追加 observation；proof 缺失、过期或上下文漂移 blocked，新 attempt 重新生成。"
+        },
+        {
+          "q": "trusted runner 是否必须与被测 Agent 处于独立进程或受保护 sandbox 边界，禁止同进程自证？",
+          "answer": "必须隔离",
+          "note": "真实 dogfood 中 Agent 不能修改 runner、registry、proof、签名私钥或验证逻辑；runner 负责 pre-launch proof 和 post-run observation，runner identity/version 纳入 proof；fixture 可注入 fake runner。"
+        },
+        {
+          "q": "post-run observation 是否必须由 active trusted runner 签名并绑定 execution/attempt、preflight、pre-launch proof 和 registry snapshot？",
+          "answer": "必须",
+          "note": "退出、worktree after-state、网络/凭据和副作用 observation 由 trusted runner 采集并签名；签名失败或上下文漂移 outcome-uncertain/blocked；observation 只能追加 evidence，不能修改 pre-launch proof。"
+        },
+        {
+          "q": "post-run observation 是否必须签名记录 termination、after_worktree、after_network、after_credentials 和 side_effects 状态？",
+          "answer": "必须包含",
+          "note": "每项绑定 execution/attempt、preflight、pre-launch proof 和 registry snapshot；任一项无法证明，不能生成成功 conformance，进程退出成功也不能掩盖安全状态未知。"
+        },
+        {
+          "q": "首条 --real-agent-dogfood 是否严格禁止除专用脱敏 evidence 外的所有副作用？",
+          "answer": "必须禁止",
+          "note": "read-only dogfood 中代码、配置、StateStore、registry、ArtifactStore、网络和外部平台均不得产生任务副作用；写入开发必须新建 write-enabled execution，不复用 read-only contract。"
+        },
+        {
+          "q": "read-only dogfood evidence 是否必须写入独立、脱敏、content-addressed、append-only 的 EvidenceStore，而不提交到源码仓库？",
+          "answer": "采用",
+          "note": "允许的唯一写入是隔离 EvidenceStore；目标 worktree、registry 和任务 StateStore 不写入。Evidence 绑定 commit/execution/attempt/preflight/proof/observation digest，写入失败即 blocked，终端输出不能替代证据。"
+        },
+        {
+          "q": "EvidenceStore 是否必须先完成脱敏写入、重新读取和 digest 校验，之后才能生成 review package 并进入 Human review？",
+          "answer": "必须",
+          "note": "写入失败、读取失败或 digest 不一致即 blocked；不允许先判成功再异步补 evidence；Human review 完成前不得清理 evidence。"
+        },
+        {
+          "q": "EvidenceStore 清理是否必须在 Human review 完成后按 retention policy 执行，并追加不可变审计事实？",
+          "answer": "必须审计",
+          "note": "清理前校验 digest、execution/attempt 和 retention 条件；由受控 operator 执行，清理失败保持原 evidence；保留 digest、状态、原因、operator、时间和 review/lifecycle digest，不改写历史 StateStore 事实。"
+        },
+        {
+          "q": "是否新增独立 Evidence retention operator，首版只提供 dry-run/report-only，不自动物理删除？",
+          "answer": "采用",
+          "note": "基础 ArtifactStore 保持读写语义；retention operator 独立校验 Human review/lifecycle、policy、digest 和 audit sink。普通 Agent、Provider、UI 不能删除 evidence，真实 dogfood 验证后再考虑物理删除。"
+        },
+        {
+          "q": "Evidence retention dry-run 是否必须纯读、deterministic、逐 artifact 输出 eligible/blocked/not-due，并生成独立 report artifact？",
+          "answer": "采用",
+          "note": "只读 EvidenceStore/StateStore，不删除不修改；结果绑定 artifact 和完整生命周期/policy digest，缺少 review 或 digest/policy 不确定即 blocked；report 独立生成且重复输入 deterministic。"
+        },
+        {
+          "q": "retention report 是否必须通过统一 content-addressed ArtifactStore 保存、回读并校验 digest，而不是 operator 直接写文件？",
+          "answer": "采用",
+          "note": "operator 只生成结构化 report；调用方保存并回读校验。report 绑定 policy digest、执行时间、输入 artifact digests 和 StateStore snapshot；失败即 blocked，并遵守脱敏/access audit。"
+        },
+        {
+          "q": "EvidenceStore 和 retention report 的每次读取是否必须追加 metadata-only access audit fact，且拒绝访问不泄露存在性？",
+          "answer": "必须",
+          "note": "audit 绑定 network/task/execution/attempt、actor/role/purpose、授权 scope digest、allowed/blocked、返回内容 digest、时间和 StateStore revision；不记录原文/secret，拒绝访问返回统一 blocked。"
+        },
+        {
+          "q": "evidence 读取是否必须先 append access audit 成功，再返回内容；audit 失败即 blocked？",
+          "answer": "必须",
+          "note": "先授权判断，再写 allowed/blocked audit fact；只有 append 成功且 revision/digest 校验通过才返回 evidence。禁止先返回内容再异步补 audit，拒绝访问不泄露存在性。"
+        },
+        {
+          "q": "evidence 读取授权是否必须显式绑定 network/task/execution/attempt、actor/role/purpose、scope digest 和 StateStore revision？",
+          "answer": "必须",
+          "note": "中心身份不自动获得跨 network/task/attempt 权限；Agent 只能读取明确授权的输入 evidence；授权与 audit 都绑定完整 scope。"
+        },
+        {
+          "q": "跨 scope 或不存在 artifact 的读取是否统一 blocked，并禁止泄露 artifact 存在性？",
+          "answer": "统一 blocked",
+          "note": "不区分不存在与无权读取，不返回 artifact id/digest/大小/时间；追加 metadata-only blocked audit，只有完整 scope 匹配才返回内容。"
+        },
+        {
+          "q": "access audit 本身是否必须受同等级 network/task/execution/attempt scope 授权，禁止成为 evidence 权限旁路？",
+          "answer": "必须",
+          "note": "audit 读取同样绑定 actor/role/purpose/scope digest；Human responsibility unit 可读本网络相关 audit，Agent 仅读授权 task 最小范围；跨 scope 统一 blocked，audit 不含原文或 secret。"
+        },
+        {
+          "q": "access audit 是否至少与 evidence 同寿命，并在 evidence 清理后继续保留可审计 metadata？",
+          "answer": "至少同寿命，通常更久",
+          "note": "evidence 清理不删除 audit；audit 保留 digest、scope、actor、purpose、decision、时间和清理关联。audit 仍受 scope 授权，且采用更严格独立 retention policy。"
+        },
+        {
+          "q": "retention policy 是否必须版本化、显式绑定 scope/duration/effective_at，并纳入 dry-run policy digest？",
+          "answer": "必须",
+          "note": "evidence、audit、review package 使用明确 policy；report 绑定 policy digest，policy 漂移/过期/scope 不匹配 blocked，历史 report 不被追溯修改，禁止隐式平台默认值。"
+        },
+        {
+          "q": "retention policy 的创建、修改和停用是否必须由 HumanSigner 授权并作为 append-only mutation 记录？",
+          "answer": "必须",
+          "note": "policy mutation 绑定版本、digest、scope、生效时间和原因；历史 report 保持旧 policy；Agent、runner、UI 和 operator 不能自行放宽/缩短 policy，policy 不可用只能 blocked。"
+        },
+        {
+          "q": "retention dry-run 是否按启动时 policy snapshot revision/digest 运行，并禁止一个 report 混用多个 policy 版本？",
+          "answer": "采用",
+          "note": "report 绑定启动时 policy snapshot；中途 policy 变更不影响当前 report，下一次 run 读取新版本；snapshot 读取/校验失败 blocked。"
+        },
+        {
+          "q": "retention dry-run、access audit 和 evidence 写入顺序是否属于 1-5 完成前置，但物理删除和跨设备 EvidenceStore 另开路线图？",
+          "answer": "采用",
+          "note": "1-5 完成必须同时通过 fake/real Agent、Human review、EvidenceStore 写入校验、access audit 和 retention dry-run；不开放物理删除，跨设备 EvidenceStore 另开范围。"
+        },
+        {
+          "q": "retention policy scope 是否必须对每个 artifact 逐项匹配，跨 network 或未授权 scope 标记 blocked？",
+          "answer": "必须逐 artifact 匹配",
+          "note": "policy 明确绑定 network/适用 scope；每个 artifact 单独校验，scope mismatch blocked；scope 变更生成新 policy version/digest，report 保留逐 item 原因。"
+        },
+        {
+          "q": "retention policy 是否必须显式声明 task scope，artifact 不在允许 task_ids 时逐项 blocked？",
+          "answer": "必须显式 task scope",
+          "note": "policy 不能用空 scope 表示全网全任务；task scope 变更生成新 policy version/digest，report 保留逐 item mismatch 原因，首版使用显式 task allowlist。"
+        },
+        {
+          "q": "retention policy 是否必须绑定 purpose，并只允许 retention-dry-run operator 使用？",
+          "answer": "必须绑定",
+          "note": "policy purpose 首版固定为 retention-dry-run；purpose 变化生成新 policy version/digest，report 绑定并校验 purpose，缺失或不匹配 blocked。"
+        },
+        {
+          "q": "retention policy 是否采用独立 mutation schema，同时复用 HumanSigner、append-only StateStore、幂等和 revision 并发机制？",
+          "answer": "采用",
+          "note": "policy mutation 独立于 trusted runner registry action/state 语义，但共用签名与持久化边界；绑定 version/purpose/scope/effective-expiry/digest/reason，支持重放幂等、ID 冲突和 revision 冲突阻断。"
+        },
+        {
+          "q": "retention policy 是否只允许 create/supersede/suspend 显式迁移，禁止原地修改已生效 policy？",
+          "answer": "采用",
+          "note": "supersede/suspend 必须匹配当前 active policy digest；旧 policy 不可变；同 mutation digest 重放幂等，ID 内容冲突 blocked；没有 active policy 时 dry-run blocked。"
+        },
+        {
+          "q": "retention policy 是否严格校验 effective_at/ expires_at、禁止 scope 窗口重叠，并在时间不确定时 blocked？",
+          "answer": "严格校验",
+          "note": "未生效或已过期不可用；supersede 不覆盖旧历史窗口；同一 scope 同时只有一个 active policy；时钟异常、窗口重叠或状态不确定均 blocked。"
+        },
+        {
+          "q": "preflight/proof/observation/policy/review 的时间判定是否必须使用同一可信时间来源，时间源不可用或漂移时 blocked？",
+          "answer": "必须",
+          "note": "本机 Agent 自报时间不能单独放行；时间来源 identity/version 或 clock evidence 纳入 proof/report；不可用、回退或超阈值漂移均 blocked，不用隐式宽松容差。"
+        },
+        {
+          "q": "1-5 首版是否由独立 trusted runner 提供并签名 wall-clock/monotonic time observation，暂不引入远程时间服务？",
+          "answer": "采用",
+          "note": "Agent/普通系统时间只能作为不可信 observation；runner 无可信时间即 blocked；跨设备时间一致性另开路线图。"
+        },
+        {
+          "q": "wall-clock 是否只用于有效期/人类时间，monotonic 只用于同一 runner 的 timeout/duration/顺序，二者不能互相替代？",
+          "answer": "采用",
+          "note": "monotonic 不跨进程/设备/runner 比较，wall-clock 不单独证明运行时长；二者绑定同一 runner proof，缺失所需时间类型对应 gate blocked。"
+        },
+        {
+          "q": "trusted clock 回退/跳跃/暂停/重置或 runner 重启时，是否立即阻断当前 execution 并要求新 attempt/preflight？",
+          "answer": "立即阻断并新 attempt",
+          "note": "不人工估算补偿、不修改旧 proof/policy/report；只追加异常 observation，旧 execution outcome-uncertain/blocked，runner 重启后重新绑定 registry/proof。"
+        },
+        {
+          "q": "trusted clock 是否采用独立版本化 observation contract，包含 runner/session、wall/monotonic、sequence、状态、execution binding 和 runner signature？",
+          "answer": "采用",
+          "note": "clock observation 由 runner 产生并签名；rollback/jump/paused/reset/unknown 只能 blocked 或 outcome-uncertain，不能修补旧 execution。"
+        },
+        {
+          "q": "clock observation 是否必须同时通过签名、sequence/monotonic、wall-clock 阈值和 execution binding 校验，任一失败即 outcome-uncertain？",
+          "answer": "必须双重校验",
+          "note": "签名证明来源，数值/序列证明时序一致；任一失败不生成成功 Evidence，不修补旧 execution。"
+        },
+        {
+          "q": "clock observation 是否固定覆盖 pre-launch、launch boundary、post-run 和 review boundary，并绑定同一 runner session/sequence？",
+          "answer": "采用",
+          "note": "缺少 required sample 或绑定失败 blocked；不允许用单条事后时间戳推断整个 execution 时序。"
+        },
+        {
+          "q": "首版 clock sampling 是否采用四类固定最小 sample：pre-launch、launch-boundary-before、post-run、review-boundary？",
+          "answer": "采用",
+          "note": "每类至少一个 trusted signed observation；可追加不可减少；sample 数量/顺序/scope 纳入 clock evidence digest；持续监控另开路线图。"
+        },
+        {
+          "q": "launch boundary 是否固定为 spawn 前和确认本次 execution child PID 后两个可信事件，并要求同一 execution/proof 绑定？",
+          "answer": "采用",
+          "note": "spawn 失败、PID 无法确认/归属或 sample 绑定失败 blocked；Agent 自报启动不能替代 runner after sample，命令调用不等于 Agent 已启动。"
+        },
+        {
+          "q": "post-run 是否必须由 trusted runner 证明目标 PID/子进程已终止，并签名记录 exit/signal/termination sequence？",
+          "answer": "必须证明终止",
+          "note": "区分 exited/timed-out/cancelled/unknown；PID 或子进程归属不明 outcome-uncertain；stdout/Agent 自报/连接断开不能证明终止，不自动重启。"
+        },
+        {
+          "q": "post-run observation 是否必须把 Agent 及其全部子进程绑定到统一 process group/job object，并证明整个 descendant tree 已终止？",
+          "answer": "必须绑定并证明",
+          "note": "Unix 使用 process group，Windows 使用 job object；记录 boundary id、child_process_count、termination_sequence_digest、all_descendants_terminated、orphan/unknown descendants。孤儿、脱离边界、未知后代或 PID 复用风险均 blocked/outcome-uncertain；Core 只消费统一 observation contract，平台差异由 trusted runner extension 处理。"
         }
       ],
       "notes": ""
@@ -489,7 +794,7 @@
   },
   "metadata": {
     "created": "2026-08-01 02:07:17",
-    "updated": "2026-08-01 11:21:48",
+    "updated": "2026-08-01 14:19:24",
     "md_file": "docs/plans/opn-native-agent-provider-adapter-next-milestone-roadmap.md"
   }
 }
