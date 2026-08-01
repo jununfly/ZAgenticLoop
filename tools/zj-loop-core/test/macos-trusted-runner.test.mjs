@@ -7,10 +7,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { randomUUID } from 'node:crypto';
+import { macosEnvironmentPolicyDigests } from '../dist/trusted-environment-proof.js';
 
 const isMacOS = process.platform === 'darwin';
-const environment = { cwd: process.cwd(), sandbox_policy: '(version 1) (deny network*) (allow process*) (allow file-read*)', env_allowlist: ['PATH', 'LANG'], env: { PATH: '/usr/bin:/bin', LANG: 'C' } };
-const policyDigests = { sandbox_policy_digest: `sha256:${createHash('sha256').update(environment.sandbox_policy).digest('hex')}`, env_policy_digest: `sha256:${createHash('sha256').update('LANG=C\nPATH=/usr/bin:/bin').digest('hex')}` };
+const environment = { cwd: process.cwd(), network_policy: { mode: 'network-denied' }, sandbox_policy: '(version 1) (deny network*) (allow process*) (allow file-read*)', env_allowlist: ['PATH', 'LANG'], env: { PATH: '/usr/bin:/bin', LANG: 'C' } };
+const policyDigests = macosEnvironmentPolicyDigests(environment);
 
 async function compileHelper() {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-macos-trusted-runner-'));
@@ -38,8 +39,9 @@ test('macOS TrustedRunner proves a normal descendant tree is terminated', { skip
       preflight_digest: `sha256:${'1'.repeat(64)}`,
       proof_digest: `sha256:${'2'.repeat(64)}`,
       registry_snapshot_digest: `sha256:${'3'.repeat(64)}`,
+      network_policy: { mode: 'network-denied', policy_digest: policyDigests.policy_digest },
       argv: ['/bin/sh', '-c', 'printf child-output; sleep 0.1 & wait'],
-      ...environment, ...policyDigests,
+      ...environment, ...policyDigests, network_policy: { mode: environment.network_policy.mode, policy_digest: policyDigests.policy_digest },
       timeout_ms: 2_000,
       termination_grace_ms: 100,
     });
@@ -64,6 +66,38 @@ test('macOS TrustedRunner proves a normal descendant tree is terminated', { skip
   }
 });
 
+test('macOS TrustedRunner proves the coarse network-allowed profile without requiring an external endpoint', { skip: !isMacOS }, async () => {
+  const helper = await compileHelper();
+  const key_tag = `zj-loop-runner-allowed-${randomUUID()}`;
+  const allowedEnvironment = { ...environment, network_policy: { mode: 'network-allowed' }, sandbox_policy: '(version 1) (allow network*) (allow process*) (allow file-read*)' };
+  const allowedPolicyDigests = macosEnvironmentPolicyDigests(allowedEnvironment);
+  try {
+    const result = run(helper.binary, {
+      schema: 'zj-loop.macos_trusted_runner_request.v1',
+      key_tag,
+      runner_id: 'runner-macos-allowed-fixture',
+      execution_id: 'execution-macos-allowed-1',
+      attempt: 1,
+      preflight_digest: `sha256:${'a'.repeat(64)}`,
+      proof_digest: `sha256:${'b'.repeat(64)}`,
+      registry_snapshot_digest: `sha256:${'c'.repeat(64)}`,
+      argv: ['/bin/echo', 'allowed-output'],
+      ...allowedEnvironment, ...allowedPolicyDigests,
+      network_policy: { mode: 'network-allowed', policy_digest: allowedPolicyDigests.policy_digest },
+      timeout_ms: 2_000,
+      termination_grace_ms: 100,
+    });
+
+    assert.equal(result.status, 'completed');
+    assert.equal(result.environment_proof.network_policy.mode, 'network-allowed');
+    assert.equal(result.environment_proof.network_policy.status, 'proved');
+    assert.equal(result.environment_proof.network_policy.policy_digest, allowedPolicyDigests.policy_digest);
+  } finally {
+    try { run(helper.binary, { command: 'delete', key_tag }); } catch { /* cleanup is best effort after test failure */ }
+    await rm(helper.root, { recursive: true, force: true });
+  }
+});
+
 test('macOS TrustedRunner terminates a timed-out descendant tree before claiming the boundary', { skip: !isMacOS }, async () => {
   const helper = await compileHelper();
   const key_tag = `zj-loop-runner-timeout-${randomUUID()}`;
@@ -77,8 +111,9 @@ test('macOS TrustedRunner terminates a timed-out descendant tree before claiming
       preflight_digest: `sha256:${'4'.repeat(64)}`,
       proof_digest: `sha256:${'5'.repeat(64)}`,
       registry_snapshot_digest: `sha256:${'6'.repeat(64)}`,
+      network_policy: { mode: 'network-denied', policy_digest: policyDigests.policy_digest },
       argv: ['/bin/sh', '-c', 'sleep 5 & wait'],
-      ...environment, ...policyDigests,
+      ...environment, ...policyDigests, network_policy: { mode: environment.network_policy.mode, policy_digest: policyDigests.policy_digest },
       timeout_ms: 50,
       termination_grace_ms: 100,
     });

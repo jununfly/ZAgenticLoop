@@ -30,7 +30,7 @@ const preflightInput = {
   env_allowlist: ['CODEX_HOME'],
   env_policy_digest: digest('d'),
   sandbox_policy_digest: digest('e'),
-  network_denied_evidence_digest: digest('f'),
+  network_policy: { mode: 'network-denied', policy_digest: digest('f') },
   timeout_ms: 30_000,
   termination_grace_ms: 1_000,
   max_stdout_bytes: 1024 * 1024,

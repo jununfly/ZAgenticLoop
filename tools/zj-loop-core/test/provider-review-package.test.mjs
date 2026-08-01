@@ -18,7 +18,7 @@ const input = {
   task_summary: 'Review the repository read-only.',
   verification_conditions: ['working tree unchanged', 'report contains file refs'],
   verification_status: 'passed',
-  policy_evidence: { policy_version: 'redaction-policy.v1', rule_ids: ['literal-1'], match_count: 1, secret_digests: [digest('f')], sandbox_policy_digest: digest('1'), network_evidence_digest: digest('2') },
+  policy_evidence: { policy_version: 'redaction-policy.v1', rule_ids: ['literal-1'], match_count: 1, secret_digests: [digest('f')], sandbox_policy_digest: digest('1'), network_policy_digest: digest('2') },
   file_refs: [{ repository: 'repo-1', commit: 'a'.repeat(40), path: 'README.md', start_line: 1, end_line: 2, content_sha256: digest('b') }],
   artifact_refs: [digest('c')],
   risks: ['provider output is untrusted'],

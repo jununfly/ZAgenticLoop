@@ -3,7 +3,7 @@ import { createHash, createPublicKey, verify } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import type { TrustedRunnerProcessBoundary, TrustedRunnerSignature } from './trusted-runner.js';
-import { macosEnvironmentPolicyDigests, validateMacOSTrustedEnvironmentPolicy, verifyTrustedEnvironmentProof, type TrustedEnvironmentProof } from './trusted-environment-proof.js';
+import { macosEnvironmentPolicyDigests, validateMacOSTrustedEnvironmentPolicy, verifyTrustedEnvironmentProof, type TrustedEnvironmentProof, type NetworkPolicyMode } from './trusted-environment-proof.js';
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export const MACOS_TRUSTED_RUNNER_ADAPTER_SCHEMA = 'zj-loop.macos_trusted_runner_adapter.v1' as const;
@@ -38,9 +38,10 @@ export type MacOSTrustedRunnerExecution = {
   preflight_digest: string;
   proof_digest: string;
   registry_snapshot_digest: string;
+  network_policy: { mode: NetworkPolicyMode; policy_digest: string };
 };
 
-export type MacOSTrustedEnvironment = { cwd: string; sandbox_policy: string; env_allowlist: string[]; env: Record<string, string> };
+export type MacOSTrustedEnvironment = { cwd: string; network_policy: { mode: NetworkPolicyMode }; sandbox_policy: string; env_allowlist: string[]; env: Record<string, string> };
 
 export type MacOSTrustedRunnerRegistrySnapshot = {
   revision: number;
@@ -84,9 +85,10 @@ export function verifyMacOSTrustedRunnerObservation(input: { observation: MacOST
   if (!validSignature(value)) reasons.push('macos-trusted-runner-signature-invalid');
   if (!value.environment_proof) reasons.push('trusted-environment-proof-missing');
   else {
+    const policyDigests = macosEnvironmentPolicyDigests(input.environment);
     const environment = verifyTrustedEnvironmentProof({
       proof: value.environment_proof,
-      execution: { ...input.execution, argv_digest: digestArgv(input.argv), cwd_digest: digestText(input.environment.cwd), env_policy_digest: macosEnvironmentPolicyDigests(input.environment).env_policy_digest, sandbox_policy_digest: macosEnvironmentPolicyDigests(input.environment).sandbox_policy_digest },
+      execution: { ...input.execution, argv_digest: digestArgv(input.argv), cwd_digest: digestText(input.environment.cwd), env_policy_digest: policyDigests.env_policy_digest, sandbox_policy_digest: policyDigests.sandbox_policy_digest, network_policy: { mode: input.environment.network_policy.mode, policy_digest: policyDigests.policy_digest } },
       registry: input.registry,
     });
     if (environment.status === 'blocked') reasons.push(...environment.reasons);
@@ -127,7 +129,7 @@ export function createMacOSTrustedRunnerAdapter(input: { helper_path: string; he
             resolve(checked.status === 'accepted' ? { status: 'accepted', observation: parsed } : checked);
           } catch { resolve({ status: 'blocked', reasons: ['macos-trusted-runner-protocol-invalid'] }); }
         });
-        child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, ...request.environment, ...policyDigests, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
+        child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, ...request.environment, ...policyDigests, network_policy: { mode: request.environment.network_policy.mode, policy_digest: policyDigests.policy_digest }, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
       });
     },
   };

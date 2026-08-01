@@ -1,0 +1,376 @@
+{
+  "title": "OPN Real Agent Dogfood 下一里程碑",
+  "description": "以 provider-neutral real-agent-dogfood 入口验证单 Agent OPN Atom：真实 Agent opt-in 执行，复用 trusted environment proof，read-only self-audit，Evidence/Verifier/Human review 全链路闭环；多节点 Graph、跨设备组网和写入型开发任务另开范围。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN Real Agent Dogfood 下一里程碑",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6"
+      ],
+      "decisions": [
+        {
+          "q": "问题1：是否冻结现有路线图，下一张路线图只聚焦 provider-neutral real-agent dogfood？",
+          "answer": "同意",
+          "note": "范围限定为通用 --real-agent-dogfood 入口、单 Agent OPN Atom、真实 Agent opt-in 执行、TrustedRunner 环境证明、read-only self-audit、Evidence/Verifier/Human review；多 Agent Graph、跨设备组网、写入型开发任务和新扩展框架另开范围。"
+        },
+        {
+          "q": "问题16：里程碑是否只有在真实 Provider、Human approval、Trusted environment、clean worktree、完整进程边界、bounded output、structured result、独立 verifier、EvidenceStore 和 Human accept 全部通过时才算完成？",
+          "answer": "同意",
+          "note": "采用全量合取；任一 gate 失败只能进入 blocked 或 outcome-uncertain，不能生成最终完成事实。"
+        },
+        {
+          "q": "问题29：本里程碑的产品成功标准是否是单 Agent OPN Atom 的责任链闭环可用，而不是比较 Agent 速度、Token 成本或 Human 单人效率？",
+          "answer": "同意",
+          "note": "验收用户发起委托、生命周期自动推进、风险可解释停下、证据可复核、Human accept/reject/revise 和中断恢复；Agent 能力、成本优化和多节点 ScaleUp 后置。"
+        },
+        {
+          "q": "问题48：network-allowed 的首版 coarse 语义是否定义为允许执行期间的网络访问，不做 endpoint、域名或目的地细分，但必须由 Human approval、policy digest、execution/attempt 绑定和 TrustedRunner observation 证明实际采用且未漂移？",
+          "answer": "同意",
+          "note": "首版只实现 network-denied 与 network-allowed 两种可执行粗粒度模式；网络风险由 Human approval 明确承担，TrustedRunner 证明实际 mode 与 digest，endpoint 级治理另开路线图。"
+        },
+        {
+          "q": "问题49：网络策略契约是否统一改为通用字段 network_policy，而不再使用 network_denied 专字段？",
+          "answer": "同意",
+          "note": "核心协议使用 network_policy.mode（network-denied 或 network-allowed）与 network_policy.policy_digest；TrustedRunner 和 post-run observation 必须绑定实际 mode/digest，network_denied 不再作为核心协议字段。"
+        },
+        {
+          "q": "问题50：实现顺序是否采用先契约与 deterministic fixture，再改 macOS TrustedRunner/native helper，最后接入 orchestrator？",
+          "answer": "同意",
+          "note": "先固定 provider-neutral contract 与 deterministic fixture，再迁移 macOS TrustedRunner/native helper，最后接入 orchestrator；当前无线上正式用户，直接干净移除旧 network_denied 兼容分支。"
+        },
+        {
+          "q": "问题51：network-allowed 是否仍必须运行在 macOS Seatbelt 等 TrustedRunner 沙箱中，只把网络规则切换为允许，而不是退化为无沙箱执行？",
+          "answer": "同意",
+          "note": "network-allowed 仅改变网络策略；进程边界、凭据清理、worktree 隔离、输出限制和 TrustedRunner 证明继续生效。"
+        },
+        {
+          "q": "问题52：policy_digest 是否应覆盖完整的可执行策略，而不只是 network_policy.mode？",
+          "answer": "同意",
+          "note": "digest 至少覆盖网络模式、Seatbelt profile、凭据 allowlist、进程边界、输出限制和超时配置；approval、TrustedRunner、execution 和 verifier 使用同一份 canonical policy digest，任何漂移都进入 blocked。"
+        },
+        {
+          "q": "问题53：deterministic fixture 是否必须同时覆盖 network-denied 与 network-allowed 两种模式，并覆盖 policy digest 漂移、实际 mode 不一致、TrustedRunner 未证明等失败场景？",
+          "answer": "同意",
+          "note": "fixture 完整锁定双模式成功路径与拒绝路径，再迁移真实 macOS 实现，避免只改字段名而没有实际策略验证。"
+        },
+        {
+          "q": "问题54：network-allowed 的验证是否分为 deterministic fixture 与 macOS native smoke 两层，且不把外部 endpoint 可达性作为本 milestone 的稳定测试依赖？",
+          "answer": "同意",
+          "note": "fixture 只验证契约、digest、模式绑定和拒绝逻辑；macOS native smoke 验证 TrustedRunner 实际加载 allowed profile 且 observation 中 mode/digest 一致。"
+        },
+        {
+          "q": "问题55：用户是否必须在 start 时显式选择 network-denied 或 network-allowed，并在 Human approval 摘要中看到该模式及完整 policy_digest？",
+          "answer": "同意",
+          "note": "start 必须显式选择网络模式；审批摘要展示模式和完整 policy_digest；两种模式都不静默默认切换，缺失或上下文不一致直接 blocked。"
+        },
+        {
+          "q": "问题56：CLI/API 是否都应把网络模式设为必填字段，省略时直接拒绝而不是采用默认值？",
+          "answer": "同意",
+          "note": "CLI 必须显式传 network-denied 或 network-allowed；API 必须传 network_policy.mode；省略即拒绝，避免不同入口产生不同默认行为。"
+        },
+        {
+          "q": "问题57：是否冻结以上网络策略决策，进入 TDD 实现阶段？",
+          "answer": "同意",
+          "note": "网络策略设计冻结；按先 provider-neutral contract、再 deterministic fixture、再 macOS TrustedRunner/native helper、最后 orchestrator 的顺序实现。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Provider-neutral real-agent-dogfood contract",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "问题2：--real-agent-dogfood 是否必须由调用方明确指定 provider_id + adapter，Provider 不可用时直接 blocked，禁止静默降级为 fake runner？",
+          "answer": "同意",
+          "note": "真实 Agent dogfood 必须证明真实 Provider 执行；fake runner 仅属于 deterministic conformance fixture，不能冒充真实执行，也不能在 Provider 不可用时静默替代。"
+        },
+        {
+          "q": "问题35：自然语言目标存在歧义、缺少成功标准、资源范围或 Provider 能力不匹配时，是否必须在创建 execution 前停下并 grill Human，而不是让 Agent 自行猜测？",
+          "answer": "同意",
+          "note": "只有目标、成功标准、资源/worktree、Provider 能力、网络/凭据/权限策略和 Human responsibility 都明确后，才允许生成 execution。"
+        },
+        {
+          "q": "问题40：执行前是否必须把 timeout、最大输出、最大事件数、最大 verification 命令数和 EvidenceStore 空间预算展示给 Human 并绑定 approval；超预算直接 blocked 或 outcome-uncertain？",
+          "answer": "同意",
+          "note": "预算是 execution contract 的一部分；审批后不可静默扩大，超预算只能停下或新建 attempt。"
+        }
+      ],
+      "notes": "Frozen provider-neutral network_policy contract: explicit network-denied/network-allowed mode, canonical policy_digest, TrustedRunner binding, no legacy network_denied field."
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Deterministic Single-Agent OPN Atom conformance fixture",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "问题3：第一条真实 real-agent-dogfood 是否选择 ZAgenticLoop 自身，并执行只读 conformance self-audit？",
+          "answer": "同意",
+          "note": "读取当前 commit 的路线图、核心契约和测试结果，生成结构化 conformance report；不修改文件、不联网、不继承本机凭据，结果绑定 commit、worktree、TrustedRunner proof 和 Evidence。"
+        },
+        {
+          "q": "问题17：首个真实 dogfood 任务是否固定为小而确定的只读 conformance self-audit，使用固定输入、固定检查项和固定结构化输出，不允许 Agent 自行扩大分析范围？",
+          "answer": "同意",
+          "note": "读取指定路线图、契约和测试结果，生成唯一结构化 report；只引用允许的 commit-bound 文件，不修改 worktree、不联网、不使用凭据、不新增任务或扩展范围。"
+        },
+        {
+          "q": "问题36：实现顺序是否采用 tracer-bullet：先 deterministic fixture 闭环，再接统一 orchestrator，最后接 opt-in 真实 Codex dogfood？",
+          "answer": "同意",
+          "note": "先验证 contract/lifecycle/失败矩阵，再固化 admission/orchestrator/恢复，然后接 Evidence/verifier/Human review，最后执行真实 Provider；每层独立可验证。"
+        },
+        {
+          "q": "问题37：deterministic fixture 是否必须与真实 dogfood 共用同一套 contract、lifecycle、TrustedRunner proof、Evidence、verifier 和 Human review API，只替换 Provider runner？",
+          "answer": "同意",
+          "note": "fixture 只能替换真实 Provider 的执行来源，不能绕过 admission、approval、worktree isolation、environment proof、output bounds、EvidenceStore、independent verification 或 Human acceptance。"
+        }
+      ],
+      "notes": "Deterministic fixture covers both coarse modes, policy/proof binding failures, digest drift and post-run safety rejection; macOS native smoke covers denied and allowed Seatbelt profiles."
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Provider-neutral real-agent-dogfood CLI entry",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "问题5：首个真实 dogfood 是否只实现一个具体 Provider adapter 作为垂直切片，但入口、协议和 review package 全部保持 provider-neutral？",
+          "answer": "同意",
+          "note": "产品不绑定 Codex、Workbuddy 或其他 Agent；首个实现仅选择当前可用 Provider 做真实验证，显式记录 provider_id/adapter，后续 Provider 复用同一 contract，切换 Provider 必须重新执行 preflight 和 Human approval。"
+        },
+        {
+          "q": "问题6：首个真实 Provider 是否采用现有 Codex adapter 作为实现切片，但将其视为 Provider 实例，而不是产品协议或产品名称？",
+          "answer": "同意",
+          "note": "复用现有 CodexAgentProviderAdapter 与 Codex JSONL parser 验证真实链路；CLI、contract、review package 保持 provider-neutral，后续 Provider 不改变核心协议。"
+        },
+        {
+          "q": "问题11：真实 Agent 调用是否必须显式 opt-in，永不作为默认测试或普通 CLI 行为；缺少固定确认、Provider 可执行文件或环境证明时直接 blocked？",
+          "answer": "同意",
+          "note": "要求 --real-agent-dogfood、明确 Provider/adapter、固定 Human confirmation、独立 worktree 和 TrustedRunner preflight；不纳入默认 npm test，不允许静默切换 fake runner 或其他 Provider。"
+        },
+        {
+          "q": "问题12：Provider executable 是否必须由 Human 显式指定，并在 preflight 中固定绝对路径、版本和 digest，禁止自动搜索、自动安装或 shell 拼接？",
+          "answer": "同意",
+          "note": "执行对象必须与 approval 一致；PATH 变化、版本/digest 漂移、路径不可读或参数不安全均在 Agent 启动前 blocked。"
+        },
+        {
+          "q": "问题25：首个 OPN real-agent-dogfood 是否必须形成一条可实际使用的端到端路径 prepare → preflight → Human approve → execute → verify → review → accept，而不是让用户手工拼底层 CLI？",
+          "answer": "是",
+          "note": "底层 CLI 可保留用于调试和审计，但产品验收以一条清晰、可恢复、可观察的用户路径为标准。"
+        },
+        {
+          "q": "问题26：首个用户路径是否先实现统一 orchestrator CLI/API，复用现有 Human approval/review UI，暂不新做独立 dogfood Web 页面？",
+          "answer": "同意",
+          "note": "用户只触发一次入口；系统内部完成 prepare、preflight、等待批准、执行、验证和 review handoff；现有 UI 负责展示和签名，后续复用同一 API 扩展 Web UX。"
+        },
+        {
+          "q": "问题27：统一 orchestrator 是否必须可恢复、幂等，并将每个阶段持久化为 append-only lifecycle facts；中断、CLI 重启或重复触发时不得重复调用真实 Provider？",
+          "answer": "同意",
+          "note": "恢复读取原 execution/attempt，继续等待 approval 或 review；只有明确创建新 attempt 才再次执行 Provider，所有中断和失败证据保留。"
+        },
+        {
+          "q": "问题30：用户发起 OPN Atom 时，是否只需提供自然语言目标、目标仓库/worktree 和明确 Provider，其余 task contract、preflight、隔离策略、验证条件由系统生成并展示给 Human 审批？",
+          "answer": "同意",
+          "note": "用户不手工填写底层 JSON、digest 或 lifecycle 状态；系统在执行前展示目标、Provider、worktree、权限/网络策略、验证标准、预期 Evidence、风险和阻塞条件。"
+        },
+        {
+          "q": "问题31：是否由系统自动创建专用 isolated worktree，并在 approval summary 中展示 base commit、worktree path 和前后 clean 检查；用户不需要手工准备隔离目录？",
+          "answer": "同意",
+          "note": "用户指定仓库和基线即可；orchestrator 负责 worktree 创建、路径校验、初始 clean 检查、执行后状态记录和受控回收。"
+        },
+        {
+          "q": "问题32：真实 Agent 执行结束后，worktree 是否必须在 Human review/acceptance 完成前保留，以支持复核和复现；只有 closeout 后才允许受控清理？",
+          "answer": "同意",
+          "note": "保留 worktree path、base commit、execution/attempt、前后状态、provider output digest 和 review package 引用；closeout 后才允许受控清理。"
+        },
+        {
+          "q": "问题33：用户可见 lifecycle 是否固定为 draft → preflight-ready → awaiting-human-approval → running → verification-pending → review-pending → accepted，并统一覆盖 blocked/outcome-uncertain/request-revision/rejected？",
+          "answer": "同意",
+          "note": "状态名成为 OPN 稳定用户心智模型，CLI/API/UI 保持一致，不把内部实现细节暴露为用户状态。"
+        },
+        {
+          "q": "问题34：每个 blocked 或 outcome-uncertain 是否必须同时提供 reason code、Human 可读解释、关联证据和明确 next action，禁止只返回 failed？",
+          "answer": "同意",
+          "note": "每次停止都解释发生了什么、证据在哪里、下一步能做什么；Generic failed 不能作为用户终态。"
+        },
+        {
+          "q": "问题44：统一 orchestrator 是否只暴露 start、resume、review、accept/reject/request-revision、closeout 等少量用户动作，而不要求用户手工推进内部 lifecycle 状态？",
+          "answer": "同意",
+          "note": "内部状态机由 Core 驱动；用户只表达委托、批准、审查、决策和关闭现场。"
+        },
+        {
+          "q": "问题45：start 是否应快速返回 execution 摘要和当前状态（通常是 awaiting-human-approval），而不是占用终端等待整个 Agent 生命周期？",
+          "answer": "同意",
+          "note": "后续通过 resume、现有 approval UI 或 review UI 继续；CLI/API、UI 和中断恢复保持一致。"
+        },
+        {
+          "q": "问题46：Human approval 前，start 是否只做无 Agent 副作用的准备工作：创建 isolated worktree、读取 commit、生成 task/preflight/approval summary；真实 Provider 启动必须等签名 approval 通过？",
+          "answer": "同意",
+          "note": "Human 审批看到实际 execution；批准前不启动 Agent、不执行 Provider、不产生外部副作用。"
+        },
+        {
+          "q": "问题47：coarse network policy 是否在本 milestone 就实现 network-denied 和 network-allowed 两种可执行模式，而不是只保留接口？",
+          "answer": "同意",
+          "note": "两种模式都必须有签名 proof、policy digest、Human approval 和 execution binding；endpoint 级治理后置。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Opt-in real Agent read-only execution",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "问题4：真实 Agent 是否必须在专用 isolated worktree 中执行，且执行前后 worktree 都必须 clean？",
+          "answer": "同意",
+          "note": "执行前已有 dirty 状态直接 blocked；执行后出现未授权修改也 blocked；只接受可验证的 worktree 状态，不依赖 prompt 或 Agent 自报。"
+        },
+        {
+          "q": "问题10：Provider/环境/verifier 失败或 Human reject/request-revision 后，是否必须创建新的 execution attempt，旧 attempt 保持 append-only，不允许原地重试或覆盖？",
+          "answer": "同意",
+          "note": "新 attempt 必须重新执行 preflight、TrustedRunner proof、Human approval、Agent execution、verification 和 Human review；旧失败/修订事实不可变。"
+        },
+        {
+          "q": "问题18：首个真实 dogfood 是否复用现有 Codex invocation（exec --json --ephemeral --sandbox read-only --ask-for-approval never --cd isolated-worktree），不增加写/网络/持久化权限，并由外层 Human approval + TrustedRunner 统一治理？",
+          "answer": "同意",
+          "note": "Codex 只是首个 Provider；具体 invocation 服从 OPN 通用 execution contract，不能自行扩大权限；--ask-for-approval never 不替代外层 Human approval。"
+        },
+        {
+          "q": "问题19：首个真实 dogfood 是否只在当前已验证的 macOS TrustedRunner 环境运行；Linux/Windows 或无法证明 Seatbelt/network deny 的环境直接 blocked，不伪造跨平台通过？",
+          "answer": "同意",
+          "note": "Provider-neutral contract 可以跨平台存在，但 native environment proof 按平台分别实现；当前只接受已验证的 macOS proof，其他环境 blocked。"
+        },
+        {
+          "q": "问题20：首个真实 dogfood 是否禁止继承 Provider 登录态、API token、Keychain credential 或其他本机凭据；Provider 需要凭据才能启动时直接 blocked，credential broker 另开范围？",
+          "answer": "同意",
+          "note": "TrustedRunner signer 不等于 Provider credential；env allowlist、文件权限和 HumanSigner 都不能被用来绕过凭据边界；需要登录态时不降低证明标准。"
+        },
+        {
+          "q": "问题21：首个真实 dogfood 是否要求 Provider 在 network-denied 环境中仍能完成任务；Provider 需要远程模型/网络时直接 blocked，不把通常不联网当作证明？",
+          "answer": "同意",
+          "note": "首个真实 Provider 必须具备本地/offline 可执行路径，或至少能在当前 network-denied TrustedRunner 中完成真实任务；不能通过放宽网络 gate 来迁就 Provider。"
+        },
+        {
+          "q": "问题21修正：network-denied 是否不再是所有真实 Coding Agent 的硬性前置条件，而改为 network-denied 或 network-allowed-with-explicit-policy 两种显式策略分支？",
+          "answer": "同意",
+          "note": "主流 Coding Agent 可能依赖远程模型；允许显式 network-allowed-with-explicit-policy，但必须绑定 Human approval、网络范围/目的、policy digest、execution/attempt 和 TrustedRunner 观测。通常不联网、prompt 约束或 Agent 自报不能替代网络策略证明。"
+        },
+        {
+          "q": "问题24：是否采用 coarse network policy，仅验证本次 execution 使用 network-denied 或 network-allowed 且无策略漂移，endpoint 级网络治理另开路线图？",
+          "answer": "是",
+          "note": "当前优先把 OPN 产品做到可用、好用；暂不做 Provider endpoint allowlist、域名/IP 精细限制、Provider 与 Agent 网络拆分、DNS/代理/TLS destination 级审计；这些属于后续网络治理范围。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Dogfood Evidence and independent verification chain",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "问题8：真实 Agent 是否必须输出结构化 conformance result，而不是只返回自然语言；缺少唯一 result envelope、报告、合法引用或 digest 不匹配时 blocked？",
+          "answer": "同意",
+          "note": "结果至少包含 conformance status、检查项结果、精确 commit-bound file references、路径/行范围/内容 digest、测试与契约引用、provider output digest，并绑定 execution/attempt；自然语言只能作为展示，不能单独作为完成证据。"
+        },
+        {
+          "q": "问题13：Provider stdout/stderr 是否必须与 TrustedRunner 控制协议隔离，并采用 bounded、带序号、可重组、可计算 digest 的输出事件；超限、乱序、重复或通道中断时 blocked？",
+          "answer": "同意",
+          "note": "Runner 控制协议与 Agent 原始输出分离；输出事件绑定 execution/attempt、stream、sequence、byte length 和 digest，超限、乱序、重复、缺失或通道中断不能生成成功 conformance。"
+        },
+        {
+          "q": "问题14：真实 dogfood 的原始输出和敏感内容是否不得写入源码仓库或普通 StateStore，而必须经过脱敏后写入独立 EvidenceStore；Evidence 写入或回读失败即 blocked？",
+          "answer": "同意",
+          "note": "只持久化结构化脱敏证据、digest、commit/worktree 引用、execution/attempt 绑定和 verifier/review 事实；原始敏感输出不得进入 review package。"
+        },
+        {
+          "q": "问题28：首个 dogfood orchestrator 是否采用已有本地 StateStore 持久化 lifecycle，采用独立 EvidenceStore 保存脱敏证据，不依赖 GitLab Issue/MR 承载执行状态？",
+          "answer": "同意",
+          "note": "GitLab、GitHub 等只作为未来可接入的协作/触发 Provider；本地 OPN Atom 的执行状态、恢复和证据链不绑定某一个代码托管平台。"
+        },
+        {
+          "q": "问题38：Agent 输出的 summary、claims、file_refs 和 evidence_refs 是否一律视为不可信输入，由 Core/verifier 重新读取目标 commit、重新计算内容 digest 并确认引用范围？",
+          "answer": "同意",
+          "note": "Agent 只能提出证据候选；Core 独立确认文件、行范围、commit、digest、claim 支撑关系和 execution 归属后，引用才能进入 review package。"
+        },
+        {
+          "q": "问题39：conformance report 所需项目验证命令是否由 Core 独立执行，并且只允许固定的 read-only allowlisted verification commands；Agent 自报测试通过不能作为证据？",
+          "answer": "同意",
+          "note": "Core 记录实际命令、命令 digest、exit status、stdout/stderr digest、运行时 commit/worktree 和验证结果；未知、写入型或未批准命令直接 blocked。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "Human review and acceptance handoff",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "问题7：真实 Agent 启动前是否必须经过一次独立 Human approval，且未批准、批准过期、上下文漂移或重复执行都直接 blocked？",
+          "answer": "同意",
+          "note": "批准绑定 provider_id/adapter、execution/attempt、isolated worktree、argv/cwd/env policy、TrustedRunner proof、read-only scope 和有效期；CLI 调用不能替代 Human 委托。"
+        },
+        {
+          "q": "问题9：真实 Agent 产出后，是否必须由独立 verifier 校验，且 verifier 通过也只能进入 review-pending，最终完成必须由 Human 对完整 review package 明确 accept？",
+          "answer": "同意",
+          "note": "Agent 不能验证自己，verifier 不能代替 Human；Human 必须接受绑定完整执行、环境、输出、引用和验证证据的 review package，才能生成最终完成事实。"
+        },
+        {
+          "q": "问题15：首个 real-agent-dogfood 是否复用现有 HumanSigner、review package 和 approval API 完成验收，Web UI 只作为展示入口，不作为本里程碑前置阻塞？",
+          "answer": "同意",
+          "note": "先闭合真实执行与责任链；CLI/API 提供等价验收，Web UI 不增加本里程碑的必要阻塞条件。"
+        },
+        {
+          "q": "问题41：approval summary 和 review package 是否采用简洁摘要 + 可展开证据详情的两层呈现？",
+          "answer": "同意",
+          "note": "默认展示目标/成功标准、Provider/版本、worktree/base commit、网络/凭据策略、预算、状态、风险和下一步；digest、命令、输出摘要、file refs 和 lifecycle facts 可展开查看。"
+        },
+        {
+          "q": "问题42：Human review 是否只提供 Accept、Reject、Request revision 三种明确动作；关闭页面、超时或不操作都不算 Accept？",
+          "answer": "同意",
+          "note": "Accept 生成最终完成事实；Reject 终止当前 attempt；Request revision 创建带 Human 意见的新 attempt；无操作保持 review-pending，不自动完成或重试。"
+        },
+        {
+          "q": "问题43：Human approval 和最终 review decision 是否都必须由 HumanSigner 对完整上下文签名，而不是依赖按钮、浏览器 session 或 CLI confirmation？",
+          "answer": "同意",
+          "note": "签名绑定 action、package/preflight digest、execution/attempt、Provider、worktree/base commit、policy/预算、Human identity 和有效时间；signer 不可用或上下文漂移直接 blocked。"
+        }
+      ],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-08-01 15:51:40",
+    "updated": "2026-08-01 17:03:14",
+    "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
+  }
+}

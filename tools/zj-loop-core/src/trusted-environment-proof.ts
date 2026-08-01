@@ -3,6 +3,8 @@ import { createHash, createPublicKey, generateKeyPairSync, sign, verify } from '
 
 export const TRUSTED_ENVIRONMENT_PROOF_SCHEMA = 'zj-loop.trusted_environment_proof.v1' as const;
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
+export type NetworkPolicyMode = 'network-denied' | 'network-allowed';
+export type TrustedNetworkPolicy = { mode: NetworkPolicyMode; policy_digest: string; status: 'proved' | 'blocked'; evidence_digest: string };
 
 export type TrustedEnvironmentExecution = {
   execution_id: string;
@@ -13,6 +15,7 @@ export type TrustedEnvironmentExecution = {
   cwd_digest: string;
   env_policy_digest: string;
   sandbox_policy_digest: string;
+  network_policy: Pick<TrustedNetworkPolicy, 'mode' | 'policy_digest'>;
 };
 
 export type TrustedEnvironmentProof = {
@@ -31,7 +34,7 @@ export type TrustedEnvironmentProof = {
   cwd_digest: string;
   env_policy_digest: string;
   sandbox_policy_digest: string;
-  network_denied: { status: 'proved' | 'blocked'; evidence_digest: string };
+  network_policy: TrustedNetworkPolicy;
   credentials: { status: 'clean' | 'blocked'; evidence_digest: string; allowlist_digest: string };
   issued_at: string;
   expires_at: string;
@@ -45,18 +48,23 @@ export type TrustedEnvironmentRegistry = {
   entries: Array<{ runner_id: string; public_key_fingerprint: string; status: 'active' | 'revoked' }>;
 };
 
-export function createMacOSSeatbeltPolicy(): string {
-  return '(version 1) (deny network*) (allow process*) (allow file-read*)';
+export function createMacOSSeatbeltPolicy(mode: NetworkPolicyMode): string {
+  const networkRule = mode === 'network-denied' ? '(deny network*)' : '(allow network*)';
+  return `(version 1) ${networkRule} (allow process*) (allow file-read*)`;
 }
 
-export function macosEnvironmentPolicyDigests(input: { sandbox_policy: string; env_allowlist: string[]; env: Record<string, string> }): { sandbox_policy_digest: string; env_policy_digest: string } {
+export function macosEnvironmentPolicyDigests(input: { network_policy: Pick<TrustedNetworkPolicy, 'mode'>; sandbox_policy: string; env_allowlist: string[]; env: Record<string, string> }): { sandbox_policy_digest: string; env_policy_digest: string; policy_digest: string } {
   const envPolicy = [...input.env_allowlist].sort().map((key) => `${key}=${input.env[key] ?? ''}`).join('\n');
-  return { sandbox_policy_digest: `sha256:${createHash('sha256').update(input.sandbox_policy, 'utf8').digest('hex')}`, env_policy_digest: `sha256:${createHash('sha256').update(envPolicy, 'utf8').digest('hex')}` };
+  const sandbox_policy_digest = `sha256:${createHash('sha256').update(input.sandbox_policy, 'utf8').digest('hex')}`;
+  const env_policy_digest = `sha256:${createHash('sha256').update(envPolicy, 'utf8').digest('hex')}`;
+  return { sandbox_policy_digest, env_policy_digest, policy_digest: canonicalDigest({ network_policy: input.network_policy, sandbox_policy_digest, env_policy_digest }) };
 }
 
-export function validateMacOSTrustedEnvironmentPolicy(input: { sandbox_policy: string; env_allowlist: string[]; env: Record<string, string> }): { status: 'accepted' } | { status: 'blocked'; reasons: string[] } {
+export function validateMacOSTrustedEnvironmentPolicy(input: { network_policy: Pick<TrustedNetworkPolicy, 'mode'>; sandbox_policy: string; env_allowlist: string[]; env: Record<string, string> }): { status: 'accepted' } | { status: 'blocked'; reasons: string[] } {
   const reasons: string[] = [];
-  if (typeof input.sandbox_policy !== 'string' || !input.sandbox_policy.includes('(deny network*)')) reasons.push('network-deny-policy-missing');
+  if (!['network-denied', 'network-allowed'].includes(input.network_policy?.mode)) reasons.push('network-policy-mode-invalid');
+  const expectedRule = input.network_policy?.mode === 'network-denied' ? '(deny network*)' : '(allow network*)';
+  if (typeof input.sandbox_policy !== 'string' || !input.sandbox_policy.includes(expectedRule) || (input.network_policy?.mode === 'network-allowed' && input.sandbox_policy.includes('(deny network*)'))) reasons.push('network-policy-sandbox-mismatch');
   const allowlist = new Set(input.env_allowlist);
   const credentialKey = /(TOKEN|SECRET|PASSWORD|CREDENTIAL|PRIVATE_KEY|AUTH|API_KEY)/i;
   for (const key of input.env_allowlist) if (!/^(PATH|LANG|LC_[A-Za-z0-9_]+|TZ|TERM)$/.test(key) || credentialKey.test(key)) reasons.push('credential-env-key-forbidden');
@@ -94,8 +102,9 @@ export function verifyTrustedEnvironmentProof(input: { proof: TrustedEnvironment
   if (value.runner_isolation === 'same-process') reasons.push('trusted-runner-isolation-invalid');
   const fields: Array<keyof TrustedEnvironmentExecution> = ['execution_id', 'attempt', 'preflight_digest', 'registry_snapshot_digest', 'argv_digest', 'cwd_digest', 'env_policy_digest', 'sandbox_policy_digest'];
   for (const field of fields) if (value[field] !== input.execution[field]) reasons.push('trusted-environment-proof-binding-mismatch');
+  if (value.network_policy.mode !== input.execution.network_policy.mode || value.network_policy.policy_digest !== input.execution.network_policy.policy_digest) reasons.push('trusted-environment-proof-binding-mismatch');
   for (const field of ['preflight_digest', 'registry_snapshot_digest', 'argv_digest', 'cwd_digest', 'env_policy_digest', 'sandbox_policy_digest'] as const) if (!digest(value[field])) reasons.push('trusted-environment-proof-invalid');
-  if (value.network_denied.status !== 'proved' || !digest(value.network_denied.evidence_digest)) reasons.push('network-denied-proof-missing');
+  if (!['network-denied', 'network-allowed'].includes(value.network_policy.mode) || value.network_policy.status !== 'proved' || !digest(value.network_policy.policy_digest) || !digest(value.network_policy.evidence_digest)) reasons.push('network-policy-proof-missing');
   if (value.credentials.status !== 'clean' || !digest(value.credentials.evidence_digest) || !digest(value.credentials.allowlist_digest)) reasons.push('credential-inheritance-detected');
   const { proof_digest: _, signature: __, ...unsigned } = value;
   if (!digest(value.proof_digest) || value.proof_digest !== trustedEnvironmentProofDigest(unsigned)) reasons.push('trusted-environment-proof-digest-invalid');
@@ -112,7 +121,7 @@ export function verifyTrustedEnvironmentProof(input: { proof: TrustedEnvironment
   return reasons.length === 0 ? { status: 'accepted' } : { status: 'blocked', reasons: [...new Set(reasons)].sort() };
 }
 
-export function createFakeTrustedEnvironmentProof(input: { runner_id: string; execution: TrustedEnvironmentExecution; now?: () => string; expires_in_ms?: number; network_evidence_digest: string; credential_evidence_digest: string; allowlist_digest?: string }): { execution: TrustedEnvironmentExecution; proof: TrustedEnvironmentProof; registry: TrustedEnvironmentRegistry; private_key_pem: string } {
+export function createFakeTrustedEnvironmentProof(input: { runner_id: string; execution: TrustedEnvironmentExecution; now?: () => string; expires_in_ms?: number; network_policy_evidence_digest: string; credential_evidence_digest: string; allowlist_digest?: string }): { execution: TrustedEnvironmentExecution; proof: TrustedEnvironmentProof; registry: TrustedEnvironmentRegistry; private_key_pem: string } {
   const keys = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
   const publicKeyPem = keys.publicKey.export({ type: 'spki', format: 'pem' }).toString();
   const fingerprint = createHash('sha256').update(keys.publicKey.export({ type: 'spki', format: 'der' })).digest('hex');
@@ -130,7 +139,7 @@ export function createFakeTrustedEnvironmentProof(input: { runner_id: string; ex
     runner_id: input.runner_id,
     runner_version: 'fake-environment-runner-1',
     ...execution,
-    network_denied: { status: 'proved' as const, evidence_digest: input.network_evidence_digest },
+    network_policy: { mode: execution.network_policy.mode, policy_digest: execution.network_policy.policy_digest, status: 'proved' as const, evidence_digest: input.network_policy_evidence_digest },
     credentials: { status: 'clean' as const, evidence_digest: input.credential_evidence_digest, allowlist_digest: input.allowlist_digest ?? `sha256:${'a'.repeat(64)}` },
     issued_at: issuedAt,
     expires_at: new Date(Date.parse(issuedAt) + (input.expires_in_ms ?? 300_000)).toISOString(),

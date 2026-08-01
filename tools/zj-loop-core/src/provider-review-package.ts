@@ -5,13 +5,13 @@ export const PROVIDER_REVIEW_PACKAGE_SCHEMA = 'zj-loop.provider_review_package.v
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const PACKAGE_KEYS = ['schema', 'network_id', 'task_id', 'execution_id', 'attempt', 'task_summary', 'verification_conditions', 'verification_status', 'policy_evidence', 'file_refs', 'artifact_refs', 'risks', 'unknowns', 'excerpts', 'package_digest'];
 const FILE_REF_KEYS = ['repository', 'commit', 'path', 'start_line', 'end_line', 'content_sha256'];
-const POLICY_KEYS = ['policy_version', 'rule_ids', 'match_count', 'secret_digests', 'sandbox_policy_digest', 'network_evidence_digest'];
+const POLICY_KEYS = ['policy_version', 'rule_ids', 'match_count', 'secret_digests', 'sandbox_policy_digest', 'network_policy_digest'];
 const EXCERPT_KEYS = ['source_artifact_digest', 'start_offset', 'end_offset', 'content', 'excerpt_digest'];
 const STATUSES = ['passed', 'blocked', 'pending'] as const;
 
 export type ProviderReviewFileRef = { repository: string; commit: string; path: string; start_line: number; end_line: number; content_sha256: string };
 export type ProviderReviewExcerpt = { source_artifact_digest: string; start_offset: number; end_offset: number; content: string; excerpt_digest: string };
-export type ProviderReviewPolicyEvidence = { policy_version: string; rule_ids: string[]; match_count: number; secret_digests: string[]; sandbox_policy_digest: string; network_evidence_digest: string };
+export type ProviderReviewPolicyEvidence = { policy_version: string; rule_ids: string[]; match_count: number; secret_digests: string[]; sandbox_policy_digest: string; network_policy_digest: string };
 export type ProviderReviewPackage = {
   schema: typeof PROVIDER_REVIEW_PACKAGE_SCHEMA;
   network_id: string;
@@ -52,7 +52,7 @@ function validateFileRef(value: unknown): value is ProviderReviewFileRef {
 
 function validatePolicy(value: unknown): value is ProviderReviewPolicyEvidence {
   if (!record(value) || !exactKeys(value, POLICY_KEYS)) return false;
-  return text(value.policy_version, 128) && strings(value.rule_ids) && integer(value.match_count) && Array.isArray(value.secret_digests) && value.secret_digests.every(digest) && digest(value.sandbox_policy_digest) && digest(value.network_evidence_digest);
+  return text(value.policy_version, 128) && strings(value.rule_ids) && integer(value.match_count) && Array.isArray(value.secret_digests) && value.secret_digests.every(digest) && digest(value.sandbox_policy_digest) && digest(value.network_policy_digest);
 }
 
 function validateExcerpt(value: unknown): value is ProviderReviewExcerpt {

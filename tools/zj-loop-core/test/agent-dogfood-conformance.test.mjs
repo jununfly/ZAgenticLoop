@@ -16,13 +16,18 @@ test('agent dogfood conformance passes only when the provider-neutral chain is c
   assert.match(agentDogfoodConformanceDigest(report), /^sha256:[0-9a-f]{64}$/);
 });
 
+test('agent dogfood fixture accepts the network-allowed coarse policy mode', () => {
+  const report = evaluateAgentDogfoodConformance(createAgentDogfoodFixture('network-allowed'));
+  assert.equal(report.status, 'passed');
+});
+
 test('agent dogfood blocks when environment proof is missing', () => {
   const fixture = createAgentDogfoodFixture();
-  fixture.environment.network_denied.status = 'blocked';
+  fixture.environment.network_policy.status = 'blocked';
   const report = evaluateAgentDogfoodConformance(fixture);
 
   assert.equal(report.status, 'blocked');
-  assert.ok(report.blocking_reasons.includes('network-denied-proof-missing'));
+  assert.ok(report.blocking_reasons.includes('network-policy-proof-missing'));
   assert.equal(report.side_effects_executed, false);
 });
 
@@ -123,7 +128,7 @@ test('agent dogfood fails closed for orphaned or unknown descendants', () => {
 
 test('agent dogfood blocks unknown post-run network, credential, or side-effect state', () => {
   const fixture = createAgentDogfoodFixture();
-  fixture.post_run_observation.after_network_denied = false;
+  fixture.post_run_observation.after_network_policy_proved = false;
   const report = evaluateAgentDogfoodConformance(fixture);
   assert.equal(report.status, 'blocked');
   assert.ok(report.blocking_reasons.includes('post-run-safety-observation-invalid'));

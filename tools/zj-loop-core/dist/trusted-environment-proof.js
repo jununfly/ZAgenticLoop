@@ -2,17 +2,23 @@ import canonicalize from 'canonicalize';
 import { createHash, createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
 export const TRUSTED_ENVIRONMENT_PROOF_SCHEMA = 'zj-loop.trusted_environment_proof.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
-export function createMacOSSeatbeltPolicy() {
-    return '(version 1) (deny network*) (allow process*) (allow file-read*)';
+export function createMacOSSeatbeltPolicy(mode) {
+    const networkRule = mode === 'network-denied' ? '(deny network*)' : '(allow network*)';
+    return `(version 1) ${networkRule} (allow process*) (allow file-read*)`;
 }
 export function macosEnvironmentPolicyDigests(input) {
     const envPolicy = [...input.env_allowlist].sort().map((key) => `${key}=${input.env[key] ?? ''}`).join('\n');
-    return { sandbox_policy_digest: `sha256:${createHash('sha256').update(input.sandbox_policy, 'utf8').digest('hex')}`, env_policy_digest: `sha256:${createHash('sha256').update(envPolicy, 'utf8').digest('hex')}` };
+    const sandbox_policy_digest = `sha256:${createHash('sha256').update(input.sandbox_policy, 'utf8').digest('hex')}`;
+    const env_policy_digest = `sha256:${createHash('sha256').update(envPolicy, 'utf8').digest('hex')}`;
+    return { sandbox_policy_digest, env_policy_digest, policy_digest: canonicalDigest({ network_policy: input.network_policy, sandbox_policy_digest, env_policy_digest }) };
 }
 export function validateMacOSTrustedEnvironmentPolicy(input) {
     const reasons = [];
-    if (typeof input.sandbox_policy !== 'string' || !input.sandbox_policy.includes('(deny network*)'))
-        reasons.push('network-deny-policy-missing');
+    if (!['network-denied', 'network-allowed'].includes(input.network_policy?.mode))
+        reasons.push('network-policy-mode-invalid');
+    const expectedRule = input.network_policy?.mode === 'network-denied' ? '(deny network*)' : '(allow network*)';
+    if (typeof input.sandbox_policy !== 'string' || !input.sandbox_policy.includes(expectedRule) || (input.network_policy?.mode === 'network-allowed' && input.sandbox_policy.includes('(deny network*)')))
+        reasons.push('network-policy-sandbox-mismatch');
     const allowlist = new Set(input.env_allowlist);
     const credentialKey = /(TOKEN|SECRET|PASSWORD|CREDENTIAL|PRIVATE_KEY|AUTH|API_KEY)/i;
     for (const key of input.env_allowlist)
@@ -59,11 +65,13 @@ export function verifyTrustedEnvironmentProof(input) {
     for (const field of fields)
         if (value[field] !== input.execution[field])
             reasons.push('trusted-environment-proof-binding-mismatch');
+    if (value.network_policy.mode !== input.execution.network_policy.mode || value.network_policy.policy_digest !== input.execution.network_policy.policy_digest)
+        reasons.push('trusted-environment-proof-binding-mismatch');
     for (const field of ['preflight_digest', 'registry_snapshot_digest', 'argv_digest', 'cwd_digest', 'env_policy_digest', 'sandbox_policy_digest'])
         if (!digest(value[field]))
             reasons.push('trusted-environment-proof-invalid');
-    if (value.network_denied.status !== 'proved' || !digest(value.network_denied.evidence_digest))
-        reasons.push('network-denied-proof-missing');
+    if (!['network-denied', 'network-allowed'].includes(value.network_policy.mode) || value.network_policy.status !== 'proved' || !digest(value.network_policy.policy_digest) || !digest(value.network_policy.evidence_digest))
+        reasons.push('network-policy-proof-missing');
     if (value.credentials.status !== 'clean' || !digest(value.credentials.evidence_digest) || !digest(value.credentials.allowlist_digest))
         reasons.push('credential-inheritance-detected');
     const { proof_digest: _, signature: __, ...unsigned } = value;
@@ -105,7 +113,7 @@ export function createFakeTrustedEnvironmentProof(input) {
         runner_id: input.runner_id,
         runner_version: 'fake-environment-runner-1',
         ...execution,
-        network_denied: { status: 'proved', evidence_digest: input.network_evidence_digest },
+        network_policy: { mode: execution.network_policy.mode, policy_digest: execution.network_policy.policy_digest, status: 'proved', evidence_digest: input.network_policy_evidence_digest },
         credentials: { status: 'clean', evidence_digest: input.credential_evidence_digest, allowlist_digest: input.allowlist_digest ?? `sha256:${'a'.repeat(64)}` },
         issued_at: issuedAt,
         expires_at: new Date(Date.parse(issuedAt) + (input.expires_in_ms ?? 300_000)).toISOString(),

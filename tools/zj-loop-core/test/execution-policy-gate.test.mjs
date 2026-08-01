@@ -22,7 +22,7 @@ const preflight = createLocalExecutionPreflight({
   env_allowlist: [],
   env_policy_digest: digest('d'),
   sandbox_policy_digest: digest('e'),
-  network_denied_evidence_digest: digest('f'),
+  network_policy: { mode: 'network-denied', policy_digest: digest('f') },
   timeout_ms: 1000,
   termination_grace_ms: 100,
   max_stdout_bytes: 1000,

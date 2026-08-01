@@ -1,5 +1,5 @@
 import type { TrustedRunnerProcessBoundary, TrustedRunnerSignature } from './trusted-runner.js';
-import { type TrustedEnvironmentProof } from './trusted-environment-proof.js';
+import { type TrustedEnvironmentProof, type NetworkPolicyMode } from './trusted-environment-proof.js';
 export declare const MACOS_TRUSTED_RUNNER_ADAPTER_SCHEMA: "zj-loop.macos_trusted_runner_adapter.v1";
 export type MacOSTrustedRunnerObservation = {
     schema: 'zj-loop.macos_trusted_runner_observation.v1';
@@ -30,9 +30,16 @@ export type MacOSTrustedRunnerExecution = {
     preflight_digest: string;
     proof_digest: string;
     registry_snapshot_digest: string;
+    network_policy: {
+        mode: NetworkPolicyMode;
+        policy_digest: string;
+    };
 };
 export type MacOSTrustedEnvironment = {
     cwd: string;
+    network_policy: {
+        mode: NetworkPolicyMode;
+    };
     sandbox_policy: string;
     env_allowlist: string[];
     env: Record<string, string>;

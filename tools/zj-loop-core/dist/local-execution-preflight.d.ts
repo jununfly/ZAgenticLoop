@@ -20,7 +20,10 @@ export type LocalExecutionPreflight = {
     env_allowlist: string[];
     env_policy_digest: string;
     sandbox_policy_digest: string;
-    network_denied_evidence_digest: string;
+    network_policy: {
+        mode: 'network-denied' | 'network-allowed';
+        policy_digest: string;
+    };
     timeout_ms: number;
     termination_grace_ms: number;
     max_stdout_bytes: number;

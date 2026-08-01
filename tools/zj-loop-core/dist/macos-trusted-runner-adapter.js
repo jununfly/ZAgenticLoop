@@ -52,9 +52,10 @@ export function verifyMacOSTrustedRunnerObservation(input) {
     if (!value.environment_proof)
         reasons.push('trusted-environment-proof-missing');
     else {
+        const policyDigests = macosEnvironmentPolicyDigests(input.environment);
         const environment = verifyTrustedEnvironmentProof({
             proof: value.environment_proof,
-            execution: { ...input.execution, argv_digest: digestArgv(input.argv), cwd_digest: digestText(input.environment.cwd), env_policy_digest: macosEnvironmentPolicyDigests(input.environment).env_policy_digest, sandbox_policy_digest: macosEnvironmentPolicyDigests(input.environment).sandbox_policy_digest },
+            execution: { ...input.execution, argv_digest: digestArgv(input.argv), cwd_digest: digestText(input.environment.cwd), env_policy_digest: policyDigests.env_policy_digest, sandbox_policy_digest: policyDigests.sandbox_policy_digest, network_policy: { mode: input.environment.network_policy.mode, policy_digest: policyDigests.policy_digest } },
             registry: input.registry,
         });
         if (environment.status === 'blocked')
@@ -107,7 +108,7 @@ export function createMacOSTrustedRunnerAdapter(input) {
                         resolve({ status: 'blocked', reasons: ['macos-trusted-runner-protocol-invalid'] });
                     }
                 });
-                child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, ...request.environment, ...policyDigests, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
+                child.stdin.end(JSON.stringify({ schema: 'zj-loop.macos_trusted_runner_request.v1', key_tag: request.key_tag, ...request.execution, argv: request.argv, ...request.environment, ...policyDigests, network_policy: { mode: request.environment.network_policy.mode, policy_digest: policyDigests.policy_digest }, timeout_ms: request.timeout_ms, termination_grace_ms: request.termination_grace_ms }));
             });
         },
     };

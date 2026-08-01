@@ -26,7 +26,7 @@ export type AgentDogfoodFixture = {
         proof_digest: string;
         registry_snapshot_digest: string;
         after_worktree_clean: boolean;
-        after_network_denied: boolean;
+        after_network_policy_proved: boolean;
         after_credentials_clean: boolean;
         side_effects_detected: boolean;
         process_boundary: {
@@ -59,7 +59,9 @@ export type AgentDogfoodFixture = {
         proof_source: 'trusted-runner' | 'agent-self-report';
         proof_stage: 'pre-launch' | 'post-launch';
         runner_isolation: 'separate-process' | 'protected-sandbox' | 'same-process';
-        network_denied: {
+        network_policy: {
+            mode: 'network-denied' | 'network-allowed';
+            policy_digest: string;
             status: 'proved' | 'blocked';
             evidence_digest: string;
         };
@@ -75,7 +77,11 @@ export type AgentDogfoodFixture = {
             preflight_digest: string;
             registry_snapshot_digest: string;
             worktree_digest: string;
-            network_evidence_digest: string;
+            network_policy: {
+                mode: 'network-denied' | 'network-allowed';
+                policy_digest: string;
+                evidence_digest: string;
+            };
             credential_evidence_digest: string;
             issued_at: string;
             expires_at: string;
@@ -122,4 +128,4 @@ export type AgentDogfoodConformanceReport = {
 };
 export declare function evaluateAgentDogfoodConformance(input: AgentDogfoodFixture): AgentDogfoodConformanceReport;
 export declare function agentDogfoodConformanceDigest(report: AgentDogfoodConformanceReport): string;
-export declare function createAgentDogfoodFixture(): AgentDogfoodFixture;
+export declare function createAgentDogfoodFixture(mode?: 'network-denied' | 'network-allowed'): AgentDogfoodFixture;

@@ -1,4 +1,11 @@
 export declare const TRUSTED_ENVIRONMENT_PROOF_SCHEMA: "zj-loop.trusted_environment_proof.v1";
+export type NetworkPolicyMode = 'network-denied' | 'network-allowed';
+export type TrustedNetworkPolicy = {
+    mode: NetworkPolicyMode;
+    policy_digest: string;
+    status: 'proved' | 'blocked';
+    evidence_digest: string;
+};
 export type TrustedEnvironmentExecution = {
     execution_id: string;
     attempt: number;
@@ -8,6 +15,7 @@ export type TrustedEnvironmentExecution = {
     cwd_digest: string;
     env_policy_digest: string;
     sandbox_policy_digest: string;
+    network_policy: Pick<TrustedNetworkPolicy, 'mode' | 'policy_digest'>;
 };
 export type TrustedEnvironmentProof = {
     schema: typeof TRUSTED_ENVIRONMENT_PROOF_SCHEMA;
@@ -25,10 +33,7 @@ export type TrustedEnvironmentProof = {
     cwd_digest: string;
     env_policy_digest: string;
     sandbox_policy_digest: string;
-    network_denied: {
-        status: 'proved' | 'blocked';
-        evidence_digest: string;
-    };
+    network_policy: TrustedNetworkPolicy;
     credentials: {
         status: 'clean' | 'blocked';
         evidence_digest: string;
@@ -53,16 +58,19 @@ export type TrustedEnvironmentRegistry = {
         status: 'active' | 'revoked';
     }>;
 };
-export declare function createMacOSSeatbeltPolicy(): string;
+export declare function createMacOSSeatbeltPolicy(mode: NetworkPolicyMode): string;
 export declare function macosEnvironmentPolicyDigests(input: {
+    network_policy: Pick<TrustedNetworkPolicy, 'mode'>;
     sandbox_policy: string;
     env_allowlist: string[];
     env: Record<string, string>;
 }): {
     sandbox_policy_digest: string;
     env_policy_digest: string;
+    policy_digest: string;
 };
 export declare function validateMacOSTrustedEnvironmentPolicy(input: {
+    network_policy: Pick<TrustedNetworkPolicy, 'mode'>;
     sandbox_policy: string;
     env_allowlist: string[];
     env: Record<string, string>;
@@ -90,7 +98,7 @@ export declare function createFakeTrustedEnvironmentProof(input: {
     execution: TrustedEnvironmentExecution;
     now?: () => string;
     expires_in_ms?: number;
-    network_evidence_digest: string;
+    network_policy_evidence_digest: string;
     credential_evidence_digest: string;
     allowlist_digest?: string;
 }): {

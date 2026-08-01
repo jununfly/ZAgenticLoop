@@ -21,7 +21,7 @@ export type ProviderReviewPolicyEvidence = {
     match_count: number;
     secret_digests: string[];
     sandbox_policy_digest: string;
-    network_evidence_digest: string;
+    network_policy_digest: string;
 };
 export type ProviderReviewPackage = {
     schema: typeof PROVIDER_REVIEW_PACKAGE_SCHEMA;

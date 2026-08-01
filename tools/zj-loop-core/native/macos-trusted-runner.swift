@@ -12,6 +12,7 @@ struct Request: Codable {
     let preflight_digest: String
     let proof_digest: String
     let registry_snapshot_digest: String
+    let network_policy: NetworkPolicyRequest
     let cwd: String
     let sandbox_policy: String
     let sandbox_policy_digest: String
@@ -21,6 +22,11 @@ struct Request: Codable {
     let argv: [String]
     let timeout_ms: Int
     let termination_grace_ms: Int
+}
+
+struct NetworkPolicyRequest: Codable {
+    let mode: String
+    let policy_digest: String
 }
 
 struct Signature: Codable {
@@ -46,7 +52,7 @@ struct EnvironmentProof: Codable {
     let cwd_digest: String
     let env_policy_digest: String
     let sandbox_policy_digest: String
-    let network_denied: [String: String]
+    let network_policy: [String: String]
     let credentials: [String: String]
     let issued_at: String
     let expires_at: String
@@ -103,7 +109,8 @@ guard request.schema == "zj-loop.macos_trusted_runner_request.v1",
       !request.key_tag.isEmpty,
       !request.argv.isEmpty,
       !request.cwd.isEmpty,
-      request.sandbox_policy.contains("(deny network*)"),
+      ["network-denied", "network-allowed"].contains(request.network_policy.mode),
+      request.network_policy.mode == "network-denied" ? request.sandbox_policy.contains("(deny network*)") : (request.sandbox_policy.contains("(allow network*)") && !request.sandbox_policy.contains("(deny network*)")),
       request.env_allowlist.allSatisfy({ request.env[$0] != nil }),
       request.timeout_ms > 0,
       request.termination_grace_ms > 0 else {
@@ -123,7 +130,7 @@ func canonicalEnvironmentProofPayload(_ proof: EnvironmentProof) -> Data {
         "execution_id": proof.execution_id, "attempt": proof.attempt, "preflight_digest": proof.preflight_digest,
         "registry_snapshot_digest": proof.registry_snapshot_digest, "argv_digest": proof.argv_digest, "cwd_digest": proof.cwd_digest,
         "env_policy_digest": proof.env_policy_digest, "sandbox_policy_digest": proof.sandbox_policy_digest,
-        "network_denied": proof.network_denied, "credentials": proof.credentials,
+        "network_policy": proof.network_policy, "credentials": proof.credentials,
         "issued_at": proof.issued_at, "expires_at": proof.expires_at
     ]
     return try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
@@ -138,7 +145,8 @@ func allowlistDigest(_ allowlist: [String]) -> String { digest(Data(allowlist.so
 
 let envPolicy = request.env_allowlist.sorted().map { "\($0)=\(request.env[$0] ?? "")" }.joined(separator: "\n")
 guard request.sandbox_policy_digest == digest(Data(request.sandbox_policy.utf8)),
-      request.env_policy_digest == digest(Data(envPolicy.utf8)) else {
+      request.env_policy_digest == digest(Data(envPolicy.utf8)),
+      request.network_policy.policy_digest == digest(try! JSONSerialization.data(withJSONObject: ["network_policy": ["mode": request.network_policy.mode], "sandbox_policy_digest": request.sandbox_policy_digest, "env_policy_digest": request.env_policy_digest], options: [.sortedKeys, .withoutEscapingSlashes])) else {
     fatalError("trusted-runner-environment-policy-digest-invalid")
 }
 
@@ -232,7 +240,7 @@ let unsignedProof = EnvironmentProof(
     runner_id: request.runner_id, runner_version: "macos-trusted-runner-1", execution_id: request.execution_id, attempt: request.attempt,
     preflight_digest: request.preflight_digest, registry_snapshot_digest: request.registry_snapshot_digest, argv_digest: canonicalArgvDigest(request.argv),
     cwd_digest: digest(Data(request.cwd.utf8)), env_policy_digest: request.env_policy_digest, sandbox_policy_digest: request.sandbox_policy_digest,
-    network_denied: ["status": "proved", "evidence_digest": digest(Data("seatbelt-network-deny:\(request.sandbox_policy_digest)".utf8))],
+    network_policy: ["mode": request.network_policy.mode, "policy_digest": request.network_policy.policy_digest, "status": "proved", "evidence_digest": digest(Data("seatbelt-network-policy:\(request.network_policy.mode):\(request.sandbox_policy_digest)".utf8))],
     credentials: ["status": "clean", "evidence_digest": digest(Data("credential-clean:\(request.env_policy_digest)".utf8)), "allowlist_digest": allowlistDigest(request.env_allowlist)],
     issued_at: issuedAt, expires_at: expiresAt, proof_digest: "", signature: emptySignature
 )
@@ -241,7 +249,7 @@ let environmentProof = EnvironmentProof(
     schema: unsignedProof.schema, status: unsignedProof.status, proof_source: unsignedProof.proof_source, proof_stage: unsignedProof.proof_stage, runner_isolation: unsignedProof.runner_isolation,
     runner_id: unsignedProof.runner_id, runner_version: unsignedProof.runner_version, execution_id: unsignedProof.execution_id, attempt: unsignedProof.attempt, preflight_digest: unsignedProof.preflight_digest,
     registry_snapshot_digest: unsignedProof.registry_snapshot_digest, argv_digest: unsignedProof.argv_digest, cwd_digest: unsignedProof.cwd_digest, env_policy_digest: unsignedProof.env_policy_digest,
-    sandbox_policy_digest: unsignedProof.sandbox_policy_digest, network_denied: unsignedProof.network_denied, credentials: unsignedProof.credentials, issued_at: unsignedProof.issued_at, expires_at: unsignedProof.expires_at,
+    sandbox_policy_digest: unsignedProof.sandbox_policy_digest, network_policy: unsignedProof.network_policy, credentials: unsignedProof.credentials, issued_at: unsignedProof.issued_at, expires_at: unsignedProof.expires_at,
     proof_digest: proofDigest, signature: runnerSignature(for: Data(proofDigest.utf8), privateKey: privateKey)
 )
 

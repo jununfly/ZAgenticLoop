@@ -9,7 +9,7 @@ function digest(value) { return `sha256:${createHash('sha256').update(canonical(
 function validText(value) { return typeof value === 'string' && value.length > 0 && value.length <= 4096; }
 function validId(value) { return typeof value === 'string' && ID.test(value); }
 function validTimestamp(value) { return validText(value) && Number.isFinite(Date.parse(value)); }
-function exactKeys(value) { return Object.keys(value).every((key) => ['schema', 'status', 'side_effects_executed', 'network_id', 'plan_id', 'plan_revision', 'task_id', 'execution_id', 'attempt', 'provider_id', 'adapter_version', 'executable', 'executable_digest', 'args', 'argv_digest', 'cwd', 'cwd_digest', 'env_allowlist', 'env_policy_digest', 'sandbox_policy_digest', 'network_denied_evidence_digest', 'timeout_ms', 'termination_grace_ms', 'max_stdout_bytes', 'max_stderr_bytes', 'orchestration_preflight_digest', 'issued_at', 'expires_at', 'preflight_digest'].includes(key)); }
+function exactKeys(value) { return Object.keys(value).every((key) => ['schema', 'status', 'side_effects_executed', 'network_id', 'plan_id', 'plan_revision', 'task_id', 'execution_id', 'attempt', 'provider_id', 'adapter_version', 'executable', 'executable_digest', 'args', 'argv_digest', 'cwd', 'cwd_digest', 'env_allowlist', 'env_policy_digest', 'sandbox_policy_digest', 'network_policy', 'timeout_ms', 'termination_grace_ms', 'max_stdout_bytes', 'max_stderr_bytes', 'orchestration_preflight_digest', 'issued_at', 'expires_at', 'preflight_digest'].includes(key)); }
 function shapeError(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value) || !exactKeys(value))
         return 'local-execution-preflight-schema-invalid';
@@ -27,9 +27,12 @@ function shapeError(value) {
         return 'local-execution-preflight-args-invalid';
     if (!Array.isArray(item.env_allowlist) || new Set(item.env_allowlist).size !== item.env_allowlist.length || !item.env_allowlist.every((key) => typeof key === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(key)))
         return 'local-execution-preflight-env-invalid';
-    for (const key of ['executable_digest', 'argv_digest', 'cwd_digest', 'env_policy_digest', 'sandbox_policy_digest', 'network_denied_evidence_digest', 'orchestration_preflight_digest', 'preflight_digest'])
+    for (const key of ['executable_digest', 'argv_digest', 'cwd_digest', 'env_policy_digest', 'sandbox_policy_digest', 'orchestration_preflight_digest', 'preflight_digest'])
         if (typeof item[key] !== 'string' || !DIGEST.test(item[key]))
             return `local-execution-preflight-${key}-invalid`;
+    const networkPolicy = item.network_policy;
+    if (!networkPolicy || !['network-denied', 'network-allowed'].includes(networkPolicy.mode) || typeof networkPolicy.policy_digest !== 'string' || !DIGEST.test(networkPolicy.policy_digest))
+        return 'local-execution-preflight-network-policy-invalid';
     for (const [key, max] of [['timeout_ms', Number.MAX_SAFE_INTEGER], ['termination_grace_ms', Number.MAX_SAFE_INTEGER], ['max_stdout_bytes', 10 * 1024 * 1024], ['max_stderr_bytes', 10 * 1024 * 1024]])
         if (!Number.isInteger(item[key]) || item[key] < 1 || item[key] > max)
             return `local-execution-preflight-${key}-invalid`;
