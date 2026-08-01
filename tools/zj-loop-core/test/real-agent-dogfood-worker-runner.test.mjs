@@ -38,6 +38,9 @@ test('worker persists bounded output evidence and advances only with post-run pr
     const events = await stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood', aggregate_id: 'dogfood-1' });
     assert.equal(projectRealAgentDogfoodLifecycle(events.events).status, 'verification-pending');
     assert.match(result.stdout_digest, /^sha256:/);
+    assert.match(result.provider_fact_digest, /^sha256:/);
+    const fact = await evidenceStore.read({ digest: result.provider_fact_digest, actor: 'test' });
+    assert.match(fact.toString(), /real_agent_dogfood_provider_result/);
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
 

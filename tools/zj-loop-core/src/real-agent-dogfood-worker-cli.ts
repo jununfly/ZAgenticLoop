@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { defaultCliIo, runCli, type CliIo } from './cli.js';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
 import { projectRealAgentDogfoodLifecycle, type RealAgentDogfoodEvent } from './real-agent-dogfood-lifecycle.js';
@@ -55,6 +56,7 @@ type WorkerContext = {
   executable: string;
   goal: string;
   expected_revision: number;
+  post_run_observation?: { status: 'signed'; all_descendants_terminated: boolean; after_worktree_clean: boolean; after_network_policy_proved: boolean; after_credentials_clean: boolean; side_effects_detected: boolean };
 };
 
 async function runWorkerContext(contextPath: string) {
@@ -73,8 +75,14 @@ async function runWorkerContext(contextPath: string) {
     if (!lease || lease.lease_id !== context.lease_id || lease.worker_id !== context.worker_id || typeof lease.expires_at !== 'string' || Date.parse(lease.expires_at) <= Date.now()) throw new Error('worker-lease-invalid');
     const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store as string });
     const provider = createRealAgentDogfoodProvider({ provider_id: context.provider_id, executable: context.executable as string, process_adapter: createLocalProcessAdapter() });
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id as string, lease_id: context.lease_id as string, binding: context.binding, worktree_path: context.worktree_path as string, executable: context.executable as string, goal: context.goal as string, provider, expected_revision: context.expected_revision as number });
-    return result;
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id as string, lease_id: context.lease_id as string, binding: context.binding, worktree_path: context.worktree_path as string, executable: context.executable as string, goal: context.goal as string, provider, post_run_observation: context.post_run_observation, expected_revision: context.expected_revision as number });
+    if (result.status !== 'verification-pending') return result;
+    const verifierContextPath = `${contextPath}.verifier.json`;
+    await writeFile(verifierContextPath, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_verifier_context.v1', state_store: context.state_store, evidence_store: context.evidence_store, network_id: context.network_id, dogfood_id: context.dogfood_id, execution_id: context.execution_id, attempt: lifecycle.attempt, verifier_id: `verifier-${context.execution_id}`, provider_fact_digest: result.provider_fact_digest, stdout_digest: result.stdout_digest, stderr_digest: result.stderr_digest, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+    const verifierCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-verifier-cli.js');
+    const verifierProcess = spawn(process.execPath, [verifierCli, 'verify', '--context', verifierContextPath], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
+    verifierProcess.unref();
+    return { ...result, verifier_started: true, verifier_context_path: verifierContextPath };
   } finally {
     await stateStore.close();
   }

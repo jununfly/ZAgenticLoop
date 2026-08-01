@@ -33,6 +33,8 @@ export type RealAgentDogfoodWorkerResult = {
     stderr_digest: string;
     stdout_size: number;
     stderr_size: number;
+    provider_fact_digest: string;
+    revision: number;
     reason_code: string;
     next_action: string;
 };

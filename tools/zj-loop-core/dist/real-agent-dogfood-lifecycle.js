@@ -10,7 +10,7 @@ const EDGES = {
     'preflight-ready': ['awaiting-human-approval', 'blocked'],
     'awaiting-human-approval': ['running', 'blocked'],
     running: ['verification-pending', 'blocked', 'outcome-uncertain'],
-    'verification-pending': ['review-pending', 'blocked'],
+    'verification-pending': ['review-pending', 'blocked', 'outcome-uncertain'],
     'review-pending': ['accepted', 'rejected', 'request-revision', 'blocked'],
     accepted: [],
     blocked: ['draft'],

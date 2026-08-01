@@ -16,6 +16,8 @@ export type RealAgentDogfoodWorkerResult = {
   stderr_digest: string;
   stdout_size: number;
   stderr_size: number;
+  provider_fact_digest: string;
+  revision: number;
   reason_code: string;
   next_action: string;
 };
@@ -29,7 +31,8 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
   const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
   const stderrEvidence = await input.evidenceStore.put({ content: result.stderr, kind: 'provider-stderr' });
   const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_observation: input.post_run_observation ?? null };
-  const factDigest = digest(fact);
+  const factEvidence = await input.evidenceStore.put({ content: JSON.stringify(fact), kind: 'provider-result-fact' });
+  const factDigest = factEvidence.digest;
   let to: 'verification-pending' | 'blocked' | 'outcome-uncertain';
   let reasonCode: string;
   let nextAction: string;
@@ -39,5 +42,5 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
   const transition = createRealAgentDogfoodTransition({ lifecycle: input.lifecycle, to, event_id: `${input.lifecycle.dogfood_id}:attempt-${input.lifecycle.attempt}:${to}`, occurred_at: now, fact_digest: factDigest, reason_code: reasonCode, next_action: nextAction });
   const appendResult = await appendRealAgentDogfoodEvent({ stateStore: input.stateStore, expected_revision: input.expected_revision, event: transition.event });
   if (appendResult.status === 'conflict') throw new Error('worker-lifecycle-revision-conflict');
-  return { status: to, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest, stdout_size: stdoutEvidence.size, stderr_size: stderrEvidence.size, reason_code: reasonCode, next_action: nextAction };
+  return { status: to, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest, stdout_size: stdoutEvidence.size, stderr_size: stderrEvidence.size, provider_fact_digest: factEvidence.digest, revision: appendResult.revision as number, reason_code: reasonCode, next_action: nextAction };
 }

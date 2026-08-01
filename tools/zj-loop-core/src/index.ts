@@ -161,3 +161,8 @@ export * from './content-addressed-evidence-store.js';
 export * from './real-agent-dogfood-worker-runner.js';
 export * from './real-agent-dogfood-binding.js';
 export * from './real-agent-dogfood-provider-registry.js';
+export * from './real-agent-dogfood-verifier.js';
+export * from './real-agent-dogfood-verifier-cli.js';
+export * from './real-agent-dogfood-review-package.js';
+export * from './real-agent-dogfood-review-decision.js';
+export * from './real-agent-dogfood-review-cli.js';
