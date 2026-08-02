@@ -110,6 +110,23 @@ test('worker keeps adapter failure blocked only after trusted cleanup proof', as
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
 
+test('worker converts provider exceptions into a cleanup-gated failure fact', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-runner-provider-exception-'));
+  const evidenceStore = await createContentAddressedEvidenceStore({ root: path.join(root, 'evidence') });
+  const { stateStore, lifecycle } = await runningFixture(root);
+  const executable = path.join(root, 'provider');
+  await (await import('node:fs/promises')).writeFile(executable, 'provider');
+  const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
+  const admission_bound_execution = admissionBoundExecution({ execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, executable, cwd: '/tmp/worktree' });
+  try {
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { throw new Error('provider-start-failed'); } }, provider_cleanup: async () => ({ status: 'cleaned', proof_digest: d('7') }), expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.reason_code, 'provider-provider-adapter-exception');
+    const fact = await evidenceStore.read({ digest: result.provider_fact_digest, actor: 'test' });
+    assert.match(fact.toString(), /provider-adapter-exception/);
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('worker rejects a tampered signed post-run proof', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-runner-tampered-'));
   const evidenceStore = await createContentAddressedEvidenceStore({ root: path.join(root, 'evidence') });

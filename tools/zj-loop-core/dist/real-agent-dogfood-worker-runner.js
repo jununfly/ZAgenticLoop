@@ -20,7 +20,13 @@ export async function executeRealAgentDogfoodWorker(input) {
     if (binding.status === 'blocked')
         throw new Error(`worker-${binding.reason}`);
     const now = input.now ?? new Date().toISOString();
-    const result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
+    let result;
+    try {
+        result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
+    }
+    catch {
+        result = { status: 'failed', success: false, pid: 0, exit_code: null, signal: null, stdout: '', stderr: '', reason: 'provider-adapter-exception' };
+    }
     const normalized = result.provider_result ?? providerResultFromLocalProcess(result);
     const normalizedCheck = validateProviderResult(normalized);
     let cleanup = { status: 'not-required' };
