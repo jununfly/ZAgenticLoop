@@ -2,6 +2,7 @@ import { type ProviderAuthRef, type ProviderAuthRuntime, type ProviderLaunchHand
 import { validateProviderResult, type ProviderResult } from './provider-runtime-adapter.js';
 import { createProviderAuthIpcFrame, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from './provider-auth-ipc-unix.js';
+import { validateTrustedRunnerPeerIdentity, type TrustedRunnerPeerIdentityVerifier } from './trusted-runner-peer-identity.js';
 
 const LAUNCH_REQUEST_SCHEMA = 'zj-loop.provider_launch_request.v1';
 const LAUNCH_RESPONSE_SCHEMA = 'zj-loop.provider_launch_response.v1';
@@ -23,6 +24,8 @@ export type ProviderRuntimeSidecarInvocation = {
 export function createProviderAuthRuntimeIpcSidecar(input: {
   socket_path: string;
   correlation_id: string;
+  expected_peer_identity_digest: string;
+  verify_peer: TrustedRunnerPeerIdentityVerifier;
   runtime: ProviderAuthRuntime;
   auth_ref: ProviderAuthRef;
   contract_digest: string;
@@ -36,7 +39,10 @@ export function createProviderAuthRuntimeIpcSidecar(input: {
   const error = async (connection: { send(frame: ProviderAuthIpcFrame): Promise<void> }, frame: ProviderAuthIpcFrame, code: string, sequence: number, launchHandleDigest?: string) => {
     await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence, network_id: frame.network_id, node_id: frame.node_id, provider_runtime_id: frame.provider_runtime_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, kind: 'error', ...(launchHandleDigest ? { launch_handle_digest: launchHandleDigest } : {}), payload: { code } }));
   };
-  const server = createUnixProviderAuthIpcServer({ socket_path: input.socket_path, correlation_id: input.correlation_id, verify_peer: () => true, on_frames: async (frames, connection) => {
+  const server = createUnixProviderAuthIpcServer({ socket_path: input.socket_path, correlation_id: input.correlation_id, verify_peer: async (socket) => {
+    const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id, expected_identity_digest: input.expected_peer_identity_digest });
+    return peer.status === 'verified' && validateTrustedRunnerPeerIdentity(peer.identity) && peer.identity.identity_digest === input.expected_peer_identity_digest;
+  }, on_frames: async (frames, connection) => {
     const frame = frames[0];
     if (!frame) return;
     const state = states.get(connection) ?? { sequence: 1 };

@@ -1,5 +1,6 @@
 import { type ProviderAuthRef, type ProviderAuthRuntime, type ProviderLaunchHandle } from './provider-auth-runtime.js';
 import { type ProviderResult } from './provider-runtime-adapter.js';
+import { type TrustedRunnerPeerIdentityVerifier } from './trusted-runner-peer-identity.js';
 export type ProviderRuntimeSidecarInvocation = {
     status: ProviderResult['status'];
     success: boolean;
@@ -13,6 +14,8 @@ export type ProviderRuntimeSidecarInvocation = {
 export declare function createProviderAuthRuntimeIpcSidecar(input: {
     socket_path: string;
     correlation_id: string;
+    expected_peer_identity_digest: string;
+    verify_peer: TrustedRunnerPeerIdentityVerifier;
     runtime: ProviderAuthRuntime;
     auth_ref: ProviderAuthRef;
     contract_digest: string;
