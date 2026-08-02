@@ -1,4 +1,4 @@
-import { type ProviderLaunchHandle } from './provider-auth-runtime.js';
+import { type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { type ProviderResult } from './provider-runtime-adapter.js';
 export type ProviderRuntimeIpcRunResult = {
     status: ProviderResult['status'];
@@ -23,6 +23,7 @@ export declare function createProviderRuntimeIpcProvider(input: {
     auth_ref_digest: string;
     contract_digest: string;
     adapter_contract_digest: string;
+    runtime_binding: ProviderRuntimeIdentityBinding;
     timeout_ms?: number;
     task?: Record<string, unknown>;
 }): {

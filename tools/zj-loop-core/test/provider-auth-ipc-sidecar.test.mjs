@@ -3,15 +3,25 @@ import { test } from 'node:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createProviderAuthRuntimeIpcSidecar } from '../dist/provider-auth-ipc-sidecar.js';
-import { createProviderRuntimeIpcProvider } from '../dist/provider-auth-ipc-provider-client.js';
+import { createProviderAuthRuntimeIpcSidecar as createProviderAuthRuntimeIpcSidecarImpl } from '../dist/provider-auth-ipc-sidecar.js';
+import { createProviderRuntimeIpcProvider as createProviderRuntimeIpcProviderImpl } from '../dist/provider-auth-ipc-provider-client.js';
 import { createProviderRuntimeIpcCleanupCoordinator } from '../dist/provider-auth-ipc-cleanup-client.js';
-import { createInMemoryProviderAuthRuntime } from '../dist/provider-auth-runtime.js';
+import { createInMemoryProviderAuthRuntime as createInMemoryProviderAuthRuntimeImpl } from '../dist/provider-auth-runtime.js';
 import { createInMemoryTrustedRunnerPeerIdentityVerifier } from '../dist/trusted-runner-peer-identity.js';
 import { connectUnixProviderAuthIpc } from '../dist/provider-auth-ipc-unix.js';
-import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.js';
+import { createProviderAuthIpcFrame as createProviderAuthIpcFrameImpl } from '../dist/provider-auth-ipc-protocol.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
+const runtimeBinding = { runtime_identity_fingerprint: digest('e'), runtime_manifest_digest: digest('f'), provider_capabilities_digest: digest('1') };
+const createInMemoryProviderAuthRuntime = (input) => {
+  const runtime = createInMemoryProviderAuthRuntimeImpl(input);
+  return { ...runtime, launch: (request) => runtime.launch({ ...request, runtime_binding: request.runtime_binding ?? runtimeBinding }) };
+};
+const createProviderAuthRuntimeIpcSidecar = (input) => createProviderAuthRuntimeIpcSidecarImpl({ ...input, runtime_binding: input.runtime_binding ?? runtimeBinding });
+const createProviderRuntimeIpcProvider = (input) => createProviderRuntimeIpcProviderImpl({ ...input, runtime_binding: input.runtime_binding ?? runtimeBinding });
+const createProviderAuthIpcFrame = (input) => input.kind === 'challenge' && input.payload && typeof input.payload === 'object'
+  ? createProviderAuthIpcFrameImpl({ ...input, payload: { ...input.payload, ...runtimeBinding } })
+  : createProviderAuthIpcFrameImpl(input);
 
 test('Runtime sidecar owns launch, relays bounded provider result, and owns cleanup', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-sidecar-'));
@@ -87,4 +97,26 @@ test('Runtime sidecar rejects a replayed challenge nonce across connections', as
     assert.equal(second[0]?.kind, 'error');
     assert.equal(second[0]?.payload?.code, 'provider-auth-ipc-challenge-replay');
   } finally { await sidecar.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('Runtime sidecar rejects a challenge sent after the in-memory TTL', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-sidecar-ttl-'));
+  const socketPath = path.join(root, 'runtime.sock');
+  let nowMs = Date.parse('2026-08-01T12:00:00.000Z');
+  const runtime = createInMemoryProviderAuthRuntime({ runtime_id: 'runtime-ttl', provider_ids: ['codex'], now: () => new Date(nowMs).toISOString() });
+  const issued = await runtime.issueRef({ network_id: 'network-ttl', node_id: 'node-ttl', provider_id: 'codex', execution_id: 'execution-ttl', attempt: 1, audience: 'model-api', scope: [], secret: 'secret', issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z', human_authorized: true });
+  assert.equal(issued.status, 'issued');
+  const sidecar = createProviderAuthRuntimeIpcSidecar({ socket_path: socketPath, correlation_id: 'corr-ttl', expected_peer_identity_digest: 'a'.repeat(64), verify_peer: createInMemoryTrustedRunnerPeerIdentityVerifier({ identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'process-audit', identity_digest: 'a'.repeat(64), process_id: 42 } }), runtime, auth_ref: issued.ref, contract_digest: digest('a'), adapter_contract_digest: digest('b'), challenge_ttl_ms: 30_000, now: () => new Date(nowMs).toISOString(), invoke: async () => { throw new Error('must not invoke'); } });
+  const received = [];
+  const connection = await (async () => {
+    await sidecar.start();
+    return connectUnixProviderAuthIpc({ socket_path: socketPath, correlation_id: 'corr-ttl', on_frames: (frames) => received.push(...frames) });
+  })();
+  try {
+    nowMs += 30_001;
+    await connection.send(createProviderAuthIpcFrame({ correlation_id: 'corr-ttl', sequence: 1, network_id: 'network-ttl', node_id: 'node-ttl', provider_runtime_id: 'runtime-ttl', provider_id: 'codex', execution_id: 'execution-ttl', attempt: 1, kind: 'challenge', nonce: 'expired-nonce', payload: { schema: 'zj-loop.provider_launch_request.v1', auth_ref_digest: issued.ref.ref_digest, contract_digest: digest('a'), adapter_contract_digest: digest('b'), task: { goal: 'expired' } } }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(received[0]?.kind, 'error');
+    assert.equal(received[0]?.payload?.code, 'provider-auth-ipc-challenge-expired');
+  } finally { connection.close(); await sidecar.close(); await rm(root, { recursive: true, force: true }); }
 });

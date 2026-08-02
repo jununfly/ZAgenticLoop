@@ -3,12 +3,18 @@ import { test } from 'node:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createProviderRuntimeIpcProvider } from '../dist/provider-auth-ipc-provider-client.js';
+import { createProviderRuntimeIpcProvider as createProviderRuntimeIpcProviderImpl } from '../dist/provider-auth-ipc-provider-client.js';
 import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from '../dist/provider-auth-ipc-unix.js';
-import { createInMemoryProviderAuthRuntime } from '../dist/provider-auth-runtime.js';
+import { createInMemoryProviderAuthRuntime as createInMemoryProviderAuthRuntimeImpl } from '../dist/provider-auth-runtime.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
+const runtimeBinding = { runtime_identity_fingerprint: digest('e'), runtime_manifest_digest: digest('f'), provider_capabilities_digest: digest('1') };
+const createProviderRuntimeIpcProvider = (input) => createProviderRuntimeIpcProviderImpl({ ...input, runtime_binding: input.runtime_binding ?? runtimeBinding });
+const createInMemoryProviderAuthRuntime = (input) => {
+  const runtime = createInMemoryProviderAuthRuntimeImpl(input);
+  return { ...runtime, launch: (request) => runtime.launch({ ...request, runtime_binding: request.runtime_binding ?? runtimeBinding }) };
+};
 
 test('Runtime IPC provider consumes only a bound launch handle and ordered result channel', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-ipc-provider-'));

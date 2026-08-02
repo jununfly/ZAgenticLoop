@@ -8,7 +8,7 @@ export type ProviderAuthIpcConnection = { send(frame: ProviderAuthIpcFrame): Pro
 
 async function removeSocket(socketPath: string): Promise<void> { try { await unlink(socketPath); } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; } }
 
-export function createUnixProviderAuthIpcServer(input: { socket_path: string; correlation_id: string; verify_peer: ProviderAuthIpcPeerVerifier; on_frames: (frames: ProviderAuthIpcFrame[], connection: ProviderAuthIpcConnection) => void | Promise<void> }) {
+export function createUnixProviderAuthIpcServer(input: { socket_path: string; correlation_id: string; verify_peer: ProviderAuthIpcPeerVerifier; on_connection?: (socket: Socket, connection: ProviderAuthIpcConnection) => void | Promise<void>; on_frames: (frames: ProviderAuthIpcFrame[], connection: ProviderAuthIpcConnection) => void | Promise<void> }) {
   let server: net.Server | undefined;
   const connections = new Set<Socket>();
   const connectionFor = (socket: Socket): ProviderAuthIpcConnection => ({
@@ -23,6 +23,7 @@ export function createUnixProviderAuthIpcServer(input: { socket_path: string; co
       server = net.createServer(async (socket) => {
         connections.add(socket);
         const connection = connectionFor(socket);
+        try { await input.on_connection?.(socket, connection); } catch { socket.destroy(); connections.delete(socket); return; }
         let accepted = false;
         try { accepted = await input.verify_peer(socket); } catch { accepted = false; }
         if (!accepted) { socket.destroy(); connections.delete(socket); return; }

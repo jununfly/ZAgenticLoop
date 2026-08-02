@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 20:15:38
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 00:32:00
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -101,4 +101,7 @@
 - Q: 问题260：是否应提供一个 provider-neutral Runtime cleanup coordinator factory，将已发行的具体 ProviderLaunchHandle 与 execution/attempt binding 绑定到 ProviderAuthRuntime.cleanup；仅 Runtime 返回有效 cleanup_digest 时返回 cleaned proof，Runtime 拒绝、绑定漂移或异常统一返回 uncertain，不暴露 secret 或允许 adapter 自报 cleanup？ → 同意 (该 factory 只做 Runtime cleanup 事实到 runner coordinator 的受控投影，不改变 Runtime 的权限边界。)
 - Q: 问题261：真实 worker CLI 是否必须只通过 execution context 中已发行且绑定 adapter_contract_digest 的 ProviderLaunchHandle，加上本次 execution 专属的 Runtime IPC endpoint/correlation binding，创建 cleanup coordinator；handle/context 漂移或绑定不完整在 Provider 启动前 blocked，Provider 已启动后的 Runtime IPC 不可用、超时或响应漂移进入 outcome-uncertain？ → 同意 (worker 不直接持有 ProviderAuthRuntime，也不注入内存 Runtime；只通过受控 provider-neutral IPC client 请求 Runtime cleanup。启动前拒绝不完整或漂移的 handle/context，运行后 cleanup IPC 无法证明则保持 outcome-uncertain。)
 - Q: 问题262：是否现在冻结并实现以下约束：真实 worker CLI 不再直接 spawn Provider；必须由本次 execution 专属的 ProviderAuthRuntime sidecar 完成 verify、challenge、launch、framed result channel 和 cleanup。缺少 sidecar、launch handle 或 channel 在 Provider 启动前 blocked；Provider 已启动后 channel 断连、乱序、超时或 cleanup 不可证明进入 outcome-uncertain。现有本地 Provider adapter 仅保留为 Runtime/协议测试 fixture，不作为真实 worker 的旁路执行入口？ → 同意 (先实现 provider-neutral Runtime IPC launch/channel 垂直切片；Runtime 负责 Provider launch 与 channel，worker 不直接 spawn。TrustedRunner post-run proof 仍保持独立，不接受 Runtime 或 Provider 自报替代。)
+- Q: 问题263：Runtime bootstrap challenge 是否必须增加独立的短时内存 TTL（推荐 30 秒），超时未消费直接 blocked，消费后立即失效，且不写入任何持久化 artifact？ → 同意 (采用 30 秒内存 TTL；challenge 只在 Runtime 内存中短时存在，消费后立即失效，超时、断连、重复消费和身份漂移直接 blocked。)
+- Q: 问题264：Runtime identity fingerprint、runtime manifest digest 与 provider capabilities digest 是否必须纳入 sidecar admission、bootstrap challenge、launch handle 和 cleanup proof 的不可变绑定？ → 同意 (sidecar 启动前必须校验三类 Runtime identity/capability digest；任一缺失、漂移或 capability 超集直接 blocked，不能继续使用旧 challenge 或 launch handle。)
+- Q: 问题265：在当前没有线上用户的前提下，ProviderLaunchHandle 与 ProviderCleanupProof 是否直接 enrich 现有 v1 schema，新增三个必填 Runtime identity/capability digest，而不做 v2 schema upgrade？ → 同意 (采用 enrich；现有 v1 直接增加 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 必填字段，并同步更新所有 producer、validator、client 和 fixture。)
 <!-- ROADMAP_SECTION_END -->

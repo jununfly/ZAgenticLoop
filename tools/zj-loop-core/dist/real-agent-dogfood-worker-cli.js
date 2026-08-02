@@ -56,9 +56,9 @@ async function runWorkerContext(contextPath) {
     if (!context.provider_runtime_ipc || typeof context.provider_runtime_ipc.socket_path !== 'string' || context.provider_runtime_ipc.socket_path.trim() === '' || typeof context.provider_runtime_ipc.contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.provider_runtime_ipc.contract_digest))
         throw new Error('worker-provider-runtime-ipc-required');
     const runtimeIpc = context.provider_runtime_ipc;
-    if (!runtimeIpc)
+    if (!runtimeIpc || !runtimeIpc.runtime_binding)
         throw new Error('worker-provider-runtime-ipc-required');
-    const runtimeProvider = createProviderRuntimeIpcProvider({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, network_id: context.network_id, node_id: authRef.node_id, provider_runtime_id: authRef.provider_runtime_id, provider_id: context.provider_id, execution_id: context.execution_id, attempt: authRef.attempt, auth_ref_digest: authRef.ref_digest, contract_digest: runtimeIpc.contract_digest, adapter_contract_digest: context.adapter_contract_digest });
+    const runtimeProvider = createProviderRuntimeIpcProvider({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, network_id: context.network_id, node_id: authRef.node_id, provider_runtime_id: authRef.provider_runtime_id, provider_id: context.provider_id, execution_id: context.execution_id, attempt: authRef.attempt, auth_ref_digest: authRef.ref_digest, contract_digest: runtimeIpc.contract_digest, adapter_contract_digest: context.adapter_contract_digest, runtime_binding: runtimeIpc.runtime_binding });
     const provider_cleanup = async () => {
         const handle = runtimeProvider.getLaunchHandle();
         if (!handle)

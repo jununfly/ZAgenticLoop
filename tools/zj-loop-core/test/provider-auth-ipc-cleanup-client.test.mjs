@@ -6,9 +6,14 @@ import path from 'node:path';
 import { createProviderRuntimeIpcCleanupCoordinator, createProviderRuntimeCleanupRequest } from '../dist/provider-auth-ipc-cleanup-client.js';
 import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from '../dist/provider-auth-ipc-unix.js';
-import { createInMemoryProviderAuthRuntime } from '../dist/provider-auth-runtime.js';
+import { createInMemoryProviderAuthRuntime as createInMemoryProviderAuthRuntimeImpl } from '../dist/provider-auth-runtime.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
+const runtimeBinding = { runtime_identity_fingerprint: digest('e'), runtime_manifest_digest: digest('f'), provider_capabilities_digest: digest('1') };
+const createInMemoryProviderAuthRuntime = (input) => {
+  const runtime = createInMemoryProviderAuthRuntimeImpl(input);
+  return { ...runtime, launch: (request) => runtime.launch({ ...request, runtime_binding: request.runtime_binding ?? runtimeBinding }) };
+};
 
 async function launchedRuntime() {
   const runtime = createInMemoryProviderAuthRuntime({ runtime_id: 'runtime-1', provider_ids: ['codex'], now: () => '2026-08-02T12:00:00.000Z' });
@@ -27,7 +32,7 @@ test('Runtime IPC cleanup coordinator accepts only a bound Runtime cleanup diges
     assert.equal(request.kind, 'cleanup');
     const cleanup = await runtime.cleanup({ handle, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, cleaned_at: '2026-08-02T12:01:00.000Z' });
     assert.equal(cleanup.status, 'cleaned');
-    await connection.send(createProviderAuthIpcFrame({ correlation_id: 'corr-cleanup', sequence: 1, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'runtime-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, kind: 'cleanup', launch_handle_digest: handle.handle_digest, payload: { schema: 'zj-loop.provider_cleanup_response.v1', status: 'cleaned', cleanup_digest: cleanup.proof.cleanup_digest } }));
+    await connection.send(createProviderAuthIpcFrame({ correlation_id: 'corr-cleanup', sequence: 1, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'runtime-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, kind: 'cleanup', launch_handle_digest: handle.handle_digest, payload: { schema: 'zj-loop.provider_cleanup_response.v1', status: 'cleaned', cleanup_digest: cleanup.proof.cleanup_digest, runtime_identity_fingerprint: cleanup.proof.runtime_identity_fingerprint, runtime_manifest_digest: cleanup.proof.runtime_manifest_digest, provider_capabilities_digest: cleanup.proof.provider_capabilities_digest } }));
   } });
   try {
     await server.start();

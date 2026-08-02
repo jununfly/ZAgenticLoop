@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { connectUnixProviderAuthIpc } from './provider-auth-ipc-unix.js';
 import { createProviderAuthIpcFrame, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
-import { validateProviderLaunchHandle, type ProviderLaunchHandle } from './provider-auth-runtime.js';
+import { validateProviderLaunchHandle, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 
 const CLEANUP_REQUEST_SCHEMA = 'zj-loop.provider_cleanup_request.v1';
 const CLEANUP_RESPONSE_SCHEMA = 'zj-loop.provider_cleanup_response.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
+
+const bindingMatches = (value: Record<string, unknown>, binding: ProviderRuntimeIdentityBinding) => value.runtime_identity_fingerprint === binding.runtime_identity_fingerprint
+  && value.runtime_manifest_digest === binding.runtime_manifest_digest
+  && value.provider_capabilities_digest === binding.provider_capabilities_digest;
 
 export type ProviderRuntimeIpcCleanupInput = {
   socket_path: string;
@@ -45,7 +49,8 @@ export function createProviderRuntimeIpcCleanupCoordinator(input: ProviderRuntim
       if (frame.kind === 'error') return { status: 'uncertain', reason: 'provider-runtime-cleanup-rejected' };
       if (!frame.payload || typeof frame.payload !== 'object' || Array.isArray(frame.payload)) return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-invalid' };
       const payload = frame.payload as Record<string, unknown>;
-      if (Object.keys(payload).some((key) => !['schema', 'status', 'cleanup_digest', 'reason'].includes(key)) || payload.schema !== CLEANUP_RESPONSE_SCHEMA) return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-invalid' };
+      if (Object.keys(payload).some((key) => !['schema', 'status', 'cleanup_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'reason'].includes(key)) || payload.schema !== CLEANUP_RESPONSE_SCHEMA) return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-invalid' };
+      if (!bindingMatches(payload, handle.handle)) return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-binding-mismatch' };
       if (payload.status !== 'cleaned' || typeof payload.cleanup_digest !== 'string' || !DIGEST.test(payload.cleanup_digest)) return { status: 'uncertain', reason: typeof payload.reason === 'string' && payload.reason.trim() ? payload.reason : 'provider-runtime-cleanup-not-proven' };
       return { status: 'cleaned', proof_digest: payload.cleanup_digest };
     } catch (error) {
@@ -69,6 +74,6 @@ export function createProviderRuntimeCleanupRequest(input: { correlation_id: str
     attempt: input.attempt,
     kind: 'cleanup',
     launch_handle_digest: input.handle.handle_digest,
-    payload: { schema: CLEANUP_REQUEST_SCHEMA, handle_id: input.handle.handle_id, cleaned_at: input.cleaned_at },
+    payload: { schema: CLEANUP_REQUEST_SCHEMA, handle_id: input.handle.handle_id, cleaned_at: input.cleaned_at, runtime_identity_fingerprint: input.handle.runtime_identity_fingerprint, runtime_manifest_digest: input.handle.runtime_manifest_digest, provider_capabilities_digest: input.handle.provider_capabilities_digest },
   });
 }

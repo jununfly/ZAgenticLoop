@@ -9,6 +9,7 @@ export declare function createUnixProviderAuthIpcServer(input: {
     socket_path: string;
     correlation_id: string;
     verify_peer: ProviderAuthIpcPeerVerifier;
+    on_connection?: (socket: Socket, connection: ProviderAuthIpcConnection) => void | Promise<void>;
     on_frames: (frames: ProviderAuthIpcFrame[], connection: ProviderAuthIpcConnection) => void | Promise<void>;
 }): {
     start(): Promise<void>;

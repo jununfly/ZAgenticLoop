@@ -1311,6 +1311,21 @@
           "q": "问题262：是否现在冻结并实现以下约束：真实 worker CLI 不再直接 spawn Provider；必须由本次 execution 专属的 ProviderAuthRuntime sidecar 完成 verify、challenge、launch、framed result channel 和 cleanup。缺少 sidecar、launch handle 或 channel 在 Provider 启动前 blocked；Provider 已启动后 channel 断连、乱序、超时或 cleanup 不可证明进入 outcome-uncertain。现有本地 Provider adapter 仅保留为 Runtime/协议测试 fixture，不作为真实 worker 的旁路执行入口？",
           "answer": "同意",
           "note": "先实现 provider-neutral Runtime IPC launch/channel 垂直切片；Runtime 负责 Provider launch 与 channel，worker 不直接 spawn。TrustedRunner post-run proof 仍保持独立，不接受 Runtime 或 Provider 自报替代。"
+        },
+        {
+          "q": "问题263：Runtime bootstrap challenge 是否必须增加独立的短时内存 TTL（推荐 30 秒），超时未消费直接 blocked，消费后立即失效，且不写入任何持久化 artifact？",
+          "answer": "同意",
+          "note": "采用 30 秒内存 TTL；challenge 只在 Runtime 内存中短时存在，消费后立即失效，超时、断连、重复消费和身份漂移直接 blocked。"
+        },
+        {
+          "q": "问题264：Runtime identity fingerprint、runtime manifest digest 与 provider capabilities digest 是否必须纳入 sidecar admission、bootstrap challenge、launch handle 和 cleanup proof 的不可变绑定？",
+          "answer": "同意",
+          "note": "sidecar 启动前必须校验三类 Runtime identity/capability digest；任一缺失、漂移或 capability 超集直接 blocked，不能继续使用旧 challenge 或 launch handle。"
+        },
+        {
+          "q": "问题265：在当前没有线上用户的前提下，ProviderLaunchHandle 与 ProviderCleanupProof 是否直接 enrich 现有 v1 schema，新增三个必填 Runtime identity/capability digest，而不做 v2 schema upgrade？",
+          "answer": "同意",
+          "note": "采用 enrich；现有 v1 直接增加 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 必填字段，并同步更新所有 producer、validator、client 和 fixture。"
         }
       ],
       "notes": ""
@@ -1400,7 +1415,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-02 20:15:38",
+    "updated": "2026-08-03 00:32:00",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

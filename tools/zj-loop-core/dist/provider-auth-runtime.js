@@ -4,7 +4,15 @@ export const PROVIDER_AUTH_REF_SCHEMA = 'zj-loop.provider_auth_ref.v1';
 export const PROVIDER_LAUNCH_HANDLE_SCHEMA = 'zj-loop.provider_launch_handle.v1';
 export const PROVIDER_CLEANUP_PROOF_SCHEMA = 'zj-loop.provider_cleanup_proof.v1';
 const PROVIDER_AUTH_REF_KEYS = new Set(['schema', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'issuer', 'audience', 'scope', 'issued_at', 'expires_at', 'status', 'ref_digest']);
-const PROVIDER_LAUNCH_HANDLE_KEYS = new Set(['schema', 'handle_id', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'endpoint_digest', 'contract_digest', 'adapter_contract_digest', 'issued_at', 'expires_at', 'status', 'handle_digest']);
+const PROVIDER_LAUNCH_HANDLE_KEYS = new Set(['schema', 'handle_id', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'endpoint_digest', 'contract_digest', 'adapter_contract_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'issued_at', 'expires_at', 'status', 'handle_digest']);
+function validRuntimeIdentityBinding(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const item = value;
+    return typeof item.runtime_identity_fingerprint === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_identity_fingerprint)
+        && typeof item.runtime_manifest_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_manifest_digest)
+        && typeof item.provider_capabilities_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.provider_capabilities_digest);
+}
 function canonical(value) {
     const json = canonicalize(value);
     if (typeof json !== 'string')
@@ -63,6 +71,7 @@ export function validateProviderLaunchHandle(value) {
         || !/^sha256:[0-9a-f]{64}$/.test(handle.endpoint_digest)
         || !/^sha256:[0-9a-f]{64}$/.test(handle.contract_digest)
         || !/^sha256:[0-9a-f]{64}$/.test(handle.adapter_contract_digest)
+        || !validRuntimeIdentityBinding(handle)
         || !Number.isFinite(Date.parse(handle.issued_at)) || !Number.isFinite(Date.parse(handle.expires_at))
         || Date.parse(handle.issued_at) >= Date.parse(handle.expires_at)
         || handle.status !== 'active'
@@ -93,6 +102,7 @@ export function createInMemoryProviderAuthRuntime(input) {
     const now = input.now ?? (() => new Date().toISOString());
     const runtime_id = input.runtime_id;
     const provider_ids = [...new Set(input.provider_ids)].sort();
+    const runtimeBinding = input.runtime_binding;
     return {
         async inspect() {
             return runtime_id.trim() && provider_ids.length > 0
@@ -139,11 +149,12 @@ export function createInMemoryProviderAuthRuntime(input) {
             const verified = await this.verify({ ref: request.ref, network_id: request.network_id, node_id: request.node_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, now: request.issued_at });
             if (verified.status === 'blocked')
                 return verified;
-            if (!request.contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.contract_digest) || !request.adapter_contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.adapter_contract_digest) || !Number.isFinite(Date.parse(request.issued_at)) || !Number.isFinite(Date.parse(request.expires_at)) || Date.parse(request.issued_at) >= Date.parse(request.expires_at))
+            const binding = request.runtime_binding ?? runtimeBinding;
+            if (!request.contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.contract_digest) || !request.adapter_contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.adapter_contract_digest) || !validRuntimeIdentityBinding(binding) || !Number.isFinite(Date.parse(request.issued_at)) || !Number.isFinite(Date.parse(request.expires_at)) || Date.parse(request.issued_at) >= Date.parse(request.expires_at))
                 return { status: 'blocked', reason: 'provider-launch-contract-invalid' };
             if ([...handles.values()].some((handle) => handle.auth_ref_id === request.ref.auth_ref_id && handle.status === 'active'))
                 return { status: 'blocked', reason: 'provider-launch-handle-already-issued' };
-            const unsigned = { schema: PROVIDER_LAUNCH_HANDLE_SCHEMA, handle_id: `handle-${randomUUID()}`, auth_ref_id: request.ref.auth_ref_id, network_id: request.network_id, node_id: request.node_id, provider_runtime_id: request.ref.provider_runtime_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, endpoint_digest: `sha256:${createHash('sha256').update(randomUUID(), 'utf8').digest('hex')}`, contract_digest: request.contract_digest, adapter_contract_digest: request.adapter_contract_digest, issued_at: request.issued_at, expires_at: request.expires_at, status: 'active' };
+            const unsigned = { schema: PROVIDER_LAUNCH_HANDLE_SCHEMA, handle_id: `handle-${randomUUID()}`, auth_ref_id: request.ref.auth_ref_id, network_id: request.network_id, node_id: request.node_id, provider_runtime_id: request.ref.provider_runtime_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, endpoint_digest: `sha256:${createHash('sha256').update(randomUUID(), 'utf8').digest('hex')}`, contract_digest: request.contract_digest, adapter_contract_digest: request.adapter_contract_digest, ...binding, issued_at: request.issued_at, expires_at: request.expires_at, status: 'active' };
             const handle = { ...unsigned, handle_digest: handleDigest(unsigned) };
             handles.set(handle.handle_id, handle);
             return { status: 'launched', handle };
@@ -162,7 +173,7 @@ export function createInMemoryProviderAuthRuntime(input) {
                 return revoked;
             const closed = { ...current, status: 'closed' };
             handles.set(closed.handle_id, { ...closed, handle_digest: handleDigest(closed) });
-            const unsigned = { schema: PROVIDER_CLEANUP_PROOF_SCHEMA, status: 'cleaned', auth_ref_id: current.auth_ref_id, handle_digest: current.handle_digest, endpoint_digest: current.endpoint_digest, network_id: current.network_id, node_id: current.node_id, provider_runtime_id: current.provider_runtime_id, provider_id: current.provider_id, execution_id: current.execution_id, attempt: current.attempt, adapter_contract_digest: current.adapter_contract_digest, revoked: true, secret_cleared: true, cleaned_at: request.cleaned_at };
+            const unsigned = { schema: PROVIDER_CLEANUP_PROOF_SCHEMA, status: 'cleaned', auth_ref_id: current.auth_ref_id, handle_digest: current.handle_digest, endpoint_digest: current.endpoint_digest, network_id: current.network_id, node_id: current.node_id, provider_runtime_id: current.provider_runtime_id, provider_id: current.provider_id, execution_id: current.execution_id, attempt: current.attempt, adapter_contract_digest: current.adapter_contract_digest, runtime_identity_fingerprint: current.runtime_identity_fingerprint, runtime_manifest_digest: current.runtime_manifest_digest, provider_capabilities_digest: current.provider_capabilities_digest, revoked: true, secret_cleared: true, cleaned_at: request.cleaned_at };
             return { status: 'cleaned', proof: { ...unsigned, cleanup_digest: cleanupDigest(unsigned) } };
         },
         async consumeSecret(request) {

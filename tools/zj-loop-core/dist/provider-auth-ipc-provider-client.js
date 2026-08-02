@@ -54,7 +54,7 @@ export function createProviderRuntimeIpcProvider(input) {
                                     return;
                                 }
                                 const handle = validateProviderLaunchHandle(payload.handle);
-                                if (handle.status === 'blocked' || handle.handle.network_id !== input.network_id || handle.handle.node_id !== input.node_id || handle.handle.provider_runtime_id !== input.provider_runtime_id || handle.handle.provider_id !== input.provider_id || handle.handle.execution_id !== input.execution_id || handle.handle.attempt !== input.attempt || handle.handle.adapter_contract_digest !== input.adapter_contract_digest) {
+                                if (handle.status === 'blocked' || handle.handle.network_id !== input.network_id || handle.handle.node_id !== input.node_id || handle.handle.provider_runtime_id !== input.provider_runtime_id || handle.handle.provider_id !== input.provider_id || handle.handle.execution_id !== input.execution_id || handle.handle.attempt !== input.attempt || handle.handle.adapter_contract_digest !== input.adapter_contract_digest || handle.handle.runtime_identity_fingerprint !== input.runtime_binding.runtime_identity_fingerprint || handle.handle.runtime_manifest_digest !== input.runtime_binding.runtime_manifest_digest || handle.handle.provider_capabilities_digest !== input.runtime_binding.provider_capabilities_digest) {
                                     rejectTerminal(new Error('provider-runtime-ipc-launch-handle-invalid'));
                                     return;
                                 }
@@ -72,7 +72,7 @@ export function createProviderRuntimeIpcProvider(input) {
                         }
                     } });
                 timer = setTimeout(() => rejectTerminal(new Error('provider-runtime-ipc-provider-timeout')), timeout);
-                await connection.send(createProviderAuthIpcFrame({ correlation_id, sequence: 1, network_id: input.network_id, node_id: input.node_id, provider_runtime_id: input.provider_runtime_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, kind: 'challenge', nonce: randomUUID(), payload: { schema: LAUNCH_REQUEST_SCHEMA, auth_ref_digest: input.auth_ref_digest, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, task: { ...(input.task ?? {}), goal: request.prompt } } }));
+                await connection.send(createProviderAuthIpcFrame({ correlation_id, sequence: 1, network_id: input.network_id, node_id: input.node_id, provider_runtime_id: input.provider_runtime_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, kind: 'challenge', nonce: randomUUID(), payload: { schema: LAUNCH_REQUEST_SCHEMA, auth_ref_digest: input.auth_ref_digest, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, ...input.runtime_binding, task: { ...(input.task ?? {}), goal: request.prompt } } }));
                 const frame = await terminal;
                 if (frame.kind !== 'result') {
                     if (frame.kind === 'error' && frame.payload && typeof frame.payload === 'object' && !Array.isArray(frame.payload) && typeof frame.payload.code === 'string' && frame.payload.code.trim())

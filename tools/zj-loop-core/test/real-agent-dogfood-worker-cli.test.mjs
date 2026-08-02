@@ -9,7 +9,7 @@ import { createRealAgentDogfoodExecutionBinding } from '../dist/real-agent-dogfo
 import { createAdmissionBoundExecution } from '../dist/trusted-runner-admission-binding.js';
 import { trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
 import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
-import { createInMemoryProviderAuthRuntime } from '../dist/provider-auth-runtime.js';
+import { createInMemoryProviderAuthRuntime as createInMemoryProviderAuthRuntimeImpl } from '../dist/provider-auth-runtime.js';
 import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from '../dist/provider-auth-ipc-unix.js';
 import { createTrustedRunnerPostRunProofServer } from '../dist/trusted-runner-post-run-ipc.js';
@@ -18,6 +18,13 @@ import { createInMemoryTrustedRunnerPeerIdentityVerifier } from '../dist/trusted
 import { mkdir, mkdtemp, rm, writeFile, chmod } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+
+const digest = (letter) => `sha256:${letter.repeat(64)}`;
+const runtimeBinding = { runtime_identity_fingerprint: digest('e'), runtime_manifest_digest: digest('f'), provider_capabilities_digest: digest('1') };
+const createInMemoryProviderAuthRuntime = (input) => {
+  const runtime = createInMemoryProviderAuthRuntimeImpl(input);
+  return { ...runtime, launch: (request) => runtime.launch({ ...request, runtime_binding: request.runtime_binding ?? runtimeBinding }) };
+};
 
 function providerAuthRef(execution_id, attempt, provider_id = 'codex') {
   const unsigned = { schema: 'zj-loop.provider_auth_ref.v1', auth_ref_id: `auth-${execution_id}`, network_id: 'network-cli', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id, execution_id, attempt, issuer: 'provider-runtime-1', audience: 'model-api', scope: ['model:invoke'], issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z', status: 'active' };
@@ -83,7 +90,7 @@ test('worker context invokes the provider through the Runtime IPC channel', asyn
       assert.ok(launchHandle);
       const cleanup = await runtime.cleanup({ handle: launchHandle, network_id: 'network-cli', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-cli', attempt: 1, cleaned_at: '2026-08-01T12:01:00.000Z' });
       assert.equal(cleanup.status, 'cleaned');
-      await connection.send(createProviderAuthIpcFrame({ correlation_id: 'worker-runtime', sequence: 1, network_id: 'network-cli', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id: 'codex', execution_id: 'execution-cli', attempt: 1, kind: 'cleanup', launch_handle_digest: launchHandle.handle_digest, payload: { schema: 'zj-loop.provider_cleanup_response.v1', status: 'cleaned', cleanup_digest: cleanup.proof.cleanup_digest } }));
+      await connection.send(createProviderAuthIpcFrame({ correlation_id: 'worker-runtime', sequence: 1, network_id: 'network-cli', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id: 'codex', execution_id: 'execution-cli', attempt: 1, kind: 'cleanup', launch_handle_digest: launchHandle.handle_digest, payload: { schema: 'zj-loop.provider_cleanup_response.v1', status: 'cleaned', cleanup_digest: cleanup.proof.cleanup_digest, runtime_identity_fingerprint: cleanup.proof.runtime_identity_fingerprint, runtime_manifest_digest: cleanup.proof.runtime_manifest_digest, provider_capabilities_digest: cleanup.proof.provider_capabilities_digest } }));
     }
   } });
   const trustedRunnerSocketPath = path.join(root, 'trusted-runner.sock');
@@ -109,7 +116,7 @@ test('worker context invokes the provider through the Runtime IPC channel', asyn
       admission: { status: 'admitted', binding: { network_id: 'network-cli', runner_id: 'runner-cli', registry_revision: 1, registry_snapshot_digest: 'sha256:' + '3'.repeat(64), required_capabilities: ['process-boundary'], capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities), provider_auth_ref: issued.ref } },
     });
     const contextPath = path.join(root, 'worker-context.json');
-    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', provider_auth_ref: admission_bound_execution.binding.provider_auth_ref, adapter_contract_digest: 'sha256:' + '4'.repeat(64), provider_runtime_ipc: { socket_path: socketPath, correlation_id: 'worker-runtime', contract_digest: 'sha256:' + '5'.repeat(64) }, trusted_runner_post_run_ipc: { socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime' }, state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, admission_bound_execution, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1 }));
+    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', provider_auth_ref: admission_bound_execution.binding.provider_auth_ref, adapter_contract_digest: 'sha256:' + '4'.repeat(64), provider_runtime_ipc: { socket_path: socketPath, correlation_id: 'worker-runtime', contract_digest: 'sha256:' + '5'.repeat(64), runtime_binding: runtimeBinding }, trusted_runner_post_run_ipc: { socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime' }, state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, admission_bound_execution, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1 }));
     const stdout = [];
     const stderr = [];
     const exitCode = await runRealAgentDogfoodWorkerCli(['worker', '--provider-id', 'codex', '--context', contextPath], { stdout: (message) => stdout.push(message), stderr: (message) => stderr.push(message) });

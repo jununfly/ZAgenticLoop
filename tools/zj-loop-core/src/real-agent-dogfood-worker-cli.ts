@@ -10,6 +10,7 @@ import { projectRealAgentDogfoodLifecycle, type RealAgentDogfoodEvent } from './
 import { executeRealAgentDogfoodWorker } from './real-agent-dogfood-worker-runner.js';
 import type { RealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
+import type { ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { createProviderRuntimeIpcCleanupCoordinator } from './provider-auth-ipc-cleanup-client.js';
 import { createProviderRuntimeIpcProvider } from './provider-auth-ipc-provider-client.js';
 import { createTrustedRunnerPostRunProofFactory } from './trusted-runner-post-run-ipc.js';
@@ -61,7 +62,7 @@ type WorkerContext = {
   executable: string;
   goal: string;
   expected_revision: number;
-  provider_runtime_ipc?: { socket_path: string; correlation_id?: string; timeout_ms?: number; contract_digest: string };
+  provider_runtime_ipc?: { socket_path: string; correlation_id?: string; timeout_ms?: number; contract_digest: string; runtime_binding: ProviderRuntimeIdentityBinding };
   trusted_runner_post_run_ipc?: { socket_path: string; correlation_id: string; timeout_ms?: number };
 };
 
@@ -76,8 +77,8 @@ async function runWorkerContext(contextPath: string) {
   if (!authRef) throw new Error('worker-provider-auth-ref-required');
   if (!context.provider_runtime_ipc || typeof context.provider_runtime_ipc.socket_path !== 'string' || context.provider_runtime_ipc.socket_path.trim() === '' || typeof context.provider_runtime_ipc.contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.provider_runtime_ipc.contract_digest)) throw new Error('worker-provider-runtime-ipc-required');
   const runtimeIpc = context.provider_runtime_ipc;
-  if (!runtimeIpc) throw new Error('worker-provider-runtime-ipc-required');
-  const runtimeProvider = createProviderRuntimeIpcProvider({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, network_id: context.network_id as string, node_id: authRef.node_id, provider_runtime_id: authRef.provider_runtime_id, provider_id: context.provider_id as string, execution_id: context.execution_id as string, attempt: authRef.attempt, auth_ref_digest: authRef.ref_digest, contract_digest: runtimeIpc.contract_digest, adapter_contract_digest: context.adapter_contract_digest as string });
+  if (!runtimeIpc || !runtimeIpc.runtime_binding) throw new Error('worker-provider-runtime-ipc-required');
+  const runtimeProvider = createProviderRuntimeIpcProvider({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, network_id: context.network_id as string, node_id: authRef.node_id, provider_runtime_id: authRef.provider_runtime_id, provider_id: context.provider_id as string, execution_id: context.execution_id as string, attempt: authRef.attempt, auth_ref_digest: authRef.ref_digest, contract_digest: runtimeIpc.contract_digest, adapter_contract_digest: context.adapter_contract_digest as string, runtime_binding: runtimeIpc.runtime_binding });
   const provider_cleanup = async () => {
     const handle = runtimeProvider.getLaunchHandle();
     if (!handle) return { status: 'uncertain' as const, reason: 'provider-runtime-launch-handle-missing' };

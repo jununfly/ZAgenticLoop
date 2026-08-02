@@ -1,6 +1,11 @@
 export declare const PROVIDER_AUTH_REF_SCHEMA: "zj-loop.provider_auth_ref.v1";
 export declare const PROVIDER_LAUNCH_HANDLE_SCHEMA: "zj-loop.provider_launch_handle.v1";
 export declare const PROVIDER_CLEANUP_PROOF_SCHEMA: "zj-loop.provider_cleanup_proof.v1";
+export type ProviderRuntimeIdentityBinding = {
+    runtime_identity_fingerprint: string;
+    runtime_manifest_digest: string;
+    provider_capabilities_digest: string;
+};
 export type ProviderAuthRef = {
     schema: typeof PROVIDER_AUTH_REF_SCHEMA;
     auth_ref_id: string;
@@ -31,6 +36,9 @@ export type ProviderLaunchHandle = {
     endpoint_digest: string;
     contract_digest: string;
     adapter_contract_digest: string;
+    runtime_identity_fingerprint: string;
+    runtime_manifest_digest: string;
+    provider_capabilities_digest: string;
     issued_at: string;
     expires_at: string;
     status: 'active' | 'closed';
@@ -49,6 +57,9 @@ export type ProviderCleanupProof = {
     execution_id: string;
     attempt: number;
     adapter_contract_digest: string;
+    runtime_identity_fingerprint: string;
+    runtime_manifest_digest: string;
+    provider_capabilities_digest: string;
     revoked: boolean;
     secret_cleared: boolean;
     cleaned_at: string;
@@ -114,6 +125,7 @@ export type ProviderAuthRuntime = {
         attempt: number;
         contract_digest: string;
         adapter_contract_digest: string;
+        runtime_binding: ProviderRuntimeIdentityBinding;
         issued_at: string;
         expires_at: string;
     }): Promise<{
@@ -187,5 +199,6 @@ export declare function createProviderRuntimeCleanupCoordinator(input: {
 export declare function createInMemoryProviderAuthRuntime(input: {
     runtime_id: string;
     provider_ids: string[];
+    runtime_binding?: ProviderRuntimeIdentityBinding;
     now?: () => string;
 }): ProviderAuthRuntime;

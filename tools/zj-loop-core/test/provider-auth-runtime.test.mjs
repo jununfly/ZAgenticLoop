@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { createInMemoryProviderAuthRuntime, createProviderRuntimeCleanupCoordinator, providerAuthRefDigest, validateProviderAuthRef } from '../dist/provider-auth-runtime.js';
 
 const clock = () => '2026-08-02T12:00:00.000Z';
+const runtimeBinding = { runtime_identity_fingerprint: 'sha256:' + 'e'.repeat(64), runtime_manifest_digest: 'sha256:' + 'f'.repeat(64), provider_capabilities_digest: 'sha256:' + '1'.repeat(64) };
 
 test('ProviderAuthRuntime issues an opaque, node-bound ref without exposing secret in metadata', async () => {
   const runtime = createInMemoryProviderAuthRuntime({ runtime_id: 'provider-runtime-1', provider_ids: ['codex'], now: clock });
@@ -33,10 +34,10 @@ test('ProviderAuthRuntime issues one-time launch handles and returns a secret-fr
   const runtime = createInMemoryProviderAuthRuntime({ runtime_id: 'provider-runtime-1', provider_ids: ['codex'], now: clock });
   const issued = await runtime.issueRef({ network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, audience: 'model-api', scope: ['model:invoke'], secret: 'secret-value', issued_at: '2026-08-02T11:59:00.000Z', expires_at: '2026-08-02T13:00:00.000Z', human_authorized: true });
   assert.equal(issued.status, 'issued');
-  const launch = await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: 'sha256:' + 'b'.repeat(64), issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' });
+  const launch = await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: 'sha256:' + 'b'.repeat(64), runtime_binding: runtimeBinding, issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' });
   assert.equal(launch.status, 'launched');
   assert.equal(launch.handle.adapter_contract_digest, 'sha256:' + 'b'.repeat(64));
-  const duplicate = await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: 'sha256:' + 'b'.repeat(64), issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' });
+  const duplicate = await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: 'sha256:' + 'b'.repeat(64), runtime_binding: runtimeBinding, issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' });
   assert.deepEqual(duplicate, { status: 'blocked', reason: 'provider-launch-handle-already-issued' });
   const cleanup = await runtime.cleanup({ handle: launch.handle, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, cleaned_at: clock() });
   assert.equal(cleanup.status, 'cleaned');
@@ -50,14 +51,14 @@ test('ProviderAuthRuntime blocks a launch without an adapter contract digest', a
   const runtime = createInMemoryProviderAuthRuntime({ runtime_id: 'provider-runtime-1', provider_ids: ['codex'], now: clock });
   const issued = await runtime.issueRef({ network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, audience: 'model-api', scope: [], secret: 'secret', issued_at: '2026-08-02T11:59:00.000Z', expires_at: '2026-08-02T13:00:00.000Z', human_authorized: true });
   assert.equal(issued.status, 'issued');
-  assert.deepEqual(await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: '', issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' }), { status: 'blocked', reason: 'provider-launch-contract-invalid' });
+  assert.deepEqual(await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: '', runtime_binding: runtimeBinding, issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' }), { status: 'blocked', reason: 'provider-launch-contract-invalid' });
 });
 
 test('Runtime cleanup coordinator projects only a bound cleanup proof', async () => {
   const runtime = createInMemoryProviderAuthRuntime({ runtime_id: 'provider-runtime-1', provider_ids: ['codex'], now: clock });
   const issued = await runtime.issueRef({ network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, audience: 'model-api', scope: [], secret: 'secret', issued_at: '2026-08-02T11:59:00.000Z', expires_at: '2026-08-02T13:00:00.000Z', human_authorized: true });
   assert.equal(issued.status, 'issued');
-  const launched = await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: 'sha256:' + 'b'.repeat(64), issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' });
+  const launched = await runtime.launch({ ref: issued.ref, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, contract_digest: 'sha256:' + 'a'.repeat(64), adapter_contract_digest: 'sha256:' + 'b'.repeat(64), runtime_binding: runtimeBinding, issued_at: clock(), expires_at: '2026-08-02T13:00:00.000Z' });
   assert.equal(launched.status, 'launched');
   const cleanup = createProviderRuntimeCleanupCoordinator({ runtime, handle: launched.handle, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, cleaned_at: clock });
   const result = await cleanup();

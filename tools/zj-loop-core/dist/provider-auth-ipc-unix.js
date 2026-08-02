@@ -26,6 +26,14 @@ export function createUnixProviderAuthIpcServer(input) {
             server = net.createServer(async (socket) => {
                 connections.add(socket);
                 const connection = connectionFor(socket);
+                try {
+                    await input.on_connection?.(socket, connection);
+                }
+                catch {
+                    socket.destroy();
+                    connections.delete(socket);
+                    return;
+                }
                 let accepted = false;
                 try {
                     accepted = await input.verify_peer(socket);

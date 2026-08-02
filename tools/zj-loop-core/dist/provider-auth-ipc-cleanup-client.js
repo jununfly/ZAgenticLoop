@@ -5,6 +5,9 @@ import { validateProviderLaunchHandle } from './provider-auth-runtime.js';
 const CLEANUP_REQUEST_SCHEMA = 'zj-loop.provider_cleanup_request.v1';
 const CLEANUP_RESPONSE_SCHEMA = 'zj-loop.provider_cleanup_response.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
+const bindingMatches = (value, binding) => value.runtime_identity_fingerprint === binding.runtime_identity_fingerprint
+    && value.runtime_manifest_digest === binding.runtime_manifest_digest
+    && value.provider_capabilities_digest === binding.provider_capabilities_digest;
 export function createProviderRuntimeIpcCleanupCoordinator(input) {
     return async () => {
         const handle = validateProviderLaunchHandle(input.handle);
@@ -37,8 +40,10 @@ export function createProviderRuntimeIpcCleanupCoordinator(input) {
             if (!frame.payload || typeof frame.payload !== 'object' || Array.isArray(frame.payload))
                 return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-invalid' };
             const payload = frame.payload;
-            if (Object.keys(payload).some((key) => !['schema', 'status', 'cleanup_digest', 'reason'].includes(key)) || payload.schema !== CLEANUP_RESPONSE_SCHEMA)
+            if (Object.keys(payload).some((key) => !['schema', 'status', 'cleanup_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'reason'].includes(key)) || payload.schema !== CLEANUP_RESPONSE_SCHEMA)
                 return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-invalid' };
+            if (!bindingMatches(payload, handle.handle))
+                return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-binding-mismatch' };
             if (payload.status !== 'cleaned' || typeof payload.cleanup_digest !== 'string' || !DIGEST.test(payload.cleanup_digest))
                 return { status: 'uncertain', reason: typeof payload.reason === 'string' && payload.reason.trim() ? payload.reason : 'provider-runtime-cleanup-not-proven' };
             return { status: 'cleaned', proof_digest: payload.cleanup_digest };
@@ -65,6 +70,6 @@ export function createProviderRuntimeCleanupRequest(input) {
         attempt: input.attempt,
         kind: 'cleanup',
         launch_handle_digest: input.handle.handle_digest,
-        payload: { schema: CLEANUP_REQUEST_SCHEMA, handle_id: input.handle.handle_id, cleaned_at: input.cleaned_at },
+        payload: { schema: CLEANUP_REQUEST_SCHEMA, handle_id: input.handle.handle_id, cleaned_at: input.cleaned_at, runtime_identity_fingerprint: input.handle.runtime_identity_fingerprint, runtime_manifest_digest: input.handle.runtime_manifest_digest, provider_capabilities_digest: input.handle.provider_capabilities_digest },
     });
 }
