@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 19:44:28
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 20:15:38
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -100,4 +100,5 @@
 - Q: 问题259：Provider 已启动后的 adapter failure 是否必须由 TrustedRunner/ProviderAuthRuntime 注入受信任 cleanup coordinator；cleanup 返回可验证 proof 才允许将 adapter failure 定位为 blocked，cleanup 缺失、失败或 proof 不可验证必须升级为 outcome-uncertain，cleanup fact 纳入 provider-result evidence，adapter 不得自报 cleanup？ → 同意 (cleanup coordinator 属于编排边界，不属于 Provider adapter；结果状态必须反映 cleanup 可证明性。)
 - Q: 问题260：是否应提供一个 provider-neutral Runtime cleanup coordinator factory，将已发行的具体 ProviderLaunchHandle 与 execution/attempt binding 绑定到 ProviderAuthRuntime.cleanup；仅 Runtime 返回有效 cleanup_digest 时返回 cleaned proof，Runtime 拒绝、绑定漂移或异常统一返回 uncertain，不暴露 secret 或允许 adapter 自报 cleanup？ → 同意 (该 factory 只做 Runtime cleanup 事实到 runner coordinator 的受控投影，不改变 Runtime 的权限边界。)
 - Q: 问题261：真实 worker CLI 是否必须只通过 execution context 中已发行且绑定 adapter_contract_digest 的 ProviderLaunchHandle，加上本次 execution 专属的 Runtime IPC endpoint/correlation binding，创建 cleanup coordinator；handle/context 漂移或绑定不完整在 Provider 启动前 blocked，Provider 已启动后的 Runtime IPC 不可用、超时或响应漂移进入 outcome-uncertain？ → 同意 (worker 不直接持有 ProviderAuthRuntime，也不注入内存 Runtime；只通过受控 provider-neutral IPC client 请求 Runtime cleanup。启动前拒绝不完整或漂移的 handle/context，运行后 cleanup IPC 无法证明则保持 outcome-uncertain。)
+- Q: 问题262：是否现在冻结并实现以下约束：真实 worker CLI 不再直接 spawn Provider；必须由本次 execution 专属的 ProviderAuthRuntime sidecar 完成 verify、challenge、launch、framed result channel 和 cleanup。缺少 sidecar、launch handle 或 channel 在 Provider 启动前 blocked；Provider 已启动后 channel 断连、乱序、超时或 cleanup 不可证明进入 outcome-uncertain。现有本地 Provider adapter 仅保留为 Runtime/协议测试 fixture，不作为真实 worker 的旁路执行入口？ → 同意 (先实现 provider-neutral Runtime IPC launch/channel 垂直切片；Runtime 负责 Provider launch 与 channel，worker 不直接 spawn。TrustedRunner post-run proof 仍保持独立，不接受 Runtime 或 Provider 自报替代。)
 <!-- ROADMAP_SECTION_END -->
