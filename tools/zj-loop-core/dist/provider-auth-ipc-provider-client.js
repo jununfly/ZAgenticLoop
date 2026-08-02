@@ -34,7 +34,11 @@ export function createProviderRuntimeIpcProvider(input) {
                                 return;
                             }
                             if (frame.kind === 'launch-accepted' || frame.kind === 'stdout' || frame.kind === 'stderr' || frame.kind === 'result' || frame.kind === 'error' || frame.kind === 'exit') {
-                                if (frame.launch_handle_digest === undefined || (launch_handle && frame.launch_handle_digest !== launch_handle.handle_digest)) {
+                                if (frame.kind !== 'error' && frame.launch_handle_digest === undefined) {
+                                    rejectTerminal(new Error('provider-runtime-ipc-provider-handle-mismatch'));
+                                    return;
+                                }
+                                if (frame.kind === 'error' && launch_handle && frame.launch_handle_digest !== launch_handle.handle_digest) {
                                     rejectTerminal(new Error('provider-runtime-ipc-provider-handle-mismatch'));
                                     return;
                                 }
@@ -70,8 +74,11 @@ export function createProviderRuntimeIpcProvider(input) {
                 timer = setTimeout(() => rejectTerminal(new Error('provider-runtime-ipc-provider-timeout')), timeout);
                 await connection.send(createProviderAuthIpcFrame({ correlation_id, sequence: 1, network_id: input.network_id, node_id: input.node_id, provider_runtime_id: input.provider_runtime_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, kind: 'challenge', nonce: randomUUID(), payload: { schema: LAUNCH_REQUEST_SCHEMA, auth_ref_digest: input.auth_ref_digest, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, task: { ...(input.task ?? {}), goal: request.prompt } } }));
                 const frame = await terminal;
-                if (frame.kind !== 'result')
+                if (frame.kind !== 'result') {
+                    if (frame.kind === 'error' && frame.payload && typeof frame.payload === 'object' && !Array.isArray(frame.payload) && typeof frame.payload.code === 'string' && frame.payload.code.trim())
+                        throw new Error(frame.payload.code);
                     throw new Error(frame.kind === 'error' ? 'provider-runtime-ipc-provider-rejected' : 'provider-runtime-ipc-provider-terminated');
+                }
                 if (!frame.payload || typeof frame.payload !== 'object' || Array.isArray(frame.payload))
                     throw new Error('provider-runtime-ipc-result-invalid');
                 const payload = frame.payload;

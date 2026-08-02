@@ -48,7 +48,9 @@ function validateFrameShape(value: unknown): { status: 'valid' } | { status: 'bl
   if (item.payload !== undefined && typeof item.payload !== 'string' && (!item.payload || typeof item.payload !== 'object' || Array.isArray(item.payload))) return { status: 'blocked', reason: 'provider-auth-ipc-frame-payload-invalid' };
   const kind = item.kind as ProviderAuthIpcFrameKind;
   if (kind === 'challenge' && !validId(item.nonce)) return { status: 'blocked', reason: 'provider-auth-ipc-challenge-nonce-required' };
-  if (['launch-accepted', 'stdout', 'stderr', 'result', 'error', 'exit', 'cleanup'].includes(kind) && !validDigest(item.launch_handle_digest)) return { status: 'blocked', reason: 'provider-auth-ipc-launch-handle-required' };
+  // A pre-launch error has no handle yet; all post-launch frames remain handle-bound.
+  if (['launch-accepted', 'stdout', 'stderr', 'result', 'exit', 'cleanup'].includes(kind) && !validDigest(item.launch_handle_digest)) return { status: 'blocked', reason: 'provider-auth-ipc-launch-handle-required' };
+  if (kind === 'error' && item.launch_handle_digest !== undefined && !validDigest(item.launch_handle_digest)) return { status: 'blocked', reason: 'provider-auth-ipc-launch-handle-invalid' };
   if (['stdout', 'stderr', 'result', 'error', 'exit', 'cleanup'].includes(kind) && item.payload === undefined) return { status: 'blocked', reason: 'provider-auth-ipc-payload-required' };
   return { status: 'valid' };
 }

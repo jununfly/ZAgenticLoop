@@ -1,0 +1,28 @@
+import { type ProviderAuthRef, type ProviderAuthRuntime, type ProviderLaunchHandle } from './provider-auth-runtime.js';
+import { type ProviderResult } from './provider-runtime-adapter.js';
+export type ProviderRuntimeSidecarInvocation = {
+    status: ProviderResult['status'];
+    success: boolean;
+    pid: number;
+    exit_code: number | null;
+    signal: string | null;
+    stdout: string;
+    stderr: string;
+    provider_result: ProviderResult;
+};
+export declare function createProviderAuthRuntimeIpcSidecar(input: {
+    socket_path: string;
+    correlation_id: string;
+    runtime: ProviderAuthRuntime;
+    auth_ref: ProviderAuthRef;
+    contract_digest: string;
+    adapter_contract_digest: string;
+    invoke: (input: {
+        task: Record<string, unknown>;
+        handle: ProviderLaunchHandle;
+    }) => Promise<ProviderRuntimeSidecarInvocation>;
+    now?: () => string;
+}): {
+    start(): Promise<void>;
+    close(): Promise<void>;
+};

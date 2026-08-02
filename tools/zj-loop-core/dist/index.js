@@ -178,4 +178,5 @@ export * from './provider-auth-ipc-protocol.js';
 export * from './provider-auth-ipc-unix.js';
 export * from './provider-auth-ipc-cleanup-client.js';
 export * from './provider-auth-ipc-provider-client.js';
+export * from './provider-auth-ipc-sidecar.js';
 export * from './trusted-runner-install-artifact.js';
