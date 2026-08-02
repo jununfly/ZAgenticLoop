@@ -1,6 +1,8 @@
 import canonicalize from 'canonicalize';
 import { createHash, randomUUID } from 'node:crypto';
 export const PROVIDER_AUTH_REF_SCHEMA = 'zj-loop.provider_auth_ref.v1';
+export const PROVIDER_LAUNCH_HANDLE_SCHEMA = 'zj-loop.provider_launch_handle.v1';
+export const PROVIDER_CLEANUP_PROOF_SCHEMA = 'zj-loop.provider_cleanup_proof.v1';
 const PROVIDER_AUTH_REF_KEYS = new Set(['schema', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'issuer', 'audience', 'scope', 'issued_at', 'expires_at', 'status', 'ref_digest']);
 function canonical(value) {
     const json = canonicalize(value);
@@ -11,6 +13,8 @@ function canonical(value) {
 function digest(value) {
     return `sha256:${createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`;
 }
+function handleDigest(value) { return `sha256:${createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`; }
+function cleanupDigest(value) { return `sha256:${createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`; }
 function normalizeScope(scope) {
     return [...new Set(scope)].sort();
 }
@@ -49,6 +53,7 @@ export function providerAuthRefDigest(ref) {
 export function createInMemoryProviderAuthRuntime(input) {
     const secrets = new Map();
     const refs = new Map();
+    const handles = new Map();
     const now = input.now ?? (() => new Date().toISOString());
     const runtime_id = input.runtime_id;
     const provider_ids = [...new Set(input.provider_ids)].sort();
@@ -93,6 +98,36 @@ export function createInMemoryProviderAuthRuntime(input) {
             refs.set(revoked.auth_ref_id, { ...revoked, ref_digest: digest(unsigned) });
             secrets.delete(revoked.auth_ref_id);
             return { status: 'revoked' };
+        },
+        async launch(request) {
+            const verified = await this.verify({ ref: request.ref, network_id: request.network_id, node_id: request.node_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, now: request.issued_at });
+            if (verified.status === 'blocked')
+                return verified;
+            if (!request.contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.contract_digest) || !Number.isFinite(Date.parse(request.issued_at)) || !Number.isFinite(Date.parse(request.expires_at)) || Date.parse(request.issued_at) >= Date.parse(request.expires_at))
+                return { status: 'blocked', reason: 'provider-launch-contract-invalid' };
+            if ([...handles.values()].some((handle) => handle.auth_ref_id === request.ref.auth_ref_id && handle.status === 'active'))
+                return { status: 'blocked', reason: 'provider-launch-handle-already-issued' };
+            const unsigned = { schema: PROVIDER_LAUNCH_HANDLE_SCHEMA, handle_id: `handle-${randomUUID()}`, auth_ref_id: request.ref.auth_ref_id, network_id: request.network_id, node_id: request.node_id, provider_runtime_id: request.ref.provider_runtime_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, endpoint_digest: `sha256:${createHash('sha256').update(randomUUID(), 'utf8').digest('hex')}`, contract_digest: request.contract_digest, issued_at: request.issued_at, expires_at: request.expires_at, status: 'active' };
+            const handle = { ...unsigned, handle_digest: handleDigest(unsigned) };
+            handles.set(handle.handle_id, handle);
+            return { status: 'launched', handle };
+        },
+        async cleanup(request) {
+            const current = handles.get(request.handle.handle_id);
+            if (!current || current.handle_digest !== request.handle.handle_digest || current.status !== 'active')
+                return { status: 'blocked', reason: 'provider-launch-handle-invalid' };
+            if (current.network_id !== request.network_id || current.node_id !== request.node_id || current.provider_id !== request.provider_id || current.execution_id !== request.execution_id || current.attempt !== request.attempt)
+                return { status: 'blocked', reason: 'provider-launch-handle-binding-mismatch' };
+            const ref = refs.get(current.auth_ref_id);
+            if (!ref)
+                return { status: 'blocked', reason: 'provider-auth-ref-not-found' };
+            const revoked = await this.revoke({ auth_ref_id: ref.auth_ref_id });
+            if (revoked.status === 'blocked')
+                return revoked;
+            const closed = { ...current, status: 'closed' };
+            handles.set(closed.handle_id, { ...closed, handle_digest: handleDigest(closed) });
+            const unsigned = { schema: PROVIDER_CLEANUP_PROOF_SCHEMA, status: 'cleaned', auth_ref_id: current.auth_ref_id, handle_digest: current.handle_digest, endpoint_digest: current.endpoint_digest, network_id: current.network_id, node_id: current.node_id, provider_runtime_id: current.provider_runtime_id, provider_id: current.provider_id, execution_id: current.execution_id, attempt: current.attempt, revoked: true, secret_cleared: true, cleaned_at: request.cleaned_at };
+            return { status: 'cleaned', proof: { ...unsigned, cleanup_digest: cleanupDigest(unsigned) } };
         },
         async consumeSecret(request) {
             const verified = await this.verify(request);

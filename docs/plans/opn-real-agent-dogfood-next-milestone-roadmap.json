@@ -1151,6 +1151,106 @@
           "q": "问题230：Framed IPC 的 MVP 编码是否采用 4-byte big-endian length prefix + canonical JSON UTF-8 payload，而不是裸 JSONL；每帧限制最大字节数、schema/version、sequence、request/response correlation，并拒绝长度溢出、重复、乱序、未知字段和非 UTF-8 数据？",
           "answer": "同意",
           "note": "采用 4-byte big-endian length prefix + canonical JSON UTF-8 payload；帧带 schema/version、sequence、correlation，受最大长度约束，拒绝溢出、重复、乱序、未知字段和非 UTF-8。"
+        },
+        {
+          "q": "问题231：由于 Node.js 本身不能跨平台直接可靠取得 Unix socket / named pipe 的 OS peer identity，MVP 是否采用 OS 原生 peer identity adapter + Runtime 签发 bootstrap challenge 双重校验：macOS 由 native helper 提供 process audit identity，Linux 使用 peer credentials，Windows 使用 named-pipe impersonation/token identity；无法取得平台级 peer identity 时直接 blocked，不降级为仅凭随机 token？",
+          "answer": "同意",
+          "note": "采用 OS 原生 peer identity adapter 与 Runtime bootstrap challenge 双重校验；平台级 peer identity 不可取得时直接 blocked，不降级为仅凭随机 token。"
+        },
+        {
+          "q": "问题232：Runtime bootstrap challenge 是否必须是一次性、短时、仅内存保存的启动事实，绑定 runtime_identity + worker_process_identity + network/node/provider/execution/attempt + endpoint + nonce；不得写入 StateStore/EvidenceStore、环境变量或命令行，超时、断连、重复消费和 worker PID/identity 漂移直接失效？",
+          "answer": "同意",
+          "note": "bootstrap challenge 仅在 Runtime 内存中短时存在且一次性消费，绑定 runtime/worker/process/execution 全部身份与 endpoint；超时、断连、重复消费或 identity 漂移直接失效，不进入任何 artifact。"
+        },
+        {
+          "q": "问题233：每次 Provider execution 结束或异常时，Runtime 是否必须清理 endpoint、bootstrap challenge、launch handle 和临时 IPC state，并生成仅含 metadata/digest 的 cleanup fact；清理后 endpoint 不可重新连接，任何残留或无法证明清理都进入 outcome-uncertain？",
+          "answer": "同意",
+          "note": "Runtime 必须清理 endpoint、bootstrap challenge、launch handle 与临时 IPC state，并生成 metadata/digest cleanup fact；清理后 endpoint 不可复用，残留或清理不可证明进入 outcome-uncertain。"
+        },
+        {
+          "q": "问题234：cleanup fact 是否必须由 ProviderAuthRuntime identity 签名，并绑定 runtime_manifest_digest、AuthRef digest、launch_handle digest、endpoint digest、execution/attempt、Provider exit fact、cleanup timestamps 和清理结果；Verifier 不接受 worker 或 Provider 自报的 cleanup fact？",
+          "answer": "同意",
+          "note": "cleanup fact 必须由 Runtime identity 签名并绑定完整 execution/attempt 与 endpoint/handle/manifest facts；Verifier 不接受 worker 或 Provider 自报。"
+        },
+        {
+          "q": "问题235：Runtime identity 被撤销或 manifest digest 发生漂移后，历史 cleanup fact 是否仍可作为过去发生过的事实进行签名校验，但不得再用于新的 execution admission、launch 或 AuthRef issuance；新的执行必须重新 provision/verify，并获得新的 Human authorization？",
+          "answer": "同意",
+          "note": "历史 cleanup fact 保持可审计但不可授权复用；Runtime identity/manifest 撤销或漂移后，新的 execution 必须重新 provision/verify 并取得新的 Human authorization。"
+        },
+        {
+          "q": "问题236：ProviderAuthRuntime 升级是否采用新 manifest、新 runtime identity、新 provision/verify 模型，而不是原地更新 manifest；旧 Runtime 可继续负责已启动 execution 的终止与 cleanup，但不得发行新 AuthRef，升级完成后必须由 Human 明确确认新的 Runtime identity 才能恢复执行？",
+          "answer": "同意",
+          "note": "Runtime 升级创建新的 manifest/identity 并重新 provision/verify；旧 Runtime 仅负责既有 execution 的终止与 cleanup，不再发行新 AuthRef。新 Runtime 必须重新 Human 确认后才能执行。"
+        },
+        {
+          "q": "问题237：ProviderAuthRuntime launch 是否应接收不可变 execution contract（provider、execution/attempt、worktree、goal digest、network policy、output limits 和 adapter digest），由 Runtime 自己选择固定 Provider invocation；worker 只能通过 framed channel 发送已绑定的结构化 task payload，不能传入任意 executable、argv、环境变量或 credential 参数？",
+          "answer": "同意",
+          "note": "Runtime launch 只接受不可变 execution contract，并固定 Provider invocation；worker 只能发送绑定 execution 的结构化 task payload，不得注入 executable、argv、环境变量或 credential。"
+        },
+        {
+          "q": "问题238：为保持进程证明闭合，是否由 TrustedRunner 先启动 worker 与本次 execution 专属的 ProviderAuthRuntime sidecar，并将二者放入同一个受控 process boundary；Runtime 再在该 boundary 内启动 Provider。这样 TrustedRunner 负责观察 worker、Runtime、Provider 全部后代，Runtime 负责 credential/launch/cleanup，二者各自产生独立 proof？",
+          "answer": "同意",
+          "note": "TrustedRunner 启动本次 execution 专属的 Runtime sidecar 与 worker，并将 Runtime/worker/Provider 纳入同一 process boundary；Runtime 与 TrustedRunner 各自产生独立 proof，职责不合并。"
+        },
+        {
+          "q": "问题239：Runtime sidecar 是否必须在 TrustedRunner launch 前完成独立 runtime manifest verification，并将 runtime_identity_fingerprint + runtime_manifest_digest + provider capability digest 纳入 execution admission；sidecar 只能消费与该 admission 完全匹配的 contract，未 provision、manifest 漂移或 capability 超集直接 blocked？",
+          "answer": "同意",
+          "note": "Runtime sidecar 在 TrustedRunner launch 前完成独立 manifest verification；runtime identity、manifest digest、provider capability 纳入 admission，任一缺失、漂移或超集直接 blocked。"
+        },
+        {
+          "q": "问题240：sidecar/worker/Provider 是否采用严格启动顺序：TrustedRunner 验证并启动 Runtime sidecar → sidecar 完成 peer identity handshake 和 execution contract verification → sidecar 返回 runtime-ready → TrustedRunner 启动 worker → worker 完成 AuthRef challenge → Runtime 签发一次性 launch handle → Runtime 启动 Provider；任一步失败都不启动后续进程？",
+          "answer": "同意",
+          "note": "采用严格启动顺序；Runtime 未 ready、contract/peer/AuthRef challenge 任一步失败，都不启动后续进程并进入对应 blocked 状态。"
+        },
+        {
+          "q": "问题241：sidecar 启动链中，若 Runtime 在启动前或 handshake 阶段失败，是否统一进入 blocked；若 Runtime 已启动 Provider 后才失联、无法确认终止或 cleanup，则进入 outcome-uncertain；两者都必须记录失败阶段、已启动进程、endpoint、challenge/launch handle 是否消费及 cleanup 结果，禁止把启动前失败与运行中不确定性混为同一状态？",
+          "answer": "同意",
+          "note": "启动前或 handshake 失败进入 blocked；Provider 已启动后若无法确认终止/cleanup 进入 outcome-uncertain。两类状态分别记录阶段、进程、endpoint、handle/challenge 和 cleanup facts。"
+        },
+        {
+          "q": "问题242：正常退出是否采用固定逆序：Provider 发送终态 → Runtime 完成 credential revoke/cleanup → Runtime 关闭 Provider channel 并确认 Provider 退出 → worker 写入 bounded result 并退出 → Runtime 清理 endpoint/challenge/handle 并退出 → TrustedRunner 收集最终 process-boundary observation；任一环节顺序或确认缺失都不进入 verification-pending？",
+          "answer": "同意",
+          "note": "正常退出采用固定逆序；Provider/credential/channel/worker/Runtime/TrustedRunner 各阶段必须确认，任一缺失不得进入 verification-pending。"
+        },
+        {
+          "q": "问题243：异常退出或撤销时，是否允许 TrustedRunner 立即终止整个 process boundary（Provider、Runtime、worker），但必须将先清理后终止与强杀后无法确认 cleanup 区分记录；强杀只是停止副作用，不等于 credential cleanup 成功，最终仍需 Runtime reconciliation，无法证明时进入 outcome-uncertain？",
+          "answer": "同意",
+          "note": "强杀只停止 process boundary，不证明 credential cleanup；区分 cleanup-before-terminate 与 forced-terminate-uncertain，最终需 Runtime reconciliation，无法证明进入 outcome-uncertain。"
+        },
+        {
+          "q": "问题244：强杀后 Runtime reconciliation 是否必须是单次、有界、只读的本机状态查询，由原 Runtime identity 或已登记的 recovery verifier 签名；不得通过重新启动 Provider、重新读取 credential、自动刷新 AuthRef 或恢复原 execution 来补齐 cleanup proof？",
+          "answer": "同意",
+          "note": "强杀后只允许一次有界、只读 reconciliation；由原 Runtime identity 或登记的 recovery verifier 签名，禁止重启 Provider、读取 credential、刷新 AuthRef 或恢复 execution。"
+        },
+        {
+          "q": "问题245：原 Runtime 已失联或 identity 已撤销时，是否允许已预先登记且能力受限的 recovery verifier 只证明 endpoint/process/credential 状态可观察结果，但不能发行 AuthRef、启动 Provider、恢复 execution 或替代 Human Accept；若 recovery verifier 也无法证明完整 cleanup，最终保持 outcome-uncertain？",
+          "answer": "同意",
+          "note": "允许预先登记的受限 recovery verifier 只提供终态观察 proof；不得发行、启动、恢复或替代 Human Accept。无法证明完整 cleanup 时保持 outcome-uncertain。"
+        },
+        {
+          "q": "问题246：Recovery verifier 是否必须由 Human 显式 provision/enroll，并绑定固定的 verifier identity、平台能力 profile、观察范围和版本 digest；其权限只能是 read-only reconciliation，不能通过配置或运行时参数扩大为 Runtime/TrustedRunner/Provider 权限？",
+          "answer": "同意",
+          "note": "Recovery verifier 由 Human 显式 provision/enroll，绑定 identity、profile、观察范围和版本 digest；权限固定为只读 reconciliation，不可配置扩权。"
+        },
+        {
+          "q": "问题247：Recovery verifier 即使证明 cleanup 完整，是否也只能把 execution 从 outcome-uncertain 推进到 review-pending 或 human-reconciliation-ready，必须由 Human 重新 review/Accept 才能形成成功终态；不得自动恢复为 provider-completed 或跳过原有 review package？",
+          "answer": "同意",
+          "note": "Recovery proof 只能产生 human-reconciliation-ready/review-pending 输入；必须重新 Human review/Accept，不得自动恢复 provider-completed 或跳过 review package。"
+        },
+        {
+          "q": "问题248：Recovery proof 是否必须作为新的 append-only evidence 纳入 reconciliation package，并重新计算 review package digest；原 review package 保持不可变，Human Accept 必须明确绑定原执行事实 + recovery proof + 新 package digest，禁止原地修改旧 package 或复用旧 Accept？",
+          "answer": "同意",
+          "note": "Recovery proof 作为 append-only evidence 进入新的 reconciliation/review package；旧 package/Accept 不变，新 Accept 必须绑定原执行事实、recovery proof 与新 digest。"
+        },
+        {
+          "q": "问题249：为避免 1-4 无限扩展，当前里程碑是否只实现 ProviderAuthRuntime IPC 的主路径与 fail-closed 状态：verify → challenge → launch → framed channel → revoke/cleanup → 独立 proof；Recovery verifier、强杀后 reconciliation、Runtime identity upgrade migration 只记录稳定协议和状态契约，作为下一子节点实现，不在当前 slice 继续扩张？",
+          "answer": "同意",
+          "note": "当前 slice 只闭合 Runtime IPC 主路径与 fail-closed cleanup proof；Recovery verifier、强杀后 reconciliation、Runtime identity upgrade migration 后置实现，仅保留协议/状态契约。"
+        },
+        {
+          "q": "问题250：当前 1-4 的 IPC slice 设计是否已经足够冻结，现在开始实现 ProviderAuthRuntime verify → challenge → launch → framed channel → revoke/cleanup → proof 主路径，并把 recovery verifier 与 Runtime upgrade migration 留到后续子节点？",
+          "answer": "同意",
+          "note": "开始实现当前 IPC 主路径；recovery verifier 与 Runtime upgrade migration 后置。"
         }
       ],
       "notes": ""
@@ -1240,7 +1340,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-02 17:01:02",
+    "updated": "2026-08-02 18:52:38",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }
