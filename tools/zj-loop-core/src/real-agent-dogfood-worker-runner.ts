@@ -40,16 +40,14 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
   const normalized = result.provider_result ?? providerResultFromLocalProcess(result);
   const normalizedCheck = validateProviderResult(normalized);
   let cleanup: ProviderCleanupResult | { status: 'not-required' } = { status: 'not-required' };
-  if (normalizedCheck.status === 'blocked' || !result.success || result.status !== 'completed') {
-    if (!input.provider_cleanup) cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-unavailable' };
-    else {
-      try {
-        const candidate = await input.provider_cleanup();
-        cleanup = candidate.status === 'cleaned' && /^sha256:[0-9a-f]{64}$/.test(candidate.proof_digest)
-          ? candidate
-          : { status: 'uncertain', reason: candidate.status === 'uncertain' ? candidate.reason : 'cleanup-proof-invalid' };
-      } catch { cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' }; }
-    }
+  if (!input.provider_cleanup) cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-unavailable' };
+  else {
+    try {
+      const candidate = await input.provider_cleanup();
+      cleanup = candidate.status === 'cleaned' && /^sha256:[0-9a-f]{64}$/.test(candidate.proof_digest)
+        ? candidate
+        : { status: 'uncertain', reason: candidate.status === 'uncertain' ? candidate.reason : 'cleanup-proof-invalid' };
+    } catch { cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' }; }
   }
   const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
   const stderrEvidence = await input.evidenceStore.put({ content: result.stderr, kind: 'provider-stderr' });
@@ -75,6 +73,7 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
     reasonCode = cleanup.status === 'cleaned' ? `provider-${result.reason ?? result.status}` : `provider-${result.reason ?? result.status}-cleanup-uncertain`;
     nextAction = cleanup.status === 'cleaned' ? 'human-review-provider-failure' : 'human-reconcile-execution';
   }
+  else if (cleanup.status !== 'cleaned') { to = 'outcome-uncertain'; reasonCode = 'provider-completed-cleanup-uncertain'; nextAction = 'human-reconcile-execution'; }
   else if (!postRunProof) { to = 'outcome-uncertain'; reasonCode = 'post-run-proof-missing-or-invalid'; nextAction = 'human-reconcile-execution'; }
   else {
     const proof = verifyRealAgentDogfoodPostRunProof({ proof: postRunProof, execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest });

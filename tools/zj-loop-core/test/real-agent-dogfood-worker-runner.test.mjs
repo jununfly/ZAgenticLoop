@@ -54,7 +54,7 @@ test('worker persists bounded output evidence and advances only with post-run pr
   const postRunProofFactory = async (input) => createFakeRealAgentDogfoodPostRunProof(input);
   let request;
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run(input) { request = input; return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run(input) { request = input; return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, provider_cleanup: async () => ({ status: 'cleaned', proof_digest: d('6') }), post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'verification-pending');
     assert.equal(request.cwd, '/tmp/worktree');
     const events = await stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood', aggregate_id: 'dogfood-1' });
@@ -75,7 +75,7 @@ test('worker does not claim verification when post-run proof is missing', async 
   const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
   const admission_bound_execution = admissionBoundExecution({ execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, executable, cwd: '/tmp/worktree' });
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, provider_cleanup: async () => ({ status: 'cleaned', proof_digest: d('6') }), expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'outcome-uncertain');
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -124,7 +124,7 @@ test('worker rejects a tampered signed post-run proof', async () => {
     return proof;
   };
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, provider_cleanup: async () => ({ status: 'cleaned', proof_digest: d('6') }), post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'outcome-uncertain');
     assert.equal(result.reason_code, 'post-run-proof-invalid');
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }

@@ -85,7 +85,7 @@ test('worker context invokes the registered provider through the real local proc
     assert.equal(exitCode, 0);
     const result = JSON.parse(stdout[0]);
     assert.equal(result.status, 'outcome-uncertain');
-    assert.equal(result.reason_code, 'post-run-proof-missing-or-invalid');
+    assert.equal(result.reason_code, 'provider-completed-cleanup-uncertain');
     assert.match(result.stdout_digest, /^sha256:/);
     let finalStatus;
     for (let attempt = 0; attempt < 30; attempt++) {

@@ -24,19 +24,17 @@ export async function executeRealAgentDogfoodWorker(input) {
     const normalized = result.provider_result ?? providerResultFromLocalProcess(result);
     const normalizedCheck = validateProviderResult(normalized);
     let cleanup = { status: 'not-required' };
-    if (normalizedCheck.status === 'blocked' || !result.success || result.status !== 'completed') {
-        if (!input.provider_cleanup)
-            cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-unavailable' };
-        else {
-            try {
-                const candidate = await input.provider_cleanup();
-                cleanup = candidate.status === 'cleaned' && /^sha256:[0-9a-f]{64}$/.test(candidate.proof_digest)
-                    ? candidate
-                    : { status: 'uncertain', reason: candidate.status === 'uncertain' ? candidate.reason : 'cleanup-proof-invalid' };
-            }
-            catch {
-                cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' };
-            }
+    if (!input.provider_cleanup)
+        cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-unavailable' };
+    else {
+        try {
+            const candidate = await input.provider_cleanup();
+            cleanup = candidate.status === 'cleaned' && /^sha256:[0-9a-f]{64}$/.test(candidate.proof_digest)
+                ? candidate
+                : { status: 'uncertain', reason: candidate.status === 'uncertain' ? candidate.reason : 'cleanup-proof-invalid' };
+        }
+        catch {
+            cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' };
         }
     }
     const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
@@ -65,6 +63,11 @@ export async function executeRealAgentDogfoodWorker(input) {
         to = cleanup.status === 'cleaned' ? 'blocked' : 'outcome-uncertain';
         reasonCode = cleanup.status === 'cleaned' ? `provider-${result.reason ?? result.status}` : `provider-${result.reason ?? result.status}-cleanup-uncertain`;
         nextAction = cleanup.status === 'cleaned' ? 'human-review-provider-failure' : 'human-reconcile-execution';
+    }
+    else if (cleanup.status !== 'cleaned') {
+        to = 'outcome-uncertain';
+        reasonCode = 'provider-completed-cleanup-uncertain';
+        nextAction = 'human-reconcile-execution';
     }
     else if (!postRunProof) {
         to = 'outcome-uncertain';
