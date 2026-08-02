@@ -161,6 +161,29 @@ export declare function validateProviderAuthRef(value: unknown): {
     reason: string;
 };
 export declare function providerAuthRefDigest(ref: ProviderAuthRef): string;
+export declare function validateProviderLaunchHandle(value: unknown): {
+    status: 'valid';
+    handle: ProviderLaunchHandle;
+} | {
+    status: 'blocked';
+    reason: string;
+};
+export declare function createProviderRuntimeCleanupCoordinator(input: {
+    runtime: ProviderAuthRuntime;
+    handle: ProviderLaunchHandle;
+    network_id: string;
+    node_id: string;
+    provider_id: string;
+    execution_id: string;
+    attempt: number;
+    cleaned_at?: () => string;
+}): () => Promise<{
+    status: 'cleaned';
+    proof_digest: string;
+} | {
+    status: 'uncertain';
+    reason: string;
+}>;
 export declare function createInMemoryProviderAuthRuntime(input: {
     runtime_id: string;
     provider_ids: string[];

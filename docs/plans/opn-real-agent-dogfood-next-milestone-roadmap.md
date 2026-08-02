@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 19:23:30
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 19:44:28
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -98,4 +98,6 @@
 - Q: 问题257：ProviderRuntimeAdapter 的固定 invocation 身份是否必须以 adapter_id、adapter_version、binary_digest、argv_policy_digest 和 invocation_digest 组成不可变 adapter contract，并同时纳入 execution contract、Human approval summary/envelope、worker context、launch handle 与 cleanup proof；任一漂移、缺失或无法验证都在 Provider 启动前 blocked，禁止运行时静默替换 adapter？ → 同意 (adapter invocation digest 是执行身份的一部分；ProviderRuntimeAdapter 只能按已批准的固定 contract 运行，不能由 adapter 自报或在启动后变更。)
 - Q: 问题258：ProviderRuntimeAdapter 返回值是否必须先经过统一 provider-neutral ProviderResult validator；旧格式、未知字段、超界 result、状态与 success 矛盾或无法归一化时不得进入 verification-pending，Provider 已启动则记录 adapter-failure 并执行 cleanup，cleanup 不可证明为 outcome-uncertain，禁止 fallback 或自动重试？ → 同意 (ProviderResult validator 是 adapter 与生命周期之间的唯一结果边界；失败按已启动/未启动分别进入 cleanup/outcome-uncertain 或 blocked。)
 - Q: 问题259：Provider 已启动后的 adapter failure 是否必须由 TrustedRunner/ProviderAuthRuntime 注入受信任 cleanup coordinator；cleanup 返回可验证 proof 才允许将 adapter failure 定位为 blocked，cleanup 缺失、失败或 proof 不可验证必须升级为 outcome-uncertain，cleanup fact 纳入 provider-result evidence，adapter 不得自报 cleanup？ → 同意 (cleanup coordinator 属于编排边界，不属于 Provider adapter；结果状态必须反映 cleanup 可证明性。)
+- Q: 问题260：是否应提供一个 provider-neutral Runtime cleanup coordinator factory，将已发行的具体 ProviderLaunchHandle 与 execution/attempt binding 绑定到 ProviderAuthRuntime.cleanup；仅 Runtime 返回有效 cleanup_digest 时返回 cleaned proof，Runtime 拒绝、绑定漂移或异常统一返回 uncertain，不暴露 secret 或允许 adapter 自报 cleanup？ → 同意 (该 factory 只做 Runtime cleanup 事实到 runner coordinator 的受控投影，不改变 Runtime 的权限边界。)
+- Q: 问题261：真实 worker CLI 是否必须只通过 execution context 中已发行且绑定 adapter_contract_digest 的 ProviderLaunchHandle，加上本次 execution 专属的 Runtime IPC endpoint/correlation binding，创建 cleanup coordinator；handle/context 漂移或绑定不完整在 Provider 启动前 blocked，Provider 已启动后的 Runtime IPC 不可用、超时或响应漂移进入 outcome-uncertain？ → 同意 (worker 不直接持有 ProviderAuthRuntime，也不注入内存 Runtime；只通过受控 provider-neutral IPC client 请求 Runtime cleanup。启动前拒绝不完整或漂移的 handle/context，运行后 cleanup IPC 无法证明则保持 outcome-uncertain。)
 <!-- ROADMAP_SECTION_END -->

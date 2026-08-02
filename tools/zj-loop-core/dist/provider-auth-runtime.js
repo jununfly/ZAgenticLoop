@@ -4,6 +4,7 @@ export const PROVIDER_AUTH_REF_SCHEMA = 'zj-loop.provider_auth_ref.v1';
 export const PROVIDER_LAUNCH_HANDLE_SCHEMA = 'zj-loop.provider_launch_handle.v1';
 export const PROVIDER_CLEANUP_PROOF_SCHEMA = 'zj-loop.provider_cleanup_proof.v1';
 const PROVIDER_AUTH_REF_KEYS = new Set(['schema', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'issuer', 'audience', 'scope', 'issued_at', 'expires_at', 'status', 'ref_digest']);
+const PROVIDER_LAUNCH_HANDLE_KEYS = new Set(['schema', 'handle_id', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'endpoint_digest', 'contract_digest', 'adapter_contract_digest', 'issued_at', 'expires_at', 'status', 'handle_digest']);
 function canonical(value) {
     const json = canonicalize(value);
     if (typeof json !== 'string')
@@ -49,6 +50,41 @@ export function validateProviderAuthRef(value) {
 export function providerAuthRefDigest(ref) {
     const { ref_digest: _, ...unsigned } = ref;
     return digest(unsigned);
+}
+export function validateProviderLaunchHandle(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return { status: 'blocked', reason: 'provider-launch-handle-invalid' };
+    const handle = value;
+    const { handle_digest: _, ...unsigned } = handle;
+    if (Object.keys(handle).some((key) => !PROVIDER_LAUNCH_HANDLE_KEYS.has(key))
+        || handle.schema !== PROVIDER_LAUNCH_HANDLE_SCHEMA
+        || [handle.handle_id, handle.auth_ref_id, handle.network_id, handle.node_id, handle.provider_runtime_id, handle.provider_id, handle.execution_id].some((item) => typeof item !== 'string' || !item.trim())
+        || !Number.isInteger(handle.attempt) || handle.attempt < 1
+        || !/^sha256:[0-9a-f]{64}$/.test(handle.endpoint_digest)
+        || !/^sha256:[0-9a-f]{64}$/.test(handle.contract_digest)
+        || !/^sha256:[0-9a-f]{64}$/.test(handle.adapter_contract_digest)
+        || !Number.isFinite(Date.parse(handle.issued_at)) || !Number.isFinite(Date.parse(handle.expires_at))
+        || Date.parse(handle.issued_at) >= Date.parse(handle.expires_at)
+        || handle.status !== 'active'
+        || !/^sha256:[0-9a-f]{64}$/.test(handle.handle_digest)
+        || handle.handle_digest !== handleDigest(unsigned))
+        return { status: 'blocked', reason: 'provider-launch-handle-invalid' };
+    return { status: 'valid', handle };
+}
+export function createProviderRuntimeCleanupCoordinator(input) {
+    return async () => {
+        try {
+            const result = await input.runtime.cleanup({ handle: input.handle, network_id: input.network_id, node_id: input.node_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, cleaned_at: (input.cleaned_at ?? (() => new Date().toISOString()))() });
+            if (result.status === 'blocked')
+                return { status: 'uncertain', reason: result.reason };
+            if (!result.proof || !/^sha256:[0-9a-f]{64}$/.test(result.proof.cleanup_digest))
+                return { status: 'uncertain', reason: 'provider-runtime-cleanup-proof-invalid' };
+            return { status: 'cleaned', proof_digest: result.proof.cleanup_digest };
+        }
+        catch {
+            return { status: 'uncertain', reason: 'provider-runtime-cleanup-failed' };
+        }
+    };
 }
 export function createInMemoryProviderAuthRuntime(input) {
     const secrets = new Map();

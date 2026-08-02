@@ -177,4 +177,5 @@ export * from './provider-auth-runtime.js';
 export * from './provider-runtime-adapter.js';
 export * from './provider-auth-ipc-protocol.js';
 export * from './provider-auth-ipc-unix.js';
+export * from './provider-auth-ipc-cleanup-client.js';
 export * from './trusted-runner-install-artifact.js';

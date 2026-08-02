@@ -10,6 +10,8 @@ import { projectRealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle
 import { createLocalProcessAdapter } from './local-process-adapter.js';
 import { createRealAgentDogfoodProvider } from './real-agent-dogfood-provider-registry.js';
 import { executeRealAgentDogfoodWorker } from './real-agent-dogfood-worker-runner.js';
+import { validateProviderLaunchHandle } from './provider-auth-runtime.js';
+import { createProviderRuntimeIpcCleanupCoordinator } from './provider-auth-ipc-cleanup-client.js';
 const WORKER_CLI_SCHEMA = 'zj-loop.real_agent_dogfood_worker_cli.v1';
 export function runRealAgentDogfoodWorkerCli(argv = process.argv.slice(2), io) {
     const outputIo = io ?? defaultCliIo;
@@ -43,12 +45,25 @@ async function runWorkerContext(contextPath) {
     if (context.schema !== 'zj-loop.real_agent_dogfood_worker_context.v1')
         throw new Error('worker-context-schema-invalid');
     const required = ['state_store', 'evidence_store', 'network_id', 'dogfood_id', 'execution_id', 'worker_id', 'lease_id', 'worktree_path', 'executable', 'goal'];
-    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || typeof context.adapter_contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.adapter_contract_digest) || !context.binding || !context.admission_bound_execution || !Number.isInteger(context.expected_revision))
+    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || typeof context.adapter_contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.adapter_contract_digest) || !context.binding || !context.admission_bound_execution || !context.provider_auth_ref || !Number.isInteger(context.expected_revision))
         throw new Error('worker-context-invalid');
     if (context.provider_id !== 'codex')
         throw new Error('provider-not-registered');
     if (JSON.stringify(context.provider_auth_ref) !== JSON.stringify(context.admission_bound_execution.binding.provider_auth_ref))
         throw new Error('worker-provider-auth-ref-binding-invalid');
+    if ((context.provider_launch_handle && !context.provider_runtime_ipc) || (!context.provider_launch_handle && context.provider_runtime_ipc))
+        throw new Error('worker-provider-runtime-cleanup-binding-incomplete');
+    let provider_cleanup;
+    if (context.provider_launch_handle && context.provider_runtime_ipc) {
+        const handle = validateProviderLaunchHandle(context.provider_launch_handle);
+        if (handle.status === 'blocked')
+            throw new Error(handle.reason);
+        if (handle.handle.network_id !== context.network_id || handle.handle.node_id !== context.provider_auth_ref.node_id || handle.handle.provider_id !== context.provider_id || handle.handle.execution_id !== context.execution_id || handle.handle.attempt !== context.provider_auth_ref.attempt || handle.handle.adapter_contract_digest !== context.adapter_contract_digest)
+            throw new Error('worker-provider-launch-handle-binding-invalid');
+        if (typeof context.provider_runtime_ipc.socket_path !== 'string' || context.provider_runtime_ipc.socket_path.trim() === '')
+            throw new Error('worker-provider-runtime-ipc-invalid');
+        provider_cleanup = createProviderRuntimeIpcCleanupCoordinator({ socket_path: context.provider_runtime_ipc.socket_path, correlation_id: context.provider_runtime_ipc.correlation_id, timeout_ms: context.provider_runtime_ipc.timeout_ms, handle: handle.handle, network_id: context.network_id, node_id: handle.handle.node_id, provider_id: context.provider_id, execution_id: context.execution_id, attempt: handle.handle.attempt });
+    }
     const stateStore = createSqliteStateStore({ filename: context.state_store });
     try {
         const snapshot = await stateStore.readEvents({ network_id: context.network_id, aggregate_type: 'real-agent-dogfood', aggregate_id: context.dogfood_id });
@@ -61,7 +76,7 @@ async function runWorkerContext(contextPath) {
             throw new Error('worker-lease-invalid');
         const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store });
         const provider = createRealAgentDogfoodProvider({ provider_id: context.provider_id, executable: context.executable, process_adapter: createLocalProcessAdapter() });
-        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, post_run_proof_factory: provider.post_run_proof_factory, expected_revision: context.expected_revision });
+        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, provider_cleanup, post_run_proof_factory: provider.post_run_proof_factory, expected_revision: context.expected_revision });
         if (result.status !== 'verification-pending')
             return result;
         const verifierContextPath = `${contextPath}.verifier.json`;
