@@ -67,8 +67,8 @@ export function createTrustedRunnerPostRunProofServer(input) {
             await removeSocket(input.socket_path);
             server = net.createServer(async (socket) => {
                 try {
-                    const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id });
-                    if (peer.status !== 'verified' || !validateTrustedRunnerPeerIdentity(peer.identity)) {
+                    const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id, expected_identity_digest: input.expected_peer_identity_digest });
+                    if (peer.status !== 'verified' || !validateTrustedRunnerPeerIdentity(peer.identity) || peer.identity.identity_digest !== input.expected_peer_identity_digest) {
                         socket.destroy();
                         return;
                     }

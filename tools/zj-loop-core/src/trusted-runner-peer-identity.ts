@@ -17,6 +17,7 @@ export type TrustedRunnerPeerVerification =
 export type TrustedRunnerPeerIdentityVerifier = (input: {
   socket: Socket;
   correlation_id: string;
+  expected_identity_digest: string;
 }) => Promise<TrustedRunnerPeerVerification> | TrustedRunnerPeerVerification;
 
 export function validateTrustedRunnerPeerIdentity(value: unknown): value is TrustedRunnerPeerIdentity {
@@ -35,7 +36,9 @@ export function createInMemoryTrustedRunnerPeerIdentityVerifier(input: {
   allow?: boolean;
   reason?: string;
 }): TrustedRunnerPeerIdentityVerifier {
-  return () => input.allow === false
+  return ({ expected_identity_digest }) => input.allow === false
     ? { status: 'blocked', reason: input.reason ?? 'trusted-runner-peer-identity-rejected' }
+    : input.identity.identity_digest !== expected_identity_digest
+      ? { status: 'blocked', reason: 'trusted-runner-peer-identity-mismatch' }
     : { status: 'verified', identity: input.identity };
 }

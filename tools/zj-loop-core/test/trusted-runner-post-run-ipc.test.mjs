@@ -13,7 +13,7 @@ test('TrustedRunner post-run IPC returns a proof only from the bound endpoint', 
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-trusted-post-run-ipc-'));
   const socketPath = path.join(root, 'trusted-runner.sock');
   const verify_peer = createInMemoryTrustedRunnerPeerIdentityVerifier({ identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'process-audit', identity_digest: 'a'.repeat(64), process_id: 42 } });
-  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
+  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', expected_peer_identity_digest: 'a'.repeat(64), verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
   try {
     await server.start();
     const factory = createTrustedRunnerPostRunProofFactory({ socket_path: socketPath, correlation_id: 'trusted-correlation' });
@@ -27,7 +27,7 @@ test('TrustedRunner post-run IPC fails closed on correlation drift and unavailab
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-tr-ipc-b-'));
   const socketPath = path.join(root, 'trusted-runner.sock');
   const verify_peer = createInMemoryTrustedRunnerPeerIdentityVerifier({ identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'process-audit', identity_digest: 'a'.repeat(64), process_id: 42 } });
-  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
+  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', expected_peer_identity_digest: 'a'.repeat(64), verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
   try {
     await server.start();
     const drift = createTrustedRunnerPostRunProofFactory({ socket_path: socketPath, correlation_id: 'wrong-correlation', timeout_ms: 100 });
@@ -45,7 +45,7 @@ test('TrustedRunner post-run IPC closes a peer when platform identity verificati
     allow: false,
     reason: 'os-peer-identity-unavailable',
   });
-  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
+  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', expected_peer_identity_digest: 'b'.repeat(64), verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
   await server.start();
   const factory = createTrustedRunnerPostRunProofFactory({ socket_path: socketPath, correlation_id: 'trusted-correlation', timeout_ms: 100 });
   try {
@@ -59,7 +59,7 @@ test('TrustedRunner post-run IPC closes a peer when the verified identity shape 
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-trusted-post-run-ipc-'));
   const socketPath = path.join(root, 'trusted.sock');
   const verify_peer = () => ({ status: 'verified', identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'peer-credentials', identity_digest: 'c'.repeat(64), process_id: 44 } });
-  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
+  const server = createTrustedRunnerPostRunProofServer({ socket_path: socketPath, correlation_id: 'trusted-correlation', expected_peer_identity_digest: 'c'.repeat(64), verify_peer, issue: async (request) => createFakeRealAgentDogfoodPostRunProof(request) });
   await server.start();
   const factory = createTrustedRunnerPostRunProofFactory({ socket_path: socketPath, correlation_id: 'trusted-correlation', timeout_ms: 100 });
   try {

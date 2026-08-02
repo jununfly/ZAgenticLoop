@@ -17,6 +17,7 @@ export type TrustedRunnerPeerVerification = {
 export type TrustedRunnerPeerIdentityVerifier = (input: {
     socket: Socket;
     correlation_id: string;
+    expected_identity_digest: string;
 }) => Promise<TrustedRunnerPeerVerification> | TrustedRunnerPeerVerification;
 export declare function validateTrustedRunnerPeerIdentity(value: unknown): value is TrustedRunnerPeerIdentity;
 export declare function createInMemoryTrustedRunnerPeerIdentityVerifier(input: {

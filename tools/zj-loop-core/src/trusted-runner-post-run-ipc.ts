@@ -56,6 +56,7 @@ function validInput(value: unknown): value is ProofRequest {
 export function createTrustedRunnerPostRunProofServer(input: {
   socket_path: string;
   correlation_id: string;
+  expected_peer_identity_digest: string;
   issue: (request: ProofRequest) => Promise<RealAgentDogfoodPostRunProof>;
   verify_peer: TrustedRunnerPeerIdentityVerifier;
 }) {
@@ -66,8 +67,8 @@ export function createTrustedRunnerPostRunProofServer(input: {
       await removeSocket(input.socket_path);
       server = net.createServer(async (socket) => {
         try {
-          const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id });
-          if (peer.status !== 'verified' || !validateTrustedRunnerPeerIdentity(peer.identity)) { socket.destroy(); return; }
+          const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id, expected_identity_digest: input.expected_peer_identity_digest });
+          if (peer.status !== 'verified' || !validateTrustedRunnerPeerIdentity(peer.identity) || peer.identity.identity_digest !== input.expected_peer_identity_digest) { socket.destroy(); return; }
           const request = await readFrame(socket, 5_000) as Partial<WireRequest>;
           const response: WireResponse = request.schema === REQUEST_SCHEMA && request.correlation_id === input.correlation_id && typeof request.request_id === 'string' && validInput(request.input)
             ? await input.issue(request.input).then((proof) => ({ schema: RESPONSE_SCHEMA as typeof RESPONSE_SCHEMA, correlation_id: input.correlation_id, request_id: request.request_id as string, status: 'issued' as const, proof })).catch((error) => ({ schema: RESPONSE_SCHEMA as typeof RESPONSE_SCHEMA, correlation_id: input.correlation_id, request_id: request.request_id as string, status: 'blocked' as const, reason: error instanceof Error ? error.message : 'trusted-runner-post-run-proof-blocked' }))

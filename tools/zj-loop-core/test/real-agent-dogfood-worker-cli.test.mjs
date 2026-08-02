@@ -87,7 +87,7 @@ test('worker context invokes the provider through the Runtime IPC channel', asyn
     }
   } });
   const trustedRunnerSocketPath = path.join(root, 'trusted-runner.sock');
-  const trustedRunner = createTrustedRunnerPostRunProofServer({ socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime', verify_peer: createInMemoryTrustedRunnerPeerIdentityVerifier({ identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'process-audit', identity_digest: 'a'.repeat(64), process_id: 42 } }), issue: async (request) => createFakeRealAgentDogfoodPostRunProof({ ...request, runner_id: 'trusted-fixture' }) });
+  const trustedRunner = createTrustedRunnerPostRunProofServer({ socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime', expected_peer_identity_digest: 'a'.repeat(64), verify_peer: createInMemoryTrustedRunnerPeerIdentityVerifier({ identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'process-audit', identity_digest: 'a'.repeat(64), process_id: 42 } }), issue: async (request) => createFakeRealAgentDogfoodPostRunProof({ ...request, runner_id: 'trusted-fixture' }) });
   try {
     await server.start();
     await trustedRunner.start();

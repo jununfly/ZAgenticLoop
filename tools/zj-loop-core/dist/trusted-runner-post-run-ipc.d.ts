@@ -4,6 +4,7 @@ type ProofRequest = Parameters<RealAgentDogfoodPostRunProofFactory>[0];
 export declare function createTrustedRunnerPostRunProofServer(input: {
     socket_path: string;
     correlation_id: string;
+    expected_peer_identity_digest: string;
     issue: (request: ProofRequest) => Promise<RealAgentDogfoodPostRunProof>;
     verify_peer: TrustedRunnerPeerIdentityVerifier;
 }): {

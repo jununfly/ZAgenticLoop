@@ -16,7 +16,9 @@ export function validateTrustedRunnerPeerIdentity(value) {
     return false;
 }
 export function createInMemoryTrustedRunnerPeerIdentityVerifier(input) {
-    return () => input.allow === false
+    return ({ expected_identity_digest }) => input.allow === false
         ? { status: 'blocked', reason: input.reason ?? 'trusted-runner-peer-identity-rejected' }
-        : { status: 'verified', identity: input.identity };
+        : input.identity.identity_digest !== expected_identity_digest
+            ? { status: 'blocked', reason: 'trusted-runner-peer-identity-mismatch' }
+            : { status: 'verified', identity: input.identity };
 }
