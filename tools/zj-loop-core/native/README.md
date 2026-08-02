@@ -28,3 +28,23 @@ The private key is generated and retained by macOS Keychain. It is never
 serialized into the helper output, Node.js, OpenSSL, or a repository file.
 Production callers must use an explicit, protected helper path and should not
 use a repository-local compiled binary as a trust root.
+
+## macOS TrustedRunner peer identity helper
+
+`macos-process-audit-peer-identity.swift` is the macOS OS-peer adapter used by
+the TrustedRunner Unix-socket boundary. Build it with:
+
+```bash
+swiftc -O \
+  -framework Security \
+  -framework CryptoKit \
+  macos-process-audit-peer-identity.swift \
+  -o macos-process-audit-peer-identity
+```
+
+The helper receives an inherited accepted socket as FD 3 and obtains the peer
+PID from `LOCAL_PEERPID`. It then resolves that PID to a valid macOS code
+signature and returns a digest bound to the process ID and signing material.
+The TypeScript adapter verifies the helper digest, validates the response, and
+blocks when the OS identity is unavailable or drifts. It never accepts a
+random token or an Agent-supplied identity as a fallback.

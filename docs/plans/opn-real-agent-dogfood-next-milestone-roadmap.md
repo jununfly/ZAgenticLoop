@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 00:53:36
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 01:28:49
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -105,4 +105,8 @@
 - Q: 问题264：Runtime identity fingerprint、runtime manifest digest 与 provider capabilities digest 是否必须纳入 sidecar admission、bootstrap challenge、launch handle 和 cleanup proof 的不可变绑定？ → 同意 (sidecar 启动前必须校验三类 Runtime identity/capability digest；任一缺失、漂移或 capability 超集直接 blocked，不能继续使用旧 challenge 或 launch handle。)
 - Q: 问题265：在当前没有线上用户的前提下，ProviderLaunchHandle 与 ProviderCleanupProof 是否直接 enrich 现有 v1 schema，新增三个必填 Runtime identity/capability digest，而不做 v2 schema upgrade？ → 同意 (采用 enrich；现有 v1 直接增加 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 必填字段，并同步更新所有 producer、validator、client 和 fixture。)
 - Q: 问题266：三个 Runtime digest 是否应作为 AdmissionBoundExecution.binding.runtime_binding 的必填字段，由 Runtime provision/admission 阶段生成并冻结，再传递到 approval summary、worker context、challenge、launch handle 和 cleanup proof？ → 同意 (将 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 作为 admission binding 的必填 runtime_binding；在 Provider 启动前冻结并贯穿 approval、worker、challenge、launch 和 cleanup。)
+- Q: 问题267：是否进入真实 Runtime sidecar 编排切片：由 real-agent-dogfood resume 创建并启动本次 execution 专属的 ProviderAuthRuntime sidecar，生成真实 IPC endpoint/correlation，写入 worker context，并由 sidecar 调用固定 ProviderRuntimeAdapter；禁止继续用空缺的 provider_runtime_ipc 让 worker 进入 running？ → 同意 (进入真实 Runtime sidecar 编排；resume 必须为本次 execution 建立专属 sidecar、endpoint、challenge/launch/cleanup 生命周期，并让 worker 只通过该 sidecar 执行。)
+- Q: 问题268：首个真实 sidecar 是否采用 sidecar 自己持有私有 AuthRuntime，Human 显式批准后通过一次性受保护 stdin/Unix FD 注入 Provider secret；secret 不进入 StateStore、EvidenceStore、worker context 或命令行？ → 同意 (采用一次性受保护 stdin/Unix FD 注入；sidecar 在内存中持有 secret 并发行 AuthRef，所有持久化 context、StateStore、EvidenceStore、命令行和 stdout/stderr 均不包含 secret。)
+- Q: 问题269：是否采用继承的 Unix FD 作为 secret 输入，例如 --provider-secret-fd 3，由 Human 在启动 resume 前打开 pipe/FD 3；resume 将该 FD 原样传给 sidecar，sidecar 只读一次后立即关闭，resume、worker context、命令行参数和持久化 artifact 都不接触 secret？ → 同意 (采用继承 FD 的一次性 secret 输入；sidecar 只读一次并立即关闭，secret 不进入 resume、worker、StateStore、EvidenceStore 或命令行参数。)
+- Q: 问题270：是否先实现 macOS Unix socket process-audit peer identity adapter，再接入真实 sidecar；Linux peer credentials、Windows named-pipe token adapter 后续复用同一接口？ → 同意 (先实现 macOS 原生 process-audit adapter；平台无关接口保持稳定，无法获取真实 OS peer identity 时 fail-closed，Linux/Windows adapter 后置。)
 <!-- ROADMAP_SECTION_END -->
