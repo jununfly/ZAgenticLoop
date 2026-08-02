@@ -9,6 +9,10 @@ export type LocalExecutionPreflight = {
     task_id: string;
     execution_id: string;
     attempt: number;
+    runner_id: string;
+    registry_revision: number;
+    registry_snapshot_digest: string;
+    capabilities_digest: string;
     provider_id: string;
     adapter_version: string;
     executable: string;

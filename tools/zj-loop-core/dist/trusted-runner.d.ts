@@ -2,10 +2,13 @@ export declare const TRUSTED_RUNNER_PROTOCOL_SCHEMA: "zj-loop.trusted_runner_pro
 export declare const TRUSTED_RUNNER_PROOF_SCHEMA: "zj-loop.trusted_runner_proof.v1";
 export declare const TRUSTED_RUNNER_OBSERVATION_SCHEMA: "zj-loop.trusted_runner_observation.v1";
 export type TrustedRunnerExecutionContext = {
+    runner_id: string;
+    registry_revision: number;
     execution_id: string;
     attempt: number;
     preflight_digest: string;
     registry_snapshot_digest: string;
+    capabilities_digest: string;
     helper: {
         helper_id: string;
         helper_version: string;
@@ -28,10 +31,12 @@ export type TrustedRunnerProof = {
     status: 'signed' | 'blocked';
     runner_id: string;
     runner_version: string;
+    registry_revision: number;
     execution_id: string;
     attempt: number;
     preflight_digest: string;
     registry_snapshot_digest: string;
+    capabilities_digest: string;
     helper_digest: string;
     issued_at: string;
     expires_at: string;
@@ -42,10 +47,13 @@ export type TrustedRunnerObservation = {
     schema: typeof TRUSTED_RUNNER_OBSERVATION_SCHEMA;
     status: 'signed' | 'uncertain';
     runner_id: string;
+    registry_revision: number;
     execution_id: string;
     attempt: number;
     preflight_digest: string;
     proof_digest: string;
+    registry_snapshot_digest: string;
+    capabilities_digest: string;
     stdout_digest: string;
     stderr_digest: string;
     stdout_bytes: number;

@@ -7,10 +7,13 @@ export const TRUSTED_RUNNER_OBSERVATION_SCHEMA = 'zj-loop.trusted_runner_observa
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 
 export type TrustedRunnerExecutionContext = {
+  runner_id: string;
+  registry_revision: number;
   execution_id: string;
   attempt: number;
   preflight_digest: string;
   registry_snapshot_digest: string;
+  capabilities_digest: string;
   helper: { helper_id: string; helper_version: string; protocol_version: typeof TRUSTED_RUNNER_PROTOCOL_SCHEMA; executable_digest: string };
 };
 
@@ -30,10 +33,12 @@ export type TrustedRunnerProof = {
   status: 'signed' | 'blocked';
   runner_id: string;
   runner_version: string;
+  registry_revision: number;
   execution_id: string;
   attempt: number;
   preflight_digest: string;
   registry_snapshot_digest: string;
+  capabilities_digest: string;
   helper_digest: string;
   issued_at: string;
   expires_at: string;
@@ -45,10 +50,13 @@ export type TrustedRunnerObservation = {
   schema: typeof TRUSTED_RUNNER_OBSERVATION_SCHEMA;
   status: 'signed' | 'uncertain';
   runner_id: string;
+  registry_revision: number;
   execution_id: string;
   attempt: number;
   preflight_digest: string;
   proof_digest: string;
+  registry_snapshot_digest: string;
+  capabilities_digest: string;
   stdout_digest: string;
   stderr_digest: string;
   stdout_bytes: number;
@@ -102,19 +110,20 @@ export function createFakeTrustedRunner(input: { runner_id: string; runner_versi
   const boundary = input.boundary ?? { kind: 'process-group', process_group_id: `pg-${input.runner_id}`, job_object_id: null, child_process_count: 1, all_descendants_terminated: true, termination_sequence_digest: bytesDigest('terminated'), orphan_processes_detected: false, unknown_descendants_detected: false };
   return {
     async prepareExecution({ execution }) {
-      if (!execution.execution_id || execution.attempt < 1 || !digest(execution.preflight_digest) || !digest(execution.registry_snapshot_digest) || !digest(execution.helper.executable_digest)) throw new Error('trusted-runner-execution-context-invalid');
+      if (execution.runner_id !== input.runner_id || !execution.execution_id || !Number.isInteger(execution.registry_revision) || execution.registry_revision < 1 || execution.attempt < 1 || !digest(execution.preflight_digest) || !digest(execution.registry_snapshot_digest) || !digest(execution.capabilities_digest) || !digest(execution.helper.executable_digest)) throw new Error('trusted-runner-execution-context-invalid');
       const issuedAt = now();
       const expiresAt = new Date(Date.parse(issuedAt) + (input.expires_in_ms ?? 300_000)).toISOString();
-      const unsigned = { schema: TRUSTED_RUNNER_PROOF_SCHEMA, status: 'signed' as const, runner_id: input.runner_id, runner_version: runnerVersion, execution_id: execution.execution_id, attempt: execution.attempt, preflight_digest: execution.preflight_digest, registry_snapshot_digest: execution.registry_snapshot_digest, helper_digest: execution.helper.executable_digest, issued_at: issuedAt, expires_at: expiresAt };
+      const unsigned = { schema: TRUSTED_RUNNER_PROOF_SCHEMA, status: 'signed' as const, runner_id: execution.runner_id, runner_version: runnerVersion, registry_revision: execution.registry_revision, execution_id: execution.execution_id, attempt: execution.attempt, preflight_digest: execution.preflight_digest, registry_snapshot_digest: execution.registry_snapshot_digest, capabilities_digest: execution.capabilities_digest, helper_digest: execution.helper.executable_digest, issued_at: issuedAt, expires_at: expiresAt };
       const proof_digest = trustedRunnerProofDigest(unsigned);
       return { ...unsigned, proof_digest, signature: signatureFor(proof_digest, keys.privateKey, publicKeyPem, fingerprint) };
     },
     async launch({ execution, proof }) {
-      if (proof.status !== 'signed' || proof.execution_id !== execution.execution_id || proof.attempt !== execution.attempt || proof.preflight_digest !== execution.preflight_digest || !validSignature(proof.proof_digest, proof.signature)) throw new Error('trusted-runner-proof-invalid');
+      if (proof.status !== 'signed' || proof.runner_id !== execution.runner_id || proof.registry_revision !== execution.registry_revision || proof.execution_id !== execution.execution_id || proof.attempt !== execution.attempt || proof.preflight_digest !== execution.preflight_digest || proof.registry_snapshot_digest !== execution.registry_snapshot_digest || proof.capabilities_digest !== execution.capabilities_digest || proof.proof_digest !== trustedRunnerProofDigest({ schema: proof.schema, status: proof.status, runner_id: proof.runner_id, runner_version: proof.runner_version, registry_revision: proof.registry_revision, execution_id: proof.execution_id, attempt: proof.attempt, preflight_digest: proof.preflight_digest, registry_snapshot_digest: proof.registry_snapshot_digest, capabilities_digest: proof.capabilities_digest, helper_digest: proof.helper_digest, issued_at: proof.issued_at, expires_at: proof.expires_at }) || !validSignature(proof.proof_digest, proof.signature)) throw new Error('trusted-runner-proof-invalid');
       return { status: 'launched', execution_id: execution.execution_id, attempt: execution.attempt, process_boundary: { ...boundary } };
     },
     async observe({ execution, proof, launch, output }) {
-      const unsigned = { schema: TRUSTED_RUNNER_OBSERVATION_SCHEMA, status: 'signed' as const, runner_id: input.runner_id, execution_id: execution.execution_id, attempt: execution.attempt, preflight_digest: execution.preflight_digest, proof_digest: proof.proof_digest, stdout_digest: bytesDigest(output.stdout), stderr_digest: bytesDigest(output.stderr), stdout_bytes: Buffer.byteLength(output.stdout, 'utf8'), stderr_bytes: Buffer.byteLength(output.stderr, 'utf8'), output_truncated: false, process_boundary: { ...launch.process_boundary } };
+      if (proof.runner_id !== execution.runner_id || proof.registry_revision !== execution.registry_revision || proof.registry_snapshot_digest !== execution.registry_snapshot_digest || proof.capabilities_digest !== execution.capabilities_digest) throw new Error('trusted-runner-proof-binding-invalid');
+      const unsigned = { schema: TRUSTED_RUNNER_OBSERVATION_SCHEMA, status: 'signed' as const, runner_id: execution.runner_id, registry_revision: execution.registry_revision, execution_id: execution.execution_id, attempt: execution.attempt, preflight_digest: execution.preflight_digest, proof_digest: proof.proof_digest, registry_snapshot_digest: execution.registry_snapshot_digest, capabilities_digest: execution.capabilities_digest, stdout_digest: bytesDigest(output.stdout), stderr_digest: bytesDigest(output.stderr), stdout_bytes: Buffer.byteLength(output.stdout, 'utf8'), stderr_bytes: Buffer.byteLength(output.stderr, 'utf8'), output_truncated: false, process_boundary: { ...launch.process_boundary } };
       const observation_digest = trustedRunnerObservationDigest(unsigned);
       return { ...unsigned, signature: signatureFor(observation_digest, keys.privateKey, publicKeyPem, fingerprint) };
     },

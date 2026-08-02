@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 01:54:03
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 11:52:08
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -137,4 +137,18 @@ Lifecycle contract, pure projection, replay admission, network-level StateStore 
 - Q: 问题158：Human authority set 的最小 mutation 是否冻结为 initialize、add、rotate、revoke 四类；每次 mutation 必须由当前 active authority 签名，并绑定旧 authority-set digest、目标 digest、原因和 CAS revision？ → 同意 (authority mutation 使用显式状态机，所有动作由 active authority 签名并经过旧状态、目标状态、network revision、replay/idempotency 校验；禁止泛化 patch。)
 - Q: 问题159：是否禁止撤销或轮换最后一个 active Human authority，保证网络永远保留至少一个可负责、可恢复的 Human authority；若需更换最后一个 authority，必须采用单个原子 rotate，而不是先 revoke 再 add？ → 同意 (authority set 不允许归零；最后一个 active authority 只能原子 rotate。任何会使网络失去 Human responsibility 的 mutation 直接 blocked。)
 - Q: 问题160：TrustedRunner registry 与 Human authority set 的持久化是否应作为同一条 vertical slice 一起完成：先 replay authority set，再用它验证 registry mutation signer；authority set 未初始化或 signer 非 active 时，registry mutation 直接 blocked？ → 同意 (registry store 先解析网络级 authority set；未初始化、签名者非 active、authority digest 漂移或 authority replay 失败时，TrustedRunner registry mutation 不写入 StateStore，直接 blocked。)
+- Q: 问题162：下一步是否先完成 Human authority set 的完整状态机（initialize / add / rotate / revoke），再进入 TrustedRunner registry 与真实执行链路的绑定？ → 是 (先闭合 authority mutation 的签名、CAS、replay、幂等和最后一个 authority 不得归零规则，再接入真实 TrustedRunner，避免授权边界返工。)
+- Q: 问题163：authority mutation 的 digest 是否应由 StateStore/orchestrator 根据当前 authority snapshot 自动计算，而不是要求调用方手工传入 previous_authority_set_digest 和 target_authority_set_digest？ → 是 (由 StateStore/orchestrator 读取当前 snapshot 并计算 digest；底层 signed payload 仍保留 digest 作为不可变审计证据，降低调用错误。)
+- Q: 问题164：是否应将带手工 digest 参数的底层 createHumanAuthoritySetMutation 降为内部实现，只对产品/API 暴露 store-bound builder，避免调用方绕过 StateStore snapshot？ → 是 (正式业务入口只使用 store-bound builder；手工 digest 构造器降为模块内部实现，测试 fixture 也改用真实 StateStore builder。)
+- Q: 问题165：store-bound builder 遇到 stale revision、非 active signer 或撤销最后 authority 时，是否应返回结构化 blocked/conflict 结果，而不是抛异常？ → 是 (预期并发和授权拒绝返回结构化结果供 CLI/UI 展示和恢复；StateStore 损坏、网络不存在等系统故障仍抛异常。)
+- Q: 问题166：Human authority 初始化是否也应提供 StateStore-bound builder，自动校验 network owner、当前 revision 和初始化前置条件？ → 是 (初始化与 add/rotate/revoke 共享读取当前状态、校验责任主体、生成签名 mutation 的入口，避免初始化成为旁路。)
+- Q: 问题167：是否将手工传入 expected_revision 的底层 createHumanAuthoritySetInitialization 降为内部实现，正式 API 只保留 initialization store-bound builder？ → 是 (初始化与 authority mutation 统一经过 StateStore 当前状态校验，手工构造器仅作为模块内部签名 payload 实现。)
+- Q: 问题168：是否冻结 Human authority set 子切片，下一步进入 TrustedRunner registry 对 authority mutation 的正式绑定与执行 admission？ → 是 (authority 初始化、增删、轮换、撤销、digest、CAS、replay、幂等和结构化拒绝已闭合，下一步聚焦 registry signer 绑定与 execution admission。)
+- Q: 问题169：registry replay 是否必须按 mutation 写入时的 network revision，解析当时有效的 authority set，而不能只用当前 active authority set 校验历史 registry mutation？ → 是 (按 mutation revision replay authority history，保证 authority 轮换或撤销后，历史合法 registry mutation 仍可验证。)
+- Q: 问题170：TrustedRunner registry mutation 是否也应新增 StateStore-bound builder，自动读取 registry snapshot、authority snapshot 和当前 revision，生成 register/rotate/revoke/update-capabilities mutation？ → 是 (registry 正式 mutation 入口与 authority set 一致，调用方不再手工传入 runner 旧状态摘要或 expected revision。)
+- Q: 问题171：是否将手工传入 runner 旧状态和 expected_revision 的底层 createTrustedRunnerRegistryMutation 也降为内部实现，只保留 registry store-bound builder 作为正式 API？ → 是 (authority 与 registry 都只能通过 StateStore 当前快照生成 mutation，消除旁路构造。)
+- Q: 问题172：下一步是否将 registry snapshot、runner capabilities 和 authority revision 绑定进 TrustedRunner execution admission/preflight？ → 是 (execution 固定 runner identity、capability digest、registry revision 和 authority-verified snapshot，作为不可变准入依据。)
+- Q: 问题173：在把 registry snapshot 接入 execution admission 前，是否先冻结并校验 TrustedRunner capability 的 provider/platform-neutral 枚举？ → 是 (冻结 process-boundary、network-policy、credential-cleanup、worktree-observation、output-bounds、secure-signing 等可解释能力；未知 capability 直接 blocked。)
+- Q: 问题174：execution admission 是否应显式接收 required_capabilities，并只允许 active runner 的 capability 集合覆盖全部要求；缺任一能力直接 blocked？ → 是 (注册 capability 只是 runner 能力声明；每次 execution 明确需求并固定 capability snapshot，缺任一能力直接 blocked。)
+- Q: 问题175：是否将 admission binding 正式加入 LocalExecutionPreflight / TrustedRunnerExecutionContext，固定 runner_id、registry_revision、registry_snapshot_digest 和 capabilities_digest，并让 proof/observation 继续绑定这些字段？ → 是 (admission 结果必须成为真实 execution 的不可变准入边界，不能停留为独立检查。)
 <!-- ROADMAP_SECTION_END -->

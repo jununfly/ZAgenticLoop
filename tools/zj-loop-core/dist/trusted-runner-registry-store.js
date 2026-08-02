@@ -1,7 +1,7 @@
 import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
-import { applyTrustedRunnerRegistryMutation } from './trusted-runner-registry.js';
-import { readHumanAuthoritySet } from './human-authority-set-store.js';
+import { applyTrustedRunnerRegistryMutation, createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest, validateTrustedRunnerCapabilities } from './trusted-runner-registry.js';
+import { readHumanAuthoritySet, replayHumanAuthoritySet } from './human-authority-set-store.js';
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE = 'trusted-runner-registry';
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID = 'network';
 export const TRUSTED_RUNNER_REGISTRY_EVENT_TYPE = 'trusted-runner-registry.mutation';
@@ -16,12 +16,62 @@ async function emptyRegistryRead(stateStore, network_id) {
     const events = await stateStore.readEvents({ network_id, aggregate_type: TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE, aggregate_id: TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID });
     return { snapshot: { network_id, revision: events.snapshot_revision, digest: trustedRunnerRegistrySnapshotDigest([]), registry: [] }, history: [] };
 }
+export async function createTrustedRunnerRegistryMutationFromStore(input) {
+    const authority = await readHumanAuthoritySet({ stateStore: input.stateStore, network_id: input.network_id });
+    const current = authority.active.length === 0 ? await emptyRegistryRead(input.stateStore, input.network_id) : await readTrustedRunnerRegistry({ stateStore: input.stateStore, network_id: input.network_id });
+    if (authority.active.length === 0)
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'human-authority-set-not-initialized' };
+    const signerIdentity = await input.signer.getPublicIdentity();
+    if (!authorityForMutation({ human_id: signerIdentity.human_id, signer_fingerprint: signerIdentity.public_key_fingerprint }, authority.active))
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'human-identity-mismatch' };
+    const entry = current.snapshot.registry.find((candidate) => candidate.runner_id === input.runner_id);
+    if (input.action === 'register' && entry)
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-runner-already-exists' };
+    if (input.action !== 'register' && (!entry || entry.status !== 'active'))
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-current-fingerprint-mismatch' };
+    if (input.action === 'register' && !input.new_public_key_fingerprint)
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-new-fingerprint-required' };
+    if (input.action === 'rotate' && !input.new_public_key_fingerprint)
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-new-fingerprint-required' };
+    if (input.action === 'update-capabilities' && !input.capabilities)
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capabilities-required' };
+    if (input.capabilities && validateTrustedRunnerCapabilities(input.capabilities).status === 'blocked')
+        return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capability-unknown' };
+    const mutation = await createTrustedRunnerRegistryMutation({ signer: input.signer, network_id: input.network_id, mutation_id: input.mutation_id, action: input.action, runner_id: input.runner_id, new_public_key_fingerprint: input.new_public_key_fingerprint, old_public_key_fingerprint: input.action === 'rotate' || input.action === 'revoke' ? entry?.public_key_fingerprint : undefined, old_capabilities_digest: input.action === 'update-capabilities' ? trustedRunnerCapabilitiesDigest(entry?.capabilities) : undefined, capabilities: input.capabilities, reason: input.reason, occurred_at: input.occurred_at, expected_revision: current.snapshot.revision });
+    return { status: 'ready', snapshot: current.snapshot, mutation };
+}
+export function admitTrustedRunnerExecution(input) {
+    if (input.snapshot.digest !== trustedRunnerRegistrySnapshotDigest(input.snapshot.registry))
+        return { status: 'blocked', reason: 'registry-snapshot-drift' };
+    if (input.expected_registry_revision !== undefined && input.snapshot.revision !== input.expected_registry_revision)
+        return { status: 'blocked', reason: 'registry-revision-drift' };
+    if (input.expected_registry_snapshot_digest !== undefined && input.snapshot.digest !== input.expected_registry_snapshot_digest)
+        return { status: 'blocked', reason: 'registry-snapshot-drift' };
+    if (validateTrustedRunnerCapabilities(input.required_capabilities).status === 'blocked')
+        return { status: 'blocked', reason: 'registry-capability-unknown' };
+    const runner = input.snapshot.registry.find((entry) => entry.runner_id === input.runner_id && entry.status === 'active');
+    if (!runner)
+        return { status: 'blocked', reason: 'registry-runner-not-active' };
+    const capabilities = [...new Set(runner.capabilities ?? [])].sort();
+    const missing = input.required_capabilities.some((capability) => !capabilities.includes(capability));
+    if (missing)
+        return { status: 'blocked', reason: 'registry-required-capability-missing' };
+    return { status: 'admitted', binding: { runner_id: runner.runner_id, registry_revision: input.snapshot.revision, registry_snapshot_digest: input.snapshot.digest, capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } };
+}
+function authorityForMutation(mutation, authorities) {
+    return authorities.find((identity) => identity.human_id === mutation.human_id && identity.public_key_fingerprint === mutation.signer_fingerprint);
+}
 function project(input) {
     let registry = [];
     const history = [];
-    for (const event of input.events) {
+    for (const event of input.events.filter((candidate) => candidate.aggregate_type === TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE && candidate.aggregate_id === TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID).sort((left, right) => left.revision - right.revision)) {
         const mutation = event.payload;
-        const result = applyTrustedRunnerRegistryMutation({ registry, history, mutation, identity: input.identity });
+        const authorityEvents = input.events.filter((candidate) => candidate.aggregate_type === 'human-authority-set' && candidate.aggregate_id === 'network' && candidate.revision <= event.revision);
+        const authority = replayHumanAuthoritySet({ network_id: input.network_id, revision: event.revision, events: authorityEvents });
+        const identity = authorityForMutation(mutation, authority.active);
+        if (!identity)
+            throw new Error('trusted-runner-registry-history-signer-inactive');
+        const result = applyTrustedRunnerRegistryMutation({ registry, history, mutation, identity });
         if (result.status === 'blocked')
             throw new Error(`trusted-runner-registry-history-invalid:${result.reason ?? 'mutation-invalid'}`);
         registry = result.registry;
@@ -32,11 +82,10 @@ function project(input) {
 }
 export async function readTrustedRunnerRegistry(input) {
     const authority = await readHumanAuthoritySet({ stateStore: input.stateStore, network_id: input.network_id });
-    const identity = authority.active[0];
-    if (!identity)
+    if (authority.active.length === 0)
         throw new Error('human-authority-set-not-initialized');
-    const events = await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE, aggregate_id: TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID });
-    return project({ network_id: input.network_id, revision: events.snapshot_revision, events: events.events, identity });
+    const events = await input.stateStore.readEvents({ network_id: input.network_id });
+    return project({ network_id: input.network_id, revision: events.snapshot_revision, events: events.events });
 }
 export async function recordTrustedRunnerRegistryMutation(input) {
     if (input.mutation.network_id === '')
@@ -50,8 +99,7 @@ export async function recordTrustedRunnerRegistryMutation(input) {
         const current = await emptyRegistryRead(input.stateStore, input.mutation.network_id);
         return { ...current, status: 'blocked', reason };
     }
-    const identity = authority.active[0];
-    if (!identity) {
+    if (authority.active.length === 0) {
         const current = await emptyRegistryRead(input.stateStore, input.mutation.network_id);
         return { ...current, status: 'blocked', reason: 'human-authority-set-not-initialized' };
     }
@@ -61,6 +109,9 @@ export async function recordTrustedRunnerRegistryMutation(input) {
         return { ...current, status: 'duplicate', revision: current.snapshot.revision };
     if (previous)
         return { ...current, status: 'conflict', reason: 'registry-mutation-id-conflict' };
+    const identity = authorityForMutation(input.mutation, authority.active);
+    if (!identity)
+        return { ...current, status: 'blocked', reason: 'human-identity-mismatch' };
     if (input.mutation.expected_revision !== input.expected_revision)
         return { ...current, status: 'conflict', reason: 'mutation-revision-mismatch' };
     if (current.snapshot.revision !== input.expected_revision)

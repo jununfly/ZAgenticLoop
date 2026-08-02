@@ -2,6 +2,8 @@ import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 import { verifyHumanSignature } from './human-signer.js';
 export const TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA = 'zj-loop.trusted_runner_registry_mutation.v1';
+export const TRUSTED_RUNNER_CAPABILITY_SCHEMA = 'zj-loop.trusted_runner_capability.v1';
+export const TRUSTED_RUNNER_CAPABILITIES = ['credential-cleanup', 'network-policy', 'output-bounds', 'process-boundary', 'secure-signing', 'worktree-observation'];
 const FINGERPRINT = /^[0-9a-f]{64}$/;
 function payloadBytes(value) {
     const json = canonicalize(value);
@@ -10,7 +12,14 @@ function payloadBytes(value) {
     return new TextEncoder().encode(json);
 }
 function payloadDigest(value) { return `sha256:${createHash('sha256').update(payloadBytes(value)).digest('hex')}`; }
-export function trustedRunnerCapabilitiesDigest(capabilities = []) { return `sha256:${createHash('sha256').update(canonicalize(capabilities), 'utf8').digest('hex')}`; }
+function normalizeCapabilities(capabilities = []) { return [...capabilities].sort(); }
+export function validateTrustedRunnerCapabilities(capabilities = []) {
+    const errors = [];
+    if (!Array.isArray(capabilities) || new Set(capabilities).size !== capabilities.length || !capabilities.every((capability) => typeof capability === 'string' && TRUSTED_RUNNER_CAPABILITIES.includes(capability)))
+        errors.push('registry-capability-unknown');
+    return { status: errors.length === 0 ? 'valid' : 'blocked', errors };
+}
+export function trustedRunnerCapabilitiesDigest(capabilities = []) { return `sha256:${createHash('sha256').update(canonicalize(normalizeCapabilities(capabilities)), 'utf8').digest('hex')}`; }
 function text(value) { return typeof value === 'string' && value.trim().length > 0; }
 function payloadOf(value) {
     const { canonical_payload_digest: _, signature: __, side_effects_executed: ___, ...payload } = value;
@@ -19,7 +28,7 @@ function payloadOf(value) {
 function actionShape(value) {
     if (!['register', 'rotate', 'revoke', 'update-capabilities'].includes(value.action))
         return false;
-    if (value.capabilities !== undefined && (!Array.isArray(value.capabilities) || new Set(value.capabilities).size !== value.capabilities.length || !value.capabilities.every((capability) => text(capability))))
+    if (value.capabilities !== undefined && validateTrustedRunnerCapabilities(value.capabilities).status === 'blocked')
         return false;
     if (value.action === 'register')
         return !value.old_public_key_fingerprint && FINGERPRINT.test(value.new_public_key_fingerprint ?? '');
@@ -40,7 +49,7 @@ export async function createTrustedRunnerRegistryMutation(input) {
         ...(input.old_public_key_fingerprint ? { old_public_key_fingerprint: input.old_public_key_fingerprint } : {}),
         ...(input.new_public_key_fingerprint ? { new_public_key_fingerprint: input.new_public_key_fingerprint } : {}),
         ...(input.old_capabilities_digest ? { old_capabilities_digest: input.old_capabilities_digest } : {}),
-        ...(input.capabilities ? { capabilities: [...input.capabilities] } : {}),
+        ...(input.capabilities ? { capabilities: normalizeCapabilities(input.capabilities) } : {}),
         reason: input.reason,
         occurred_at: input.occurred_at,
         ...(input.expected_revision !== undefined ? { expected_revision: input.expected_revision } : {}),
@@ -88,7 +97,7 @@ export function applyTrustedRunnerRegistryMutation(input) {
     if (input.mutation.action === 'register') {
         if (current)
             return { status: 'blocked', registry, reason: 'registry-runner-already-exists' };
-        registry.push({ runner_id: input.mutation.runner_id, public_key_fingerprint: input.mutation.new_public_key_fingerprint, status: 'active', ...(input.mutation.capabilities ? { capabilities: [...input.mutation.capabilities] } : {}) });
+        registry.push({ runner_id: input.mutation.runner_id, public_key_fingerprint: input.mutation.new_public_key_fingerprint, status: 'active', ...(input.mutation.capabilities ? { capabilities: normalizeCapabilities(input.mutation.capabilities) } : {}) });
         return { status: 'recorded', registry };
     }
     if (!current || current.status !== 'active' || (input.mutation.action !== 'update-capabilities' && current.public_key_fingerprint !== input.mutation.old_public_key_fingerprint))
@@ -100,6 +109,6 @@ export function applyTrustedRunnerRegistryMutation(input) {
     else if (input.mutation.action === 'revoke')
         current.status = 'revoked';
     else
-        current.capabilities = [...(input.mutation.capabilities ?? [])];
+        current.capabilities = normalizeCapabilities(input.mutation.capabilities ?? []);
     return { status: 'recorded', registry };
 }

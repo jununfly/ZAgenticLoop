@@ -755,6 +755,76 @@
           "q": "问题160：TrustedRunner registry 与 Human authority set 的持久化是否应作为同一条 vertical slice 一起完成：先 replay authority set，再用它验证 registry mutation signer；authority set 未初始化或 signer 非 active 时，registry mutation 直接 blocked？",
           "answer": "同意",
           "note": "registry store 先解析网络级 authority set；未初始化、签名者非 active、authority digest 漂移或 authority replay 失败时，TrustedRunner registry mutation 不写入 StateStore，直接 blocked。"
+        },
+        {
+          "q": "问题162：下一步是否先完成 Human authority set 的完整状态机（initialize / add / rotate / revoke），再进入 TrustedRunner registry 与真实执行链路的绑定？",
+          "answer": "是",
+          "note": "先闭合 authority mutation 的签名、CAS、replay、幂等和最后一个 authority 不得归零规则，再接入真实 TrustedRunner，避免授权边界返工。"
+        },
+        {
+          "q": "问题163：authority mutation 的 digest 是否应由 StateStore/orchestrator 根据当前 authority snapshot 自动计算，而不是要求调用方手工传入 previous_authority_set_digest 和 target_authority_set_digest？",
+          "answer": "是",
+          "note": "由 StateStore/orchestrator 读取当前 snapshot 并计算 digest；底层 signed payload 仍保留 digest 作为不可变审计证据，降低调用错误。"
+        },
+        {
+          "q": "问题164：是否应将带手工 digest 参数的底层 createHumanAuthoritySetMutation 降为内部实现，只对产品/API 暴露 store-bound builder，避免调用方绕过 StateStore snapshot？",
+          "answer": "是",
+          "note": "正式业务入口只使用 store-bound builder；手工 digest 构造器降为模块内部实现，测试 fixture 也改用真实 StateStore builder。"
+        },
+        {
+          "q": "问题165：store-bound builder 遇到 stale revision、非 active signer 或撤销最后 authority 时，是否应返回结构化 blocked/conflict 结果，而不是抛异常？",
+          "answer": "是",
+          "note": "预期并发和授权拒绝返回结构化结果供 CLI/UI 展示和恢复；StateStore 损坏、网络不存在等系统故障仍抛异常。"
+        },
+        {
+          "q": "问题166：Human authority 初始化是否也应提供 StateStore-bound builder，自动校验 network owner、当前 revision 和初始化前置条件？",
+          "answer": "是",
+          "note": "初始化与 add/rotate/revoke 共享读取当前状态、校验责任主体、生成签名 mutation 的入口，避免初始化成为旁路。"
+        },
+        {
+          "q": "问题167：是否将手工传入 expected_revision 的底层 createHumanAuthoritySetInitialization 降为内部实现，正式 API 只保留 initialization store-bound builder？",
+          "answer": "是",
+          "note": "初始化与 authority mutation 统一经过 StateStore 当前状态校验，手工构造器仅作为模块内部签名 payload 实现。"
+        },
+        {
+          "q": "问题168：是否冻结 Human authority set 子切片，下一步进入 TrustedRunner registry 对 authority mutation 的正式绑定与执行 admission？",
+          "answer": "是",
+          "note": "authority 初始化、增删、轮换、撤销、digest、CAS、replay、幂等和结构化拒绝已闭合，下一步聚焦 registry signer 绑定与 execution admission。"
+        },
+        {
+          "q": "问题169：registry replay 是否必须按 mutation 写入时的 network revision，解析当时有效的 authority set，而不能只用当前 active authority set 校验历史 registry mutation？",
+          "answer": "是",
+          "note": "按 mutation revision replay authority history，保证 authority 轮换或撤销后，历史合法 registry mutation 仍可验证。"
+        },
+        {
+          "q": "问题170：TrustedRunner registry mutation 是否也应新增 StateStore-bound builder，自动读取 registry snapshot、authority snapshot 和当前 revision，生成 register/rotate/revoke/update-capabilities mutation？",
+          "answer": "是",
+          "note": "registry 正式 mutation 入口与 authority set 一致，调用方不再手工传入 runner 旧状态摘要或 expected revision。"
+        },
+        {
+          "q": "问题171：是否将手工传入 runner 旧状态和 expected_revision 的底层 createTrustedRunnerRegistryMutation 也降为内部实现，只保留 registry store-bound builder 作为正式 API？",
+          "answer": "是",
+          "note": "authority 与 registry 都只能通过 StateStore 当前快照生成 mutation，消除旁路构造。"
+        },
+        {
+          "q": "问题172：下一步是否将 registry snapshot、runner capabilities 和 authority revision 绑定进 TrustedRunner execution admission/preflight？",
+          "answer": "是",
+          "note": "execution 固定 runner identity、capability digest、registry revision 和 authority-verified snapshot，作为不可变准入依据。"
+        },
+        {
+          "q": "问题173：在把 registry snapshot 接入 execution admission 前，是否先冻结并校验 TrustedRunner capability 的 provider/platform-neutral 枚举？",
+          "answer": "是",
+          "note": "冻结 process-boundary、network-policy、credential-cleanup、worktree-observation、output-bounds、secure-signing 等可解释能力；未知 capability 直接 blocked。"
+        },
+        {
+          "q": "问题174：execution admission 是否应显式接收 required_capabilities，并只允许 active runner 的 capability 集合覆盖全部要求；缺任一能力直接 blocked？",
+          "answer": "是",
+          "note": "注册 capability 只是 runner 能力声明；每次 execution 明确需求并固定 capability snapshot，缺任一能力直接 blocked。"
+        },
+        {
+          "q": "问题175：是否将 admission binding 正式加入 LocalExecutionPreflight / TrustedRunnerExecutionContext，固定 runner_id、registry_revision、registry_snapshot_digest 和 capabilities_digest，并让 proof/observation 继续绑定这些字段？",
+          "answer": "是",
+          "note": "admission 结果必须成为真实 execution 的不可变准入边界，不能停留为独立检查。"
         }
       ],
       "notes": "Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters remain; independent verifier, review package persistence, signed Human review CLI/API, CAS decision path and explicit signed closeout are implemented. Closeout is a separate resource lifecycle: it requires accepted/rejected, no active lease, a clean registered worktree, signed worktree binding, is idempotent, removes only the worktree, and retains EvidenceStore evidence."
@@ -895,7 +965,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-02 01:54:03",
+    "updated": "2026-08-02 11:52:08",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

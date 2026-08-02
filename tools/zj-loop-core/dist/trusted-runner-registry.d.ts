@@ -1,5 +1,7 @@
 import { type HumanSignature, type HumanSigner, type HumanSignerIdentity } from './human-signer.js';
 export declare const TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA: "zj-loop.trusted_runner_registry_mutation.v1";
+export declare const TRUSTED_RUNNER_CAPABILITY_SCHEMA: "zj-loop.trusted_runner_capability.v1";
+export declare const TRUSTED_RUNNER_CAPABILITIES: readonly ["credential-cleanup", "network-policy", "output-bounds", "process-boundary", "secure-signing", "worktree-observation"];
 export type TrustedRunnerRegistryMutationAction = 'register' | 'rotate' | 'revoke' | 'update-capabilities';
 export type TrustedRunnerRegistryMutation = {
     schema: typeof TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA;
@@ -25,6 +27,10 @@ export type TrustedRunnerRegistryEntry = {
     public_key_fingerprint: string;
     status: 'active' | 'revoked';
     capabilities?: string[];
+};
+export declare function validateTrustedRunnerCapabilities(capabilities?: string[]): {
+    status: 'valid' | 'blocked';
+    errors: string[];
 };
 export declare function trustedRunnerCapabilitiesDigest(capabilities?: string[]): string;
 export declare function createTrustedRunnerRegistryMutation(input: {
