@@ -22,7 +22,7 @@ export function createProviderRuntimeIpcCleanupCoordinator(input) {
             let resolveResponse = () => undefined;
             let rejectResponse = () => undefined;
             const response = new Promise((resolve, reject) => { resolveResponse = resolve; rejectResponse = reject; });
-            connection = await connectUnixProviderAuthIpc({ socket_path: input.socket_path, correlation_id, on_frames: (frames) => {
+            connection = await connectUnixProviderAuthIpc({ socket_path: input.socket_path, correlation_id, timeout_ms: timeout, on_frames: (frames) => {
                     const frame = frames.find((candidate) => candidate.kind === 'cleanup');
                     if (frame)
                         resolveResponse(frame);

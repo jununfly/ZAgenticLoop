@@ -71,6 +71,11 @@ export function createUnixProviderAuthIpcServer(input) {
 export async function connectUnixProviderAuthIpc(input) {
     const socket = net.createConnection(input.socket_path);
     const decoder = new ProviderAuthIpcDecoder({ correlation_id: input.correlation_id });
+    const timeout = input.timeout_ms ?? 5_000;
+    if (!Number.isInteger(timeout) || timeout < 1 || timeout > 60_000) {
+        socket.destroy();
+        throw new Error('provider-auth-ipc-timeout-invalid');
+    }
     socket.on('data', async (chunk) => {
         const result = decoder.push(new Uint8Array(chunk));
         if (result.status === 'blocked')
@@ -78,7 +83,11 @@ export async function connectUnixProviderAuthIpc(input) {
         else if (result.frames.length > 0)
             await input.on_frames(result.frames);
     });
-    await new Promise((resolve, reject) => { socket.once('connect', () => resolve()); socket.once('error', reject); });
+    await new Promise((resolve, reject) => {
+        socket.setTimeout(timeout, () => { socket.destroy(); reject(new Error('provider-auth-ipc-connect-timeout')); });
+        socket.once('connect', () => { socket.setTimeout(0); resolve(); });
+        socket.once('error', reject);
+    });
     return {
         async send(frame) { if (socket.destroyed)
             throw new Error('provider-auth-ipc-socket-closed'); await new Promise((resolve, reject) => { socket.write(encodeProviderAuthIpcFrame(frame), (error) => error ? reject(error) : resolve()); }); },

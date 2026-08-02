@@ -18,4 +18,5 @@ export declare function connectUnixProviderAuthIpc(input: {
     socket_path: string;
     correlation_id: string;
     on_frames: (frames: ProviderAuthIpcFrame[]) => void | Promise<void>;
+    timeout_ms?: number;
 }): Promise<ProviderAuthIpcConnection>;
