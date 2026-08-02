@@ -1,0 +1,87 @@
+import { chmod, mkdir, unlink } from 'node:fs/promises';
+import net from 'node:net';
+import path from 'node:path';
+import { encodeProviderAuthIpcFrame, ProviderAuthIpcDecoder } from './provider-auth-ipc-protocol.js';
+async function removeSocket(socketPath) { try {
+    await unlink(socketPath);
+}
+catch (error) {
+    if (error.code !== 'ENOENT')
+        throw error;
+} }
+export function createUnixProviderAuthIpcServer(input) {
+    let server;
+    const connections = new Set();
+    const connectionFor = (socket) => ({
+        async send(frame) { if (socket.destroyed)
+            throw new Error('provider-auth-ipc-socket-closed'); await new Promise((resolve, reject) => { socket.write(encodeProviderAuthIpcFrame(frame), (error) => error ? reject(error) : resolve()); }); },
+        close() { socket.destroy(); },
+    });
+    return {
+        async start() {
+            if (server)
+                throw new Error('provider-auth-ipc-server-already-started');
+            await mkdir(path.dirname(input.socket_path), { recursive: true, mode: 0o700 });
+            await removeSocket(input.socket_path);
+            server = net.createServer(async (socket) => {
+                connections.add(socket);
+                const connection = connectionFor(socket);
+                let accepted = false;
+                try {
+                    accepted = await input.verify_peer(socket);
+                }
+                catch {
+                    accepted = false;
+                }
+                if (!accepted) {
+                    socket.destroy();
+                    connections.delete(socket);
+                    return;
+                }
+                const decoder = new ProviderAuthIpcDecoder({ correlation_id: input.correlation_id });
+                socket.on('data', async (chunk) => {
+                    const result = decoder.push(new Uint8Array(chunk));
+                    if (result.status === 'blocked') {
+                        socket.destroy();
+                        return;
+                    }
+                    if (result.frames.length > 0)
+                        await input.on_frames(result.frames, connection);
+                });
+                socket.on('close', () => connections.delete(socket));
+                socket.on('error', () => connections.delete(socket));
+            });
+            await new Promise((resolve, reject) => { server?.once('error', reject).listen(input.socket_path, resolve); });
+            await chmod(input.socket_path, 0o600);
+        },
+        async close() {
+            for (const socket of connections)
+                socket.destroy();
+            if (!server) {
+                await removeSocket(input.socket_path);
+                return;
+            }
+            const current = server;
+            server = undefined;
+            await new Promise((resolve) => current.close(() => resolve()));
+            await removeSocket(input.socket_path);
+        },
+    };
+}
+export async function connectUnixProviderAuthIpc(input) {
+    const socket = net.createConnection(input.socket_path);
+    const decoder = new ProviderAuthIpcDecoder({ correlation_id: input.correlation_id });
+    socket.on('data', async (chunk) => {
+        const result = decoder.push(new Uint8Array(chunk));
+        if (result.status === 'blocked')
+            socket.destroy();
+        else if (result.frames.length > 0)
+            await input.on_frames(result.frames);
+    });
+    await new Promise((resolve, reject) => { socket.once('connect', () => resolve()); socket.once('error', reject); });
+    return {
+        async send(frame) { if (socket.destroyed)
+            throw new Error('provider-auth-ipc-socket-closed'); await new Promise((resolve, reject) => { socket.write(encodeProviderAuthIpcFrame(frame), (error) => error ? reject(error) : resolve()); }); },
+        close() { socket.destroy(); },
+    };
+}

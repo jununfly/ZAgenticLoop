@@ -1076,6 +1076,81 @@
           "q": "问题215：是否现在冻结 1-4 的设计决策并进入连续实现，依次落地 macOS TrustedRunner install/verify/provision 与 install artifact、Human-signed enroll 和 registry helper metadata、provider-neutral ProviderAuthRuntime/ProviderAuthRef、AuthRef admission/approval/worker binding、真实 network-allowed 只读 dogfood、network-denied 验证、verification/review/Accept/closeout？",
           "answer": "同意",
           "note": "1-4 设计冻结，进入实现阶段；按垂直切片闭合真实单节点 OPN Atom，不再继续扩展设计范围，遇到真正边界阻塞再停下 grill。"
+        },
+        {
+          "q": "问题216：ProviderAuthRuntime 与 detached worker 之间的 MVP 私有通道，是否采用本机 Unix domain socket（macOS/Linux）/ named pipe（Windows）的 provider-neutral IPC 抽象；worker 只发送 AuthRef 元数据和 execution binding，Runtime 返回一次性验证结果或受控启动句柄，绝不返回 secret，也不把 secret 注入 worker context、环境变量或 stdout/stderr？",
+          "answer": "同意",
+          "note": "采用 provider-neutral 本机 IPC；macOS/Linux 使用 Unix domain socket，Windows 使用 named pipe。worker 只发送 AuthRef metadata 与 execution binding，Runtime 只返回一次性验证结果或受控启动句柄，secret 不离开私有 runtime。"
+        },
+        {
+          "q": "问题217：IPC 是否必须采用一次性 challenge-response：worker 提交 auth_ref + execution/attempt binding + nonce，Runtime 校验本机 peer identity、AuthRef 状态和 binding 后签发不可复用的 ProviderLaunchHandle；handle 仅绑定一次启动、短时有效、不可迁移，worker 重启或重复消费直接 blocked？",
+          "answer": "同意",
+          "note": "采用一次性 challenge-response 与不可复用 ProviderLaunchHandle；handle 短时有效、绑定本机 peer、network/node/provider/runtime/execution/attempt 和 nonce，重复消费或迁移直接 blocked。"
+        },
+        {
+          "q": "问题218：Provider 启动是否应由 ProviderAuthRuntime 承担，而不是由 worker 直接 spawn Provider？Runtime 使用已验证的 ProviderLaunchHandle 在私有边界内启动 Provider，并通过受控 IPC/stdio relay 提供结果；TrustedRunner 仍负责 worker 的进程边界、worktree、网络策略和输出上限，worker 只能消费受控 Provider channel，不能获得 secret 或原始 credential？",
+          "answer": "同意",
+          "note": "ProviderAuthRuntime 承担 Provider launch 与 credential 注入；TrustedRunner 继续治理 worker 的进程边界、worktree、网络和 output bounds。worker 只能消费受控 Provider channel，不能接触 secret 或原始 credential。"
+        },
+        {
+          "q": "问题219：Provider 结束后，是否要求 ProviderAuthRuntime 先执行并证明 credential cleanup/revoke，再允许 execution 进入 verification-pending；cleanup proof 必须绑定 network/node/provider/runtime/execution/attempt/launch_handle、Provider 退出状态和时间窗口，无法证明清理或 Runtime IPC 中断则进入 outcome-uncertain，禁止自动重试或换 credential？",
+          "answer": "同意",
+          "note": "ProviderAuthRuntime 必须先完成并证明 credential cleanup/revoke；cleanup proof 与 launch handle、Provider 退出状态及 execution binding 关联。清理不可证明或 IPC 中断进入 outcome-uncertain，不自动重试或换 credential。"
+        },
+        {
+          "q": "问题220：ProviderAuthRuntime cleanup proof 与 TrustedRunner post-run proof 是否保持为两份独立、不可互相替代的事实：前者证明 credential/session 已撤销和清理，后者证明 worker/provider 进程树、worktree、网络策略和输出边界；最终 verifier 只有在两份 proof 都通过且绑定同一 execution/attempt 后，才能进入 verification-pending？",
+          "answer": "同意",
+          "note": "两类 proof 独立存在、独立签发、不可互相替代；Verifier 只有在两者都通过且绑定同一 execution/attempt 后才允许 verification-pending。"
+        },
+        {
+          "q": "问题221：ProviderAuthRuntime 与 worker 的受控 channel，是否采用有界、可序列化、provider-neutral 的 framed protocol（如 launch-accepted、stdout、stderr、result、error、exit、cleanup），每帧绑定 execution/attempt/launch_handle 并受大小、顺序和超时约束；Provider 输出只作为事实输入，不能携带或声明 TrustedRunner/AuthRuntime proof？",
+          "answer": "同意",
+          "note": "采用有界 framed protocol；每帧绑定 execution/attempt/launch_handle，校验顺序、大小和超时。Provider 输出只是事实输入，不能自声明 TrustedRunner 或 AuthRuntime proof。"
+        },
+        {
+          "q": "问题222：Provider channel 出现断连、帧乱序、超时或缺少终止/cleanup 帧时，是否立即停止正常完成路径并进入 outcome-uncertain；只允许执行一次有界、只读的 Runtime 状态回读与 cleanup reconciliation，不允许自动重启 Provider、刷新 AuthRef、换 credential 或重放任务？",
+          "answer": "同意",
+          "note": "channel 异常进入 outcome-uncertain；只允许一次有界、只读的 Runtime 状态回读与 cleanup reconciliation，禁止自动重启、刷新 AuthRef、换 credential 或重放任务。"
+        },
+        {
+          "q": "问题223：Human approval 是否必须发生在 AuthRef 已由 Runtime 发行、且 summary 已展示完整非敏感认证事实之后；至少展示 provider/provider_runtime/issuer/audience/scope/issued_at/expires_at/auth_ref_digest/node_id、TrustedRunner identity、network policy 和 execution/attempt，禁止先批准一个之后再替换 AuthRef 的抽象“可用认证能力”？",
+          "answer": "同意",
+          "note": "Human 只批准已发行的具体 AuthRef；summary 展示 provider/runtime/issuer/audience/scope/有效期/digest/node/TrustedRunner/network policy/execution/attempt。AuthRef 不得在批准后被替换。"
+        },
+        {
+          "q": "问题224：AuthRef 在 Human approval 后但尚未启动时过期，是否直接 blocked 并要求新的 execution attempt；若执行过程中到期，是否停止继续发起新的 Provider 请求，触发 Runtime cleanup，并根据是否取得完整 cleanup proof 进入 outcome-uncertain 或后续验证，禁止自动延长有效期？",
+          "answer": "同意",
+          "note": "AuthRef 不自动延长；启动前过期直接 blocked。执行中到期停止新的 Provider 请求并触发 cleanup，按 cleanup proof 完整性进入后续验证或 outcome-uncertain；需要继续时创建新 attempt。"
+        },
+        {
+          "q": "问题225：本机 IPC endpoint 是否必须避免固定公共路径和 TCP 监听：Runtime 每次 execution 创建随机、短生命周期 endpoint，置于仅 Human/Runtime 可访问的私有目录（Unix socket 0600；Windows named pipe ACL），并结合 OS peer identity 与 challenge nonce 校验；路径、socket 文件或 pipe 名称本身不能作为唯一信任依据？",
+          "answer": "同意",
+          "note": "采用随机、短生命周期 IPC endpoint；Unix socket 使用私有目录和 0600，Windows named pipe 使用 ACL，并结合 OS peer identity 与 challenge nonce。endpoint 名称本身不构成信任。"
+        },
+        {
+          "q": "问题226：ProviderAuthRuntime 自身的 issuer/runtime identity，是否采用独立于 TrustedRunner 的本机 provision 流程：Runtime 生成不可导出的 P-256 identity key，记录 runtime binary/version/provider capability digest，由 Human 显式确认并保存本机 manifest；IPC challenge-response 由该 identity 签名，worker 校验 runtime identity、manifest digest 和 provider capability，不能仅凭“本机进程自称 Runtime”作为可信 issuer？",
+          "answer": "同意",
+          "note": "ProviderAuthRuntime 采用独立本机 provision；生成不可导出的 P-256 identity，Human 确认 runtime manifest。IPC challenge-response 与 AuthRef issuer 都绑定 runtime identity、manifest digest 和 provider capability，不能依赖进程自报。"
+        },
+        {
+          "q": "问题227：AuthRef 发行时，Runtime 是否必须同时校验三层能力边界：Human 明确批准的 scope、Runtime manifest 声明的 provider capability 上限、当前 execution 所请求的 scope；三者不一致或请求超集直接拒绝，不静默降级 scope、不自动扩大 scope，也不复用其他 AuthRef？",
+          "answer": "同意",
+          "note": "AuthRef scope 必须同时满足 Human 批准、Runtime manifest capability 上限和 execution 请求；超集或不一致直接拒绝，不静默降级、扩大或复用其他 AuthRef。"
+        },
+        {
+          "q": "问题228：Human 撤销权限时，是否要求 Runtime 支持分层撤销并 fail-closed：撤销单个 AuthRef 只影响该 execution，撤销 Runtime identity/manifest 影响其全部 AuthRef，撤销 Human 授权源影响该授权源发行的全部 AuthRef；worker/Provider 下一次 IPC 交互必须立即收到 revoked，禁止继续使用已有 launch handle？",
+          "answer": "同意",
+          "note": "支持 AuthRef、Runtime identity/manifest、Human 授权源三层撤销；撤销立即阻断后续 IPC 与已有 launch handle，不允许继续消费。"
+        },
+        {
+          "q": "问题229：若 AuthRef/Runtime/Human 授权在 Provider 已运行期间被撤销，Runtime 是否必须向 Provider 发送受控终止并阻断后续 channel；终止结果和 credential cleanup 必须生成 proof，若 Provider 或 IPC 无法确认已终止，则进入 outcome-uncertain，禁止把撤销误判为正常完成？",
+          "answer": "同意",
+          "note": "运行中撤销触发 Provider 受控终止并阻断 channel；终止与 credential cleanup 都必须有 proof，无法确认终止进入 outcome-uncertain，不得视为正常完成。"
+        },
+        {
+          "q": "问题230：Framed IPC 的 MVP 编码是否采用 4-byte big-endian length prefix + canonical JSON UTF-8 payload，而不是裸 JSONL；每帧限制最大字节数、schema/version、sequence、request/response correlation，并拒绝长度溢出、重复、乱序、未知字段和非 UTF-8 数据？",
+          "answer": "同意",
+          "note": "采用 4-byte big-endian length prefix + canonical JSON UTF-8 payload；帧带 schema/version、sequence、correlation，受最大长度约束，拒绝溢出、重复、乱序、未知字段和非 UTF-8。"
         }
       ],
       "notes": ""
@@ -1165,7 +1240,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-02 15:40:46",
+    "updated": "2026-08-02 17:01:02",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }
