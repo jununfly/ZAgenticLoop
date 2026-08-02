@@ -34,8 +34,9 @@ export function createProviderAuthRuntimeIpcSidecar(input: {
   now?: () => string;
 }) {
   const now = input.now ?? (() => new Date().toISOString());
-  const states = new WeakMap<object, { activeHandle?: ProviderLaunchHandle; sequence: number }>();
+  const states = new WeakMap<object, { activeHandle?: ProviderLaunchHandle; sequence: number; challenge_consumed: boolean }>();
   const handles = new Map<string, ProviderLaunchHandle>();
+  const consumedChallenges = new Set<string>();
   const error = async (connection: { send(frame: ProviderAuthIpcFrame): Promise<void> }, frame: ProviderAuthIpcFrame, code: string, sequence: number, launchHandleDigest?: string) => {
     await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence, network_id: frame.network_id, node_id: frame.node_id, provider_runtime_id: frame.provider_runtime_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, kind: 'error', ...(launchHandleDigest ? { launch_handle_digest: launchHandleDigest } : {}), payload: { code } }));
   };
@@ -45,9 +46,12 @@ export function createProviderAuthRuntimeIpcSidecar(input: {
   }, on_frames: async (frames, connection) => {
     const frame = frames[0];
     if (!frame) return;
-    const state = states.get(connection) ?? { sequence: 1 };
+    const state = states.get(connection) ?? { sequence: 1, challenge_consumed: false };
     states.set(connection, state);
     if (frame.kind === 'challenge') {
+      if (state.challenge_consumed || !frame.nonce || consumedChallenges.has(frame.nonce)) { await error(connection, frame, 'provider-auth-ipc-challenge-replay', state.sequence++); return; }
+      state.challenge_consumed = true;
+      consumedChallenges.add(frame.nonce);
       const payload = frame.payload;
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) { await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++); return; }
       const value = payload as Record<string, unknown>;

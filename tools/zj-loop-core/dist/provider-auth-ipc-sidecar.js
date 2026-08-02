@@ -11,6 +11,7 @@ export function createProviderAuthRuntimeIpcSidecar(input) {
     const now = input.now ?? (() => new Date().toISOString());
     const states = new WeakMap();
     const handles = new Map();
+    const consumedChallenges = new Set();
     const error = async (connection, frame, code, sequence, launchHandleDigest) => {
         await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence, network_id: frame.network_id, node_id: frame.node_id, provider_runtime_id: frame.provider_runtime_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, kind: 'error', ...(launchHandleDigest ? { launch_handle_digest: launchHandleDigest } : {}), payload: { code } }));
     };
@@ -21,9 +22,15 @@ export function createProviderAuthRuntimeIpcSidecar(input) {
             const frame = frames[0];
             if (!frame)
                 return;
-            const state = states.get(connection) ?? { sequence: 1 };
+            const state = states.get(connection) ?? { sequence: 1, challenge_consumed: false };
             states.set(connection, state);
             if (frame.kind === 'challenge') {
+                if (state.challenge_consumed || !frame.nonce || consumedChallenges.has(frame.nonce)) {
+                    await error(connection, frame, 'provider-auth-ipc-challenge-replay', state.sequence++);
+                    return;
+                }
+                state.challenge_consumed = true;
+                consumedChallenges.add(frame.nonce);
                 const payload = frame.payload;
                 if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
                     await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++);
