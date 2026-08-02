@@ -23,7 +23,7 @@ export function createProviderRuntimeIpcCleanupCoordinator(input) {
             let rejectResponse = () => undefined;
             const response = new Promise((resolve, reject) => { resolveResponse = resolve; rejectResponse = reject; });
             connection = await connectUnixProviderAuthIpc({ socket_path: input.socket_path, correlation_id, timeout_ms: timeout, on_frames: (frames) => {
-                    const frame = frames.find((candidate) => candidate.kind === 'cleanup');
+                    const frame = frames.find((candidate) => candidate.kind === 'cleanup' || candidate.kind === 'error');
                     if (frame)
                         resolveResponse(frame);
                 } });
@@ -32,10 +32,12 @@ export function createProviderRuntimeIpcCleanupCoordinator(input) {
             const frame = await response;
             if (frame.network_id !== input.network_id || frame.node_id !== input.node_id || frame.provider_id !== input.provider_id || frame.execution_id !== input.execution_id || frame.attempt !== input.attempt || frame.launch_handle_digest !== handle.handle.handle_digest)
                 return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-binding-mismatch' };
+            if (frame.kind === 'error')
+                return { status: 'uncertain', reason: 'provider-runtime-cleanup-rejected' };
             if (!frame.payload || typeof frame.payload !== 'object' || Array.isArray(frame.payload))
                 return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-invalid' };
             const payload = frame.payload;
-            if (payload.schema !== CLEANUP_RESPONSE_SCHEMA)
+            if (Object.keys(payload).some((key) => !['schema', 'status', 'cleanup_digest', 'reason'].includes(key)) || payload.schema !== CLEANUP_RESPONSE_SCHEMA)
                 return { status: 'uncertain', reason: 'provider-runtime-cleanup-response-invalid' };
             if (payload.status !== 'cleaned' || typeof payload.cleanup_digest !== 'string' || !DIGEST.test(payload.cleanup_digest))
                 return { status: 'uncertain', reason: typeof payload.reason === 'string' && payload.reason.trim() ? payload.reason : 'provider-runtime-cleanup-not-proven' };

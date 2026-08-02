@@ -53,3 +53,17 @@ test('Runtime IPC cleanup coordinator fails closed on response binding drift and
   const unavailable = createProviderRuntimeIpcCleanupCoordinator({ socket_path: path.join(root, 'missing.sock'), handle, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, timeout_ms: 100 });
   assert.deepEqual(await unavailable(), { status: 'uncertain', reason: 'provider-runtime-cleanup-ipc-unavailable' });
 });
+
+test('Runtime IPC cleanup coordinator maps Runtime rejection immediately and rejects response extras', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-cleanup-rejected-'));
+  const socketPath = path.join(root, 'runtime.sock');
+  const { handle } = await launchedRuntime();
+  const server = createUnixProviderAuthIpcServer({ socket_path: socketPath, correlation_id: 'corr-rejected', verify_peer: () => true, on_frames: async (_frames, connection) => {
+    await connection.send(createProviderAuthIpcFrame({ correlation_id: 'corr-rejected', sequence: 1, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'runtime-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, kind: 'error', launch_handle_digest: handle.handle_digest, payload: { code: 'cleanup-rejected' } }));
+  } });
+  try {
+    await server.start();
+    const cleanup = createProviderRuntimeIpcCleanupCoordinator({ socket_path: socketPath, correlation_id: 'corr-rejected', handle, network_id: 'network-1', node_id: 'node-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1 });
+    assert.deepEqual(await cleanup(), { status: 'uncertain', reason: 'provider-runtime-cleanup-rejected' });
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});
