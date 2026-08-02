@@ -14,6 +14,7 @@ import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.j
 import { createUnixProviderAuthIpcServer } from '../dist/provider-auth-ipc-unix.js';
 import { createTrustedRunnerPostRunProofServer } from '../dist/trusted-runner-post-run-ipc.js';
 import { createFakeRealAgentDogfoodPostRunProof } from '../dist/real-agent-dogfood-post-run-proof.js';
+import { createInMemoryTrustedRunnerPeerIdentityVerifier } from '../dist/trusted-runner-peer-identity.js';
 import { mkdir, mkdtemp, rm, writeFile, chmod } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -86,7 +87,7 @@ test('worker context invokes the provider through the Runtime IPC channel', asyn
     }
   } });
   const trustedRunnerSocketPath = path.join(root, 'trusted-runner.sock');
-  const trustedRunner = createTrustedRunnerPostRunProofServer({ socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime', verify_peer: () => true, issue: async (request) => createFakeRealAgentDogfoodPostRunProof({ ...request, runner_id: 'trusted-fixture' }) });
+  const trustedRunner = createTrustedRunnerPostRunProofServer({ socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime', verify_peer: createInMemoryTrustedRunnerPeerIdentityVerifier({ identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'process-audit', identity_digest: 'a'.repeat(64), process_id: 42 } }), issue: async (request) => createFakeRealAgentDogfoodPostRunProof({ ...request, runner_id: 'trusted-fixture' }) });
   try {
     await server.start();
     await trustedRunner.start();

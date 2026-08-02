@@ -3,6 +3,7 @@ import net, { type Socket } from 'node:net';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { RealAgentDogfoodPostRunProof, RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
+import { validateTrustedRunnerPeerIdentity, type TrustedRunnerPeerIdentityVerifier } from './trusted-runner-peer-identity.js';
 
 const REQUEST_SCHEMA = 'zj-loop.trusted_runner_post_run_proof_request.v1';
 const RESPONSE_SCHEMA = 'zj-loop.trusted_runner_post_run_proof_response.v1';
@@ -56,7 +57,7 @@ export function createTrustedRunnerPostRunProofServer(input: {
   socket_path: string;
   correlation_id: string;
   issue: (request: ProofRequest) => Promise<RealAgentDogfoodPostRunProof>;
-  verify_peer: (socket: Socket) => Promise<boolean> | boolean;
+  verify_peer: TrustedRunnerPeerIdentityVerifier;
 }) {
   let server: net.Server | undefined;
   return {
@@ -65,7 +66,8 @@ export function createTrustedRunnerPostRunProofServer(input: {
       await removeSocket(input.socket_path);
       server = net.createServer(async (socket) => {
         try {
-          if (!(await input.verify_peer(socket))) { socket.destroy(); return; }
+          const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id });
+          if (peer.status !== 'verified' || !validateTrustedRunnerPeerIdentity(peer.identity)) { socket.destroy(); return; }
           const request = await readFrame(socket, 5_000) as Partial<WireRequest>;
           const response: WireResponse = request.schema === REQUEST_SCHEMA && request.correlation_id === input.correlation_id && typeof request.request_id === 'string' && validInput(request.input)
             ? await input.issue(request.input).then((proof) => ({ schema: RESPONSE_SCHEMA as typeof RESPONSE_SCHEMA, correlation_id: input.correlation_id, request_id: request.request_id as string, status: 'issued' as const, proof })).catch((error) => ({ schema: RESPONSE_SCHEMA as typeof RESPONSE_SCHEMA, correlation_id: input.correlation_id, request_id: request.request_id as string, status: 'blocked' as const, reason: error instanceof Error ? error.message : 'trusted-runner-post-run-proof-blocked' }))

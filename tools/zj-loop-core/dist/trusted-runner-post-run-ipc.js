@@ -2,6 +2,7 @@ import { mkdir, unlink, chmod, access } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { validateTrustedRunnerPeerIdentity } from './trusted-runner-peer-identity.js';
 const REQUEST_SCHEMA = 'zj-loop.trusted_runner_post_run_proof_request.v1';
 const RESPONSE_SCHEMA = 'zj-loop.trusted_runner_post_run_proof_response.v1';
 const MAX_BYTES = 64 * 1024;
@@ -66,7 +67,8 @@ export function createTrustedRunnerPostRunProofServer(input) {
             await removeSocket(input.socket_path);
             server = net.createServer(async (socket) => {
                 try {
-                    if (!(await input.verify_peer(socket))) {
+                    const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id });
+                    if (peer.status !== 'verified' || !validateTrustedRunnerPeerIdentity(peer.identity)) {
                         socket.destroy();
                         return;
                     }
