@@ -1,5 +1,6 @@
 import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
+import { validateProviderAuthRef } from './provider-auth-runtime.js';
 export const LOCAL_EXECUTION_PREFLIGHT_SCHEMA = 'zj-loop.local_execution_preflight.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const ID = /^[^\s]{1,256}$/;
@@ -9,7 +10,7 @@ function digest(value) { return `sha256:${createHash('sha256').update(canonical(
 function validText(value) { return typeof value === 'string' && value.length > 0 && value.length <= 4096; }
 function validId(value) { return typeof value === 'string' && ID.test(value); }
 function validTimestamp(value) { return validText(value) && Number.isFinite(Date.parse(value)); }
-function exactKeys(value) { return Object.keys(value).every((key) => ['schema', 'status', 'side_effects_executed', 'network_id', 'plan_id', 'plan_revision', 'task_id', 'execution_id', 'attempt', 'runner_id', 'registry_revision', 'registry_snapshot_digest', 'capabilities_digest', 'provider_id', 'adapter_version', 'executable', 'executable_digest', 'args', 'argv_digest', 'cwd', 'cwd_digest', 'env_allowlist', 'env_policy_digest', 'sandbox_policy_digest', 'network_policy', 'timeout_ms', 'termination_grace_ms', 'max_stdout_bytes', 'max_stderr_bytes', 'orchestration_preflight_digest', 'issued_at', 'expires_at', 'preflight_digest'].includes(key)); }
+function exactKeys(value) { return Object.keys(value).every((key) => ['schema', 'status', 'side_effects_executed', 'network_id', 'plan_id', 'plan_revision', 'task_id', 'execution_id', 'attempt', 'runner_id', 'registry_revision', 'registry_snapshot_digest', 'capabilities_digest', 'provider_id', 'provider_auth_ref', 'adapter_version', 'executable', 'executable_digest', 'args', 'argv_digest', 'cwd', 'cwd_digest', 'env_allowlist', 'env_policy_digest', 'sandbox_policy_digest', 'network_policy', 'timeout_ms', 'termination_grace_ms', 'max_stdout_bytes', 'max_stderr_bytes', 'orchestration_preflight_digest', 'issued_at', 'expires_at', 'preflight_digest'].includes(key)); }
 function shapeError(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value) || !exactKeys(value))
         return 'local-execution-preflight-schema-invalid';
@@ -19,6 +20,8 @@ function shapeError(value) {
     for (const key of ['network_id', 'plan_id', 'task_id', 'execution_id', 'provider_id', 'adapter_version'])
         if (!validId(item[key]))
             return `local-execution-preflight-${key}-invalid`;
+    if (item.provider_auth_ref !== undefined && validateProviderAuthRef(item.provider_auth_ref).status === 'blocked')
+        return 'local-execution-preflight-provider-auth-ref-invalid';
     if (!Number.isInteger(item.plan_revision) || item.plan_revision < 1 || !Number.isInteger(item.attempt) || item.attempt < 1 || !Number.isInteger(item.registry_revision) || item.registry_revision < 1)
         return 'local-execution-preflight-revision-invalid';
     if (!validId(item.runner_id))

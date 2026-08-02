@@ -1,3 +1,4 @@
+import type { ProviderAuthRef } from './provider-auth-runtime.js';
 export declare const TRUSTED_RUNNER_PROTOCOL_SCHEMA: "zj-loop.trusted_runner_protocol.v1";
 export declare const TRUSTED_RUNNER_PROOF_SCHEMA: "zj-loop.trusted_runner_proof.v1";
 export declare const TRUSTED_RUNNER_OBSERVATION_SCHEMA: "zj-loop.trusted_runner_observation.v1";
@@ -9,6 +10,7 @@ export type TrustedRunnerExecutionContext = {
     preflight_digest: string;
     registry_snapshot_digest: string;
     capabilities_digest: string;
+    provider_auth_ref: ProviderAuthRef;
     helper: {
         helper_id: string;
         helper_version: string;

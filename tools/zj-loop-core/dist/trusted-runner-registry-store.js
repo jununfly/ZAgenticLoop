@@ -2,6 +2,7 @@ import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 import { applyTrustedRunnerRegistryMutation, createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest, validateTrustedRunnerCapabilities } from './trusted-runner-registry.js';
 import { readHumanAuthoritySet, replayHumanAuthoritySet } from './human-authority-set-store.js';
+import { validateTrustedRunnerInstallArtifact } from './trusted-runner-install-artifact.js';
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE = 'trusted-runner-registry';
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID = 'network';
 export const TRUSTED_RUNNER_REGISTRY_EVENT_TYPE = 'trusted-runner-registry.mutation';
@@ -29,7 +30,7 @@ export async function createTrustedRunnerRegistryMutationFromStore(input) {
         return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-runner-already-exists' };
     if (input.action !== 'register' && (!entry || entry.status !== 'active'))
         return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-current-fingerprint-mismatch' };
-    if (input.action === 'register' && !input.new_public_key_fingerprint)
+    if (input.action === 'register' && !input.new_public_key_fingerprint && !input.install_artifact)
         return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-new-fingerprint-required' };
     if (input.action === 'rotate' && !input.new_public_key_fingerprint)
         return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-new-fingerprint-required' };
@@ -37,6 +38,18 @@ export async function createTrustedRunnerRegistryMutationFromStore(input) {
         return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capabilities-required' };
     if (input.capabilities && validateTrustedRunnerCapabilities(input.capabilities).status === 'blocked')
         return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capability-unknown' };
+    if (input.install_artifact) {
+        const artifactCheck = validateTrustedRunnerInstallArtifact(input.install_artifact);
+        if (artifactCheck.status === 'blocked')
+            return { status: 'blocked', snapshot: current.snapshot, reason: artifactCheck.reason };
+        if (input.action !== 'register' || input.install_artifact.runner_id !== input.runner_id || input.install_artifact.platform !== 'macos' && input.install_artifact.platform !== 'windows' && input.install_artifact.platform !== 'linux')
+            return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-install-artifact-binding-invalid' };
+        const selected = [...new Set(input.capabilities ?? input.install_artifact.capability_profile.capabilities)].sort();
+        if (selected.some((capability) => !input.install_artifact?.capability_profile.capabilities.includes(capability)))
+            return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capability-exceeds-install-profile' };
+        const mutation = await createTrustedRunnerRegistryMutation({ signer: input.signer, network_id: input.network_id, mutation_id: input.mutation_id, action: input.action, runner_id: input.runner_id, platform: input.install_artifact.platform, helper_version: input.install_artifact.helper_version, helper_digest: input.install_artifact.helper_digest, capability_profile_digest: input.install_artifact.capability_profile.profile_digest, new_public_key_fingerprint: input.install_artifact.public_key_fingerprint, capabilities: selected, reason: input.reason, occurred_at: input.occurred_at, expected_revision: current.snapshot.revision });
+        return { status: 'ready', snapshot: current.snapshot, mutation };
+    }
     const mutation = await createTrustedRunnerRegistryMutation({ signer: input.signer, network_id: input.network_id, mutation_id: input.mutation_id, action: input.action, runner_id: input.runner_id, new_public_key_fingerprint: input.new_public_key_fingerprint, old_public_key_fingerprint: input.action === 'rotate' || input.action === 'revoke' ? entry?.public_key_fingerprint : undefined, old_capabilities_digest: input.action === 'update-capabilities' ? trustedRunnerCapabilitiesDigest(entry?.capabilities) : undefined, capabilities: input.capabilities, reason: input.reason, occurred_at: input.occurred_at, expected_revision: current.snapshot.revision });
     return { status: 'ready', snapshot: current.snapshot, mutation };
 }

@@ -45,6 +45,7 @@ export function runRealAgentDogfoodWorkerCli(argv: readonly string[] = process.a
 type WorkerContext = {
   schema: 'zj-loop.real_agent_dogfood_worker_context.v1';
   provider_id: string;
+  provider_auth_ref: AdmissionBoundExecution['binding']['provider_auth_ref'];
   state_store: string;
   evidence_store: string;
   network_id: string;
@@ -66,6 +67,7 @@ async function runWorkerContext(contextPath: string) {
   const required = ['state_store', 'evidence_store', 'network_id', 'dogfood_id', 'execution_id', 'worker_id', 'lease_id', 'worktree_path', 'executable', 'goal'] as const;
   if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || !context.binding || !context.admission_bound_execution || !Number.isInteger(context.expected_revision)) throw new Error('worker-context-invalid');
   if (context.provider_id !== 'codex') throw new Error('provider-not-registered');
+  if (JSON.stringify(context.provider_auth_ref) !== JSON.stringify(context.admission_bound_execution.binding.provider_auth_ref)) throw new Error('worker-provider-auth-ref-binding-invalid');
   const stateStore = createSqliteStateStore({ filename: context.state_store as string });
   try {
     const snapshot = await stateStore.readEvents({ network_id: context.network_id as string, aggregate_type: 'real-agent-dogfood', aggregate_id: context.dogfood_id as string });

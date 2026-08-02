@@ -2,6 +2,7 @@ import { type HumanSignature, type HumanSigner, type HumanSignerIdentity } from 
 export declare const TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA: "zj-loop.trusted_runner_registry_mutation.v1";
 export declare const TRUSTED_RUNNER_CAPABILITY_SCHEMA: "zj-loop.trusted_runner_capability.v1";
 export declare const TRUSTED_RUNNER_CAPABILITIES: readonly ["credential-cleanup", "network-policy", "output-bounds", "process-boundary", "secure-signing", "worktree-observation"];
+export type TrustedRunnerCapability = typeof TRUSTED_RUNNER_CAPABILITIES[number];
 export type TrustedRunnerRegistryMutationAction = 'register' | 'rotate' | 'revoke' | 'update-capabilities';
 export type TrustedRunnerRegistryMutation = {
     schema: typeof TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA;
@@ -9,6 +10,10 @@ export type TrustedRunnerRegistryMutation = {
     mutation_id: string;
     action: TrustedRunnerRegistryMutationAction;
     runner_id: string;
+    platform?: 'macos' | 'windows' | 'linux';
+    helper_version?: string;
+    helper_digest?: string;
+    capability_profile_digest?: string;
     old_public_key_fingerprint?: string;
     new_public_key_fingerprint?: string;
     old_capabilities_digest?: string;
@@ -26,6 +31,10 @@ export type TrustedRunnerRegistryEntry = {
     runner_id: string;
     public_key_fingerprint: string;
     status: 'active' | 'revoked';
+    platform?: 'macos' | 'windows' | 'linux';
+    helper_version?: string;
+    helper_digest?: string;
+    capability_profile_digest?: string;
     capabilities?: string[];
 };
 export declare function validateTrustedRunnerCapabilities(capabilities?: string[]): {
@@ -39,6 +48,10 @@ export declare function createTrustedRunnerRegistryMutation(input: {
     mutation_id: string;
     action: TrustedRunnerRegistryMutationAction;
     runner_id: string;
+    platform?: 'macos' | 'windows' | 'linux';
+    helper_version?: string;
+    helper_digest?: string;
+    capability_profile_digest?: string;
     old_public_key_fingerprint?: string;
     new_public_key_fingerprint?: string;
     old_capabilities_digest?: string;

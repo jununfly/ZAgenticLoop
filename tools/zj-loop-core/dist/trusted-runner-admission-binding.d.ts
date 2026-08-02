@@ -1,7 +1,7 @@
 import { type LocalExecutionPreflight, type LocalExecutionPreflightInput } from './local-execution-preflight.js';
 import type { TrustedRunnerExecutionContext } from './trusted-runner.js';
 import type { TrustedRunnerAdmissionBinding, TrustedRunnerExecutionAdmissionResult } from './trusted-runner-registry-store.js';
-type AdmissionBindingFields = keyof Pick<TrustedRunnerAdmissionBinding, 'runner_id' | 'registry_revision' | 'registry_snapshot_digest' | 'capabilities_digest'>;
+type AdmissionBindingFields = keyof Pick<TrustedRunnerAdmissionBinding, 'runner_id' | 'registry_revision' | 'registry_snapshot_digest' | 'capabilities_digest' | 'provider_auth_ref'>;
 export type AdmissionBoundLocalExecutionPreflightInput = Omit<LocalExecutionPreflightInput, AdmissionBindingFields>;
 export type AdmissionBoundTrustedRunnerExecutionContextInput = Omit<TrustedRunnerExecutionContext, AdmissionBindingFields>;
 export type AdmissionBoundExecutionInput = {

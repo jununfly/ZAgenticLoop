@@ -30,6 +30,14 @@ function actionShape(value) {
         return false;
     if (value.capabilities !== undefined && validateTrustedRunnerCapabilities(value.capabilities).status === 'blocked')
         return false;
+    if (value.platform !== undefined && !['macos', 'windows', 'linux'].includes(value.platform))
+        return false;
+    if (value.helper_version !== undefined && !text(value.helper_version))
+        return false;
+    if (value.helper_digest !== undefined && !/^sha256:[0-9a-f]{64}$/.test(value.helper_digest))
+        return false;
+    if (value.capability_profile_digest !== undefined && !/^sha256:[0-9a-f]{64}$/.test(value.capability_profile_digest))
+        return false;
     if (value.action === 'register')
         return !value.old_public_key_fingerprint && FINGERPRINT.test(value.new_public_key_fingerprint ?? '');
     if (value.action === 'revoke')
@@ -46,6 +54,10 @@ export async function createTrustedRunnerRegistryMutation(input) {
         mutation_id: input.mutation_id,
         action: input.action,
         runner_id: input.runner_id,
+        ...(input.platform ? { platform: input.platform } : {}),
+        ...(input.helper_version ? { helper_version: input.helper_version } : {}),
+        ...(input.helper_digest ? { helper_digest: input.helper_digest } : {}),
+        ...(input.capability_profile_digest ? { capability_profile_digest: input.capability_profile_digest } : {}),
         ...(input.old_public_key_fingerprint ? { old_public_key_fingerprint: input.old_public_key_fingerprint } : {}),
         ...(input.new_public_key_fingerprint ? { new_public_key_fingerprint: input.new_public_key_fingerprint } : {}),
         ...(input.old_capabilities_digest ? { old_capabilities_digest: input.old_capabilities_digest } : {}),
@@ -97,7 +109,7 @@ export function applyTrustedRunnerRegistryMutation(input) {
     if (input.mutation.action === 'register') {
         if (current)
             return { status: 'blocked', registry, reason: 'registry-runner-already-exists' };
-        registry.push({ runner_id: input.mutation.runner_id, public_key_fingerprint: input.mutation.new_public_key_fingerprint, status: 'active', ...(input.mutation.capabilities ? { capabilities: normalizeCapabilities(input.mutation.capabilities) } : {}) });
+        registry.push({ runner_id: input.mutation.runner_id, public_key_fingerprint: input.mutation.new_public_key_fingerprint, status: 'active', ...(input.mutation.platform ? { platform: input.mutation.platform } : {}), ...(input.mutation.helper_version ? { helper_version: input.mutation.helper_version } : {}), ...(input.mutation.helper_digest ? { helper_digest: input.mutation.helper_digest } : {}), ...(input.mutation.capability_profile_digest ? { capability_profile_digest: input.mutation.capability_profile_digest } : {}), ...(input.mutation.capabilities ? { capabilities: normalizeCapabilities(input.mutation.capabilities) } : {}) });
         return { status: 'recorded', registry };
     }
     if (!current || current.status !== 'active' || (input.mutation.action !== 'update-capabilities' && current.public_key_fingerprint !== input.mutation.old_public_key_fingerprint))

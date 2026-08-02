@@ -8,12 +8,36 @@ import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
 import { admitTrustedRunnerExecution, createTrustedRunnerRegistryMutationFromStore, readTrustedRunnerRegistry, recordTrustedRunnerRegistryMutation, trustedRunnerRegistrySnapshotDigest } from '../dist/trusted-runner-registry-store.js';
 import { createHumanAuthoritySetInitializationFromStore, createHumanAuthoritySetMutationFromStore, humanAuthoritySetDigest, recordHumanAuthoritySetInitialization, recordHumanAuthoritySetMutation } from '../dist/human-authority-set-store.js';
+import { createTrustedRunnerInstallArtifact } from '../dist/trusted-runner-install-artifact.js';
 
 async function buildInitialization(input) {
   const result = await createHumanAuthoritySetInitializationFromStore(input);
   assert.equal(result.status, 'ready');
   return result.initialization;
 }
+
+test('trusted runner enrollment is bound to a verified install artifact and capability subset', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-trusted-runner-artifact-enrollment-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  try {
+    await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-08-02T10:00:00.000Z' });
+    const initialization = await buildInitialization({ stateStore, signer, network_id: 'network-1', mutation_id: 'authority-1', expected_revision: 1, reason: 'initialize', occurred_at: '2026-08-02T10:00:01.000Z' });
+    assert.equal((await recordHumanAuthoritySetInitialization({ stateStore, initialization })).status, 'recorded');
+    const artifact = createTrustedRunnerInstallArtifact({ artifact_id: 'artifact-1', platform: 'macos', runner_id: 'runner-artifact-1', helper_path: '/tmp/helper', helper_digest: 'sha256:' + 'a'.repeat(64), helper_version: 'helper-1', toolchain: { name: 'swiftc', version: '6.0' }, key_tag: 'tag-1', public_key_pem: 'pem', public_key_fingerprint: 'b'.repeat(64), capability_profile: { version: 'profile-1', capabilities: ['process-boundary', 'output-bounds'] }, verification: { status: 'verified', checked_at: '2026-08-02T10:00:02.000Z', evidence_digest: 'sha256:' + 'c'.repeat(64) } });
+    const result = await createTrustedRunnerRegistryMutationFromStore({ stateStore, signer, network_id: 'network-1', mutation_id: 'runner-artifact-1', action: 'register', runner_id: 'runner-artifact-1', install_artifact: artifact, capabilities: ['process-boundary'], reason: 'enroll verified helper', occurred_at: '2026-08-02T10:00:03.000Z' });
+    assert.equal(result.status, 'ready');
+    assert.equal(result.mutation.helper_digest, artifact.helper_digest);
+    assert.equal(result.mutation.capability_profile_digest, artifact.capability_profile.profile_digest);
+    assert.deepEqual(result.mutation.capabilities, ['process-boundary']);
+    const tooPowerful = await createTrustedRunnerRegistryMutationFromStore({ stateStore, signer, network_id: 'network-1', mutation_id: 'runner-artifact-2', action: 'register', runner_id: 'runner-artifact-1', install_artifact: artifact, capabilities: ['secure-signing'], reason: 'invalid enrollment', occurred_at: '2026-08-02T10:00:03.000Z' });
+    assert.equal(tooPowerful.status, 'blocked');
+    assert.equal(tooPowerful.reason, 'registry-capability-exceeds-install-profile');
+  } finally {
+    await stateStore.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test('trusted runner registry is persisted as a CAS-backed network aggregate and replays idempotently', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-trusted-runner-registry-store-'));

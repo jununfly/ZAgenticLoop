@@ -1,5 +1,6 @@
 import canonicalize from 'canonicalize';
 import { createHash, createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
+import type { ProviderAuthRef } from './provider-auth-runtime.js';
 
 export const TRUSTED_RUNNER_PROTOCOL_SCHEMA = 'zj-loop.trusted_runner_protocol.v1' as const;
 export const TRUSTED_RUNNER_PROOF_SCHEMA = 'zj-loop.trusted_runner_proof.v1' as const;
@@ -14,6 +15,7 @@ export type TrustedRunnerExecutionContext = {
   preflight_digest: string;
   registry_snapshot_digest: string;
   capabilities_digest: string;
+  provider_auth_ref: ProviderAuthRef;
   helper: { helper_id: string; helper_version: string; protocol_version: typeof TRUSTED_RUNNER_PROTOCOL_SCHEMA; executable_digest: string };
 };
 

@@ -1,5 +1,6 @@
 import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
+import { validateProviderAuthRef, type ProviderAuthRef } from './provider-auth-runtime.js';
 
 export const LOCAL_EXECUTION_PREFLIGHT_SCHEMA = 'zj-loop.local_execution_preflight.v1' as const;
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -20,6 +21,7 @@ export type LocalExecutionPreflight = {
   registry_snapshot_digest: string;
   capabilities_digest: string;
   provider_id: string;
+  provider_auth_ref?: ProviderAuthRef;
   adapter_version: string;
   executable: string;
   executable_digest: string;
@@ -48,13 +50,14 @@ function digest(value: Omit<LocalExecutionPreflight, 'preflight_digest'>): strin
 function validText(value: unknown): value is string { return typeof value === 'string' && value.length > 0 && value.length <= 4096; }
 function validId(value: unknown): value is string { return typeof value === 'string' && ID.test(value); }
 function validTimestamp(value: unknown): value is string { return validText(value) && Number.isFinite(Date.parse(value)); }
-function exactKeys(value: Record<string, unknown>): boolean { return Object.keys(value).every((key) => ['schema', 'status', 'side_effects_executed', 'network_id', 'plan_id', 'plan_revision', 'task_id', 'execution_id', 'attempt', 'runner_id', 'registry_revision', 'registry_snapshot_digest', 'capabilities_digest', 'provider_id', 'adapter_version', 'executable', 'executable_digest', 'args', 'argv_digest', 'cwd', 'cwd_digest', 'env_allowlist', 'env_policy_digest', 'sandbox_policy_digest', 'network_policy', 'timeout_ms', 'termination_grace_ms', 'max_stdout_bytes', 'max_stderr_bytes', 'orchestration_preflight_digest', 'issued_at', 'expires_at', 'preflight_digest'].includes(key)); }
+function exactKeys(value: Record<string, unknown>): boolean { return Object.keys(value).every((key) => ['schema', 'status', 'side_effects_executed', 'network_id', 'plan_id', 'plan_revision', 'task_id', 'execution_id', 'attempt', 'runner_id', 'registry_revision', 'registry_snapshot_digest', 'capabilities_digest', 'provider_id', 'provider_auth_ref', 'adapter_version', 'executable', 'executable_digest', 'args', 'argv_digest', 'cwd', 'cwd_digest', 'env_allowlist', 'env_policy_digest', 'sandbox_policy_digest', 'network_policy', 'timeout_ms', 'termination_grace_ms', 'max_stdout_bytes', 'max_stderr_bytes', 'orchestration_preflight_digest', 'issued_at', 'expires_at', 'preflight_digest'].includes(key)); }
 
 function shapeError(value: unknown): string | null {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !exactKeys(value as Record<string, unknown>)) return 'local-execution-preflight-schema-invalid';
   const item = value as Record<string, unknown>;
   if (item.schema !== LOCAL_EXECUTION_PREFLIGHT_SCHEMA || item.status !== 'execution-ready' || item.side_effects_executed !== false) return 'local-execution-preflight-status-invalid';
   for (const key of ['network_id', 'plan_id', 'task_id', 'execution_id', 'provider_id', 'adapter_version'] as const) if (!validId(item[key])) return `local-execution-preflight-${key}-invalid`;
+  if (item.provider_auth_ref !== undefined && validateProviderAuthRef(item.provider_auth_ref).status === 'blocked') return 'local-execution-preflight-provider-auth-ref-invalid';
   if (!Number.isInteger(item.plan_revision) || (item.plan_revision as number) < 1 || !Number.isInteger(item.attempt) || (item.attempt as number) < 1 || !Number.isInteger(item.registry_revision) || (item.registry_revision as number) < 1) return 'local-execution-preflight-revision-invalid';
   if (!validId(item.runner_id)) return 'local-execution-preflight-runner-id-invalid';
   if (!validText(item.executable) || !item.executable.startsWith('/') || item.executable.includes('\0') || !validText(item.cwd) || !item.cwd.startsWith('/') || item.cwd.includes('\0')) return 'local-execution-preflight-path-invalid';

@@ -47,6 +47,8 @@ async function runWorkerContext(contextPath) {
         throw new Error('worker-context-invalid');
     if (context.provider_id !== 'codex')
         throw new Error('provider-not-registered');
+    if (JSON.stringify(context.provider_auth_ref) !== JSON.stringify(context.admission_bound_execution.binding.provider_auth_ref))
+        throw new Error('worker-provider-auth-ref-binding-invalid');
     const stateStore = createSqliteStateStore({ filename: context.state_store });
     try {
         const snapshot = await stateStore.readEvents({ network_id: context.network_id, aggregate_type: 'real-agent-dogfood', aggregate_id: context.dogfood_id });

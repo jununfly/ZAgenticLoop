@@ -146,7 +146,7 @@
     "1-3": {
       "id": "1-3",
       "label": "Provider-neutral real-agent-dogfood CLI entry",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": "1",
       "children": [],
@@ -860,6 +860,11 @@
           "q": "问题182：是否应让 admission artifact 携带 StateStore admission provenance，并由 bind-admission 回读 registry snapshot、revision 和 required capabilities 重新验证；无法证明来自真实 admission 的 bundle 直接 blocked？",
           "answer": "同意",
           "note": "TrustedRunnerAdmissionBinding 增加 network_id 与 required_capabilities provenance；bind-admission 使用 StateStore 当前 snapshot 重新执行同一 admission，并逐字段比较 binding，禁止只凭 JSON 形状通过。"
+        },
+        {
+          "q": "问题183：是否现在冻结并完成 1-3 Provider-neutral real-agent-dogfood CLI entry，下一步进入 1-4 Opt-in real Agent read-only execution，聚焦真实 macOS TrustedRunner/native proof 与端到端 dogfood 验证？",
+          "answer": "同意",
+          "note": "1-3 的 admission、approval binding、StateStore provenance、worker 消费和 blocked 语义已闭合；下一步聚焦真实 macOS TrustedRunner/native proof 与端到端 dogfood 验证，避免继续把产品入口与平台执行实现混在一起。"
         }
       ],
       "notes": "Lifecycle contract, pure projection, replay admission, network-level StateStore CAS/idempotency and dedicated TDD entry implemented. Provider-neutral CLI start/status/resume persist draft -> preflight-ready -> awaiting-human-approval; start requires a clean Git repo and creates an execution-bound isolated worktree outside the repo. Resume consumes persisted signed approval by reference, acquires a CAS-backed single-worker lease (30s TTL/10s heartbeat contract), and enters running. Content-addressed EvidenceStore MVP provides private permissions, deduplication, digest verification and access audit. Provider worker runner persists stdout/stderr evidence and maps failed execution to blocked, missing post-run proof to outcome-uncertain, and complete post-run proof to verification-pending. Execution binding now revalidates executable file digest, canonical argv/cwd and lease/worktree before Provider invocation. Detached worker startup, full trusted proof adapters remain; independent verifier, review package persistence, signed Human review CLI/API, CAS decision path and explicit signed closeout are implemented. Closeout is a separate resource lifecycle: it requires accepted/rejected, no active lease, a clean registered worktree, signed worktree binding, is idempotent, removes only the worktree, and retains EvidenceStore evidence."
@@ -867,8 +872,8 @@
     "1-4": {
       "id": "1-4",
       "label": "Opt-in real Agent read-only execution",
-      "status": "pending",
-      "mode": "explore",
+      "status": "in_progress",
+      "mode": "exploit",
       "parent": "1",
       "children": [],
       "decisions": [
@@ -911,6 +916,166 @@
           "q": "问题24：是否采用 coarse network policy，仅验证本次 execution 使用 network-denied 或 network-allowed 且无策略漂移，endpoint 级网络治理另开路线图？",
           "answer": "是",
           "note": "当前优先把 OPN 产品做到可用、好用；暂不做 Provider endpoint allowlist、域名/IP 精细限制、Provider 与 Agent 网络拆分、DNS/代理/TLS destination 级审计；这些属于后续网络治理范围。"
+        },
+        {
+          "q": "问题184：1-4 的首个真实验收是否应采用真实 Agent + network-allowed 粗粒度策略作为主路径，以支持依赖远程模型的 Coding Agent；同时要求 macOS TrustedRunner 提供真实 Seatbelt/environment/process/worktree proof，network-denied 作为独立验证分支，而不是主路径硬前置？",
+          "answer": "同意",
+          "note": "主路径优先验证真实可用的 OPN 体验；network-allowed 仍必须经过 Human approval、macOS TrustedRunner proof、execution binding 和 bounded observation。network-denied 保留为独立安全验证分支，endpoint 级网络治理后置。"
+        },
+        {
+          "q": "问题185：1-4 是否应先实现明确的 macOS TrustedRunner 安装/初始化流程：由 Human 显式编译或安装 native helper，读取其不可导出 P-256 公钥指纹，经 Human-signed registry enrollment 注册后才能执行；禁止测试脚本临时生成 helper、自动注册或使用未登记的 helper？",
+          "answer": "同意",
+          "note": "安装/初始化负责产生可审计的 helper 身份与 registry enrollment；执行阶段只消费已登记、未撤销且 digest 一致的 helper。测试 fixture 不得替代真实安装和 enrollment。"
+        },
+        {
+          "q": "问题186：TrustedRunner 初始化是否应拆成 Install/verify 与 Enroll 两个显式阶段；Install/verify 只验证本机 helper，Enroll 才由 Human 选择 network、runner identity 和 capabilities 并签名写入网络级 StateStore；未 enrollment 的 helper 只能是 installed-unenrolled，不能执行？",
+          "answer": "同意",
+          "note": "安装验证与网络授权分离；本机安装不自动加入任何 network，只有 Human 明确发起 enrollment 并完成 registry mutation 后，helper 才具备 execution admission 资格。"
+        },
+        {
+          "q": "问题187：TrustedRunner enrollment 的 capabilities 是否采用“helper 证明上限 + Human 选择子集”模型；Install/verify 产生可证明的最大能力集合，Human 只能注册其子集，不能授予未证明能力，execution admission 只能请求已注册子集？",
+          "answer": "同意",
+          "note": "能力声明与授权分离：helper/platform proof 决定可证明上限，Human enrollment 决定网络内实际授权子集，StateStore 记录最终批准集合。"
+        },
+        {
+          "q": "问题188：TrustedRunner registry enrollment 是否必须绑定 helper 的不可变身份元数据（runner_id、platform、helper_version、helper_digest、public_key_fingerprint、capabilities、status），并要求 execution admission 校验当前 helper 与 registry snapshot 全部一致；任一漂移直接 blocked？",
+          "answer": "同意",
+          "note": "registry 登记的是可执行 helper 身份而不只是公钥；helper 替换、重编译、平台或版本漂移都必须重新 install/verify 与 enrollment，旧 execution 不自动迁移。"
+        },
+        {
+          "q": "问题189：macOS TrustedRunner 的 1-4 MVP 是否采用本机源码编译 + Swift/compiler/toolchain 证据 + helper digest enrollment 的安装方式，暂不引入签名分发、渠道升级和自动更新系统？",
+          "answer": "同意",
+          "note": "先验证真实 OPN dogfood 闭环；安装摘要必须记录 toolchain、产物 digest 并经 Human 确认，正式发布分发、Apple 签名和自动更新后置。"
+        },
+        {
+          "q": "问题190：Install/verify 是否必须执行真实 helper 自检，验证协议握手、macOS Keychain 不可导出 P-256 密钥签名、公钥指纹、环境/process proof 和临时 key 清理；自检失败保持 install-blocked，不得进入 enrollment？",
+          "answer": "同意",
+          "note": "编译成功不等于 TrustedRunner 可用；只有真实 helper 自检闭合后才允许 Human 看到 enrollment 候选，任何 Keychain、签名、proof 或清理失败都停在安装阶段。"
+        },
+        {
+          "q": "问题191：TrustedRunner 安装验证是否应区分临时自检身份与待 enrollment 的持久身份；临时 key 自检后删除，持久 key 由 Human 明确 provision 并生成 install artifact，但 enrollment 前不能执行，禁止把临时 key 升级为网络信任身份？",
+          "answer": "同意",
+          "note": "身份生命周期分离：self-test 证明本机能力，provision 产生待授权身份，enrollment 才授予 network execution 资格。"
+        },
+        {
+          "q": "问题192：Enroll 是否只能消费 Install/verify + provision 生成的内容寻址 install artifact，不接受手工传入 runner 公钥、helper digest、版本、平台或 capabilities；artifact 缺失、篡改或字段漂移直接 blocked？",
+          "answer": "同意",
+          "note": "安装 artifact 成为 enrollment 的唯一输入边界，绑定 helper、toolchain、持久公钥、Keychain key tag、能力上限和验证证据；Human 只批准 network 授权，不手工重建底层身份。"
+        },
+        {
+          "q": "问题193：TrustedRunner 的可证明能力上限是否应由 helper 版本对应的、代码内固定且版本化的 capability profile 产生，而不是由 CLI 参数或 Human 自行声明；Install artifact 记录 profile digest，Human enrollment 只能选择其子集？",
+          "answer": "同意",
+          "note": "能力 profile 是 helper 实现事实，不是用户输入；profile digest 与 helper digest、版本和 proof 绑定，避免通过声明扩大 TrustedRunner 权限。"
+        },
+        {
+          "q": "问题194：Install artifact、TrustedRunner registry 和 admission binding 的外层 schema 是否从第一天保持 platform-neutral，仅将 macOS 专属信息放入 platform_evidence；Windows CNG、Linux PKCS#11/TPM2 后续复用同一 enrollment/admission contract？",
+          "answer": "同意",
+          "note": "协议外层跨平台稳定，平台差异仅存在于 install/verify、native helper 和 trusted proof；避免把 macOS 实现细节固化进 OPN 核心模型。"
+        },
+        {
+          "q": "问题195：1-4 的首个真实 dogfood 是否选择 ZAgenticLoop 仓库中的有价值、可复核、明确只读任务；真实 Agent 使用 network-allowed + macOS TrustedRunner 完成分析、证据、verification 和 Human review，禁止修改文件、提交或 push；写入型任务后置？",
+          "answer": "同意",
+          "note": "先用只读任务验证真实 OPN execution 闭环和责任边界；写入型 Agent execution 需要后续单独的 capability、资源隔离和验收设计。"
+        },
+        {
+          "q": "问题196：首个只读 dogfood 是否必须采用固定、可验证的任务契约，而不是开放式 prompt；任务为审查 ZAgenticLoop 当前 OPN/TrustedRunner 实现边界，输出包含已实现、未实现、风险、证据引用和建议的结构化 review report，并以字段完整、引用可回读、仓库无修改、无 commit/push、输出未超限作为验收条件？",
+          "answer": "同意",
+          "note": "首个真实任务以结构化 report 和可回读证据为结果，不接受 Agent 自报完成；这为后续 Graph Atom 和写入型任务提供 baseline。"
+        },
+        {
+          "q": "问题197：首个 dogfood review report 是否采用机器可验证 JSON 为事实源、Human 可读 Markdown/文本为渲染视图；JSON 绑定 task/execution/attempt、输入范围、findings、severity、evidence_refs、边界、建议、digest、时间和 provider metadata，Verifier 只消费 schema/digest 校验后的 JSON？",
+          "answer": "同意",
+          "note": "报告事实与展示分离；JSON 进入 EvidenceStore 并参与 verification/review package，Markdown 只是稳定的人类阅读投影，不能反向改变事实。"
+        },
+        {
+          "q": "问题198：首个只读 dogfood 是否必须经过真实 Human review package 和 P-256 签名 Accept 才视为 OPN 任务成功；Verifier 通过只能进入 review-pending，不能自动进入 accepted；package 必须包含 report、证据、verifier 结果、worktree clean、风险和 provider/execution/admission provenance？",
+          "answer": "同意",
+          "note": "OPN 成功终态仍由 Human 对结果负责；自动 verification 只能证明事实完整，不能替代 Human 对结果、风险和边界的最终判断。"
+        },
+        {
+          "q": "问题199：首个只读 dogfood 是否必须绑定不可变仓库输入快照（repository canonical path、branch/ref、base commit、execution worktree、初始 clean digest、roadmap/documentation revision）；执行期间输入漂移直接 blocked 或 outcome-uncertain，禁止把报告归因到不明确代码版本？",
+          "answer": "同意",
+          "note": "报告必须可复现、可归因；Human review 看到的 report、evidence 和 review package 都绑定同一个输入 commit 与 worktree 事实。"
+        },
+        {
+          "q": "问题200：network-allowed 主路径下，是否将只读严格定义为目标仓库与本地 worktree 不可写、无 Git/Provider credential、禁止 commit/push 和本地副作用，但不宣称当前具备 endpoint 级网络副作用阻断能力；无法解释的远程副作用证据进入 outcome-uncertain，不自动接受？",
+          "answer": "同意",
+          "note": "本 milestone 做真实可用与可解释边界：本地只读和凭据清理必须可证明，网络允许的远程副作用治理明确留到后续，不用过度承诺当前能力。"
+        },
+        {
+          "q": "问题201：真实 Agent 的远程模型认证是否采用显式 ProviderAuthRef；worker 不读取任意环境变量、用户目录登录态或 Keychain secret，Provider adapter 只消费受控 runtime 提供的可审计 auth ref（provider、来源类型、权限范围和 digest，不含 secret），缺少 auth ref 直接 blocked？",
+          "answer": "同意",
+          "note": "把“能否调用远程模型”从隐式 credential inheritance 提升为显式 Provider runtime contract；credential broker 和 endpoint 级治理可后置，但不得以环境泄漏或用户目录旁路实现。"
+        },
+        {
+          "q": "问题202：ProviderAuthRef 是否必须绑定单次 network + execution_id + attempt，并具备 provider、audience/scope、issued_at、expires_at 和 revocation 状态；Human approval summary 展示来源类型、scope 和有效期但不展示 secret，任一绑定漂移、过期或撤销都 blocked，禁止自动刷新、换 credential 或重试？",
+          "answer": "同意",
+          "note": "认证引用成为一次 execution 的不可变输入；auth 生命周期独立于 Provider execution，但必须与其绑定，避免远程模型调用绕过 Human approval 和 attempt 边界。"
+        },
+        {
+          "q": "问题203：ProviderAuthRef 是否必须由独立且受 Human 授权的 Provider Auth Broker/Runtime 发行，禁止 Agent、worker 或 Provider 自己声明或自签；MVP 可先实现本机 broker adapter，但必须记录 issuer、发行证据、scope 和 digest，没有可验证 issuer 时直接 blocked？",
+          "answer": "同意",
+          "note": "认证发行权与执行权分离；Provider 只能消费已发行 ref，不能借执行过程给自己授予远程模型访问权限。"
+        },
+        {
+          "q": "问题204：ProviderAuthRef 是否必须是无 secret 的 capability reference，secret 只能留在受控 Provider Auth Runtime 内存或受保护 IPC 通道中，禁止写入 StateStore、EvidenceStore、approval summary/envelope、worker context、stdout/stderr、report 或 review package；泄漏、清理不可证明或 broker IPC 失控进入 blocked 或 outcome-uncertain？",
+          "answer": "同意",
+          "note": "认证事实可审计，认证秘密不可持久化；OPN 记录 issuer/scope/digest/生命周期，不记录或回放 secret。"
+        },
+        {
+          "q": "问题205：Provider Auth Runtime 是否应作为 Human/设备的私有资源，而不是 OPN 网络级共享资源；secret、broker session 和 Provider 登录态只留在持有设备，网络 StateStore 只保存不可取回 secret 的 ProviderAuthRef 元数据，中心责任单元不能读取、复制、迁移或改变 secret 存储位置，跨设备必须重新经过目标设备 Human 授权？",
+          "answer": "同意",
+          "note": "认证秘密的所有权与任务协调权分离；网络可以协调“谁拥有可用认证能力”，不能因为中心节点或任务消费者身份取得认证秘密。"
+        },
+        {
+          "q": "问题206：当被编排节点没有满足任务所需的 ProviderAuthRef 时，路由是否必须停止并返回 Human，而不是自动把任务迁移到其他节点或借用其他设备 credential；Human 决定本地配置授权、改路由、任务降级、修订或终止？",
+          "answer": "同意",
+          "note": "认证能力是节点私有资源，缺失时属于真实路由阻塞；中心责任单元只能解释和提出候选，不能静默迁移权限或秘密。"
+        },
+        {
+          "q": "问题207：1-4 是否应实现 provider-neutral ProviderAuthRuntime 接口，由私有 runtime 提供 inspect、issueRef、launch(ref, execution)、revoke 和 verify；Core、worker、EvidenceStore 不直接处理 credential，首个实现可以是本机 runtime adapter？",
+          "answer": "同意",
+          "note": "Provider 认证成为独立私有生命周期；Core 只编排 opaque ref 和事实，ProviderAuthRuntime 承担 secret、进程启动和清理边界。"
+        },
+        {
+          "q": "问题208：ProviderAuthRuntime 是否应与 TrustedRunner 保持两个独立的本机责任组件；AuthRuntime 负责 credential issue/scope/私有 IPC/revoke/cleanup，TrustedRunner 负责 helper 身份、sandbox、process boundary、worktree、网络和 output proof；execution 必须同时持有两类独立事实，任一缺失或漂移直接 blocked？",
+          "answer": "同意",
+          "note": "认证生命周期与执行环境生命周期解耦但在 execution admission 汇合；AuthRuntime 不能代替 TrustedRunner，TrustedRunner 也不能取得 credential 管理权。"
+        },
+        {
+          "q": "问题209：ProviderAuthRef 的非敏感 metadata 是否必须纳入 AdmissionBoundExecution、LocalExecutionPreflight、approval summary/envelope 和 worker context 的 digest binding（auth_ref_id、provider、issuer、scope/audience、issued_at/expires_at、ref digest、network/execution/attempt）；resume/worker 启动前通过私有 AuthRuntime 重新验证，过期、撤销或状态漂移直接 blocked，secret 不进入任何 artifact？",
+          "answer": "同意",
+          "note": "Human 批准的是明确的 Provider 认证能力而非隐式登录态；auth metadata 与 TrustedRunner admission 一起成为不可变 execution 输入，但秘密仍留在私有 runtime。"
+        },
+        {
+          "q": "问题210：ProviderAuthRef 是否必须绑定具体 OPN 节点与 Provider runtime identity，而不能只绑定 provider；至少包含 network_id、node_id、provider_runtime_id、provider_id、auth_ref_id、scope/audience 和 digest；同一设备上的 Agent1、Agent2 也不能因共用设备自动共享 auth ref？",
+          "answer": "同意",
+          "note": "认证消费主体必须可定位到具体节点/runtime；设备共用不等于权限共用，跨 Agent 使用需要独立 Human 授权和新的 ref。"
+        },
+        {
+          "q": "问题211：1-4 是否冻结为单设备、单 OPN node、单 Human responsibility unit、单 Provider runtime、单 TrustedRunner 的真实只读 dogfood；多设备、多 Agent、跨节点 ProviderAuthRef 转移和 Graph 路由留到下一里程碑？",
+          "answer": "同意",
+          "note": "本阶段验证单节点 OPN Atom 的真实可用性和责任边界，不提前引入多节点协同复杂度；Graph Atom 以后以该 baseline 为基础扩展。"
+        },
+        {
+          "q": "问题212：TrustedRunner 的 install、verify、provision 和 enrollment 是否应通过统一产品级 CLI/API 工作流暴露，不要求 Human 手工执行 swiftc、读取 Keychain 输出或拼 registry mutation；公开 trusted-runner install/verify/provision/enroll/status 等少量动作，并返回结构化状态、Human 摘要、证据引用和下一步？",
+          "answer": "同意",
+          "note": "底层平台细节收敛在产品能力内；Human 负责确认和授权，不承担手工拼接密码学、helper 和 StateStore 事实的操作负担。"
+        },
+        {
+          "q": "问题213：trusted-runner provision 与 enroll 是否都必须要求明确 Human confirmation；install/verify/status 保持可重复、尽量只读；provision 创建持久 Keychain identity，enroll 写入网络级 registry，缺少固定 confirmation 或 Human 签名时禁止任何持久化副作用？",
+          "answer": "同意",
+          "note": "平台密钥创建和网络授权是两种不同副作用，都必须让 Human 看见、确认并留下证据；只读检查不应意外改变身份或网络状态。"
+        },
+        {
+          "q": "问题214：TrustedRunner install/provision/enroll 是否必须具备可恢复、幂等和 fail-closed 语义；同一 helper digest + key tag 不创建第二个 identity，provision 中断先回读验证而不自动生成新 key，同一 artifact + network + runner_id 的重复 enroll 返回已有 mutation，字段或 revision 漂移返回 conflict/blocked，不自动轮换、迁移或删除旧 identity？",
+          "answer": "同意",
+          "note": "身份安装和网络授权也遵循 OPN append-only/CAS 原则；恢复只能重读和验证既有事实，不能在不经 Human 决策时创建新责任边界。"
+        },
+        {
+          "q": "问题215：是否现在冻结 1-4 的设计决策并进入连续实现，依次落地 macOS TrustedRunner install/verify/provision 与 install artifact、Human-signed enroll 和 registry helper metadata、provider-neutral ProviderAuthRuntime/ProviderAuthRef、AuthRef admission/approval/worker binding、真实 network-allowed 只读 dogfood、network-denied 验证、verification/review/Accept/closeout？",
+          "answer": "同意",
+          "note": "1-4 设计冻结，进入实现阶段；按垂直切片闭合真实单节点 OPN Atom，不再继续扩展设计范围，遇到真正边界阻塞再停下 grill。"
         }
       ],
       "notes": ""
@@ -1000,7 +1165,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-02 13:06:17",
+    "updated": "2026-08-02 15:40:46",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

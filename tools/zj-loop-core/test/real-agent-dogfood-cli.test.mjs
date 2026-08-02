@@ -11,10 +11,16 @@ import { createHumanAuthoritySetInitializationFromStore, recordHumanAuthoritySet
 import { createAdmissionBoundExecution } from '../dist/trusted-runner-admission-binding.js';
 import { createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
 import { admitTrustedRunnerExecution, recordTrustedRunnerRegistryMutation, readTrustedRunnerRegistry } from '../dist/trusted-runner-registry-store.js';
+import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
+
+function providerAuthRef(network_id, execution_id, attempt, provider_id = 'codex') {
+  const unsigned = { schema: 'zj-loop.provider_auth_ref.v1', auth_ref_id: `auth-${execution_id}`, network_id, node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id, execution_id, attempt, issuer: 'provider-runtime-1', audience: 'model-api', scope: ['model:invoke'], issued_at: '2026-08-01T00:00:00.000Z', expires_at: '2026-08-02T00:00:00.000Z', status: 'active' };
+  return { ...unsigned, ref_digest: providerAuthRefDigest(unsigned) };
+}
 
 async function initGitRepo(repo) {
   await run('git', ['init', '-b', 'master'], { cwd: repo });
@@ -176,14 +182,14 @@ test('resume starts a detached Codex worker with a persisted execution context',
     const admissionBoundExecution = createAdmissionBoundExecution({
       preflight: { network_id: created.network_id, plan_id: 'plan-detached', plan_revision: 1, task_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, provider_id: 'codex', adapter_version: 'codex-agent-provider.v1', executable: summary.executable, executable_digest: 'sha256:' + 'a'.repeat(64), args: ['exec'], argv_digest: 'sha256:' + 'b'.repeat(64), cwd: summary.worktree_path, cwd_digest: 'sha256:' + 'c'.repeat(64), env_allowlist: [], env_policy_digest: 'sha256:' + 'd'.repeat(64), sandbox_policy_digest: 'sha256:' + 'e'.repeat(64), network_policy: { mode: 'network-denied', policy_digest: 'sha256:' + 'f'.repeat(64) }, timeout_ms: 30_000, termination_grace_ms: 1_000, max_stdout_bytes: 1024 * 1024, max_stderr_bytes: 1024 * 1024, orchestration_preflight_digest: 'sha256:' + '1'.repeat(64), issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z' },
       execution: { helper: { helper_id: 'helper-detached', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: 'sha256:' + '2'.repeat(64) } },
-      admission,
+      admission: { ...admission, binding: { ...admission.binding, provider_auth_ref: providerAuthRef(created.network_id, created.execution_id, 1) } },
     });
     await writeFile(admissionContextPath, JSON.stringify(admissionBoundExecution));
     const bound = await invoke(['bind-admission', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--admission-context', admissionContextPath, '--state-store', statePath, '--evidence-store', evidencePath]);
     assert.equal(bound.exitCode, 0, bound.stderr);
     const boundSummary = JSON.parse(await readFile(created.approval_summary_path, 'utf8'));
     const approval = await authority.signApprovalContext({ action: 'real-agent-dogfood.approve', request_id: created.dogfood_id, request_digest: boundSummary.summary_digest, network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64), issued_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() });
-    await writeFile(path.join(evidencePath, 'approval-detached.json'), JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, lifecycle_revision: 4, policy_digest: boundSummary.policy_digest, approval_summary_digest: boundSummary.summary_digest, admission_digest: boundSummary.admission_digest, approval, identity: authority.getPublicIdentity() }));
+    await writeFile(path.join(evidencePath, 'approval-detached.json'), JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, lifecycle_revision: 4, policy_digest: boundSummary.policy_digest, approval_summary_digest: boundSummary.summary_digest, admission_digest: boundSummary.admission_digest, provider_auth_ref: boundSummary.provider_auth_ref, approval, identity: authority.getPublicIdentity() }));
     const resumed = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-detached', '--admission-context', admissionContextPath, '--state-store', statePath, '--evidence-store', evidencePath]);
     assert.equal(resumed.exitCode, 0, resumed.stderr);
     const output = JSON.parse(resumed.stdout);

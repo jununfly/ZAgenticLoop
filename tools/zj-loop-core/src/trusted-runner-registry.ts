@@ -5,6 +5,7 @@ import { verifyHumanSignature, type HumanSignature, type HumanSigner, type Human
 export const TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA = 'zj-loop.trusted_runner_registry_mutation.v1' as const;
 export const TRUSTED_RUNNER_CAPABILITY_SCHEMA = 'zj-loop.trusted_runner_capability.v1' as const;
 export const TRUSTED_RUNNER_CAPABILITIES = ['credential-cleanup', 'network-policy', 'output-bounds', 'process-boundary', 'secure-signing', 'worktree-observation'] as const;
+export type TrustedRunnerCapability = typeof TRUSTED_RUNNER_CAPABILITIES[number];
 const FINGERPRINT = /^[0-9a-f]{64}$/;
 export type TrustedRunnerRegistryMutationAction = 'register' | 'rotate' | 'revoke' | 'update-capabilities';
 
@@ -14,6 +15,10 @@ export type TrustedRunnerRegistryMutation = {
   mutation_id: string;
   action: TrustedRunnerRegistryMutationAction;
   runner_id: string;
+  platform?: 'macos' | 'windows' | 'linux';
+  helper_version?: string;
+  helper_digest?: string;
+  capability_profile_digest?: string;
   old_public_key_fingerprint?: string;
   new_public_key_fingerprint?: string;
   old_capabilities_digest?: string;
@@ -32,6 +37,10 @@ export type TrustedRunnerRegistryEntry = {
   runner_id: string;
   public_key_fingerprint: string;
   status: 'active' | 'revoked';
+  platform?: 'macos' | 'windows' | 'linux';
+  helper_version?: string;
+  helper_digest?: string;
+  capability_profile_digest?: string;
   capabilities?: string[];
 };
 
@@ -60,6 +69,10 @@ function payloadOf(value: TrustedRunnerRegistryMutation): Payload {
 function actionShape(value: TrustedRunnerRegistryMutation): boolean {
   if (!['register', 'rotate', 'revoke', 'update-capabilities'].includes(value.action)) return false;
   if (value.capabilities !== undefined && validateTrustedRunnerCapabilities(value.capabilities).status === 'blocked') return false;
+  if (value.platform !== undefined && !['macos', 'windows', 'linux'].includes(value.platform)) return false;
+  if (value.helper_version !== undefined && !text(value.helper_version)) return false;
+  if (value.helper_digest !== undefined && !/^sha256:[0-9a-f]{64}$/.test(value.helper_digest)) return false;
+  if (value.capability_profile_digest !== undefined && !/^sha256:[0-9a-f]{64}$/.test(value.capability_profile_digest)) return false;
   if (value.action === 'register') return !value.old_public_key_fingerprint && FINGERPRINT.test(value.new_public_key_fingerprint ?? '');
   if (value.action === 'revoke') return FINGERPRINT.test(value.old_public_key_fingerprint ?? '') && !value.new_public_key_fingerprint;
   if (value.action === 'update-capabilities') return !value.old_public_key_fingerprint && !value.new_public_key_fingerprint && /^sha256:[0-9a-f]{64}$/.test(value.old_capabilities_digest ?? '') && Array.isArray(value.capabilities);
@@ -72,6 +85,10 @@ export async function createTrustedRunnerRegistryMutation(input: {
   mutation_id: string;
   action: TrustedRunnerRegistryMutationAction;
   runner_id: string;
+  platform?: 'macos' | 'windows' | 'linux';
+  helper_version?: string;
+  helper_digest?: string;
+  capability_profile_digest?: string;
   old_public_key_fingerprint?: string;
   new_public_key_fingerprint?: string;
   old_capabilities_digest?: string;
@@ -87,6 +104,10 @@ export async function createTrustedRunnerRegistryMutation(input: {
     mutation_id: input.mutation_id,
     action: input.action,
     runner_id: input.runner_id,
+    ...(input.platform ? { platform: input.platform } : {}),
+    ...(input.helper_version ? { helper_version: input.helper_version } : {}),
+    ...(input.helper_digest ? { helper_digest: input.helper_digest } : {}),
+    ...(input.capability_profile_digest ? { capability_profile_digest: input.capability_profile_digest } : {}),
     ...(input.old_public_key_fingerprint ? { old_public_key_fingerprint: input.old_public_key_fingerprint } : {}),
     ...(input.new_public_key_fingerprint ? { new_public_key_fingerprint: input.new_public_key_fingerprint } : {}),
     ...(input.old_capabilities_digest ? { old_capabilities_digest: input.old_capabilities_digest } : {}),
@@ -133,7 +154,7 @@ export function applyTrustedRunnerRegistryMutation(input: {
   const current = registry.find((entry) => entry.runner_id === input.mutation.runner_id);
   if (input.mutation.action === 'register') {
     if (current) return { status: 'blocked', registry, reason: 'registry-runner-already-exists' };
-    registry.push({ runner_id: input.mutation.runner_id, public_key_fingerprint: input.mutation.new_public_key_fingerprint as string, status: 'active', ...(input.mutation.capabilities ? { capabilities: normalizeCapabilities(input.mutation.capabilities) } : {}) });
+    registry.push({ runner_id: input.mutation.runner_id, public_key_fingerprint: input.mutation.new_public_key_fingerprint as string, status: 'active', ...(input.mutation.platform ? { platform: input.mutation.platform } : {}), ...(input.mutation.helper_version ? { helper_version: input.mutation.helper_version } : {}), ...(input.mutation.helper_digest ? { helper_digest: input.mutation.helper_digest } : {}), ...(input.mutation.capability_profile_digest ? { capability_profile_digest: input.mutation.capability_profile_digest } : {}), ...(input.mutation.capabilities ? { capabilities: normalizeCapabilities(input.mutation.capabilities) } : {}) });
     return { status: 'recorded', registry };
   }
   if (!current || current.status !== 'active' || (input.mutation.action !== 'update-capabilities' && current.public_key_fingerprint !== input.mutation.old_public_key_fingerprint)) return { status: 'blocked', registry, reason: 'registry-current-fingerprint-mismatch' };

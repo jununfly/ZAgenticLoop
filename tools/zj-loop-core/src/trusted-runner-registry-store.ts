@@ -1,9 +1,11 @@
 import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 import type { SqliteStateStore, StateEvent } from './sqlite-state-store.js';
-import { applyTrustedRunnerRegistryMutation, createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest, validateTrustedRunnerCapabilities, type TrustedRunnerRegistryEntry, type TrustedRunnerRegistryMutation, type TrustedRunnerRegistryMutationAction } from './trusted-runner-registry.js';
+import { applyTrustedRunnerRegistryMutation, createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest, validateTrustedRunnerCapabilities, type TrustedRunnerCapability, type TrustedRunnerRegistryEntry, type TrustedRunnerRegistryMutation, type TrustedRunnerRegistryMutationAction } from './trusted-runner-registry.js';
 import { readHumanAuthoritySet, replayHumanAuthoritySet } from './human-authority-set-store.js';
 import type { HumanSignerIdentity } from './human-signer.js';
+import { validateTrustedRunnerInstallArtifact, type TrustedRunnerInstallArtifact } from './trusted-runner-install-artifact.js';
+import type { ProviderAuthRef } from './provider-auth-runtime.js';
 
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE = 'trusted-runner-registry' as const;
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID = 'network' as const;
@@ -13,7 +15,7 @@ export type TrustedRunnerRegistrySnapshot = { network_id: string; revision: numb
 export type TrustedRunnerRegistryRead = { snapshot: TrustedRunnerRegistrySnapshot; history: TrustedRunnerRegistryMutation[] };
 export type TrustedRunnerRegistryRecordResult = TrustedRunnerRegistryRead & { status: 'recorded' | 'duplicate' | 'conflict' | 'blocked'; revision?: number; reason?: string };
 export type TrustedRunnerRegistryMutationBuildResult = { status: 'ready'; mutation: TrustedRunnerRegistryMutation; snapshot: TrustedRunnerRegistrySnapshot } | { status: 'blocked' | 'conflict'; snapshot: TrustedRunnerRegistrySnapshot; reason: string };
-export type TrustedRunnerAdmissionBinding = { network_id: string; runner_id: string; registry_revision: number; registry_snapshot_digest: string; required_capabilities: string[]; capabilities: string[]; capabilities_digest: string };
+export type TrustedRunnerAdmissionBinding = { network_id: string; runner_id: string; registry_revision: number; registry_snapshot_digest: string; required_capabilities: string[]; capabilities: string[]; capabilities_digest: string; provider_auth_ref?: ProviderAuthRef };
 export type TrustedRunnerExecutionAdmissionResult = { status: 'admitted'; binding: TrustedRunnerAdmissionBinding } | { status: 'blocked'; reason: string };
 
 function canonicalDigest(value: unknown): string {
@@ -29,7 +31,7 @@ async function emptyRegistryRead(stateStore: SqliteStateStore, network_id: strin
   return { snapshot: { network_id, revision: events.snapshot_revision, digest: trustedRunnerRegistrySnapshotDigest([]), registry: [] }, history: [] };
 }
 
-export async function createTrustedRunnerRegistryMutationFromStore(input: { stateStore: SqliteStateStore; signer: Parameters<typeof createTrustedRunnerRegistryMutation>[0]['signer']; network_id: string; mutation_id: string; action: TrustedRunnerRegistryMutationAction; runner_id: string; new_public_key_fingerprint?: string; capabilities?: string[]; reason: string; occurred_at: string }): Promise<TrustedRunnerRegistryMutationBuildResult> {
+export async function createTrustedRunnerRegistryMutationFromStore(input: { stateStore: SqliteStateStore; signer: Parameters<typeof createTrustedRunnerRegistryMutation>[0]['signer']; network_id: string; mutation_id: string; action: TrustedRunnerRegistryMutationAction; runner_id: string; new_public_key_fingerprint?: string; capabilities?: string[]; reason: string; occurred_at: string; install_artifact?: TrustedRunnerInstallArtifact }): Promise<TrustedRunnerRegistryMutationBuildResult> {
   const authority = await readHumanAuthoritySet({ stateStore: input.stateStore, network_id: input.network_id });
   const current = authority.active.length === 0 ? await emptyRegistryRead(input.stateStore, input.network_id) : await readTrustedRunnerRegistry({ stateStore: input.stateStore, network_id: input.network_id });
   if (authority.active.length === 0) return { status: 'blocked', snapshot: current.snapshot, reason: 'human-authority-set-not-initialized' };
@@ -38,10 +40,19 @@ export async function createTrustedRunnerRegistryMutationFromStore(input: { stat
   const entry = current.snapshot.registry.find((candidate) => candidate.runner_id === input.runner_id);
   if (input.action === 'register' && entry) return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-runner-already-exists' };
   if (input.action !== 'register' && (!entry || entry.status !== 'active')) return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-current-fingerprint-mismatch' };
-  if (input.action === 'register' && !input.new_public_key_fingerprint) return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-new-fingerprint-required' };
+  if (input.action === 'register' && !input.new_public_key_fingerprint && !input.install_artifact) return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-new-fingerprint-required' };
   if (input.action === 'rotate' && !input.new_public_key_fingerprint) return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-new-fingerprint-required' };
   if (input.action === 'update-capabilities' && !input.capabilities) return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capabilities-required' };
   if (input.capabilities && validateTrustedRunnerCapabilities(input.capabilities).status === 'blocked') return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capability-unknown' };
+  if (input.install_artifact) {
+    const artifactCheck = validateTrustedRunnerInstallArtifact(input.install_artifact);
+    if (artifactCheck.status === 'blocked') return { status: 'blocked', snapshot: current.snapshot, reason: artifactCheck.reason };
+    if (input.action !== 'register' || input.install_artifact.runner_id !== input.runner_id || input.install_artifact.platform !== 'macos' && input.install_artifact.platform !== 'windows' && input.install_artifact.platform !== 'linux') return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-install-artifact-binding-invalid' };
+    const selected = [...new Set(input.capabilities ?? input.install_artifact.capability_profile.capabilities)].sort() as TrustedRunnerCapability[];
+    if (selected.some((capability) => !input.install_artifact?.capability_profile.capabilities.includes(capability))) return { status: 'blocked', snapshot: current.snapshot, reason: 'registry-capability-exceeds-install-profile' };
+    const mutation = await createTrustedRunnerRegistryMutation({ signer: input.signer, network_id: input.network_id, mutation_id: input.mutation_id, action: input.action, runner_id: input.runner_id, platform: input.install_artifact.platform, helper_version: input.install_artifact.helper_version, helper_digest: input.install_artifact.helper_digest, capability_profile_digest: input.install_artifact.capability_profile.profile_digest, new_public_key_fingerprint: input.install_artifact.public_key_fingerprint, capabilities: selected, reason: input.reason, occurred_at: input.occurred_at, expected_revision: current.snapshot.revision });
+    return { status: 'ready', snapshot: current.snapshot, mutation };
+  }
   const mutation = await createTrustedRunnerRegistryMutation({ signer: input.signer, network_id: input.network_id, mutation_id: input.mutation_id, action: input.action, runner_id: input.runner_id, new_public_key_fingerprint: input.new_public_key_fingerprint, old_public_key_fingerprint: input.action === 'rotate' || input.action === 'revoke' ? entry?.public_key_fingerprint : undefined, old_capabilities_digest: input.action === 'update-capabilities' ? trustedRunnerCapabilitiesDigest(entry?.capabilities) : undefined, capabilities: input.capabilities, reason: input.reason, occurred_at: input.occurred_at, expected_revision: current.snapshot.revision });
   return { status: 'ready', snapshot: current.snapshot, mutation };
 }

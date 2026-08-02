@@ -172,3 +172,5 @@ export * from './real-agent-dogfood-review-decision.js';
 export * from './real-agent-dogfood-review-cli.js';
 export * from './real-agent-dogfood-closeout.js';
 export * from './real-agent-dogfood-closeout-cli.js';
+export * from './provider-auth-runtime.js';
+export * from './trusted-runner-install-artifact.js';

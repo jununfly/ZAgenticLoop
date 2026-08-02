@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createAdmissionBoundExecution, createAdmissionBoundLocalExecutionPreflight, createAdmissionBoundTrustedRunnerExecutionContext } from '../dist/trusted-runner-admission-binding.js';
 import { trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
+import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
+const authRefUnsigned = { schema: 'zj-loop.provider_auth_ref.v1', auth_ref_id: 'auth-1', network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id: 'provider-1', execution_id: 'execution-1', attempt: 1, issuer: 'provider-runtime-1', audience: 'model-api', scope: ['model:invoke'], issued_at: '2026-08-02T00:00:00.000Z', expires_at: '2026-08-02T01:00:00.000Z', status: 'active' };
+const providerAuthRef = { ...authRefUnsigned, ref_digest: providerAuthRefDigest(authRefUnsigned) };
 
 const binding = {
   network_id: 'network-1',
@@ -13,6 +16,7 @@ const binding = {
   required_capabilities: ['process-boundary'],
   capabilities: ['process-boundary', 'secure-signing'],
   capabilities_digest: trustedRunnerCapabilitiesDigest(['process-boundary', 'secure-signing']),
+  provider_auth_ref: providerAuthRef,
 };
 
 const preflightBase = {
@@ -64,6 +68,7 @@ test('admission-bound builders inject one immutable binding into preflight and T
     registry_revision: binding.registry_revision,
     registry_snapshot_digest: binding.registry_snapshot_digest,
     capabilities_digest: binding.capabilities_digest,
+    provider_auth_ref: providerAuthRef,
     execution_id: preflight.execution_id,
     attempt: preflight.attempt,
     preflight_digest: preflight.preflight_digest,

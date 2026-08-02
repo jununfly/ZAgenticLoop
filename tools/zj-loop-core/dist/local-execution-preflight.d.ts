@@ -1,3 +1,4 @@
+import { type ProviderAuthRef } from './provider-auth-runtime.js';
 export declare const LOCAL_EXECUTION_PREFLIGHT_SCHEMA: "zj-loop.local_execution_preflight.v1";
 export type LocalExecutionPreflight = {
     schema: typeof LOCAL_EXECUTION_PREFLIGHT_SCHEMA;
@@ -14,6 +15,7 @@ export type LocalExecutionPreflight = {
     registry_snapshot_digest: string;
     capabilities_digest: string;
     provider_id: string;
+    provider_auth_ref?: ProviderAuthRef;
     adapter_version: string;
     executable: string;
     executable_digest: string;

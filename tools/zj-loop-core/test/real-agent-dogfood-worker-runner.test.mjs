@@ -11,8 +11,13 @@ import { createRealAgentDogfoodExecutionBinding } from '../dist/real-agent-dogfo
 import { createFakeRealAgentDogfoodPostRunProof } from '../dist/real-agent-dogfood-post-run-proof.js';
 import { createAdmissionBoundExecution } from '../dist/trusted-runner-admission-binding.js';
 import { trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
+import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
 
 const d = (letter) => `sha256:${letter.repeat(64)}`;
+function providerAuthRef(execution_id, attempt, provider_id = 'provider-1') {
+  const unsigned = { schema: 'zj-loop.provider_auth_ref.v1', auth_ref_id: `auth-${execution_id}`, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id, execution_id, attempt, issuer: 'provider-runtime-1', audience: 'model-api', scope: ['model:invoke'], issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z', status: 'active' };
+  return { ...unsigned, ref_digest: providerAuthRefDigest(unsigned) };
+}
 
 function admissionBoundExecution({ execution_id, attempt, executable, cwd }) {
   const capabilities = ['process-boundary', 'output-bounds'];
@@ -22,7 +27,7 @@ function admissionBoundExecution({ execution_id, attempt, executable, cwd }) {
       provider_id: 'provider-1', adapter_version: 'adapter-1', executable, executable_digest: d('c'), args: ['exec'], argv_digest: d('d'), cwd, cwd_digest: d('e'), env_allowlist: [], env_policy_digest: d('f'), sandbox_policy_digest: d('1'), network_policy: { mode: 'network-denied', policy_digest: d('2') }, timeout_ms: 1000, termination_grace_ms: 100, max_stdout_bytes: 1024, max_stderr_bytes: 1024, orchestration_preflight_digest: d('3'), issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z',
     },
     execution: { helper: { helper_id: 'helper-1', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: d('4') } },
-    admission: { status: 'admitted', binding: { network_id: 'network-1', runner_id: 'runner-1', registry_revision: 1, registry_snapshot_digest: d('5'), required_capabilities: ['process-boundary'], capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } },
+    admission: { status: 'admitted', binding: { network_id: 'network-1', runner_id: 'runner-1', registry_revision: 1, registry_snapshot_digest: d('5'), required_capabilities: ['process-boundary'], capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities), provider_auth_ref: providerAuthRef(execution_id, attempt) } },
   });
 }
 
