@@ -10,6 +10,7 @@ import { projectRealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle
 import { executeRealAgentDogfoodWorker } from './real-agent-dogfood-worker-runner.js';
 import { createProviderRuntimeIpcCleanupCoordinator } from './provider-auth-ipc-cleanup-client.js';
 import { createProviderRuntimeIpcProvider } from './provider-auth-ipc-provider-client.js';
+import { createTrustedRunnerPostRunProofFactory } from './trusted-runner-post-run-ipc.js';
 const WORKER_CLI_SCHEMA = 'zj-loop.real_agent_dogfood_worker_cli.v1';
 export function runRealAgentDogfoodWorkerCli(argv = process.argv.slice(2), io) {
     const outputIo = io ?? defaultCliIo;
@@ -64,6 +65,9 @@ async function runWorkerContext(contextPath) {
             return { status: 'uncertain', reason: 'provider-runtime-launch-handle-missing' };
         return createProviderRuntimeIpcCleanupCoordinator({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, handle, network_id: context.network_id, node_id: handle.node_id, provider_id: context.provider_id, execution_id: context.execution_id, attempt: handle.attempt })();
     };
+    const post_run_proof_factory = context.trusted_runner_post_run_ipc && typeof context.trusted_runner_post_run_ipc.socket_path === 'string' && typeof context.trusted_runner_post_run_ipc.correlation_id === 'string'
+        ? createTrustedRunnerPostRunProofFactory(context.trusted_runner_post_run_ipc)
+        : undefined;
     const stateStore = createSqliteStateStore({ filename: context.state_store });
     try {
         const snapshot = await stateStore.readEvents({ network_id: context.network_id, aggregate_type: 'real-agent-dogfood', aggregate_id: context.dogfood_id });
@@ -76,7 +80,7 @@ async function runWorkerContext(contextPath) {
             throw new Error('worker-lease-invalid');
         const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store });
         const provider = runtimeProvider;
-        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, provider_cleanup, expected_revision: context.expected_revision });
+        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision });
         if (result.status !== 'verification-pending')
             return result;
         const verifierContextPath = `${contextPath}.verifier.json`;

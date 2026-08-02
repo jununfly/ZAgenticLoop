@@ -12,6 +12,8 @@ import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
 import { createInMemoryProviderAuthRuntime } from '../dist/provider-auth-runtime.js';
 import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from '../dist/provider-auth-ipc-unix.js';
+import { createTrustedRunnerPostRunProofServer } from '../dist/trusted-runner-post-run-ipc.js';
+import { createFakeRealAgentDogfoodPostRunProof } from '../dist/real-agent-dogfood-post-run-proof.js';
 import { mkdir, mkdtemp, rm, writeFile, chmod } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -83,8 +85,11 @@ test('worker context invokes the provider through the Runtime IPC channel', asyn
       await connection.send(createProviderAuthIpcFrame({ correlation_id: 'worker-runtime', sequence: 1, network_id: 'network-cli', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id: 'codex', execution_id: 'execution-cli', attempt: 1, kind: 'cleanup', launch_handle_digest: launchHandle.handle_digest, payload: { schema: 'zj-loop.provider_cleanup_response.v1', status: 'cleaned', cleanup_digest: cleanup.proof.cleanup_digest } }));
     }
   } });
+  const trustedRunnerSocketPath = path.join(root, 'trusted-runner.sock');
+  const trustedRunner = createTrustedRunnerPostRunProofServer({ socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime', verify_peer: () => true, issue: async (request) => createFakeRealAgentDogfoodPostRunProof({ ...request, runner_id: 'trusted-fixture' }) });
   try {
     await server.start();
+    await trustedRunner.start();
     await store.createNetwork({ network_id: 'network-cli', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
     const draft = createRealAgentDogfoodDraft({ network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', attempt: 1, provider_id: 'codex', adapter_version: 'codex-agent-provider.v1', created_at: '2026-08-01T12:00:00.000Z' });
     const ready = createRealAgentDogfoodTransition({ lifecycle: draft.lifecycle, to: 'preflight-ready', event_id: 'ready-cli', occurred_at: '2026-08-01T12:00:01.000Z', fact_digest: 'sha256:' + 'a'.repeat(64), next_action: 'human-approval' });
@@ -103,28 +108,29 @@ test('worker context invokes the provider through the Runtime IPC channel', asyn
       admission: { status: 'admitted', binding: { network_id: 'network-cli', runner_id: 'runner-cli', registry_revision: 1, registry_snapshot_digest: 'sha256:' + '3'.repeat(64), required_capabilities: ['process-boundary'], capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities), provider_auth_ref: issued.ref } },
     });
     const contextPath = path.join(root, 'worker-context.json');
-    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', provider_auth_ref: admission_bound_execution.binding.provider_auth_ref, adapter_contract_digest: 'sha256:' + '4'.repeat(64), provider_runtime_ipc: { socket_path: socketPath, correlation_id: 'worker-runtime', contract_digest: 'sha256:' + '5'.repeat(64) }, state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, admission_bound_execution, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1 }));
+    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', provider_auth_ref: admission_bound_execution.binding.provider_auth_ref, adapter_contract_digest: 'sha256:' + '4'.repeat(64), provider_runtime_ipc: { socket_path: socketPath, correlation_id: 'worker-runtime', contract_digest: 'sha256:' + '5'.repeat(64) }, trusted_runner_post_run_ipc: { socket_path: trustedRunnerSocketPath, correlation_id: 'trusted-worker-runtime' }, state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, admission_bound_execution, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1 }));
     const stdout = [];
     const stderr = [];
     const exitCode = await runRealAgentDogfoodWorkerCli(['worker', '--provider-id', 'codex', '--context', contextPath], { stdout: (message) => stdout.push(message), stderr: (message) => stderr.push(message) });
     assert.deepEqual(stderr, []);
     assert.equal(exitCode, 0);
     const result = JSON.parse(stdout[0]);
-    assert.equal(result.status, 'outcome-uncertain');
-    assert.equal(result.reason_code, 'post-run-proof-missing-or-invalid');
+    assert.equal(result.status, 'verification-pending');
+    assert.equal(result.verifier_started, true);
     assert.match(result.stdout_digest, /^sha256:/);
     let finalStatus;
     for (let attempt = 0; attempt < 30; attempt++) {
       const snapshot = await store.readEvents({ network_id: 'network-cli', aggregate_type: 'real-agent-dogfood', aggregate_id: 'dogfood-cli' });
       finalStatus = projectRealAgentDogfoodLifecycle(snapshot.events).status;
-      if (finalStatus === 'outcome-uncertain' || finalStatus === 'blocked') break;
+      if (finalStatus === 'review-pending' || finalStatus === 'outcome-uncertain' || finalStatus === 'blocked') break;
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    assert.equal(finalStatus, 'outcome-uncertain');
+    assert.equal(finalStatus, 'review-pending');
     const evidence = await createContentAddressedEvidenceStore({ root: evidencePath });
     assert.equal((await evidence.read({ digest: result.stdout_digest, actor: 'test' })).toString(), 'worker-output');
   } finally {
     await server.close();
+    await trustedRunner.close();
     await store.close();
     await rm(root, { recursive: true, force: true });
   }
