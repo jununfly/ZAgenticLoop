@@ -58,6 +58,7 @@
     "test:execution-context": "npm run build && node --test test/execution-context.test.mjs",
     "test:local-process-adapter": "npm run build && node --test test/local-process-adapter.test.mjs",
     "test:codex-agent-provider-adapter": "npm run build && node --test test/codex-agent-provider-adapter.test.mjs",
+    "test:provider-runtime-adapter": "npm run build && node --test test/provider-runtime-adapter.test.mjs test/provider-auth-runtime.test.mjs",
     "test:local-execution-policy": "npm run build && node --test test/local-execution-policy.test.mjs",
     "test:codex-jsonl-parser": "npm run build && node --test test/codex-jsonl-parser.test.mjs",
     "test:provider-redaction": "npm run build && node --test test/provider-redaction.test.mjs",

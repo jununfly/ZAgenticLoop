@@ -174,6 +174,7 @@ export * from './real-agent-dogfood-review-cli.js';
 export * from './real-agent-dogfood-closeout.js';
 export * from './real-agent-dogfood-closeout-cli.js';
 export * from './provider-auth-runtime.js';
+export * from './provider-runtime-adapter.js';
 export * from './provider-auth-ipc-protocol.js';
 export * from './provider-auth-ipc-unix.js';
 export * from './trusted-runner-install-artifact.js';

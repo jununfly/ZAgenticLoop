@@ -2,6 +2,7 @@ import { appendRealAgentDogfoodEvent, createRealAgentDogfoodTransition } from '.
 import { validateRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 import { verifyRealAgentDogfoodPostRunProof } from './real-agent-dogfood-post-run-proof.js';
 import { validateLocalExecutionPreflight } from './local-execution-preflight.js';
+import { providerResultFromLocalProcess, validateProviderResult } from './provider-runtime-adapter.js';
 function validateAdmissionBoundExecution(input) {
     const admission = input.admission_bound_execution;
     if (validateLocalExecutionPreflight(admission.preflight).status !== 'valid')
@@ -20,6 +21,24 @@ export async function executeRealAgentDogfoodWorker(input) {
         throw new Error(`worker-${binding.reason}`);
     const now = input.now ?? new Date().toISOString();
     const result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
+    const normalized = result.provider_result ?? providerResultFromLocalProcess(result);
+    const normalizedCheck = validateProviderResult(normalized);
+    let cleanup = { status: 'not-required' };
+    if (normalizedCheck.status === 'blocked' || !result.success || result.status !== 'completed') {
+        if (!input.provider_cleanup)
+            cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-unavailable' };
+        else {
+            try {
+                const candidate = await input.provider_cleanup();
+                cleanup = candidate.status === 'cleaned' && /^sha256:[0-9a-f]{64}$/.test(candidate.proof_digest)
+                    ? candidate
+                    : { status: 'uncertain', reason: candidate.status === 'uncertain' ? candidate.reason : 'cleanup-proof-invalid' };
+            }
+            catch {
+                cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' };
+            }
+        }
+    }
     const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
     const stderrEvidence = await input.evidenceStore.put({ content: result.stderr, kind: 'provider-stderr' });
     let postRunProof;
@@ -31,16 +50,21 @@ export async function executeRealAgentDogfoodWorker(input) {
             postRunProof = null;
         }
     }
-    const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
+    const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, provider_result: normalized, provider_result_validation: normalizedCheck, cleanup, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
     const factEvidence = await input.evidenceStore.put({ content: JSON.stringify(fact), kind: 'provider-result-fact' });
     const factDigest = factEvidence.digest;
     let to;
     let reasonCode;
     let nextAction;
-    if (!result.success || result.status !== 'completed') {
-        to = 'blocked';
-        reasonCode = `provider-${result.reason ?? result.status}`;
-        nextAction = 'human-review-provider-failure';
+    if (normalizedCheck.status === 'blocked') {
+        to = cleanup.status === 'cleaned' ? 'blocked' : 'outcome-uncertain';
+        reasonCode = cleanup.status === 'cleaned' ? 'provider-adapter-failure' : 'provider-adapter-failure-cleanup-uncertain';
+        nextAction = cleanup.status === 'cleaned' ? 'human-review-provider-failure' : 'human-reconcile-execution';
+    }
+    else if (!result.success || result.status !== 'completed') {
+        to = cleanup.status === 'cleaned' ? 'blocked' : 'outcome-uncertain';
+        reasonCode = cleanup.status === 'cleaned' ? `provider-${result.reason ?? result.status}` : `provider-${result.reason ?? result.status}-cleanup-uncertain`;
+        nextAction = cleanup.status === 'cleaned' ? 'human-review-provider-failure' : 'human-reconcile-execution';
     }
     else if (!postRunProof) {
         to = 'outcome-uncertain';

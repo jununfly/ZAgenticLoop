@@ -36,6 +36,7 @@ export type ProviderLaunchHandle = {
   attempt: number;
   endpoint_digest: string;
   contract_digest: string;
+  adapter_contract_digest: string;
   issued_at: string;
   expires_at: string;
   status: 'active' | 'closed';
@@ -54,6 +55,7 @@ export type ProviderCleanupProof = {
   provider_id: string;
   execution_id: string;
   attempt: number;
+  adapter_contract_digest: string;
   revoked: boolean;
   secret_cleared: boolean;
   cleaned_at: string;
@@ -65,7 +67,7 @@ export type ProviderAuthRuntime = {
   issueRef(input: { network_id: string; node_id: string; provider_id: string; execution_id: string; attempt: number; audience: string; scope: string[]; secret: string; issued_at: string; expires_at: string; human_authorized: boolean }): Promise<{ status: 'issued'; ref: ProviderAuthRef } | { status: 'blocked'; reason: string }>;
   verify(input: { ref: ProviderAuthRef; network_id: string; node_id: string; provider_id: string; execution_id: string; attempt: number; now?: string }): Promise<{ status: 'valid'; ref: ProviderAuthRef } | { status: 'blocked'; reason: string }>;
   revoke(input: { auth_ref_id: string }): Promise<{ status: 'revoked' } | { status: 'blocked'; reason: string }>;
-  launch(input: { ref: ProviderAuthRef; network_id: string; node_id: string; provider_id: string; execution_id: string; attempt: number; contract_digest: string; issued_at: string; expires_at: string }): Promise<{ status: 'launched'; handle: ProviderLaunchHandle } | { status: 'blocked'; reason: string }>;
+  launch(input: { ref: ProviderAuthRef; network_id: string; node_id: string; provider_id: string; execution_id: string; attempt: number; contract_digest: string; adapter_contract_digest: string; issued_at: string; expires_at: string }): Promise<{ status: 'launched'; handle: ProviderLaunchHandle } | { status: 'blocked'; reason: string }>;
   cleanup(input: { handle: ProviderLaunchHandle; network_id: string; node_id: string; provider_id: string; execution_id: string; attempt: number; cleaned_at: string }): Promise<{ status: 'cleaned'; proof: ProviderCleanupProof } | { status: 'blocked'; reason: string }>;
   consumeSecret(input: { ref: ProviderAuthRef; network_id: string; node_id: string; provider_id: string; execution_id: string; attempt: number; now?: string }): Promise<{ status: 'authorized'; secret: string } | { status: 'blocked'; reason: string }>;
 };
@@ -164,9 +166,9 @@ export function createInMemoryProviderAuthRuntime(input: { runtime_id: string; p
     async launch(request) {
       const verified = await this.verify({ ref: request.ref, network_id: request.network_id, node_id: request.node_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, now: request.issued_at });
       if (verified.status === 'blocked') return verified;
-      if (!request.contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.contract_digest) || !Number.isFinite(Date.parse(request.issued_at)) || !Number.isFinite(Date.parse(request.expires_at)) || Date.parse(request.issued_at) >= Date.parse(request.expires_at)) return { status: 'blocked', reason: 'provider-launch-contract-invalid' };
+      if (!request.contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.contract_digest) || !request.adapter_contract_digest || !/^sha256:[0-9a-f]{64}$/.test(request.adapter_contract_digest) || !Number.isFinite(Date.parse(request.issued_at)) || !Number.isFinite(Date.parse(request.expires_at)) || Date.parse(request.issued_at) >= Date.parse(request.expires_at)) return { status: 'blocked', reason: 'provider-launch-contract-invalid' };
       if ([...handles.values()].some((handle) => handle.auth_ref_id === request.ref.auth_ref_id && handle.status === 'active')) return { status: 'blocked', reason: 'provider-launch-handle-already-issued' };
-      const unsigned = { schema: PROVIDER_LAUNCH_HANDLE_SCHEMA, handle_id: `handle-${randomUUID()}`, auth_ref_id: request.ref.auth_ref_id, network_id: request.network_id, node_id: request.node_id, provider_runtime_id: request.ref.provider_runtime_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, endpoint_digest: `sha256:${createHash('sha256').update(randomUUID(), 'utf8').digest('hex')}`, contract_digest: request.contract_digest, issued_at: request.issued_at, expires_at: request.expires_at, status: 'active' as const };
+      const unsigned = { schema: PROVIDER_LAUNCH_HANDLE_SCHEMA, handle_id: `handle-${randomUUID()}`, auth_ref_id: request.ref.auth_ref_id, network_id: request.network_id, node_id: request.node_id, provider_runtime_id: request.ref.provider_runtime_id, provider_id: request.provider_id, execution_id: request.execution_id, attempt: request.attempt, endpoint_digest: `sha256:${createHash('sha256').update(randomUUID(), 'utf8').digest('hex')}`, contract_digest: request.contract_digest, adapter_contract_digest: request.adapter_contract_digest, issued_at: request.issued_at, expires_at: request.expires_at, status: 'active' as const };
       const handle = { ...unsigned, handle_digest: handleDigest(unsigned) };
       handles.set(handle.handle_id, handle);
       return { status: 'launched', handle };
@@ -181,7 +183,7 @@ export function createInMemoryProviderAuthRuntime(input: { runtime_id: string; p
       if (revoked.status === 'blocked') return revoked;
       const closed = { ...current, status: 'closed' as const };
       handles.set(closed.handle_id, { ...closed, handle_digest: handleDigest(closed) });
-      const unsigned = { schema: PROVIDER_CLEANUP_PROOF_SCHEMA, status: 'cleaned' as const, auth_ref_id: current.auth_ref_id, handle_digest: current.handle_digest, endpoint_digest: current.endpoint_digest, network_id: current.network_id, node_id: current.node_id, provider_runtime_id: current.provider_runtime_id, provider_id: current.provider_id, execution_id: current.execution_id, attempt: current.attempt, revoked: true, secret_cleared: true, cleaned_at: request.cleaned_at };
+      const unsigned = { schema: PROVIDER_CLEANUP_PROOF_SCHEMA, status: 'cleaned' as const, auth_ref_id: current.auth_ref_id, handle_digest: current.handle_digest, endpoint_digest: current.endpoint_digest, network_id: current.network_id, node_id: current.node_id, provider_runtime_id: current.provider_runtime_id, provider_id: current.provider_id, execution_id: current.execution_id, attempt: current.attempt, adapter_contract_digest: current.adapter_contract_digest, revoked: true, secret_cleared: true, cleaned_at: request.cleaned_at };
       return { status: 'cleaned', proof: { ...unsigned, cleanup_digest: cleanupDigest(unsigned) } };
     },
     async consumeSecret(request) {

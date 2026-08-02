@@ -1,4 +1,5 @@
 import type { LocalProcessAdapter, LocalProcessHandle, LocalProcessLaunchSpec, LocalProcessResult } from './local-process-adapter.js';
+import { providerResultFromLocalProcess, type ProviderResult } from './provider-runtime-adapter.js';
 
 export const CODEX_AGENT_PROVIDER_SCHEMA = 'zj-loop.codex_agent_provider.v1' as const;
 
@@ -23,6 +24,7 @@ export type CodexAgentRunResult = Omit<LocalProcessResult, 'schema'> & {
   schema: typeof CODEX_AGENT_PROVIDER_SCHEMA;
   provider: 'codex';
   invocation: CodexInvocation;
+  provider_result: ProviderResult;
 };
 
 type ProcessAdapter = Pick<LocalProcessAdapter, 'launch'>;
@@ -38,7 +40,7 @@ export function buildCodexInvocation(input: { executable: string; cwd: string })
 }
 
 function withCodexSchema(result: LocalProcessResult, invocation: CodexInvocation): CodexAgentRunResult {
-  return { ...result, schema: CODEX_AGENT_PROVIDER_SCHEMA, provider: 'codex', invocation };
+  return { ...result, schema: CODEX_AGENT_PROVIDER_SCHEMA, provider: 'codex', invocation, provider_result: providerResultFromLocalProcess(result) };
 }
 
 export function createCodexAgentProviderAdapter(input: { process_adapter: ProcessAdapter; executable: string }) {

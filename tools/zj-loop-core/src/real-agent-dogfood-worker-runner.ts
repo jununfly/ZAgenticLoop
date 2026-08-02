@@ -5,8 +5,9 @@ import { validateRealAgentDogfoodExecutionBinding, type RealAgentDogfoodExecutio
 import { verifyRealAgentDogfoodPostRunProof, type RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
 import { validateLocalExecutionPreflight } from './local-execution-preflight.js';
 import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
+import { providerResultFromLocalProcess, validateProviderResult, type ProviderResult as NormalizedProviderResult } from './provider-runtime-adapter.js';
 
-type ProviderResult = { status: 'completed' | 'failed' | 'cancelled' | 'timed-out'; success: boolean; pid: number; exit_code: number | null; signal: string | null; stdout: string; stderr: string; reason?: string };
+type ProviderResult = { status: 'completed' | 'failed' | 'cancelled' | 'timed-out'; success: boolean; pid: number; exit_code: number | null; signal: string | null; stdout: string; stderr: string; reason?: string; provider_result?: NormalizedProviderResult };
 type Provider = { run(input: { cwd: string; prompt: string; executable: string }): Promise<ProviderResult> };
 export type RealAgentDogfoodWorkerResult = {
   status: 'verification-pending' | 'blocked' | 'outcome-uncertain';
@@ -20,6 +21,8 @@ export type RealAgentDogfoodWorkerResult = {
   next_action: string;
 };
 
+type ProviderCleanupResult = { status: 'cleaned'; proof_digest: string } | { status: 'uncertain'; reason: string };
+
 function validateAdmissionBoundExecution(input: { admission_bound_execution: AdmissionBoundExecution; lifecycle: RealAgentDogfoodLifecycle; executable: string; worktree_path: string }): void {
   const admission = input.admission_bound_execution;
   if (validateLocalExecutionPreflight(admission.preflight).status !== 'valid') throw new Error('worker-admission-preflight-invalid');
@@ -27,13 +30,27 @@ function validateAdmissionBoundExecution(input: { admission_bound_execution: Adm
   if (admission.preflight.executable !== input.executable || admission.preflight.cwd !== input.worktree_path) throw new Error('worker-admission-resource-binding-invalid');
 }
 
-export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; admission_bound_execution: AdmissionBoundExecution; worktree_path: string; executable: string; goal: string; provider: Provider; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
+export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; admission_bound_execution: AdmissionBoundExecution; worktree_path: string; executable: string; goal: string; provider: Provider; provider_cleanup?: () => Promise<ProviderCleanupResult>; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
   if (input.lifecycle.status !== 'running') throw new Error('worker-lifecycle-not-running');
   validateAdmissionBoundExecution(input);
   const binding = await validateRealAgentDogfoodExecutionBinding({ binding: input.binding, executable: input.executable, args: input.binding.args, cwd: input.worktree_path, worktree_path: input.worktree_path, lease_id: input.lease_id });
   if (binding.status === 'blocked') throw new Error(`worker-${binding.reason}`);
   const now = input.now ?? new Date().toISOString();
   const result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
+  const normalized = result.provider_result ?? providerResultFromLocalProcess(result);
+  const normalizedCheck = validateProviderResult(normalized);
+  let cleanup: ProviderCleanupResult | { status: 'not-required' } = { status: 'not-required' };
+  if (normalizedCheck.status === 'blocked' || !result.success || result.status !== 'completed') {
+    if (!input.provider_cleanup) cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-unavailable' };
+    else {
+      try {
+        const candidate = await input.provider_cleanup();
+        cleanup = candidate.status === 'cleaned' && /^sha256:[0-9a-f]{64}$/.test(candidate.proof_digest)
+          ? candidate
+          : { status: 'uncertain', reason: candidate.status === 'uncertain' ? candidate.reason : 'cleanup-proof-invalid' };
+      } catch { cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' }; }
+    }
+  }
   const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
   const stderrEvidence = await input.evidenceStore.put({ content: result.stderr, kind: 'provider-stderr' });
   let postRunProof;
@@ -42,13 +59,22 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
       postRunProof = await input.post_run_proof_factory({ execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest, provider_result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal } });
     } catch { postRunProof = null; }
   }
-  const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
+  const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, provider_result: normalized, provider_result_validation: normalizedCheck, cleanup, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
   const factEvidence = await input.evidenceStore.put({ content: JSON.stringify(fact), kind: 'provider-result-fact' });
   const factDigest = factEvidence.digest;
   let to: 'verification-pending' | 'blocked' | 'outcome-uncertain';
   let reasonCode: string;
   let nextAction: string;
-  if (!result.success || result.status !== 'completed') { to = 'blocked'; reasonCode = `provider-${result.reason ?? result.status}`; nextAction = 'human-review-provider-failure'; }
+  if (normalizedCheck.status === 'blocked') {
+    to = cleanup.status === 'cleaned' ? 'blocked' : 'outcome-uncertain';
+    reasonCode = cleanup.status === 'cleaned' ? 'provider-adapter-failure' : 'provider-adapter-failure-cleanup-uncertain';
+    nextAction = cleanup.status === 'cleaned' ? 'human-review-provider-failure' : 'human-reconcile-execution';
+  }
+  else if (!result.success || result.status !== 'completed') {
+    to = cleanup.status === 'cleaned' ? 'blocked' : 'outcome-uncertain';
+    reasonCode = cleanup.status === 'cleaned' ? `provider-${result.reason ?? result.status}` : `provider-${result.reason ?? result.status}-cleanup-uncertain`;
+    nextAction = cleanup.status === 'cleaned' ? 'human-review-provider-failure' : 'human-reconcile-execution';
+  }
   else if (!postRunProof) { to = 'outcome-uncertain'; reasonCode = 'post-run-proof-missing-or-invalid'; nextAction = 'human-reconcile-execution'; }
   else {
     const proof = verifyRealAgentDogfoodPostRunProof({ proof: postRunProof, execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest });

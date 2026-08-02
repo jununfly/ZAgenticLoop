@@ -1,3 +1,4 @@
+import { providerResultFromLocalProcess } from './provider-runtime-adapter.js';
 export const CODEX_AGENT_PROVIDER_SCHEMA = 'zj-loop.codex_agent_provider.v1';
 export function buildCodexInvocation(input) {
     if (!input.executable || input.executable.includes('\0'))
@@ -11,7 +12,7 @@ export function buildCodexInvocation(input) {
     };
 }
 function withCodexSchema(result, invocation) {
-    return { ...result, schema: CODEX_AGENT_PROVIDER_SCHEMA, provider: 'codex', invocation };
+    return { ...result, schema: CODEX_AGENT_PROVIDER_SCHEMA, provider: 'codex', invocation, provider_result: providerResultFromLocalProcess(result) };
 }
 export function createCodexAgentProviderAdapter(input) {
     if (!input.process_adapter || typeof input.process_adapter.launch !== 'function')

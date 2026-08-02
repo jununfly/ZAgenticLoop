@@ -21,6 +21,7 @@ import { buildCodexInvocation } from './codex-agent-provider-adapter.js';
 import { createRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 import { trustedRunnerAdmissionBundleDigest, validateAdmissionBoundExecution, type AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import { admitTrustedRunnerExecution, readTrustedRunnerRegistry } from './trusted-runner-registry-store.js';
+import { createProviderRuntimeAdapterContract, providerRuntimeAdapterContractDigest } from './provider-runtime-adapter.js';
 
 const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -38,6 +39,16 @@ export function defaultRealAgentDogfoodRuntimePaths(platform = process.platform,
 
 function digest(value: unknown): string {
   return `sha256:${createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex')}`;
+}
+
+async function buildAdapterContractDigest(input: { provider_id: string; adapter: string; executable: string; network_policy: string }): Promise<string> {
+  const contract = createProviderRuntimeAdapterContract({
+    adapter_id: input.provider_id,
+    adapter_version: input.adapter,
+    binary_digest: `sha256:${createHash('sha256').update(await readFile(input.executable)).digest('hex')}`,
+    argv_policy_digest: digest({ provider_id: input.provider_id, adapter: input.adapter, network_policy: input.network_policy, argv_policy: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', '<isolated-worktree>'] }),
+  });
+  return providerRuntimeAdapterContractDigest(contract);
 }
 
 function admissionBindingsEqual(left: AdmissionBoundExecution['binding'], right: AdmissionBoundExecution['binding']): boolean {
@@ -132,11 +143,12 @@ async function start(options: Record<string, string | boolean | undefined>) {
     let revision = 1;
     await append(stateStore, networkId, draft.event, revision++);
     const policyDigest = digest({ repo: paths.repo, worktree_path: worktree.worktree_path, base_commit: worktree.base_commit, branch: worktree.branch, executable, network_policy: networkPolicy });
+    const adapterContractDigest = await buildAdapterContractDigest({ provider_id: providerId, adapter, executable, network_policy: networkPolicy });
     const preflight = createRealAgentDogfoodTransition({ lifecycle: draft.lifecycle, to: 'preflight-ready', event_id: `${dogfoodId}:preflight-ready`, occurred_at: now, fact_digest: policyDigest, next_action: 'human-approval' });
     await append(stateStore, networkId, preflight.event, revision++);
     const awaiting = createRealAgentDogfoodTransition({ lifecycle: preflight.lifecycle, to: 'awaiting-human-approval', event_id: `${dogfoodId}:awaiting-human-approval`, occurred_at: now, fact_digest: policyDigest, next_action: 'human-approval' });
     await append(stateStore, networkId, awaiting.event, revision++);
-    const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, executable, network_policy: networkPolicy, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
+    const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, adapter_contract_digest: adapterContractDigest, executable, network_policy: networkPolicy, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
     const summary = { ...summaryBase, summary_digest: digest(summaryBase) };
     const summaryPath = path.join(paths.evidenceStore, `${dogfoodId}.approval-summary.json`);
     await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, { mode: 0o600 });
@@ -213,8 +225,8 @@ async function resume(options: Record<string, string | boolean | undefined>) {
     }
     if (envelope.schema !== 'zj-loop.real_agent_dogfood_approval_envelope.v1' || envelope.dogfood_id !== dogfoodId || envelope.execution_id !== lifecycle.execution_id || envelope.attempt !== lifecycle.attempt || typeof envelope.policy_digest !== 'string' || typeof envelope.approval_summary_digest !== 'string' || !envelope.approval || !envelope.identity) throw new Error('human-approval-binding-invalid');
     const summaryPath = path.join(evidenceStore, `${dogfoodId}.approval-summary.json`);
-    const summary = JSON.parse(await readFile(summaryPath, 'utf8')) as { summary_digest?: unknown; admission_digest?: unknown; provider_auth_ref?: unknown; policy_digest?: unknown; lifecycle_revision?: unknown; goal?: unknown; executable?: unknown; worktree_path?: unknown };
-    if (summary.summary_digest !== envelope.approval_summary_digest || summary.policy_digest !== envelope.policy_digest || summary.lifecycle_revision !== envelope.lifecycle_revision) throw new Error('human-approval-summary-mismatch');
+    const summary = JSON.parse(await readFile(summaryPath, 'utf8')) as { summary_digest?: unknown; admission_digest?: unknown; provider_auth_ref?: unknown; policy_digest?: unknown; lifecycle_revision?: unknown; goal?: unknown; executable?: unknown; worktree_path?: unknown; adapter_contract_digest?: unknown };
+    if (summary.summary_digest !== envelope.approval_summary_digest || summary.policy_digest !== envelope.policy_digest || summary.lifecycle_revision !== envelope.lifecycle_revision || typeof summary.adapter_contract_digest !== 'string' || !DIGEST.test(summary.adapter_contract_digest)) throw new Error('human-approval-summary-mismatch');
     if (envelope.approval.action !== 'real-agent-dogfood.approve' || envelope.approval.request_id !== dogfoodId || envelope.approval.request_digest !== summary.summary_digest || envelope.approval.network_id !== networkId || envelope.approval.schema !== 'zj-loop.human_authority.v2') throw new Error('human-approval-context-mismatch');
     if (verifyHumanApprovalContextDetailed({ identity: envelope.identity, context: envelope.approval, require_v2: true }).status !== 'current-v2-accepted') throw new Error('human-approval-signature-invalid');
     let admissionBoundExecution: AdmissionBoundExecution | undefined;
@@ -256,7 +268,7 @@ async function resume(options: Record<string, string | boolean | undefined>) {
     if (result.status === 'conflict') throw new Error('lifecycle-revision-conflict');
     if (!workerContext) return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
     try {
-      await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+      await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, adapter_contract_digest: summary.adapter_contract_digest, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
       const workerCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-worker-cli.js');
       const child = spawn(process.execPath, [workerCli, 'worker', '--provider-id', 'codex', '--context', workerContext.path], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
       child.unref();

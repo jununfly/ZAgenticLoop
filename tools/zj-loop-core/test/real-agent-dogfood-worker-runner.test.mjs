@@ -80,6 +80,36 @@ test('worker does not claim verification when post-run proof is missing', async 
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
 
+test('worker records malformed ProviderResult as an adapter failure', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-runner-adapter-failure-'));
+  const evidenceStore = await createContentAddressedEvidenceStore({ root: path.join(root, 'evidence') });
+  const { stateStore, lifecycle } = await runningFixture(root);
+  const executable = path.join(root, 'provider');
+  await (await import('node:fs/promises')).writeFile(executable, 'provider');
+  const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
+  const admission_bound_execution = admissionBoundExecution({ execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, executable, cwd: '/tmp/worktree' });
+  try {
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '', provider_result: { schema: 'zj-loop.provider_result.v1', status: 'completed', success: true, exit_code: 0, signal: null, stdout_digest: d('a'), stderr_digest: d('b'), unexpected: true } }; } }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    assert.equal(result.status, 'outcome-uncertain');
+    assert.equal(result.reason_code, 'provider-adapter-failure-cleanup-uncertain');
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('worker keeps adapter failure blocked only after trusted cleanup proof', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-runner-adapter-cleaned-'));
+  const evidenceStore = await createContentAddressedEvidenceStore({ root: path.join(root, 'evidence') });
+  const { stateStore, lifecycle } = await runningFixture(root);
+  const executable = path.join(root, 'provider');
+  await (await import('node:fs/promises')).writeFile(executable, 'provider');
+  const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
+  const admission_bound_execution = admissionBoundExecution({ execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, executable, cwd: '/tmp/worktree' });
+  try {
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '', provider_result: { schema: 'zj-loop.provider_result.v1', status: 'completed', success: true, exit_code: 0, signal: null, stdout_digest: d('a'), stderr_digest: d('b'), unexpected: true } }; } }, provider_cleanup: async () => ({ status: 'cleaned', proof_digest: d('c') }), expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.reason_code, 'provider-adapter-failure');
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('worker rejects a tampered signed post-run proof', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-runner-tampered-'));
   const evidenceStore = await createContentAddressedEvidenceStore({ root: path.join(root, 'evidence') });

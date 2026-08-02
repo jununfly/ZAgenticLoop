@@ -30,6 +30,7 @@ export type ProviderLaunchHandle = {
     attempt: number;
     endpoint_digest: string;
     contract_digest: string;
+    adapter_contract_digest: string;
     issued_at: string;
     expires_at: string;
     status: 'active' | 'closed';
@@ -47,6 +48,7 @@ export type ProviderCleanupProof = {
     provider_id: string;
     execution_id: string;
     attempt: number;
+    adapter_contract_digest: string;
     revoked: boolean;
     secret_cleared: boolean;
     cleaned_at: string;
@@ -111,6 +113,7 @@ export type ProviderAuthRuntime = {
         execution_id: string;
         attempt: number;
         contract_digest: string;
+        adapter_contract_digest: string;
         issued_at: string;
         expires_at: string;
     }): Promise<{
