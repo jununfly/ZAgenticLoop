@@ -6,6 +6,8 @@ import { createContentAddressedEvidenceStore } from '../dist/content-addressed-e
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition, appendRealAgentDogfoodEvent, projectRealAgentDogfoodLifecycle } from '../dist/real-agent-dogfood-lifecycle.js';
 import { acquireRealAgentDogfoodWorkerLease } from '../dist/real-agent-dogfood-worker.js';
 import { createRealAgentDogfoodExecutionBinding } from '../dist/real-agent-dogfood-binding.js';
+import { createAdmissionBoundExecution } from '../dist/trusted-runner-admission-binding.js';
+import { trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
 import { mkdir, mkdtemp, rm, writeFile, chmod } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -62,8 +64,14 @@ test('worker context invokes the registered provider through the real local proc
     const running = createRealAgentDogfoodTransition({ lifecycle: awaiting.lifecycle, to: 'running', event_id: 'running-cli', occurred_at: '2026-08-01T12:00:04.000Z', approval_digest: 'sha256:' + 'b'.repeat(64), next_action: 'provider-execution' });
     await appendRealAgentDogfoodEvent({ stateStore: store, expected_revision: lease.revision, event: running.event });
     const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', worktree], cwd: worktree, worktree_path: worktree, lease_id: lease.lease_id });
+    const capabilities = ['process-boundary', 'output-bounds'];
+    const admission_bound_execution = createAdmissionBoundExecution({
+      preflight: { network_id: 'network-cli', plan_id: 'plan-cli', plan_revision: 1, task_id: 'task-cli', execution_id: 'execution-cli', attempt: 1, provider_id: 'codex', adapter_version: 'codex-agent-provider.v1', executable, executable_digest: 'sha256:' + 'a'.repeat(64), args: ['exec'], argv_digest: 'sha256:' + 'b'.repeat(64), cwd: worktree, cwd_digest: 'sha256:' + 'c'.repeat(64), env_allowlist: [], env_policy_digest: 'sha256:' + 'd'.repeat(64), sandbox_policy_digest: 'sha256:' + 'e'.repeat(64), network_policy: { mode: 'network-denied', policy_digest: 'sha256:' + 'f'.repeat(64) }, timeout_ms: 30_000, termination_grace_ms: 1_000, max_stdout_bytes: 1024 * 1024, max_stderr_bytes: 1024 * 1024, orchestration_preflight_digest: 'sha256:' + '1'.repeat(64), issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z' },
+      execution: { helper: { helper_id: 'helper-cli', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: 'sha256:' + '2'.repeat(64) } },
+      admission: { status: 'admitted', binding: { network_id: 'network-cli', runner_id: 'runner-cli', registry_revision: 1, registry_snapshot_digest: 'sha256:' + '3'.repeat(64), required_capabilities: ['process-boundary'], capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } },
+    });
     const contextPath = path.join(root, 'worker-context.json');
-    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1 }));
+    await writeFile(contextPath, JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: 'codex', state_store: statePath, evidence_store: evidencePath, network_id: 'network-cli', dogfood_id: 'dogfood-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', lease_id: lease.lease_id, binding, admission_bound_execution, worktree_path: worktree, executable, goal: 'run the atom', expected_revision: lease.revision + 1 }));
     const stdout = [];
     const stderr = [];
     const exitCode = await runRealAgentDogfoodWorkerCli(['worker', '--provider-id', 'codex', '--context', contextPath], { stdout: (message) => stdout.push(message), stderr: (message) => stderr.push(message) });

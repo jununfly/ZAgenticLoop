@@ -13,6 +13,8 @@ import { acquireRealAgentDogfoodWorkerLease } from './real-agent-dogfood-worker.
 import { prepareRealAgentDogfoodWorktree } from './real-agent-dogfood-worktree.js';
 import { buildCodexInvocation } from './codex-agent-provider-adapter.js';
 import { createRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
+import { trustedRunnerAdmissionBundleDigest, validateAdmissionBoundExecution } from './trusted-runner-admission-binding.js';
+import { admitTrustedRunnerExecution, readTrustedRunnerRegistry } from './trusted-runner-registry-store.js';
 const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export function defaultRealAgentDogfoodRuntimePaths(platform = process.platform, home = os.homedir(), env = process.env) {
@@ -25,6 +27,15 @@ export function defaultRealAgentDogfoodRuntimePaths(platform = process.platform,
 }
 function digest(value) {
     return `sha256:${createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex')}`;
+}
+function admissionBindingsEqual(left, right) {
+    return left.network_id === right.network_id
+        && left.runner_id === right.runner_id
+        && left.registry_revision === right.registry_revision
+        && left.registry_snapshot_digest === right.registry_snapshot_digest
+        && JSON.stringify(left.required_capabilities) === JSON.stringify(right.required_capabilities)
+        && JSON.stringify(left.capabilities) === JSON.stringify(right.capabilities)
+        && left.capabilities_digest === right.capabilities_digest;
 }
 async function canonicalPath(input) {
     const absolute = path.resolve(input);
@@ -121,6 +132,55 @@ async function start(options) {
         await stateStore.close();
     }
 }
+async function bindAdmission(options) {
+    const dogfoodId = required(options, 'dogfood-id');
+    const networkId = required(options, 'network-id');
+    const admissionPath = required(options, 'admission-context');
+    const defaults = defaultRealAgentDogfoodRuntimePaths();
+    const evidenceStore = await canonicalPath(typeof options['evidence-store'] === 'string' ? options['evidence-store'] : defaults.evidence_store);
+    const statePath = typeof options['state-store'] === 'string' ? options['state-store'] : defaults.state_store;
+    const stateStore = createSqliteStateStore({ filename: statePath });
+    try {
+        const snapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood', aggregate_id: dogfoodId });
+        const lifecycle = projectRealAgentDogfoodLifecycle(snapshot.events);
+        if (lifecycle.status !== 'awaiting-human-approval' || lifecycle.dogfood_id !== dogfoodId)
+            throw new Error('admission-bind-lifecycle-invalid');
+        const admission = JSON.parse(await readFile(admissionPath, 'utf8'));
+        const checked = validateAdmissionBoundExecution(admission);
+        if (checked.status === 'blocked' || admission.execution.execution_id !== lifecycle.execution_id || admission.execution.attempt !== lifecycle.attempt)
+            throw new Error(checked.status === 'blocked' ? checked.reason : 'trusted-runner-admission-execution-binding-invalid');
+        let currentRegistry;
+        try {
+            currentRegistry = await readTrustedRunnerRegistry({ stateStore, network_id: networkId });
+        }
+        catch (error) {
+            throw new Error(error instanceof Error ? error.message : 'trusted-runner-admission-registry-unavailable');
+        }
+        const replayed = admitTrustedRunnerExecution({
+            snapshot: currentRegistry.snapshot,
+            runner_id: admission.binding.runner_id,
+            required_capabilities: admission.binding.required_capabilities,
+            expected_registry_revision: admission.binding.registry_revision,
+            expected_registry_snapshot_digest: admission.binding.registry_snapshot_digest,
+        });
+        if (replayed.status === 'blocked')
+            throw new Error(`trusted-runner-admission-${replayed.reason}`);
+        if (!admissionBindingsEqual(replayed.binding, admission.binding))
+            throw new Error('trusted-runner-admission-binding-provenance-mismatch');
+        const summaryPath = path.join(evidenceStore, `${dogfoodId}.approval-summary.json`);
+        const summary = JSON.parse(await readFile(summaryPath, 'utf8'));
+        if (summary.network_id !== networkId || summary.execution_id !== lifecycle.execution_id || summary.attempt !== lifecycle.attempt)
+            throw new Error('admission-bind-summary-mismatch');
+        const { summary_digest: _, ...summaryBase } = summary;
+        const boundSummaryBase = { ...summaryBase, admission_digest: trustedRunnerAdmissionBundleDigest(admission) };
+        const boundSummary = { ...boundSummaryBase, summary_digest: digest(boundSummaryBase) };
+        await writeFile(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`, { mode: 0o600 });
+        return outputLifecycle(lifecycle, { provider_invoked: false, approval_summary_path: summaryPath, approval_summary_digest: boundSummary.summary_digest, admission_digest: boundSummary.admission_digest });
+    }
+    finally {
+        await stateStore.close();
+    }
+}
 async function resume(options) {
     const dogfoodId = required(options, 'dogfood-id');
     const networkId = required(options, 'network-id');
@@ -146,16 +206,43 @@ async function resume(options) {
         catch {
             return outputLifecycle(lifecycle, { provider_invoked: false, reason_code: 'human-approval-required', next_action: 'human-approval' });
         }
-        if (envelope.schema !== 'zj-loop.real_agent_dogfood_approval_envelope.v1' || envelope.dogfood_id !== dogfoodId || envelope.execution_id !== lifecycle.execution_id || envelope.attempt !== lifecycle.attempt || envelope.lifecycle_revision !== snapshot.snapshot_revision || typeof envelope.policy_digest !== 'string' || typeof envelope.approval_summary_digest !== 'string' || !envelope.approval || !envelope.identity)
+        if (envelope.schema !== 'zj-loop.real_agent_dogfood_approval_envelope.v1' || envelope.dogfood_id !== dogfoodId || envelope.execution_id !== lifecycle.execution_id || envelope.attempt !== lifecycle.attempt || typeof envelope.policy_digest !== 'string' || typeof envelope.approval_summary_digest !== 'string' || !envelope.approval || !envelope.identity)
             throw new Error('human-approval-binding-invalid');
         const summaryPath = path.join(evidenceStore, `${dogfoodId}.approval-summary.json`);
         const summary = JSON.parse(await readFile(summaryPath, 'utf8'));
-        if (summary.summary_digest !== envelope.approval_summary_digest || summary.policy_digest !== envelope.policy_digest)
+        if (summary.summary_digest !== envelope.approval_summary_digest || summary.policy_digest !== envelope.policy_digest || summary.lifecycle_revision !== envelope.lifecycle_revision)
             throw new Error('human-approval-summary-mismatch');
         if (envelope.approval.action !== 'real-agent-dogfood.approve' || envelope.approval.request_id !== dogfoodId || envelope.approval.request_digest !== summary.summary_digest || envelope.approval.network_id !== networkId || envelope.approval.schema !== 'zj-loop.human_authority.v2')
             throw new Error('human-approval-context-mismatch');
         if (verifyHumanApprovalContextDetailed({ identity: envelope.identity, context: envelope.approval, require_v2: true }).status !== 'current-v2-accepted')
             throw new Error('human-approval-signature-invalid');
+        let admissionBoundExecution;
+        if (lifecycle.provider_id === 'codex') {
+            const admissionContextPath = typeof options['admission-context'] === 'string' ? options['admission-context'] : '';
+            if (!admissionContextPath) {
+                const blocked = createRealAgentDogfoodTransition({ lifecycle, to: 'blocked', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:admission-required`, occurred_at: new Date().toISOString(), fact_digest: digest({ reason_code: 'trusted-runner-admission-required' }), reason_code: 'trusted-runner-admission-required', next_action: 'prepare-trusted-runner-admission' });
+                const blockedResult = await append(stateStore, networkId, blocked.event, snapshot.snapshot_revision);
+                if (blockedResult.status === 'conflict')
+                    throw new Error('admission-required-record-conflict');
+                return outputLifecycle(blocked.lifecycle, { provider_invoked: false });
+            }
+            try {
+                admissionBoundExecution = JSON.parse(await readFile(admissionContextPath, 'utf8'));
+            }
+            catch {
+                throw new Error('trusted-runner-admission-context-invalid');
+            }
+            const admissionCheck = validateAdmissionBoundExecution(admissionBoundExecution);
+            const admissionDigest = admissionCheck.status === 'valid' ? trustedRunnerAdmissionBundleDigest(admissionBoundExecution) : null;
+            if (admissionCheck.status === 'blocked' || admissionBoundExecution.execution.execution_id !== lifecycle.execution_id || admissionBoundExecution.execution.attempt !== lifecycle.attempt || summary.admission_digest !== admissionDigest || envelope.admission_digest !== admissionDigest) {
+                const reason = admissionCheck.status === 'blocked' ? admissionCheck.reason : summary.admission_digest !== admissionDigest || envelope.admission_digest !== admissionDigest ? 'trusted-runner-admission-digest-mismatch' : 'trusted-runner-admission-execution-binding-invalid';
+                const blocked = createRealAgentDogfoodTransition({ lifecycle, to: 'blocked', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:admission-invalid`, occurred_at: new Date().toISOString(), fact_digest: digest({ reason_code: reason }), reason_code: reason, next_action: 'prepare-trusted-runner-admission' });
+                const blockedResult = await append(stateStore, networkId, blocked.event, snapshot.snapshot_revision);
+                if (blockedResult.status === 'conflict')
+                    throw new Error('admission-invalid-record-conflict');
+                return outputLifecycle(blocked.lifecycle, { provider_invoked: false });
+            }
+        }
         const workerId = `worker-${randomUUID()}`;
         const lease = await acquireRealAgentDogfoodWorkerLease({ stateStore, network_id: networkId, execution_id: lifecycle.execution_id, worker_id: workerId });
         if (lease.status === 'blocked')
@@ -175,7 +262,7 @@ async function resume(options) {
         if (!workerContext)
             return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
         try {
-            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
             const workerCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-worker-cli.js');
             const child = spawn(process.execPath, [workerCli, 'worker', '--provider-id', 'codex', '--context', workerContext.path], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
             child.unref();
@@ -230,6 +317,7 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'dogfood-id', flag: 'dogfood-id', type: 'string', description: 'Dogfood id for status' },
             { name: 'network-id', flag: 'network-id', type: 'string', description: 'Network id for status' },
             { name: 'approval-id', flag: 'approval-id', type: 'string', description: 'Persisted approval envelope id for resume' },
+            { name: 'admission-context', flag: 'admission-context', type: 'string', description: 'Persisted AdmissionBoundExecution artifact for resume' },
             { name: 'worktree-root', flag: 'worktree-root', type: 'string', description: 'Directory for isolated execution worktrees' },
         ],
         async handler({ options }) {
@@ -246,6 +334,11 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             }
             if (command === 'resume') {
                 const result = await resume(options);
+                outputIo.stdout(JSON.stringify(result, null, 2));
+                return 0;
+            }
+            if (command === 'bind-admission') {
+                const result = await bindAdmission(options);
                 outputIo.stdout(JSON.stringify(result, null, 2));
                 return 0;
             }

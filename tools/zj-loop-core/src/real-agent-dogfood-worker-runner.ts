@@ -3,6 +3,8 @@ import { appendRealAgentDogfoodEvent, createRealAgentDogfoodTransition, type Rea
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { validateRealAgentDogfoodExecutionBinding, type RealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 import { verifyRealAgentDogfoodPostRunProof, type RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
+import { validateLocalExecutionPreflight } from './local-execution-preflight.js';
+import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 
 type ProviderResult = { status: 'completed' | 'failed' | 'cancelled' | 'timed-out'; success: boolean; pid: number; exit_code: number | null; signal: string | null; stdout: string; stderr: string; reason?: string };
 type Provider = { run(input: { cwd: string; prompt: string; executable: string }): Promise<ProviderResult> };
@@ -18,8 +20,16 @@ export type RealAgentDogfoodWorkerResult = {
   next_action: string;
 };
 
-export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; worktree_path: string; executable: string; goal: string; provider: Provider; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
+function validateAdmissionBoundExecution(input: { admission_bound_execution: AdmissionBoundExecution; lifecycle: RealAgentDogfoodLifecycle; executable: string; worktree_path: string }): void {
+  const admission = input.admission_bound_execution;
+  if (validateLocalExecutionPreflight(admission.preflight).status !== 'valid') throw new Error('worker-admission-preflight-invalid');
+  if (admission.preflight.execution_id !== input.lifecycle.execution_id || admission.preflight.attempt !== input.lifecycle.attempt || admission.execution.execution_id !== admission.preflight.execution_id || admission.execution.attempt !== admission.preflight.attempt || admission.execution.preflight_digest !== admission.preflight.preflight_digest) throw new Error('worker-admission-execution-binding-invalid');
+  if (admission.preflight.executable !== input.executable || admission.preflight.cwd !== input.worktree_path) throw new Error('worker-admission-resource-binding-invalid');
+}
+
+export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; admission_bound_execution: AdmissionBoundExecution; worktree_path: string; executable: string; goal: string; provider: Provider; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
   if (input.lifecycle.status !== 'running') throw new Error('worker-lifecycle-not-running');
+  validateAdmissionBoundExecution(input);
   const binding = await validateRealAgentDogfoodExecutionBinding({ binding: input.binding, executable: input.executable, args: input.binding.args, cwd: input.worktree_path, worktree_path: input.worktree_path, lease_id: input.lease_id });
   if (binding.status === 'blocked') throw new Error(`worker-${binding.reason}`);
   const now = input.now ?? new Date().toISOString();

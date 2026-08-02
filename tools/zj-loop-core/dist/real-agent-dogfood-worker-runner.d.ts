@@ -3,6 +3,7 @@ import { type RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.j
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { type RealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 import { type RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
+import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 type ProviderResult = {
     status: 'completed' | 'failed' | 'cancelled' | 'timed-out';
     success: boolean;
@@ -38,6 +39,7 @@ export declare function executeRealAgentDogfoodWorker(input: {
     worker_id: string;
     lease_id: string;
     binding: RealAgentDogfoodExecutionBinding;
+    admission_bound_execution: AdmissionBoundExecution;
     worktree_path: string;
     executable: string;
     goal: string;

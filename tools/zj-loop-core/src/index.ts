@@ -163,6 +163,7 @@ export type {
   TrustedRunnerRegistryMutationAction,
 } from './trusted-runner-registry.js';
 export * from './trusted-runner-registry-store.js';
+export * from './trusted-runner-admission-binding.js';
 export * from './human-authority-set-store.js';
 export * from './evidence-retention.js';
 export * from './evidence-access-audit.js';

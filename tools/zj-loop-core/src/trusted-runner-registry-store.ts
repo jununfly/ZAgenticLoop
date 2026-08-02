@@ -13,7 +13,8 @@ export type TrustedRunnerRegistrySnapshot = { network_id: string; revision: numb
 export type TrustedRunnerRegistryRead = { snapshot: TrustedRunnerRegistrySnapshot; history: TrustedRunnerRegistryMutation[] };
 export type TrustedRunnerRegistryRecordResult = TrustedRunnerRegistryRead & { status: 'recorded' | 'duplicate' | 'conflict' | 'blocked'; revision?: number; reason?: string };
 export type TrustedRunnerRegistryMutationBuildResult = { status: 'ready'; mutation: TrustedRunnerRegistryMutation; snapshot: TrustedRunnerRegistrySnapshot } | { status: 'blocked' | 'conflict'; snapshot: TrustedRunnerRegistrySnapshot; reason: string };
-export type TrustedRunnerExecutionAdmissionResult = { status: 'admitted'; binding: { runner_id: string; registry_revision: number; registry_snapshot_digest: string; capabilities: string[]; capabilities_digest: string } } | { status: 'blocked'; reason: string };
+export type TrustedRunnerAdmissionBinding = { network_id: string; runner_id: string; registry_revision: number; registry_snapshot_digest: string; required_capabilities: string[]; capabilities: string[]; capabilities_digest: string };
+export type TrustedRunnerExecutionAdmissionResult = { status: 'admitted'; binding: TrustedRunnerAdmissionBinding } | { status: 'blocked'; reason: string };
 
 function canonicalDigest(value: unknown): string {
   const json = canonicalize(value);
@@ -49,13 +50,14 @@ export function admitTrustedRunnerExecution(input: { snapshot: TrustedRunnerRegi
   if (input.snapshot.digest !== trustedRunnerRegistrySnapshotDigest(input.snapshot.registry)) return { status: 'blocked', reason: 'registry-snapshot-drift' };
   if (input.expected_registry_revision !== undefined && input.snapshot.revision !== input.expected_registry_revision) return { status: 'blocked', reason: 'registry-revision-drift' };
   if (input.expected_registry_snapshot_digest !== undefined && input.snapshot.digest !== input.expected_registry_snapshot_digest) return { status: 'blocked', reason: 'registry-snapshot-drift' };
-  if (validateTrustedRunnerCapabilities(input.required_capabilities).status === 'blocked') return { status: 'blocked', reason: 'registry-capability-unknown' };
+  const required_capabilities = [...new Set(input.required_capabilities)].sort();
+  if (validateTrustedRunnerCapabilities(required_capabilities).status === 'blocked') return { status: 'blocked', reason: 'registry-capability-unknown' };
   const runner = input.snapshot.registry.find((entry) => entry.runner_id === input.runner_id && entry.status === 'active');
   if (!runner) return { status: 'blocked', reason: 'registry-runner-not-active' };
   const capabilities = [...new Set(runner.capabilities ?? [])].sort();
-  const missing = input.required_capabilities.some((capability) => !capabilities.includes(capability));
+  const missing = required_capabilities.some((capability) => !capabilities.includes(capability));
   if (missing) return { status: 'blocked', reason: 'registry-required-capability-missing' };
-  return { status: 'admitted', binding: { runner_id: runner.runner_id, registry_revision: input.snapshot.revision, registry_snapshot_digest: input.snapshot.digest, capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } };
+  return { status: 'admitted', binding: { network_id: input.snapshot.network_id, runner_id: runner.runner_id, registry_revision: input.snapshot.revision, registry_snapshot_digest: input.snapshot.digest, required_capabilities, capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } };
 }
 
 function authorityForMutation(mutation: TrustedRunnerRegistryMutation, authorities: HumanSignerIdentity[]): HumanSignerIdentity | undefined {

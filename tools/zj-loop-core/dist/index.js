@@ -150,6 +150,7 @@ export * from './bounded-reconciliation.js';
 export * from './agent-dogfood-conformance.js';
 export { TRUSTED_RUNNER_REGISTRY_MUTATION_SCHEMA, TRUSTED_RUNNER_CAPABILITY_SCHEMA, TRUSTED_RUNNER_CAPABILITIES, applyTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest, validateTrustedRunnerCapabilities, validateTrustedRunnerRegistryMutation, } from './trusted-runner-registry.js';
 export * from './trusted-runner-registry-store.js';
+export * from './trusted-runner-admission-binding.js';
 export * from './human-authority-set-store.js';
 export * from './evidence-retention.js';
 export * from './evidence-access-audit.js';

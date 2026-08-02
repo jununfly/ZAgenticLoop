@@ -27,15 +27,18 @@ export type TrustedRunnerRegistryMutationBuildResult = {
     snapshot: TrustedRunnerRegistrySnapshot;
     reason: string;
 };
+export type TrustedRunnerAdmissionBinding = {
+    network_id: string;
+    runner_id: string;
+    registry_revision: number;
+    registry_snapshot_digest: string;
+    required_capabilities: string[];
+    capabilities: string[];
+    capabilities_digest: string;
+};
 export type TrustedRunnerExecutionAdmissionResult = {
     status: 'admitted';
-    binding: {
-        runner_id: string;
-        registry_revision: number;
-        registry_snapshot_digest: string;
-        capabilities: string[];
-        capabilities_digest: string;
-    };
+    binding: TrustedRunnerAdmissionBinding;
 } | {
     status: 'blocked';
     reason: string;

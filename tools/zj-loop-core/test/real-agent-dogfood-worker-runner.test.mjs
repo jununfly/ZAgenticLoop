@@ -9,8 +9,22 @@ import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition, appendRe
 import { executeRealAgentDogfoodWorker } from '../dist/real-agent-dogfood-worker-runner.js';
 import { createRealAgentDogfoodExecutionBinding } from '../dist/real-agent-dogfood-binding.js';
 import { createFakeRealAgentDogfoodPostRunProof } from '../dist/real-agent-dogfood-post-run-proof.js';
+import { createAdmissionBoundExecution } from '../dist/trusted-runner-admission-binding.js';
+import { trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
 
 const d = (letter) => `sha256:${letter.repeat(64)}`;
+
+function admissionBoundExecution({ execution_id, attempt, executable, cwd }) {
+  const capabilities = ['process-boundary', 'output-bounds'];
+  return createAdmissionBoundExecution({
+    preflight: {
+      network_id: 'network-1', plan_id: 'plan-1', plan_revision: 1, task_id: 'task-1', execution_id, attempt,
+      provider_id: 'provider-1', adapter_version: 'adapter-1', executable, executable_digest: d('c'), args: ['exec'], argv_digest: d('d'), cwd, cwd_digest: d('e'), env_allowlist: [], env_policy_digest: d('f'), sandbox_policy_digest: d('1'), network_policy: { mode: 'network-denied', policy_digest: d('2') }, timeout_ms: 1000, termination_grace_ms: 100, max_stdout_bytes: 1024, max_stderr_bytes: 1024, orchestration_preflight_digest: d('3'), issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z',
+    },
+    execution: { helper: { helper_id: 'helper-1', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: d('4') } },
+    admission: { status: 'admitted', binding: { network_id: 'network-1', runner_id: 'runner-1', registry_revision: 1, registry_snapshot_digest: d('5'), required_capabilities: ['process-boundary'], capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } },
+  });
+}
 
 async function runningFixture(root) {
   const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
@@ -31,10 +45,11 @@ test('worker persists bounded output evidence and advances only with post-run pr
   const executable = path.join(root, 'provider');
   await (await import('node:fs/promises')).writeFile(executable, 'provider');
   const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
+  const admission_bound_execution = admissionBoundExecution({ execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, executable, cwd: '/tmp/worktree' });
   const postRunProofFactory = async (input) => createFakeRealAgentDogfoodPostRunProof(input);
   let request;
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run(input) { request = input; return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run(input) { request = input; return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'verification-pending');
     assert.equal(request.cwd, '/tmp/worktree');
     const events = await stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood', aggregate_id: 'dogfood-1' });
@@ -53,8 +68,9 @@ test('worker does not claim verification when post-run proof is missing', async 
   const executable = path.join(root, 'provider');
   await (await import('node:fs/promises')).writeFile(executable, 'provider');
   const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
+  const admission_bound_execution = admissionBoundExecution({ execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, executable, cwd: '/tmp/worktree' });
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'outcome-uncertain');
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -66,13 +82,14 @@ test('worker rejects a tampered signed post-run proof', async () => {
   const executable = path.join(root, 'provider');
   await (await import('node:fs/promises')).writeFile(executable, 'provider');
   const binding = await createRealAgentDogfoodExecutionBinding({ executable, args: ['exec'], cwd: '/tmp/worktree', worktree_path: '/tmp/worktree', lease_id: 'lease-1' });
+  const admission_bound_execution = admissionBoundExecution({ execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, executable, cwd: '/tmp/worktree' });
   const postRunProofFactory = async (input) => {
     const proof = createFakeRealAgentDogfoodPostRunProof(input);
     proof.after_worktree_clean = false;
     return proof;
   };
   try {
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { return { status: 'completed', success: true, pid: 123, exit_code: 0, signal: null, stdout: 'result', stderr: '' }; } }, post_run_proof_factory: postRunProofFactory, expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'outcome-uncertain');
     assert.equal(result.reason_code, 'post-run-proof-invalid');
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }

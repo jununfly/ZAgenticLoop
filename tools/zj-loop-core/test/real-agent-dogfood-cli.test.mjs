@@ -6,6 +6,11 @@ import path from 'node:path';
 import { runRealAgentDogfoodCli } from '../dist/real-agent-dogfood-cli.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createInMemoryHumanAuthorityProvider } from '../dist/human-authority.js';
+import { createInMemoryHumanSigner } from '../dist/human-signer.js';
+import { createHumanAuthoritySetInitializationFromStore, recordHumanAuthoritySetInitialization } from '../dist/human-authority-set-store.js';
+import { createAdmissionBoundExecution } from '../dist/trusted-runner-admission-binding.js';
+import { createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
+import { admitTrustedRunnerExecution, recordTrustedRunnerRegistryMutation, readTrustedRunnerRegistry } from '../dist/trusted-runner-registry-store.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -154,9 +159,32 @@ test('resume starts a detached Codex worker with a persisted execution context',
     const created = JSON.parse(started.stdout);
     const summary = JSON.parse(await readFile(created.approval_summary_path, 'utf8'));
     const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64) });
-    const approval = await authority.signApprovalContext({ action: 'real-agent-dogfood.approve', request_id: created.dogfood_id, request_digest: summary.summary_digest, network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64), issued_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() });
-    await writeFile(path.join(evidencePath, 'approval-detached.json'), JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, lifecycle_revision: 4, policy_digest: summary.policy_digest, approval_summary_digest: summary.summary_digest, approval, identity: authority.getPublicIdentity() }));
-    const resumed = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-detached', '--state-store', statePath, '--evidence-store', evidencePath]);
+    const registrySigner = createInMemoryHumanSigner({ human_id: 'human-local' });
+    const registryStore = createSqliteStateStore({ filename: statePath });
+    const authorityInitialization = await createHumanAuthoritySetInitializationFromStore({ stateStore: registryStore, signer: registrySigner, network_id: created.network_id, mutation_id: 'authority-init', expected_revision: await registryStore.getRevision(created.network_id), reason: 'initialize trusted runner admission fixture', occurred_at: '2026-08-02T12:00:00.000Z' });
+    assert.equal(authorityInitialization.status, 'ready');
+    assert.equal((await recordHumanAuthoritySetInitialization({ stateStore: registryStore, initialization: authorityInitialization.initialization })).status, 'recorded');
+    const registryMutation = await createTrustedRunnerRegistryMutation({ signer: registrySigner, network_id: created.network_id, mutation_id: 'runner-register', action: 'register', runner_id: 'runner-detached', new_public_key_fingerprint: 'b'.repeat(64), capabilities: ['process-boundary', 'output-bounds'], reason: 'register fixture runner', occurred_at: '2026-08-02T12:00:01.000Z', expected_revision: await registryStore.getRevision(created.network_id) });
+    const registryRecorded = await recordTrustedRunnerRegistryMutation({ stateStore: registryStore, mutation: registryMutation, expected_revision: await registryStore.getRevision(created.network_id) });
+    assert.equal(registryRecorded.status, 'recorded');
+    const registry = await readTrustedRunnerRegistry({ stateStore: registryStore, network_id: created.network_id });
+    await registryStore.close();
+    const capabilities = ['process-boundary', 'output-bounds'];
+    const admission = admitTrustedRunnerExecution({ snapshot: registry.snapshot, runner_id: 'runner-detached', required_capabilities: ['process-boundary'] });
+    assert.equal(admission.status, 'admitted');
+    const admissionContextPath = path.join(evidencePath, 'admission-bound-execution.json');
+    const admissionBoundExecution = createAdmissionBoundExecution({
+      preflight: { network_id: created.network_id, plan_id: 'plan-detached', plan_revision: 1, task_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, provider_id: 'codex', adapter_version: 'codex-agent-provider.v1', executable: summary.executable, executable_digest: 'sha256:' + 'a'.repeat(64), args: ['exec'], argv_digest: 'sha256:' + 'b'.repeat(64), cwd: summary.worktree_path, cwd_digest: 'sha256:' + 'c'.repeat(64), env_allowlist: [], env_policy_digest: 'sha256:' + 'd'.repeat(64), sandbox_policy_digest: 'sha256:' + 'e'.repeat(64), network_policy: { mode: 'network-denied', policy_digest: 'sha256:' + 'f'.repeat(64) }, timeout_ms: 30_000, termination_grace_ms: 1_000, max_stdout_bytes: 1024 * 1024, max_stderr_bytes: 1024 * 1024, orchestration_preflight_digest: 'sha256:' + '1'.repeat(64), issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z' },
+      execution: { helper: { helper_id: 'helper-detached', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: 'sha256:' + '2'.repeat(64) } },
+      admission,
+    });
+    await writeFile(admissionContextPath, JSON.stringify(admissionBoundExecution));
+    const bound = await invoke(['bind-admission', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--admission-context', admissionContextPath, '--state-store', statePath, '--evidence-store', evidencePath]);
+    assert.equal(bound.exitCode, 0, bound.stderr);
+    const boundSummary = JSON.parse(await readFile(created.approval_summary_path, 'utf8'));
+    const approval = await authority.signApprovalContext({ action: 'real-agent-dogfood.approve', request_id: created.dogfood_id, request_digest: boundSummary.summary_digest, network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64), issued_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() });
+    await writeFile(path.join(evidencePath, 'approval-detached.json'), JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, lifecycle_revision: 4, policy_digest: boundSummary.policy_digest, approval_summary_digest: boundSummary.summary_digest, admission_digest: boundSummary.admission_digest, approval, identity: authority.getPublicIdentity() }));
+    const resumed = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-detached', '--admission-context', admissionContextPath, '--state-store', statePath, '--evidence-store', evidencePath]);
     assert.equal(resumed.exitCode, 0, resumed.stderr);
     const output = JSON.parse(resumed.stdout);
     assert.equal(output.status, 'running');

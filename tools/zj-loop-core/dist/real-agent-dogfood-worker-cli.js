@@ -43,7 +43,7 @@ async function runWorkerContext(contextPath) {
     if (context.schema !== 'zj-loop.real_agent_dogfood_worker_context.v1')
         throw new Error('worker-context-schema-invalid');
     const required = ['state_store', 'evidence_store', 'network_id', 'dogfood_id', 'execution_id', 'worker_id', 'lease_id', 'worktree_path', 'executable', 'goal'];
-    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || !context.binding || !Number.isInteger(context.expected_revision))
+    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || !context.binding || !context.admission_bound_execution || !Number.isInteger(context.expected_revision))
         throw new Error('worker-context-invalid');
     if (context.provider_id !== 'codex')
         throw new Error('provider-not-registered');
@@ -59,7 +59,7 @@ async function runWorkerContext(contextPath) {
             throw new Error('worker-lease-invalid');
         const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store });
         const provider = createRealAgentDogfoodProvider({ provider_id: context.provider_id, executable: context.executable, process_adapter: createLocalProcessAdapter() });
-        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, post_run_proof_factory: provider.post_run_proof_factory, expected_revision: context.expected_revision });
+        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, post_run_proof_factory: provider.post_run_proof_factory, expected_revision: context.expected_revision });
         if (result.status !== 'verification-pending')
             return result;
         const verifierContextPath = `${contextPath}.verifier.json`;

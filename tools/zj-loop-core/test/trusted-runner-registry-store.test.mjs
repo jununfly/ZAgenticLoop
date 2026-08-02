@@ -54,6 +54,8 @@ test('trusted runner registry is persisted as a CAS-backed network aggregate and
     assert.equal(missingCapability.reason, 'registry-required-capability-missing');
     const admitted = admitTrustedRunnerExecution({ snapshot: updated.snapshot, runner_id: 'runner-1', required_capabilities: ['process-boundary', 'secure-signing'] });
     assert.equal(admitted.status, 'admitted');
+    assert.deepEqual(admitted.binding.required_capabilities, ['process-boundary', 'secure-signing']);
+    assert.equal(admitted.binding.network_id, 'network-1');
     assert.equal(admitted.binding.registry_revision, updated.snapshot.revision);
     const unknownAdmissionCapability = admitTrustedRunnerExecution({ snapshot: updated.snapshot, runner_id: 'runner-1', required_capabilities: ['unknown-capability'] });
     assert.equal(unknownAdmissionCapability.status, 'blocked');

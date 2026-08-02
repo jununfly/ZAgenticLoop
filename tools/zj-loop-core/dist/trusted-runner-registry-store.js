@@ -47,16 +47,17 @@ export function admitTrustedRunnerExecution(input) {
         return { status: 'blocked', reason: 'registry-revision-drift' };
     if (input.expected_registry_snapshot_digest !== undefined && input.snapshot.digest !== input.expected_registry_snapshot_digest)
         return { status: 'blocked', reason: 'registry-snapshot-drift' };
-    if (validateTrustedRunnerCapabilities(input.required_capabilities).status === 'blocked')
+    const required_capabilities = [...new Set(input.required_capabilities)].sort();
+    if (validateTrustedRunnerCapabilities(required_capabilities).status === 'blocked')
         return { status: 'blocked', reason: 'registry-capability-unknown' };
     const runner = input.snapshot.registry.find((entry) => entry.runner_id === input.runner_id && entry.status === 'active');
     if (!runner)
         return { status: 'blocked', reason: 'registry-runner-not-active' };
     const capabilities = [...new Set(runner.capabilities ?? [])].sort();
-    const missing = input.required_capabilities.some((capability) => !capabilities.includes(capability));
+    const missing = required_capabilities.some((capability) => !capabilities.includes(capability));
     if (missing)
         return { status: 'blocked', reason: 'registry-required-capability-missing' };
-    return { status: 'admitted', binding: { runner_id: runner.runner_id, registry_revision: input.snapshot.revision, registry_snapshot_digest: input.snapshot.digest, capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } };
+    return { status: 'admitted', binding: { network_id: input.snapshot.network_id, runner_id: runner.runner_id, registry_revision: input.snapshot.revision, registry_snapshot_digest: input.snapshot.digest, required_capabilities, capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities) } };
 }
 function authorityForMutation(mutation, authorities) {
     return authorities.find((identity) => identity.human_id === mutation.human_id && identity.public_key_fingerprint === mutation.signer_fingerprint);

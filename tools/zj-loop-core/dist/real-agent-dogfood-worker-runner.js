@@ -1,9 +1,20 @@
 import { appendRealAgentDogfoodEvent, createRealAgentDogfoodTransition } from './real-agent-dogfood-lifecycle.js';
 import { validateRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 import { verifyRealAgentDogfoodPostRunProof } from './real-agent-dogfood-post-run-proof.js';
+import { validateLocalExecutionPreflight } from './local-execution-preflight.js';
+function validateAdmissionBoundExecution(input) {
+    const admission = input.admission_bound_execution;
+    if (validateLocalExecutionPreflight(admission.preflight).status !== 'valid')
+        throw new Error('worker-admission-preflight-invalid');
+    if (admission.preflight.execution_id !== input.lifecycle.execution_id || admission.preflight.attempt !== input.lifecycle.attempt || admission.execution.execution_id !== admission.preflight.execution_id || admission.execution.attempt !== admission.preflight.attempt || admission.execution.preflight_digest !== admission.preflight.preflight_digest)
+        throw new Error('worker-admission-execution-binding-invalid');
+    if (admission.preflight.executable !== input.executable || admission.preflight.cwd !== input.worktree_path)
+        throw new Error('worker-admission-resource-binding-invalid');
+}
 export async function executeRealAgentDogfoodWorker(input) {
     if (input.lifecycle.status !== 'running')
         throw new Error('worker-lifecycle-not-running');
+    validateAdmissionBoundExecution(input);
     const binding = await validateRealAgentDogfoodExecutionBinding({ binding: input.binding, executable: input.executable, args: input.binding.args, cwd: input.worktree_path, worktree_path: input.worktree_path, lease_id: input.lease_id });
     if (binding.status === 'blocked')
         throw new Error(`worker-${binding.reason}`);

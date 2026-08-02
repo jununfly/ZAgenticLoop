@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 11:52:08
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-02 13:06:17
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -151,4 +151,11 @@ Lifecycle contract, pure projection, replay admission, network-level StateStore 
 - Q: 问题173：在把 registry snapshot 接入 execution admission 前，是否先冻结并校验 TrustedRunner capability 的 provider/platform-neutral 枚举？ → 是 (冻结 process-boundary、network-policy、credential-cleanup、worktree-observation、output-bounds、secure-signing 等可解释能力；未知 capability 直接 blocked。)
 - Q: 问题174：execution admission 是否应显式接收 required_capabilities，并只允许 active runner 的 capability 集合覆盖全部要求；缺任一能力直接 blocked？ → 是 (注册 capability 只是 runner 能力声明；每次 execution 明确需求并固定 capability snapshot，缺任一能力直接 blocked。)
 - Q: 问题175：是否将 admission binding 正式加入 LocalExecutionPreflight / TrustedRunnerExecutionContext，固定 runner_id、registry_revision、registry_snapshot_digest 和 capabilities_digest，并让 proof/observation 继续绑定这些字段？ → 是 (admission 结果必须成为真实 execution 的不可变准入边界，不能停留为独立检查。)
+- Q: 问题176：是否应增加统一的 admission-bound builder，由已验证 admission binding 生成或校验 LocalExecutionPreflight 与 TrustedRunnerExecutionContext，避免业务调用方手工拼接 runner、registry 和 capability 绑定字段？ → 同意 (admitTrustedRunnerExecution 负责准入判断并产出 immutable binding；builder 负责注入和校验 preflight/context 的四字段一致性；TrustedRunner 不读取 StateStore，手工构造不作为正式产品 API。)
+- Q: 问题177：是否应提供统一 AdmissionBoundExecution builder，一次性由同一个 admission binding 生成 LocalExecutionPreflight 与 TrustedRunner context，并校验 execution_id、attempt、preflight_digest 一致？ → 同意 (正式 API 以完整准入结果为入口，execution context 的 execution_id、attempt、preflight_digest 从同一份生成后的 preflight 派生；独立 builder 仅保留为底层实现。)
+- Q: 问题178：正式 AdmissionBoundExecution API 是否应只接受 TrustedRunnerExecutionAdmissionResult 的 admitted 分支，blocked 结果直接拒绝，而不再接受裸 binding？ → 同意 (统一入口必须位于 admission 之后；blocked admission 不得生成 preflight/context；裸 binding 只保留为内部底层 builder 输入。)
+- Q: 问题179：是否应将 AdmissionBoundExecution 接入真实 real-agent-dogfood worker/preflight 执行路径，使 TrustedRunner 启动前必须存在由 admission result 生成的完整 bundle，缺少 bundle 或手工拼接 context 时直接 blocked？ → 同意 (真实 worker 的启动边界必须消费统一 bundle；TrustedRunner 不接受脱离 bundle 的执行上下文，缺少 admission、preflight 或 binding 一致性时 blocked。)
+- Q: 问题180：resume 应如何获得 admission bundle？ → 同意 (由独立 preflight/admission 阶段生成并持久化 AdmissionBoundExecution；resume 只接收其 artifact/reference 并消费，不自行选择 runner 或构造 registry snapshot；缺少或漂移直接 blocked。)
+- Q: 问题181：是否应将 admission artifact digest 纳入 Human approval summary、approval envelope 和 worker context 的完整签名绑定？ → 同意 (Human 必须批准精确的 runner、registry revision、capability snapshot 和 preflight；admission digest 必须在 approval 签名前进入 summary，resume 只校验已签名 digest，不能事后补写。)
+- Q: 问题182：是否应让 admission artifact 携带 StateStore admission provenance，并由 bind-admission 回读 registry snapshot、revision 和 required capabilities 重新验证；无法证明来自真实 admission 的 bundle 直接 blocked？ → 同意 (TrustedRunnerAdmissionBinding 增加 network_id 与 required_capabilities provenance；bind-admission 使用 StateStore 当前 snapshot 重新执行同一 admission，并逐字段比较 binding，禁止只凭 JSON 形状通过。)
 <!-- ROADMAP_SECTION_END -->
