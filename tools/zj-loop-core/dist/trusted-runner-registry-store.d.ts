@@ -1,7 +1,7 @@
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { createTrustedRunnerRegistryMutation, type TrustedRunnerRegistryEntry, type TrustedRunnerRegistryMutation, type TrustedRunnerRegistryMutationAction } from './trusted-runner-registry.js';
 import { type TrustedRunnerInstallArtifact } from './trusted-runner-install-artifact.js';
-import type { ProviderAuthRef } from './provider-auth-runtime.js';
+import type { ProviderAuthRef, ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 export declare const TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE: "trusted-runner-registry";
 export declare const TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID: "network";
 export declare const TRUSTED_RUNNER_REGISTRY_EVENT_TYPE: "trusted-runner-registry.mutation";
@@ -38,6 +38,7 @@ export type TrustedRunnerAdmissionBinding = {
     capabilities: string[];
     capabilities_digest: string;
     provider_auth_ref?: ProviderAuthRef;
+    runtime_binding?: ProviderRuntimeIdentityBinding;
 };
 export type TrustedRunnerExecutionAdmissionResult = {
     status: 'admitted';

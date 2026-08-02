@@ -4,14 +4,14 @@ import { createLocalExecutionPreflight, validateLocalExecutionPreflight, type Lo
 import { trustedRunnerCapabilitiesDigest, validateTrustedRunnerCapabilities } from './trusted-runner-registry.js';
 import type { TrustedRunnerExecutionContext } from './trusted-runner.js';
 import type { TrustedRunnerAdmissionBinding, TrustedRunnerExecutionAdmissionResult } from './trusted-runner-registry-store.js';
-import { validateProviderAuthRef, type ProviderAuthRef } from './provider-auth-runtime.js';
+import { validateProviderAuthRef, validateProviderRuntimeIdentityBinding, type ProviderAuthRef, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
-type AdmissionBindingFields = keyof Pick<TrustedRunnerAdmissionBinding, 'runner_id' | 'registry_revision' | 'registry_snapshot_digest' | 'capabilities_digest' | 'provider_auth_ref'>;
+type AdmissionBindingFields = keyof Pick<TrustedRunnerAdmissionBinding, 'runner_id' | 'registry_revision' | 'registry_snapshot_digest' | 'capabilities_digest' | 'provider_auth_ref' | 'runtime_binding'>;
 export type AdmissionBoundLocalExecutionPreflightInput = Omit<LocalExecutionPreflightInput, AdmissionBindingFields>;
 export type AdmissionBoundTrustedRunnerExecutionContextInput = Omit<TrustedRunnerExecutionContext, AdmissionBindingFields>;
-export type AdmissionBoundExecutionInput = { preflight: AdmissionBoundLocalExecutionPreflightInput; execution: Omit<AdmissionBoundTrustedRunnerExecutionContextInput, 'execution_id' | 'attempt' | 'preflight_digest'>; admission: TrustedRunnerExecutionAdmissionResult };
-export type AdmissionBoundExecution = { binding: TrustedRunnerAdmissionBinding; preflight: LocalExecutionPreflight; execution: TrustedRunnerExecutionContext };
+export type AdmissionBoundExecutionInput = { preflight: AdmissionBoundLocalExecutionPreflightInput; execution: Omit<AdmissionBoundTrustedRunnerExecutionContextInput, 'execution_id' | 'attempt' | 'preflight_digest'>; admission: TrustedRunnerExecutionAdmissionResult; runtime_binding: ProviderRuntimeIdentityBinding };
+export type AdmissionBoundExecution = { binding: TrustedRunnerAdmissionBinding & { provider_auth_ref: ProviderAuthRef; runtime_binding: ProviderRuntimeIdentityBinding }; preflight: LocalExecutionPreflight; execution: TrustedRunnerExecutionContext };
 
 export function trustedRunnerAdmissionBundleDigest(value: AdmissionBoundExecution): string {
   const json = canonicalize(value);
@@ -19,7 +19,7 @@ export function trustedRunnerAdmissionBundleDigest(value: AdmissionBoundExecutio
   return `sha256:${createHash('sha256').update(json, 'utf8').digest('hex')}`;
 }
 
-function checkedBinding(input: TrustedRunnerAdmissionBinding): TrustedRunnerAdmissionBinding & { provider_auth_ref: ProviderAuthRef } {
+function checkedBinding(input: TrustedRunnerAdmissionBinding): TrustedRunnerAdmissionBinding & { provider_auth_ref: ProviderAuthRef; runtime_binding: ProviderRuntimeIdentityBinding } {
   if (!input || typeof input.network_id !== 'string' || input.network_id.trim().length === 0) throw new Error('trusted-runner-admission-binding-network-id-invalid');
   if (!input || typeof input.runner_id !== 'string' || input.runner_id.trim().length === 0) throw new Error('trusted-runner-admission-binding-runner-id-invalid');
   if (!Number.isInteger(input.registry_revision) || input.registry_revision < 1) throw new Error('trusted-runner-admission-binding-registry-revision-invalid');
@@ -27,8 +27,10 @@ function checkedBinding(input: TrustedRunnerAdmissionBinding): TrustedRunnerAdmi
   if (!Array.isArray(input.required_capabilities) || validateTrustedRunnerCapabilities(input.required_capabilities).status === 'blocked') throw new Error('trusted-runner-admission-binding-required-capabilities-invalid');
   if (validateTrustedRunnerCapabilities(input.capabilities).status === 'blocked') throw new Error('trusted-runner-admission-binding-capabilities-invalid');
   if (!input.provider_auth_ref || validateProviderAuthRef(input.provider_auth_ref).status === 'blocked') throw new Error('trusted-runner-admission-binding-provider-auth-ref-invalid');
+  const runtimeBinding = validateProviderRuntimeIdentityBinding(input.runtime_binding);
+  if (runtimeBinding.status === 'blocked') throw new Error('trusted-runner-admission-binding-runtime-binding-invalid');
   if (input.capabilities_digest !== trustedRunnerCapabilitiesDigest(input.capabilities)) throw new Error('trusted-runner-admission-binding-capabilities-digest-invalid');
-  return { ...input, required_capabilities: [...new Set(input.required_capabilities)].sort(), capabilities: [...input.capabilities].sort(), provider_auth_ref: structuredClone(input.provider_auth_ref) };
+  return { ...input, required_capabilities: [...new Set(input.required_capabilities)].sort(), capabilities: [...input.capabilities].sort(), provider_auth_ref: structuredClone(input.provider_auth_ref), runtime_binding: structuredClone(runtimeBinding.binding) };
 }
 
 export function createAdmissionBoundLocalExecutionPreflight(input: { preflight: AdmissionBoundLocalExecutionPreflightInput; binding: TrustedRunnerAdmissionBinding }): LocalExecutionPreflight {
@@ -46,7 +48,7 @@ export function createAdmissionBoundTrustedRunnerExecutionContext(input: { execu
 
 export function createAdmissionBoundExecution(input: AdmissionBoundExecutionInput): AdmissionBoundExecution {
   if (input.admission.status !== 'admitted') throw new Error('trusted-runner-admission-blocked');
-  const binding = checkedBinding(input.admission.binding);
+  const binding = checkedBinding({ ...input.admission.binding, runtime_binding: input.runtime_binding });
   const preflight = createAdmissionBoundLocalExecutionPreflight({ preflight: input.preflight, binding });
   const execution = createAdmissionBoundTrustedRunnerExecutionContext({ execution: { ...input.execution, execution_id: preflight.execution_id, attempt: preflight.attempt, preflight_digest: preflight.preflight_digest }, binding });
   return { binding, preflight, execution };

@@ -1326,6 +1326,11 @@
           "q": "问题265：在当前没有线上用户的前提下，ProviderLaunchHandle 与 ProviderCleanupProof 是否直接 enrich 现有 v1 schema，新增三个必填 Runtime identity/capability digest，而不做 v2 schema upgrade？",
           "answer": "同意",
           "note": "采用 enrich；现有 v1 直接增加 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 必填字段，并同步更新所有 producer、validator、client 和 fixture。"
+        },
+        {
+          "q": "问题266：三个 Runtime digest 是否应作为 AdmissionBoundExecution.binding.runtime_binding 的必填字段，由 Runtime provision/admission 阶段生成并冻结，再传递到 approval summary、worker context、challenge、launch handle 和 cleanup proof？",
+          "answer": "同意",
+          "note": "将 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 作为 admission binding 的必填 runtime_binding；在 Provider 启动前冻结并贯穿 approval、worker、challenge、launch 和 cleanup。"
         }
       ],
       "notes": ""
@@ -1415,7 +1420,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-03 00:32:00",
+    "updated": "2026-08-03 00:53:36",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

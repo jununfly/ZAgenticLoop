@@ -5,6 +5,7 @@ import { trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry
 import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
+const runtimeBinding = { runtime_identity_fingerprint: digest('6'), runtime_manifest_digest: digest('7'), provider_capabilities_digest: digest('8') };
 const authRefUnsigned = { schema: 'zj-loop.provider_auth_ref.v1', auth_ref_id: 'auth-1', network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id: 'provider-1', execution_id: 'execution-1', attempt: 1, issuer: 'provider-runtime-1', audience: 'model-api', scope: ['model:invoke'], issued_at: '2026-08-02T00:00:00.000Z', expires_at: '2026-08-02T01:00:00.000Z', status: 'active' };
 const providerAuthRef = { ...authRefUnsigned, ref_digest: providerAuthRefDigest(authRefUnsigned) };
 
@@ -17,6 +18,7 @@ const binding = {
   capabilities: ['process-boundary', 'secure-signing'],
   capabilities_digest: trustedRunnerCapabilitiesDigest(['process-boundary', 'secure-signing']),
   provider_auth_ref: providerAuthRef,
+  runtime_binding: runtimeBinding,
 };
 
 const preflightBase = {
@@ -95,6 +97,7 @@ test('AdmissionBoundExecution derives the TrustedRunner context binding from the
     preflight: preflightBase,
     execution: { helper: { helper_id: 'helper-1', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: digest('3') } },
     admission: { status: 'admitted', binding },
+    runtime_binding: runtimeBinding,
   });
 
   assert.equal(result.execution.execution_id, result.preflight.execution_id);

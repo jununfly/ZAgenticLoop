@@ -44,19 +44,21 @@ async function runWorkerContext(contextPath) {
     if (context.schema !== 'zj-loop.real_agent_dogfood_worker_context.v1')
         throw new Error('worker-context-schema-invalid');
     const required = ['state_store', 'evidence_store', 'network_id', 'dogfood_id', 'execution_id', 'worker_id', 'lease_id', 'worktree_path', 'executable', 'goal'];
-    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || typeof context.adapter_contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.adapter_contract_digest) || !context.binding || !context.admission_bound_execution || !context.provider_auth_ref || !Number.isInteger(context.expected_revision))
+    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || typeof context.adapter_contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.adapter_contract_digest) || !context.binding || !context.admission_bound_execution || !context.provider_auth_ref || !context.runtime_binding || !Number.isInteger(context.expected_revision))
         throw new Error('worker-context-invalid');
     if (context.provider_id !== 'codex')
         throw new Error('provider-not-registered');
     if (JSON.stringify(context.provider_auth_ref) !== JSON.stringify(context.admission_bound_execution.binding.provider_auth_ref))
         throw new Error('worker-provider-auth-ref-binding-invalid');
+    if (JSON.stringify(context.runtime_binding) !== JSON.stringify(context.admission_bound_execution.binding.runtime_binding))
+        throw new Error('worker-provider-runtime-identity-binding-invalid');
     const authRef = context.provider_auth_ref;
     if (!authRef)
         throw new Error('worker-provider-auth-ref-required');
     if (!context.provider_runtime_ipc || typeof context.provider_runtime_ipc.socket_path !== 'string' || context.provider_runtime_ipc.socket_path.trim() === '' || typeof context.provider_runtime_ipc.contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.provider_runtime_ipc.contract_digest))
         throw new Error('worker-provider-runtime-ipc-required');
     const runtimeIpc = context.provider_runtime_ipc;
-    if (!runtimeIpc || !runtimeIpc.runtime_binding)
+    if (!runtimeIpc || !runtimeIpc.runtime_binding || JSON.stringify(runtimeIpc.runtime_binding) !== JSON.stringify(context.runtime_binding))
         throw new Error('worker-provider-runtime-ipc-required');
     const runtimeProvider = createProviderRuntimeIpcProvider({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, network_id: context.network_id, node_id: authRef.node_id, provider_runtime_id: authRef.provider_runtime_id, provider_id: context.provider_id, execution_id: context.execution_id, attempt: authRef.attempt, auth_ref_digest: authRef.ref_digest, contract_digest: runtimeIpc.contract_digest, adapter_contract_digest: context.adapter_contract_digest, runtime_binding: runtimeIpc.runtime_binding });
     const provider_cleanup = async () => {

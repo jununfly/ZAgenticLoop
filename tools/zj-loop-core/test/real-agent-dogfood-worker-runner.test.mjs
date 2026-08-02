@@ -14,6 +14,7 @@ import { trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry
 import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
 
 const d = (letter) => `sha256:${letter.repeat(64)}`;
+const runtimeBinding = { runtime_identity_fingerprint: d('6'), runtime_manifest_digest: d('7'), provider_capabilities_digest: d('8') };
 function providerAuthRef(execution_id, attempt, provider_id = 'provider-1') {
   const unsigned = { schema: 'zj-loop.provider_auth_ref.v1', auth_ref_id: `auth-${execution_id}`, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'provider-runtime-1', provider_id, execution_id, attempt, issuer: 'provider-runtime-1', audience: 'model-api', scope: ['model:invoke'], issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z', status: 'active' };
   return { ...unsigned, ref_digest: providerAuthRefDigest(unsigned) };
@@ -28,6 +29,7 @@ function admissionBoundExecution({ execution_id, attempt, executable, cwd }) {
     },
     execution: { helper: { helper_id: 'helper-1', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: d('4') } },
     admission: { status: 'admitted', binding: { network_id: 'network-1', runner_id: 'runner-1', registry_revision: 1, registry_snapshot_digest: d('5'), required_capabilities: ['process-boundary'], capabilities, capabilities_digest: trustedRunnerCapabilitiesDigest(capabilities), provider_auth_ref: providerAuthRef(execution_id, attempt) } },
+    runtime_binding: runtimeBinding,
   });
 }
 

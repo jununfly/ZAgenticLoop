@@ -5,7 +5,7 @@ import { applyTrustedRunnerRegistryMutation, createTrustedRunnerRegistryMutation
 import { readHumanAuthoritySet, replayHumanAuthoritySet } from './human-authority-set-store.js';
 import type { HumanSignerIdentity } from './human-signer.js';
 import { validateTrustedRunnerInstallArtifact, type TrustedRunnerInstallArtifact } from './trusted-runner-install-artifact.js';
-import type { ProviderAuthRef } from './provider-auth-runtime.js';
+import type { ProviderAuthRef, ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_TYPE = 'trusted-runner-registry' as const;
 export const TRUSTED_RUNNER_REGISTRY_AGGREGATE_ID = 'network' as const;
@@ -15,7 +15,7 @@ export type TrustedRunnerRegistrySnapshot = { network_id: string; revision: numb
 export type TrustedRunnerRegistryRead = { snapshot: TrustedRunnerRegistrySnapshot; history: TrustedRunnerRegistryMutation[] };
 export type TrustedRunnerRegistryRecordResult = TrustedRunnerRegistryRead & { status: 'recorded' | 'duplicate' | 'conflict' | 'blocked'; revision?: number; reason?: string };
 export type TrustedRunnerRegistryMutationBuildResult = { status: 'ready'; mutation: TrustedRunnerRegistryMutation; snapshot: TrustedRunnerRegistrySnapshot } | { status: 'blocked' | 'conflict'; snapshot: TrustedRunnerRegistrySnapshot; reason: string };
-export type TrustedRunnerAdmissionBinding = { network_id: string; runner_id: string; registry_revision: number; registry_snapshot_digest: string; required_capabilities: string[]; capabilities: string[]; capabilities_digest: string; provider_auth_ref?: ProviderAuthRef };
+export type TrustedRunnerAdmissionBinding = { network_id: string; runner_id: string; registry_revision: number; registry_snapshot_digest: string; required_capabilities: string[]; capabilities: string[]; capabilities_digest: string; provider_auth_ref?: ProviderAuthRef; runtime_binding?: ProviderRuntimeIdentityBinding };
 export type TrustedRunnerExecutionAdmissionResult = { status: 'admitted'; binding: TrustedRunnerAdmissionBinding } | { status: 'blocked'; reason: string };
 
 function canonicalDigest(value: unknown): string {

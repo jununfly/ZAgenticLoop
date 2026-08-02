@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 00:32:00
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 00:53:36
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -104,4 +104,5 @@
 - Q: 问题263：Runtime bootstrap challenge 是否必须增加独立的短时内存 TTL（推荐 30 秒），超时未消费直接 blocked，消费后立即失效，且不写入任何持久化 artifact？ → 同意 (采用 30 秒内存 TTL；challenge 只在 Runtime 内存中短时存在，消费后立即失效，超时、断连、重复消费和身份漂移直接 blocked。)
 - Q: 问题264：Runtime identity fingerprint、runtime manifest digest 与 provider capabilities digest 是否必须纳入 sidecar admission、bootstrap challenge、launch handle 和 cleanup proof 的不可变绑定？ → 同意 (sidecar 启动前必须校验三类 Runtime identity/capability digest；任一缺失、漂移或 capability 超集直接 blocked，不能继续使用旧 challenge 或 launch handle。)
 - Q: 问题265：在当前没有线上用户的前提下，ProviderLaunchHandle 与 ProviderCleanupProof 是否直接 enrich 现有 v1 schema，新增三个必填 Runtime identity/capability digest，而不做 v2 schema upgrade？ → 同意 (采用 enrich；现有 v1 直接增加 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 必填字段，并同步更新所有 producer、validator、client 和 fixture。)
+- Q: 问题266：三个 Runtime digest 是否应作为 AdmissionBoundExecution.binding.runtime_binding 的必填字段，由 Runtime provision/admission 阶段生成并冻结，再传递到 approval summary、worker context、challenge、launch handle 和 cleanup proof？ → 同意 (将 runtime_identity_fingerprint、runtime_manifest_digest、provider_capabilities_digest 作为 admission binding 的必填 runtime_binding；在 Provider 启动前冻结并贯穿 approval、worker、challenge、launch 和 cleanup。)
 <!-- ROADMAP_SECTION_END -->

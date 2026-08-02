@@ -2,7 +2,7 @@ import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 import { createLocalExecutionPreflight, validateLocalExecutionPreflight } from './local-execution-preflight.js';
 import { trustedRunnerCapabilitiesDigest, validateTrustedRunnerCapabilities } from './trusted-runner-registry.js';
-import { validateProviderAuthRef } from './provider-auth-runtime.js';
+import { validateProviderAuthRef, validateProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export function trustedRunnerAdmissionBundleDigest(value) {
     const json = canonicalize(value);
@@ -25,9 +25,12 @@ function checkedBinding(input) {
         throw new Error('trusted-runner-admission-binding-capabilities-invalid');
     if (!input.provider_auth_ref || validateProviderAuthRef(input.provider_auth_ref).status === 'blocked')
         throw new Error('trusted-runner-admission-binding-provider-auth-ref-invalid');
+    const runtimeBinding = validateProviderRuntimeIdentityBinding(input.runtime_binding);
+    if (runtimeBinding.status === 'blocked')
+        throw new Error('trusted-runner-admission-binding-runtime-binding-invalid');
     if (input.capabilities_digest !== trustedRunnerCapabilitiesDigest(input.capabilities))
         throw new Error('trusted-runner-admission-binding-capabilities-digest-invalid');
-    return { ...input, required_capabilities: [...new Set(input.required_capabilities)].sort(), capabilities: [...input.capabilities].sort(), provider_auth_ref: structuredClone(input.provider_auth_ref) };
+    return { ...input, required_capabilities: [...new Set(input.required_capabilities)].sort(), capabilities: [...input.capabilities].sort(), provider_auth_ref: structuredClone(input.provider_auth_ref), runtime_binding: structuredClone(runtimeBinding.binding) };
 }
 export function createAdmissionBoundLocalExecutionPreflight(input) {
     const binding = checkedBinding(input.binding);
@@ -46,7 +49,7 @@ export function createAdmissionBoundTrustedRunnerExecutionContext(input) {
 export function createAdmissionBoundExecution(input) {
     if (input.admission.status !== 'admitted')
         throw new Error('trusted-runner-admission-blocked');
-    const binding = checkedBinding(input.admission.binding);
+    const binding = checkedBinding({ ...input.admission.binding, runtime_binding: input.runtime_binding });
     const preflight = createAdmissionBoundLocalExecutionPreflight({ preflight: input.preflight, binding });
     const execution = createAdmissionBoundTrustedRunnerExecutionContext({ execution: { ...input.execution, execution_id: preflight.execution_id, attempt: preflight.attempt, preflight_digest: preflight.preflight_digest }, binding });
     return { binding, preflight, execution };

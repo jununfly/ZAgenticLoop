@@ -6,6 +6,13 @@ export type ProviderRuntimeIdentityBinding = {
     runtime_manifest_digest: string;
     provider_capabilities_digest: string;
 };
+export declare function validateProviderRuntimeIdentityBinding(value: unknown): {
+    status: 'valid';
+    binding: ProviderRuntimeIdentityBinding;
+} | {
+    status: 'blocked';
+    reason: string;
+};
 export type ProviderAuthRef = {
     schema: typeof PROVIDER_AUTH_REF_SCHEMA;
     auth_ref_id: string;

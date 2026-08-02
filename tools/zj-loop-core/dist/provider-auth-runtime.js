@@ -5,14 +5,17 @@ export const PROVIDER_LAUNCH_HANDLE_SCHEMA = 'zj-loop.provider_launch_handle.v1'
 export const PROVIDER_CLEANUP_PROOF_SCHEMA = 'zj-loop.provider_cleanup_proof.v1';
 const PROVIDER_AUTH_REF_KEYS = new Set(['schema', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'issuer', 'audience', 'scope', 'issued_at', 'expires_at', 'status', 'ref_digest']);
 const PROVIDER_LAUNCH_HANDLE_KEYS = new Set(['schema', 'handle_id', 'auth_ref_id', 'network_id', 'node_id', 'provider_runtime_id', 'provider_id', 'execution_id', 'attempt', 'endpoint_digest', 'contract_digest', 'adapter_contract_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'issued_at', 'expires_at', 'status', 'handle_digest']);
-function validRuntimeIdentityBinding(value) {
+export function validateProviderRuntimeIdentityBinding(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
-        return false;
+        return { status: 'blocked', reason: 'provider-runtime-identity-binding-invalid' };
     const item = value;
-    return typeof item.runtime_identity_fingerprint === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_identity_fingerprint)
+    if (typeof item.runtime_identity_fingerprint === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_identity_fingerprint)
         && typeof item.runtime_manifest_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_manifest_digest)
-        && typeof item.provider_capabilities_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.provider_capabilities_digest);
+        && typeof item.provider_capabilities_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.provider_capabilities_digest))
+        return { status: 'valid', binding: item };
+    return { status: 'blocked', reason: 'provider-runtime-identity-binding-invalid' };
 }
+function validRuntimeIdentityBinding(value) { return validateProviderRuntimeIdentityBinding(value).status === 'valid'; }
 function canonical(value) {
     const json = canonicalize(value);
     if (typeof json !== 'string')

@@ -13,13 +13,16 @@ export type ProviderRuntimeIdentityBinding = {
   provider_capabilities_digest: string;
 };
 
-function validRuntimeIdentityBinding(value: unknown): value is ProviderRuntimeIdentityBinding {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+export function validateProviderRuntimeIdentityBinding(value: unknown): { status: 'valid'; binding: ProviderRuntimeIdentityBinding } | { status: 'blocked'; reason: string } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { status: 'blocked', reason: 'provider-runtime-identity-binding-invalid' };
   const item = value as Record<string, unknown>;
-  return typeof item.runtime_identity_fingerprint === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_identity_fingerprint)
+  if (typeof item.runtime_identity_fingerprint === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_identity_fingerprint)
     && typeof item.runtime_manifest_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.runtime_manifest_digest)
-    && typeof item.provider_capabilities_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.provider_capabilities_digest);
+    && typeof item.provider_capabilities_digest === 'string' && /^sha256:[0-9a-f]{64}$/.test(item.provider_capabilities_digest)) return { status: 'valid', binding: item as ProviderRuntimeIdentityBinding };
+  return { status: 'blocked', reason: 'provider-runtime-identity-binding-invalid' };
 }
+
+function validRuntimeIdentityBinding(value: unknown): value is ProviderRuntimeIdentityBinding { return validateProviderRuntimeIdentityBinding(value).status === 'valid'; }
 
 export type ProviderAuthRef = {
   schema: typeof PROVIDER_AUTH_REF_SCHEMA;
