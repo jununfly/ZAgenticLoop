@@ -1,3 +1,4 @@
+export { BOOTSTRAP_CHANNEL_ROLES, BOOTSTRAP_PROTOCOL_PROFILE, BOOTSTRAP_REASON_DESCRIPTORS, bootstrapProfileSha256, getBootstrapReasonDescriptor, } from './bootstrap-protocol.js';
 export declare const ORCHESTRATION_PLAN_PROFILE: "orchestration-plan-v1-2026-07";
 export declare const ORCHESTRATION_PLAN_CANONICALIZATION: "jcs-rfc8785";
 export declare const RESOURCE_ISOLATION_STRATEGIES: readonly ["read-only-snapshot", "git-branch-worktree", "isolated-copy", "serialized-owner", "human-defined", "not-applicable", "needs-human-grill"];

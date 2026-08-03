@@ -1,5 +1,6 @@
 import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
+export { BOOTSTRAP_CHANNEL_ROLES, BOOTSTRAP_PROTOCOL_PROFILE, BOOTSTRAP_REASON_DESCRIPTORS, bootstrapProfileSha256, getBootstrapReasonDescriptor, } from './bootstrap-protocol.js';
 export const ORCHESTRATION_PLAN_PROFILE = 'orchestration-plan-v1-2026-07';
 export const ORCHESTRATION_PLAN_CANONICALIZATION = 'jcs-rfc8785';
 export const RESOURCE_ISOLATION_STRATEGIES = Object.freeze([

@@ -875,7 +875,11 @@
       "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3"
+      ],
       "decisions": [
         {
           "q": "问题4：真实 Agent 是否必须在专用 isolated worktree 中执行，且执行前后 worktree 都必须 clean？",
@@ -1351,6 +1355,226 @@
           "q": "问题270：是否先实现 macOS Unix socket process-audit peer identity adapter，再接入真实 sidecar；Linux peer credentials、Windows named-pipe token adapter 后续复用同一接口？",
           "answer": "同意",
           "note": "先实现 macOS 原生 process-audit adapter；平台无关接口保持稳定，无法获取真实 OS peer identity 时 fail-closed，Linux/Windows adapter 后置。"
+        },
+        {
+          "q": "真实 macOS peer identity adapter 首先接入哪条 IPC 边界？",
+          "answer": "A：先接入 ProviderAuthRuntime sidecar，验证 TrustedRunner → Runtime sidecar → Provider 的真实 peer handshake，再推进 post-run proof IPC。",
+          "note": "sidecar 位于 Provider 启动前，是严格启动顺序的前置门槛；先闭合该门槛可避免把 post-run 证据问题与 Provider 启动问题耦合。"
+        },
+        {
+          "q": "ProviderAuthRuntime sidecar 的 expected_peer_identity_digest 如何获得？",
+          "answer": "A：TrustedRunner 启动 worker 后查询其 PID 的真实 macOS identity，再通过一次性受保护 FD 注入 sidecar；sidecar 不采用 TOFU、随机 token 或 worker 自报身份。",
+          "note": "digest 绑定 worker 进程实例；真实 OS identity 由 TrustedRunner/native adapter 采集，sidecar 只接受受保护启动契约注入的预期值并对连接 peer 再验证。"
+        },
+        {
+          "q": "sidecar 先启动但 worker identity 尚未知时，如何保持严格启动顺序？",
+          "answer": "A：sidecar 先以 awaiting-peer-binding 状态启动，通过一次性受保护 FD 等待 TrustedRunner 注入 worker identity binding；binding 校验通过后才进入 runtime-ready 并接受业务连接。",
+          "note": "保留 TrustedRunner → sidecar → worker 的生命周期顺序，同时避免 TOFU；sidecar 在 binding 到达前不接受 ProviderAuth 业务连接。"
+        },
+        {
+          "q": "sidecar 的 identity bootstrap binding 使用哪种受保护通道？",
+          "answer": "A：使用独立继承 Unix FD 4，传递一次性 bounded canonical JSON identity binding；FD 3 保留给 Provider/Auth secret。FD 4 读取一次后关闭，缺失、重复、超时或漂移直接 blocked。",
+          "note": "分离 secret 与身份绑定的权限、生命周期和审计边界；binding 绑定 network/node/provider、execution/attempt、worker PID、identity digest、nonce 和 binding digest。"
+        },
+        {
+          "q": "FD 4 identity binding 是否需要额外 TrustedRunner 签名？",
+          "answer": "A：不额外签名；采用继承 FD authority + canonical binding digest。sidecar 只接受 TrustedRunner 继承的 FD 4 一次性输入，并校验 schema、字段、nonce、binding digest 和启动契约。",
+          "note": "本机一次性 bootstrap 的发送方边界由 FD 所有权提供；额外签名、runner 公钥注册与轮换留给跨设备/跨网络协议，不扩大当前 MVP。"
+        },
+        {
+          "q": "sidecar 在 identity binding 到达前是否创建业务 Unix socket？",
+          "answer": "A：不创建；start 阻塞等待并校验 FD 4 binding，只有校验通过后才创建业务 socket、进入 runtime-ready 并返回；缺失、超时或非法直接启动失败。",
+          "note": "runtime-ready 表示 identity bootstrap、execution contract 和 peer gate 已闭合，避免未就绪 endpoint 引入连接竞态。"
+        },
+        {
+          "q": "bootstrap binding 是否拆成独立 provider-neutral 协议模块？",
+          "answer": "A：拆分为 provider-neutral bootstrap binding 协议模块与 OS-specific transport；当前实现 macOS inherited Unix FD，后续 Linux/Windows 复用同一协议接口。ProviderAuth sidecar 只消费已验证 binding。",
+          "note": "隔离 canonical envelope、digest、状态机与平台 FD/named-pipe 传输，避免 sidecar 直接耦合 macOS 细节。"
+        },
+        {
+          "q": "bootstrap binding 是否拆成独立 provider-neutral 协议模块？",
+          "answer": "A：拆分为 provider-neutral bootstrap binding 协议模块与 OS-specific transport；当前实现 macOS inherited Unix FD，后续 Linux/Windows 复用同一协议接口。ProviderAuth sidecar 只消费已验证 binding。",
+          "note": "隔离 canonical envelope、digest、状态机与平台 FD/named-pipe 传输，避免 sidecar 直接耦合 macOS 细节。"
+        },
+        {
+          "q": "worker 已启动但 identity bootstrap 失败时如何收敛生命周期？",
+          "answer": "A：TrustedRunner 执行一次有界的 worker process-tree termination；sidecar 不进入 runtime-ready，worker 不得启动 Provider。能证明完整终止则 blocked，无法证明则 outcome-uncertain 并交 Human review；不自动重试，不引入 recovery verifier。",
+          "note": "这是启动前置条件失败的有界清理，不扩展为新的 recovery 机制；必须保留 process-boundary 证据。"
+        },
+        {
+          "q": "bootstrap 失败清理是否复用现有 TrustedRunner process-boundary 机制？",
+          "answer": "A：复用并扩展现有 TrustedRunner process-boundary 机制；sidecar/worker bootstrap 只新增 lifecycle outcome/proof 投影，不另写 kill、等待和 descendant 检查逻辑。",
+          "note": "TrustedRunner 继续是唯一 process-boundary 责任单元，保证 SIGTERM、grace period、SIGKILL、descendant、orphan/unknown 检查及 outcome 映射一致。"
+        },
+        {
+          "q": "sidecar 与 worker 的 process boundary 如何组织？",
+          "answer": "A：sidecar、worker 及其 Provider descendants 共用一个 TrustedRunner-owned execution process group；TrustedRunner 统一终止和证明整个 execution group。",
+          "note": "单一 execution boundary 可复用现有 process_boundary 证据，bootstrap 失败时一次清理覆盖 sidecar、worker 和 descendants。"
+        },
+        {
+          "q": "由谁创建 execution process group 并让 sidecar/worker 加入？",
+          "answer": "A：扩展现有 macOS TrustedRunner native helper；由 native helper 创建 execution process group，sidecar 作为 group leader，worker 通过受控 posix_spawn 加入，Provider descendants 继承该 group。",
+          "note": "继续强化现有 TrustedRunner native boundary，统一 group identity、bootstrap FD 和 process-boundary proof，避免新增并行 supervisor 实现。"
+        },
+        {
+          "q": "sidecar 完成 identity binding 后如何宣告 runtime-ready？",
+          "answer": "A：通过独立一次性 inherited FD 5 返回 bounded readiness envelope；FD 4 是 TrustedRunner→sidecar binding，FD 5 是 sidecar→TrustedRunner runtime-ready/blocked。",
+          "note": "sidecar 只有完成 FD 4 校验、socket 创建保护和 execution contract 校验后才能返回 runtime-ready，否则返回结构化 blocked。"
+        },
+        {
+          "q": "runtime-ready envelope 需要绑定哪些内容？",
+          "answer": "A：绑定完整启动上下文：network/node/provider、execution/attempt、sidecar PID、identity_binding_digest、runtime_binding_digest、correlation ID、socket path/digest、Unix socket 0600 权限证明和 readiness digest；TrustedRunner 逐项校验。",
+          "note": "runtime-ready 是可验证的 execution-bound evidence，而不是进程存活信号；endpoint 位置本身不构成信任。"
+        },
+        {
+          "q": "TrustedRunner 如何在 worker 首次连接前获取 expected identity digest？",
+          "answer": "A：扩展 macOS process-audit helper 支持 --pid <pid>；TrustedRunner 启动 worker 后先查询 PID identity 并生成 expected digest，再经 FD 4 注入 sidecar；sidecar 对实际 socket peer 重新采集并比对。",
+          "note": "预启动 PID inspection 与连接时 socket peer verification 是两次独立 OS 事实采集；digest 绑定 PID，可检测进程退出、PID reuse 和 peer drift。"
+        },
+        {
+          "q": "FD 3/4/5 的编号是否属于跨平台协议？",
+          "answer": "A：不属于；provider-neutral 协议只定义 channel role 和 envelope，Unix 默认 FD 3/4/5，Windows 后续映射为对应 named pipe/handle。",
+          "note": "避免 Unix FD 细节泄漏到跨平台协议；实际 FD 编号由 Unix launch contract 显式传入或采用 MVP 默认值。"
+        },
+        {
+          "q": "FD 4/5 的一次性 envelope 采用什么 framing？",
+          "answer": "A：4-byte big-endian length + 单帧 canonical JSON，最大 16 KiB；读取完成后必须关闭 FD，超长、半帧、追加第二帧、非 canonical 或超时直接 blocked。",
+          "note": "与现有 bounded IPC frame 一致，明确输入上限和单次消费边界，避免启动挂起与多帧注入。"
+        },
+        {
+          "q": "bootstrap envelope 的 canonicalization 和 digest 如何定义？",
+          "answer": "A：复用现有 JCS/RFC 8785 canonicalization；固定 schema/version/profile，digest 统一 sha256:<64 hex>，不包含自身字段，sender/receiver 对同一 unsigned payload 计算。",
+          "note": "避免 JSON.stringify 或 native 自定义拼接造成跨语言 digest 漂移，直接复用项目现有 canonicalization contract。"
+        },
+        {
+          "q": "identity_digest 与 execution_binding_digest 如何分工？",
+          "answer": "A：分离两类 digest；identity_digest 只覆盖 PID 与 macOS signing identity，execution_binding_digest 覆盖 network/node/provider、execution/attempt、worker、identity_digest 和 runtime binding。",
+          "note": "OS identity 是事实层，execution binding 是授权/编排层；peer verifier 保持 provider-neutral，sidecar 再校验二者组合关系。"
+        },
+        {
+          "q": "Runtime sidecar 自身的身份如何被信任？",
+          "answer": "A：sidecar executable identity 由 TrustedRunner registry 与 process boundary 证明；sidecar digest 预注册并由 native helper 启动时校验，sidecar PID/group 纳入 readiness envelope；worker peer identity 仍独立验证。",
+          "note": "TrustedRunner proof 负责 sidecar，OS peer adapter 负责 worker，Runtime/Auth proof 保持独立。"
+        },
+        {
+          "q": "TrustedRunner registry 如何建模 Runtime sidecar？",
+          "answer": "A：新增独立 runtime-sidecar artifact/identity 类型；sidecar 自有 executable digest、version、adapter contract、capability profile、verification evidence 和 active/revoked 状态，由 TrustedRunner 负责启动与 boundary proof，但不冒充 TrustedRunner。",
+          "note": "分离 TrustedRunner 环境边界责任与 Runtime/Auth 执行组件身份，保留可注册、撤销和能力审计。"
+        },
+        {
+          "q": "Runtime sidecar artifact 的注册和撤销是否必须由 Human 批准？",
+          "answer": "A：必须 Human-signed registry mutation；注册、能力变更、adapter contract、executable digest 和撤销都需 Human approval，Agent 不能自行注册、升级或恢复。",
+          "note": "sidecar 是受信执行组件，必须沿用 TrustedRunner registry 的 Human authority 和 active/digest gate。"
+        },
+        {
+          "q": "sidecar registry 在 execution 运行期间发生撤销或变更时如何处理？",
+          "answer": "A：execution admission 时冻结 sidecar artifact digest、version、capability 和 registry revision；当前 execution 使用不可变 snapshot，撤销和漂移只阻止后续 execution；紧急强杀另设 Human-approved control。",
+          "note": "避免运行中 registry 轮询造成隐式竞态，同时保留后续 execution 的撤销保护。"
+        },
+        {
+          "q": "sidecar 的 FD 3 secret 校验与 FD 4 worker identity binding 如何排序？",
+          "answer": "A：FD 5 作为有界两阶段 status channel，最多返回 sidecar-auth-ready 和 runtime-ready 两帧；TrustedRunner 只在 auth-ready 后启动 worker，只在最终 runtime-ready 后允许 worker 连接；任意 blocked、乱序、第三帧或超时失败。",
+          "note": "修正单帧 readiness 的过窄设计，同时保持 bounded、单向、不可重放的启动状态通道。"
+        },
+        {
+          "q": "FD 5 readiness status channel 的写端和继承边界如何控制？",
+          "answer": "A：只有 sidecar 持有 FD 5 写端，TrustedRunner 持有读端；worker/Provider 不继承，sidecar 写完两帧立即关闭，并由 CLOEXEC、spawn file actions 和 launch contract 验证继承边界。",
+          "note": "readiness 只能由 sidecar 产生，TrustedRunner 只负责读取和验证，避免 worker 伪造或追加 readiness。"
+        },
+        {
+          "q": "Provider/Auth secret 是否允许进入 readiness、identity 或 evidence envelope？",
+          "answer": "A：不允许；FD 3 只传一次性 raw secret，sidecar 读取后立即关闭；readiness/evidence 只记录 auth_ref、runtime/provider binding 和 contract digest，不记录 secret 或 secret hash。",
+          "note": "保持 AuthRuntime secret isolation：secret 只存在 sidecar 私有内存与 provider 受保护注入路径。"
+        },
+        {
+          "q": "Runtime sidecar 的复用粒度是什么？",
+          "answer": "A：一个 sidecar 只服务一个 execution、一个 provider launch；与 execution process group 同生共死，FD 3/4 只消费一次，cleanup 或 terminal outcome 后退出并销毁 endpoint。",
+          "note": "当前单设备、单节点、单 Provider OPN Atom 采用 execution-scoped sidecar，避免跨 execution secret、registry snapshot 和状态污染。"
+        },
+        {
+          "q": "Human approval、admission 与 FD 3 secret 注入的关系是什么？",
+          "answer": "A：FD 3 secret 只能在 Human approval 与 admission 完成、execution binding 冻结后由 TrustedRunner 注入；sidecar 不重新授权，worker/Agent 不能触发 secret 注入。",
+          "note": "Human/Human+Agent 中心责任单元保持唯一授权入口，Runtime sidecar 只执行已批准契约。"
+        },
+        {
+          "q": "下一次实现采用哪种垂直切片？",
+          "answer": "A：分三层连续推进：先实现 provider-neutral bootstrap envelope、状态机、FD transport 接口与内存 fixture；再接 macOS --pid/socket identity proof；最后接 ProviderAuth sidecar 的 FD 3/4/5 与统一 TrustedRunner process group。",
+          "note": "每层独立测试和 fail-closed 证据，第三层才进入真实 sidecar orchestration，降低故障定位范围。"
+        },
+        {
+          "q": "FD 4 binding 与 FD 5 readiness 是否使用同一套 schema？",
+          "answer": "A：使用两个方向专用 schema：TrustedRunner→sidecar 的 identity binding schema，以及 sidecar→TrustedRunner 的 runtime readiness schema；两者都绑定 channel_role、execution context、correlation_id 和 binding_digest，不能互换。",
+          "note": "transport 只负责传输，协议层负责方向、语义和权限边界。"
+        },
+        {
+          "q": "bootstrap lifecycle 是否采用显式单向状态机？",
+          "answer": "A：采用显式单向 bootstrap 状态机，状态为 starting → auth-ready → awaiting-peer-binding → runtime-ready → closed，任意阶段可进入 blocked/outcome-uncertain；不允许回退、重复或 terminal 后继续使用。",
+          "note": "bootstrap 状态机负责 sidecar readiness 与 channel 生命周期，不能用 status 字段替代顺序约束。"
+        },
+        {
+          "q": "bootstrap lifecycle 与 Provider/Execution lifecycle 如何分层？",
+          "answer": "A：严格分离；bootstrap 只管理 starting/auth-ready/awaiting-peer-binding/runtime-ready/closed 或 blocked/outcome-uncertain，Provider/Agent execution/verification/cleanup 独立管理，通过 execution context、attempt、runtime binding 和 bootstrap digest 关联。",
+          "note": "runtime-ready 不代表 execution 成功；证据通过不可变 correlation/binding 关联，避免生命周期状态耦合。"
+        },
+        {
+          "q": "bootstrap 失败如何投影到 Execution lifecycle？",
+          "answer": "A：按阶段投影：sidecar auth 失败且 worker 未启动为 Execution blocked；worker 已启动但有界清理成功仍为 blocked；无法证明 process-tree 完整终止为 outcome-uncertain；bootstrap 原始状态独立保留。",
+          "note": "Execution 只接收规则化 outcome projection，不能用 Execution 状态替代 bootstrap 状态，也不能掩盖残留进程风险。"
+        },
+        {
+          "q": "bootstrap evidence 是否必须进入 review handoff？",
+          "answer": "A：必须作为独立 evidence set 进入 review handoff，包含 sidecar artifact/registry snapshot、process-boundary、PID/socket identity、FD channel lifecycle、state transitions、binding digests 和 cleanup proof；与 Provider result、Execution verification 分开。",
+          "note": "bootstrap 是 OPN execution 的独立证明链，Human review 必须能区分 bootstrap、Provider 启动、Execution 完成和结果验证。"
+        },
+        {
+          "q": "Human review 如何呈现 bootstrap evidence？",
+          "answer": "A：以可读摘要 + 可校验 evidence references 呈现；默认显示 bootstrap 状态、identity/binding/process-boundary 结论与失败动作，详情通过 evidence ID、artifact path、canonical digest 和 registry snapshot ref 展开；secret、FD 内容和未脱敏 native stderr 不进入 review package。",
+          "note": "兼顾 Human 可读性、证据可追溯性与敏感材料隔离。"
+        },
+        {
+          "q": "bootstrap evidence 使用哪种存储和完整性模型？",
+          "answer": "A：复用 content-addressed evidence store；proof artifact immutable 且按内容 digest 寻址，StateStore 只记录事件和 references，读取重新校验 network/execution/attempt/bootstrap digest；secret 与 FD 原始内容不入 store。",
+          "note": "StateStore 负责可查询生命周期，content-addressed store 负责脱敏 proof 完整性与长期引用。"
+        },
+        {
+          "q": "第一层 provider-neutral protocol fixture 的测试范围是什么？",
+          "answer": "A：覆盖完整 failure matrix：正常两阶段 readiness、FD 缺失/超时/截断/超长、重放/追加帧、状态乱序/重复/第三帧、schema/role 互换、digest/binding 漂移、terminal 后写入、secret 泄露，以及 blocked/outcome-uncertain 投影。",
+          "note": "协议状态机和 fail-closed 边界先独立闭合，避免 native integration 掩盖协议错误。"
+        },
+        {
+          "q": "sidecar 对 worker peer identity 的验证频率是什么？",
+          "answer": "A：每次 Unix socket connection 都重新采集并验证 OS peer identity，再执行 challenge-response；不复用上一连接的 verified 状态。",
+          "note": "bootstrap expected identity 与 per-connection actual identity 必须同时成立，challenge nonce 不能替代 OS peer proof。"
+        },
+        {
+          "q": "execution-scoped sidecar 是否允许 worker 重连？",
+          "answer": "A：每个 execution 只允许一个 verified worker connection；首次连接完成 peer identity + challenge 后绑定 execution/attempt，连接断开后不允许重连，worker restart/PID 变化/repeated launch 直接 blocked。",
+          "note": "与一次性 AuthRef、challenge、ProviderLaunchHandle 和 execution-scoped sidecar 保持一致，避免跨连接继续执行。"
+        },
+        {
+          "q": "sidecar 何时占用唯一 worker connection slot？",
+          "answer": "A：第一个 connection 到达并通过 OS peer identity 后立即占用；随后进入 connection-reserved/challenge-verified/launch-accepted，任何 peer mismatch、challenge failure 或 timeout 都直接终止，slot 不释放、不允许第二个连接接管。",
+          "note": "避免错误 worker、攻击者或 stale endpoint 竞争首个 slot，execution 与首个真实 OS peer 一次性绑定。"
+        },
+        {
+          "q": "bootstrap failure reason 是否采用稳定 machine-readable taxonomy？",
+          "answer": "A：采用稳定 reason codes 和可选 bounded 脱敏 detail；reason code 进入 StateStore、evidence、review handoff，并纳入协议测试矩阵；secret、native stderr 和敏感路径不直接进入 reason。",
+          "note": "支持 Human 可解释停下、机器路由、重放和 UI 映射，避免自由文本漂移。"
+        },
+        {
+          "q": "bootstrap reason taxonomy 放在哪里治理？",
+          "answer": "A：纳入 provider-neutral protocol registry；reason code 固定 schema/version，声明 lifecycle stage、默认 outcome projection、Human retry/review policy，fixture/UI/evidence verifier 共用。",
+          "note": "reason taxonomy 是协议的一部分，不是分散在 sidecar、TrustedRunner 和 UI 中的日志字符串。"
+        },
+        {
+          "q": "Human retry 如何处理失败的 bootstrap？",
+          "answer": "A：retry 创建全新的 execution attempt；原 sidecar、worker process group、FD 3/4/5、AuthRef/challenge/launch handle 均不复用，重新生成 execution/attempt、nonce、binding、socket，原失败 evidence 保留并关联。",
+          "note": "retry 是新的 execution，不是 failed bootstrap 的 in-place rebind；避免复用一次性授权和边界状态。"
+        },
+        {
+          "q": "retry 时 Human approval 是否重新签发？",
+          "answer": "A：每个新的 execution attempt 都重新签发 Human approval；approval、AuthRef、secret、bootstrap binding、socket 和 process boundary 都 attempt-bound，不跨 retry 迁移。",
+          "note": "现有 approval contract 绑定 execution_id/attempt，重新签发保证 Human 明确确认新的执行上下文。"
         }
       ],
       "notes": ""
@@ -1436,11 +1660,292 @@
         }
       ],
       "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Provider-neutral bootstrap protocol and memory failure-matrix fixture",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "第一层 provider-neutral transport 接口如何设计？",
+          "answer": "A：协议与 transport 分层；Bootstrap protocol 负责 canonical envelope、schema/state/digest 和 bounded one-shot rules，transport 负责按 channel role 读写 frame、timeout、EOF 和 close；当前提供 memory fixture，后续接 Unix FD/named pipe。",
+          "note": "避免 provider-neutral 层绑定 Node fd 或 sidecar 实现，先固定稳定 channel-role API。"
+        },
+        {
+          "q": "memory fixture 是否模拟真实 FD ownership？",
+          "answer": "A：必须模拟单向 channel authority：binding/secret 仅 TrustedRunner→sidecar，readiness 仅 sidecar→TrustedRunner；receiver 不能反向写入，channel 一次消费后关闭，非法 writer、重复 close、反向写入 blocked。",
+          "note": "memory fixture 作为真实 inherited FD authority 的可执行模型，避免把关键安全约束推迟到 native integration。"
+        },
+        {
+          "q": "memory fixture 的 timeout/chunk 测试如何保证确定性？",
+          "answer": "A：注入虚拟时钟和可控 chunk scheduler；chunk 大小/顺序、EOF、timeout 由 fixture 预设，不使用真实 timer 或随机调度，同一输入稳定生成同一 state/evidence/reason code。",
+          "note": "协议 failure matrix 可确定性重放，避免 flaky test 和难以复现的 pipe/socket 分段问题。"
+        },
+        {
+          "q": "是否为 bootstrap envelope 建立跨实现 golden vectors？",
+          "answer": "A：建立并纳入 conformance test；每个 vector 固定 unsigned payload、canonical JSON、expected digest、encoded frame bytes、decoded envelope、expected state transition 和 reason code，TypeScript/Swift/未来平台共用。",
+          "note": "golden vectors 提供 provider-neutral 协议跨实现的最低兼容保证，捕获 canonicalization 与 framing 漂移。"
+        },
+        {
+          "q": "golden vectors 存储和更新如何治理？",
+          "answer": "A：版本化存储在 tools/zj-loop-core/test/fixtures/bootstrap/，每个 vector 独立 JSON，测试只读取不自动重写；修改必须同步 protocol registry、reason taxonomy 和 conformance tests，并接受 Human review。",
+          "note": "golden vectors 是协议资产，不能因测试失败被隐式更新。"
+        },
+        {
+          "q": "bootstrap protocol registry 如何与现有 protocol-registry.ts 兼容？",
+          "answer": "A：在现有模块中新增独立 bootstrap profile、schema/channel/state/reason descriptors 和 bootstrapProfileSha256()；不修改 orchestration-plan profile 的内容或 digest，golden vectors 绑定 bootstrap profile digest。",
+          "note": "共用 registry 模块入口但保持 profile/digest 独立，避免无关 orchestration evidence 失效。"
+        },
+        {
+          "q": "bootstrap reason descriptor 的最小结构是什么？",
+          "answer": "A：使用 immutable structured descriptor，至少包含 code、lifecycle_stage、default_outcome、requires_human_review、allows_new_attempt、detail_policy，并由 bootstrap profile digest 覆盖。",
+          "note": "reason taxonomy 作为可执行 policy descriptor，同时服务协议校验、Execution projection、review UI 和 retry policy。"
+        },
+        {
+          "q": "reason taxonomy 如何演进而不破坏旧 evidence？",
+          "answer": "A：append-only、版本化演进；已发布 reason code 不复用、不改语义，新 code 只追加；breaking change 创建新 bootstrap profile/version，evidence 记录 profile_id/profile_sha256，verifier 按 evidence 声明的 profile 验证。",
+          "note": "保持历史 evidence 的语义稳定，避免当前最新 taxonomy 回溯重解释旧结果。"
+        },
+        {
+          "q": "1-4-1 第一版 public API 采用什么最小集合？",
+          "answer": "A：提供 createBootstrapBinding、createBootstrapTransportFixture、advanceBootstrapLifecycle 三个职责清晰的 API，以及纯函数 encode/decode frame、reason descriptor 查询和 bootstrap profile digest；协议、transport、lifecycle 可独立测试。",
+          "note": "避免用单一 manager 耦合全部职责，先固定 provider-neutral、可组合、纯函数优先的 API。"
+        },
+        {
+          "q": "createBootstrapBinding 接受什么输入？",
+          "answer": "A：接受规范化 identity facts 与 execution context，由协议层校验 facts 并计算 identity_digest、execution_binding_digest 和 envelope digest；native adapter 只输出 facts，不直接定义协议 digest。",
+          "note": "保持 OS adapter 与 provider-neutral protocol 解耦，并拒绝 secret、原始 FD 内容和未知字段。"
+        },
+        {
+          "q": "identity binding 的有效期如何约束？",
+          "answer": "A：短 TTL，默认不超过 30 秒；issued_at < expires_at，receiver 使用注入 now() 和 bounded clock skew 校验；FD 4 延迟消费或过期直接 blocked，retry 重新生成 nonce/binding。",
+          "note": "一次性 FD 与短时 freshness 双重防 replay/stale identity。"
+        },
+        {
+          "q": "bootstrap binding nonce 如何生成和管理？",
+          "answer": "A：每个 execution/attempt 使用独立、至少 128-bit 的 cryptographically random binding nonce；与 Auth challenge nonce 分离，sidecar 只消费一次，nonce 纳入 binding digest，重复/跨 attempt 使用 blocked。",
+          "note": "bootstrap freshness 与 Provider challenge freshness 属于两个独立 lifecycle，避免 nonce 复用耦合。"
+        },
+        {
+          "q": "runtime-ready 如何证明 Unix socket endpoint 没有被替换？",
+          "answer": "A：readiness envelope 包含 socket path/digest、st_dev、st_ino、0600 mode、owner UID 和 execution binding；TrustedRunner 收到后立即 stat 并逐项比较，确认仍为同一 Unix socket 后才放行 worker。",
+          "note": "endpoint path、权限或名字本身不构成身份信任，必须绑定运行时对象和 execution context。"
+        },
+        {
+          "q": "execution 结束时 Unix socket endpoint 如何收敛？",
+          "answer": "A：sidecar terminal 时关闭 listener 并 unlink socket；TrustedRunner 等待 process group 收敛后 lstat，必须确认 ENOENT；残留、inode 漂移或无法确认删除均记录 outcome-uncertain，cleanup proof 绑定 execution/attempt/bootstrap digest。",
+          "note": "sidecar 负责 endpoint 生命周期，TrustedRunner 验证结果，不对漂移对象无条件删除。"
+        },
+        {
+          "q": "sidecar crash 后 TrustedRunner 是否可以清理残留 socket？",
+          "answer": "A：只允许 guarded cleanup；必须校验 path、Unix socket 类型、st_dev/st_ino、owner UID、0600 mode 和 execution readiness snapshot 一致，删除结果进入 cleanup proof；漂移则不删并记录 outcome-uncertain。",
+          "note": "避免无条件 unlink 后续 execution 或其他组件 endpoint，同时减少 stale socket 残留风险。"
+        },
+        {
+          "q": "sidecar endpoint 所在私有目录如何收敛？",
+          "answer": "A：每个 execution 使用随机私有目录，目录 mode 0700；sidecar 负责关闭 listener、unlink socket 并在目录为空时删除；TrustedRunner 只在目录 owner、mode、路径和 execution snapshot 仍匹配时做 guarded cleanup；漂移或非空目录不强删，记录 outcome-uncertain。",
+          "note": "目录也是 execution-scoped resource，不能因 socket path 已删除就忽略残留权限和替换风险。"
+        },
+        {
+          "q": "execution 私有目录如何创建？",
+          "answer": "A：由 TrustedRunner 在受控 private root 下生成至少 128-bit 随机目录名，校验 owner/mode 0700/lstat identity，并通过 launch contract 固定给 sidecar；sidecar 不能自行选择或切换目录。",
+          "note": "目录名只用于资源定位，不构成身份信任根；TrustedRunner 保留 namespace authority。"
+        },
+        {
+          "q": "sidecar 是否允许在同一 execution 内变更 socket path？",
+          "answer": "A：禁止；socket path 在 TrustedRunner launch contract 中冻结，runtime-ready 必须匹配，sidecar 不创建第二 endpoint，任何 path/endpoint rebinding 直接 blocked，新 endpoint 只能属于新 execution attempt。",
+          "note": "execution 只有一个 immutable endpoint，避免 identity、peer binding 和 cleanup proof 重绑定。"
+        },
+        {
+          "q": "Unix socket accept queue 如何与唯一 connection slot 对齐？",
+          "answer": "A：使用 bounded listen backlog 与 application reservation；首个 accepted connection 立即占用 slot，slot 一旦占用不释放，后续 queued connections 关闭，backlog 溢出由 OS 拒绝并记录 bounded evidence。",
+          "note": "OS queue 与应用 connection slot 同时有界，避免多个竞争 peer 积压和 race window。"
+        },
+        {
+          "q": "runtime-ready 后 worker 首次连接的超时如何处理？",
+          "answer": "A：使用 bounded connection deadline，默认 5 秒；worker 未在窗口内连接则 bootstrap blocked，sidecar 关闭 endpoint，TrustedRunner 收敛 process group；无法证明收敛则 Execution outcome-uncertain，不无限等待、不允许后续接管。",
+          "note": "readiness 后仍需要 bounded handoff window，限制 sidecar、secret 和 endpoint 生命周期。"
+        },
+        {
+          "q": "worker connection deadline 如何配置？",
+          "answer": "A：由 execution contract 冻结，默认 5_000ms，范围 1–60_000ms；admission 时进入 execution binding，sidecar/TrustedRunner/worker 共用，运行时不可修改，超时只能创建新 attempt。",
+          "note": "timeout 是 execution policy，不是 sidecar 临时参数，避免组件间 deadline 漂移。"
+        },
+        {
+          "q": "worker connection deadline 使用哪种时钟？",
+          "answer": "A：deadline 计算使用 monotonic clock；ISO 8601 wall-clock 只用于 evidence 时间戳。timeout 判断不受系统时间回拨、跳变或 NTP 校正影响，虚拟 fixture 注入 monotonic now。",
+          "note": "将 deadline freshness 与可读时间戳分离，避免 wall-clock 漂移造成提前或延迟超时。"
+        },
+        {
+          "q": "worker connection deadline 使用哪种时钟？",
+          "answer": "A：使用 monotonic clock 计算 deadline；ISO 8601 wall-clock 只用于 evidence 时间戳；fixture 注入虚拟 monotonic now，避免系统时间回拨或跳变影响 timeout。",
+          "note": "将运行时 deadline freshness 与可读时间戳分离。"
+        },
+        {
+          "q": "FD 3/4/5 channel timeout 与 worker connection timeout 如何协调？",
+          "answer": "A：使用 execution-scoped bootstrap budget；FD 3/4/5 和 worker connection 各有 bounded phase timeout，但都从同一 monotonic execution deadline 派生，后续阶段不能续期，任一阶段耗尽按当前 stage reason 投影。",
+          "note": "总预算约束 sidecar/secret/process group 生命周期，phase timeout 提供可解释 failure reason，且与 execution/attempt binding 绑定。"
+        },
+        {
+          "q": "第一版 bootstrap phase budget 的默认值如何设定？",
+          "answer": "A：默认总预算 30 秒，FD3 secret 2s、auth-ready 5s、FD4 binding 5s、runtime-ready 5s、worker connection 5s，cleanup 使用剩余预算且最多 8s；所有 phase 共享 execution deadline，admission 可缩短不可放大。",
+          "note": "总预算提供硬上限，phase budget 提供稳定、可解释的默认 reason 行为。"
+        },
+        {
+          "q": "bootstrap budget 从什么时候开始计时？",
+          "answer": "A：从 TrustedRunner arm bootstrap channels 并启动 sidecar 时开始；覆盖 sidecar、FD3 secret、auth-ready、worker、FD4 binding、runtime-ready、首次连接和 bounded cleanup，不包括 Human approval、admission 前规划、artifact 安装或 native 编译。",
+          "note": "budget 只覆盖 TrustedRunner-controlled runtime handoff，避免用户等待和安装准备污染运行时安全期限。"
+        },
+        {
+          "q": "FD 3 secret channel 的读取上限和临时内存如何处理？",
+          "answer": "A：secret frame bounded（默认最大 64 KiB）、单帧、读取后立即关闭 FD3；超长或 handoff 失败 blocked，临时 buffer best-effort zeroize，secret 不进入日志、StateStore、evidence 或 readiness。",
+          "note": "secret channel 与 identity/readiness 一样遵守 bounded one-shot，但 handoff 后不保留可审计副本。"
+        },
+        {
+          "q": "FD 3 secret payload 的协议类型是什么？",
+          "answer": "A：opaque bytes + bounded content type；transport 不解析 secret，envelope 只声明 schema/version、content type、byte length 和 channel role，AuthRuntime 解释具体 credential 格式，secret 不进入公开 digest/evidence。",
+          "note": "保持 Provider-neutral，同时支持 UTF-8、JSON 和 binary credential。"
+        },
+        {
+          "q": "secret content_type 如何防止与 AuthRef/Provider contract 漂移？",
+          "answer": "A：AuthRef 在 admission 时声明允许的 credential content type，execution binding 冻结 auth_ref_digest/content_type；FD3 envelope 必须匹配，sidecar/AuthRuntime 再验证，未知或漂移直接 bootstrap-auth-secret-type-invalid。",
+          "note": "content type 是 Human-approved authorization contract 的一部分，不是 transport 自由字段。"
+        },
+        {
+          "q": "opaque secret bytes 的 framing 如何设计？",
+          "answer": "A：使用 metadata header + raw bytes；4-byte total length，JCS canonical metadata（schema/version/channel_role/content_type/byte_length），raw secret 不进入 JSON，长度必须一致，读取后立即 handoff/清理。",
+          "note": "metadata 可验证，secret bytes 保持 opaque、bounded 和最小复制，避免 base64/log/evidence 暴露。"
+        },
+        {
+          "q": "本地继承式 Unix FD secret transport 是否需要额外应用层加密？",
+          "answer": "A：MVP 不追加应用层加密；本地继承 FD 的安全边界由 FD 继承与所有权、TrustedRunner 控制、execution-scoped 0700 私有目录、一次性有界读取、关闭与进程组收敛共同提供；跨设备或未来网络 transport 另行使用 TLS/安全信道，不把网络加密复杂度带入 provider-neutral 本地 atom。",
+          "note": "本地 FD 不是跨设备网络边界；先保持 provider-neutral secret channel 简单、可验证、可复现，避免重复加密和协议复杂度。"
+        },
+        {
+          "q": "MVP 本地继承式 FD 的威胁模型边界是什么？",
+          "answer": "A：明确排除同一用户权限下已被攻陷的进程、root/调试器与内核级攻击；这些属于设备/操作系统信任根，不由本阶段 provider-neutral FD bootstrap 协议解决。",
+          "note": "本阶段聚焦 Human-approved TrustedRunner 与 sidecar 的正常运行时隔离、绑定、生命周期和证据；更强本机对抗模型另立安全增强路线。"
+        },
+        {
+          "q": "Provider worker 是否允许继承 bootstrap FD？",
+          "answer": "A：冻结 FD 继承白名单；FD 3/4/5 只注入并保留给 TrustedRunner 与 sidecar，Provider worker 不得继承；worker 仅通过已验证的 execution-scoped 业务 Unix socket 通信，任何意外继承都使 bootstrap 失败。",
+          "note": "将 secret、identity binding、readiness/status 控制面与业务 worker 隔离，避免 worker 获得控制面能力或残留敏感句柄。"
+        },
+        {
+          "q": "如何验证 Provider worker 未继承 FD 3/4/5？",
+          "answer": "A：以启动时句柄治理为主：bootstrap FD 设置 close-on-exec；worker 仅显式注入业务 socket 句柄；TrustedRunner 关闭 worker 侧所有 bootstrap FD；句柄白名单与 launch contract 写入证据。MVP 不依赖 /proc 或其他平台特定的事后扫描，启动治理失败直接判定 bootstrap 失败。",
+          "note": "以可移植的 launch contract 和 descriptor ownership 建立 provider-neutral 语义，避免把进程句柄审计绑定到单一 OS。"
+        },
+        {
+          "q": "FD 数字是否属于稳定 bootstrap 协议字段？",
+          "answer": "A：不属于。证据固定记录 channel_role、ownership、close-on-exec、frame/result 与 digest；FD 3/4/5 仅作为当前 Unix transport 的诊断元数据，不参与协议 digest、身份判断或跨平台兼容性。",
+          "note": "保持协议语义与 Unix descriptor 编号解耦，未来 named pipe 或其他 transport 不需要伪造 FD 编号。"
+        },
+        {
+          "q": "memory fixture 是否验证具体 FD 数字？",
+          "answer": "A：不验证具体 FD 数字，而验证抽象 channel role 与 worker 句柄白名单：方向、ownership、一次性消费、close-on-exec 和 worker 禁止继承由 fixture 覆盖；具体 FD 编号留给 Unix integration 测试。",
+          "note": "让 provider-neutral failure matrix 保持跨 transport 可复用，同时把数字 descriptor 的实现约束隔离到 Unix adapter。"
+        },
+        {
+          "q": "业务 Unix socket 是否继承给 Provider worker？",
+          "answer": "A：不继承。worker 根据冻结的 endpoint contract 自行连接；TrustedRunner 只传递 endpoint path、execution binding 和 connection deadline，worker 不继承任何业务 socket FD；sidecar 负责首次连接与 peer 验证。",
+          "note": "统一采用 path-based connect，减少 worker descriptor 继承面，让 bootstrap 控制面和业务连接边界清晰。"
+        },
+        {
+          "q": "如何向 Provider worker 传递 endpoint 与 execution binding？",
+          "answer": "A：通过 provider-neutral 的冻结 launch contract；协议层只定义 canonical endpoint path、execution binding、connection deadline 等字段，具体 adapter 可映射到 argv、环境变量或受控 manifest；secret 禁止进入 launch contract。",
+          "note": "把启动载体与协议语义解耦，便于 Codex、Workbuddy 等不同 Agent adapter 接入，同时避免 credential 泄露。"
+        },
+        {
+          "q": "worker 连接业务 Unix socket 后是否需要应用层 hello？",
+          "answer": "A：必须。worker 首帧发送包含 execution_binding_digest 的 canonical hello；sidecar 同时验证 Unix peer identity 与 execution binding，验证通过后才永久占用唯一 connection slot；hello 不得携带 secret。",
+          "note": "Unix peer identity 证明进程身份，execution binding 证明 execution/attempt 归属；两层绑定共同防止错误 worker 或旧 attempt 占用 endpoint。"
+        },
+        {
+          "q": "首个业务 socket 连接校验失败后是否允许后续 worker 接管？",
+          "answer": "A：不允许。首个 accepted connection 进入唯一 provisional slot；peer identity、execution binding、schema 或 digest 任一校验失败都关闭连接、记录 bootstrap failure 并终止本次 execution；重试必须创建全新的 execution attempt。",
+          "note": "保持 one execution/one worker connection 的确定性，避免错误 peer 释放 slot 后引入接管竞态。"
+        },
+        {
+          "q": "hello 校验通过后是否需要 sidecar ack？",
+          "answer": "A：必须。sidecar 校验 worker hello 后返回携带同一 execution_binding_digest 的 worker-accepted ack；worker 收到 ack 前不得开始业务执行。",
+          "note": "将 bootstrap 完成与业务开始明确分隔，避免 worker 在 sidecar 尚未完成最终绑定时提前执行。"
+        },
+        {
+          "q": "worker hello/ack 属于 bootstrap profile 还是业务协议？",
+          "answer": "A：属于独立的 bootstrap handshake profile。profile 固定 schema、canonical fields、frame limits、digest 与 reason codes；worker 收到 worker-accepted 后才进入业务协议，业务协议演进不改变 bootstrap conformance digest。",
+          "note": "保持 bootstrap conformance 与业务协议生命周期、版本演进相互独立。"
+        },
+        {
+          "q": "worker hello/ack 校验失败时是否记录原始 payload？",
+          "answer": "A：不记录。证据只保留稳定 reason code、失败字段名、bounded diagnostic detail、frame 长度与 payload digest；不保存原始 hello/ack 内容。",
+          "note": "避免路径、环境变量或 provider 私有字段进入 StateStore/evidence，同时保留足够的独立验证线索。"
+        },
+        {
+          "q": "worker hello/sidecar ack 是否允许重复或乱序？",
+          "answer": "A：不允许。每个 execution 只允许一个 hello 和一个 worker-accepted ack；重复、乱序或业务协议阶段再次出现 bootstrap frame 都视为 protocol violation，终止本次 execution，不复用连接或 nonce。",
+          "note": "保持 handshake 为一次性、单调状态转换，避免 replay、重入和 bootstrap/业务协议边界混淆。"
+        },
+        {
+          "q": "worker hello/sidecar ack 是否必须携带 bootstrap profile digest？",
+          "answer": "A：必须。hello 与 worker-accepted ack 都携带并匹配 bootstrap_profile_sha256 与 execution_binding_digest；profile digest 绑定双方协议版本，execution binding 绑定具体 execution/attempt，两者均匹配后才完成握手。",
+          "note": "避免不同 profile 实现误通信，并防止旧 attempt 或其他 execution 连接到当前 sidecar。"
+        },
+        {
+          "q": "bootstrap evidence 是否必须记录三条绑定 digest？",
+          "answer": "A：必须记录 bootstrap_profile_sha256、execution_binding_digest 和 worker_peer_identity_digest；它们分别证明协议版本、execution/attempt 归属和实际 worker 身份，独立 verifier 据此复核完整绑定链。",
+          "note": "保持 Runtime/Auth proof、TrustedRunner proof 与 peer identity proof 可独立验证，并通过 digest 关联而非相互替代。"
+        },
+        {
+          "q": "worker peer identity 的原始 OS 事实是否进入长期证据？",
+          "answer": "A：不进入。长期 StateStore/evidence 只保存 worker_peer_identity_digest、验证结果、adapter/profile 标识与必要的 bounded 公共摘要；原始签名链、路径和 native 输出留在本机受控诊断范围内。",
+          "note": "减少环境与身份细节泄露，同时保留独立 verifier 所需的稳定绑定摘要。"
+        },
+        {
+          "q": "原始 peer identity/native 输出如何保留？",
+          "answer": "A：默认不落盘，仅内存短暂保留；只有 Human 显式开启诊断时才写入 execution-scoped 私有目录，并受 TTL、大小上限与 cleanup proof 约束；不得进入 StateStore、review package 或长期 evidence。",
+          "note": "诊断材料与可审计证据分离，默认最小化敏感信息持久化。"
+        },
+        {
+          "q": "原始诊断开关是否必须由 Human 批准并冻结？",
+          "answer": "A：必须。诊断开关进入 signed admission/execution binding，由 Human 批准并冻结；Agent/worker 不得在运行时临时打开。长期证据只记录启用状态、策略摘要和 cleanup 结果，不记录诊断内容。",
+          "note": "保持诊断权限属于 Human 责任边界，避免执行节点扩大证据收集范围或改变已批准的 execution contract。"
+        },
+        {
+          "q": "1-4-1 设计是否冻结并进入 TDD 实现？",
+          "answer": "A：冻结当前 bootstrap provider-neutral 设计，进入 TDD 实现与 failure-matrix fixture 编写；后续变更必须通过新的明确决策，不在实现中隐式改变协议边界。",
+          "note": "先实现最小 memory fixture 与 golden/conformance contract，再接入 Unix FD/native integration。"
+        }
+      ],
+      "notes": "已完成 provider-neutral bootstrap 第一实现闭环：独立 profile/reason descriptors/digest 并通过 protocol-registry re-export 暴露；identity/execution 分离 binding；canonical bounded uint32be framing；memory channel authority fixture 覆盖方向、ownership、一次性消费、worker 无继承、可控 chunk schedule 与注入 deadline；单调 lifecycle 映射 blocked/outcome-uncertain；golden vector 版本化只读 conformance test。真实 Unix FD、macOS peer identity、Runtime sidecar 与 process-group orchestration 留给 1-4-2/1-4-3。"
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "macOS process identity PID and Unix socket verification integration",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "TrustedRunner Runtime sidecar FD bootstrap and execution process-group orchestration",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-03 01:28:49",
+    "updated": "2026-08-03 12:06:55",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

@@ -1,0 +1,32 @@
+{
+  "schema": "zj-loop.bootstrap_golden_vector.v1",
+  "vector_id": "basic-binding-v1",
+  "identity": {
+    "schema": "zj-loop.worker_identity_facts.v1",
+    "platform": "darwin",
+    "kind": "process-audit",
+    "executable_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "signer_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "execution": {
+    "network_id": "network-1",
+    "execution_id": "execution-1",
+    "attempt": 1,
+    "provider_id": "agent-1",
+    "execution_binding_nonce": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+  },
+  "frame": {
+    "schema": "zj-loop.bootstrap_frame.v1",
+    "channel_role": "identity-binding",
+    "payload": {
+      "x": 1
+    }
+  },
+  "expected": {
+    "bootstrap_profile_sha256": "sha256:6539b3ad0083c3556548a7dcc5a051284a0b40108c2dd83d4de145ac45eef0a7",
+    "identity_digest": "sha256:8966d9cf7b6d39528af70cc5037b9db9c0b7ab1a831506dec1ba920e4b9487aa",
+    "execution_binding_digest": "sha256:9f5609782c3f6efa9d488c607e4fdc2ed21caf8dacba07d77c8bb5f1e5b2422a",
+    "binding_digest": "sha256:99ae24199161d5dbfbfd3686c2810386d84a21d0839041e20a4634ca9c6e49f4",
+    "frame_hex": "0000005b7b226368616e6e656c5f726f6c65223a226964656e746974792d62696e64696e67222c227061796c6f6164223a7b2278223a317d2c22736368656d61223a227a6a2d6c6f6f702e626f6f7473747261705f6672616d652e7631227d"
+  }
+}

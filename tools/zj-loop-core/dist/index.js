@@ -183,3 +183,4 @@ export * from './trusted-runner-post-run-ipc.js';
 export * from './trusted-runner-peer-identity.js';
 export * from './macos-process-audit-peer-identity.js';
 export * from './trusted-runner-install-artifact.js';
+export * from './bootstrap-protocol.js';
