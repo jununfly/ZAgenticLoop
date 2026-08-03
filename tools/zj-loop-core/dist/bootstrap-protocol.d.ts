@@ -72,6 +72,7 @@ export type BootstrapLifecycle = {
 export declare const BOOTSTRAP_INITIAL_LIFECYCLE: BootstrapLifecycle;
 export declare function bootstrapProfileSha256(): string;
 export declare function getBootstrapReasonDescriptor(code: unknown): BootstrapReasonDescriptor | undefined;
+export declare function bootstrapIdentityDigest(identity: BootstrapIdentityFacts): string;
 type BootstrapLifecycleEvent = {
     type: 'arm';
     now_ms: number;

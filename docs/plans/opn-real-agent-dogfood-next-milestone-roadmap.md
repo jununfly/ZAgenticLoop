@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 12:06:55
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 12:56:08
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -9,7 +9,7 @@
 ├── [x][X+] 1-3. Provider-neutral real-agent-dogfood CLI entry
 ├── [~][Y+] 1-4. Opt-in real Agent read-only execution
 │   ├── [x][Y+] 1-4-1. Provider-neutral bootstrap protocol and memory failure-matrix fixture
-│   ├── [ ][Y+] 1-4-2. macOS process identity PID and Unix socket verification integration
+│   ├── [x][Y+] 1-4-2. macOS process identity PID and Unix socket verification integration
 │   └── [ ][Y+] 1-4-3. TrustedRunner Runtime sidecar FD bootstrap and execution process-group orchestration
 ├── [ ][Y+] 1-5. Dogfood Evidence and independent verification chain
 └── [ ][Y+] 1-6. Human review and acceptance handoff
@@ -159,6 +159,6 @@
 
 **当前子树：**
 ├── [x][Y+] 1-4-1. Provider-neutral bootstrap protocol and memory failure-matrix fixture
-├── [ ][Y+] 1-4-2. macOS process identity PID and Unix socket verification integration
+├── [x][Y+] 1-4-2. macOS process identity PID and Unix socket verification integration
 └── [ ][Y+] 1-4-3. TrustedRunner Runtime sidecar FD bootstrap and execution process-group orchestration
 <!-- ROADMAP_SECTION_END -->

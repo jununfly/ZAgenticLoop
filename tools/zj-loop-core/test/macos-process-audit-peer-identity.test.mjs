@@ -7,9 +7,30 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { createMacOSProcessAuditPeerIdentityVerifier } from '../dist/macos-process-audit-peer-identity.js';
+import { bootstrapIdentityDigest } from '../dist/bootstrap-protocol.js';
+import { createMacOSProcessAuditBootstrapPeerIdentityVerifier, createMacOSProcessAuditIdentityFacts, createMacOSProcessAuditPeerIdentityVerifier } from '../dist/macos-process-audit-peer-identity.js';
+import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.js';
+import { connectUnixProviderAuthIpc, createUnixProviderAuthIpcServer } from '../dist/provider-auth-ipc-unix.js';
 
 const isMacOS = process.platform === 'darwin';
+
+test('macOS process-audit response normalizes into provider-neutral bootstrap identity facts', () => {
+  const facts = createMacOSProcessAuditIdentityFacts({ process_id: 42, signing_identifier: 'com.example.agent', team_identifier: 'TEAM1', code_directory_hash: 'cdhash-1' });
+  assert.deepEqual(facts, {
+    schema: 'zj-loop.worker_identity_facts.v1',
+    platform: 'darwin',
+    kind: 'process-audit',
+    process_id: 42,
+    signing_identifier: 'com.example.agent',
+    team_identifier: 'TEAM1',
+    code_directory_hash: 'cdhash-1',
+    executable_digest: facts.executable_digest,
+    signer_digest: facts.signer_digest,
+  });
+  assert.equal(bootstrapIdentityDigest(facts), bootstrapIdentityDigest({ ...facts }));
+  assert.match(facts.executable_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.match(facts.signer_digest, /^sha256:[0-9a-f]{64}$/);
+});
 
 async function compileHelper(root) {
   const source = path.resolve('native/macos-process-audit-peer-identity.swift');
@@ -69,6 +90,55 @@ test('macOS process-audit adapter verifies the real Unix socket peer identity', 
     assert.equal(result.identity.kind, 'process-audit');
     assert.equal(result.identity.process_id, process.pid);
     pair.client.destroy(); socket.destroy(); await new Promise((resolve) => pair.server.close(resolve));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('macOS process-audit bootstrap verifier verifies the real Unix socket against bootstrap identity digest', { skip: !isMacOS }, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-process-audit-bootstrap-'));
+  const socketPath = path.join(root, 'peer.sock');
+  try {
+    const binary = await compileHelper(root);
+    const pair = await connectedPair(socketPath);
+    const native = await helperIdentity(binary, pair.socket);
+    const facts = createMacOSProcessAuditIdentityFacts(native);
+    const helperBytes = await readFile(binary);
+    const verifier = createMacOSProcessAuditBootstrapPeerIdentityVerifier({ helper_path: binary, helper_digest: `sha256:${createHash('sha256').update(helperBytes).digest('hex')}` });
+    const result = await verifier({ socket: pair.socket, correlation_id: 'bootstrap-fixture', expected_identity_digest: bootstrapIdentityDigest(facts) });
+    assert.equal(result.status, 'verified');
+    assert.equal(result.identity.identity_digest, bootstrapIdentityDigest(facts));
+    assert.equal(result.identity.process_id, process.pid);
+    pair.client.destroy(); pair.socket.destroy(); await new Promise((resolve) => pair.server.close(resolve));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('macOS bootstrap identity is a Unix socket server gate before provider IPC handling', { skip: !isMacOS }, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-process-audit-gate-'));
+  const probePath = path.join(root, 'probe.sock');
+  const serverPath = path.join(root, 'server.sock');
+  try {
+    const binary = await compileHelper(root);
+    const helperBytes = await readFile(binary);
+    const helperDigest = `sha256:${createHash('sha256').update(helperBytes).digest('hex')}`;
+    const probe = await connectedPair(probePath);
+    const facts = createMacOSProcessAuditIdentityFacts(await helperIdentity(binary, probe.socket));
+    probe.client.destroy(); probe.socket.destroy(); await new Promise((resolve) => probe.server.close(resolve));
+    const verifier = createMacOSProcessAuditBootstrapPeerIdentityVerifier({ helper_path: binary, helper_digest: helperDigest });
+    const received = [];
+    let resolveFrame;
+    const frameReceived = new Promise((resolve) => { resolveFrame = resolve; });
+    const server = createUnixProviderAuthIpcServer({
+      socket_path: serverPath,
+      correlation_id: 'bootstrap-gate',
+      verify_peer: async (socket) => (await verifier({ socket, correlation_id: 'bootstrap-gate', expected_identity_digest: bootstrapIdentityDigest(facts) })).status === 'verified',
+      on_frames: async (frames) => { received.push(...frames); resolveFrame(); },
+    });
+    await server.start();
+    const client = await connectUnixProviderAuthIpc({ socket_path: serverPath, correlation_id: 'bootstrap-gate', on_frames: () => {} });
+    await client.send(createProviderAuthIpcFrame({ kind: 'challenge', correlation_id: 'bootstrap-gate', sequence: 1, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'runtime-1', provider_id: 'agent-1', execution_id: 'execution-1', attempt: 1, nonce: 'nonce-1', payload: { schema: 'fixture' } }));
+    await Promise.race([frameReceived, new Promise((_, reject) => setTimeout(() => reject(new Error('bootstrap-gate-frame-timeout')), 2_000))]);
+    assert.equal(received.length, 1);
+    client.close();
+    await server.close();
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

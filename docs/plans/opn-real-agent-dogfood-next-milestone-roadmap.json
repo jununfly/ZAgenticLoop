@@ -1925,12 +1925,23 @@
     "1-4-2": {
       "id": "1-4-2",
       "label": "macOS process identity PID and Unix socket verification integration",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "macOS process identity 如何接入 provider-neutral bootstrap binding？",
+          "answer": "A：macOS adapter 只负责从已验证 Unix peer 读取并规范化 OS identity facts；bootstrap protocol 负责 canonical identity_digest/execution binding_digest 计算。保留现有 legacy TrustedRunnerPeerIdentity verifier 兼容路径，新增 bootstrap-aware verifier 以 expected bootstrap identity digest 校验，避免 native adapter 自己定义协议 digest。",
+          "note": "把 OS/native 事实与 provider-neutral 协议解耦；legacy IPC 不因新 bootstrap 集成改变既有 digest contract。"
+        },
+        {
+          "q": "bootstrap-aware peer verifier 在 Unix socket server 中的接入顺序是什么？",
+          "answer": "A：Unix socket server 先执行 bootstrap-aware peer identity verifier，再创建/启用业务 frame decoder 和 handler；验证失败立即关闭连接且不得触发业务 handler，验证成功后才进入既有 provider IPC 流程。",
+          "note": "把 process identity 与业务协议入口形成明确 gate，避免未绑定 peer 消耗 decoder、nonce 或业务状态。"
+        }
+      ],
+      "notes": "已完成 macOS process identity 与 Unix socket verification integration：native helper 输出被规范化为 provider-neutral worker identity facts，bootstrap protocol 计算 canonical identity digest；新增 bootstrap-aware verifier，legacy TrustedRunnerPeerIdentity verifier 保持兼容；真实 macOS Unix socket 测试覆盖 facts normalization、bootstrap digest、server 先验 peer gate、drift/malformed/no-peer failure；成功验证后才进入既有 provider IPC frame handler。TrustedRunner sidecar FD 注入、execution process-group orchestration 留给 1-4-3。"
     },
     "1-4-3": {
       "id": "1-4-3",
@@ -1945,7 +1956,7 @@
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-03 12:06:55",
+    "updated": "2026-08-03 12:56:08",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }

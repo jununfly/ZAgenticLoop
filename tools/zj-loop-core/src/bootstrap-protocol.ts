@@ -117,6 +117,13 @@ export function getBootstrapReasonDescriptor(code: unknown): BootstrapReasonDesc
   return BOOTSTRAP_REASON_DESCRIPTORS.find((descriptor) => descriptor.code === code);
 }
 
+export function bootstrapIdentityDigest(identity: BootstrapIdentityFacts): string {
+  if (!identity || identity.schema !== 'zj-loop.worker_identity_facts.v1' || typeof identity.platform !== 'string' || typeof identity.kind !== 'string') throw new Error('bootstrap-identity-facts-invalid');
+  assertDigest(identity.executable_digest, 'executable-digest');
+  if (identity.signer_digest !== undefined) assertDigest(identity.signer_digest, 'signer-digest');
+  return digest(identity);
+}
+
 type BootstrapLifecycleEvent =
   | { type: 'arm'; now_ms: number }
   | { type: 'sidecar-started'; now_ms: number }
@@ -157,11 +164,9 @@ export function advanceBootstrapLifecycle(current: BootstrapLifecycle, event: Bo
 
 export function createBootstrapBinding(input: { identity: BootstrapIdentityFacts; execution: BootstrapExecutionContext }): BootstrapBinding {
   if (!input || typeof input !== 'object' || !input.identity || !input.execution) throw new Error('bootstrap-binding-input-invalid');
-  if (input.identity.schema !== 'zj-loop.worker_identity_facts.v1' || typeof input.identity.platform !== 'string' || typeof input.identity.kind !== 'string') throw new Error('bootstrap-identity-facts-invalid');
-  assertDigest(input.identity.executable_digest, 'executable-digest');
-  if (input.identity.signer_digest !== undefined) assertDigest(input.identity.signer_digest, 'signer-digest');
+  bootstrapIdentityDigest(input.identity);
   if (typeof input.execution.network_id !== 'string' || typeof input.execution.execution_id !== 'string' || !Number.isInteger(input.execution.attempt) || input.execution.attempt < 1 || typeof input.execution.provider_id !== 'string' || typeof input.execution.execution_binding_nonce !== 'string' || input.execution.execution_binding_nonce.length < 16) throw new Error('bootstrap-execution-context-invalid');
-  const identity_digest = digest(input.identity);
+  const identity_digest = bootstrapIdentityDigest(input.identity);
   const execution_binding_digest = digest(input.execution);
   const binding = {
     schema: 'zj-loop.bootstrap_binding.v1' as const,
