@@ -1,0 +1,200 @@
+{
+  "title": "OPN Multi-node Graph Atom E2E 下一里程碑",
+  "description": "组合已完成的 Single-Agent OPN Atom、Graph Engineering、Cross-device Transport、Native Agent Runtime 与 Provider Adapter，验证 Human/Human+Agent 中心责任单元编排 Agent1/Agent2 的第一条 Multi-node Graph Atom 端到端产品路径。重点是任务分工、依赖、资源隔离、证据聚合、独立验证、Review Handoff、失败恢复和相对 Single-Agent baseline 的能力增量。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN Multi-node Graph Atom E2E 下一里程碑",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5",
+        "1-6"
+      ],
+      "decisions": [
+        {
+          "q": "是否新建 Multi-node Graph Atom E2E 下一里程碑，组合既有 Graph、Transport、Runtime 和 Provider 能力，验证 Agent1/Agent2 的第一条端到端 OPN 产品路径？",
+          "answer": "同意",
+          "note": "不再扩展已完成路线图；新路线图只承载多节点 Graph Atom 的产品级端到端验证，并以 Single-Agent OPN Atom 作为 baseline。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Multi-node Graph Atom 场景与 Single-Agent baseline 增量",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "第一条 Multi-node Graph Atom 采用什么真实任务拓扑？",
+          "answer": "同意选 1：Agent1 执行代码变更，Agent2 在隔离 worktree 中独立验证/审查，中心责任单元聚合结果并决定是否合并。",
+          "note": "该拓扑以最小复杂度证明 Graph Atom 的任务分工、依赖、资源隔离、独立验证和中心责任。"
+        },
+        {
+          "q": "Graph Atom 相对 Single-Agent baseline 是否采用数量/Token/耗时指标作为主要验收？",
+          "answer": "下一问题确认。",
+          "note": "先区分必须证明的新增能力与可选效率指标；不把 Agent 数量本身当作产品价值。"
+        },
+        {
+          "q": "Graph Atom 相对 Single-Agent baseline 如何验收？",
+          "answer": "同意选 1：主要验收新增任务分工、依赖、资源隔离、独立验证、Evidence 聚合、恢复能力和责任边界；不以 Agent 数量、Token、并发数或耗时作为主要价值指标，未授权副作用必须为零。",
+          "note": "Single-Agent OPN Atom 是 baseline；Graph Atom 必须证明可组合能力增量，而不是证明 Agent 数量增加。"
+        },
+        {
+          "q": "第一条真实 Multi-node Graph Atom 在哪里进行 dogfood？",
+          "answer": "同意选 1：在 ZAgenticLoop 自身选择一个低风险、边界清晰的真实代码任务；Agent1 实现、Agent2 独立验证，Human + Coordinator 编排、merge 和最终决策。",
+          "note": "以自身产品作为 dogfood，验证产品能力与真实开发体验；不把外部 ai-studio 状态耦合进本里程碑。"
+        }
+      ],
+      "notes": "场景与 baseline 增量已冻结：Agent1 实施、Agent2 独立验证/审查，中心责任单元聚合并决定合并。"
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Human 中心责任单元与 Agent 节点组网",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "第一条 Graph Atom 的中心责任单元如何定义？",
+          "answer": "同意选 1：Human + Coordinator Agent 构成中心责任单元；Agent1 和 Agent2 是被编排执行节点。Coordinator 可推进 DAG、聚合 Evidence，但不能替代 Human 做最终接受、拒绝或责任决策。",
+          "note": "保持 Human 的最终责任、权限和决策不对称，同时验证 Agent 辅助中心编排的 ScaleUp 价值。"
+        },
+        {
+          "q": "Coordinator、Agent1、Agent2 的 capability 如何划分？",
+          "answer": "同意选 1：按角色、任务、worktree、Evidence scope 做 capability ceiling；Coordinator 只能编排/聚合/准备 merge proposal，Agent1 只能写自己的 worktree，Agent2 只能读验证 worktree，Human 批准 merge 并作最终决策。",
+          "note": "Human 与 Agent 协议对称但责任、权限和最终决策不对称；任何节点不得通过 capability 扩张越过中心责任或资源边界。"
+        }
+      ],
+      "notes": "中心责任单元冻结为 Human + Coordinator Agent；Agent1/Agent2 是被编排执行节点。Coordinator 可推进 DAG、聚合 Evidence，但不能替代 Human 做最终接受、拒绝或责任决策。"
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "Directed Task Graph 编排、依赖与资源隔离",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Agent1 与 Agent2 如何隔离目标代码库资源？",
+          "answer": "同意选 1：Agent1 使用独立开发 worktree/branch；Agent2 基于 Agent1 精确 commit 使用独立只读验证 worktree；中心责任单元最后 merge 和执行最终 gate。",
+          "note": "资源竞态隔离属于任务编排前置决策，不由本产品实现目标代码库内部的通用锁；Agent2 的输入必须绑定 Agent1 commit。"
+        },
+        {
+          "q": "Agent1 → Agent2 的 Directed Task Graph 依赖如何定义？",
+          "answer": "同意选 1：Agent2 必须等待 Agent1 完成，并绑定 Agent1 的 terminal result、commit 和 Evidence；之后才能创建验证任务。",
+          "note": "首个 Graph Atom 采用严格 DAG，不引入动态调度；依赖输入、资源快照和证据归因必须可重放。"
+        },
+        {
+          "q": "什么条件下才允许创建 Agent2 验证任务？",
+          "answer": "同意选 1：Agent1 必须通过 terminal success、commit/branch/worktree 绑定、bounded result、可回读 Evidence、无未授权副作用等完整 admission gate；任一失败则不启动 Agent2，进入 blocked 或 outcome-uncertain。",
+          "note": "避免 Agent2 在不完整、不可归因或资源状态不明的输入上执行；Graph edge 必须表达真实可验证前置条件。"
+        },
+        {
+          "q": "第一条 Graph Atom 采用什么 merge 策略？",
+          "answer": "同意选 1：fast-forward only；Human Accept 后重新确认 target 未漂移、target clean、source commit 可达且 scope 正确；只允许 fast-forward，禁止自动 rebase 或自动解决冲突。",
+          "note": "首个 Graph Atom 优先确定性、可重放和责任清晰；merge conflict 或 target drift 直接停下。"
+        }
+      ],
+      "notes": "Directed Task Graph、Agent1 admission gate、Agent1/Agent2 资源隔离和独立验证边界已冻结。"
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "多节点执行、Evidence 聚合与独立验证",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Agent2 的独立验证如何保证独立性？",
+          "answer": "同意选 1：Agent2 使用独立 execution identity、独立只读 verifier worktree、Core verifier plan 和独立 Evidence；只接收 Agent1 精确 commit、Graph task contract、success criteria 与必要 scoped refs，不继承 Agent1 进程或运行态。",
+          "note": "相同 Provider 类型可以复用，但 execution、process state、worktree、verifier plan 和 Evidence 必须独立。"
+        },
+        {
+          "q": "Agent1 与 Agent2 的结果由谁负责聚合？",
+          "answer": "同意选 1：由 Core 执行 canonical aggregation；Coordinator 只提交结构化 result/evidence refs、推进状态和展示结果，不能自行宣布 Graph Atom 完成；Human 依据 aggregation 进入 Review Handoff 与最终决策。",
+          "note": "避免协调 Agent 自己证明协调成功；Graph-level aggregation 必须可重放、可验证、可审计。"
+        },
+        {
+          "q": "Graph-level aggregation 如何映射状态？",
+          "answer": "同意选 1：Graph-level 复用现有生命周期语义；running 表示仍有节点执行，blocked 表示已知失败，outcome-uncertain 表示无法证明事实，review-pending 表示 aggregation 完整但未 Human 决策，accepted/rejected/request-revision/closed 沿用既有 Review 与 Closeout lifecycle。",
+          "note": "不新造 Graph 专属状态机，保持 Loop、Graph、Review、Closeout 分层，避免相似状态漂移。"
+        },
+        {
+          "q": "ZAgenticLoop 的第一条 Graph Atom dogfood 任务选什么？",
+          "answer": "同意选 1：实现 Graph-level canonical aggregation/conformance vertical slice；Agent1 实现 aggregation 与 projection，Agent2 基于 Agent1 commit 独立验证 schema、digest binding、dependency、isolation 和 failure matrix，Human + Coordinator 编排并批准 fast-forward merge。",
+          "note": "任务直接增强 ZAgenticLoop 核心 Graph 能力，边界清晰且可证明相对 Single-Agent baseline 的能力增量；legacy 清理和 UI 扩展不作为本纵切主任务。"
+        },
+        {
+          "q": "Agent1 与 Agent2 的具体职责如何拆分？",
+          "answer": "同意选 1：Agent1 实现 Graph-level canonical aggregation、result projection、provider-neutral contract 与最小 fixture；Agent2 基于精确 commit 独立设计 verifier plan，编写独立 conformance tests，验证 schema/digest/dependency/isolation/failure/replay 并产出 findings。",
+          "note": "Agent2 不只复跑 Agent1 测试，也不另造第二套实现；独立性体现在验证计划、测试矩阵、execution、worktree 和 Evidence。"
+        },
+        {
+          "q": "第一条 Graph-level aggregation vertical slice 是否复用并扩展现有 native-opn-tracer-aggregation / native-opn-tracer-verification contract？",
+          "answer": "同意：复用并扩展现有 contract，不新建平行 aggregation schema。",
+          "note": "保持单一事实来源；只补 Graph Atom 所需的中心责任单元、资源隔离证明、Agent1 commit binding、Agent2 verifier 输入 binding、Graph lifecycle projection 与 Review Handoff integration。"
+        }
+      ],
+      "notes": "已完成第一条 Graph-level aggregation vertical slice：复用既有 aggregation/verification schema，加入 Graph responsibility、execution/commit/worktree binding、resource isolation proof、review-pending projection，以及 Agent2 verifier input binding；Core 持久化时校验 source commit 与 execution 集合。全量 npm test 428/428，git diff --check 通过。后续仍需 Review Handoff Graph projection、merge/closeout、failure/replay/conformance E2E。"
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Review Handoff、Human 决策与 closeout",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Graph-level Review Handoff 必须包含哪些内容？",
+          "answer": "同意选 1：复用现有 Human review package，增加 Graph projection；包含 Graph plan/DAG、center responsibility、Agent1/Agent2 execution、commit/worktree isolation、节点 Evidence、Core aggregation、independent findings、风险、success criteria 与 decisionability，并沿用 Accept/Reject/Request revision。",
+          "note": "不创建第二套 Graph review lifecycle；沿用既有 immutable package、publisher CAS、HumanSigner、warning gate 和 closeout。"
+        },
+        {
+          "q": "代码 merge 如何纳入第一条 Graph Atom 闭环？",
+          "answer": "同意选 1：Human Accept 同时接受 Graph 结果并授权受约束 merge；Coordinator/Core 执行 merge，随后运行最终 deterministic gate；merge 或 post-merge gate 无法证明时进入 outcome-uncertain，不请求第二次 Human 签名。",
+          "note": "首个闭环保持一次 Human decision；merge 是已授权副作用，post-merge 事实与 cleanup 独立记录。"
+        },
+        {
+          "q": "fast-forward merge 后是否需要重新执行完整 Agent2 语义验证？",
+          "answer": "未决，下一问题继续确认。",
+          "note": "先区分 merge 后 deterministic integrity gate 与是否重复 semantic verification，避免把同一验证重复计入 Graph 能力。"
+        },
+        {
+          "q": "fast-forward merge 后是否需要重新执行完整 Agent2 语义验证？",
+          "answer": "同意选 1：只执行 deterministic integrity gate；确认 target HEAD 等于 Agent1 已验证 source commit、fast-forward 关系、scope、clean worktree、git diff --check、项目测试/构建通过；不重复完整 Agent2 语义验证。",
+          "note": "fast-forward 不产生新的代码内容；若 target drift、HEAD 不一致、scope 漂移或 gate 失败，停止并投影 blocked/outcome-uncertain。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "失败恢复、重放与端到端 conformance",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-08-04 00:34:14",
+    "updated": "2026-08-04 01:35:03",
+    "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
+  }
+}

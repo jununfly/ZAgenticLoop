@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { buildNativeOpnTracerEvidence, nativeOpnTracerEvidenceDigest } from '../dist/native-opn-tracer.js';
 import { recordNativeOpnTracerEvidence } from '../dist/native-opn-tracer-fact.js';
 import { createNativeOpnTracerExecution, recordNativeOpnTracerExecution } from '../dist/native-opn-tracer-execution.js';
-import { createNativeOpnTracerAggregation, recordNativeOpnTracerAggregation } from '../dist/native-opn-tracer-aggregation.js';
+import { createNativeOpnTracerAggregation, nativeOpnTracerAggregationDigest, recordNativeOpnTracerAggregation } from '../dist/native-opn-tracer-aggregation.js';
 import { createNativeOpnTracerVerification, recordNativeOpnTracerVerification } from '../dist/native-opn-tracer-verification.js';
 import { createNativeOpnTracerReviewHandoff } from '../dist/review-handoff.js';
 import { recordReviewHandoff } from '../dist/review-handoff-fact.js';
@@ -123,6 +123,32 @@ test('Native OPN Tracer Aggregation requires both successful executions and pres
   }
 });
 
+test('Native OPN Tracer Aggregation validates the Graph responsibility and isolation projection', () => {
+  const aggregation = createNativeOpnTracerAggregation({
+    network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'),
+    aggregation_id: 'aggregation-graph-1', execution_ids: ['execution-1', 'execution-2'], input_evidence_digests: [digest('2'), digest('3')],
+    output_evidence_digest: digest('4'), aggregated_at: '2026-07-31T10:02:00.000Z',
+    graph: {
+      responsibility_unit: 'human+agent', human_id: 'human-1', lifecycle_status: 'review-pending',
+      execution_bindings: [
+        { execution_id: 'execution-1', node_id: 'agent-1', task_id: 'task-stage-1', commit_sha: 'a'.repeat(40), worktree_ref: 'worktree:agent-1' },
+        { execution_id: 'execution-2', node_id: 'agent-2', task_id: 'task-stage-2', commit_sha: 'a'.repeat(40), worktree_ref: 'worktree:agent-2' },
+      ],
+      resource_isolation: [
+        { node_id: 'agent-1', resource_id: 'repo', strategy: 'git-branch-worktree', isolation_ref: 'worktree:agent-1' },
+        { node_id: 'agent-2', resource_id: 'repo', strategy: 'git-branch-worktree-read-only', isolation_ref: 'worktree:agent-2' },
+      ],
+    },
+  });
+  assert.equal(aggregation.graph.lifecycle_status, 'review-pending');
+  assert.equal(aggregation.graph.execution_bindings[1].commit_sha, 'a'.repeat(40));
+  assert.match(nativeOpnTracerAggregationDigest(aggregation), /^sha256:[0-9a-f]{64}$/);
+  assert.throws(() => createNativeOpnTracerAggregation({
+    ...aggregation,
+    graph: { ...aggregation.graph, resource_isolation: aggregation.graph.resource_isolation.slice(0, 1) },
+  }), /native-opn-tracer-aggregation-graph-invalid/);
+});
+
 test('Native OPN Tracer Verification consumes persisted Aggregation and rejects self-verification', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-native-opn-tracer-verification-'));
   const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
@@ -141,6 +167,47 @@ test('Native OPN Tracer Verification consumes persisted Aggregation and rejects 
     const retry = await recordNativeOpnTracerVerification({ stateStore, expected_revision: 5, verification, now: '2026-07-31T10:04:00.000Z' });
     assert.equal(retry.status, 'duplicate');
     assert.throws(() => createNativeOpnTracerVerification({ ...verification, verifier_id: 'agent-1' }), /native-opn-tracer-verifier-invalid/);
+  } finally {
+    await stateStore.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('Native OPN Tracer Verification requires an independent Graph verifier input binding', () => {
+  const verification = createNativeOpnTracerVerification({
+    network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'),
+    aggregation_id: 'aggregation-1', aggregation_digest: digest('4'), verifier_id: 'verifier-1', excluded_node_ids: ['agent-1', 'agent-2', 'aggregation-1'],
+    status: 'passed', conditions: ['combined-output-valid'], satisfied_conditions: ['combined-output-valid'], failed_conditions: [], evidence_digest: digest('5'), checked_at: '2026-07-31T10:03:00.000Z',
+    graph: {
+      verifier_execution_id: 'verifier-execution-1', source_commit_sha: 'a'.repeat(40), source_execution_ids: ['execution-1', 'execution-2'],
+      verifier_worktree_ref: 'worktree:agent-2-verifier',
+    },
+  });
+  assert.equal(verification.graph.source_commit_sha, 'a'.repeat(40));
+  assert.throws(() => createNativeOpnTracerVerification({
+    ...verification,
+    graph: { ...verification.graph, source_execution_ids: ['execution-1', 'execution-1'] },
+  }), /native-opn-tracer-verifier-graph-invalid/);
+});
+
+test('Native OPN Tracer Verification rejects a verifier input bound to an unverified source commit', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-native-opn-tracer-verifier-binding-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-07-31T00:00:00.000Z' });
+    const stage1 = createNativeOpnTracerExecution({ network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'), node_id: 'agent-1', task_id: 'task-stage-1', execution_id: 'execution-1', assigned_node: 'agent-1', status: 'succeeded', input_evidence_digests: [], output_evidence_digest: digest('2'), recorded_at: '2026-07-31T10:00:00.000Z' });
+    const stage2 = createNativeOpnTracerExecution({ network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'), node_id: 'agent-2', task_id: 'task-stage-2', execution_id: 'execution-2', assigned_node: 'agent-2', status: 'succeeded', input_evidence_digests: [digest('2')], output_evidence_digest: digest('3'), recorded_at: '2026-07-31T10:01:00.000Z' });
+    await recordNativeOpnTracerExecution({ stateStore, expected_revision: 1, execution: stage1, now: stage1.recorded_at });
+    await recordNativeOpnTracerExecution({ stateStore, expected_revision: 2, execution: stage2, now: stage2.recorded_at });
+    const aggregation = createNativeOpnTracerAggregation({
+      network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'), aggregation_id: 'aggregation-1', execution_ids: ['execution-1', 'execution-2'], input_evidence_digests: [digest('2'), digest('3')], output_evidence_digest: digest('4'), aggregated_at: '2026-07-31T10:02:00.000Z',
+      graph: { responsibility_unit: 'human+agent', human_id: 'human-1', lifecycle_status: 'review-pending', execution_bindings: [{ execution_id: 'execution-1', node_id: 'agent-1', task_id: 'task-stage-1', commit_sha: 'a'.repeat(40), worktree_ref: 'worktree:agent-1' }, { execution_id: 'execution-2', node_id: 'agent-2', task_id: 'task-stage-2', commit_sha: 'a'.repeat(40), worktree_ref: 'worktree:agent-2-verifier' }], resource_isolation: [{ node_id: 'agent-1', resource_id: 'repo', strategy: 'git-branch-worktree', isolation_ref: 'worktree:agent-1' }, { node_id: 'agent-2', resource_id: 'repo', strategy: 'git-branch-worktree-read-only', isolation_ref: 'worktree:agent-2-verifier' }] },
+    });
+    await recordNativeOpnTracerAggregation({ stateStore, expected_revision: 3, aggregation, now: aggregation.aggregated_at });
+    const verification = createNativeOpnTracerVerification({ network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'), aggregation_id: aggregation.aggregation_id, aggregation_digest: aggregation.aggregation_digest, verifier_id: 'verifier-1', excluded_node_ids: ['agent-1', 'agent-2', 'aggregation-1'], status: 'passed', conditions: ['combined-output-valid'], satisfied_conditions: ['combined-output-valid'], failed_conditions: [], evidence_digest: digest('5'), checked_at: '2026-07-31T10:03:00.000Z', graph: { verifier_execution_id: 'verifier-execution-1', source_commit_sha: 'b'.repeat(40), source_execution_ids: ['execution-1', 'execution-2'], verifier_worktree_ref: 'worktree:agent-2-verifier' } });
+    const result = await recordNativeOpnTracerVerification({ stateStore, expected_revision: 4, verification, now: verification.checked_at });
+    assert.equal(result.status, 'blocked');
+    assert.equal(result.reason, 'verification-graph-binding-mismatch');
   } finally {
     await stateStore.close();
     await rm(root, { recursive: true, force: true });

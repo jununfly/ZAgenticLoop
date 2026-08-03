@@ -1,6 +1,12 @@
 import type { SqliteStateStore } from './sqlite-state-store.js';
 export declare const NATIVE_OPN_TRACER_VERIFICATION_SCHEMA: "zj-loop.native_opn_tracer_verification.v1";
 export declare const NATIVE_OPN_TRACER_VERIFICATION_RECORDED_SCHEMA: "zj-loop.native_opn_tracer_verification_recorded.v1";
+export type NativeOpnTracerVerifierInputBinding = {
+    verifier_execution_id: string;
+    source_commit_sha: string;
+    source_execution_ids: string[];
+    verifier_worktree_ref: string;
+};
 export type NativeOpnTracerVerification = {
     schema: typeof NATIVE_OPN_TRACER_VERIFICATION_SCHEMA;
     network_id: string;
@@ -20,6 +26,7 @@ export type NativeOpnTracerVerification = {
     checked_at: string;
     side_effects_executed: false;
     verification_digest: string;
+    graph?: NativeOpnTracerVerifierInputBinding;
 };
 export type NativeOpnTracerVerificationFactResult = {
     schema: typeof NATIVE_OPN_TRACER_VERIFICATION_RECORDED_SCHEMA;
