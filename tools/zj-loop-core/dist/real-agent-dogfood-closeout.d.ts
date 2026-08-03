@@ -4,6 +4,7 @@ import type { SqliteStateStore, StateEvent } from './sqlite-state-store.js';
 export declare const REAL_AGENT_DOGFOOD_CLOSEOUT_SCHEMA: "zj-loop.real_agent_dogfood_closeout.v1";
 export declare const REAL_AGENT_DOGFOOD_CLOSEOUT_EVENT_SCHEMA: "zj-loop.real_agent_dogfood_closeout_event.v1";
 export declare const REAL_AGENT_DOGFOOD_CLOSEOUT_AGGREGATE_TYPE: "real-agent-dogfood-closeout";
+export declare const REAL_AGENT_DOGFOOD_CLOSEOUT_LIFECYCLE_EVENT_SCHEMA: "zj-loop.real_agent_dogfood_closeout_lifecycle_event.v1";
 export type RealAgentDogfoodCloseout = {
     schema: typeof REAL_AGENT_DOGFOOD_CLOSEOUT_SCHEMA;
     network_id: string;
@@ -53,4 +54,19 @@ export declare function recordRealAgentDogfoodCloseout(input: {
     status: 'closed';
     revision: number;
     event: StateEvent;
+}>;
+export declare function recordRealAgentDogfoodDecisionCloseout(input: {
+    stateStore: SqliteStateStore;
+    lifecycle: RealAgentDogfoodLifecycle;
+    decision_digest: string;
+    package_digest: string;
+    repo_root: string;
+    worktree_path: string;
+    expected_revision: number;
+    now?: string;
+}): Promise<{
+    status: 'closed' | 'outcome-uncertain';
+    revision: number;
+    event: StateEvent;
+    reason?: string;
 }>;

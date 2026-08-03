@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import { createInMemoryHumanSigner } from '../dist/human-signer.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition, appendRealAgentDogfoodEvent, projectRealAgentDogfoodLifecycle } from '../dist/real-agent-dogfood-lifecycle.js';
-import { createRealAgentDogfoodCloseout, recordRealAgentDogfoodCloseout } from '../dist/real-agent-dogfood-closeout.js';
+import { createRealAgentDogfoodCloseout, recordRealAgentDogfoodCloseout, recordRealAgentDogfoodDecisionCloseout } from '../dist/real-agent-dogfood-closeout.js';
 import { runRealAgentDogfoodCloseoutCli } from '../dist/real-agent-dogfood-closeout-cli.js';
 
 const execFile = promisify(execFileCallback);
@@ -87,4 +87,28 @@ test('closeout refuses a dirty worktree and a non-terminal lifecycle', async () 
     const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
     await assert.rejects(() => createRealAgentDogfoodCloseout({ signer, lifecycle: nonTerminal.lifecycle, worktree_path: nonTerminal.worktree, reason: 'too early', closed_at: '2026-08-01T12:01:00.000Z' }), /lifecycle-not-terminal/);
   } finally { await nonTerminal.stateStore.close(); await rm(nonTerminal.root, { recursive: true, force: true }); }
+});
+
+test('decision closeout reuses the recorded Human decision without a second signature', async () => {
+  const f = await fixture('accepted');
+  try {
+    const result = await recordRealAgentDogfoodDecisionCloseout({ stateStore: f.stateStore, lifecycle: f.lifecycle, decision_digest: digest('e'), package_digest: digest('f'), repo_root: f.repo, worktree_path: f.worktree, expected_revision: f.revision, now: '2026-08-01T12:03:00.000Z' });
+    assert.equal(result.status, 'closed');
+    const events = await f.stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood-closeout', aggregate_id: 'dogfood-1:attempt-1' });
+    assert.deepEqual(events.events.map((event) => event.payload.status), ['cleanup-pending', 'closed']);
+    const repeated = await recordRealAgentDogfoodDecisionCloseout({ stateStore: f.stateStore, lifecycle: f.lifecycle, decision_digest: digest('e'), package_digest: digest('f'), repo_root: f.repo, worktree_path: f.worktree, expected_revision: result.revision, now: '2026-08-01T12:03:01.000Z' });
+    assert.equal(repeated.status, 'closed');
+    assert.equal((await f.stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood-closeout', aggregate_id: 'dogfood-1:attempt-1' })).events.length, 2);
+  } finally { await f.stateStore.close(); await rm(f.root, { recursive: true, force: true }); }
+});
+
+test('decision closeout records outcome-uncertain when Core cannot prove cleanup', async () => {
+  const f = await fixture('rejected');
+  try {
+    await writeFile(path.join(f.worktree, 'untracked.txt'), 'must remain\n');
+    const result = await recordRealAgentDogfoodDecisionCloseout({ stateStore: f.stateStore, lifecycle: f.lifecycle, decision_digest: digest('e'), package_digest: digest('f'), repo_root: f.repo, worktree_path: f.worktree, expected_revision: f.revision, now: '2026-08-01T12:03:00.000Z' });
+    assert.equal(result.status, 'outcome-uncertain');
+    const events = await f.stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood-closeout', aggregate_id: 'dogfood-1:attempt-1' });
+    assert.deepEqual(events.events.map((event) => event.payload.status), ['cleanup-pending', 'outcome-uncertain']);
+  } finally { await f.stateStore.close(); await rm(f.root, { recursive: true, force: true }); }
 });

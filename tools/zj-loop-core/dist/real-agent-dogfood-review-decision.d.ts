@@ -3,6 +3,11 @@ import { type RealAgentDogfoodReviewPackage } from './real-agent-dogfood-review-
 import { type RealAgentDogfoodLifecycle, type RealAgentDogfoodEvent } from './real-agent-dogfood-lifecycle.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
 export declare const REAL_AGENT_DOGFOOD_REVIEW_DECISION_SCHEMA: "zj-loop.real_agent_dogfood_review_decision.v1";
+export type RealAgentDogfoodReviewRevisionRequirement = {
+    requirement_id: string;
+    description: string;
+    evidence_refs: string[];
+};
 export type RealAgentDogfoodReviewDecision = {
     schema: typeof REAL_AGENT_DOGFOOD_REVIEW_DECISION_SCHEMA;
     package_digest: string;
@@ -11,6 +16,8 @@ export type RealAgentDogfoodReviewDecision = {
     signer_fingerprint: string;
     decision: 'accept' | 'reject' | 'request-revision';
     comment: string;
+    acknowledged_warning_ids: string[];
+    revision_requirements: RealAgentDogfoodReviewRevisionRequirement[];
     decided_at: string;
     canonical_payload_digest: string;
     signature: HumanSignature;
@@ -21,6 +28,8 @@ export declare function createRealAgentDogfoodReviewDecision(input: {
     review_package: RealAgentDogfoodReviewPackage;
     decision: RealAgentDogfoodReviewDecision['decision'];
     comment: string;
+    acknowledged_warning_ids?: string[];
+    revision_requirements?: RealAgentDogfoodReviewRevisionRequirement[];
     decided_at: string;
 }): Promise<RealAgentDogfoodReviewDecision>;
 export declare function validateRealAgentDogfoodReviewDecision(input: {

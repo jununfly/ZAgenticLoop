@@ -13,6 +13,7 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export const REAL_AGENT_DOGFOOD_CLOSEOUT_SCHEMA = 'zj-loop.real_agent_dogfood_closeout.v1' as const;
 export const REAL_AGENT_DOGFOOD_CLOSEOUT_EVENT_SCHEMA = 'zj-loop.real_agent_dogfood_closeout_event.v1' as const;
 export const REAL_AGENT_DOGFOOD_CLOSEOUT_AGGREGATE_TYPE = 'real-agent-dogfood-closeout' as const;
+export const REAL_AGENT_DOGFOOD_CLOSEOUT_LIFECYCLE_EVENT_SCHEMA = 'zj-loop.real_agent_dogfood_closeout_lifecycle_event.v1' as const;
 
 export type RealAgentDogfoodCloseout = {
   schema: typeof REAL_AGENT_DOGFOOD_CLOSEOUT_SCHEMA;
@@ -109,4 +110,66 @@ export async function recordRealAgentDogfoodCloseout(input: { stateStore: Sqlite
   const recorded = (await input.stateStore.readEvents({ network_id: input.lifecycle.network_id, aggregate_type: REAL_AGENT_DOGFOOD_CLOSEOUT_AGGREGATE_TYPE, aggregate_id: input.lifecycle.dogfood_id })).events.find((item) => item.event_id === event.event_id);
   if (!recorded) throw new Error('real-agent-dogfood-closeout-record-missing');
   return { status: 'closed', revision: recorded.revision, event: recorded };
+}
+
+type DecisionCloseoutStatus = 'cleanup-pending' | 'closed' | 'outcome-uncertain';
+type DecisionCloseoutPayload = {
+  schema: typeof REAL_AGENT_DOGFOOD_CLOSEOUT_LIFECYCLE_EVENT_SCHEMA;
+  status: DecisionCloseoutStatus;
+  network_id: string;
+  dogfood_id: string;
+  execution_id: string;
+  attempt: number;
+  lifecycle_status: 'accepted' | 'rejected';
+  lifecycle_digest: string;
+  decision_digest: string;
+  package_digest: string;
+  worktree_path: string;
+  reason: string;
+};
+
+function decisionCloseoutAggregateId(lifecycle: RealAgentDogfoodLifecycle): string { return `${lifecycle.dogfood_id}:attempt-${lifecycle.attempt}`; }
+function validateDecisionCloseoutInput(input: { lifecycle: RealAgentDogfoodLifecycle; decision_digest: string; package_digest: string; worktree_path: string }): void {
+  if (input.lifecycle.status !== 'accepted' && input.lifecycle.status !== 'rejected') throw new Error('real-agent-dogfood-closeout-lifecycle-not-terminal');
+  if (!DIGEST.test(input.decision_digest) || !DIGEST.test(input.package_digest)) throw new Error('real-agent-dogfood-closeout-decision-binding-invalid');
+  if (input.lifecycle.last_fact_digest !== input.decision_digest) throw new Error('real-agent-dogfood-closeout-decision-binding-mismatch');
+  if (!path.isAbsolute(input.worktree_path)) throw new Error('real-agent-dogfood-closeout-worktree-binding-invalid');
+}
+
+function decisionCloseoutEvent(input: { lifecycle: RealAgentDogfoodLifecycle; decision_digest: string; package_digest: string; worktree_path: string; status: DecisionCloseoutStatus; reason: string; now: string }): StateEvent {
+  const payload: DecisionCloseoutPayload = { schema: REAL_AGENT_DOGFOOD_CLOSEOUT_LIFECYCLE_EVENT_SCHEMA, status: input.status, network_id: input.lifecycle.network_id, dogfood_id: input.lifecycle.dogfood_id, execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, lifecycle_status: input.lifecycle.status as 'accepted' | 'rejected', lifecycle_digest: input.lifecycle.lifecycle_digest, decision_digest: input.decision_digest, package_digest: input.package_digest, worktree_path: input.worktree_path, reason: input.reason };
+  return { event_id: `${decisionCloseoutAggregateId(input.lifecycle)}:${input.status}`, aggregate_type: REAL_AGENT_DOGFOOD_CLOSEOUT_AGGREGATE_TYPE, aggregate_id: decisionCloseoutAggregateId(input.lifecycle), event_type: 'real-agent-dogfood-closeout.lifecycle-transitioned', occurred_at: input.now, payload } as StateEvent;
+}
+
+export async function recordRealAgentDogfoodDecisionCloseout(input: { stateStore: SqliteStateStore; lifecycle: RealAgentDogfoodLifecycle; decision_digest: string; package_digest: string; repo_root: string; worktree_path: string; expected_revision: number; now?: string }): Promise<{ status: 'closed' | 'outcome-uncertain'; revision: number; event: StateEvent; reason?: string }> {
+  validateDecisionCloseoutInput(input);
+  const now = input.now ?? new Date().toISOString();
+  await assertNoActiveLease(input.stateStore, input.lifecycle.network_id, input.lifecycle.execution_id, now);
+  const aggregate_id = decisionCloseoutAggregateId(input.lifecycle);
+  const existing = (await input.stateStore.readEvents({ network_id: input.lifecycle.network_id, aggregate_type: REAL_AGENT_DOGFOOD_CLOSEOUT_AGGREGATE_TYPE, aggregate_id })).events;
+  const latest = existing.at(-1);
+  const latestPayload = latest?.payload as Partial<DecisionCloseoutPayload> | undefined;
+  if (latestPayload && (latestPayload.decision_digest !== input.decision_digest || latestPayload.package_digest !== input.package_digest || latestPayload.lifecycle_digest !== input.lifecycle.lifecycle_digest || latestPayload.worktree_path !== input.worktree_path)) throw new Error('real-agent-dogfood-closeout-binding-conflict');
+  if (latestPayload?.status === 'closed') return { status: 'closed', revision: latest!.revision, event: latest! };
+  const pending = latestPayload?.status === 'cleanup-pending' || latestPayload?.status === 'outcome-uncertain' ? latest! : undefined;
+  let pendingRevision = pending?.revision;
+  if (pendingRevision === undefined) {
+    const pendingEvent = decisionCloseoutEvent({ ...input, status: 'cleanup-pending', reason: 'cleanup-started', now });
+    const pendingResult = await input.stateStore.appendEvent({ network_id: input.lifecycle.network_id, expected_revision: input.expected_revision, now, event: pendingEvent });
+    if (pendingResult.status === 'conflict' || pendingResult.revision === undefined) throw new Error('real-agent-dogfood-closeout-revision-conflict');
+    pendingRevision = pendingResult.revision;
+  }
+  try {
+    await removeRealAgentDogfoodWorktree({ repo_root: input.repo_root, worktree_path: input.worktree_path });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'cleanup-failed';
+    const uncertainEvent = decisionCloseoutEvent({ ...input, status: 'outcome-uncertain', reason, now });
+    const uncertainResult = await input.stateStore.appendEvent({ network_id: input.lifecycle.network_id, expected_revision: pendingRevision, now, event: uncertainEvent });
+    if (uncertainResult.status === 'conflict' || uncertainResult.revision === undefined) throw new Error('real-agent-dogfood-closeout-outcome-uncertain-record-conflict');
+    return { status: 'outcome-uncertain', revision: uncertainResult.revision, event: uncertainEvent, reason };
+  }
+  const closedEvent = decisionCloseoutEvent({ ...input, status: 'closed', reason: 'cleanup-verified', now });
+  const closedResult = await input.stateStore.appendEvent({ network_id: input.lifecycle.network_id, expected_revision: pendingRevision, now, event: closedEvent });
+  if (closedResult.status === 'conflict' || closedResult.revision === undefined) throw new Error('real-agent-dogfood-closeout-closed-record-conflict');
+  return { status: 'closed', revision: closedResult.revision, event: closedEvent };
 }

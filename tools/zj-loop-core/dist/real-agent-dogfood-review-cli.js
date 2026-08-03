@@ -7,6 +7,7 @@ import { createContentAddressedEvidenceStore } from './content-addressed-evidenc
 import { projectRealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createRealAgentDogfoodReviewDecision, recordRealAgentDogfoodReviewDecision } from './real-agent-dogfood-review-decision.js';
+import { publishRealAgentDogfoodReviewPackage } from './real-agent-dogfood-review-package-publisher.js';
 import { readRealAgentDogfoodReviewPackage } from './real-agent-dogfood-review-package.js';
 const SCHEMA = 'zj-loop.real_agent_dogfood_review_cli.v1';
 function required(options, name) {
@@ -32,7 +33,18 @@ async function readPackage(options, actor) {
 }
 async function show(options) {
     const { reviewPackage } = await readPackage(options, 'review-cli:show');
-    return { schema: SCHEMA, status: 'review-pending', package: reviewPackage, side_effects_executed: false };
+    return { schema: SCHEMA, status: reviewPackage.decisionability === 'ready' ? 'review-pending' : 'blocked', decisionability: reviewPackage.decisionability, warning_ids: reviewPackage.findings.filter((finding) => finding.status === 'warning').map((finding) => finding.finding_id).sort(), package: reviewPackage, side_effects_executed: false };
+}
+function jsonOption(options, name, fallback) {
+    const value = options[name];
+    if (typeof value !== 'string' || value.trim() === '')
+        return fallback;
+    try {
+        return JSON.parse(value);
+    }
+    catch {
+        throw new Error(`${name}-json-invalid`);
+    }
 }
 async function decide(options, deps) {
     const statePath = required(options, 'state-store');
@@ -49,12 +61,15 @@ async function decide(options, deps) {
             throw new Error('real-agent-dogfood-review-lifecycle-not-pending');
         if (reviewPackage.network_id !== networkId || reviewPackage.dogfood_id !== dogfoodId || reviewPackage.execution_id !== lifecycle.execution_id || reviewPackage.attempt !== lifecycle.attempt || reviewPackage.lifecycle_revision !== snapshot.snapshot_revision || reviewPackage.lifecycle_digest !== lifecycle.lifecycle_digest)
             throw new Error('real-agent-dogfood-review-package-lifecycle-drift');
+        const publication = await publishRealAgentDogfoodReviewPackage({ stateStore, review_package: reviewPackage, evidence_digest: packageEvidence, expected_revision: snapshot.snapshot_revision, now: deps.now?.() ?? new Date().toISOString() });
+        if (publication.status === 'conflict')
+            throw new Error(publication.reason ?? 'real-agent-dogfood-review-package-publication-conflict');
         const signer = signerFor(options, deps);
-        const decision = await createRealAgentDogfoodReviewDecision({ signer, review_package: reviewPackage, decision: required(options, 'decision'), comment: required(options, 'comment'), decided_at: deps.now?.() ?? new Date().toISOString() });
+        const decision = await createRealAgentDogfoodReviewDecision({ signer, review_package: reviewPackage, decision: required(options, 'decision'), comment: required(options, 'comment'), acknowledged_warning_ids: jsonOption(options, 'acknowledged-warning-ids', []), revision_requirements: jsonOption(options, 'revision-requirements', []), decided_at: deps.now?.() ?? new Date().toISOString() });
         const decisionEvidence = await evidenceStore.put({ content: JSON.stringify(decision), kind: 'real-agent-dogfood-review-decision' });
         const identity = await signer.getPublicIdentity();
-        const recorded = await recordRealAgentDogfoodReviewDecision({ stateStore, lifecycle, review_package: reviewPackage, decision, identity, expected_revision: snapshot.snapshot_revision, now: deps.now?.() ?? new Date().toISOString() });
-        return { schema: SCHEMA, status: recorded.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: reviewPackage.execution_id, attempt: reviewPackage.attempt, package_evidence_digest: packageEvidence, decision_evidence_digest: decisionEvidence.digest, state_revision: recorded.revision, side_effects_executed: true };
+        const recorded = await recordRealAgentDogfoodReviewDecision({ stateStore, lifecycle, review_package: reviewPackage, decision, identity, expected_revision: await stateStore.getRevision(networkId), now: deps.now?.() ?? new Date().toISOString() });
+        return { schema: SCHEMA, status: recorded.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: reviewPackage.execution_id, attempt: reviewPackage.attempt, package_evidence_digest: packageEvidence, package_publication_status: publication.status, decision_evidence_digest: decisionEvidence.digest, state_revision: recorded.revision, side_effects_executed: true };
     }
     finally {
         await stateStore.close();
@@ -74,6 +89,8 @@ export function runRealAgentDogfoodReviewCli(argv = process.argv.slice(2), io = 
             { name: 'dogfood-id', flag: 'dogfood-id', type: 'string', description: 'Dogfood id' },
             { name: 'decision', flag: 'decision', type: 'enum', values: ['accept', 'reject', 'request-revision'], description: 'Human review decision' },
             { name: 'comment', flag: 'comment', type: 'string', description: 'Human review comment' },
+            { name: 'acknowledged-warning-ids', flag: 'acknowledged-warning-ids', type: 'string', description: 'JSON array of warning IDs acknowledged by Human' },
+            { name: 'revision-requirements', flag: 'revision-requirements', type: 'string', description: 'JSON array of structured revision requirements' },
             { name: 'human-id', flag: 'human-id', type: 'string', description: 'Human id for macOS Keychain signer' },
             { name: 'key-tag', flag: 'key-tag', type: 'string', description: 'macOS Keychain key tag' },
             { name: 'helper-path', flag: 'helper-path', type: 'string', description: 'macOS Keychain signer helper path' },

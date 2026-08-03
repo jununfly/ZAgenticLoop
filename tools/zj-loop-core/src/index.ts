@@ -181,6 +181,7 @@ export * from './real-agent-dogfood-provider-registry.js';
 export * from './real-agent-dogfood-verifier.js';
 export * from './real-agent-dogfood-verifier-cli.js';
 export * from './real-agent-dogfood-review-package.js';
+export * from './real-agent-dogfood-review-package-publisher.js';
 export * from './real-agent-dogfood-review-decision.js';
 export * from './real-agent-dogfood-review-cli.js';
 export * from './real-agent-dogfood-closeout.js';

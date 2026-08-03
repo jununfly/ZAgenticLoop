@@ -10,7 +10,7 @@ import { createRealAgentDogfoodReviewPackage } from '../dist/real-agent-dogfood-
 import { createRealAgentDogfoodReviewDecision, validateRealAgentDogfoodReviewDecision, recordRealAgentDogfoodReviewDecision } from '../dist/real-agent-dogfood-review-decision.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
-const packageValue = createRealAgentDogfoodReviewPackage({ network_id: 'network-1', dogfood_id: 'dogfood-1', execution_id: 'execution-1', attempt: 1, lifecycle_revision: 12, lifecycle_digest: digest('a'), provider_id: 'codex', provider_fact_digest: digest('b'), verification_digest: digest('c'), worktree_path: '/tmp/worktree-1', base_commit: 'commit-1', branch: 'branch-1', risks: [], available_decisions: ['accept', 'reject', 'request-revision'], generated_at: '2026-08-01T12:00:00.000Z' });
+const packageValue = createRealAgentDogfoodReviewPackage({ network_id: 'network-1', dogfood_id: 'dogfood-1', execution_id: 'execution-1', attempt: 1, lifecycle_revision: 12, lifecycle_digest: digest('a'), provider_id: 'codex', provider_fact_digest: digest('b'), verification_digest: digest('c'), worktree_path: '/tmp/worktree-1', base_commit: 'commit-1', branch: 'branch-1', risks: [], available_decisions: ['accept', 'reject', 'request-revision'], generated_at: '2026-08-01T12:00:00.000Z', goal: 'Audit the provider-neutral OPN contract.', success_criteria: ['All key claims are independently verified.'], input_manifest_digest: digest('d'), result_envelope_digest: digest('e'), receipt_digest: digest('f'), evidence_refs: [{ schema: 'zj-loop.real_agent_dogfood_scoped_evidence_ref.v1', digest: digest('a'), kind: 'result-envelope', execution_id: 'execution-1', attempt: 1, provenance: 'provider:fixture' }], findings: [{ finding_id: 'finding-1', severity: 'info', claim: 'The contract is present.', status: 'verified', key_claim: false, evidence_refs: [digest('a')], verification_refs: [digest('c')] }], decisionability: 'ready' });
 
 test('Human review decision signs the exact review package binding', async () => {
   const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
@@ -26,6 +26,16 @@ test('Human review decision rejects package and lifecycle drift', async () => {
   const decision = await createRealAgentDogfoodReviewDecision({ signer, review_package: packageValue, decision: 'reject', comment: 'not ready', decided_at: '2026-08-01T12:01:00.000Z' });
   const identity = await signer.getPublicIdentity();
   assert.equal(validateRealAgentDogfoodReviewDecision({ decision: { ...decision, package_digest: digest('d') }, identity, review_package: packageValue }).status, 'blocked');
+});
+
+test('Human accept must acknowledge every warning and revision must carry structured requirements', async () => {
+  const warningPackage = createRealAgentDogfoodReviewPackage({ ...packageValue, findings: [{ finding_id: 'warning-1', severity: 'low', claim: 'A non-critical limitation remains.', status: 'warning', key_claim: false, evidence_refs: [digest('a')], verification_refs: [] }], decisionability: 'ready' });
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  await assert.rejects(() => createRealAgentDogfoodReviewDecision({ signer, review_package: warningPackage, decision: 'accept', comment: 'verified', decided_at: '2026-08-01T12:01:00.000Z' }), /warning-acknowledgement-required/);
+  const accepted = await createRealAgentDogfoodReviewDecision({ signer, review_package: warningPackage, decision: 'accept', comment: 'verified', acknowledged_warning_ids: ['warning-1'], decided_at: '2026-08-01T12:01:00.000Z' });
+  assert.deepEqual(accepted.acknowledged_warning_ids, ['warning-1']);
+  const revised = await createRealAgentDogfoodReviewDecision({ signer, review_package: packageValue, decision: 'request-revision', comment: 'tighten the proof', revision_requirements: [{ requirement_id: 'req-1', description: 'Add verifier evidence for the result.', evidence_refs: [digest('c')] }], decided_at: '2026-08-01T12:01:00.000Z' });
+  assert.equal(revised.revision_requirements[0].requirement_id, 'req-1');
 });
 
 test('recorded Human accept passes the lifecycle CAS gate', async () => {
@@ -67,9 +77,9 @@ test('request-revision generates a fresh execution id inside the orchestrator', 
     let revision = 1;
     for (const event of [draft.event, ready.event, awaiting.event, running.event, pending.event, review.event]) await appendRealAgentDogfoodEvent({ stateStore, expected_revision: revision++, event });
     const { package_digest: _, ...packageInput } = packageValue;
-    const reviewPackage = createRealAgentDogfoodReviewPackage({ ...packageInput, dogfood_id: 'dogfood-2', execution_id: 'execution-old', lifecycle_revision: await stateStore.getRevision('network-1'), lifecycle_digest: review.lifecycle.lifecycle_digest });
+    const reviewPackage = createRealAgentDogfoodReviewPackage({ ...packageInput, dogfood_id: 'dogfood-2', execution_id: 'execution-old', lifecycle_revision: await stateStore.getRevision('network-1'), lifecycle_digest: review.lifecycle.lifecycle_digest, evidence_refs: packageInput.evidence_refs.map((ref) => ({ ...ref, execution_id: 'execution-old' })) });
     const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
-    const decision = await createRealAgentDogfoodReviewDecision({ signer, review_package: reviewPackage, decision: 'request-revision', comment: 'tighten the proof', decided_at: '2026-08-01T12:00:06.000Z' });
+    const decision = await createRealAgentDogfoodReviewDecision({ signer, review_package: reviewPackage, decision: 'request-revision', comment: 'tighten the proof', revision_requirements: [{ requirement_id: 'req-1', description: 'Add verifier evidence for the result.', evidence_refs: [digest('c')] }], decided_at: '2026-08-01T12:00:06.000Z' });
     const recorded = await recordRealAgentDogfoodReviewDecision({ stateStore, lifecycle: review.lifecycle, review_package: reviewPackage, decision, identity: await signer.getPublicIdentity(), expected_revision: await stateStore.getRevision('network-1'), now: '2026-08-01T12:00:06.000Z' });
     assert.equal(recorded.status, 'request-revision');
     assert.notEqual(recorded.event.payload.execution_id, 'execution-old');

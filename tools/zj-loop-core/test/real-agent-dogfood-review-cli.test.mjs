@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -8,6 +8,7 @@ import { createContentAddressedEvidenceStore } from '../dist/content-addressed-e
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition, appendRealAgentDogfoodEvent, projectRealAgentDogfoodLifecycle } from '../dist/real-agent-dogfood-lifecycle.js';
 import { createRealAgentDogfoodReviewPackage, persistRealAgentDogfoodReviewPackage } from '../dist/real-agent-dogfood-review-package.js';
+import { validateRealAgentDogfoodReviewDecision } from '../dist/real-agent-dogfood-review-decision.js';
 import { runRealAgentDogfoodReviewCli } from '../dist/real-agent-dogfood-review-cli.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
@@ -27,7 +28,7 @@ async function fixture() {
   const review = createRealAgentDogfoodTransition({ lifecycle: pending.lifecycle, to: 'review-pending', event_id: 'review', occurred_at: '2026-08-01T12:00:05.000Z', fact_digest: digest('d'), next_action: 'human-review' });
   let revision = 1;
   for (const event of [draft.event, ready.event, awaiting.event, running.event, pending.event, review.event]) await appendRealAgentDogfoodEvent({ stateStore, expected_revision: revision++, event });
-  const packageValue = createRealAgentDogfoodReviewPackage({ network_id: 'network-1', dogfood_id: 'dogfood-1', execution_id: 'execution-1', attempt: 1, lifecycle_revision: await stateStore.getRevision('network-1'), lifecycle_digest: review.lifecycle.lifecycle_digest, provider_id: 'provider-1', provider_fact_digest: digest('e'), verification_digest: digest('d'), worktree_path: '/tmp/worktree-1', base_commit: 'commit-1', branch: 'branch-1', risks: [], available_decisions: ['accept', 'reject', 'request-revision'], generated_at: '2026-08-01T12:00:05.000Z' });
+  const packageValue = createRealAgentDogfoodReviewPackage({ network_id: 'network-1', dogfood_id: 'dogfood-1', execution_id: 'execution-1', attempt: 1, lifecycle_revision: await stateStore.getRevision('network-1'), lifecycle_digest: review.lifecycle.lifecycle_digest, provider_id: 'provider-1', provider_fact_digest: digest('e'), verification_digest: digest('d'), worktree_path: '/tmp/worktree-1', base_commit: 'commit-1', branch: 'branch-1', risks: [], available_decisions: ['accept', 'reject', 'request-revision'], generated_at: '2026-08-01T12:00:05.000Z', goal: 'Audit the provider-neutral OPN contract.', success_criteria: ['All key claims are independently verified.'], input_manifest_digest: digest('a'), result_envelope_digest: digest('b'), receipt_digest: digest('c'), evidence_refs: [{ schema: 'zj-loop.real_agent_dogfood_scoped_evidence_ref.v1', digest: digest('a'), kind: 'result-envelope', execution_id: 'execution-1', attempt: 1, provenance: 'provider:fixture' }], findings: [{ finding_id: 'finding-1', severity: 'info', claim: 'The contract is present.', status: 'verified', key_claim: false, evidence_refs: [digest('a')], verification_refs: [digest('d')] }], decisionability: 'ready' });
   const reference = await persistRealAgentDogfoodReviewPackage({ evidenceStore, review_package: packageValue });
   return { root, statePath, evidencePath, stateStore, evidenceStore, reference, packageValue, lifecycle: review.lifecycle };
 }
@@ -39,9 +40,16 @@ test('review CLI shows a persisted package and signs an accept through the CAS A
     const shown = [];
     assert.equal(await runRealAgentDogfoodReviewCli(['show', '--evidence-store', f.evidencePath, '--package-evidence', f.reference.evidence_digest], { stdout: (x) => shown.push(x), stderr: () => {} }), 0);
     assert.equal(JSON.parse(shown[0]).status, 'review-pending');
+    assert.equal(JSON.parse(shown[0]).decisionability, 'ready');
     const output = [];
     assert.equal(await runRealAgentDogfoodReviewCli(['decide', '--state-store', f.statePath, '--evidence-store', f.evidencePath, '--network-id', 'network-1', '--dogfood-id', 'dogfood-1', '--package-evidence', f.reference.evidence_digest, '--decision', 'accept', '--comment', 'verified'], { stdout: (x) => output.push(x), stderr: () => {} }, { signer, now: () => '2026-08-01T12:00:06.000Z' }), 0);
     assert.equal(JSON.parse(output[0]).status, 'accepted');
+    const result = JSON.parse(output[0]);
+    assert.equal(result.package_publication_status, 'recorded');
+    const published = await f.stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood-review-package' });
+    assert.equal(published.events.length, 1);
+    const decision = JSON.parse((await f.evidenceStore.read({ digest: result.decision_evidence_digest, actor: 'review-cli:replay' })).toString('utf8'));
+    assert.equal(validateRealAgentDogfoodReviewDecision({ decision, identity: await signer.getPublicIdentity(), review_package: f.packageValue }).status, 'valid');
     const events = await f.stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'real-agent-dogfood', aggregate_id: 'dogfood-1' });
     assert.equal(projectRealAgentDogfoodLifecycle(events.events).status, 'accepted');
   } finally { await f.stateStore.close(); await rm(f.root, { recursive: true, force: true }); }

@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Real Agent Dogfood 下一里程碑",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -1914,10 +1914,16 @@
     "1-6": {
       "id": "1-6",
       "label": "Human review and acceptance handoff",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3",
+        "1-6-4",
+        "1-6-5"
+      ],
       "decisions": [
         {
           "q": "问题7：真实 Agent 启动前是否必须经过一次独立 Human approval，且未批准、批准过期、上下文漂移或重复执行都直接 blocked？",
@@ -1948,6 +1954,196 @@
           "q": "问题43：Human approval 和最终 review decision 是否都必须由 HumanSigner 对完整上下文签名，而不是依赖按钮、浏览器 session 或 CLI confirmation？",
           "answer": "同意",
           "note": "签名绑定 action、package/preflight digest、execution/attempt、Provider、worktree/base commit、policy/预算、Human identity 和有效时间；signer 不可用或上下文漂移直接 blocked。"
+        },
+        {
+          "q": "问题44：1-6 是否增强现有 review package，把 result envelope digest、独立 verification digest、scoped evidence refs 和 digest-only receipt 纳入同一个 Core 生成的 immutable package，并继续复用 Accept/Reject/Request revision/closeout？",
+          "answer": "同意",
+          "note": "不新造第二套 review 生命周期，闭合 1-5 到 1-6 的证据责任链；Human 仍是最终责任与决策主体。"
+        },
+        {
+          "q": "问题45：review package 是否由 Core 在 verifier 成功后自动生成并发布；只有 package digest 与当前 lifecycle revision 绑定后，Human 才能执行 Accept/Reject/Request revision？",
+          "answer": "同意",
+          "note": "跨 StateStore/EvidenceStore 采用两阶段闭环：先写 immutable package，再 CAS 追加 package-published fact；未发布 package 时保持不可决策。"
+        },
+        {
+          "q": "问题46：package-published 是否采用独立 real-agent-dogfood-review-package aggregate，以 dogfood/execution/attempt/lifecycle_revision/package_digest 绑定原 lifecycle，Human review CLI 同时读取两个 aggregate 做 CAS 校验？",
+          "answer": "同意",
+          "note": "避免污染现有 lifecycle projector；review artifact 独立演化，但必须通过强绑定才能进入 Human decision。"
+        },
+        {
+          "q": "问题47：review package findings 是否由 Core 重新投影；未验证 Agent 主张只能作为 warning，Human Accept 必须明确确认 warning，原始报告仅通过 EvidenceStore digest 引用？",
+          "answer": "同意",
+          "note": "Agent 不能直接产生完成事实；Core 负责 verified facts/warnings 投影，Human 对 warning 负最终判断责任。"
+        },
+        {
+          "q": "问题48：Human review decision 是否增加结构化 acknowledged_warning_ids，并将其纳入 HumanSigner 签名 payload；Accept 缺少任一 warning acknowledgement 时直接 blocked？",
+          "answer": "同意",
+          "note": "Accept 的责任确认必须可机器验证；Reject/Request revision 不要求确认全部 warning，但 comment 与 acknowledgement 均纳入签名上下文。"
+        },
+        {
+          "q": "问题49：package publication 是否对每个 dogfood_id/execution_id/attempt/lifecycle_revision 只保留一个 winner；同 digest 重放幂等、同绑定不同 digest 冲突、不同 attempt/revision 才产生新 package？",
+          "answer": "同意",
+          "note": "防止重复发布产生多个可决策 package；Human decision 只能引用已发布 winner。"
+        },
+        {
+          "q": "问题50：package 的 lifecycle_revision 是否绑定进入 review-pending 的 lifecycle transition revision，而不是 package 发布后的全局 StateStore snapshot revision？",
+          "answer": "同意",
+          "note": "Human decision 校验当前 review-pending lifecycle digest 与 transition revision；package publication revision 仅用于 CAS。"
+        },
+        {
+          "q": "问题51：package 已写入 EvidenceStore 但 package-published CAS 失败时，是否保持 lifecycle review-pending、禁止 Human decision，并允许幂等重试 publication；绝不重跑 Provider？",
+          "answer": "同意",
+          "note": "这是 artifact publication failure，不是 Agent execution failure；仅证据损坏、绑定不一致或 winner 冲突才升级 blocked/outcome-uncertain。"
+        },
+        {
+          "q": "问题52：用户可见层是否保持 lifecycle review-pending，并用派生 decisionability=blocked/ready 表达 package 是否可决策，而不新增 review-package-pending 生命周期？",
+          "answer": "同意",
+          "note": "保持单一 lifecycle；package publication/绑定是 decisionability gate，不制造第二套生命周期。"
+        },
+        {
+          "q": "问题53：Reject/Request revision 后旧 review package 是否永久 immutable 保留但立即失去 decisionability；Request revision 必须创建新 attempt 和新 package，旧 package 不得复用？",
+          "answer": "同意",
+          "note": "历史证据只读保留；旧 package 不能再次驱动 Accept 或新执行。"
+        },
+        {
+          "q": "问题54：Human 的签名 Accept 是否作为最终责任决策；closeout 只验证 Accept/package/lifecycle/worktree clean proof 并落盘完成事实，不再产生第二个 Human 审批意图？",
+          "answer": "同意",
+          "note": "避免把结果接受与资源清理混成两个 Human 审批动作。"
+        },
+        {
+          "q": "问题55：closeout 是否复用 Accept decision 的 Human signature，不再重新调用 HumanSigner；closeout 只记录 Accept/package/lifecycle digest、TrustedRunner/worktree cleanup proof 和 CAS revision？",
+          "answer": "同意",
+          "note": "HumanSigner 只签最终 Accept；verifier/TrustedRunner/Core 分别负责验证、清理证明和绑定落盘。"
+        },
+        {
+          "q": "问题56：Reject/Request revision 是否必须先完成旧 attempt 的机械化 cleanup；Reject cleanup 后进入 rejected closeout，Request revision cleanup 成功后才创建新 draft，cleanup 失败不创建新 attempt？",
+          "answer": "同意",
+          "note": "不复用旧 worktree/package/lease；cleanup 不可证明时必须停下等待 Human reconcile。"
+        },
+        {
+          "q": "问题57：是否补充 review-pending → outcome-uncertain 合法转移边，用于 Human decision 后 cleanup 或 package binding 无法证明的情况？",
+          "answer": "同意",
+          "note": "已知拒绝仍是 rejected；不可验证的资源/状态事实必须显式表达为 outcome-uncertain。"
+        },
+        {
+          "q": "问题58：Request revision 是否拆为 Human decision→request-revision、独立 cleanup proof、cleanup 成功后新 attempt draft 三步；cleanup 失败停在 outcome-uncertain，不创建新 attempt？",
+          "answer": "同意",
+          "note": "决策与资源清理分别可重放、可审计，避免 record decision 时隐式创建新执行。"
+        },
+        {
+          "q": "问题59：Accept 是否先将 lifecycle 置为 accepted，再由独立 closeout aggregate 记录 cleanup；cleanup 失败保留已签名 Accept，closeout 进入 outcome-uncertain，不回滚 Human decision？",
+          "answer": "同意",
+          "note": "Accept 是不可变 Human 责任事实；cleanup 是后置运行事实，二者不互相回滚。"
+        },
+        {
+          "q": "问题60：Reject 是否与 Accept 对称，先记录已签名 rejected lifecycle，再由 closeout 清理；cleanup 失败保留 rejected，仅 closeout 标记 outcome-uncertain；Request revision 仍须 cleanup 成功后创建新 attempt？",
+          "answer": "同意",
+          "note": "Human decision 与资源清理分离；Request revision 额外受新 attempt 创建前 cleanup gate 约束。"
+        },
+        {
+          "q": "问题61：是否为 closeout 建立独立可恢复 lifecycle，状态为 cleanup-pending/closed/outcome-uncertain，并与 dogfood execution lifecycle 解耦？",
+          "answer": "同意",
+          "note": "closeout 只绑定 Human decision、package/lifecycle digest、worktree 与 cleanup proof；同 proof 幂等，不同 proof 冲突。"
+        },
+        {
+          "q": "问题62：closeout retry 是否必须绑定同一 decision_digest/package_digest/lifecycle_digest/worktree_path；同 proof 幂等、不同 proof 冲突、绑定漂移进入 outcome-uncertain，且不重新签名或重跑 Agent？",
+          "answer": "同意",
+          "note": "防止 cleanup coordinator 在资源或责任上下文漂移后继续产生副作用。"
+        },
+        {
+          "q": "问题63：review package 是否只在 StateStore 保存 bounded summary、Core findings/warnings、scoped evidence refs 和 receipt digest；raw stdout/stderr/完整 report 只保留在 EvidenceStore？",
+          "answer": "同意",
+          "note": "保持 Human 可读与可展开追溯，同时避免 StateStore payload 被大输出或秘密污染。"
+        },
+        {
+          "q": "问题64：Core 是否必须在 review package 生成前执行 bounded-size gate，canonical payload 小于 StateStore 256KB，并对 summary/findings/warnings/refs 设置上限；超限直接 blocked 而不静默截断？",
+          "answer": "同意",
+          "note": "保证 package 可可靠发布；完整证据仍保留在 EvidenceStore。"
+        },
+        {
+          "q": "问题65：closeout cleanup 是否必须由 Core-owned cleanup coordinator 执行并产出独立 proof；Provider/Agent 不得作为 cleanup proof 唯一来源？",
+          "answer": "同意",
+          "note": "Core/TrustedRunner 负责 lease、worktree、进程、凭据与副作用事实的验证和绑定；Provider 只能提供候选观察。"
+        },
+        {
+          "q": "问题66：closeout proof 是否采用 provider-neutral schema，OS/provider 事实放入 adapter_facts；1-6 只实现 macOS adapter，其他平台后续扩展？",
+          "answer": "同意",
+          "note": "统一 Core 验证语义，隔离平台事实，不在本里程碑扩展 Linux/Windows。"
+        },
+        {
+          "q": "问题67：package-published fact 是否由 Core 通过 EvidenceStore digest、StateStore append-only/CAS 和独立 package aggregate 证明，不需要 HumanSigner；HumanSigner 仅负责 approval 与最终 review decision？",
+          "answer": "同意",
+          "note": "保持系统事实与 Human 意图的签名责任分层。"
+        },
+        {
+          "q": "问题68：Accept 的 acknowledged_warning_ids 是否必须与 package 全部 warning IDs 规范化后完全相等；无 warning 签名空数组，有 warning 不得少确认、多填、重复或因 digest 漂移失效？",
+          "answer": "同意",
+          "note": "Human 责任确认可机器验证；Reject/Request revision 可部分确认但同样签名绑定。"
+        },
+        {
+          "q": "问题69：warning ID 是否必须由 Core 根据规范化 finding 内容、绑定 evidence digest 和 execution/attempt 上下文生成；内容或 attempt 变化生成新 ID，旧 acknowledgement 不跨 package 继承？",
+          "answer": "同意",
+          "note": "防止 Agent 通过改名、重排或重复提交绕过 Human warning acknowledgement。"
+        },
+        {
+          "q": "问题70：review package publisher 是否作为独立 Core 组件，接收 verifier 通过事实，负责 package 投影、EvidenceStore 写入和 package-published CAS；verifier 不生成 Human decision package？",
+          "answer": "同意",
+          "note": "保持 verifier、publisher、Human decision、closeout 的责任边界。"
+        },
+        {
+          "q": "问题71：是否将 critical/high 或影响成功标准的 finding 定义为 key claim；key claim 未独立验证时 package publication blocked，其他未验证 finding 只能成为 warning？",
+          "answer": "同意",
+          "note": "Human acknowledgement 不能把未验证 key claim 变成 verified fact。"
+        },
+        {
+          "q": "问题72：key claim 的 key/non-key 属性是否完全由 Core policy 判定，Agent 不得声明、降级或修改；policy digest 是否绑定 report/package？",
+          "answer": "同意",
+          "note": "保证高风险主张不能通过 Agent 自标低风险绕过验证；策略变化生成新的可审计 package。"
+        },
+        {
+          "q": "问题73：key claim 未验证时，Core 是否仍发布 immutable review package，标记 decisionability=blocked 并展示缺失事实/下一步，但禁止 Human Accept？",
+          "answer": "同意",
+          "note": "可解释停下优于静默不产出；修复通过新 attempt/package 完成，不覆盖旧证据。"
+        },
+        {
+          "q": "问题74：blocked package 是否仍是该 attempt/lifecycle revision 的唯一 immutable winner；后续修复只能通过新 attempt 或新 lifecycle revision 生成新 package，禁止覆盖/替换/解锁原 package？",
+          "answer": "同意",
+          "note": "blocked package 是完整历史事实，不是临时草稿；新证据必须形成新 digest/package。"
+        },
+        {
+          "q": "问题75：同一 Provider execution 的 verifier 产生新事实时，是否禁止在原 attempt 重写/替换 package，必须以新的受控 attempt 生成新 lifecycle revision/package？",
+          "answer": "同意",
+          "note": "保持 replay 确定性和历史 package 不可变；旧事实不被新事实覆盖。"
+        },
+        {
+          "q": "问题76：1-6 是否暂不引入独立 verification_attempt；verifier 事实变化按新 execution attempt 处理，只有 package publication CAS 失败允许同 attempt 幂等重试？",
+          "answer": "同意",
+          "note": "保持 attempt 的最小原子语义；不让同一 execution 产生多套竞争 verification truth。"
+        },
+        {
+          "q": "问题77：review package 是否必须加入并绑定不可变 goal、success_criteria（或 digest）和 input_manifest_digest，并在 Human 默认摘要展示？",
+          "answer": "同意",
+          "note": "Human 审查必须明确结果对应的目标、成功标准和输入范围；这些字段进入 package digest/最终签名上下文。"
+        },
+        {
+          "q": "问题78：Accept 是否必须同时通过 decisionability、key claims verification、完整 warning acknowledgement、package/lifecycle/revision binding、HumanSigner、goal/success criteria/input manifest 全部 gate；任一失败 blocked？",
+          "answer": "同意",
+          "note": "Human comment 不能覆盖机器验证失败；Accept 是严格的完成责任门。"
+        },
+        {
+          "q": "问题79：decisionability=blocked 的 package 是否允许 Human Reject 或 Request revision，但禁止 Accept；所有动作仍须签名绑定 blocked package digest？",
+          "answer": "同意",
+          "note": "不能接受不等于不能做出责任决策；Reject/Request revision 仍是 Human 对当前 attempt 的明确处置。"
+        },
+        {
+          "q": "问题80：Request revision 是否增加 bounded 结构化 revision_requirements[]，与 comment 一起纳入 HumanSigner 签名，作为下一 attempt 的 Human 约束且 Agent 不得修改？",
+          "answer": "同意",
+          "note": "requirements 是责任约束，不是自动执行指令；下一 attempt 必须重新经过编排/验证。"
+        },
+        {
+          "q": "问题81：Request revision 创建的新 attempt 是否必须重新完成完整 preflight 与 Human approval；旧 approval 只能作为历史引用，不能授权新 attempt？",
+          "answer": "同意",
+          "note": "新 execution/attempt、输入、worktree、Provider/runtime/policy 和 Human approval 全部重新绑定。"
         }
       ],
       "notes": ""
@@ -2314,11 +2510,61 @@
       "children": [],
       "decisions": [],
       "notes": "已完成显式 opt-in self-audit runner：Provider 只能返回 envelope，Core 入 EvidenceStore 后调用 independent verifier，成功只推进到 review-pending，Human Accept 留在后续生命周期。"
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "Enriched immutable review package and Core projection",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 enriched immutable review package：goal/success criteria、input/result/receipt digests、execution/attempt-scoped evidence refs、Core-projected findings/key-claim/decisionability，并在生成与读取时执行 canonical payload <256KB gate；raw report 仍留在 EvidenceStore。聚焦测试 11/11 通过。"
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "Independent review-package aggregate and publisher CAS",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "已实现独立 review-package aggregate publisher：scope=network/dogfood/execution/attempt/lifecycle_revision，StateStore 原子事务 CAS 保证单 winner；同 package/evidence digest 重放为 duplicate，异 digest 为 review-package-publication-conflict；聚焦与并发测试通过。"
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "Warning acknowledgement, key-claim gate, and revision requirements",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "已实现 Core key-claim policy：显式 key_claim 或 critical/high 均视为 key claim，未验证则 decisionability=blocked；普通 warning 可 ready。Human decision 签名绑定 acknowledged_warning_ids 与结构化 revision_requirements；accept 必须完整确认 warnings，request-revision 必须携带 requirements。聚焦 review 测试 15/15 通过。"
+    },
+    "1-6-4": {
+      "id": "1-6-4",
+      "label": "Closeout lifecycle, cleanup proof, and symmetric decision closeout",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "已实现 decision-bound closeout 主路径：不再请求第二次 Human 签名，复用 lifecycle.last_fact_digest 绑定已记录 decision；独立 closeout aggregate 先记录 cleanup-pending，再由 Core 清理 worktree，成功 closed，无法证明则 outcome-uncertain；同 binding closed 幂等，dirty cleanup 有明确不确定结果。closeout 测试 5/5 通过。"
+    },
+    "1-6-5": {
+      "id": "1-6-5",
+      "label": "CLI/API decisionability and complete acceptance replay",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 review CLI/API 收口：show 暴露 decisionability 与 warning IDs；decide 先通过独立 publisher CAS 再创建 Human decision，支持 acknowledgement/revision JSON 参数；stale package 在副作用前拒绝；accept replay 可从 EvidenceStore 重读 decision、重新验证签名，并确认 publication aggregate 单 winner。review/closeout 聚焦测试通过，完整 npm test 428/428。"
     }
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-03 17:59:55",
+    "updated": "2026-08-04 00:22:44",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }
