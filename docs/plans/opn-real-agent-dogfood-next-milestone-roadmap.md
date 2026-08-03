@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 13:23:28
+> 数据文件: `opn-real-agent-dogfood-next-milestone-roadmap.json` | 最后更新: 2026-08-03 17:59:55
 
 [~][X+] 1. OPN Real Agent Dogfood 下一里程碑
 ├── [x][X+] 1-1. Provider-neutral real-agent-dogfood contract
@@ -11,7 +11,12 @@
 │   ├── [x][Y+] 1-4-1. Provider-neutral bootstrap protocol and memory failure-matrix fixture
 │   ├── [x][Y+] 1-4-2. macOS process identity PID and Unix socket verification integration
 │   └── [x][Y+] 1-4-3. TrustedRunner Runtime sidecar FD bootstrap and execution process-group orchestration
-├── [ ][Y+] 1-5. Dogfood Evidence and independent verification chain
+├── [x][Y+] 1-5. Dogfood Evidence and independent verification chain
+│   ├── [x][Y+] 1-5-1. Provider-neutral result envelope, conformance report, and finding schema
+│   ├── [x][Y+] 1-5-2. Core independent verification plan and disposable verifier worktree
+│   ├── [x][Y+] 1-5-3. EvidenceStore redaction, scoped refs, and digest-only receipt
+│   ├── [x][Y+] 1-5-4. Deterministic failure matrix, replay, and idempotency
+│   └── [x][Y+] 1-5-5. Real provider self-audit dogfood to review-pending
 └── [ ][Y+] 1-6. Human review and acceptance handoff
 
 ### 当前施工：1. OPN Real Agent Dogfood 下一里程碑
@@ -37,6 +42,7 @@
 ├── [x][X+] 1-3. Provider-neutral real-agent-dogfood CLI entry
 ├── [x][Y+] 1-4. Opt-in real Agent read-only execution
 │   ... 3 more child nodes; run tree 1-4 --depth 2 for full view
-├── [ ][Y+] 1-5. Dogfood Evidence and independent verification chain
+├── [x][Y+] 1-5. Dogfood Evidence and independent verification chain
+│   ... 5 more child nodes; run tree 1-5 --depth 2 for full view
 └── [ ][Y+] 1-6. Human review and acceptance handoff
 <!-- ROADMAP_SECTION_END -->

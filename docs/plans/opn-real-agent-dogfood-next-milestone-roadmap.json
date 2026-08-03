@@ -1582,10 +1582,16 @@
     "1-5": {
       "id": "1-5",
       "label": "Dogfood Evidence and independent verification chain",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3",
+        "1-5-4",
+        "1-5-5"
+      ],
       "decisions": [
         {
           "q": "问题8：真实 Agent 是否必须输出结构化 conformance result，而不是只返回自然语言；缺少唯一 result envelope、报告、合法引用或 digest 不匹配时 blocked？",
@@ -1616,9 +1622,294 @@
           "q": "问题39：conformance report 所需项目验证命令是否由 Core 独立执行，并且只允许固定的 read-only allowlisted verification commands；Agent 自报测试通过不能作为证据？",
           "answer": "同意",
           "note": "Core 记录实际命令、命令 digest、exit status、stdout/stderr digest、运行时 commit/worktree 和验证结果；未知、写入型或未批准命令直接 blocked。"
+        },
+        {
+          "q": "1-5 的第一步是否先实现一条完整的证据闭环最小切片？",
+          "answer": "选 1：先打通真实 Agent result → Core 独立验证 → EvidenceStore → independent verifier → review-pending 的端到端闭环。",
+          "note": "先用垂直切片验证责任链和协议边界，再决定是否扩展覆盖面。"
+        },
+        {
+          "q": "完整证据闭环最小切片是否足以完成 1-5？",
+          "answer": "选 2：最小切片只是入口；1-5 还必须覆盖关键失败矩阵、证据完整性、verifier 失败、outcome-uncertain、重放幂等和 execution/attempt 绑定。",
+          "note": "不扩展多 Agent、跨设备或新 Provider；先闭合单 Agent OPN Atom 的可信证据责任链。"
+        },
+        {
+          "q": "证据闭环最小切片采用真实 Agent 还是 deterministic fixture？",
+          "answer": "选 3：两层组合；deterministic fixture 覆盖完整失败矩阵、边界和重放，真实 Agent 成功路径验证真实 Provider 输出进入同一套 provider-neutral result/evidence/verifier contract。",
+          "note": "两层共享业务协议和 verifier，不维护两套业务逻辑。"
+        },
+        {
+          "q": "真实 Agent 成功路径是否复用现有 real-agent-dogfood 生命周期和组件？",
+          "answer": "同意：复用现有 start/resume/worker/verifier、content-addressed EvidenceStore 和 review package；1-5 只对现有主路径做 evidence/verifier enrich，不建立第二条事实链。",
+          "note": "保持 RealAgentDogfoodLifecycle 作为用户生命周期事实源，Core/verifier 共享现有 provider-neutral contract。"
+        },
+        {
+          "q": "真实 Agent 成功路径是否固定为 ZAgenticLoop 只读 conformance self-audit？",
+          "answer": "选 1：固定只读 self-audit；输入、检查项和结构化 conformance report 固定，禁止修改、提交、push 或扩大分析范围。",
+          "note": "首个闭环先验证 OPN 责任链，不以任意任务通用性作为完成条件。"
+        },
+        {
+          "q": "结构化 conformance report 如何进入证据链？",
+          "answer": "选 1：真实 Agent 通过 bounded provider stdout 输出最终 JSON result envelope；Worker/Core 校验并规范化后写入 EvidenceStore，原始 stdout 仅作为绑定输出证据，Markdown/HTML 作为后续展示投影。",
+          "note": "Agent 不写 worktree，避免突破 read-only 边界。"
+        },
+        {
+          "q": "result envelope 中 Agent 与 Core/verifier 的事实边界如何划分？",
+          "answer": "选 1：Agent 提供 summary、findings、claims、候选 file/evidence refs；Core/verifier 独立确认 execution/attempt、输入 commit、worktree、文件 digest、验证命令结果、输出 digest 和 runtime proof；Agent 自报状态不能直接成为成功事实。",
+          "note": "保持 Agent 为不可信候选事实提供者，独立 verifier 为事实确认者。"
+        },
+        {
+          "q": "Core 的独立验证命令应在哪里执行？",
+          "answer": "选 1：Core 从 pinned commit 创建 disposable verifier worktree，在其中执行固定 read-only verification plan；记录命令、argv digest、cwd、commit、exit status、输出 digest 和清理结果，Agent worktree 仍独立保持 clean。",
+          "note": "避免 npm test/tsc 等生成 dist 或临时文件污染 Agent 执行边界。"
+        },
+        {
+          "q": "disposable verifier worktree 的清理责任如何划分？",
+          "answer": "选 1：Core 创建并负责清理，记录 worktree identity/base commit/cleanup proof；验证命令失败与清理失败分开记录，清理无法证明时投影为 outcome-uncertain。",
+          "note": "Agent 不负责独立 verifier 资源清理；避免临时资源泄漏。"
+        },
+        {
+          "q": "Provider 原始 stdout/stderr 与 EvidenceStore 中的证据如何分层？",
+          "answer": "同意选 1：原始输出仅在受控运行期间短暂存在；Core 计算原始 digest/大小，对输出做字段级脱敏、截断和 schema 化；EvidenceStore 只保存脱敏投影、原始 digest、大小、截断状态和 provenance，review package 不暴露原始内容。",
+          "note": "无法脱敏、超限或无法证明清理时进入 blocked 或 outcome-uncertain。"
+        },
+        {
+          "q": "脱敏策略如何保证可重复、可验证？",
+          "answer": "同意选 1：采用版本化、确定性的 provider-neutral redaction profile，由 Core 统一执行；记录 profile id/digest、原始 digest、脱敏后 digest；结构化字段递归脱敏，无法可靠识别的非结构化原文不进入长期 EvidenceStore。",
+          "note": "Provider/Agent 不能自定义安全边界；profile 漂移、脱敏失败或输出超限直接 blocked。"
+        },
+        {
+          "q": "脱敏失败、输出超限和原始输出清理失败如何映射终态？",
+          "answer": "同意选 1：可确定拒绝（脱敏规则不支持、超限、profile/digest 漂移）进入 blocked；无法证明原始输出是否落盘、是否清理完成或是否发生泄漏进入 outcome-uncertain。",
+          "note": "区分已知不满足条件与状态未知，避免错误自动接受。"
+        },
+        {
+          "q": "独立 verifier 的独立性需要达到哪一层？",
+          "answer": "选 1：独立 verifier 命令/进程和独立 verifier identity；verifier 只读 StateStore/EvidenceStore 与绑定输入，输出独立 verification fact；失败、崩溃或身份不匹配不得进入 review-pending。",
+          "note": "同进程函数调用或不同 verifier_id 字符串不构成独立验证；更强 sandbox/设备隔离后置。"
+        },
+        {
+          "q": "1-5 的 deterministic failure matrix 是否全部纳入完成门禁？",
+          "answer": "同意选 1：必须覆盖 result/stream 边界、file/commit 引用、EvidenceStore、redaction、execution binding、verifier identity/process、verifier worktree、StateStore conflict/replay，并将每类结果映射到 blocked、outcome-uncertain 或 review-pending。",
+          "note": "这些场景定义证据可信边界，不作为后续外围增强。"
+        },
+        {
+          "q": "Agent result envelope 是否允许直接声明生命周期状态？",
+          "answer": "同意选 1：Agent 只提交 observations、claims、候选 refs 和建议；生命周期状态只能由 Core/verifier 根据完整证据链推导，Agent 的 status 不能驱动状态迁移。",
+          "note": "保持执行节点与生命周期事实源分离。"
+        },
+        {
+          "q": "Agent result 不可信状态如何进入生命周期？",
+          "answer": "同意选 1：Agent 只提交 observations/claims/候选 refs；Core/verifier 推导并写入生命周期状态，Agent status 不驱动迁移。",
+          "note": "确保执行节点不能自我宣布成功或失败终态。"
+        },
+        {
+          "q": "EvidenceStore 写入与生命周期状态迁移如何保持一致？",
+          "answer": "同意选 1：先准备并回读全部 content-addressed evidence，再用 StateStore revision CAS 追加只含 digest/ref 的生命周期事件；冲突不迁移状态，未被引用的 evidence 作为 orphan artifact 后续清理。",
+          "note": "不伪装跨 StateStore/EvidenceStore 的单库事务。"
+        },
+        {
+          "q": "孤儿 evidence artifact 应如何清理？",
+          "answer": "同意选 1：由 Evidence retention job 延迟清理；仅清理超过 grace period 且未被 StateStore/review package/active attempt 引用的 artifact；先 dry-run，引用关系不确定时保留。",
+          "note": "避免并发重试误删，保持敏感数据和临时输出有界且可审计。"
+        },
+        {
+          "q": "相同内容 digest 是否允许跨 execution/attempt 复用？",
+          "answer": "同意选 1：允许物理去重，但每个逻辑 evidence ref 必须重新绑定 execution/attempt、来源和 provenance；verifier 不得凭裸 digest 跨 scope 复用。",
+          "note": "保留 content-addressed 存储效率，同时防止跨任务证据混淆。"
+        },
+        {
+          "q": "evidence ref 是否冻结为固定 provider-neutral schema？",
+          "answer": "同意选 1：冻结 evidence_id、kind、content_digest、size、execution/attempt、dogfood_id、producer、source、input_commit、worktree_identity、redaction profile 和 provenance 等外层绑定字段；kind-specific payload 单独定义。",
+          "note": "verifier 依赖稳定外层绑定，具体证据内容保持可扩展。"
+        },
+        {
+          "q": "evidence schema 如何处理未来扩展字段？",
+          "answer": "同意选 1：严格拒绝未知顶层字段；未来字段必须进入版本化、命名空间化 extensions，核心 verifier 不信任未声明扩展，扩展 payload 参与 canonical digest。",
+          "note": "保持核心协议稳定，同时保留显式、可审计的扩展入口。"
+        },
+        {
+          "q": "self-audit 发现未实现项时如何区分执行结果与审查结论？",
+          "answer": "同意选 1：分离报告生成状态与审查 findings；只要 Agent 完成固定 self-audit 且结构、引用、证据完整，报告生成可成功；implemented/partial/missing/risk 是被审查产品事实，Human 再决定是否接受。",
+          "note": "避免把产品缺口误判为 Agent 执行失败，也不把结论权交给 Agent。"
+        },
+        {
+          "q": "固定 conformance report 是否必须包含版本化必需章节？",
+          "answer": "同意选 1：固定并版本化 scope、implemented、partial、missing、risks、evidence_refs、verification_refs、recommendations、report_digest/provenance 等必需章节；可为空但不可缺失，结构错误直接 blocked。",
+          "note": "报告结构严格，审查结论内容开放。"
+        },
+        {
+          "q": "独立验证命令是否由 task contract 预先冻结？",
+          "answer": "同意选 1：task contract 固定 allowlisted argv、顺序和 cwd/commit 绑定；Agent 不能新增或授权命令，Core/verifier 记录实际 argv digest、exit status 和输出 digest。",
+          "note": "命令集合属于任务编排责任；会写入的命令只在 disposable verifier worktree 执行。"
+        },
+        {
+          "q": "验证命令返回非零时如何区分有效发现与 verifier 失败？",
+          "answer": "同意选 1：命令启动并完整结束时，exit code、输出和 digest 作为有效 verification fact，由 task contract 解释；启动失败、超时、输出不完整、cwd/commit 漂移或结果不可解释才进入 blocked/outcome-uncertain。",
+          "note": "避免把被审查项目缺陷误判为 verifier 故障，也不忽略非零事实。"
+        },
+        {
+          "q": "真实 Agent 成功路径是否保持 Provider-neutral？",
+          "answer": "同意选 1：复用 provider-neutral CLI，由调用方显式提供 provider_id、adapter、executable 和运行参数；Codex 只是当前首个 Provider 实例，不进入核心协议名称或固定分支。",
+          "note": "后续 Agent 只需实现同一 Provider adapter contract。"
+        },
+        {
+          "q": "Provider 配置是否必须作为不可变 execution binding？",
+          "answer": "同意选 1：provider_id、adapter schema/version/digest、executable path/digest、argv digest、cwd/worktree、network policy、ProviderAuthRef digest、TrustedRunner/preflight 和 execution/attempt 全部绑定；任一漂移 blocked。",
+          "note": "Human approval、worker、verifier 和 evidence 使用同一不可变上下文。"
+        },
+        {
+          "q": "self-audit 的输入范围是否冻结为 input manifest？",
+          "answer": "同意选 1：task contract 冻结允许读取的路径/目录；manifest 绑定 repository/worktree/base commit、文件路径与内容 digest、文档/路线图 revision；Agent 超出范围 blocked，verifier 独立重算。",
+          "note": "首个 self-audit 只覆盖核心契约、路线图、产品文档及相关源码/测试，不读取整个仓库。"
+        },
+        {
+          "q": "input manifest 应由谁生成并进入 Human approval？",
+          "answer": "同意选 1：Core 根据 task contract 在 pinned commit 上生成 manifest，Human approval 绑定范围摘要与 manifest digest；Agent 只能消费，verifier 独立重建并比对。",
+          "note": "避免 Agent 通过自报 manifest 扩大读取范围。"
+        },
+        {
+          "q": "input manifest 如何处理 symlink、路径别名和仓库外文件？",
+          "answer": "同意选 1：canonicalize 所有路径；symlink 解析后必须仍在批准 worktree/root 内；越界、路径穿越、重复别名或无法解析直接 blocked；manifest 使用 canonical relative path。",
+          "note": "防止只读 self-audit 通过 symlink 读取批准范围外内容。"
+        },
+        {
+          "q": "执行期间是否必须验证 input manifest 没有漂移？",
+          "answer": "同意选 1：执行前后生成并比较 manifest digest；已知路径/内容/commit 漂移 blocked，无法读取或无法确认状态 outcome-uncertain，不能用 Agent 自报替代。",
+          "note": "把输入 manifest 做成完整执行边界证明。"
+        },
+        {
+          "q": "是否必须同时证明整个 Agent worktree clean？",
+          "answer": "同意选 1：执行前后都生成完整 worktree clean digest；manifest 保证输入范围稳定，clean digest 保证没有未授权本地副作用；tracked/untracked/ignored/metadata 漂移按策略进入 blocked 或 outcome-uncertain。",
+          "note": "两种证明互补，不能只靠 manifest 或 git status。"
+        },
+        {
+          "q": "worktree clean digest 如何定义？",
+          "answer": "同意选 1：preflight 记录 canonical inventory baseline，包含 tracked/untracked/ignored 文件及类型、权限/metadata、内容 digest；post-run 必须完全一致；runtime 临时目录在 worktree 外并单独记录 cleanup proof。",
+          "note": "验证执行期间无新增、删除或修改，而非误要求目录为空。"
+        },
+        {
+          "q": "worktree inventory 如何保证 bounded？",
+          "answer": "同意选 1：固定文件数、路径字节数和 inventory 总字节上限；canonical path 稳定排序；只保存路径/类型/metadata/content digest；超限 blocked、无法完整采集 outcome-uncertain；排除规则进入 manifest/approval digest。",
+          "note": "避免扫描失控和敏感内容泄漏，同时保留显式范围控制。"
+        },
+        {
+          "q": "task contract 排除路径对 Agent 应是什么语义？",
+          "answer": "同意选 1：排除路径是 denied 边界，Agent 不可访问或写入；访问直接 blocked；需要构建/临时文件只能在 disposable verifier worktree 或受控 runtime 目录产生；排除规则绑定 sandbox/preflight/approval digest。",
+          "note": "避免 read-only 任务出现不可观察的本地副作用。"
+        },
+        {
+          "q": "Provider stdout 的事件流与最终 conformance report 如何组织？",
+          "answer": "同意选 1：使用 bounded、有序、带 sequence 的事件流，恰好一个 terminal result 携带 report；乱序、重复、缺失或多个 terminal result blocked；原始事件流只保留 digest，规范化 result 单独写入 EvidenceStore。",
+          "note": "复用现有 JSONL parser，保持控制协议与 Agent 原始输出隔离。"
+        },
+        {
+          "q": "report digest 应由谁计算？",
+          "answer": "同意选 1：Core 校验 schema/大小/binding 后 canonicalize 并重算 report digest；Agent digest 仅作候选比对，不匹配 blocked；EvidenceStore/verifier 只信任 Core digest。",
+          "note": "保证规范化 report 可寻址、可 replay，避免 Agent 自签事实。"
+        },
+        {
+          "q": "findings 是否需要固定机器可验证结构？",
+          "answer": "同意选 1：固定 finding_id、severity、category、claim、implemented/partial/missing/risk status、file_refs、evidence_refs、verification_refs；枚举版本化，无证据支撑的 finding 只能是候选，不能进入 verified report。",
+          "note": "让 finding 成为可验证、可索引、可回读的产品事实单元。"
+        },
+        {
+          "q": "无法被 Core 独立证实的 Agent finding 如何处理？",
+          "answer": "同意选 1：保留为 unverified candidate 并记录失败原因，不能进入 verified report；task contract 要求的关键 finding 无法证实时进入 blocked 或 outcome-uncertain。",
+          "note": "保留风险线索但不提升其可信等级。"
+        },
+        {
+          "q": "非关键 unverified finding 是否允许进入 review-pending？",
+          "answer": "同意选 1：允许进入，但显式标注 warning/unverified；关键 task claims 必须 verified；review package 展示未证实数量，Human 决定 Accept/Reject/Request revision。",
+          "note": "不把低风险不确定性隐藏，也不让非关键观察无谓阻塞整个报告。"
+        },
+        {
+          "q": "verifier 结果是否将 verification_status 与 warnings 分离？",
+          "answer": "同意选 1：verification_status 表示关键 contract/evidence gates；warnings 表示非关键 unverified findings、可解释非零检查和信息缺口；关键缺失/漂移/verifier 失败才 blocked；通过后进入 review-pending。",
+          "note": "区分证据链是否完成与结果是否存在风险。"
+        },
+        {
+          "q": "review-pending package 应由谁生成？",
+          "answer": "同意选 1：verifier 只输出独立 verification fact；Core 汇总 verified report、evidence refs、verification fact、warnings、manifest/worktree/provenance，生成并重算绑定 execution/attempt 的 review package。",
+          "note": "Agent/verifier 不能直接创建 Human acceptance package。"
+        },
+        {
+          "q": "review-pending package 是否必须不可变？",
+          "answer": "同意选 1：package content-addressed、append-only、不可变；Human decision 追加独立 fact；任何证据、warning 或内容变化生成新 package，旧 package 保留。",
+          "note": "package 是 Human 决策的不可变输入，禁止悄悄替换。"
+        },
+        {
+          "q": "package successor 与 execution/attempt 的关系如何定义？",
+          "answer": "同意选 1：纯展示/脱敏投影或补充确定性 verifier fact可生成同 attempt successor；Provider 重跑、输入/worktree/AuthRef/策略/关键 evidence 变化或 Request revision 必须新 attempt，重新 approval/执行/验证。",
+          "note": "package 版本与 execution attempt 分层，不能用 successor 规避重新执行。"
+        },
+        {
+          "q": "Human Accept 遇到 warnings 是否必须显式确认风险？",
+          "answer": "同意选 1：approval summary 展示 warning 数量/最高 severity，Human 必须确认风险摘要；签名绑定 warnings digest、package digest 和 execution/attempt context；未确认保持 review-pending。",
+          "note": "允许承担已知风险，但必须留下责任证据。"
+        },
+        {
+          "q": "Human 查看 package 关联 evidence 如何约束？",
+          "answer": "同意选 1：通过 EvidenceStore 受控、只读、scope-bound、可审计 API 查看脱敏 evidence；raw stdout/stderr 不开放；访问失败或 scope 不匹配拒绝并记录 audit fact。",
+          "note": "保护长期 evidence 资源，确保 Human 展开查看可追溯。"
+        },
+        {
+          "q": "原始 stdout/stderr 在运行期间应放在哪里？",
+          "answer": "同意选 1：只在受控进程内存中保持 bounded buffer，脱敏/digest 完成后释放；不写目标 worktree、StateStore/EvidenceStore；进程崩溃或无法证明释放/捕获状态时 outcome-uncertain。",
+          "note": "首个 OPN Atom 不支持超大原始输出的临时文件路径。"
+        },
+        {
+          "q": "Provider 输出超过 bounded 上限时如何处理？",
+          "answer": "同意选 1：立即停止接收，记录 output-limit-exceeded，受控终止 Provider 进程组；cleanup 成功 blocked，cleanup 不确定 outcome-uncertain；截断内容不得进入 verifier。",
+          "note": "超限是协议违规，不把不完整 report 当作成功结果。"
+        },
+        {
+          "q": "各类 execution/verifier/project command timeout 如何治理？",
+          "answer": "同意选 1：Provider、stdout/stderr idle、verifier、每条 project verification command 分别有 task contract 固定 timeout；超时先 cleanup，cleanup 成功 blocked，cleanup 不确定 outcome-uncertain；不自动延长、换 Provider 或复用 attempt。",
+          "note": "保持预算、诊断和清理责任可解释。"
+        },
+        {
+          "q": "同一 execution/attempt 的重复 result 或 verifier 请求如何处理？",
+          "answer": "同意选 1：相同 scope/input digest 幂等返回已记录事实；不同 result/evidence/verification digest conflict，禁止覆盖；retry 创建新 attempt；replay 只重放 append-only facts。",
+          "note": "支持安全重试和进程重启，同时保护旧事实。"
+        },
+        {
+          "q": "进程重启后如何恢复证据闭环？",
+          "answer": "同意选 1：从 StateStore replay lifecycle，按原 digest 读取 EvidenceStore；不重跑 Provider、不覆盖旧 evidence；verification-pending 可恢复 verifier，review-pending 恢复同一 immutable package；StateStore/EvidenceStore 不一致 outcome-uncertain。",
+          "note": "恢复是 replay facts，不是隐式 retry。"
+        },
+        {
+          "q": "StateStore 与 EvidenceStore 不一致时哪一个是生命周期权威？",
+          "answer": "同意选 1：StateStore append-only lifecycle 是权威；EvidenceStore 只证明事件引用的内容；StateStore 引用缺失/篡改进入 outcome-uncertain，未被引用的 EvidenceStore artifact 只能是 orphan。",
+          "note": "避免孤儿证据或时间戳改变生命周期事实。"
+        },
+        {
+          "q": "真实 Agent 成功路径如何纳入测试门禁？",
+          "answer": "同意选 1：deterministic fixture 纳入普通 CI；真实 Agent 运行作为显式 opt-in macOS dogfood evidence，绑定 commit/execution/attempt/Provider/environment proof；缺少本机 Provider/Keychain/网络条件不能伪装通过。",
+          "note": "CI 证明协议，真实 dogfood 证明产品路径。"
+        },
+        {
+          "q": "真实 dogfood evidence 应持久化在哪里？",
+          "answer": "同意选 1：持久化到仓库外私有、content-addressed EvidenceStore，StateStore 保存 lifecycle/ref；源码仓库不提交输出、敏感内容或本机路径；通过受控 CLI/API 读取，必要时导出 digest-only receipt。",
+          "note": "保持源码历史干净，同时支持重启、复核和里程碑证据。"
+        },
+        {
+          "q": "digest-only receipt 的最小字段应是什么？",
+          "answer": "同意选 1：receipt 只包含 schema/version、dogfood/execution/attempt/package IDs、commit/manifest/worktree digest、Provider/adapter/executable digest、policy/preflight/trusted proof digest、report/evidence/verification/package digest、status/warnings、时间和自身 digest/signature；不包含原始内容、secret、绝对路径。",
+          "note": "receipt 是可共享证据索引，不是证据内容。"
+        },
+        {
+          "q": "digest-only receipt 与 Human Accept 的签名职责如何分离？",
+          "answer": "同意选 1：Core 生成 receipt digest；TrustedRunner 签环境/process/worktree observation；verifier 生成独立 verification fact；HumanSigner 只签 approval 和最终 review decision；receipt 不等于 Human acceptance。",
+          "note": "分离执行、环境、验证和责任决策事实。"
+        },
+        {
+          "q": "1-5 的完成边界是否停在 review-pending？",
+          "answer": "同意选 1：1-5 完成要求 deterministic failure matrix、真实 Agent self-audit、EvidenceStore/verifier、immutable review package 和 receipt 全部通过，lifecycle 稳定停在 review-pending；Human Accept/Reject/Request revision 属于 1-6。",
+          "note": "证明可信结果可交付给 Human，不提前宣称任务完成。"
         }
       ],
-      "notes": ""
+      "notes": "已选择先实现一条完整证据闭环最小切片；覆盖 result、独立验证、EvidenceStore、verifier 和 review-pending。"
     },
     "1-6": {
       "id": "1-6",
@@ -1973,11 +2264,61 @@
         }
       ],
       "notes": "已实现 TrustedRunner→sidecar 的 provider-neutral launch contract、FD 3/4/5 bounded bootstrap/status、sidecar/worker process-group cleanup；新增真实子进程 fixture 验证 worker 不继承 bootstrap 管道；专用测试与 npm test 接入，完整 428/428 通过。"
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "Provider-neutral result envelope, conformance report, and finding schema",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 provider-neutral result envelope 与 conformance report：严格 schema/finding/ref/size 边界，Core 重算 report/envelope digest，固定有序输出且恰好一个 terminal；Agent 不可写 lifecycle status。"
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "Core independent verification plan and disposable verifier worktree",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 Core 独立验证计划与 disposable detached verifier worktree：固定命令、execution/attempt/commit 绑定、独立 verifier identity、pre/post clean proof。"
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "EvidenceStore redaction, scoped refs, and digest-only receipt",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 versioned provider-neutral deterministic redaction、execution-scoped evidence refs、digest-only receipt；原始输出不进入 StateStore/review package。"
+    },
+    "1-5-4": {
+      "id": "1-5-4",
+      "label": "Deterministic failure matrix, replay, and idempotency",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 deterministic failure matrix、known rejection/unverifiable 映射、same-digest replay 幂等、different-digest conflict、retry attempt/execution binding。"
+    },
+    "1-5-5": {
+      "id": "1-5-5",
+      "label": "Real provider self-audit dogfood to review-pending",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成显式 opt-in self-audit runner：Provider 只能返回 envelope，Core 入 EvidenceStore 后调用 independent verifier，成功只推进到 review-pending，Human Accept 留在后续生命周期。"
     }
   },
   "metadata": {
     "created": "2026-08-01 15:51:40",
-    "updated": "2026-08-03 13:23:28",
+    "updated": "2026-08-03 17:59:55",
     "md_file": "docs/plans/opn-real-agent-dogfood-next-milestone-roadmap.md"
   }
 }
