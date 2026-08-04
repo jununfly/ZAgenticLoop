@@ -16,6 +16,7 @@ export function createRealAgentDogfoodProvider(input) {
             return adapter.run({
                 cwd: request.cwd,
                 prompt: request.prompt,
+                mode: request.mode,
                 env_allowlist: [],
                 env: {},
                 timeout_ms: 15 * 60 * 1000,

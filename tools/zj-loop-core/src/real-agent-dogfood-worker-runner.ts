@@ -6,9 +6,10 @@ import { verifyRealAgentDogfoodPostRunProof, type RealAgentDogfoodPostRunProofFa
 import { validateLocalExecutionPreflight } from './local-execution-preflight.js';
 import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import { providerResultFromLocalProcess, validateProviderResult, type ProviderResult as NormalizedProviderResult } from './provider-runtime-adapter.js';
+import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
 
 type ProviderResult = { status: 'completed' | 'failed' | 'cancelled' | 'timed-out'; success: boolean; pid: number; exit_code: number | null; signal: string | null; stdout: string; stderr: string; reason?: string; provider_result?: NormalizedProviderResult };
-type Provider = { run(input: { cwd: string; prompt: string; executable: string }): Promise<ProviderResult> };
+type Provider = { run(input: { cwd: string; prompt: string; executable: string; mode?: CodexExecutionMode }): Promise<ProviderResult> };
 export type RealAgentDogfoodWorkerResult = {
   status: 'verification-pending' | 'blocked' | 'outcome-uncertain';
   stdout_digest: string;
@@ -30,7 +31,7 @@ function validateAdmissionBoundExecution(input: { admission_bound_execution: Adm
   if (admission.preflight.executable !== input.executable || admission.preflight.cwd !== input.worktree_path) throw new Error('worker-admission-resource-binding-invalid');
 }
 
-export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; admission_bound_execution: AdmissionBoundExecution; worktree_path: string; executable: string; goal: string; provider: Provider; provider_cleanup?: () => Promise<ProviderCleanupResult>; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
+export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; admission_bound_execution: AdmissionBoundExecution; worktree_path: string; executable: string; goal: string; execution_mode?: CodexExecutionMode; provider: Provider; provider_cleanup?: () => Promise<ProviderCleanupResult>; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
   if (input.lifecycle.status !== 'running') throw new Error('worker-lifecycle-not-running');
   validateAdmissionBoundExecution(input);
   const binding = await validateRealAgentDogfoodExecutionBinding({ binding: input.binding, executable: input.executable, args: input.binding.args, cwd: input.worktree_path, worktree_path: input.worktree_path, lease_id: input.lease_id });
@@ -38,7 +39,7 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
   const now = input.now ?? new Date().toISOString();
   let result: ProviderResult;
   try {
-    result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
+    result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable, mode: input.execution_mode });
   } catch {
     result = { status: 'failed', success: false, pid: 0, exit_code: null, signal: null, stdout: '', stderr: '', reason: 'provider-adapter-exception' };
   }

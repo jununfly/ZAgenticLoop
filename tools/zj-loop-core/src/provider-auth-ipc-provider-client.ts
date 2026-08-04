@@ -3,6 +3,7 @@ import { connectUnixProviderAuthIpc } from './provider-auth-ipc-unix.js';
 import { createProviderAuthIpcFrame, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 import { validateProviderLaunchHandle, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { validateProviderResult, type ProviderResult } from './provider-runtime-adapter.js';
+import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
 
 const LAUNCH_REQUEST_SCHEMA = 'zj-loop.provider_launch_request.v1';
 const LAUNCH_RESPONSE_SCHEMA = 'zj-loop.provider_launch_response.v1';
@@ -36,7 +37,7 @@ export function createProviderRuntimeIpcProvider(input: {
   runtime_binding: ProviderRuntimeIdentityBinding;
   timeout_ms?: number;
   task?: Record<string, unknown>;
-}): { run(input: { cwd: string; prompt: string; executable: string }): Promise<ProviderRuntimeIpcRunResult>; getLaunchHandle(): ProviderLaunchHandle | undefined } {
+}): { run(input: { cwd: string; prompt: string; executable: string; mode?: CodexExecutionMode }): Promise<ProviderRuntimeIpcRunResult>; getLaunchHandle(): ProviderLaunchHandle | undefined } {
   let launch_handle: ProviderLaunchHandle | undefined;
   return {
     async run(request) {
@@ -74,7 +75,7 @@ export function createProviderRuntimeIpcProvider(input: {
           }
         }});
         timer = setTimeout(() => rejectTerminal(new Error('provider-runtime-ipc-provider-timeout')), timeout);
-        await connection.send(createProviderAuthIpcFrame({ correlation_id, sequence: 1, network_id: input.network_id, node_id: input.node_id, provider_runtime_id: input.provider_runtime_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, kind: 'challenge', nonce: randomUUID(), payload: { schema: LAUNCH_REQUEST_SCHEMA, auth_ref_digest: input.auth_ref_digest, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, ...input.runtime_binding, task: { ...(input.task ?? {}), goal: request.prompt } } }));
+          await connection.send(createProviderAuthIpcFrame({ correlation_id, sequence: 1, network_id: input.network_id, node_id: input.node_id, provider_runtime_id: input.provider_runtime_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, kind: 'challenge', nonce: randomUUID(), payload: { schema: LAUNCH_REQUEST_SCHEMA, auth_ref_digest: input.auth_ref_digest, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, ...input.runtime_binding, task: { ...(input.task ?? {}), goal: request.prompt, execution_mode: request.mode ?? 'read-only' } } }));
         const frame = await terminal;
         if (frame.kind !== 'result') {
           if (frame.kind === 'error' && frame.payload && typeof frame.payload === 'object' && !Array.isArray(frame.payload) && typeof frame.payload.code === 'string' && frame.payload.code.trim()) throw new Error(frame.payload.code);

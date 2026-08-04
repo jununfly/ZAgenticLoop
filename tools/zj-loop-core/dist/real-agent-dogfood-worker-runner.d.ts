@@ -5,6 +5,7 @@ import { type RealAgentDogfoodExecutionBinding } from './real-agent-dogfood-bind
 import { type RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
 import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import { type ProviderResult as NormalizedProviderResult } from './provider-runtime-adapter.js';
+import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
 type ProviderResult = {
     status: 'completed' | 'failed' | 'cancelled' | 'timed-out';
     success: boolean;
@@ -21,6 +22,7 @@ type Provider = {
         cwd: string;
         prompt: string;
         executable: string;
+        mode?: CodexExecutionMode;
     }): Promise<ProviderResult>;
 };
 export type RealAgentDogfoodWorkerResult = {
@@ -52,6 +54,7 @@ export declare function executeRealAgentDogfoodWorker(input: {
     worktree_path: string;
     executable: string;
     goal: string;
+    execution_mode?: CodexExecutionMode;
     provider: Provider;
     provider_cleanup?: () => Promise<ProviderCleanupResult>;
     post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory;

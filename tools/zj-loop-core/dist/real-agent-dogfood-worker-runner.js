@@ -22,7 +22,7 @@ export async function executeRealAgentDogfoodWorker(input) {
     const now = input.now ?? new Date().toISOString();
     let result;
     try {
-        result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable });
+        result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable, mode: input.execution_mode });
     }
     catch {
         result = { status: 'failed', success: false, pid: 0, exit_code: null, signal: null, stdout: '', stderr: '', reason: 'provider-adapter-exception' };

@@ -1,5 +1,6 @@
 import { type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { type ProviderResult } from './provider-runtime-adapter.js';
+import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
 export type ProviderRuntimeIpcRunResult = {
     status: ProviderResult['status'];
     success: boolean;
@@ -31,6 +32,7 @@ export declare function createProviderRuntimeIpcProvider(input: {
         cwd: string;
         prompt: string;
         executable: string;
+        mode?: CodexExecutionMode;
     }): Promise<ProviderRuntimeIpcRunResult>;
     getLaunchHandle(): ProviderLaunchHandle | undefined;
 };

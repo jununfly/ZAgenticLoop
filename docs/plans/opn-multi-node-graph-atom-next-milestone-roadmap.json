@@ -383,6 +383,16 @@
           "q": "当前 Graph 实现的基线 commit 是否只包含本轮 src、测试、生成 dist 与路线图决策，不包含两份既有无关 dirty d.ts？",
           "answer": "同意：只纳入本轮实现、测试、生成产物和路线图 JSON/Markdown；保留并排除 ci-sweeper-runner.d.ts 与 gitlab-dependency-sweeper-adapter.d.ts。",
           "note": "保持 dirty 文件边界清晰，避免把无关生成物带入基线。"
+        },
+        {
+          "q": "是否先按 TDD 实现显式 write-enabled Codex Provider contract，并完成 deterministic 范围校验测试，再启动真实 dogfood？",
+          "answer": "同意：先完成 write-enabled invocation 与允许文件范围的 deterministic contract/test；通过后再启动真实 Codex dogfood。",
+          "note": "避免把 Provider 环境问题与 contract 问题混在一起。"
+        },
+        {
+          "q": "是否将 execution_mode 持久化到 approval summary/context，并要求默认 read-only、write-enabled 必须由 Human approval 明确绑定，所有链路漂移即 blocked？",
+          "answer": "同意：默认 read-only；只有 approval summary 明确写入 write-enabled 才能进入 worker context；worker、Provider registry、Codex invocation 透传同一 mode；任一漂移 blocked。",
+          "note": "禁止通过 CLI 参数临时升级写权限，保持 Human approval 为唯一授权事实。"
         }
       ],
       "notes": "已完成第一阶段 deterministic Graph conformance fixture：复用 NativeOpnTracerConformanceReport，保持旧调用兼容；显式 Graph facts 追加 merge、post-merge-gate、cleanup、replay phases，并区分 passed、blocked、outcome-uncertain；fixture 覆盖完整成功链、merge blocked 与 cleanup-unresolved。真实 disposable worktree、真实 ZAgenticLoop dogfood、真实 merge 和端到端副作用 conformance 尚未执行。"
@@ -390,7 +400,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-04 21:01:30",
+    "updated": "2026-08-04 21:09:56",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

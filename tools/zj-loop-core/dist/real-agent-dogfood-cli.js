@@ -11,7 +11,7 @@ import { createSqliteStateStore } from './sqlite-state-store.js';
 import { verifyHumanApprovalContextDetailed } from './human-authority.js';
 import { acquireRealAgentDogfoodWorkerLease } from './real-agent-dogfood-worker.js';
 import { prepareRealAgentDogfoodWorktree } from './real-agent-dogfood-worktree.js';
-import { buildCodexInvocation } from './codex-agent-provider-adapter.js';
+import { buildCodexInvocation, validateCodexExecutionModeBinding } from './codex-agent-provider-adapter.js';
 import { createRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
 import { trustedRunnerAdmissionBundleDigest, validateAdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import { admitTrustedRunnerExecution, readTrustedRunnerRegistry } from './trusted-runner-registry-store.js';
@@ -83,6 +83,14 @@ function required(options, name) {
         throw new Error(`${name}-required`);
     return value;
 }
+function executionMode(options) {
+    const value = options['execution-mode'];
+    if (value === undefined)
+        return 'read-only';
+    if (value === 'read-only' || value === 'write-enabled')
+        return value;
+    throw new Error('execution-mode-invalid');
+}
 function outputLifecycle(lifecycle, extra = {}) {
     return {
         schema: 'zj-loop.real_agent_dogfood_cli_result.v1',
@@ -108,6 +116,7 @@ async function start(options) {
     const adapter = required(options, 'adapter');
     const executable = required(options, 'executable');
     const networkPolicy = required(options, 'network-policy');
+    const mode = executionMode(options);
     if (!['network-denied', 'network-allowed'].includes(networkPolicy))
         throw new Error('network-policy-invalid');
     if (!path.isAbsolute(executable) || executable.includes('\0'))
@@ -129,13 +138,13 @@ async function start(options) {
         const draft = createRealAgentDogfoodDraft({ network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, provider_id: providerId, adapter_version: adapter, created_at: now });
         let revision = 1;
         await append(stateStore, networkId, draft.event, revision++);
-        const policyDigest = digest({ repo: paths.repo, worktree_path: worktree.worktree_path, base_commit: worktree.base_commit, branch: worktree.branch, executable, network_policy: networkPolicy });
+        const policyDigest = digest({ repo: paths.repo, worktree_path: worktree.worktree_path, base_commit: worktree.base_commit, branch: worktree.branch, executable, network_policy: networkPolicy, execution_mode: mode });
         const adapterContractDigest = await buildAdapterContractDigest({ provider_id: providerId, adapter, executable, network_policy: networkPolicy });
         const preflight = createRealAgentDogfoodTransition({ lifecycle: draft.lifecycle, to: 'preflight-ready', event_id: `${dogfoodId}:preflight-ready`, occurred_at: now, fact_digest: policyDigest, next_action: 'human-approval' });
         await append(stateStore, networkId, preflight.event, revision++);
         const awaiting = createRealAgentDogfoodTransition({ lifecycle: preflight.lifecycle, to: 'awaiting-human-approval', event_id: `${dogfoodId}:awaiting-human-approval`, occurred_at: now, fact_digest: policyDigest, next_action: 'human-approval' });
         await append(stateStore, networkId, awaiting.event, revision++);
-        const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, adapter_contract_digest: adapterContractDigest, executable, network_policy: networkPolicy, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
+        const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, adapter_contract_digest: adapterContractDigest, executable, network_policy: networkPolicy, execution_mode: mode, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
         const summary = { ...summaryBase, summary_digest: digest(summaryBase) };
         const summaryPath = path.join(paths.evidenceStore, `${dogfoodId}.approval-summary.json`);
         await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, { mode: 0o600 });
@@ -265,7 +274,12 @@ async function resume(options) {
         if (lifecycle.provider_id === 'codex') {
             if (typeof summary.goal !== 'string' || typeof summary.executable !== 'string' || typeof summary.worktree_path !== 'string')
                 throw new Error('worker-context-source-missing');
-            const invocation = buildCodexInvocation({ executable: summary.executable, cwd: summary.worktree_path });
+            if (summary.execution_mode !== 'read-only' && summary.execution_mode !== 'write-enabled')
+                throw new Error('execution-mode-binding-invalid');
+            const invocation = buildCodexInvocation({ executable: summary.executable, cwd: summary.worktree_path, mode: summary.execution_mode });
+            const modeBinding = validateCodexExecutionModeBinding({ mode: summary.execution_mode, admitted_args: admissionBoundExecution?.preflight.args ?? [], invocation_args: invocation.args });
+            if (modeBinding.status === 'blocked')
+                throw new Error(modeBinding.reason);
             const binding = await createRealAgentDogfoodExecutionBinding({ executable: invocation.executable, args: invocation.args, cwd: invocation.cwd, worktree_path: summary.worktree_path, lease_id: lease.lease_id });
             workerContext = { path: path.join(evidenceStore, `${dogfoodId}.worker-context.json`), binding };
         }
@@ -276,7 +290,7 @@ async function resume(options) {
         if (!workerContext)
             return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
         try {
-            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, runtime_binding: admissionBoundExecution?.binding.runtime_binding, adapter_contract_digest: summary.adapter_contract_digest, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, runtime_binding: admissionBoundExecution?.binding.runtime_binding, adapter_contract_digest: summary.adapter_contract_digest, execution_mode: summary.execution_mode, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
             const workerCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-worker-cli.js');
             const child = spawn(process.execPath, [workerCli, 'worker', '--provider-id', 'codex', '--context', workerContext.path], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
             child.unref();
@@ -326,6 +340,7 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'adapter', type: 'string', description: 'Provider adapter version' },
             { name: 'executable', type: 'string', description: 'Absolute Provider executable path' },
             { name: 'network-policy', flag: 'network-policy', type: 'enum', values: ['network-denied', 'network-allowed'], description: 'Coarse network policy' },
+            { name: 'execution-mode', flag: 'execution-mode', type: 'enum', values: ['read-only', 'write-enabled'], description: 'Explicit provider execution mode' },
             { name: 'state-store', flag: 'state-store', type: 'string', description: 'SQLite StateStore path' },
             { name: 'evidence-store', flag: 'evidence-store', type: 'string', description: 'Evidence directory path' },
             { name: 'dogfood-id', flag: 'dogfood-id', type: 'string', description: 'Dogfood id for status' },

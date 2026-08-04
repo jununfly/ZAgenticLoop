@@ -1,5 +1,5 @@
 import type { LocalProcessAdapter } from './local-process-adapter.js';
-import { type CodexAgentRunResult } from './codex-agent-provider-adapter.js';
+import { type CodexAgentRunResult, type CodexExecutionMode } from './codex-agent-provider-adapter.js';
 import type { RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
 export declare const REAL_AGENT_DOGFOOD_PROVIDER_REGISTRY_SCHEMA: "zj-loop.real_agent_dogfood_provider_registry.v1";
 export type RealAgentDogfoodProvider = {
@@ -9,6 +9,7 @@ export type RealAgentDogfoodProvider = {
         cwd: string;
         prompt: string;
         executable: string;
+        mode?: CodexExecutionMode;
     }): Promise<CodexAgentRunResult>;
     post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory;
 };

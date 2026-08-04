@@ -48,6 +48,8 @@ async function runWorkerContext(contextPath) {
         throw new Error('worker-context-invalid');
     if (context.provider_id !== 'codex')
         throw new Error('provider-not-registered');
+    if (context.execution_mode !== undefined && context.execution_mode !== 'read-only' && context.execution_mode !== 'write-enabled')
+        throw new Error('worker-execution-mode-invalid');
     if (JSON.stringify(context.provider_auth_ref) !== JSON.stringify(context.admission_bound_execution.binding.provider_auth_ref))
         throw new Error('worker-provider-auth-ref-binding-invalid');
     if (JSON.stringify(context.runtime_binding) !== JSON.stringify(context.admission_bound_execution.binding.runtime_binding))
@@ -82,7 +84,7 @@ async function runWorkerContext(contextPath) {
             throw new Error('worker-lease-invalid');
         const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store });
         const provider = runtimeProvider;
-        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision });
+        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, execution_mode: context.execution_mode, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision });
         if (result.status !== 'verification-pending')
             return result;
         const verifierContextPath = `${contextPath}.verifier.json`;
