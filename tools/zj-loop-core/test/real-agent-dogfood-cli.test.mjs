@@ -12,6 +12,7 @@ import { createAdmissionBoundExecution } from '../dist/trusted-runner-admission-
 import { createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest } from '../dist/trusted-runner-registry.js';
 import { admitTrustedRunnerExecution, recordTrustedRunnerRegistryMutation, readTrustedRunnerRegistry } from '../dist/trusted-runner-registry-store.js';
 import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
+import { createRealAgentDogfoodGraphPlan } from '../dist/real-agent-dogfood-graph-orchestrator.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -102,6 +103,40 @@ test('start persists an explicitly approved write-enabled execution mode in the 
     assert.equal(summary.execution_mode, 'write-enabled');
     assert.deepEqual(summary.allowed_files, ['tools/zj-loop-core/test/native-opn-tracer.test.mjs']);
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('Graph mode start reuses the exact prepared target and source worktrees', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-graph-cli-'));
+  const repo = path.join(root, 'repo');
+  const runtime = path.join(root, 'runtime');
+  const target = path.join(root, 'target');
+  const source = path.join(root, 'source');
+  const verifier = path.join(root, 'verifier');
+  const evidence = path.join(root, 'evidence');
+  const planPath = path.join(root, 'graph-plan.json');
+  await mkdir(repo); await mkdir(runtime); await mkdir(verifier);
+  await initGitRepo(repo);
+  const baseline = (await run('git', ['rev-parse', 'HEAD'], { cwd: repo })).stdout.trim();
+  await run('git', ['worktree', 'add', '-b', 'dogfood-target', target, baseline], { cwd: repo });
+  await run('git', ['worktree', 'add', '-b', 'dogfood-source', source, baseline], { cwd: repo });
+  const plan = createRealAgentDogfoodGraphPlan({ dogfood_id: 'dogfood-plan', execution_id: 'execution-plan', attempt: 1, goal: 'add the responsibility boundary test', repo_root: source, baseline_commit: baseline, target_worktree: target, source_worktree: source, verifier_worktree: verifier, evidence_store: evidence, allowed_files: ['tools/zj-loop-core/test/native-opn-tracer.test.mjs'], execution_mode: 'write-enabled', network_policy: 'network-allowed' });
+  await writeFile(planPath, `${JSON.stringify(plan, null, 2)}\n`);
+  try {
+    const result = await invoke(['start', '--goal', plan.goal, '--repo', source, '--provider-id', 'codex', '--adapter', 'codex-agent-provider.v1', '--executable', '/usr/bin/true', '--network-policy', 'network-allowed', '--execution-mode', 'write-enabled', '--allowed-file', plan.allowed_files[0], '--graph-plan', planPath, '--state-store', path.join(runtime, 'state.db'), '--evidence-store', evidence]);
+    assert.equal(result.exitCode, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.status, 'awaiting-human-approval');
+    assert.equal(output.dogfood_id, plan.dogfood_id);
+    assert.equal(output.execution_id, plan.execution_id);
+    const summary = JSON.parse(await readFile(output.approval_summary_path, 'utf8'));
+    assert.equal(summary.graph_plan.plan_digest, plan.plan_digest);
+    assert.equal(summary.worktree_path, source);
+    assert.equal(summary.base_commit, baseline);
+  } finally {
+    await run('git', ['worktree', 'remove', '--force', source], { cwd: repo }).catch(() => {});
+    await run('git', ['worktree', 'remove', '--force', target], { cwd: repo }).catch(() => {});
     await rm(root, { recursive: true, force: true });
   }
 });

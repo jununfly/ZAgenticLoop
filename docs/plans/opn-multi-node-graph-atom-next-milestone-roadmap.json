@@ -398,6 +398,121 @@
           "q": "是否实现真实 Git post-run observation，将 changed_files、uncommitted_files、commit_parent、baseline_commit、git diff --check 接入 validateCodexWriteScope，并在 scope 不通过时禁止 merge？",
           "answer": "同意：由可信编排层观察并绑定这些 Git facts；Provider/Agent 不得自报；scope 失败进入 blocked 且禁止 merge。",
           "note": "完成 write-enabled dogfood 的真实提交范围证据闭环。"
+        },
+        {
+          "q": "是否将下一步定为执行一次真实本机 OPN Graph dogfood？",
+          "answer": "同意：执行一次真实本机 OPN Graph dogfood。只使用本地 disposable worktree；只修改约定测试文件；必须使用真实 Codex Provider 和 Human approval；观察真实 commit、scope、验证与 cleanup；不 push、不创建 MR、不修改远程仓库；Provider 失败不 fake fallback，按真实事实进入 blocked 或 outcome-uncertain。",
+          "note": "将 Q62 的可信 Git scope observation 接入真实执行闭环，验证 OPN Graph 的本机端到端路径。"
+        },
+        {
+          "q": "真实 dogfood 应绑定哪个基线与目标范围？",
+          "answer": "同意：绑定当前实现基线 e027eb465ff42c12a7d2fd24be39aa070d5c02a0；从该提交创建全新的本地 disposable source worktree；只允许修改 tools/zj-loop-core/test/native-opn-tracer.test.mjs；当前主工作树的路线图改动和两个无关 .d.ts 不进入 dogfood 基线。",
+          "note": "锁定真实执行的代码、资源和副作用范围。"
+        },
+        {
+          "q": "真实 dogfood 的 worktree 拓扑是否固定为三阶段？",
+          "answer": "同意：固定为 target、source、verifier 三个本地 disposable worktree。target 从 e027eb46 创建并作为合并目标；source 从同一基线创建独立 branch，真实 Codex 只在此修改并提交目标测试文件；verifier 从 source commit 创建只读验证 worktree，独立运行测试并产出 Evidence；Human+Coordinator 负责 scope 检查、fast-forward merge、合并后 deterministic gate 和 cleanup；任一身份、commit、scope、验证或 cleanup 事实无法证明即进入 blocked 或 outcome-uncertain。",
+          "note": "将资源隔离、真实 Agent 执行、独立验证和合并后事实连成可复盘闭环。"
+        },
+        {
+          "q": "真实 Codex dogfood 是否仍要求新增测试内容？",
+          "answer": "同意：必须新增一个当前测试尚未覆盖的最小测试，明确证明 Human+Coordinator 只能作为中心责任单元，Agent1/Agent2 只能作为被编排执行节点；Agent 节点不能成为最终责任主体或 Review 决策主体；禁止重复已有 Graph 断言。",
+          "note": "让真实 dogfood 验证新增产品边界，而不是制造重复测试。"
+        },
+        {
+          "q": "本次真实 dogfood 的 Human approval 是否必须使用真实平台签名？",
+          "answer": "同意：必须使用真实 macOS Keychain HumanSigner；内存 signer 只用于自动化测试。签名必须绑定精确 goal、baseline commit e027eb465ff42c12a7d2fd24be39aa070d5c02a0、source/target worktree、allowed file、write-enabled execution mode、network policy、execution 和 attempt；签名缺失、过期或字段漂移不得启动 Codex。",
+          "note": "保持真实 dogfood 的 Human 最终授权边界，不用测试 fixture 伪造批准。"
+        },
+        {
+          "q": "如果 macOS Keychain approval provider 不可用，是否允许降级？",
+          "answer": "同意：禁止降级；不使用内存 signer、人工输入或绕过 Human approval。保持 lifecycle 为 awaiting-human-approval，记录 provider unavailable 事实；修复或诊断 Keychain approval path 后重新发起授权，只有真实签名到手才启动 Codex。",
+          "note": "避免把真实授权失败伪装成已批准执行。"
+        },
+        {
+          "q": "本次真实 Codex dogfood 是否采用 network-allowed？",
+          "answer": "同意：采用 network-allowed，因为 Codex 依赖远程模型；记录实际网络策略和环境 Evidence，但不把网络可用视为成功。网络不可用按真实结果进入 blocked 或 outcome-uncertain，仍必须通过 Git scope、测试、独立验证和 Human review。",
+          "note": "当前切片优先验证 OPN 闭环，不展开 endpoint 级网络治理。"
+        },
+        {
+          "q": "本次真实 dogfood 的 deterministic verification gate 是否固定？",
+          "answer": "同意：verifier worktree 和 merge target worktree 均执行 npm run build、node --test test/native-opn-tracer.test.mjs、git diff --check；命令、工作目录、commit 和输出 Evidence 必须绑定。任一失败或事实缺失禁止 accepted；全量 npm test 不作为本切片必要 gate，保留为项目级质量证据。",
+          "note": "保持真实闭环的可复现性，并控制 dogfood 切片范围。"
+        },
+        {
+          "q": "merge 前是否必须由 Human 接受 review package 并授权 fast-forward merge？",
+          "answer": "同意：必须。Agent/Coordinator 只能生成 review package 和 merge proposal；Human 审阅新增测试、source commit、Git scope observation、verifier Evidence、deterministic gate 和 cleanup 状态后显式 Accept。Accept 同时绑定 source commit、target worktree、fast-forward-only 策略、scope digest 和 post-merge gate；未接受、拒绝或要求 revision 均禁止 merge。",
+          "note": "保持 Human 对代码合并和最终结果的责任与决策权。"
+        },
+        {
+          "q": "merge 和 post-merge gate 成功但 cleanup 无法证明时如何处理？",
+          "answer": "同意：业务结果保持已验证事实，不回滚或伪造失败；整体 lifecycle 不进入 closed，投影为 outcome-uncertain 或 cleanup-unresolved；保留 cleanup Evidence 和残留资源信息，进入 bounded reconciliation 或 Human manual cleanup；只有 Core 证明三个 worktree 已删除且 Git worktree 注册已移除后才能 closed。",
+          "note": "解耦业务结果与资源生命周期，避免 cleanup 失败被隐藏。"
+        },
+        {
+          "q": "本次真实 dogfood 的 EvidenceStore 是否使用仓库外唯一临时目录并在 cleanup 后保留？",
+          "answer": "同意：使用仓库外唯一临时目录 /var/folders/.../T/zj-loop-real-agent-dogfood/<dogfood-id>/；每次 run 唯一目录，保存脱敏结构化 Evidence、digest、引用和 cleanup 事实；不写入任何 worktree；cleanup 不删除 EvidenceStore，长期保留或清理由 Human 决定。",
+          "note": "避免运行产物污染源码，同时保证可复盘性。"
+        },
+        {
+          "q": "本次真实 Codex execution 是否采用现有 Provider Registry 的 bounded runtime 配置？",
+          "answer": "同意：采用现有配置，不临时放宽：Provider timeout 15 分钟、termination grace 5 秒、stdout/stderr 各 10 MB；verifier 命令使用已有 bounded timeout；超时记录 provider-timeout 并进入 blocked 或 outcome-uncertain，不重启、不 fake fallback；重试必须新 execution/attempt 并重新 Human approval。",
+          "note": "保持运行预算、资源和重试边界稳定可审计。"
+        },
+        {
+          "q": "真实执行是否必须严格复用现有 Codex invocation contract？",
+          "answer": "同意：严格使用 buildCodexInvocation 生成的固定 invocation：codex exec --json --ephemeral --sandbox workspace-write --ask-for-approval never --cd <source-worktree>；不使用 --full-auto、不使用 shell 拼接、不临时添加参数；prompt 只描述 Q66 最小测试目标、允许文件和验收标准；admission args 与实际 invocation args 必须逐项相等。",
+          "note": "保持 Provider contract、Human approval binding 和真实执行一致。"
+        },
+        {
+          "q": "source commit 是否由真实 Codex 创建，Coordinator 只负责观察和 merge？",
+          "answer": "同意：Codex 在 source worktree 中完成修改、运行目标测试并创建本地 commit；Coordinator 不代替 Codex 修改或提交，只可信观察 commit、parent 是否为 e027eb465ff42c12a7d2fd24be39aa070d5c02a0、changed_files、clean worktree 和 git diff --check；scope 不通过进入 blocked，禁止 verifier 和 merge。",
+          "note": "保持被编排 Agent 与中心责任单元的职责边界清晰。"
+        },
+        {
+          "q": "verifier 是否采用 Core deterministic verifier 而不是第二个真实 Agent？",
+          "answer": "同意：采用 Core deterministic verifier，不启动第二个真实 Agent；verifier 使用独立只读 worktree，只执行 npm run build、node --test test/native-opn-tracer.test.mjs、git diff --check；verifier 身份、source commit、命令和输出 Evidence 独立绑定；verifier 失败进入 blocked 或 outcome-uncertain。",
+          "note": "保持验证独立、可重复且不引入第二个模型判断。"
+        },
+        {
+          "q": "真实 Graph dogfood 的执行顺序是否固定？",
+          "answer": "同意：固定为 Codex source execution、source commit、trusted Git scope observation、Core deterministic verification、review package、Human Accept、fast-forward merge、post-merge deterministic gate、三个 worktree cleanup、cleanup proof、closed；scope 失败不启动 verifier，verifier 失败不生成可接受 review package，Human 未 Accept 不 merge，merge/gate 失败进入 blocked 或 outcome-uncertain，cleanup 失败不能 closed。",
+          "note": "让每个状态转换都有明确前置事实和责任主体。"
+        },
+        {
+          "q": "创建 disposable worktree 和启动 Codex 前是否必须先完成只读 preflight？",
+          "answer": "同意：必须先只读确认 HEAD 等于 e027eb465ff42c12a7d2fd24be39aa070d5c02a0、Codex 可执行文件和版本、目标测试文件、仓库外 EvidenceStore 路径、target/source/verifier 路径、执行参数、Provider Registry、invocation、timeout 和 network policy；失败时不创建 worktree、不请求 Human approval、不启动 Codex。",
+          "note": "把环境和绑定错误挡在真实副作用之前。"
+        },
+        {
+          "q": "本次三个 disposable worktree 是否统一放在唯一临时根目录下？",
+          "answer": "同意：使用 /private/tmp/zj-loop-real-agent-dogfood/<dogfood-id>/，包含 target、source、verifier；EvidenceStore 使用同级但独立的 /private/tmp/zj-loop-real-agent-dogfood/<dogfood-id>-evidence/；EvidenceStore 保留，worktree 在 closeout 阶段清理。",
+          "note": "固定真实执行的资源位置，避免污染源码仓库。"
+        },
+        {
+          "q": "Human approval 绑定的 Codex goal 是否采用精确的 Q66 最小测试目标？",
+          "answer": "同意：目标为在 tools/zj-loop-core/test/native-opn-tracer.test.mjs 中新增一个最小 Node test，证明 Human+Coordinator 是唯一责任中心，Agent1/Agent2 只能作为被编排执行节点，不能成为最终责任主体或 Review 决策主体；遵循现有 API 和测试风格，不修改生产代码或其他文件；运行目标测试并创建一个本地 commit。",
+          "note": "让 Human 签名、Codex prompt、scope 和验收标准绑定同一目标。"
+        },
+        {
+          "q": "如何处理当前 real-agent-dogfood CLI 不支持三 worktree Graph 闭环的实现缺口？",
+          "answer": "同意：先补一个最小本地 Graph dogfood orchestrator，复用已有 worktree preparation、Human approval contract、Codex Provider、trusted Git scope observation、Core deterministic verifier、fast-forward merge 和 cleanup proof；不改变 provider-neutral contract，不手工拼接多个 CLI；orchestrator 完成并通过测试后再启动真实 Codex。",
+          "note": "使已确认的 Graph lifecycle 由统一可信状态源编排。"
+        },
+        {
+          "q": "是否继续把 Graph orchestrator 接入现有 real-agent-dogfood CLI/lifecycle？",
+          "answer": "同意：接入现有 CLI/lifecycle；start 创建并持久化 Graph plan，resume 在真实 Human approval 后启动 source Codex，worker 后接 trusted scope observation、verifier、review、merge、post-merge gate 和 cleanup；各阶段结果写入现有 StateStore/EvidenceStore；保持现有 CLI 兼容，read-only 默认不变。",
+          "note": "让 Q82 的 orchestrator 成为真实本机 dogfood 的执行路径，而不是孤立测试组件。"
+        },
+        {
+          "q": "CLI/lifecycle 接入采用哪种控制模型？",
+          "answer": "同意方案 1：orchestrator 作为唯一阶段协调层，逐步把现有 worker 改为可被 orchestrator 驱动的阶段执行器；保留现有 resume 参数和兼容输出；worker 只负责 source Agent execution 并返回受约束结果；orchestrator 负责 scope、verifier、review、merge、post-merge gate 和 cleanup；先完成 deterministic fixture 接入，再接真实 Codex；不并行维护两套 lifecycle。",
+          "note": "避免 detached worker 与 Graph orchestrator 形成竞争状态源。"
+        },
+        {
+          "q": "Graph mode 的 resume 是否改为阶段化、可恢复的多次 resume？",
+          "answer": "同意：采用阶段化可恢复 resume；每次只推进一个已满足前置条件的阶段：source execution、scope observation、independent verification、review package/Human decision、merge、post-merge gate、cleanup/closeout；每个阶段结果写入 StateStore，进程退出后从最后一个已确认阶段继续；禁止 detached worker 私自跨越多个 Graph 阶段。",
+          "note": "使 Graph lifecycle 可重放、可暂停、可恢复，且每个状态转换都有独立 Evidence。"
         }
       ],
       "notes": "已完成第一阶段 deterministic Graph conformance fixture：复用 NativeOpnTracerConformanceReport，保持旧调用兼容；显式 Graph facts 追加 merge、post-merge-gate、cleanup、replay phases，并区分 passed、blocked、outcome-uncertain；fixture 覆盖完整成功链、merge blocked 与 cleanup-unresolved。真实 disposable worktree、真实 ZAgenticLoop dogfood、真实 merge 和端到端副作用 conformance 尚未执行。"
@@ -405,7 +520,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-04 21:21:09",
+    "updated": "2026-08-04 22:12:05",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

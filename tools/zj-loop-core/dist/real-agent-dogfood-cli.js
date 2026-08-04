@@ -16,6 +16,7 @@ import { createRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-bin
 import { trustedRunnerAdmissionBundleDigest, validateAdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import { admitTrustedRunnerExecution, readTrustedRunnerRegistry } from './trusted-runner-registry-store.js';
 import { createProviderRuntimeAdapterContract, providerRuntimeAdapterContractDigest } from './provider-runtime-adapter.js';
+import { createRealAgentDogfoodGraphPlan, validateRealAgentDogfoodGraphWorktrees } from './real-agent-dogfood-graph-orchestrator.js';
 const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export function defaultRealAgentDogfoodRuntimePaths(platform = process.platform, home = os.homedir(), env = process.env) {
@@ -125,14 +126,33 @@ async function start(options) {
     if (!path.isAbsolute(executable) || executable.includes('\0'))
         throw new Error('executable-must-be-absolute');
     const defaults = defaultRealAgentDogfoodRuntimePaths();
+    const graphPlanPath = typeof options['graph-plan'] === 'string' ? options['graph-plan'] : '';
+    let graphPlan;
+    if (graphPlanPath) {
+        try {
+            const candidate = JSON.parse(await readFile(graphPlanPath, 'utf8'));
+            const rebound = createRealAgentDogfoodGraphPlan(candidate);
+            if (rebound.plan_digest !== candidate.plan_digest || rebound.repo_root !== repoInput || rebound.execution_mode !== mode || rebound.network_policy !== networkPolicy || JSON.stringify(rebound.allowed_files) !== JSON.stringify(allowedFiles))
+                throw new Error('graph-plan-binding-invalid');
+            graphPlan = rebound;
+        }
+        catch (error) {
+            throw new Error(error instanceof Error ? error.message : 'graph-plan-invalid');
+        }
+    }
     const paths = await validateRuntimePaths({ repo: repoInput, stateStore: typeof options['state-store'] === 'string' ? options['state-store'] : defaults.state_store, evidenceStore: typeof options['evidence-store'] === 'string' ? options['evidence-store'] : defaults.evidence_store });
     await mkdir(path.dirname(paths.stateStore), { recursive: true });
     await mkdir(paths.evidenceStore, { recursive: true });
     const networkId = `network-${randomUUID()}`;
-    const dogfoodId = `dogfood-${randomUUID()}`;
-    const executionId = `execution-${randomUUID()}`;
+    const dogfoodId = graphPlan?.dogfood_id ?? `dogfood-${randomUUID()}`;
+    const executionId = graphPlan?.execution_id ?? `execution-${randomUUID()}`;
     const now = new Date().toISOString();
-    const worktree = await prepareRealAgentDogfoodWorktree({ repo_root: paths.repo, worktree_root: typeof options['worktree-root'] === 'string' ? options['worktree-root'] : defaults.worktree_root, execution_id: executionId });
+    const graphWorktree = graphPlan ? await validateRealAgentDogfoodGraphWorktrees({ plan: graphPlan }) : undefined;
+    const worktree = graphPlan
+        ? graphWorktree?.status === 'valid'
+            ? { status: 'reused', execution_id: executionId, branch: graphWorktree.source_branch, worktree_path: graphPlan.source_worktree, base_commit: graphPlan.baseline_commit }
+            : { status: 'blocked', reason: graphWorktree?.reason ?? 'graph-worktree-observation-uncertain' }
+        : await prepareRealAgentDogfoodWorktree({ repo_root: paths.repo, worktree_root: typeof options['worktree-root'] === 'string' ? options['worktree-root'] : defaults.worktree_root, execution_id: executionId });
     if (worktree.status === 'blocked')
         throw new Error(`worktree-${worktree.reason}`);
     const stateStore = createSqliteStateStore({ filename: paths.stateStore });
@@ -147,7 +167,7 @@ async function start(options) {
         await append(stateStore, networkId, preflight.event, revision++);
         const awaiting = createRealAgentDogfoodTransition({ lifecycle: preflight.lifecycle, to: 'awaiting-human-approval', event_id: `${dogfoodId}:awaiting-human-approval`, occurred_at: now, fact_digest: policyDigest, next_action: 'human-approval' });
         await append(stateStore, networkId, awaiting.event, revision++);
-        const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, adapter_contract_digest: adapterContractDigest, executable, network_policy: networkPolicy, execution_mode: mode, allowed_files: allowedFiles, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
+        const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, adapter_contract_digest: adapterContractDigest, executable, network_policy: networkPolicy, execution_mode: mode, allowed_files: allowedFiles, graph_plan: graphPlan, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
         const summary = { ...summaryBase, summary_digest: digest(summaryBase) };
         const summaryPath = path.join(paths.evidenceStore, `${dogfoodId}.approval-summary.json`);
         await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, { mode: 0o600 });
@@ -295,7 +315,7 @@ async function resume(options) {
         if (!workerContext)
             return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
         try {
-            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, runtime_binding: admissionBoundExecution?.binding.runtime_binding, adapter_contract_digest: summary.adapter_contract_digest, execution_mode: summary.execution_mode, git_scope: summary.execution_mode === 'write-enabled' ? { repo_root: summary.repo, baseline_commit: summary.base_commit, allowed_files: summary.allowed_files } : undefined, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, runtime_binding: admissionBoundExecution?.binding.runtime_binding, adapter_contract_digest: summary.adapter_contract_digest, graph_mode: Boolean(summary.graph_plan), execution_mode: summary.execution_mode, git_scope: summary.execution_mode === 'write-enabled' ? { repo_root: summary.repo, baseline_commit: summary.base_commit, allowed_files: summary.allowed_files } : undefined, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
             const workerCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-worker-cli.js');
             const child = spawn(process.execPath, [workerCli, 'worker', '--provider-id', 'codex', '--context', workerContext.path], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
             child.unref();
@@ -354,6 +374,7 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'approval-id', flag: 'approval-id', type: 'string', description: 'Persisted approval envelope id for resume' },
             { name: 'admission-context', flag: 'admission-context', type: 'string', description: 'Persisted AdmissionBoundExecution artifact for resume' },
             { name: 'worktree-root', flag: 'worktree-root', type: 'string', description: 'Directory for isolated execution worktrees' },
+            { name: 'graph-plan', flag: 'graph-plan', type: 'string', description: 'Persisted Graph dogfood plan using prepared target/source/verifier worktrees' },
         ],
         async handler({ options }) {
             const command = String(options.command ?? '');
