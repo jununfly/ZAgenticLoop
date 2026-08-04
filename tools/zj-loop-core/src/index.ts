@@ -114,6 +114,7 @@ export * from './native-opn-tracer-fact.js';
 export * from './native-opn-tracer-execution.js';
 export * from './native-opn-tracer-aggregation.js';
 export * from './native-opn-tracer-verification.js';
+export * from './native-opn-graph-merge.js';
 export * from './native-opn-tracer-relay.js';
 export * from './native-opn-tracer-relay-fact.js';
 export * from './native-opn-tracer-conformance.js';

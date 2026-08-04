@@ -5,6 +5,15 @@ import type { SqliteStateStore } from './sqlite-state-store.js';
 export const NATIVE_OPN_TRACER_AGGREGATION_SCHEMA = 'zj-loop.native_opn_tracer_aggregation.v1' as const;
 export const NATIVE_OPN_TRACER_AGGREGATION_RECORDED_SCHEMA = 'zj-loop.native_opn_tracer_aggregation_recorded.v1' as const;
 
+export type NativeOpnTracerMergeAuthorization = {
+  source_commit_sha: string;
+  target_ref: string;
+  target_worktree_ref: string;
+  strategy: 'fast-forward-only';
+  scope_digest: string;
+  deterministic_gate_digest: string;
+};
+
 export type NativeOpnTracerGraphAggregation = {
   responsibility_unit: 'human' | 'human+agent';
   human_id: string;
@@ -22,6 +31,7 @@ export type NativeOpnTracerGraphAggregation = {
     strategy: string;
     isolation_ref: string;
   }>;
+  merge_authorization?: NativeOpnTracerMergeAuthorization;
 };
 
 export type NativeOpnTracerAggregation = {
@@ -56,6 +66,9 @@ type Input = Omit<NativeOpnTracerAggregation, 'schema' | 'status' | 'side_effect
 function text(value: unknown): value is string { return typeof value === 'string' && value.length > 0; }
 function digest(value: unknown): value is string { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
 function commit(value: unknown): value is string { return typeof value === 'string' && /^[0-9a-f]{40}$/.test(value); }
+function mergeAuthorizationValid(value: NativeOpnTracerMergeAuthorization): boolean {
+  return commit(value.source_commit_sha) && text(value.target_ref) && text(value.target_worktree_ref) && value.strategy === 'fast-forward-only' && digest(value.scope_digest) && digest(value.deterministic_gate_digest);
+}
 function graphValid(graph: NativeOpnTracerGraphAggregation, executionIds: string[]): boolean {
   if (!['human', 'human+agent'].includes(graph.responsibility_unit) || !text(graph.human_id) || graph.lifecycle_status !== 'review-pending') return false;
   if (!Array.isArray(graph.execution_bindings) || graph.execution_bindings.length !== executionIds.length) return false;
@@ -67,7 +80,7 @@ function graphValid(graph: NativeOpnTracerGraphAggregation, executionIds: string
   if (nodeIds.size !== graph.execution_bindings.length || worktrees.size !== graph.execution_bindings.length) return false;
   if (!Array.isArray(graph.resource_isolation) || graph.resource_isolation.length !== graph.execution_bindings.length) return false;
   const isolatedNodes = new Set(graph.resource_isolation.map((isolation) => isolation.node_id));
-  return isolatedNodes.size === graph.resource_isolation.length && graph.resource_isolation.every((isolation) => nodeIds.has(isolation.node_id) && text(isolation.resource_id) && text(isolation.strategy) && text(isolation.isolation_ref));
+  return isolatedNodes.size === graph.resource_isolation.length && graph.resource_isolation.every((isolation) => nodeIds.has(isolation.node_id) && text(isolation.resource_id) && text(isolation.strategy) && text(isolation.isolation_ref)) && (graph.merge_authorization === undefined || mergeAuthorizationValid(graph.merge_authorization));
 }
 function unsigned(aggregation: NativeOpnTracerAggregation): Omit<NativeOpnTracerAggregation, 'aggregation_digest'> { const { aggregation_digest: _, ...value } = aggregation; return value; }
 function aggregationDigest(aggregation: NativeOpnTracerAggregation): string { const json = canonicalize(unsigned(aggregation)); if (typeof json !== 'string') throw new Error('native-opn-tracer-aggregation-canonicalization-invalid'); return `sha256:${createHash('sha256').update(json).digest('hex')}`; }

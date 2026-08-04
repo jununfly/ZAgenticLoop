@@ -153,7 +153,7 @@
     "1-5": {
       "id": "1-5",
       "label": "Review Handoff、Human 决策与 closeout",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
       "children": [],
@@ -177,9 +177,54 @@
           "q": "fast-forward merge 后是否需要重新执行完整 Agent2 语义验证？",
           "answer": "同意选 1：只执行 deterministic integrity gate；确认 target HEAD 等于 Agent1 已验证 source commit、fast-forward 关系、scope、clean worktree、git diff --check、项目测试/构建通过；不重复完整 Agent2 语义验证。",
           "note": "fast-forward 不产生新的代码内容；若 target drift、HEAD 不一致、scope 漂移或 gate 失败，停止并投影 blocked/outcome-uncertain。"
+        },
+        {
+          "q": "Graph Review Handoff 是否由 Core 根据已持久化 aggregation + verification facts 自动生成完整 Graph projection？",
+          "answer": "同意：由 Core 派生，不接受 Coordinator 再次提交 Graph 摘要。",
+          "note": "Handoff 必须校验 aggregation/verification digest 与 Graph binding，并从事实生成中心责任、Agent execution、commit/worktree 隔离和 verifier 输入投影；Coordinator 只能触发、推进和展示。"
+        },
+        {
+          "q": "Graph Atom 的最终 Human 决策是否复用共享 Human Acceptance / Review Decision contract？",
+          "answer": "同意：复用共享 contract，不创建 Graph 专属签名协议。",
+          "note": "Accept 使用 HumanAcceptanceRecord 并授权受约束 merge；Reject/Request revision 沿用既有 Review Decision lifecycle 与 revision requirements。Graph 只提供 projection 和事实绑定。"
+        },
+        {
+          "q": "Human Accept 是否必须绑定由 Core 生成的受约束 merge authorization projection？",
+          "answer": "同意：Accept 必须绑定精确 source commit、target ref、fast-forward-only 策略、scope digest 和 post-merge deterministic gate。",
+          "note": "Merge authorization 由 Graph aggregation fact 派生到 Review Handoff，再由共享 HumanAcceptanceRecord 绑定；target/source/scope 漂移时停止，不执行 merge。"
+        },
+        {
+          "q": "受约束 merge 的执行是否采用 provider-neutral Core contract，再由目标代码库或托管平台 adapter 实现？",
+          "answer": "同意：Core 负责 admission/gate，adapter 负责具体 Git/GitLab/GitHub 操作。",
+          "note": "Core 不假设 GitLab；merge admission 绑定 Human Acceptance、source/target、fast-forward-only、scope 和 clean target 事实。Adapter 只提供可验证观察和执行结果。"
+        },
+        {
+          "q": "merge adapter 是否采用 observe → Core admission → execute 两阶段协议？",
+          "answer": "同意：采用两阶段协议，并把 observe 得到的 expected_target_head 绑定到 execute。",
+          "note": "Core admission 通过前不得执行副作用；adapter execute 必须重检 target 快照，漂移进入 outcome-uncertain 或 blocked。"
+        },
+        {
+          "q": "post-merge deterministic gate 是否采用 provider-neutral Core evaluator，由 adapter 提供只读事实？",
+          "answer": "同意：Core evaluator 校验 target HEAD/source/fast-forward/scope/clean、git diff --check 和项目验证结果。",
+          "note": "Gate 不重复 Agent2 语义验证；事实不完整进入 outcome-uncertain，确定失败进入 blocked，且不请求第二次 Human 签名。"
+        },
+        {
+          "q": "第一条真实 dogfood 是否先实现本地 Git adapter，验证 ZAgenticLoop 自身仓库的 fast-forward merge 闭环？",
+          "answer": "同意：先实现本地 Git adapter，Core 保持 provider-neutral；GitLab/GitHub adapter 后续扩展。",
+          "note": "本阶段只实现可测试 adapter contract，不对真实仓库执行 merge；真实 merge 需单独 Human 批准。"
+        },
+        {
+          "q": "第一次真实 dogfood 是否必须在专用 disposable target worktree/branch 中执行，而不是当前开发 checkout？",
+          "answer": "同意：必须使用专用 disposable target worktree/branch，并把 worktree identity 与 cleanup proof 纳入 Evidence。",
+          "note": "Merge authorization 绑定 target worktree；adapter observe/execute 不得操作未授权 checkout。"
+        },
+        {
+          "q": "Merge authorization 是否必须绑定 target worktree identity？",
+          "answer": "同意：NativeOpnTracerMergeAuthorization 必须包含 target_worktree_ref；Core admission 要求 adapter 提供并精确匹配该身份，错配进入 blocked，缺失进入 outcome-uncertain；本地 Git adapter 绑定配置的 target worktree identity，observe 与 execute 都不得跨身份操作。",
+          "note": "Q28 已实现并通过聚焦与全量测试；真实仓库 merge、StateStore closeout 和真实 dogfood 仍未执行。"
         }
       ],
-      "notes": ""
+      "notes": "已完成 provider-neutral merge admission、两阶段 orchestration、post-merge deterministic gate、本地 Git adapter fixture 与 target worktree identity binding：授权绑定 source commit、target ref、target worktree、fast-forward-only、scope 和 gate；adapter 只在配置的 target worktree 上 observe/execute，身份错配 blocked，身份缺失 outcome-uncertain。真实仓库 merge、StateStore closeout 和真实 dogfood 尚未执行。"
     },
     "1-6": {
       "id": "1-6",
@@ -194,7 +239,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-04 01:35:03",
+    "updated": "2026-08-04 15:08:10",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

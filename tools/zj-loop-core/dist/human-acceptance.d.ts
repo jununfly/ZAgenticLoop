@@ -10,6 +10,7 @@ export type HumanAcceptanceRecord = {
     plan_digest: string;
     review_handoff_digest: string;
     verification_digest: string;
+    merge_authorization_digest?: string;
     human_id: string;
     signer_fingerprint: string;
     decision: 'accepted';

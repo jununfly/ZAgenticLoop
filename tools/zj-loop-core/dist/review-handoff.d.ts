@@ -1,5 +1,6 @@
 import { type ProviderOutcomeVerification } from './provider-outcome-verification.js';
 import { type NativeOpnTracerVerification } from './native-opn-tracer-verification.js';
+import { type NativeOpnTracerAggregation, type NativeOpnTracerGraphAggregation, type NativeOpnTracerMergeAuthorization } from './native-opn-tracer-aggregation.js';
 export declare const REVIEW_HANDOFF_SCHEMA: "zj-loop.review_handoff.v1";
 export type ExternalResourceState = {
     resource_id: string;
@@ -22,6 +23,9 @@ export type ReviewHandoffRecord = {
     dependencies_closed: boolean;
     remaining_risks: string[];
     external_resource_states: ExternalResourceState[];
+    graph?: NativeOpnTracerGraphAggregation & {
+        verifier_input: NonNullable<NativeOpnTracerVerification['graph']>;
+    };
     responsible_party: string;
     accepted_at: string;
     event_completed: false;
@@ -30,6 +34,7 @@ export type ReviewHandoffRecord = {
     handoff_digest: string;
     reason?: 'verification-not-passed' | 'dependencies-not-closed' | 'unresolved-risks';
 };
+export declare function nativeOpnTracerMergeAuthorizationDigest(value: NativeOpnTracerMergeAuthorization): string;
 export declare function createReviewHandoff(input: {
     verification: ProviderOutcomeVerification;
     dependencies_closed: boolean;
@@ -39,6 +44,7 @@ export declare function createReviewHandoff(input: {
     accepted_at: string;
 }): ReviewHandoffRecord;
 export declare function createNativeOpnTracerReviewHandoff(input: {
+    aggregation?: NativeOpnTracerAggregation;
     verification: NativeOpnTracerVerification;
     dependencies_closed: boolean;
     remaining_risks: string[];

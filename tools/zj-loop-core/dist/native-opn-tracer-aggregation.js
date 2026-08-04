@@ -5,6 +5,9 @@ export const NATIVE_OPN_TRACER_AGGREGATION_RECORDED_SCHEMA = 'zj-loop.native_opn
 function text(value) { return typeof value === 'string' && value.length > 0; }
 function digest(value) { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
 function commit(value) { return typeof value === 'string' && /^[0-9a-f]{40}$/.test(value); }
+function mergeAuthorizationValid(value) {
+    return commit(value.source_commit_sha) && text(value.target_ref) && text(value.target_worktree_ref) && value.strategy === 'fast-forward-only' && digest(value.scope_digest) && digest(value.deterministic_gate_digest);
+}
 function graphValid(graph, executionIds) {
     if (!['human', 'human+agent'].includes(graph.responsibility_unit) || !text(graph.human_id) || graph.lifecycle_status !== 'review-pending')
         return false;
@@ -22,7 +25,7 @@ function graphValid(graph, executionIds) {
     if (!Array.isArray(graph.resource_isolation) || graph.resource_isolation.length !== graph.execution_bindings.length)
         return false;
     const isolatedNodes = new Set(graph.resource_isolation.map((isolation) => isolation.node_id));
-    return isolatedNodes.size === graph.resource_isolation.length && graph.resource_isolation.every((isolation) => nodeIds.has(isolation.node_id) && text(isolation.resource_id) && text(isolation.strategy) && text(isolation.isolation_ref));
+    return isolatedNodes.size === graph.resource_isolation.length && graph.resource_isolation.every((isolation) => nodeIds.has(isolation.node_id) && text(isolation.resource_id) && text(isolation.strategy) && text(isolation.isolation_ref)) && (graph.merge_authorization === undefined || mergeAuthorizationValid(graph.merge_authorization));
 }
 function unsigned(aggregation) { const { aggregation_digest: _, ...value } = aggregation; return value; }
 function aggregationDigest(aggregation) { const json = canonicalize(unsigned(aggregation)); if (typeof json !== 'string')

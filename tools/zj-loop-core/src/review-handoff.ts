@@ -2,6 +2,7 @@ import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 import { validateProviderOutcomeVerification, type ProviderOutcomeVerification } from './provider-outcome-verification.js';
 import { validateNativeOpnTracerVerification, type NativeOpnTracerVerification } from './native-opn-tracer-verification.js';
+import { nativeOpnTracerAggregationDigest, type NativeOpnTracerAggregation, type NativeOpnTracerGraphAggregation, type NativeOpnTracerMergeAuthorization } from './native-opn-tracer-aggregation.js';
 
 export const REVIEW_HANDOFF_SCHEMA = 'zj-loop.review_handoff.v1' as const;
 export type ExternalResourceState = { resource_id: string; last_known_status: string; responsible_party: string };
@@ -21,6 +22,7 @@ export type ReviewHandoffRecord = {
   dependencies_closed: boolean;
   remaining_risks: string[];
   external_resource_states: ExternalResourceState[];
+  graph?: NativeOpnTracerGraphAggregation & { verifier_input: NonNullable<NativeOpnTracerVerification['graph']> };
   responsible_party: string;
   accepted_at: string;
   event_completed: false;
@@ -34,6 +36,7 @@ function digest(value: Omit<ReviewHandoffRecord, 'handoff_digest'>): string { co
 function text(value: unknown): value is string { return typeof value === 'string' && value.length > 0; }
 function strings(value: unknown): value is string[] { return Array.isArray(value) && value.every(text); }
 function resourceStates(value: unknown): value is ExternalResourceState[] { return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null && text((item as ExternalResourceState).resource_id) && text((item as ExternalResourceState).last_known_status) && text((item as ExternalResourceState).responsible_party)); }
+export function nativeOpnTracerMergeAuthorizationDigest(value: NativeOpnTracerMergeAuthorization): string { const json = canonicalize(value); if (typeof json !== 'string') throw new Error('native-opn-tracer-merge-authorization-canonicalization-invalid'); return `sha256:${createHash('sha256').update(json, 'utf8').digest('hex')}`; }
 
 export function createReviewHandoff(input: { verification: ProviderOutcomeVerification; dependencies_closed: boolean; remaining_risks: string[]; external_resource_states: ExternalResourceState[]; responsible_party: string; accepted_at: string }): ReviewHandoffRecord {
   const verificationCheck = validateProviderOutcomeVerification(input.verification);
@@ -46,13 +49,20 @@ export function createReviewHandoff(input: { verification: ProviderOutcomeVerifi
   return { ...unsigned, handoff_digest: digest(unsigned) };
 }
 
-export function createNativeOpnTracerReviewHandoff(input: { verification: NativeOpnTracerVerification; dependencies_closed: boolean; remaining_risks: string[]; external_resource_states: ExternalResourceState[]; responsible_party: string; accepted_at: string }): ReviewHandoffRecord {
+export function createNativeOpnTracerReviewHandoff(input: { aggregation?: NativeOpnTracerAggregation; verification: NativeOpnTracerVerification; dependencies_closed: boolean; remaining_risks: string[]; external_resource_states: ExternalResourceState[]; responsible_party: string; accepted_at: string }): ReviewHandoffRecord {
   if (validateNativeOpnTracerVerification(input.verification).status === 'blocked') throw new Error('review-handoff-native-verification-invalid');
   if (!text(input.responsible_party) || !text(input.accepted_at) || !strings(input.remaining_risks) || !resourceStates(input.external_resource_states) || typeof input.dependencies_closed !== 'boolean') throw new Error('review-handoff-input-invalid');
+  if (input.verification.graph && (!input.aggregation || !input.aggregation.graph || !input.aggregation.graph.merge_authorization || nativeOpnTracerAggregationDigest(input.aggregation) !== input.aggregation.aggregation_digest || input.aggregation.aggregation_digest !== input.verification.aggregation_digest)) throw new Error('review-handoff-native-graph-binding-invalid');
+  if (input.verification.graph && input.aggregation?.graph) {
+    const aggregationIds = [...input.aggregation.execution_ids].sort();
+    const sourceIds = [...input.verification.graph.source_execution_ids].sort();
+    if (aggregationIds.join('\0') !== sourceIds.join('\0') || input.aggregation.graph.human_id !== input.responsible_party || input.aggregation.graph.execution_bindings.some((binding) => binding.commit_sha !== input.verification.graph?.source_commit_sha) || !input.aggregation.graph.execution_bindings.some((binding) => binding.worktree_ref === input.verification.graph?.verifier_worktree_ref)) throw new Error('review-handoff-native-graph-binding-invalid');
+  }
   const risks = [...new Set(input.remaining_risks)].sort();
   const status = input.verification.status === 'passed' && input.dependencies_closed && risks.length === 0 ? 'accepted' as const : 'blocked' as const;
   const reason = input.verification.status !== 'passed' ? 'verification-not-passed' as const : !input.dependencies_closed ? 'dependencies-not-closed' as const : risks.length > 0 ? 'unresolved-risks' as const : undefined;
-  const unsigned = { schema: REVIEW_HANDOFF_SCHEMA, status, outcome_digest: input.verification.aggregation_digest, verification_source: 'native-opn-graph' as const, aggregation_digest: input.verification.aggregation_digest, verification_digest: input.verification.verification_digest, network_id: input.verification.network_id, event_id: input.verification.event_id, plan_id: input.verification.plan_id, plan_revision: input.verification.plan_revision, execution_id: input.verification.aggregation_id, task_id: input.verification.aggregation_id, dependencies_closed: input.dependencies_closed, remaining_risks: risks, external_resource_states: input.external_resource_states.map((state) => ({ ...state })), responsible_party: input.responsible_party, accepted_at: input.accepted_at, event_completed: false as const, task_completed: false as const, side_effects_executed: false as const, ...(reason === undefined ? {} : { reason }) };
+  const graph = input.aggregation?.graph && input.verification.graph ? { ...input.aggregation.graph, execution_bindings: input.aggregation.graph.execution_bindings.map((binding) => ({ ...binding })), resource_isolation: input.aggregation.graph.resource_isolation.map((isolation) => ({ ...isolation })), verifier_input: { ...input.verification.graph, source_execution_ids: [...input.verification.graph.source_execution_ids] } } : undefined;
+  const unsigned = { schema: REVIEW_HANDOFF_SCHEMA, status, outcome_digest: input.verification.aggregation_digest, verification_source: 'native-opn-graph' as const, aggregation_digest: input.verification.aggregation_digest, verification_digest: input.verification.verification_digest, network_id: input.verification.network_id, event_id: input.verification.event_id, plan_id: input.verification.plan_id, plan_revision: input.verification.plan_revision, execution_id: input.verification.aggregation_id, task_id: input.verification.aggregation_id, dependencies_closed: input.dependencies_closed, remaining_risks: risks, external_resource_states: input.external_resource_states.map((state) => ({ ...state })), responsible_party: input.responsible_party, accepted_at: input.accepted_at, event_completed: false as const, task_completed: false as const, side_effects_executed: false as const, ...(graph === undefined ? {} : { graph }), ...(reason === undefined ? {} : { reason }) };
   return { ...unsigned, handoff_digest: digest(unsigned) };
 }
 

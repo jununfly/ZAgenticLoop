@@ -5,8 +5,10 @@ import { recordNativeOpnTracerEvidence } from '../dist/native-opn-tracer-fact.js
 import { createNativeOpnTracerExecution, recordNativeOpnTracerExecution } from '../dist/native-opn-tracer-execution.js';
 import { createNativeOpnTracerAggregation, nativeOpnTracerAggregationDigest, recordNativeOpnTracerAggregation } from '../dist/native-opn-tracer-aggregation.js';
 import { createNativeOpnTracerVerification, recordNativeOpnTracerVerification } from '../dist/native-opn-tracer-verification.js';
-import { createNativeOpnTracerReviewHandoff } from '../dist/review-handoff.js';
+import { createNativeOpnTracerReviewHandoff, nativeOpnTracerMergeAuthorizationDigest } from '../dist/review-handoff.js';
 import { recordReviewHandoff } from '../dist/review-handoff-fact.js';
+import { createInMemoryHumanSigner } from '../dist/human-signer.js';
+import { createHumanAcceptance, validateHumanAcceptance } from '../dist/human-acceptance.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -212,6 +214,26 @@ test('Native OPN Tracer Verification rejects a verifier input bound to an unveri
     await stateStore.close();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('Native OPN Graph Review Handoff derives its projection from aggregation and verification facts', async () => {
+  const aggregation = createNativeOpnTracerAggregation({
+    network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'), aggregation_id: 'aggregation-1', execution_ids: ['execution-1', 'execution-2'], input_evidence_digests: [digest('2'), digest('3')], output_evidence_digest: digest('4'), aggregated_at: '2026-07-31T10:02:00.000Z',
+    graph: { responsibility_unit: 'human+agent', human_id: 'human-1', lifecycle_status: 'review-pending', execution_bindings: [{ execution_id: 'execution-1', node_id: 'agent-1', task_id: 'task-stage-1', commit_sha: 'a'.repeat(40), worktree_ref: 'worktree:agent-1' }, { execution_id: 'execution-2', node_id: 'agent-2', task_id: 'task-stage-2', commit_sha: 'a'.repeat(40), worktree_ref: 'worktree:agent-2-verifier' }], resource_isolation: [{ node_id: 'agent-1', resource_id: 'repo', strategy: 'git-branch-worktree', isolation_ref: 'worktree:agent-1' }, { node_id: 'agent-2', resource_id: 'repo', strategy: 'git-branch-worktree-read-only', isolation_ref: 'worktree:agent-2-verifier' }], merge_authorization: { source_commit_sha: 'a'.repeat(40), target_ref: 'refs/heads/main', target_worktree_ref: 'worktree:graph-merge-target', strategy: 'fast-forward-only', scope_digest: digest('6'), deterministic_gate_digest: digest('7') } },
+  });
+  const verification = createNativeOpnTracerVerification({ network_id: 'network-1', event_id: 'event-graph-1', plan_id: 'plan-1', plan_revision: 1, plan_digest: digest('1'), aggregation_id: aggregation.aggregation_id, aggregation_digest: aggregation.aggregation_digest, verifier_id: 'verifier-1', excluded_node_ids: ['agent-1', 'agent-2', 'aggregation-1'], status: 'passed', conditions: ['combined-output-valid'], satisfied_conditions: ['combined-output-valid'], failed_conditions: [], evidence_digest: digest('5'), checked_at: '2026-07-31T10:03:00.000Z', graph: { verifier_execution_id: 'verifier-execution-1', source_commit_sha: 'a'.repeat(40), source_execution_ids: ['execution-1', 'execution-2'], verifier_worktree_ref: 'worktree:agent-2-verifier' } });
+  const handoff = createNativeOpnTracerReviewHandoff({ aggregation, verification, dependencies_closed: true, remaining_risks: [], external_resource_states: [], responsible_party: 'human-1', accepted_at: '2026-07-31T10:04:00.000Z' });
+  assert.equal(handoff.status, 'accepted');
+  assert.equal(handoff.graph.responsibility_unit, 'human+agent');
+  assert.equal(handoff.graph.execution_bindings[1].commit_sha, 'a'.repeat(40));
+  assert.equal(handoff.graph.verifier_input.source_commit_sha, 'a'.repeat(40));
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  const identity = await signer.getPublicIdentity();
+  const acceptance = await createHumanAcceptance({ signer, handoff, plan_digest: digest('1'), accepted_at: '2026-07-31T10:05:00.000Z' });
+  assert.equal(acceptance.review_handoff_digest, handoff.handoff_digest);
+  assert.equal(acceptance.merge_authorization_digest, nativeOpnTracerMergeAuthorizationDigest(handoff.graph.merge_authorization));
+  assert.equal(validateHumanAcceptance({ acceptance, identity, handoff }).status, 'valid');
+  assert.throws(() => createNativeOpnTracerReviewHandoff({ aggregation: { ...aggregation, aggregation_digest: digest('9') }, verification, dependencies_closed: true, remaining_risks: [], external_resource_states: [], responsible_party: 'human-1', accepted_at: '2026-07-31T10:04:00.000Z' }), /review-handoff-native-graph-binding-invalid/);
 });
 
 test('Native OPN Graph Verification enters the shared Review Handoff boundary', async () => {

@@ -1,6 +1,14 @@
 import type { SqliteStateStore } from './sqlite-state-store.js';
 export declare const NATIVE_OPN_TRACER_AGGREGATION_SCHEMA: "zj-loop.native_opn_tracer_aggregation.v1";
 export declare const NATIVE_OPN_TRACER_AGGREGATION_RECORDED_SCHEMA: "zj-loop.native_opn_tracer_aggregation_recorded.v1";
+export type NativeOpnTracerMergeAuthorization = {
+    source_commit_sha: string;
+    target_ref: string;
+    target_worktree_ref: string;
+    strategy: 'fast-forward-only';
+    scope_digest: string;
+    deterministic_gate_digest: string;
+};
 export type NativeOpnTracerGraphAggregation = {
     responsibility_unit: 'human' | 'human+agent';
     human_id: string;
@@ -18,6 +26,7 @@ export type NativeOpnTracerGraphAggregation = {
         strategy: string;
         isolation_ref: string;
     }>;
+    merge_authorization?: NativeOpnTracerMergeAuthorization;
 };
 export type NativeOpnTracerAggregation = {
     schema: typeof NATIVE_OPN_TRACER_AGGREGATION_SCHEMA;
