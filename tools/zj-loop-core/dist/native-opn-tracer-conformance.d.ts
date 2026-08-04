@@ -4,7 +4,7 @@ export type NativeOpnTracerConformanceReport = {
     fixture_version: string;
     network_id: string;
     event_id: string;
-    status: 'passed' | 'blocked';
+    status: 'passed' | 'blocked' | 'outcome-uncertain';
     side_effects_executed: false;
     plan: {
         plan_id: string;
@@ -16,15 +16,15 @@ export type NativeOpnTracerConformanceReport = {
         human_id: string;
     };
     phases: Array<{
-        name: 'enrollment' | 'preflight' | 'execution' | 'relay' | 'aggregation' | 'verification' | 'review-handoff';
-        status: 'passed' | 'blocked';
+        name: 'enrollment' | 'preflight' | 'execution' | 'relay' | 'aggregation' | 'verification' | 'review-handoff' | 'merge' | 'post-merge-gate' | 'cleanup' | 'replay';
+        status: 'passed' | 'blocked' | 'outcome-uncertain';
         reason?: string;
     }>;
     blocking_reasons: string[];
     created_at: string;
     report_digest: string;
 };
-type Input = Omit<NativeOpnTracerConformanceReport, 'schema' | 'status' | 'side_effects_executed' | 'phases' | 'blocking_reasons' | 'report_digest'> & {
+type Input = Omit<NativeOpnTracerConformanceReport, 'schema' | 'status' | 'side_effects_executed' | 'phases' | 'blocking_reasons' | 'report_digest' | 'graph'> & {
     enrollments: Array<{
         node_id: string;
         network_id: string;
@@ -63,6 +63,12 @@ type Input = Omit<NativeOpnTracerConformanceReport, 'schema' | 'status' | 'side_
         verification_digest: string;
         aggregation_digest: string;
         responsible_party: string;
+    };
+    graph?: {
+        merge: 'merged' | 'blocked' | 'outcome-uncertain';
+        post_merge_gate: 'passed' | 'blocked' | 'outcome-uncertain';
+        cleanup: 'closed' | 'outcome-uncertain' | 'cleanup-unresolved';
+        replay: 'idempotent' | 'conflict';
     };
 };
 export declare function buildNativeOpnTracerConformanceReport(input: Input): NativeOpnTracerConformanceReport;

@@ -26,10 +26,27 @@ export function buildNativeOpnTracerConformanceReport(input) {
         reasons.push('verification-not-independent-or-bound');
     if (input.review_handoff.status !== 'accepted' || input.review_handoff.verification_digest !== input.verification.verification_digest || input.review_handoff.aggregation_digest !== input.aggregation.aggregation_digest || input.review_handoff.responsible_party !== input.center.human_id)
         reasons.push('review-handoff-not-closed');
+    if (input.graph !== undefined) {
+        if (input.graph.merge !== 'merged')
+            reasons.push(input.graph.merge === 'outcome-uncertain' ? 'graph-merge-outcome-uncertain' : 'graph-merge-blocked');
+        if (input.graph.post_merge_gate !== 'passed')
+            reasons.push(input.graph.post_merge_gate === 'outcome-uncertain' ? 'graph-post-merge-outcome-uncertain' : 'graph-post-merge-blocked');
+        if (input.graph.cleanup !== 'closed')
+            reasons.push(input.graph.cleanup === 'cleanup-unresolved' ? 'graph-cleanup-unresolved' : 'graph-cleanup-outcome-uncertain');
+        if (input.graph.replay !== 'idempotent')
+            reasons.push('graph-replay-conflict');
+    }
     const uniqueReasons = [...new Set(reasons)].sort();
-    const phaseNames = ['enrollment', 'preflight', 'execution', 'relay', 'aggregation', 'verification', 'review-handoff'];
-    const phases = phaseNames.map((name) => ({ name, status: uniqueReasons.length === 0 ? 'passed' : 'blocked', ...(uniqueReasons.length === 0 ? {} : { reason: uniqueReasons.find((reason) => reason.startsWith(name) || (name === 'preflight' && reason.startsWith('preflight')) || (name === 'review-handoff' && reason.startsWith('review-handoff'))) ?? 'conformance-blocked' }) }));
-    const unsigned = { schema: NATIVE_OPN_TRACER_CONFORMANCE_REPORT_SCHEMA, fixture_version: input.fixture_version, network_id: input.network_id, event_id: input.event_id, status: uniqueReasons.length === 0 ? 'passed' : 'blocked', side_effects_executed: false, plan: { ...input.plan }, center: { ...input.center }, phases, blocking_reasons: uniqueReasons, created_at: input.created_at };
+    const phaseNames = ['enrollment', 'preflight', 'execution', 'relay', 'aggregation', 'verification', 'review-handoff', ...(input.graph === undefined ? [] : ['merge', 'post-merge-gate', 'cleanup', 'replay'])];
+    const phaseStatus = (name) => {
+        const reason = uniqueReasons.find((item) => item.startsWith(name) || (name === 'preflight' && item.startsWith('preflight')) || (name === 'review-handoff' && item.startsWith('review-handoff')));
+        if (!reason)
+            return 'passed';
+        return reason.includes('outcome-uncertain') || reason.includes('cleanup-unresolved') ? 'outcome-uncertain' : 'blocked';
+    };
+    const phases = phaseNames.map((name) => ({ name, status: phaseStatus(name), ...(phaseStatus(name) === 'passed' ? {} : { reason: uniqueReasons.find((reason) => reason.startsWith(name) || (name === 'preflight' && reason.startsWith('preflight')) || (name === 'review-handoff' && reason.startsWith('review-handoff'))) ?? 'conformance-blocked' }) }));
+    const status = uniqueReasons.length === 0 ? 'passed' : uniqueReasons.some((reason) => reason.includes('outcome-uncertain') || reason.includes('cleanup-unresolved')) && !uniqueReasons.some((reason) => reason.includes('blocked') || reason.endsWith('-not-closed') || reason.includes('mismatch') || reason.includes('incomplete') || reason.includes('invalid') || reason.includes('conflict')) ? 'outcome-uncertain' : 'blocked';
+    const unsigned = { schema: NATIVE_OPN_TRACER_CONFORMANCE_REPORT_SCHEMA, fixture_version: input.fixture_version, network_id: input.network_id, event_id: input.event_id, status, side_effects_executed: false, plan: { ...input.plan }, center: { ...input.center }, phases, blocking_reasons: uniqueReasons, created_at: input.created_at, ...(input.graph === undefined ? {} : { graph: { ...input.graph } }) };
     return { ...unsigned, report_digest: reportDigest(unsigned) };
 }
 export function nativeOpnTracerConformanceReportDigest(report) { const { report_digest: _, ...unsigned } = report; return reportDigest(unsigned); }

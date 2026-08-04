@@ -153,7 +153,7 @@
     "1-5": {
       "id": "1-5",
       "label": "Review Handoff、Human 决策与 closeout",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
@@ -222,24 +222,175 @@
           "q": "Merge authorization 是否必须绑定 target worktree identity？",
           "answer": "同意：NativeOpnTracerMergeAuthorization 必须包含 target_worktree_ref；Core admission 要求 adapter 提供并精确匹配该身份，错配进入 blocked，缺失进入 outcome-uncertain；本地 Git adapter 绑定配置的 target worktree identity，observe 与 execute 都不得跨身份操作。",
           "note": "Q28 已实现并通过聚焦与全量测试；真实仓库 merge、StateStore closeout 和真实 dogfood 仍未执行。"
+        },
+        {
+          "q": "Graph Atom 的 disposable target worktree 创建与清理是否复用现有 Real Agent Dogfood worktree/closeout 能力？",
+          "answer": "同意：复用现有 worktree/closeout 安全底座；Graph 只增加 target identity、merge authorization 绑定和 cleanup Evidence 投影，不创建第二套 worktree 生命周期。",
+          "note": "先复用既有隔离创建、干净性检查、Human closeout 与独立事实记录，再实现 Graph target worktree 的最小 provider-neutral 投影。"
+        },
+        {
+          "q": "target_worktree_ref 应采用什么身份形态？",
+          "answer": "同意：采用稳定逻辑身份 worktree:graph-target:<graph-id>:<execution-id>；实际绝对路径只作为独立 worktree binding 与 cleanup Evidence，不作为授权身份。",
+          "note": "逻辑身份跨设备/平台稳定，路径变化不会导致授权身份漂移；adapter 仍必须绑定实际 repo_root/worktree_path 以防止误操作。"
+        },
+        {
+          "q": "Graph cleanup Evidence 如何持久化？",
+          "answer": "同意：复用既有 Dogfood closeout StateStore 事实，Graph 只保存/派生带 source event identity 的绑定投影，不新增第二套 cleanup 生命周期。",
+          "note": "cleanup Evidence 必须能追溯到原始 closeout event；Graph projection 不拥有独立 cleanup 状态机。"
+        },
+        {
+          "q": "merge 成功但 cleanup outcome-uncertain 时是否保持 Graph accepted？",
+          "answer": "同意：保持 Graph 业务结果为 accepted，仅将 closeout 标记为 cleanup-uncertain，并允许后续有限重试；不重新请求 Human 签名。",
+          "note": "业务结果、merge、cleanup 是相互绑定证据但不同生命周期；cleanup 不确定不能伪造为 closed，也不应回滚已证明的业务结果。"
+        },
+        {
+          "q": "cleanup 后续重试是否复用通用 BoundedReconciliationPlan？",
+          "answer": "同意：复用通用 BoundedReconciliationPlan，仅允许读取 target worktree 注册状态与清理状态；不新增 Graph 专属 retry 协议，不重新执行 Agent、merge 或扩大资源范围。",
+          "note": "Graph 只提供 network/execution/worktree 绑定和只读 query scope，统一 reconciliation 组件负责预算、截止时间与禁止副作用。"
+        },
+        {
+          "q": "bounded reconciliation 耗尽且 worktree 仍无法确认清理时如何收敛？",
+          "answer": "同意：业务结果保持 accepted，Graph closeout 显式标记 cleanup-unresolved 并通知 Human 处理资源残留；不得伪装为 closed，也不回滚业务结果。",
+          "note": "原始 Dogfood closeout 事实保持 outcome-uncertain；cleanup-unresolved 是 Graph 对重试耗尽后的投影终态。"
+        },
+        {
+          "q": "cleanup-unresolved 后是否允许 Human 手工清理并补交 Evidence？",
+          "answer": "同意：允许 Human 单独处理资源残留并提交新的 cleanup Evidence 完成 closeout，不重新执行 Agent、merge 或 Human Accept。",
+          "note": "资源处置与业务结果重审解耦；补交 Evidence 必须继续绑定原 Graph target worktree identity 和 cleanup-unresolved 来源。"
+        },
+        {
+          "q": "Human 手工 cleanup Evidence 是否必须签名并绑定原 unresolved 事实？",
+          "answer": "同意：必须由 HumanSigner 签名，并精确绑定原 target_worktree_ref、原 worktree_path 与 cleanup-unresolved source event；不允许借此清理其他 worktree。",
+          "note": "手工处置是独立副作用；签名证明责任主体和处置范围，但不重新授权业务 merge。"
+        },
+        {
+          "q": "Human 手工清理后是否需要 Core 只读验证才能 closed？",
+          "answer": "同意：必须由 Core 只读验证 worktree 路径已不存在且 Git worktree 注册表已移除；Human 签名证明责任主体，Core 验证证明清理效果。事实缺失 outcome-uncertain，仍存在 blocked，两项均证明不存在才 closed。",
+          "note": "不增加清理副作用；验证 adapter 只读，且仍绑定原 target_worktree_ref 与 worktree_path。"
+        },
+        {
+          "q": "Graph cleanup projection 是否作为派生 Evidence event 写入 StateStore？",
+          "answer": "同意：写入可重放的派生 Graph Evidence event，同时 Dogfood closeout event 仍是唯一源事实；不创建第二套 cleanup 生命周期。",
+          "note": "Graph event 只保存绑定投影与来源 event identity，支持幂等重放和冲突检测。"
+        },
+        {
+          "q": "是否冻结 1-5 并进入 1-6 失败恢复、重放与端到端 conformance？",
+          "answer": "同意：冻结 1-5，进入 1-6；真实仓库 merge/dogfood 作为端到端 conformance，不阻塞 1-5 契约冻结。",
+          "note": "1-5 的 Review Handoff、Human decision、merge authorization、worktree cleanup 和 projection 契约已完成；后续在 1-6 进行真实链路、失败恢复、重放与 conformance。"
         }
       ],
-      "notes": "已完成 provider-neutral merge admission、两阶段 orchestration、post-merge deterministic gate、本地 Git adapter fixture 与 target worktree identity binding：授权绑定 source commit、target ref、target worktree、fast-forward-only、scope 和 gate；adapter 只在配置的 target worktree 上 observe/execute，身份错配 blocked，身份缺失 outcome-uncertain。真实仓库 merge、StateStore closeout 和真实 dogfood 尚未执行。"
+      "notes": "已冻结：Review Handoff、Human decision、provider-neutral merge authorization、target worktree isolation、cleanup/reconciliation、Human manual cleanup、Core read-only closeout gate 与 StateStore projection 均已实现并验证。真实仓库 merge、真实 dogfood 与端到端 conformance 转入 1-6。"
     },
     "1-6": {
       "id": "1-6",
       "label": "失败恢复、重放与端到端 conformance",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "1-6 是否先实现可重放的完整 conformance fixture，再执行真实 disposable dogfood？",
+          "answer": "同意：先用确定性 fixture 覆盖成功、merge blocked、outcome-uncertain、cleanup-unresolved，再执行真实仓库副作用。",
+          "note": "先锁住失败恢复与重放语义，再验证真实 worktree/merge，避免把协议问题与环境问题混在一起。"
+        },
+        {
+          "q": "真实 dogfood 是否限定为 ZAgenticLoop 的小型 docs/test-only 改动？",
+          "answer": "同意：使用 disposable target worktree 验证真实链路，目标只改 docs 或测试，不触碰生产代码。",
+          "note": "本次 dogfood 验证的是 OPN Graph 编排、隔离、merge、post-merge gate 与 cleanup，不验证生产功能变更。"
+        },
+        {
+          "q": "真实 dogfood 的目标改动是否选一个新增或修改测试文件的最小 Graph conformance assertion，而不是任意文档改动？",
+          "answer": "采用最小、可独立验证、易回滚的测试文件改动；不得把本轮正在开发的实现本身作为唯一被测对象。",
+          "note": "真实 dogfood 选择 ZAgenticLoop 中 docs/test-only 范围的小改动，优先测试文件中的最小 Graph conformance assertion。"
+        },
+        {
+          "q": "真实 dogfood 的最小目标改动选哪一个测试切片？",
+          "answer": "在 tools/zj-loop-core/test/native-opn-tracer.test.mjs 的既有 Graph 测试中新增一条独立断言，验证 Human+Agent 责任单元及资源隔离投影仍然成立。",
+          "note": "该断言与本轮 worktree cleanup 实现解耦，改动小、可独立验证、易回滚。"
+        },
+        {
+          "q": "首个真实 dogfood 使用哪个 Provider？",
+          "answer": "采用当前已实现的 codex-agent-provider.v1 作为第一个真实 Provider；入口与核心协议保持 provider-neutral，provider_id 记录为 codex。",
+          "note": "Codex 仅是本次真实运行的 Provider 实例，后续 Provider 复用同一 contract。"
+        },
+        {
+          "q": "首个真实 Graph dogfood 的副作用顺序是否固定为独立 source worktree 执行、target worktree 合并、验证后清理，并对缺失事实 fail-closed？",
+          "answer": "同意：中心责任单元创建 disposable target worktree；Codex 在独立 source worktree/branch 修改 native-opn-tracer.test.mjs 并提交；中心责任单元做 merge admission、merge 后 gate、cleanup；事实缺失或漂移时只能 blocked 或 outcome-uncertain。",
+          "note": "验证任务隔离、Agent 执行、中心合并、结果验证和资源清理的完整链路。"
+        },
+        {
+          "q": "真实 dogfood 是否必须从当前 Graph 实现的干净基线 commit 启动，并由真实 Codex Provider 只提交独立测试改动？",
+          "answer": "同意：先将当前 Graph conformance、worktree binding、cleanup projection 实现提交为干净基线；真实 Codex Provider 在该基线上仅新增目标测试断言并提交独立 commit。",
+          "note": "区分产品实现与真实 Agent 改动，保证 merge、验证和 cleanup Evidence 可复现。"
+        },
+        {
+          "q": "真实 dogfood 的 merge 后验证是否固定包含 git diff --check、build、目标测试、Graph 回归测试、完整 npm test，并绑定 target/commit/命令/摘要 Evidence？",
+          "answer": "同意：全部 gates 必须通过，结果绑定 target worktree、merge 后 commit、测试命令和输出摘要。",
+          "note": "目标测试验证真实 Agent 改动，Graph 回归验证编排契约，完整 npm test 提供项目级回归边界。"
+        },
+        {
+          "q": "真实 dogfood 是否必须在生成 review package 前完成 target worktree cleanup，并将 cleanup 状态作为独立事实呈现？",
+          "answer": "同意：先执行 bounded cleanup 并记录 cleanup Evidence，再生成 review-pending package；业务结果与 cleanup 状态分开，cleanup uncertain 不得伪报 closed，也不自动否定已验证的业务结果。",
+          "note": "保持业务结果和资源生命周期解耦；cleanup 失败时进入独立 reconciliation 或 Human manual cleanup。"
+        },
+        {
+          "q": "真实 dogfood 的 Evidence 是否写入独立、脱敏、content-addressed、append-only EvidenceStore，而不提交到源码仓库？",
+          "answer": "同意：源码只保留测试改动和必要长期文档；execution、merge、验证、cleanup、review package 等真实证据独立存储，并通过 digest 与 commit/worktree 关联。",
+          "note": "避免运行产物污染源码，同时保留可复盘证据。"
+        },
+        {
+          "q": "本机真实 dogfood 的 EvidenceStore 是否采用独立的 /var/folders/bk/25klw83n5wn38lj2m3wbr9fc0000gn/T//zj-loop-real-agent-dogfood/<dogfood-id>/，保留证据且不污染仓库？",
+          "answer": "同意：每次使用唯一目录，保存脱敏结构化证据、digest 和引用；不写入 Git 工作区，清理 worktree 不删除 EvidenceStore。",
+          "note": "支持 review/replay，同时避免运行产物进入源码。"
+        },
+        {
+          "q": "本次 OPN dogfood 是否允许使用 Codex 正常运行所需的网络访问，不把 network-denied 作为必须 gate？",
+          "answer": "同意：记录实际网络策略与观测结果；不在本切片设计 endpoint 级网络治理；网络不可用按真实结果记录 blocked/uncertain，网络可用本身不构成失败。",
+          "note": "当前优先验证 OPN 组网、编排、隔离、合并、验证和清理闭环。"
+        },
+        {
+          "q": "是否为 Codex Provider 增加显式 write-enabled execution 变体，同时保持 read-only 默认并绑定 Human approval、独立 worktree、范围和清理事实？",
+          "answer": "同意：新增显式 write-enabled 变体；read-only 默认不变；write-enabled 必须绑定独立 source worktree、branch、execution、Human approval、超时/清理事实，并限制为约定测试文件范围。",
+          "note": "让真实 Agent 能完成已确认的测试改动，同时不扩大默认副作用边界。"
+        },
+        {
+          "q": "write-enabled Codex execution 是否采用启动前允许文件绑定与执行后真实 diff/commit 双重范围校验，越界即 blocked 且禁止 merge？",
+          "answer": "同意：启动前只允许 source worktree 与 tools/zj-loop-core/test/native-opn-tracer.test.mjs；执行后要求只改该文件、无未提交修改、commit 父节点为 dogfood 基线、git diff --check 通过；越界变化 blocked。",
+          "note": "sandbox 降低风险，Git diff/commit 提供最终可验证事实。"
+        },
+        {
+          "q": "Codex dogfood 的目标是否固定为在 native-opn-tracer.test.mjs 既有 Graph 测试中新增 Human+Agent 责任单元与 worktree 隔离断言，并提交单独 commit？",
+          "answer": "同意：只改该测试文件；断言 responsibility_unit 为 human+agent 且保留 Agent worktree 资源隔离投影；测试通过后提交独立 commit，禁止生产代码和其他文件变化。",
+          "note": "目标小、语义明确，验证责任模型和资源隔离模型。"
+        },
+        {
+          "q": "write-enabled dogfood 启动前是否必须使用现有 Human approval/signature contract，并绑定 goal、Provider、worktree、允许文件、网络策略、execution、attempt、baseline 和期限？",
+          "answer": "同意：必须使用并验证 Human approval/signature；缺少、过期或绑定漂移不得启动，Agent/Provider/CLI/env 不能代替 Human approval。",
+          "note": "保持 Human 或 Human+Agent 中心责任单元的最终授权边界。"
+        },
+        {
+          "q": "真实 Codex Provider 不可用或失败时是否禁止 fake fallback，保留失败事实并进入 blocked/outcome-uncertain，重试必须新 attempt？",
+          "answer": "同意：不回退、不伪造成功 Evidence；按真实原因 blocked 或 outcome-uncertain，后续 Human 重新批准后以新 attempt 重试。",
+          "note": "只有真实 Provider 通过全部 gates 才算真实 dogfood 闭环。"
+        },
+        {
+          "q": "本次真实 Graph dogfood 的 Git 副作用是否限定为本地 disposable worktree、branch、commit、merge、测试和 cleanup，禁止 push/MR/远程状态修改？",
+          "answer": "同意：只执行本地副作用；不 push、不创建 MR、不修改远程仓库或外部项目状态。",
+          "note": "完整验证 Graph 本地隔离与合并链路，外部协作平台另行批准。"
+        },
+        {
+          "q": "当前 Graph 实现的基线 commit 是否只包含本轮 src、测试、生成 dist 与路线图决策，不包含两份既有无关 dirty d.ts？",
+          "answer": "同意：只纳入本轮实现、测试、生成产物和路线图 JSON/Markdown；保留并排除 ci-sweeper-runner.d.ts 与 gitlab-dependency-sweeper-adapter.d.ts。",
+          "note": "保持 dirty 文件边界清晰，避免把无关生成物带入基线。"
+        }
+      ],
+      "notes": "已完成第一阶段 deterministic Graph conformance fixture：复用 NativeOpnTracerConformanceReport，保持旧调用兼容；显式 Graph facts 追加 merge、post-merge-gate、cleanup、replay phases，并区分 passed、blocked、outcome-uncertain；fixture 覆盖完整成功链、merge blocked 与 cleanup-unresolved。真实 disposable worktree、真实 ZAgenticLoop dogfood、真实 merge 和端到端副作用 conformance 尚未执行。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-04 15:08:10",
+    "updated": "2026-08-04 21:01:30",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

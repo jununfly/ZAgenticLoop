@@ -44,3 +44,18 @@ test('Native OPN Tracer conformance report blocks scope drift or incomplete phas
   assert.ok(report.blocking_reasons.includes('preflight-plan-binding-mismatch'));
   assert.equal(report.side_effects_executed, false);
 });
+
+test('Native OPN Graph conformance fixture passes the complete merge, cleanup, and replay chain', () => {
+  const report = buildNativeOpnTracerConformanceReport({ ...validInput(), graph: { merge: 'merged', post_merge_gate: 'passed', cleanup: 'closed', replay: 'idempotent' } });
+  assert.equal(report.status, 'passed');
+  assert.deepEqual(report.phases.slice(-4).map((phase) => phase.name), ['merge', 'post-merge-gate', 'cleanup', 'replay']);
+});
+
+test('Native OPN Graph conformance fixture distinguishes blocked merge from uncertain cleanup', () => {
+  const blocked = buildNativeOpnTracerConformanceReport({ ...validInput(), graph: { merge: 'blocked', post_merge_gate: 'outcome-uncertain', cleanup: 'outcome-uncertain', replay: 'idempotent' } });
+  assert.equal(blocked.status, 'blocked');
+  assert.ok(blocked.blocking_reasons.includes('graph-merge-blocked'));
+  const uncertain = buildNativeOpnTracerConformanceReport({ ...validInput(), graph: { merge: 'merged', post_merge_gate: 'passed', cleanup: 'cleanup-unresolved', replay: 'idempotent' } });
+  assert.equal(uncertain.status, 'outcome-uncertain');
+  assert.ok(uncertain.blocking_reasons.includes('graph-cleanup-unresolved'));
+});

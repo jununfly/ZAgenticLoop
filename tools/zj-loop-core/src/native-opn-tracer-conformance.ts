@@ -7,17 +7,17 @@ export type NativeOpnTracerConformanceReport = {
   fixture_version: string;
   network_id: string;
   event_id: string;
-  status: 'passed' | 'blocked';
+  status: 'passed' | 'blocked' | 'outcome-uncertain';
   side_effects_executed: false;
   plan: { plan_id: string; plan_revision: number; plan_digest: string };
   center: { responsibility_unit: 'human' | 'human+agent'; human_id: string };
-  phases: Array<{ name: 'enrollment' | 'preflight' | 'execution' | 'relay' | 'aggregation' | 'verification' | 'review-handoff'; status: 'passed' | 'blocked'; reason?: string }>;
+  phases: Array<{ name: 'enrollment' | 'preflight' | 'execution' | 'relay' | 'aggregation' | 'verification' | 'review-handoff' | 'merge' | 'post-merge-gate' | 'cleanup' | 'replay'; status: 'passed' | 'blocked' | 'outcome-uncertain'; reason?: string }>;
   blocking_reasons: string[];
   created_at: string;
   report_digest: string;
 };
 
-type Input = Omit<NativeOpnTracerConformanceReport, 'schema' | 'status' | 'side_effects_executed' | 'phases' | 'blocking_reasons' | 'report_digest'> & {
+type Input = Omit<NativeOpnTracerConformanceReport, 'schema' | 'status' | 'side_effects_executed' | 'phases' | 'blocking_reasons' | 'report_digest' | 'graph'> & {
   enrollments: Array<{ node_id: string; network_id: string; status: 'enrolled-active' | 'blocked' }>;
   preflight: { status: 'execution-ready' | 'blocked'; plan_id: string; plan_revision: number; plan_digest: string };
   executions: Array<{ node_id: string; execution_id: string; status: 'succeeded' | 'blocked'; execution_digest: string }>;
@@ -25,6 +25,7 @@ type Input = Omit<NativeOpnTracerConformanceReport, 'schema' | 'status' | 'side_
   aggregation: { status: 'passed' | 'blocked'; aggregation_digest: string };
   verification: { status: 'passed' | 'blocked'; verification_digest: string; aggregation_digest: string; verifier_id: string };
   review_handoff: { status: 'accepted' | 'blocked'; verification_digest: string; aggregation_digest: string; responsible_party: string };
+  graph?: { merge: 'merged' | 'blocked' | 'outcome-uncertain'; post_merge_gate: 'passed' | 'blocked' | 'outcome-uncertain'; cleanup: 'closed' | 'outcome-uncertain' | 'cleanup-unresolved'; replay: 'idempotent' | 'conflict' };
 };
 
 function text(value: unknown): value is string { return typeof value === 'string' && value.length > 0; }
@@ -43,10 +44,22 @@ export function buildNativeOpnTracerConformanceReport(input: Input): NativeOpnTr
   if (input.aggregation.status !== 'passed' || !digest(input.aggregation.aggregation_digest)) reasons.push('aggregation-not-passed');
   if (input.verification.status !== 'passed' || !digest(input.verification.verification_digest) || input.verification.aggregation_digest !== input.aggregation.aggregation_digest || nodeIds.includes(input.verification.verifier_id)) reasons.push('verification-not-independent-or-bound');
   if (input.review_handoff.status !== 'accepted' || input.review_handoff.verification_digest !== input.verification.verification_digest || input.review_handoff.aggregation_digest !== input.aggregation.aggregation_digest || input.review_handoff.responsible_party !== input.center.human_id) reasons.push('review-handoff-not-closed');
+  if (input.graph !== undefined) {
+    if (input.graph.merge !== 'merged') reasons.push(input.graph.merge === 'outcome-uncertain' ? 'graph-merge-outcome-uncertain' : 'graph-merge-blocked');
+    if (input.graph.post_merge_gate !== 'passed') reasons.push(input.graph.post_merge_gate === 'outcome-uncertain' ? 'graph-post-merge-outcome-uncertain' : 'graph-post-merge-blocked');
+    if (input.graph.cleanup !== 'closed') reasons.push(input.graph.cleanup === 'cleanup-unresolved' ? 'graph-cleanup-unresolved' : 'graph-cleanup-outcome-uncertain');
+    if (input.graph.replay !== 'idempotent') reasons.push('graph-replay-conflict');
+  }
   const uniqueReasons = [...new Set(reasons)].sort();
-  const phaseNames: NativeOpnTracerConformanceReport['phases'][number]['name'][] = ['enrollment', 'preflight', 'execution', 'relay', 'aggregation', 'verification', 'review-handoff'];
-  const phases = phaseNames.map((name) => ({ name, status: uniqueReasons.length === 0 ? 'passed' as const : 'blocked' as const, ...(uniqueReasons.length === 0 ? {} : { reason: uniqueReasons.find((reason) => reason.startsWith(name) || (name === 'preflight' && reason.startsWith('preflight')) || (name === 'review-handoff' && reason.startsWith('review-handoff'))) ?? 'conformance-blocked' }) }));
-  const unsigned = { schema: NATIVE_OPN_TRACER_CONFORMANCE_REPORT_SCHEMA, fixture_version: input.fixture_version, network_id: input.network_id, event_id: input.event_id, status: uniqueReasons.length === 0 ? 'passed' as const : 'blocked' as const, side_effects_executed: false as const, plan: { ...input.plan }, center: { ...input.center }, phases, blocking_reasons: uniqueReasons, created_at: input.created_at };
+  const phaseNames: NativeOpnTracerConformanceReport['phases'][number]['name'][] = ['enrollment', 'preflight', 'execution', 'relay', 'aggregation', 'verification', 'review-handoff', ...(input.graph === undefined ? [] : ['merge' as const, 'post-merge-gate' as const, 'cleanup' as const, 'replay' as const])];
+  const phaseStatus = (name: NativeOpnTracerConformanceReport['phases'][number]['name']): 'passed' | 'blocked' | 'outcome-uncertain' => {
+    const reason = uniqueReasons.find((item) => item.startsWith(name) || (name === 'preflight' && item.startsWith('preflight')) || (name === 'review-handoff' && item.startsWith('review-handoff')));
+    if (!reason) return 'passed';
+    return reason.includes('outcome-uncertain') || reason.includes('cleanup-unresolved') ? 'outcome-uncertain' : 'blocked';
+  };
+  const phases = phaseNames.map((name) => ({ name, status: phaseStatus(name), ...(phaseStatus(name) === 'passed' ? {} : { reason: uniqueReasons.find((reason) => reason.startsWith(name) || (name === 'preflight' && reason.startsWith('preflight')) || (name === 'review-handoff' && reason.startsWith('review-handoff'))) ?? 'conformance-blocked' }) }));
+  const status = uniqueReasons.length === 0 ? 'passed' as const : uniqueReasons.some((reason) => reason.includes('outcome-uncertain') || reason.includes('cleanup-unresolved')) && !uniqueReasons.some((reason) => reason.includes('blocked') || reason.endsWith('-not-closed') || reason.includes('mismatch') || reason.includes('incomplete') || reason.includes('invalid') || reason.includes('conflict')) ? 'outcome-uncertain' as const : 'blocked' as const;
+  const unsigned = { schema: NATIVE_OPN_TRACER_CONFORMANCE_REPORT_SCHEMA, fixture_version: input.fixture_version, network_id: input.network_id, event_id: input.event_id, status, side_effects_executed: false as const, plan: { ...input.plan }, center: { ...input.center }, phases, blocking_reasons: uniqueReasons, created_at: input.created_at, ...(input.graph === undefined ? {} : { graph: { ...input.graph } }) };
   return { ...unsigned, report_digest: reportDigest(unsigned) };
 }
 

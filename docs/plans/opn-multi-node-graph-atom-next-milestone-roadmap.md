@@ -1,15 +1,15 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-04 15:08:10
+> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-04 21:01:30
 
 [~][X+] 1. OPN Multi-node Graph Atom E2E 下一里程碑
 ├── [x][Y+] 1-1. Multi-node Graph Atom 场景与 Single-Agent baseline 增量
 ├── [~][Y+] 1-2. Human 中心责任单元与 Agent 节点组网
 ├── [x][Y+] 1-3. Directed Task Graph 编排、依赖与资源隔离
 ├── [~][Y+] 1-4. 多节点执行、Evidence 聚合与独立验证
-├── [~][Y+] 1-5. Review Handoff、Human 决策与 closeout
-└── [ ][Y+] 1-6. 失败恢复、重放与端到端 conformance
+├── [x][Y+] 1-5. Review Handoff、Human 决策与 closeout
+└── [~][Y+] 1-6. 失败恢复、重放与端到端 conformance
 
 ### 当前施工：1-2. Human 中心责任单元与 Agent 节点组网
 
