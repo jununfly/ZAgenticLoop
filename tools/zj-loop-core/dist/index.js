@@ -190,6 +190,7 @@ export * from './bootstrap-protocol.js';
 export * from './trusted-runner-sidecar-bootstrap.js';
 export * from './real-agent-dogfood-report.js';
 export * from './real-agent-dogfood-independent-verification.js';
+export * from './real-agent-dogfood-git-scope.js';
 export * from './real-agent-dogfood-evidence-integrity.js';
 export * from './real-agent-dogfood-replay.js';
 export * from './real-agent-dogfood-self-audit.js';

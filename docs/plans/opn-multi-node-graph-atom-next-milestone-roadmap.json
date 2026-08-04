@@ -393,6 +393,11 @@
           "q": "是否将 execution_mode 持久化到 approval summary/context，并要求默认 read-only、write-enabled 必须由 Human approval 明确绑定，所有链路漂移即 blocked？",
           "answer": "同意：默认 read-only；只有 approval summary 明确写入 write-enabled 才能进入 worker context；worker、Provider registry、Codex invocation 透传同一 mode；任一漂移 blocked。",
           "note": "禁止通过 CLI 参数临时升级写权限，保持 Human approval 为唯一授权事实。"
+        },
+        {
+          "q": "是否实现真实 Git post-run observation，将 changed_files、uncommitted_files、commit_parent、baseline_commit、git diff --check 接入 validateCodexWriteScope，并在 scope 不通过时禁止 merge？",
+          "answer": "同意：由可信编排层观察并绑定这些 Git facts；Provider/Agent 不得自报；scope 失败进入 blocked 且禁止 merge。",
+          "note": "完成 write-enabled dogfood 的真实提交范围证据闭环。"
         }
       ],
       "notes": "已完成第一阶段 deterministic Graph conformance fixture：复用 NativeOpnTracerConformanceReport，保持旧调用兼容；显式 Graph facts 追加 merge、post-merge-gate、cleanup、replay phases，并区分 passed、blocked、outcome-uncertain；fixture 覆盖完整成功链、merge blocked 与 cleanup-unresolved。真实 disposable worktree、真实 ZAgenticLoop dogfood、真实 merge 和端到端副作用 conformance 尚未执行。"
@@ -400,7 +405,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-04 21:09:56",
+    "updated": "2026-08-04 21:21:09",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

@@ -55,6 +55,11 @@ export declare function executeRealAgentDogfoodWorker(input: {
     executable: string;
     goal: string;
     execution_mode?: CodexExecutionMode;
+    git_scope?: {
+        repo_root: string;
+        baseline_commit: string;
+        allowed_files: string[];
+    };
     provider: Provider;
     provider_cleanup?: () => Promise<ProviderCleanupResult>;
     post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory;

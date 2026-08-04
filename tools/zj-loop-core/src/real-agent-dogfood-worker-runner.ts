@@ -7,6 +7,7 @@ import { validateLocalExecutionPreflight } from './local-execution-preflight.js'
 import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import { providerResultFromLocalProcess, validateProviderResult, type ProviderResult as NormalizedProviderResult } from './provider-runtime-adapter.js';
 import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
+import { observeRealAgentDogfoodGitScope, type RealAgentDogfoodGitScopeObservation } from './real-agent-dogfood-git-scope.js';
 
 type ProviderResult = { status: 'completed' | 'failed' | 'cancelled' | 'timed-out'; success: boolean; pid: number; exit_code: number | null; signal: string | null; stdout: string; stderr: string; reason?: string; provider_result?: NormalizedProviderResult };
 type Provider = { run(input: { cwd: string; prompt: string; executable: string; mode?: CodexExecutionMode }): Promise<ProviderResult> };
@@ -31,7 +32,7 @@ function validateAdmissionBoundExecution(input: { admission_bound_execution: Adm
   if (admission.preflight.executable !== input.executable || admission.preflight.cwd !== input.worktree_path) throw new Error('worker-admission-resource-binding-invalid');
 }
 
-export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; admission_bound_execution: AdmissionBoundExecution; worktree_path: string; executable: string; goal: string; execution_mode?: CodexExecutionMode; provider: Provider; provider_cleanup?: () => Promise<ProviderCleanupResult>; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
+export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteStateStore; evidenceStore: ContentAddressedEvidenceStore; lifecycle: RealAgentDogfoodLifecycle; worker_id: string; lease_id: string; binding: RealAgentDogfoodExecutionBinding; admission_bound_execution: AdmissionBoundExecution; worktree_path: string; executable: string; goal: string; execution_mode?: CodexExecutionMode; git_scope?: { repo_root: string; baseline_commit: string; allowed_files: string[] }; provider: Provider; provider_cleanup?: () => Promise<ProviderCleanupResult>; post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerResult> {
   if (input.lifecycle.status !== 'running') throw new Error('worker-lifecycle-not-running');
   validateAdmissionBoundExecution(input);
   const binding = await validateRealAgentDogfoodExecutionBinding({ binding: input.binding, executable: input.executable, args: input.binding.args, cwd: input.worktree_path, worktree_path: input.worktree_path, lease_id: input.lease_id });
@@ -55,6 +56,14 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
         : { status: 'uncertain', reason: candidate.status === 'uncertain' ? candidate.reason : 'cleanup-proof-invalid' };
     } catch { cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' }; }
   }
+  let gitScope: RealAgentDogfoodGitScopeObservation | { status: 'unavailable'; reason: string } | undefined;
+  if (input.execution_mode === 'write-enabled') {
+    if (!input.git_scope) gitScope = { status: 'unavailable', reason: 'write-scope-observation-missing' };
+    else {
+      try { gitScope = await observeRealAgentDogfoodGitScope(input.git_scope); }
+      catch (error) { gitScope = { status: 'unavailable', reason: error instanceof Error ? error.message : 'write-scope-observation-failed' }; }
+    }
+  }
   const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
   const stderrEvidence = await input.evidenceStore.put({ content: result.stderr, kind: 'provider-stderr' });
   let postRunProof;
@@ -63,7 +72,7 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
       postRunProof = await input.post_run_proof_factory({ execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest, provider_result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal } });
     } catch { postRunProof = null; }
   }
-  const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, provider_result: normalized, provider_result_validation: normalizedCheck, cleanup, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
+  const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, provider_result: normalized, provider_result_validation: normalizedCheck, cleanup, git_scope: gitScope ?? null, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
   const factEvidence = await input.evidenceStore.put({ content: JSON.stringify(fact), kind: 'provider-result-fact' });
   const factDigest = factEvidence.digest;
   let to: 'verification-pending' | 'blocked' | 'outcome-uncertain';
@@ -80,6 +89,8 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
     nextAction = cleanup.status === 'cleaned' ? 'human-review-provider-failure' : 'human-reconcile-execution';
   }
   else if (cleanup.status !== 'cleaned') { to = 'outcome-uncertain'; reasonCode = 'provider-completed-cleanup-uncertain'; nextAction = 'human-reconcile-execution'; }
+  else if (input.execution_mode === 'write-enabled' && (!gitScope || !('scope' in gitScope))) { to = 'outcome-uncertain'; reasonCode = 'write-scope-observation-uncertain'; nextAction = 'human-reconcile-execution'; }
+  else if (input.execution_mode === 'write-enabled' && gitScope && 'scope' in gitScope && gitScope.scope.status === 'blocked') { to = 'blocked'; reasonCode = gitScope.scope.reason; nextAction = 'human-review-provider-failure'; }
   else if (!postRunProof) { to = 'outcome-uncertain'; reasonCode = 'post-run-proof-missing-or-invalid'; nextAction = 'human-reconcile-execution'; }
   else {
     const proof = verifyRealAgentDogfoodPostRunProof({ proof: postRunProof, execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worktree_path: input.worktree_path, executable_digest: input.binding.executable_digest, stdout_digest: stdoutEvidence.digest, stderr_digest: stderrEvidence.digest });

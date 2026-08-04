@@ -93,13 +93,14 @@ test('start persists an explicitly approved write-enabled execution mode in the 
       'start', '--goal', 'write the approved test atom', '--repo', repo,
       '--provider-id', 'codex', '--adapter', 'codex-agent-provider.v1',
       '--executable', '/usr/bin/true', '--network-policy', 'network-allowed',
-      '--execution-mode', 'write-enabled', '--state-store', path.join(runtime, 'state.db'),
+      '--execution-mode', 'write-enabled', '--allowed-file', 'tools/zj-loop-core/test/native-opn-tracer.test.mjs', '--state-store', path.join(runtime, 'state.db'),
       '--evidence-store', path.join(runtime, 'evidence'), '--worktree-root', path.join(runtime, 'worktrees'),
     ]);
     assert.equal(result.exitCode, 0, result.stderr);
     const output = JSON.parse(result.stdout);
     const summary = JSON.parse(await readFile(output.approval_summary_path, 'utf8'));
     assert.equal(summary.execution_mode, 'write-enabled');
+    assert.deepEqual(summary.allowed_files, ['tools/zj-loop-core/test/native-opn-tracer.test.mjs']);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

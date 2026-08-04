@@ -64,6 +64,7 @@ type WorkerContext = {
   executable: string;
   goal: string;
   execution_mode?: CodexExecutionMode;
+  git_scope?: { repo_root: string; baseline_commit: string; allowed_files: string[] };
   expected_revision: number;
   provider_runtime_ipc?: { socket_path: string; correlation_id?: string; timeout_ms?: number; contract_digest: string; runtime_binding: ProviderRuntimeIdentityBinding };
   trusted_runner_post_run_ipc?: { socket_path: string; correlation_id: string; timeout_ms?: number };
@@ -76,6 +77,7 @@ async function runWorkerContext(contextPath: string) {
   if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || typeof context.adapter_contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.adapter_contract_digest) || !context.binding || !context.admission_bound_execution || !context.provider_auth_ref || !context.runtime_binding || !Number.isInteger(context.expected_revision)) throw new Error('worker-context-invalid');
   if (context.provider_id !== 'codex') throw new Error('provider-not-registered');
   if (context.execution_mode !== undefined && context.execution_mode !== 'read-only' && context.execution_mode !== 'write-enabled') throw new Error('worker-execution-mode-invalid');
+  if (context.execution_mode === 'write-enabled' && (!context.git_scope || typeof context.git_scope.repo_root !== 'string' || typeof context.git_scope.baseline_commit !== 'string' || !Array.isArray(context.git_scope.allowed_files))) throw new Error('worker-git-scope-required');
   if (JSON.stringify(context.provider_auth_ref) !== JSON.stringify(context.admission_bound_execution.binding.provider_auth_ref)) throw new Error('worker-provider-auth-ref-binding-invalid');
   if (JSON.stringify(context.runtime_binding) !== JSON.stringify(context.admission_bound_execution.binding.runtime_binding)) throw new Error('worker-provider-runtime-identity-binding-invalid');
   const authRef = context.provider_auth_ref;
@@ -102,7 +104,7 @@ async function runWorkerContext(contextPath: string) {
     if (!lease || lease.lease_id !== context.lease_id || lease.worker_id !== context.worker_id || typeof lease.expires_at !== 'string' || Date.parse(lease.expires_at) <= Date.now()) throw new Error('worker-lease-invalid');
     const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store as string });
     const provider = runtimeProvider;
-    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id as string, lease_id: context.lease_id as string, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path as string, executable: context.executable as string, goal: context.goal as string, execution_mode: context.execution_mode, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision as number });
+    const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id as string, lease_id: context.lease_id as string, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path as string, executable: context.executable as string, goal: context.goal as string, execution_mode: context.execution_mode, git_scope: context.git_scope, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision as number });
     if (result.status !== 'verification-pending') return result;
     const verifierContextPath = `${contextPath}.verifier.json`;
     await writeFile(verifierContextPath, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_verifier_context.v1', state_store: context.state_store, evidence_store: context.evidence_store, network_id: context.network_id, dogfood_id: context.dogfood_id, execution_id: context.execution_id, attempt: lifecycle.attempt, verifier_id: `verifier-${context.execution_id}`, provider_fact_digest: result.provider_fact_digest, stdout_digest: result.stdout_digest, stderr_digest: result.stderr_digest, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });

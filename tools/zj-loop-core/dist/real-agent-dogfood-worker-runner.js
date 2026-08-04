@@ -3,6 +3,7 @@ import { validateRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-b
 import { verifyRealAgentDogfoodPostRunProof } from './real-agent-dogfood-post-run-proof.js';
 import { validateLocalExecutionPreflight } from './local-execution-preflight.js';
 import { providerResultFromLocalProcess, validateProviderResult } from './provider-runtime-adapter.js';
+import { observeRealAgentDogfoodGitScope } from './real-agent-dogfood-git-scope.js';
 function validateAdmissionBoundExecution(input) {
     const admission = input.admission_bound_execution;
     if (validateLocalExecutionPreflight(admission.preflight).status !== 'valid')
@@ -43,6 +44,19 @@ export async function executeRealAgentDogfoodWorker(input) {
             cleanup = { status: 'uncertain', reason: 'cleanup-coordinator-failed' };
         }
     }
+    let gitScope;
+    if (input.execution_mode === 'write-enabled') {
+        if (!input.git_scope)
+            gitScope = { status: 'unavailable', reason: 'write-scope-observation-missing' };
+        else {
+            try {
+                gitScope = await observeRealAgentDogfoodGitScope(input.git_scope);
+            }
+            catch (error) {
+                gitScope = { status: 'unavailable', reason: error instanceof Error ? error.message : 'write-scope-observation-failed' };
+            }
+        }
+    }
     const stdoutEvidence = await input.evidenceStore.put({ content: result.stdout, kind: 'provider-stdout' });
     const stderrEvidence = await input.evidenceStore.put({ content: result.stderr, kind: 'provider-stderr' });
     let postRunProof;
@@ -54,7 +68,7 @@ export async function executeRealAgentDogfoodWorker(input) {
             postRunProof = null;
         }
     }
-    const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, provider_result: normalized, provider_result_validation: normalizedCheck, cleanup, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
+    const fact = { schema: 'zj-loop.real_agent_dogfood_provider_result.v1', execution_id: input.lifecycle.execution_id, attempt: input.lifecycle.attempt, worker_id: input.worker_id, lease_id: input.lease_id, executable: input.executable, executable_digest: input.binding.executable_digest, worktree_path: input.worktree_path, result: { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, reason: result.reason }, provider_result: normalized, provider_result_validation: normalizedCheck, cleanup, git_scope: gitScope ?? null, stdout: stdoutEvidence, stderr: stderrEvidence, post_run_proof: postRunProof ?? null };
     const factEvidence = await input.evidenceStore.put({ content: JSON.stringify(fact), kind: 'provider-result-fact' });
     const factDigest = factEvidence.digest;
     let to;
@@ -74,6 +88,16 @@ export async function executeRealAgentDogfoodWorker(input) {
         to = 'outcome-uncertain';
         reasonCode = 'provider-completed-cleanup-uncertain';
         nextAction = 'human-reconcile-execution';
+    }
+    else if (input.execution_mode === 'write-enabled' && (!gitScope || !('scope' in gitScope))) {
+        to = 'outcome-uncertain';
+        reasonCode = 'write-scope-observation-uncertain';
+        nextAction = 'human-reconcile-execution';
+    }
+    else if (input.execution_mode === 'write-enabled' && gitScope && 'scope' in gitScope && gitScope.scope.status === 'blocked') {
+        to = 'blocked';
+        reasonCode = gitScope.scope.reason;
+        nextAction = 'human-review-provider-failure';
     }
     else if (!postRunProof) {
         to = 'outcome-uncertain';
