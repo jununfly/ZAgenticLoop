@@ -1128,6 +1128,116 @@
           "q": "1-6 Runtime start config loader 的实现结果是什么？",
           "answer": "同意：新增持久化 config loader；只读取绝对路径文件，解析后复用 start config schema 校验，读取失败、JSON 非法、未知字段或 secret 字段均 fail-closed。",
           "note": "TDD focused 4/4；npm run build 与 git diff --check 通过。CLI start 的剩余阻塞是外部 revoke authority 的显式入口，不能从配置文件读取 secret 或自行获得 revoke 权限。"
+        },
+        {
+          "q": "ProviderAuth authority 如何提供给 foreground Runtime？",
+          "answer": "同意：采用独立、provider-neutral 的本机 Authority IPC；authority 进程持有 secret 与 Human/Keychain 能力，Runtime 只请求受认证的 revokeRef；issueRef/consumeSecret 不开放给 Runtime；StateStore 只保存无 secret ref facts；authority 不可用时 start blocked，cleanup 进入 outcome-uncertain。",
+          "note": "现有 ProviderAuthRuntime 只有内存 authority，StateStore resolver 已完成；下一步设计 Authority IPC 的复用 framing、peer identity、命令边界和生命周期。"
+        },
+        {
+          "q": "Authority IPC 是否复用现有 ProviderAuth IPC transport？",
+          "answer": "同意：复用现有 Unix transport/framing、correlation/sequence、bounded parsing、replay 防护和 peer identity gate；Authority 使用独立 socket 与独立 command schema，不复用 Provider launch/cleanup frame 语义，不新造第二套 transport。",
+          "note": "下一步确定 Authority 对 Runtime peer、network/runtime binding 和 revocation StateStore 写入权的边界。"
+        },
+        {
+          "q": "Authority IPC 如何确认请求来自被授权的 Runtime？",
+          "answer": "同意：采用 pinned process identity + request-level runtime/network 双重绑定；socket 层校验平台真实 peer identity，request 层校验 network_id、runtime_id、runtime_binding、authority contract digest 与 auth_ref 绑定；任一漂移都拒绝且不写 StateStore。",
+          "note": "macOS 使用 process-audit，Linux 使用 peer credentials，Windows 使用 named-pipe identity；不依赖 socket 文件权限或请求字段单独完成身份认证。"
+        },
+        {
+          "q": "ProviderAuth revocation fact 由谁写入 StateStore？",
+          "answer": "同意：由独立 ProviderAuth authority 在完成自身权限校验后写入网络级 StateStore append-only revocation event；Runtime 只提出 revoke request，不直接写 StateStore；写入失败返回 outcome-uncertain。",
+          "note": "保持 StateStore 为网络级事实资源，同时不授予 Runtime 网络状态写入权。"
+        },
+        {
+          "q": "Authority process 与 Runtime process 的生命周期如何组织？",
+          "answer": "同意：Authority 作为独立受控 foreground service，拥有独立 Unix socket、process identity、binding artifact 和 bounded start/status/stop；Runtime foreground service 不隐式启动或拥有 Authority。",
+          "note": "两个生命周期独立；Runtime start 必须验证 Authority readiness，Authority stop 不伪造 Runtime cleanup 成功。"
+        },
+        {
+          "q": "Authority IPC 首版允许哪些命令？",
+          "answer": "同意：首版只开放 revokeRef；issueRef、consumeSecret、读取 secret、修改 Human/Keychain authority 均不通过 Runtime Authority IPC 暴露。",
+          "note": "命令集合固定并由 authority contract digest 绑定，后续扩展必须新增明确契约。"
+        },
+        {
+          "q": "Authority revoke command 如何处理重试与并发？",
+          "answer": "同意：以 request_id + network_id + runtime_id + runtime_binding + auth_ref_id 组成幂等绑定；相同请求返回同一结果，绑定冲突或相同 request_id 不同 payload 直接 blocked；并发 revoke 只能产生一个 append-only fact。",
+          "note": "避免 Runtime cleanup 重试制造多条语义冲突的 revocation facts。"
+        },
+        {
+          "q": "Authority 不可用时 Runtime 如何收束？",
+          "answer": "同意：Runtime start 在 Authority readiness/identity gate 未通过时 blocked；运行中 Authority 断开时不伪造 cleanup/revoke 成功，Provider cleanup 返回 outcome-uncertain，并保留可重试的原始绑定证据。",
+          "note": "Authority availability 与 Provider 业务结果分离，但 cleanup 事实缺失必须显式暴露。"
+        },
+        {
+          "q": "secret 是否允许进入 Authority IPC？",
+          "answer": "同意：不允许；IPC 只传 auth_ref_id、auth_ref_digest、network/runtime binding、request id 和 revoke reason，不传 secret、token、密码、私钥或 Keychain 导出材料。",
+          "note": "secret 只存在 Authority 进程及其受控 Keychain/provider adapter 内。"
+        },
+        {
+          "q": "Authority revoke IPC 的连接粒度是什么？",
+          "answer": "同意：首版一个 authenticated Unix IPC connection 只承载一个 revoke command；完成 response 后由任一方关闭；不在同一连接上复用多个 execution 的 revoke 请求。",
+          "note": "优先降低跨 execution 状态串扰、序列复用和并发审计复杂度；后续批量优化另立契约。"
+        },
+        {
+          "q": "Authority IPC 是否需要 challenge/replay gate？",
+          "answer": "同意：复用现有 challenge nonce、correlation_id、sequence 和 bounded frame gate；Authority 在 peer identity 通过后仍要求一次性 nonce 与 command digest 绑定，nonce 重放、过期或跨 connection 使用均 blocked。",
+          "note": "Unix socket peer identity 解决进程身份，challenge 解决请求新鲜度与重放。"
+        },
+        {
+          "q": "Authority revoke request 的最小绑定字段是什么？",
+          "answer": "同意：request_id、network_id、runtime_id、runtime_binding、auth_ref_id、auth_ref_digest、authority_contract_digest、revoke_reason、nonce；禁止携带 secret 和未声明字段。",
+          "note": "所有字段参与 canonical request digest，response 必须回显并精确匹配绑定摘要。"
+        },
+        {
+          "q": "revocation StateStore event 如何保证幂等？",
+          "answer": "同意：event_id 由 authority 根据 request_id 与 auth_ref_id 生成稳定幂等键；payload 保存 request_digest、network/runtime binding、auth_ref_id、auth_ref_digest、reason 和 authority identity digest；相同事件 duplicate，冲突 payload blocked。",
+          "note": "利用 StateStore 的 append-only revision/unique event_id 约束，不覆盖历史事实。"
+        },
+        {
+          "q": "Authority revoke response 需要哪些状态？",
+          "answer": "同意：revoked、duplicate、blocked、outcome-uncertain；revoked/duplicate 返回 revocation event digest，blocked 返回稳定 reason，StateStore 写入结果未知时只能 outcome-uncertain，不返回 revoked。",
+          "note": "Runtime cleanup 只能把 revoked/duplicate 映射为已清理，其他状态保持不确定或阻塞。"
+        },
+        {
+          "q": "Authority binding artifact 保存什么？",
+          "answer": "同意：独立仓库外 0600 artifact，保存 authority service_id、network scope、socket path、process identity digest、authority contract digest、StateStore identity/path、PID/started_at 和 binding digest；不保存 secret、token 或 Keychain material。",
+          "note": "Authority 与 Runtime 各自拥有独立 binding，不能通过替换对方 artifact 获得权限。"
+        },
+        {
+          "q": "Authority IPC 如何复用现有 framing 而不污染 ProviderAuth frame schema？",
+          "answer": "同意：提取 provider-neutral length-prefixed JSON transport、decoder、correlation/sequence 和 Unix connection/server 底座；ProviderAuth IPC 保留原有专用 frame schema，Authority 定义独立 frame schema 与 command validator；不向 ProviderAuthIpcFrame 增加 Authority kind。",
+          "note": "复用实现底座，不复用业务协议，避免两个生命周期继续耦合。"
+        },
+        {
+          "q": "Authority IPC server 的 peer gate 如何装配？",
+          "answer": "同意：通用 Authority server 在建立 connection 后先执行平台真实 peer verifier，再创建带 correlation_id 的 authority decoder；peer 失败不进入 command parser，不发送业务 response；每个 connection 只处理一个已认证 revoke request。",
+          "note": "保证身份 gate 位于协议处理之前，并与 Provider Runtime server 的安全顺序一致。"
+        },
+        {
+          "q": "Authority 写入 revocation StateStore 时如何处理 revision race？",
+          "answer": "同意：Authority 以稳定 event_id/request_digest 调用 append-only StateStore；revision conflict 时重新读取当前 revision 并有限次数重试；同 event_id 同 payload 返回 duplicate，event_id payload 冲突 blocked，超过重试或状态未知返回 outcome-uncertain。",
+          "note": "不覆盖历史、不伪造 revoked 成功，保留 request 与 authority binding evidence。"
+        },
+        {
+          "q": "Provider cleanup 触发 revoke 是否需要新的 Human approval？",
+          "answer": "同意：不需要新的 Human approval；初次 issueRef 已绑定 Human authorization，cleanup revoke 只是收束同一 execution/attempt 的既有授权，必须严格绑定原 auth_ref、handle、network/runtime binding 和 cleanup context。",
+          "note": "它不能扩大 scope、延长有效期或产生新授权；任何新 issueRef 仍必须回到独立 Human/Keychain authority。"
+        },
+        {
+          "q": "Authority 是否可以因 auth_ref 过期而主动 revoke？",
+          "answer": "同意：可以由 Authority 做幂等过期收束，但必须生成独立 append-only revocation fact，标注 reason=expired，并继续绑定 auth_ref、network/runtime binding 和 authority identity；不能覆盖原 issuance。",
+          "note": "过期收束属于资源生命周期，不等同于 Human 做出的产品结果决策。"
+        },
+        {
+          "q": "Authority stop 时是否主动撤销所有 active auth_ref？",
+          "answer": "同意：首版不做无边界全量撤销；Authority stop 先拒绝新请求并 bounded drain 已接收请求，已知 active execution 按绑定 cleanup 收束，无法证明的 ref 保持 outcome-uncertain 并进入 reconciliation。",
+          "note": "避免 Authority stop 误伤其他 Runtime/network scope，也避免伪造全量 cleanup 事实。"
+        },
+        {
+          "q": "Human 手动 revoke 与 Runtime cleanup revoke 如何区分？",
+          "answer": "同意：使用不同 command/reason/schema projection；Runtime cleanup 只能撤销其原 execution-scoped ref，Human revoke 可按 Human authority contract 撤销更高层授权，但仍 append-only、可审计、不可被 Runtime 代替。",
+          "note": "责任主体、权限范围和审计路径保持不对称：Human 能做最终撤销决策，Agent/Runtime 只能请求既定生命周期收束。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1135,7 +1245,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:50:17",
+    "updated": "2026-08-05 18:23:10",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
