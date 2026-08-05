@@ -1108,6 +1108,11 @@
           "q": "1-6 foreground service core 的实现结果是什么？",
           "answer": "同意：新增 provider-neutral foreground service core，启动顺序固定为 launcher.start、Unix socket readiness、binding artifact 持久化；readiness/持久化失败会 bounded close 且不留下 binding；stop 关闭 launcher 后删除对应 artifact。",
           "note": "TDD focused 7/7；npm run build 与 git diff --check 通过。该 core 已具备 start 装配底座，但 CLI 仍需接入真实 Runtime authority、peer verifier 和 launcher config。"
+        },
+        {
+          "q": "1-6 Provider Runtime start config contract 的实现结果是什么？",
+          "answer": "同意：新增 secret-free provider runtime start config schema；固定 network/runtime/provider/socket/peer/contract/StateStore/binding 配置，所有路径必须绝对路径，digest 必须匹配；macOS helper path 与 digest 必须成对；未知或 secret 字段 fail-closed。",
+          "note": "TDD focused 7/7；npm run build 与 git diff --check 通过。下一步用 validated config 装配 StateStore resolver、service-only adapter、launcher 与 foreground service。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1115,7 +1120,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:41:10",
+    "updated": "2026-08-05 17:45:04",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
