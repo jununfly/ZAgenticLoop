@@ -47,6 +47,23 @@ test('worker lease can be explicitly released by its holder', async () => {
   }
 });
 
+test('worker lease release revision conflict never reports a released lease', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-lease-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-release-conflict-1', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
+    const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-conflict-1', execution_id: 'execution-release-conflict-1', worker_id: 'worker-1', execution_binding_digest: bindingDigest, now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
+    assert.equal(acquired.status, 'acquired');
+    const conflict = await releaseRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-conflict-1', execution_id: 'execution-release-conflict-1', lease_id: acquired.lease_id, worker_id: 'worker-1', execution_binding_digest: bindingDigest, expected_revision: acquired.revision - 1, now: '2026-08-01T12:00:05.000Z' });
+    assert.deepEqual(conflict, { status: 'blocked', reason: 'worker-lease-mismatch' });
+    const events = (await store.readEvents({ network_id: 'network-release-conflict-1', aggregate_type: 'real-agent-dogfood-worker', aggregate_id: 'execution-release-conflict-1' })).events;
+    assert.equal(events.at(-1).payload.operation, 'acquired');
+  } finally {
+    await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('expired worker lease can be explicitly abandoned and then reacquired', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-lease-'));
   const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });

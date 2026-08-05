@@ -384,13 +384,45 @@ async function status(options: Record<string, string | boolean | undefined>) {
   const networkId = required(options, 'network-id');
   const defaults = defaultRealAgentDogfoodRuntimePaths();
   const statePath = typeof options['state-store'] === 'string' ? options['state-store'] : defaults.state_store;
+  const evidenceStore = await canonicalPath(typeof options['evidence-store'] === 'string' ? options['evidence-store'] : defaults.evidence_store);
   const stateStore = createSqliteStateStore({ filename: statePath });
   try {
     const snapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood', aggregate_id: dogfoodId });
     const events = snapshot.events as unknown as RealAgentDogfoodEvent[];
     const lifecycle = projectRealAgentDogfoodLifecycle(events);
     if (lifecycle.dogfood_id !== dogfoodId) throw new Error('dogfood-id-mismatch');
-    return outputLifecycle(lifecycle, { state_revision: snapshot.snapshot_revision, event_count: events.length });
+    const graphSummary: Record<string, unknown> = {};
+    try {
+      const summary = JSON.parse(await readFile(path.join(evidenceStore, `${dogfoodId}.approval-summary.json`), 'utf8')) as { graph_plan?: unknown };
+      if (summary.graph_plan && typeof summary.graph_plan === 'object') {
+        const graphPlan = createRealAgentDogfoodGraphPlan(summary.graph_plan as RealAgentDogfoodGraphPlan);
+        const graphSnapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood-graph', aggregate_id: dogfoodId });
+        const phase = projectRealAgentDogfoodGraphPhaseRecord({ plan: graphPlan, events: graphSnapshot.events });
+        const workerSnapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood-worker', aggregate_id: lifecycle.execution_id });
+        const coordinatorSnapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood-graph-coordinator', aggregate_id: lifecycle.execution_id });
+        const nextPhase = REAL_AGENT_DOGFOOD_GRAPH_PHASES[phase?.completed_phases.length ?? 0] ?? null;
+        graphSummary.graph = {
+          schema: 'zj-loop.real_agent_dogfood_graph_status.v1',
+          plan_digest: graphPlan.plan_digest,
+          plan_definition_digest: graphPlan.plan_definition_digest,
+          current_phase: phase?.phase ?? null,
+          phase_status: phase?.status ?? null,
+          completed_phases: phase?.completed_phases ?? [],
+          next_phase: nextPhase,
+          actor_kind: phase?.actor_kind ?? null,
+          actor_identity: phase?.actor_identity ?? null,
+          evidence_refs: phase?.evidence_refs ?? [],
+          execution_binding_digest: phase?.execution_binding_digest ?? null,
+          worker_lease_digest: phase?.worker_lease_digest ?? null,
+          worker_lease: workerSnapshot.events.at(-1)?.payload ?? null,
+          coordinator_lease: coordinatorSnapshot.events.at(-1)?.payload ?? null,
+          state_revision: graphSnapshot.snapshot_revision,
+        };
+      }
+    } catch {
+      // A non-Graph execution or an incomplete summary has no Graph read model.
+    }
+    return outputLifecycle(lifecycle, { state_revision: snapshot.snapshot_revision, event_count: events.length, ...graphSummary });
   } finally {
     await stateStore.close();
   }

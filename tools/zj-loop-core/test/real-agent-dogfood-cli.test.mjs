@@ -171,6 +171,12 @@ test('Graph mode resume gates worker start behind the Coordinator lease and shar
     const output = JSON.parse(resumed.stdout);
     assert.equal(output.status, 'running');
     assert.equal(output.provider_invoked, false);
+    const graphStatus = JSON.parse((await invoke(['status', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--state-store', statePath, '--evidence-store', evidence])).stdout);
+    assert.equal(graphStatus.graph.schema, 'zj-loop.real_agent_dogfood_graph_status.v1');
+    assert.equal(graphStatus.graph.next_phase, 'source_execution');
+    assert.deepEqual(graphStatus.graph.completed_phases, []);
+    assert.equal(graphStatus.graph.worker_lease.operation, 'acquired');
+    assert.equal(graphStatus.graph.coordinator_lease.operation, 'acquired');
     const store = createSqliteStateStore({ filename: statePath });
     try {
       const coordinator = await store.readEvents({ network_id: created.network_id, aggregate_type: 'real-agent-dogfood-graph-coordinator', aggregate_id: created.execution_id });

@@ -59,3 +59,18 @@ test('Native OPN Graph conformance fixture distinguishes blocked merge from unce
   assert.equal(uncertain.status, 'outcome-uncertain');
   assert.ok(uncertain.blocking_reasons.includes('graph-cleanup-unresolved'));
 });
+
+test('Native OPN Graph failure matrix never projects a failed graph as passed', () => {
+  const cases = [
+    { merge: 'blocked', post_merge_gate: 'passed', cleanup: 'closed', replay: 'idempotent' },
+    { merge: 'merged', post_merge_gate: 'outcome-uncertain', cleanup: 'closed', replay: 'idempotent' },
+    { merge: 'merged', post_merge_gate: 'passed', cleanup: 'cleanup-unresolved', replay: 'idempotent' },
+    { merge: 'merged', post_merge_gate: 'passed', cleanup: 'closed', replay: 'conflict' },
+  ];
+  for (const graph of cases) {
+    const report = buildNativeOpnTracerConformanceReport({ ...validInput(), graph });
+    assert.notEqual(report.status, 'passed');
+    assert.ok(report.blocking_reasons.length > 0);
+    assert.ok(report.phases.slice(-4).some((phase) => phase.status !== 'passed'));
+  }
+});
