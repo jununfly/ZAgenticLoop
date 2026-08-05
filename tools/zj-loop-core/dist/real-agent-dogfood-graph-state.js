@@ -2,6 +2,15 @@ import { REAL_AGENT_DOGFOOD_GRAPH_PHASES, } from './real-agent-dogfood-graph-orc
 export const REAL_AGENT_DOGFOOD_GRAPH_STATE_SCHEMA = 'zj-loop.real_agent_dogfood_graph_state.v1';
 export const REAL_AGENT_DOGFOOD_GRAPH_STATE_AGGREGATE = 'real-agent-dogfood-graph';
 export const REAL_AGENT_DOGFOOD_GRAPH_STATE_EVENT = 'real-agent-dogfood-graph.phase-recorded';
+const PHASE_ACTOR_KINDS = {
+    source_execution: ['agent-node'],
+    scope_observation: ['coordinator', 'trusted-runner', 'core'],
+    independent_verification: ['coordinator', 'trusted-runner', 'core'],
+    human_acceptance: ['human'],
+    merge: ['coordinator', 'human'],
+    post_merge_gate: ['coordinator', 'trusted-runner', 'core'],
+    cleanup: ['coordinator', 'trusted-runner', 'core'],
+};
 function phasePrefix(phases) {
     return phases.every((phase, index) => phase === REAL_AGENT_DOGFOOD_GRAPH_PHASES[index]);
 }
@@ -12,6 +21,10 @@ function assertPlanBinding(input) {
 function assertRecord(record, plan) {
     if (record.schema !== REAL_AGENT_DOGFOOD_GRAPH_STATE_SCHEMA || record.network_id.trim() === '' || record.dogfood_id !== plan.dogfood_id || record.execution_id !== plan.execution_id || record.plan_digest !== plan.plan_digest || !phasePrefix(record.completed_phases) || record.completed_phases.length > REAL_AGENT_DOGFOOD_GRAPH_PHASES.length || record.status === 'passed' && record.completed_phases.at(-1) !== record.phase || record.status !== 'passed' && record.completed_phases.includes(record.phase))
         throw new Error('graph-state-record-invalid');
+    const hasKind = record.actor_kind !== undefined;
+    const hasIdentity = record.actor_identity !== undefined;
+    if (hasKind !== hasIdentity || hasKind && (!PHASE_ACTOR_KINDS[record.phase].includes(record.actor_kind) || !record.actor_identity?.trim()))
+        throw new Error('graph-state-actor-binding-invalid');
 }
 export function createRealAgentDogfoodGraphPhaseRecord(input) {
     assertPlanBinding({ plan: input.plan, network_id: input.network_id, dogfood_id: input.plan.dogfood_id, execution_id: input.plan.execution_id });
@@ -28,6 +41,7 @@ export function createRealAgentDogfoodGraphPhaseRecord(input) {
         status: input.status,
         completed_phases: completed,
         reason: input.reason ?? null,
+        ...(input.actor_kind !== undefined || input.actor_identity !== undefined ? { actor_kind: input.actor_kind, actor_identity: input.actor_identity } : {}),
     };
     assertRecord(record, input.plan);
     return Object.freeze(record);

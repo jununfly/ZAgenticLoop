@@ -19,6 +19,20 @@ export type RealAgentDogfoodGraphPhaseRecord = {
   status: 'passed' | 'blocked' | 'outcome-uncertain';
   completed_phases: RealAgentDogfoodGraphPhase[];
   reason: string | null;
+  actor_kind?: RealAgentDogfoodGraphActorKind;
+  actor_identity?: string;
+};
+
+export type RealAgentDogfoodGraphActorKind = 'agent-node' | 'coordinator' | 'trusted-runner' | 'core' | 'human';
+
+const PHASE_ACTOR_KINDS: Record<RealAgentDogfoodGraphPhase, readonly RealAgentDogfoodGraphActorKind[]> = {
+  source_execution: ['agent-node'],
+  scope_observation: ['coordinator', 'trusted-runner', 'core'],
+  independent_verification: ['coordinator', 'trusted-runner', 'core'],
+  human_acceptance: ['human'],
+  merge: ['coordinator', 'human'],
+  post_merge_gate: ['coordinator', 'trusted-runner', 'core'],
+  cleanup: ['coordinator', 'trusted-runner', 'core'],
 };
 
 function phasePrefix(phases: readonly string[]): phases is RealAgentDogfoodGraphPhase[] {
@@ -31,6 +45,9 @@ function assertPlanBinding(input: { plan: RealAgentDogfoodGraphPlan; network_id:
 
 function assertRecord(record: RealAgentDogfoodGraphPhaseRecord, plan: RealAgentDogfoodGraphPlan): void {
   if (record.schema !== REAL_AGENT_DOGFOOD_GRAPH_STATE_SCHEMA || record.network_id.trim() === '' || record.dogfood_id !== plan.dogfood_id || record.execution_id !== plan.execution_id || record.plan_digest !== plan.plan_digest || !phasePrefix(record.completed_phases) || record.completed_phases.length > REAL_AGENT_DOGFOOD_GRAPH_PHASES.length || record.status === 'passed' && record.completed_phases.at(-1) !== record.phase || record.status !== 'passed' && record.completed_phases.includes(record.phase)) throw new Error('graph-state-record-invalid');
+  const hasKind = record.actor_kind !== undefined;
+  const hasIdentity = record.actor_identity !== undefined;
+  if (hasKind !== hasIdentity || hasKind && (!PHASE_ACTOR_KINDS[record.phase].includes(record.actor_kind as RealAgentDogfoodGraphActorKind) || !record.actor_identity?.trim())) throw new Error('graph-state-actor-binding-invalid');
 }
 
 export function createRealAgentDogfoodGraphPhaseRecord(input: {
@@ -40,6 +57,8 @@ export function createRealAgentDogfoodGraphPhaseRecord(input: {
   status: RealAgentDogfoodGraphPhaseRecord['status'];
   completed_phases: readonly RealAgentDogfoodGraphPhase[];
   reason?: string;
+  actor_kind?: RealAgentDogfoodGraphActorKind;
+  actor_identity?: string;
 }): RealAgentDogfoodGraphPhaseRecord {
   assertPlanBinding({ plan: input.plan, network_id: input.network_id, dogfood_id: input.plan.dogfood_id, execution_id: input.plan.execution_id });
   const completed = [...input.completed_phases];
@@ -54,6 +73,7 @@ export function createRealAgentDogfoodGraphPhaseRecord(input: {
     status: input.status,
     completed_phases: completed,
     reason: input.reason ?? null,
+    ...(input.actor_kind !== undefined || input.actor_identity !== undefined ? { actor_kind: input.actor_kind, actor_identity: input.actor_identity } : {}),
   };
   assertRecord(record, input.plan);
   return Object.freeze(record);

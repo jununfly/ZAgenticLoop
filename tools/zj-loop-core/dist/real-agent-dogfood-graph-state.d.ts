@@ -13,7 +13,10 @@ export type RealAgentDogfoodGraphPhaseRecord = {
     status: 'passed' | 'blocked' | 'outcome-uncertain';
     completed_phases: RealAgentDogfoodGraphPhase[];
     reason: string | null;
+    actor_kind?: RealAgentDogfoodGraphActorKind;
+    actor_identity?: string;
 };
+export type RealAgentDogfoodGraphActorKind = 'agent-node' | 'coordinator' | 'trusted-runner' | 'core' | 'human';
 export declare function createRealAgentDogfoodGraphPhaseRecord(input: {
     plan: RealAgentDogfoodGraphPlan;
     network_id: string;
@@ -21,6 +24,8 @@ export declare function createRealAgentDogfoodGraphPhaseRecord(input: {
     status: RealAgentDogfoodGraphPhaseRecord['status'];
     completed_phases: readonly RealAgentDogfoodGraphPhase[];
     reason?: string;
+    actor_kind?: RealAgentDogfoodGraphActorKind;
+    actor_identity?: string;
 }): RealAgentDogfoodGraphPhaseRecord;
 export declare function projectRealAgentDogfoodGraphPhaseRecord(input: {
     plan: RealAgentDogfoodGraphPlan;
