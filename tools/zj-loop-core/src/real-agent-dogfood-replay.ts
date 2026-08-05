@@ -4,7 +4,7 @@ import type { ContentAddressedEvidenceStore } from './content-addressed-evidence
 import { projectRealAgentDogfoodLifecycle, type RealAgentDogfoodEvent, type RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import { projectRealAgentDogfoodGraphPhaseRecord, type RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
 import { REAL_AGENT_DOGFOOD_GRAPH_PHASES, type RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
-import type { StateEvent } from './sqlite-state-store.js';
+import { sha256CanonicalJson, type StateEvent } from './sqlite-state-store.js';
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const FAILURE_CLASSES = new Set(['known-rejection', 'unverifiable-cleanup', 'unverifiable-evidence', 'provider-timeout']);
@@ -52,6 +52,55 @@ function scopeFailure(parsed: unknown, input: { network_id: string; dogfood_id: 
   return null;
 }
 
+function eventIdentity(event: StateEvent): string {
+  return canonical({ schema: event.schema, network_id: event.network_id, revision: event.revision, event_id: event.event_id, aggregate_type: event.aggregate_type, aggregate_id: event.aggregate_id, event_type: event.event_type, occurred_at: event.occurred_at, created_at: event.created_at, payload: event.payload, payload_sha256: event.payload_sha256 });
+}
+
+function validateGraphEvents(input: { network_id: string; plan: RealAgentDogfoodGraphPlan; graph_events: readonly StateEvent[] }): { events: StateEvent[]; failures: string[] } {
+  const events: StateEvent[] = [];
+  const failures: string[] = [];
+  const byId = new Map<string, string>();
+  const byRevision = new Map<number, string>();
+  let previousRevision = 0;
+  for (const event of input.graph_events) {
+    if (!event || event.schema !== 'zj-loop.state_event.v1' || event.network_id !== input.network_id || event.aggregate_type !== 'real-agent-dogfood-graph' || event.aggregate_id !== input.plan.dogfood_id || event.event_type !== 'real-agent-dogfood-graph.phase-recorded') {
+      failures.push(`graph-event-scope-invalid:${event?.event_id ?? 'unknown'}`);
+      continue;
+    }
+    if (!Number.isInteger(event.revision) || event.revision < 1) {
+      failures.push(`graph-event-revision-invalid:${event.event_id}`);
+      continue;
+    }
+    let identity: string;
+    try { identity = eventIdentity(event); } catch { failures.push(`graph-event-encoding-invalid:${event.event_id}`); continue; }
+    const priorId = byId.get(event.event_id);
+    if (priorId !== undefined) {
+      if (priorId !== identity) failures.push(`graph-event-id-conflict:${event.event_id}`);
+      continue;
+    }
+    const priorRevision = byRevision.get(event.revision);
+    if (priorRevision !== undefined) {
+      failures.push(`${priorRevision === identity ? 'graph-event-revision-duplicate' : 'graph-event-revision-conflict'}:${event.revision}`);
+      continue;
+    }
+    if (event.revision < previousRevision) {
+      failures.push(`graph-event-revision-order-invalid:${event.event_id}`);
+      continue;
+    }
+    let payloadDigest: string;
+    try { payloadDigest = sha256CanonicalJson(event.payload); } catch { failures.push(`graph-event-payload-invalid:${event.event_id}`); continue; }
+    if (payloadDigest !== event.payload_sha256) {
+      failures.push(`graph-event-payload-digest-mismatch:${event.event_id}`);
+      continue;
+    }
+    byId.set(event.event_id, identity);
+    byRevision.set(event.revision, identity);
+    previousRevision = event.revision;
+    events.push(event);
+  }
+  return { events, failures };
+}
+
 export async function replayRealAgentDogfoodGraphReadModel(input: {
   network_id: string;
   plan: RealAgentDogfoodGraphPlan;
@@ -66,8 +115,10 @@ export async function replayRealAgentDogfoodGraphReadModel(input: {
   if (lifecycle.network_id !== input.network_id || lifecycle.dogfood_id !== plan.dogfood_id || lifecycle.execution_id !== plan.execution_id || lifecycle.attempt !== plan.attempt) {
     throw new Error('real-agent-dogfood-replay-scope-mismatch');
   }
-  const phase = projectRealAgentDogfoodGraphPhaseRecord({ plan, events: input.graph_events });
-  const failures: string[] = [];
+  const validated = validateGraphEvents({ network_id: input.network_id, plan, graph_events: input.graph_events });
+  let phase: RealAgentDogfoodGraphPhaseRecord | null = null;
+  const failures: string[] = [...validated.failures];
+  try { phase = projectRealAgentDogfoodGraphPhaseRecord({ plan, events: validated.events }); } catch (error) { failures.push(`graph-projection-invalid:${error instanceof Error ? error.message : 'unknown'}`); }
   if (!phase) failures.push('graph-phase-missing');
   const refs = [...new Set(phase?.evidence_refs ?? [])].sort();
   if (phase?.status === 'passed' && refs.length === 0) failures.push('phase-evidence-missing');
@@ -82,7 +133,10 @@ export async function replayRealAgentDogfoodGraphReadModel(input: {
       failures.push(error instanceof Error && error.message === 'evidence-digest-drift' ? `evidence-digest-drift:${ref}` : `evidence-missing:${ref}`);
     }
   }
-  const status: RealAgentDogfoodGraphReplayReadModel['status'] = failures.length > 0 ? 'outcome-uncertain' : phase?.status === 'blocked' ? 'blocked' : phase?.status === 'outcome-uncertain' ? 'outcome-uncertain' : lifecycle.status === 'accepted' && phase?.completed_phases.at(-1) === 'cleanup' ? 'passed' : 'in-progress';
+  const terminalGraph = phase?.phase === 'cleanup' && phase.status === 'passed' && phase.completed_phases.at(-1) === 'cleanup' && phase.completed_phases.includes('post_merge_gate');
+  if (lifecycle.status === 'accepted' && !terminalGraph) failures.push('lifecycle-graph-terminal-mismatch');
+  if (terminalGraph && lifecycle.status !== 'accepted') failures.push('lifecycle-graph-terminal-mismatch');
+  const status: RealAgentDogfoodGraphReplayReadModel['status'] = failures.length > 0 ? 'outcome-uncertain' : phase?.status === 'blocked' ? 'blocked' : phase?.status === 'outcome-uncertain' ? 'outcome-uncertain' : terminalGraph ? 'passed' : 'in-progress';
   const unsigned: Omit<RealAgentDogfoodGraphReplayReadModel, 'read_model_digest'> = {
     schema: 'zj-loop.real_agent_dogfood_graph_replay.v1' as const,
     status,

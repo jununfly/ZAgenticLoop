@@ -1423,6 +1423,31 @@
           "q": "1-6 Authority CLI start 是否由 CLI 自身承担前台 supervisor 生命周期？",
           "answer": "同意推荐方案：CLI start 作为前台 supervisor，持有 external Authority controller；启动后保持运行，首个 SIGINT/SIGTERM 触发 bounded stop，只有确认 binding 清除才返回成功；重复信号忽略，stop 不确定则返回 outcome-uncertain 与非零退出码。",
           "note": "TDD Authority CLI 3/3、Authority 回归 9/9、npm run build 通过；已接入真实 external start controller，未使用内存 fixture 降级生产路径。"
+        },
+        {
+          "q": "1-6 replay 是否补齐 StateEvent 完整性校验并校验 lifecycle/graph 终态一致性？",
+          "answer": "同意：replay 只消费已验证的 append-only facts；校验 network、aggregate、revision、payload digest、重复/冲突事件，并校验 lifecycle 与 graph 终态一致性；任一事实不完整进入 outcome-uncertain，不获取 lease、不写 StateStore、不改变 Evidence。",
+          "note": "下一步实现 replay read-model integrity gate，保持 replay 纯读。"
+        },
+        {
+          "q": "replay 遇到损坏或不完整 StateEvent 时如何返回？",
+          "answer": "同意推荐方案：对已绑定输入范围内的事实损坏返回 outcome-uncertain/incomplete，并保留稳定 integrity_failures；调用方主动传入的 network/plan/lifecycle scope mismatch 仍直接拒绝，避免把调用错误伪装成业务不确定。",
+          "note": "区分事实不确定与 API 调用绑定错误。"
+        },
+        {
+          "q": "lifecycle 与 graph 的终态不一致如何处理？",
+          "answer": "同意：accepted 只有在 graph 已完成 post_merge_gate 与 cleanup 且 phase status passed 时才可投影 passed；blocked/outcome-uncertain/rejected/request-revision 等终态与 graph 事实冲突时返回 outcome-uncertain；in-progress 允许尚未完成的 graph 阶段。",
+          "note": "不让单一生命周期事实覆盖另一条 append-only 事实链。"
+        },
+        {
+          "q": "replay 完整性校验是否允许产生任何副作用？",
+          "answer": "同意：不获取 lease、不写 StateStore、不写 Evidence、不写 access audit；只使用 readOnly Evidence 读取和内存中的确定性 projection，read_model_digest 必须可重复。",
+          "note": "保持 replay 可安全重放、可并发读取、可审计。"
+        },
+        {
+          "q": "replay Evidence/read model integrity gate 实现结果是什么？",
+          "answer": "同意：replay 新增纯读 StateEvent integrity gate，校验 schema/network/aggregate/event type、payload_sha256、网络级 revision 递增、revision/id 冲突与语义 projection；accepted 只有 graph 已完成 post_merge_gate 与 cleanup 且 cleanup passed 才能投影 passed；事实损坏或生命周期/Graph 终态不一致返回 outcome-uncertain/incomplete，scope mismatch 继续直接拒绝。",
+          "note": "TDD replay/Graph/lifecycle/UI 回归 20/20；npm run build 与 git diff --check 通过；Evidence 使用 readOnly，不获取 lease、不写 StateStore、不写 access audit。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1430,7 +1455,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 23:36:23",
+    "updated": "2026-08-05 23:52:14",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

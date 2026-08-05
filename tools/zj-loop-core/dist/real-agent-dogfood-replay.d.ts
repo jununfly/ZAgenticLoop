@@ -2,7 +2,7 @@ import type { ContentAddressedEvidenceStore } from './content-addressed-evidence
 import { type RealAgentDogfoodEvent, type RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import { type RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
 import { REAL_AGENT_DOGFOOD_GRAPH_PHASES, type RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
-import type { StateEvent } from './sqlite-state-store.js';
+import { type StateEvent } from './sqlite-state-store.js';
 export type RealAgentDogfoodFailureClass = 'known-rejection' | 'unverifiable-cleanup' | 'unverifiable-evidence' | 'provider-timeout';
 export type RealAgentDogfoodReplayRecord = {
     status: 'recorded';

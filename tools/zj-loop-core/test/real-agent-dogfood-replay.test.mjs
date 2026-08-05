@@ -5,10 +5,11 @@ import {
   replayRealAgentDogfoodGraphReadModel,
   replayRealAgentDogfoodAttempt,
 } from '../dist/real-agent-dogfood-replay.js';
-import { createRealAgentDogfoodDraft } from '../dist/real-agent-dogfood-lifecycle.js';
+import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition } from '../dist/real-agent-dogfood-lifecycle.js';
 import { createRealAgentDogfoodGraphPlan } from '../dist/real-agent-dogfood-graph-orchestrator.js';
 import { createRealAgentDogfoodGraphPhaseRecord } from '../dist/real-agent-dogfood-graph-state.js';
 import { createContentAddressedEvidenceStore } from '../dist/content-addressed-evidence-store.js';
+import { sha256CanonicalJson } from '../dist/sqlite-state-store.js';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -33,11 +34,22 @@ test('same digest replay is idempotent while different digest conflicts', () => 
 function graphFixture() {
   const plan = createRealAgentDogfoodGraphPlan({ dogfood_id: 'dogfood-replay', execution_id: 'execution-replay', attempt: 1, goal: 'replay graph', repo_root: '/tmp/replay-repo', baseline_commit: 'a'.repeat(40), target_worktree: '/tmp/replay-target', source_worktree: '/tmp/replay-source', verifier_worktree: '/tmp/replay-verifier', evidence_store: '/tmp/replay-evidence', allowed_files: ['README.md'], execution_mode: 'write-enabled', network_policy: 'network-allowed' });
   const draft = createRealAgentDogfoodDraft({ network_id: 'network-replay', dogfood_id: plan.dogfood_id, execution_id: plan.execution_id, attempt: 1, provider_id: 'provider-1', adapter_version: 'adapter-1', created_at: '2026-08-05T00:00:00.000Z' });
-  return { plan, lifecycle_events: [draft.event], network_id: 'network-replay' };
+  return { plan, lifecycle: draft.lifecycle, lifecycle_events: [draft.event], network_id: 'network-replay' };
+}
+
+function acceptedLifecycleEvents(draft) {
+  const transition = (lifecycle, to, event_id, extra = {}) => createRealAgentDogfoodTransition({ lifecycle, to, event_id, occurred_at: '2026-08-05T00:00:00.000Z', fact_digest: digest('a'), ...extra });
+  const ready = transition(draft.lifecycle, 'preflight-ready', 'ready');
+  const awaiting = transition(ready.lifecycle, 'awaiting-human-approval', 'awaiting');
+  const running = transition(awaiting.lifecycle, 'running', 'running', { approval_digest: digest('b') });
+  const verifying = transition(running.lifecycle, 'verification-pending', 'verifying');
+  const review = transition(verifying.lifecycle, 'review-pending', 'review');
+  const accepted = transition(review.lifecycle, 'accepted', 'accepted');
+  return [draft.event, ready.event, awaiting.event, running.event, verifying.event, review.event, accepted.event];
 }
 
 function graphEvent(plan, record) {
-  return { schema: 'zj-loop.state_event.v1', network_id: 'network-replay', event_id: 'graph-event-1', aggregate_type: 'real-agent-dogfood-graph', aggregate_id: plan.dogfood_id, event_type: 'real-agent-dogfood-graph.phase-recorded', revision: 2, occurred_at: '2026-08-05T00:00:01.000Z', created_at: '2026-08-05T00:00:01.000Z', payload: record, payload_sha256: '0'.repeat(64) };
+  return { schema: 'zj-loop.state_event.v1', network_id: 'network-replay', event_id: 'graph-event-1', aggregate_type: 'real-agent-dogfood-graph', aggregate_id: plan.dogfood_id, event_type: 'real-agent-dogfood-graph.phase-recorded', revision: 2, occurred_at: '2026-08-05T00:00:01.000Z', created_at: '2026-08-05T00:00:01.000Z', payload: record, payload_sha256: sha256CanonicalJson(record) };
 }
 
 test('Graph replay reconstructs a valid phase and is content-addressed without mutating evidence audit state', async () => {
@@ -77,4 +89,33 @@ test('Graph replay rejects lifecycle and plan scope mismatch before reading evid
   const fixture = graphFixture();
   const evidenceStore = { readOnly: async () => { throw new Error('must-not-read'); } };
   await assert.rejects(() => replayRealAgentDogfoodGraphReadModel({ ...fixture, network_id: 'network-other', graph_events: [], evidenceStore }), /scope-mismatch/);
+});
+
+test('Graph replay reports StateEvent payload drift and revision collision as outcome-uncertain', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-replay-state-integrity-'));
+  try {
+    const fixture = graphFixture();
+    const evidenceStore = await createContentAddressedEvidenceStore({ root });
+    const record = createRealAgentDogfoodGraphPhaseRecord({ plan: fixture.plan, network_id: fixture.network_id, phase: 'source_execution', status: 'passed', completed_phases: ['source_execution'], actor_kind: 'agent-node', actor_identity: 'Agent1', evidence_digest: digest('a'), evidence_refs: [digest('a')], execution_binding_digest: digest('b'), worker_lease_digest: digest('c') });
+    const first = graphEvent(fixture.plan, record);
+    const drift = { ...first, event_id: 'graph-event-drift', revision: 3, payload: { ...record, reason: 'drifted' } };
+    const collision = { ...first, event_id: 'graph-event-2', revision: 2, payload_sha256: sha256CanonicalJson(first.payload) };
+    const replay = await replayRealAgentDogfoodGraphReadModel({ ...fixture, graph_events: [first, drift, collision], evidenceStore });
+    assert.equal(replay.status, 'outcome-uncertain');
+    assert.equal(replay.integrity_status, 'incomplete');
+    assert.ok(replay.integrity_failures.includes('graph-event-payload-digest-mismatch:graph-event-drift'));
+    assert.ok(replay.integrity_failures.includes('graph-event-revision-conflict:2'));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('Graph replay does not claim passed when accepted lifecycle lacks terminal graph facts', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-replay-terminal-integrity-'));
+  try {
+    const fixture = graphFixture();
+    const evidenceStore = await createContentAddressedEvidenceStore({ root });
+    const record = createRealAgentDogfoodGraphPhaseRecord({ plan: fixture.plan, network_id: fixture.network_id, phase: 'source_execution', status: 'passed', completed_phases: ['source_execution'], actor_kind: 'agent-node', actor_identity: 'Agent1', evidence_digest: digest('a'), evidence_refs: [digest('a')], execution_binding_digest: digest('b'), worker_lease_digest: digest('c') });
+    const replay = await replayRealAgentDogfoodGraphReadModel({ ...fixture, lifecycle_events: acceptedLifecycleEvents({ lifecycle: fixture.lifecycle, event: fixture.lifecycle_events[0] }), graph_events: [graphEvent(fixture.plan, record)], evidenceStore });
+    assert.equal(replay.status, 'outcome-uncertain');
+    assert.ok(replay.integrity_failures.includes('lifecycle-graph-terminal-mismatch'));
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
