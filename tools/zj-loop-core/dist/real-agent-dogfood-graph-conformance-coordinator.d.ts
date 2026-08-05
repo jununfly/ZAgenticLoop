@@ -17,6 +17,10 @@ type PhaseAdapters = {
 export declare function createRealAgentDogfoodGraphConformanceCoordinator(input: {
     plan: RealAgentDogfoodGraphPlan;
     network_id: string;
+    human_id: string;
+    coordinator_id: string;
+    session_id: string;
+    execution_binding_digest: string;
     state_store: SqliteStateStore;
     adapters: PhaseAdapters;
     replay: () => Promise<{

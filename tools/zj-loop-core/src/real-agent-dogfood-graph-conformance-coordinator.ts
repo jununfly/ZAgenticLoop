@@ -1,4 +1,6 @@
 import { runRealAgentDogfoodGraphConformance, type RealAgentDogfoodGraphConformanceResult } from './real-agent-dogfood-conformance.js';
+import { acquireRealAgentDogfoodCoordinatorLease } from './real-agent-dogfood-coordinator-lease.js';
+import { evaluateRealAgentDogfoodCoordinatorResumeGate } from './real-agent-dogfood-coordinator-resume-gate.js';
 import { REAL_AGENT_DOGFOOD_GRAPH_PHASES, type RealAgentDogfoodGraphPhase, type RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
 import { appendRealAgentDogfoodGraphPhaseRecord, projectRealAgentDogfoodGraphPhaseRecord, type RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
@@ -21,25 +23,33 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export async function createRealAgentDogfoodGraphConformanceCoordinator(input: {
   plan: RealAgentDogfoodGraphPlan;
   network_id: string;
+  human_id: string;
+  coordinator_id: string;
+  session_id: string;
+  execution_binding_digest: string;
   state_store: SqliteStateStore;
   adapters: PhaseAdapters;
   replay: () => Promise<{ status: 'passed' | 'blocked' | 'outcome-uncertain'; integrity_status: 'complete' | 'incomplete'; read_model_digest: string }>;
 }): Promise<RealAgentDogfoodGraphConformanceCoordinator> {
   if (!input.network_id.trim()) throw new Error('graph-conformance-coordinator-network-id-required');
-  const snapshot = await input.state_store.readEvents({ network_id: input.network_id, aggregate_type: 'real-agent-dogfood-graph', aggregate_id: input.plan.dogfood_id });
-  let projected: RealAgentDogfoodGraphPhaseRecord | null;
-  try { projected = projectRealAgentDogfoodGraphPhaseRecord({ plan: input.plan, events: snapshot.events }); } catch { throw new Error('graph-conformance-coordinator-existing-state-invalid'); }
-  const completed = projected?.completed_phases ?? [];
-  const historyEvidence: Partial<Record<RealAgentDogfoodGraphPhase, string>> = {};
-  for (const event of snapshot.events) {
-    const record = event.payload as RealAgentDogfoodGraphPhaseRecord;
-    const evidence = record.evidence_refs?.[0] ?? record.evidence_digest;
-    if (DIGEST.test(evidence ?? '')) historyEvidence[record.phase] = evidence;
-  }
-  let expectedRevision = snapshot.snapshot_revision;
   return {
     async run() {
+      const lease = await acquireRealAgentDogfoodCoordinatorLease({ stateStore: input.state_store, network_id: input.network_id, execution_id: input.plan.execution_id, human_id: input.human_id, coordinator_id: input.coordinator_id, session_id: input.session_id, execution_binding_digest: input.execution_binding_digest });
+      const activeLease = lease.status === 'acquired' || lease.status === 'reused' || lease.status === 'renewed' ? { ...lease, execution_id: input.plan.execution_id, execution_binding_digest: input.execution_binding_digest } : null;
+      const snapshot = await input.state_store.readEvents({ network_id: input.network_id, aggregate_type: 'real-agent-dogfood-graph', aggregate_id: input.plan.dogfood_id });
+      let projected: RealAgentDogfoodGraphPhaseRecord | null;
+      try { projected = projectRealAgentDogfoodGraphPhaseRecord({ plan: input.plan, events: snapshot.events }); } catch { throw new Error('graph-conformance-coordinator-existing-state-invalid'); }
+      const completed = projected?.completed_phases ?? [];
+      const historyEvidence: Partial<Record<RealAgentDogfoodGraphPhase, string>> = {};
+      for (const event of snapshot.events) {
+        const record = event.payload as RealAgentDogfoodGraphPhaseRecord;
+        const evidence = record.evidence_refs?.[0] ?? record.evidence_digest;
+        if (DIGEST.test(evidence ?? '')) historyEvidence[record.phase] = evidence;
+      }
+      let expectedRevision = await input.state_store.getRevision(input.network_id);
       const phaseAdapters = Object.fromEntries(REAL_AGENT_DOGFOOD_GRAPH_PHASES.map((phase) => [phase, async () => {
+        const gate = evaluateRealAgentDogfoodCoordinatorResumeGate({ execution_id: input.plan.execution_id, execution_binding_digest: input.execution_binding_digest, lease: activeLease ?? { status: 'blocked', reason: 'coordinator-lease-required' }, phase: projected, next_phase: phase });
+        if (gate.status === 'blocked') return { status: 'outcome-uncertain' as const, reason: `coordinator-resume-gate-${gate.reason}` };
         const result = await input.adapters[phase]();
         if (result.record && (result.record.phase !== phase || result.record.network_id !== input.network_id || result.record.plan_digest !== input.plan.plan_digest)) return { status: 'outcome-uncertain' as const, reason: 'graph-phase-record-binding-invalid' };
         if (result.status === 'passed' && (!result.record || !DIGEST.test(result.evidence_digest ?? result.record.evidence_digest ?? ''))) return { status: 'outcome-uncertain' as const, reason: 'phase-evidence-required' };
@@ -48,6 +58,7 @@ export async function createRealAgentDogfoodGraphConformanceCoordinator(input: {
         const appended = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore: input.state_store, plan: input.plan, network_id: input.network_id, record: result.record, expected_revision: expectedRevision });
         if (appended.status === 'conflict' || appended.revision === undefined) return { status: 'outcome-uncertain' as const, reason: 'graph-phase-append-conflict' };
         expectedRevision = appended.revision;
+        projected = result.record;
         historyEvidence[phase] = result.evidence_digest ?? result.record.evidence_digest ?? result.record.evidence_refs?.[0];
         return { status: result.status, reason: result.reason, evidence_digest: historyEvidence[phase] };
       }])) as PhaseAdapters;

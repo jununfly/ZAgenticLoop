@@ -1508,6 +1508,16 @@
           "q": "Graph conformance Coordinator 实现结果是什么？",
           "answer": "同意：新增 provider-neutral Graph conformance Coordinator，并从包入口导出；Coordinator 读取并投影 Graph StateStore facts，以 phase/plan/network binding 校验 adapter record，再用 revision CAS append；支持从 passed prefix resume，合法失败事实先 append 后停止，append conflict 返回 outcome-uncertain；七阶段完成后仍必须通过 replay status=passed、integrity=complete、read_model_digest 有效才返回 closed。",
           "note": "TDD 相关回归 19/19；npm run build、包入口导出检查与 git diff --check 通过。下一步是接入真实可验证 phase adapters，并完成真实端到端 conformance 前的 replay/read-model integrity gate。"
+        },
+        {
+          "q": "Graph conformance Coordinator 是否必须绑定 coordinator lease 与 resume gate？",
+          "answer": "同意：Coordinator run 启动前必须取得与 execution_binding_digest、Human、coordinator、session 绑定的有效 coordinator lease；每次恢复下一个 phase 前执行 resume gate。lease 缺失、过期、绑定漂移或历史 phase 缺 actor 事实时 fail-closed 为 outcome-uncertain，不启动后续 adapter。",
+          "note": "先锁定中心责任单元的恢复所有权，再接入真实 phase adapter；lease 事件与 Graph phase 事实均保持 append-only，使用网络级 revision CAS。"
+        },
+        {
+          "q": "Coordinator lease 与 resume gate 实现结果是什么？",
+          "answer": "同意：Coordinator run 现在先取得与 execution binding、Human、coordinator、session 绑定的 coordinator lease；每个待执行 phase 前执行 resume gate，历史 passed phase 必须有合法 actor binding，lease 或事实不满足时不启动 adapter 并返回 outcome-uncertain；Graph phase append 继续使用网络 revision CAS。",
+          "note": "TDD focused 回归 19/19；npm test 通过；npm run build 与 git diff --check 通过。下一步进入真实可验证 phase adapter 接入，不改变 replay 纯读和 Human 最终接受边界。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1515,7 +1525,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 00:19:25",
+    "updated": "2026-08-06 00:26:27",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
