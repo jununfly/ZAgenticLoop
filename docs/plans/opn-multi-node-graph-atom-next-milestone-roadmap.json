@@ -171,6 +171,11 @@
           "q": "source_execution phase evidence 与 Worker lease release 由谁完成？",
           "answer": "同意：Graph mode 下 Worker CLI 负责写入 Provider result Evidence、source_execution phase record 并释放自身 Worker lease；Coordinator 下一次 resume 只读取并验证这些事实，再推进 scope_observation。Worker 不得直接写 scope、verification、review、merge 或 cleanup phase。",
           "note": "source phase actor_kind=agent-node；phase record 绑定 execution/attempt、plan digest、execution binding digest、worker lease digest、provider fact Evidence digest；任一收尾写入不确定时保持 outcome-uncertain，不宣称 Graph 完成。"
+        },
+        {
+          "q": "post_merge_gate Graph adapter 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral post_merge_gate Graph adapter；只消费 status=passed 且绑定一致的 merge phase 与 Human merge authorization，在 target worktree 只读观察 target/source commit、target ref、fast-forward confirmed、cleanliness 和 scope digest，严格按 git diff --check、project build、target test、Graph regression 四个固定 argv 命令顺序执行。非零退出为 blocked，timeout/事实不可读为 outcome-uncertain；Evidence 仅记录 bounded command metadata、exit code、timeout、stdout/stderr digest/size 与 commit/gate 摘要；不修改仓库、不重新 merge、不 push、不创建 MR。",
+          "note": "TDD 覆盖 success、fixed command failure、target observation uncertainty；Graph adapter focused 22/22、完整 npm test 432/432、build 与 git diff --check 通过；已从包入口导出并纳入标准 Graph adapter 测试脚本。"
         }
       ],
       "notes": "已完成 Graph Worker lease 双绑定、Coordinator resume gate、source_execution Evidence 写入与 Worker lease release，提交 4c988a13。仍需完成 Review Handoff Graph projection、merge/closeout，以及失败恢复、重放和端到端 conformance 闭环。下一施工重点转入 1-6。"
@@ -1638,6 +1643,51 @@
           "q": "merge Graph adapter 实现结果是什么？",
           "answer": "同意：新增 provider-neutral merge Graph adapter；它只消费已通过且由 Human actor 绑定的 human_acceptance phase，严格复用 NativeOpnGraphMerge admission/execution contract，要求 Human-approved merge authorization、target/source/ref/scope/cleanliness 和 fast-forward facts；成功后写入独立 merge Evidence 并返回 coordinator actor 的 passed phase record，blocked/outcome-uncertain 结果保留对应 phase record；不新增合并语义，不 push、不创建 MR、不执行 rebase 或自动修复。",
           "note": "TDD 覆盖 fast-forward 成功、Human authorization drift 阻断和 merge result 不可证明的 outcome-uncertain；Graph adapter 19/19、完整 npm test 432/432、build 与 git diff --check 通过；已从包入口导出并纳入标准 Graph adapter 测试脚本。"
+        },
+        {
+          "q": "post_merge_gate adapter 的输入前置条件是什么？",
+          "answer": "同意：只消费 status=passed 且 actor_kind 为 coordinator/human 的 merge phase；merge record、plan、network、execution 和 Evidence digest 必须绑定一致；缺失或漂移在启动验证命令前返回 blocked 或 outcome-uncertain。",
+          "note": "避免对未确认 merge 或错误 target 执行验证。"
+        },
+        {
+          "q": "post_merge_gate 的 trusted actor 如何确定？",
+          "answer": "同意：由 Coordinator 调用 provider-neutral adapter，adapter 的事实观察和命令执行由已登记 TrustedRunner/Core 能力完成；Graph record actor_kind 使用 trusted-runner、core 或 coordinator，禁止 Agent/Provider 自报验证通过。",
+          "note": "保持执行节点与可信验证节点分离。"
+        },
+        {
+          "q": "post_merge_gate 固定命令集合是什么？",
+          "answer": "同意：首版固定为 、项目 build、目标测试和 Graph adapter 回归测试；命令以 argv 数组、工作目录、timeout、顺序和 digest 固化在 verification plan 中，不接受任意 shell 字符串。",
+          "note": "保证 deterministic、bounded、可重放。"
+        },
+        {
+          "q": "post_merge_gate 命令失败和超时如何映射？",
+          "answer": "同意：非零退出码映射为 blocked；timeout、进程终止事实不明、stdout/stderr 或 HEAD 无法读取映射为 outcome-uncertain；任一命令失败立即停止后续命令，不自动重试。",
+          "note": "区分确定性验证失败与事实不确定。"
+        },
+        {
+          "q": "post_merge_gate 是否写入完整原始输出？",
+          "answer": "同意：Evidence 只保留脱敏、bounded 的命令描述、退出码、超时标志、stdout/stderr digest/size、commit 和最终观察摘要；不把无限制原始输出写入 Graph StateStore。",
+          "note": "保持 Evidence 可审计且避免状态膨胀/敏感输出泄漏。"
+        },
+        {
+          "q": "cleanup adapter 是否允许在业务结果失败后运行？",
+          "answer": "同意：允许。cleanup 是独立资源生命周期 phase；即使 merge 或 post_merge_gate blocked/outcome-uncertain，也可以由 Coordinator 根据已知 worktree facts 启动 bounded cleanup，但不得把清理成功提升为业务成功。",
+          "note": "确保失败路径不遗留本地资源。"
+        },
+        {
+          "q": "cleanup 的 Git worktree 证明方式是什么？",
+          "answer": "同意：逐一执行 bounded  仅针对本次 plan 绑定的 target/source/verifier 路径，随后只读检查路径不存在、worktree /Users/bilibili/Documents/workspace/github/jununfly/ZAgenticLoop\nHEAD 8e4553b7ee2b9ecd65863f13d73bc01d3d80afa9\nbranch refs/heads/codex/fix-agent-local-worktree-git-flag\n\nworktree /private/tmp/zagenticloop-bridge-path\nHEAD e0d510652da3d0eb2bdd57e7c9a54cd966709e05\nbranch refs/heads/codex/release-zj-loop-core-017\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-activation-producer-ref\nHEAD 96277d72384e87d5e868b22be49e2029c0132ac0\nbranch refs/heads/codex/activation-producer-ref\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-activation-snapshot-ref\nHEAD 9a01a0da6758b4d82b33a0b7ecc584c53caaf1cf\nbranch refs/heads/codex/activation-snapshot-ref\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-context-snapshot-reconstruction\nHEAD 2a2ae44f4dc621663cf37b34e84b0e4e4b9be18d\nbranch refs/heads/codex/context-snapshot-reconstruction\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-core-bootstrap-0.1.33\nHEAD 06e63a8c730303cc6088571a8ff24edb5d864d23\nbranch refs/heads/codex/bootstrap-core-first-publish-0.1.33\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-core-lock-registry-0.1.33\nHEAD a9a88b60a220a8f36aff01db0269875a2fc1b64b\nbranch refs/heads/codex/fix-core-lock-registry-0.1.33\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-core-pure-trusted-publishing\nHEAD f3dd1b27aee7c7abc1fdb316af168a2b89ecf4eb\nbranch refs/heads/codex/core-pure-trusted-publishing\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-core-release-0.1.32\nHEAD 7b69b4768c645b0f7b02929938473fa01bdd0d44\nbranch refs/heads/codex/release-core-0.1.32\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-loop-core-0.1.16\nHEAD a28519998178b7a8c58ce874817887d7147b948c\nbranch refs/heads/codex/release-zj-loop-core-0.1.16\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-loop-core-0.1.19\nHEAD 7a1eab7fcf267749d6ac10bd73fd1f737ac0c9a1\nbranch refs/heads/codex/release-zj-loop-core-019\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-loop-fix-activation-target-branch\nHEAD c6d2e220dc7694ccf4ee93521a39202716ce89e6\nbranch refs/heads/codex/fix-activation-target-branch\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-loop-real-agent-dogfood/opn-graph-atom-20260804215634/source\nHEAD e027eb465ff42c12a7d2fd24be39aa070d5c02a0\nbranch refs/heads/zj-loop-dogfood-source-opn-graph-atom-20260804215634\n\nworktree /private/tmp/zj-loop-real-agent-dogfood/opn-graph-atom-20260804215634/target\nHEAD e027eb465ff42c12a7d2fd24be39aa070d5c02a0\ndetached\n\nworktree /private/tmp/zj-loop-release-core-0.1.34\nHEAD 548d7a9fdf6d899d35586f2239b6bc2a96eed2fc\nbranch refs/heads/codex/release-core-0.1.34\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-preflight-context-consumer\nHEAD 21a641fe0080c16db5127a1f89008d9f8ead3ea7\nbranch refs/heads/codex/preflight-context-consumer\nprunable gitdir file points to non-existent location\n\nworktree /private/tmp/zj-trusted-publisher-0.1.33\nHEAD 385f063d9a2254e7c9fc0f92787971e5041905b6\nbranch refs/heads/codex/npm-trusted-publisher-0.1.33\nprunable gitdir file points to non-existent location\n\nworktree /Users/bilibili/Documents/workspace/github/jununfly/ZAgenticLoop-issue-211\nHEAD e46f7cc7fd9e8c9bd86b3f9b756d809cb47dcf2f\nbranch refs/heads/codex/issue-211-execution-context\n\nworktree /Users/bilibili/Documents/workspace/github/jununfly/ZAgenticLoop-issue-211-consumer\nHEAD 11de088ce1a6dffc68e1081ed25f88e7e052089e\nbranch refs/heads/codex/issue-211-consumer-preflight\n\nworktree /Users/bilibili/Documents/workspace/github/jununfly/ZAgenticLoop-release-0.1.31\nHEAD dbe9855a03c5872bb492a3fd1a1e37f4c0e06098\nbranch refs/heads/codex/release-core-0.1.31 不再包含绑定路径、无残留 execution binding；路径或身份不匹配先 blocked，删除结果不可确认则 outcome-uncertain。",
+          "note": "限制删除范围，避免误删外部 worktree。"
+        },
+        {
+          "q": "什么时候允许 Graph closed？",
+          "answer": "同意：只有七个 phase 均为 passed、每个 phase 有有效 Evidence、cleanup 已证明资源清除，并且纯读 replay/read-model integrity 返回 complete/passed 和稳定 read_model_digest 时才允许 closed；任何业务失败、cleanup unresolved、Evidence 缺失或终态冲突都禁止 closed。",
+          "note": "将业务、资源和持久化事实三条边界同时收束。"
+        },
+        {
+          "q": "本批完成后的实现顺序是什么？",
+          "answer": "同意：先实现 post_merge_gate adapter，再实现 cleanup adapter，然后接入 Coordinator 的真实 adapters，最后补齐七阶段 deterministic full-chain conformance fixture 和本机 disposable dogfood；每一步独立 TDD 并更新路线图。",
+          "note": "保持单阶段变更和可回滚验证。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection、Graph CLI status read model、source_execution、scope_observation 与 independent_verification adapters。independent_verification 采用固定 bounded commands、disposable verifier worktree、HEAD/cleanliness observation 和 EvidenceStore digest 绑定；macOS symlink canonical path 已纳入验证。标准 Graph adapter 回归与完整 npm test 均通过。下一步为接入剩余 Graph phase adapters 与真实端到端 conformance 前的 replay/read-model integrity gate。"
@@ -1645,7 +1695,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 01:25:02",
+    "updated": "2026-08-06 01:42:49",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
