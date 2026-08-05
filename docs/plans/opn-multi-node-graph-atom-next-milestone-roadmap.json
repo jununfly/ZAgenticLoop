@@ -176,6 +176,61 @@
           "q": "post_merge_gate Graph adapter 实现结果是什么？",
           "answer": "同意：新增 provider-neutral post_merge_gate Graph adapter；只消费 status=passed 且绑定一致的 merge phase 与 Human merge authorization，在 target worktree 只读观察 target/source commit、target ref、fast-forward confirmed、cleanliness 和 scope digest，严格按 git diff --check、project build、target test、Graph regression 四个固定 argv 命令顺序执行。非零退出为 blocked，timeout/事实不可读为 outcome-uncertain；Evidence 仅记录 bounded command metadata、exit code、timeout、stdout/stderr digest/size 与 commit/gate 摘要；不修改仓库、不重新 merge、不 push、不创建 MR。",
           "note": "TDD 覆盖 success、fixed command failure、target observation uncertainty；Graph adapter focused 22/22、完整 npm test 432/432、build 与 git diff --check 通过；已从包入口导出并纳入标准 Graph adapter 测试脚本。"
+        },
+        {
+          "q": "cleanup adapter 的实际职责边界是什么？",
+          "answer": "同意推荐方案：cleanup adapter 直接负责当前 Graph attempt 绑定的本地 disposable target、source、verifier worktree 清理；只操作 plan 精确绑定的路径和 Git registration，不删除 EvidenceStore、不修改远程仓库、不改变业务结果；清理后必须证明路径不存在、Git registration 已移除且无残留 execution binding。",
+          "note": "保持业务结果、资源生命周期和远程协作边界分离。"
+        },
+        {
+          "q": "cleanup 是否允许在 merge 或 post_merge_gate 失败后运行？",
+          "answer": "同意推荐方案：允许。cleanup 是独立资源生命周期 phase，可在 merge/post_merge_gate passed、blocked 或 outcome-uncertain 后启动；但 cleanup passed 不能提升业务结果，业务失败仍由原 phase 保留。",
+          "note": "失败路径必须可回收本地资源，同时不掩盖业务失败。"
+        },
+        {
+          "q": "cleanup 遇到 dirty worktree 是否强制删除？",
+          "answer": "同意推荐方案：默认不使用 force 删除；dirty、路径身份不匹配或 registration 指向其他路径时返回 blocked/cleanup-unresolved，保留现场交给 Human 决定 revision 或人工清理。只有未来显式 Human 授权的清理策略才可扩大删除权限。",
+          "note": "避免 cleanup 静默丢失 Agent 未提交变更和诊断事实。"
+        },
+        {
+          "q": "cleanup 如何处理资源已经不存在的情况？",
+          "answer": "同意推荐方案：幂等处理。路径不存在且 Git registration 也不存在视为已清理；路径/registration 任一残留则继续清理并复验；查询失败或无法证明 registration 状态为 outcome-uncertain。",
+          "note": "允许 resume/retry，不重复制造副作用，也不把未知当成功。"
+        },
+        {
+          "q": "cleanup 的 Git 操作如何约束？",
+          "answer": "同意推荐方案：只使用 execFile argv 调用针对精确 worktree path 的 git worktree remove/prune 与只读查询；禁止 shell 字符串、任意路径、仓库外删除、push、branch 删除、远程 API 和自动修复。prune 只能在确认属于本次 plan 的 registration 后执行。",
+          "note": "将 destructive surface 限定到 plan-bound disposable resources。"
+        },
+        {
+          "q": "cleanup 的结果状态如何映射？",
+          "answer": "同意推荐方案：所有资源和 registration 均被清除且复验通过为 passed；确定性 dirty/mismatch/refusal 为 blocked，并在业务层投影 cleanup-unresolved；命令异常、状态读取失败或清理结果无法证明为 outcome-uncertain。",
+          "note": "区分可解释的清理拒绝与事实不可知。"
+        },
+        {
+          "q": "cleanup Evidence 与 actor 如何绑定？",
+          "answer": "同意推荐方案：由 TrustedRunner/Core 执行，Graph record actor_kind 使用 trusted-runner/core/coordinator；Evidence 只保存 plan/network/execution binding、每个资源的 bounded before/after metadata、Git registration digest、命令 exit/status/reason，不保存无限制原始输出；StateStore 仍由 Coordinator CAS append。",
+          "note": "保持验证主体可信、证据有界、状态写入单一入口。"
+        },
+        {
+          "q": "cleanup 完成后是否直接 closed？",
+          "answer": "同意推荐方案：不直接 closed。cleanup passed 后必须执行纯读 replay/read-model integrity gate，确认七阶段顺序、Evidence digest、StateEvent revision、lifecycle/Graph 终态一致且 read_model_digest 稳定，才允许 Graph closed；cleanup unresolved 或 replay 不确定均禁止 closed。",
+          "note": "最终完成是业务、资源和持久化事实三者共同闭环。"
+        },
+        {
+          "q": "cleanup adapter 的 TDD 最小验证矩阵是什么？",
+          "answer": "同意推荐方案：覆盖全量清理成功、重复调用幂等、dirty worktree 阻断、registration/path mismatch 阻断、目标路径不存在且 registration 不存在的已清理事实、git 查询/删除异常导致 outcome-uncertain，以及 merge/post_merge_gate 失败后仍可独立清理；最后纳入 Graph adapter focused 与完整 npm test。",
+          "note": "先证明资源生命周期边界，再接 Coordinator wiring 和真实 disposable dogfood。"
+        },
+        {
+          "q": "业务 phase 失败后 cleanup 如何与严格线性 completed_phases 共存？",
+          "answer": "同意推荐方案：cleanup 仍可在 merge 或 post_merge_gate blocked/outcome-uncertain 后独立运行并写资源 cleanup Evidence，但不把 cleanup 追加到未完成业务前缀的 Graph completed_phases，也不伪造 phase=cleanup passed；只有 source_execution→scope_observation→independent_verification→human_acceptance→merge→post_merge_gate 全部 passed 时，cleanup 才生成线性 Graph phase record。业务失败、资源清理结果和最终 closed 保持分离。",
+          "note": "现有 Graph State 严格校验 completed_phases 为固定 phase 前缀；该约束防止 cleanup 成功掩盖业务失败。cleanup adapter 需要支持无 Graph record 的独立资源结果。"
+        },
+        {
+          "q": "cleanup Graph adapter 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral cleanup Graph adapter；先对 target/source/verifier 三个 plan-bound disposable worktree 做完整预检，再使用普通 git worktree remove argv 清理，禁止 force 删除、任意路径和远程副作用；清理后复验路径不存在、Git registration 移除和无残留。清理成功且业务前缀完整通过时返回 phase=cleanup passed；业务 merge/post_merge_gate 失败时仍可独立清理并写 cleanup Evidence，但不伪造线性 cleanup Graph phase。dirty/mismatch 为 blocked，事实不可读为 outcome-uncertain，重复调用幂等。",
+          "note": "TDD 覆盖 cleanup success、幂等、dirty worktree 阻断、Git observation uncertainty、业务失败后的独立 Evidence；Graph adapter focused 26/26，已从包入口导出并纳入标准测试脚本。"
         }
       ],
       "notes": "已完成 Graph Worker lease 双绑定、Coordinator resume gate、source_execution Evidence 写入与 Worker lease release，提交 4c988a13。仍需完成 Review Handoff Graph projection、merge/closeout，以及失败恢复、重放和端到端 conformance 闭环。下一施工重点转入 1-6。"
@@ -1695,7 +1750,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 01:42:49",
+    "updated": "2026-08-06 02:04:17",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
