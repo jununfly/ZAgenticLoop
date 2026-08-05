@@ -1118,6 +1118,11 @@
           "q": "1-6 Runtime start assembly 的实现结果是什么？",
           "answer": "同意：新增 start assembly；从 validated config 创建 network-scoped StateStore resolver 与 service-only Runtime，要求外部提供 revoke authority、launcher factory 和当前进程 identity digest，再构造 foreground service；Runtime 不取得 issueRef/consumeSecret 权限。",
           "note": "TDD focused 5/5；npm run build 与 git diff --check 通过。下一步把 launcher factory 接到真实 macOS peer verifier、Codex provider adapter 与 start CLI 的 config loader。"
+        },
+        {
+          "q": "1-6 macOS Runtime launcher factory 的实现结果是什么？",
+          "answer": "同意：新增 macOS launcher factory，固定使用 Security process-audit peer verifier、config 中的 expected peer identity、provider executable/cwd、contract digests、runtime binding 和 network-scoped auth_ref resolver；非 macOS 不降级为弱校验，直接 blocked。",
+          "note": "TDD focused 4/4（非 macOS 分支按平台 skip）；npm run build 与 git diff --check 通过。下一步接 config loader 与外部 revoke authority，完成 CLI start 装配。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1125,7 +1130,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:46:45",
+    "updated": "2026-08-05 17:48:58",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
