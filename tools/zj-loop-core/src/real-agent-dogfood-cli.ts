@@ -27,6 +27,8 @@ import { createRealAgentDogfoodGraphPlan, validateRealAgentDogfoodGraphWorktrees
 import { REAL_AGENT_DOGFOOD_GRAPH_PHASES } from './real-agent-dogfood-graph-orchestrator.js';
 import { projectRealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
 import { evaluateRealAgentDogfoodCoordinatorResumeGate } from './real-agent-dogfood-coordinator-resume-gate.js';
+import { createContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
+import { replayRealAgentDogfoodGraphReadModel } from './real-agent-dogfood-replay.js';
 
 const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -428,14 +430,36 @@ async function status(options: Record<string, string | boolean | undefined>) {
   }
 }
 
+async function replay(options: Record<string, string | boolean | undefined>) {
+  const dogfoodId = required(options, 'dogfood-id');
+  const networkId = required(options, 'network-id');
+  const defaults = defaultRealAgentDogfoodRuntimePaths();
+  const statePath = typeof options['state-store'] === 'string' ? options['state-store'] : defaults.state_store;
+  const evidencePath = await canonicalPath(typeof options['evidence-store'] === 'string' ? options['evidence-store'] : defaults.evidence_store);
+  const stateStore = createSqliteStateStore({ filename: statePath });
+  const evidenceStore = await createContentAddressedEvidenceStore({ root: evidencePath, initialize: false });
+  try {
+    const lifecycleSnapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood', aggregate_id: dogfoodId });
+    const lifecycleEvents = lifecycleSnapshot.events as unknown as RealAgentDogfoodEvent[];
+    const summary = JSON.parse(await readFile(path.join(evidencePath, `${dogfoodId}.approval-summary.json`), 'utf8')) as { graph_plan?: unknown };
+    if (!summary.graph_plan || typeof summary.graph_plan !== 'object') throw new Error('replay-graph-plan-required');
+    const plan = createRealAgentDogfoodGraphPlan(summary.graph_plan as RealAgentDogfoodGraphPlan);
+    const graphSnapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood-graph', aggregate_id: dogfoodId });
+    const model = await replayRealAgentDogfoodGraphReadModel({ network_id: networkId, plan, lifecycle_events: lifecycleEvents, graph_events: graphSnapshot.events, evidenceStore });
+    return { ...model, cli_schema: 'zj-loop.real_agent_dogfood_graph_replay_cli.v1', state_revision: lifecycleSnapshot.snapshot_revision, side_effects_executed: false };
+  } finally {
+    await stateStore.close();
+  }
+}
+
 export function runRealAgentDogfoodCli(argv: readonly string[] = process.argv.slice(2), io?: CliIo): Promise<number> {
   const outputIo = io ?? defaultCliIo;
   return runCli({
     name: CLI_NAME,
     description: 'Prepare and inspect a provider-neutral OPN real-agent dogfood lifecycle.',
-    usage: `${CLI_NAME} <start|status> [options]`,
+    usage: `${CLI_NAME} <start|status|replay> [options]`,
     options: [
-      { name: 'command', type: 'positional', description: 'start or status' },
+      { name: 'command', type: 'positional', description: 'start, status, or replay' },
       { name: 'goal', type: 'string', description: 'Human-readable goal' },
       { name: 'repo', type: 'string', description: 'Target repository path' },
       { name: 'provider-id', flag: 'provider-id', type: 'string', description: 'Provider identity' },
@@ -468,6 +492,11 @@ export function runRealAgentDogfoodCli(argv: readonly string[] = process.argv.sl
         const result = await status(options);
         outputIo.stdout(JSON.stringify(result, null, 2));
         return 0;
+      }
+      if (command === 'replay') {
+        const result = await replay(options);
+        outputIo.stdout(JSON.stringify(result, null, 2));
+        return result.status === 'blocked' || result.status === 'outcome-uncertain' ? 2 : 0;
       }
       if (command === 'resume') {
         const result = await resume(options);

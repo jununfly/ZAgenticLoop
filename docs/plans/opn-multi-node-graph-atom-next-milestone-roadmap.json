@@ -22,6 +22,11 @@
           "q": "是否新建 Multi-node Graph Atom E2E 下一里程碑，组合既有 Graph、Transport、Runtime 和 Provider 能力，验证 Agent1/Agent2 的第一条端到端 OPN 产品路径？",
           "answer": "同意",
           "note": "不再扩展已完成路线图；新路线图只承载多节点 Graph Atom 的产品级端到端验证，并以 Single-Agent OPN Atom 作为 baseline。"
+        },
+        {
+          "q": "完成 Graph Worker lease、Coordinator resume gate 与 source_execution closeout 后，下一步如何推进？",
+          "answer": "先同步路线图状态与决策事实，再继续 1-6 失败恢复、重放与端到端 conformance",
+          "note": "1-4 保留 in_progress；已完成 Worker lease 双绑定、Coordinator resume gate、Graph source_execution Evidence/lease closeout。后续聚焦 1-6 的失败矩阵、重放和真实/端到端 conformance。"
         }
       ],
       "notes": ""
@@ -146,9 +151,29 @@
           "q": "第一条 Graph-level aggregation vertical slice 是否复用并扩展现有 native-opn-tracer-aggregation / native-opn-tracer-verification contract？",
           "answer": "同意：复用并扩展现有 contract，不新建平行 aggregation schema。",
           "note": "保持单一事实来源；只补 Graph Atom 所需的中心责任单元、资源隔离证明、Agent1 commit binding、Agent2 verifier 输入 binding、Graph lifecycle projection 与 Review Handoff integration。"
+        },
+        {
+          "q": "Graph phase evidence 的 actor enrich 如何兼容既有 v1 evidence？",
+          "answer": "同意：新 evidence 可选记录 actor_kind 与 actor_identity，并按 phase actor 白名单校验；历史 v1 evidence 缺少这两个字段时继续可读取、投影和追加，不升级 schema、不伪造历史 actor。",
+          "note": "source_execution 绑定 agent-node；human_acceptance 绑定 human；scope、verification、post-merge gate、cleanup 绑定 coordinator/trusted-runner/core；merge 允许 coordinator 或 human。"
+        },
+        {
+          "q": "execution_binding_digest 是否必须与 Worker lease 解耦？",
+          "answer": "同意：execution_binding_digest 只由 execution 的 executable、argv、cwd、worktree identity 及 executable digest 等固定事实生成，不包含 worker lease_id；Coordinator lease 与 Worker lease 分别绑定该 digest，worker binding 仍单独校验 lease_id。",
+          "note": "这样 Coordinator 可在获取 Worker lease 前完成 execution binding 校验，消除 resume 的依赖环；Worker lease 仍负责单 worker 所有权。"
+        },
+        {
+          "q": "Worker lease 与 Coordinator resume gate 的最小接入顺序是什么？",
+          "answer": "同意：Graph resume 先校验已批准 execution definition，获取并校验 Coordinator lease，再获取携带同一 execution_binding_digest 的 Worker lease，最后才写入 running；lease、phase projection、digest 或身份任一不满足时 fail-closed，不启动 Agent。",
+          "note": "普通非 Graph mode 保持兼容；Graph mode 需要 human-id、coordinator-id、session-id；Coordinator lease 与 Worker lease 仍是独立 aggregate。"
+        },
+        {
+          "q": "source_execution phase evidence 与 Worker lease release 由谁完成？",
+          "answer": "同意：Graph mode 下 Worker CLI 负责写入 Provider result Evidence、source_execution phase record 并释放自身 Worker lease；Coordinator 下一次 resume 只读取并验证这些事实，再推进 scope_observation。Worker 不得直接写 scope、verification、review、merge 或 cleanup phase。",
+          "note": "source phase actor_kind=agent-node；phase record 绑定 execution/attempt、plan digest、execution binding digest、worker lease digest、provider fact Evidence digest；任一收尾写入不确定时保持 outcome-uncertain，不宣称 Graph 完成。"
         }
       ],
-      "notes": "已完成第一条 Graph-level aggregation vertical slice：复用既有 aggregation/verification schema，加入 Graph responsibility、execution/commit/worktree binding、resource isolation proof、review-pending projection，以及 Agent2 verifier input binding；Core 持久化时校验 source commit 与 execution 集合。全量 npm test 428/428，git diff --check 通过。后续仍需 Review Handoff Graph projection、merge/closeout、failure/replay/conformance E2E。"
+      "notes": "已完成 Graph Worker lease 双绑定、Coordinator resume gate、source_execution Evidence 写入与 Worker lease release，提交 4c988a13。仍需完成 Review Handoff Graph projection、merge/closeout，以及失败恢复、重放和端到端 conformance 闭环。下一施工重点转入 1-6。"
     },
     "1-5": {
       "id": "1-5",
@@ -513,14 +538,464 @@
           "q": "Graph mode 的 resume 是否改为阶段化、可恢复的多次 resume？",
           "answer": "同意：采用阶段化可恢复 resume；每次只推进一个已满足前置条件的阶段：source execution、scope observation、independent verification、review package/Human decision、merge、post-merge gate、cleanup/closeout；每个阶段结果写入 StateStore，进程退出后从最后一个已确认阶段继续；禁止 detached worker 私自跨越多个 Graph 阶段。",
           "note": "使 Graph lifecycle 可重放、可暂停、可恢复，且每个状态转换都有独立 Evidence。"
+        },
+        {
+          "q": "Graph mode 下 Source Agent 的 detached worker 完成后，下一次 resume 是否严格只确认 source_execution，不同时推进 scope_observation？",
+          "answer": "是：每次 resume 只推进一个 phase。先启动 Source Agent；下一次 resume 只观察并确认 source_execution；再下一次 resume 执行 scope_observation；后续依次推进 verifier、review、merge、post-merge gate、cleanup。",
+          "note": "避免把 Agent 结果、Git scope 和验证结果混成不可恢复状态。"
+        },
+        {
+          "q": "Graph mode 下是否将 Git scope observation 从 worker 移出，由 Coordinator 作为独立 scope_observation phase 执行？",
+          "answer": "是：Graph mode 下 worker 只负责启动并等待 Source Agent；source_execution 只记录 Provider 结果；下一次 resume 由 Coordinator 独立观察 changed_files、uncommitted_files、commit_parent、git diff --check；scope 失败阻断 verifier；非 Graph mode 保留现有 worker 行为。",
+          "note": "保持每次 resume 单 phase，并保持普通 mode 兼容。"
+        },
+        {
+          "q": "Graph mode 的 Source Agent 完成后，如何表示现有 RealAgentDogfoodLifecycle 没有 source-completed 状态的中间状态？",
+          "answer": "同意：新增独立 Graph phase completion evidence，不扩展或误用 RealAgentDogfoodLifecycle。Graph phase aggregate 记录 source_execution=passed/blocked/outcome-uncertain；既有生命周期保持现有模型，verification-pending 不表示 Graph verifier 已完成；Coordinator 后续只依据 Graph phase evidence 推进 scope_observation。",
+          "note": "保持业务生命周期与 Graph phase 生命周期分层，避免语义漂移。"
+        },
+        {
+          "q": "Source Agent 完成后，worker lease 如何释放，才能让后续多次 resume 安全推进 Graph phase？",
+          "answer": "同意：新增 append-only worker lease released 事件。worker 完成 Source Agent 后记录 source_execution evidence 并释放 worker lease；Coordinator 后续 phase 使用独立 Graph coordinator lease；旧 worker lease 不能继续推进任何 phase；lease 未释放、释放事实缺失或身份不匹配进入 outcome-uncertain；不依赖自然过期作为正常流程。",
+          "note": "显式划分 Agent 执行权与 Coordinator 编排权，避免多次 resume 竞态。"
+        },
+        {
+          "q": "Graph coordinator lease 的互斥范围应是什么？",
+          "answer": "同意：按单个 Graph execution 绑定，而不是按整个 OPN network 绑定。lease key 绑定 network_id、dogfood_id、execution_id、plan_digest；同一 Graph execution 同时只能有一个 Coordinator；同一 OPN network 可并行不同 Graph execution；lease 只授予 Human+Coordinator，Agent 节点不能获取或续租。",
+          "note": "兼顾单任务竞态安全与网络级并行能力。"
+        },
+        {
+          "q": "Coordinator lease 是否复用现有 worker lease aggregate，还是建立独立的 Graph coordinator lease aggregate？",
+          "answer": "同意：建立独立 aggregate real-agent-dogfood-graph-coordinator。worker lease 只表示 Agent 执行权；coordinator lease 表示 Human+Coordinator 的 Graph phase 推进权；两者分别 acquire、renew、release；同一 StateStore 中互不覆盖、互不投影。",
+          "note": "保持 Agent 执行权与中心编排权的责任边界。"
+        },
+        {
+          "q": "Graph coordinator lease 是否要求每个 phase 都重新进行 HumanSigner 签名？",
+          "answer": "同意：不要求每个 phase 重签。初始 coordinator lease 绑定已验证 Human approval、Graph plan digest、execution/attempt；普通 phase 只验证 lease、StateStore revision、前置 evidence 和 plan digest；human_acceptance phase 必须独立 Human Accept 签名；merge 只接受绑定该 Human Accept 的 coordinator；plan、目标、scope、execution 或 attempt 漂移时 lease 失效并重新 Human approval。",
+          "note": "降低连续 resume 的交互负担，同时保留关键决策的 Human 最终授权。"
+        },
+        {
+          "q": "当 Graph phase 进入 blocked 或 outcome-uncertain 时，Coordinator lease 如何处理？",
+          "answer": "同意：立即记录终止原因并释放 Coordinator lease。blocked 记录确定性阻断原因后释放；outcome-uncertain 先记录不确定事实再尝试释放；释放失败记录 coordinator-lease-release-uncertain，整体不得 closed；后续 reconciliation 只能由新的 Human+Coordinator lease 继续；原 lease 不得继续推进 phase。",
+          "note": "避免失败执行长期占用 Graph 编排权，同时保留释放失败证据。"
+        },
+        {
+          "q": "如果 Source Agent 或 worker 崩溃，无法写入 released 事件，后续 Coordinator 如何接管？",
+          "answer": "同意：采用有界接管，不静默抢占。先记录 worker outcome-uncertain；等待固定 lease TTL 加 termination grace；新的 Human+Coordinator 验证 lease 已过期、进程已终止且没有未确认副作用；写入 worker-lease-abandoned evidence 后才允许新 Coordinator lease；无法证明进程终止或副作用状态时保持 outcome-uncertain，不得接管。",
+          "note": "区分 lease 过期与资源安全，防止重复执行和隐藏副作用。"
+        },
+        {
+          "q": "worker-lease-abandoned 所需的进程已终止、无未确认副作用证据由谁提供？",
+          "answer": "同意：只能由可信运行时/TrustedRunner 提供，Agent、worker、Provider 不得自报。TrustedRunner 观察完整 descendant process tree，证明 Source Agent、Provider 和子进程均已终止；证据绑定 execution、attempt、lease、worktree、runtime identity，并执行 post-run Git scope/cleanup observation；证据缺失或身份漂移保持 outcome-uncertain。",
+          "note": "保证接管依据来自可信观察，而非执行节点自我声明。"
+        },
+        {
+          "q": "同一个 Graph phase 被重复 resume 时，phase evidence 如何保证可重放且不产生分叉？",
+          "answer": "同意：每个 phase 在同一 execution/attempt 下只能有一个最终记录。相同 phase、相同 evidence digest 幂等返回 duplicate；相同 phase、不同结果或 digest 返回 conflict；不允许同一 attempt 将 blocked 改为 passed；重试创建新 execution/attempt 并重新 Human approval；StateStore projection 只接受严格有序 phase 前缀。",
+          "note": "保证 phase replay 确定性，避免重复 resume 产生隐藏分支。"
+        },
+        {
+          "q": "Graph phase record 是否必须直接绑定该 phase 的 Evidence digest/reference？",
+          "answer": "同意：必须绑定。每个 phase record 包含 evidence_digest 和受约束 evidence_refs；digest 绑定 phase、execution、attempt、plan digest、输入摘要和输出摘要；StateStore 只保存可审计元数据与引用，原始 stdout/stderr 留在 EvidenceStore；没有 Evidence digest 的 phase 只能 outcome-uncertain，不能推进下一阶段。",
+          "note": "确保 phase progression 建立在可复盘证据上。"
+        },
+        {
+          "q": "Graph phase 的 Evidence 是否复用现有 ContentAddressedEvidenceStore，还是创建专用 Graph EvidenceStore？",
+          "answer": "同意：复用现有 ContentAddressedEvidenceStore，不创建第二套存储。Graph phase 只新增结构化 phase record；原始 Evidence 统一写入现有 EvidenceStore；evidence_refs 只允许 content-addressed digest/reference；每个 phase 限制固定数量的小型引用，防止 StateStore payload 膨胀；EvidenceStore 位置由 Graph plan 的 evidence_store 绑定。",
+          "note": "保持 Evidence 生命周期统一，避免重复存储和协议分裂。"
+        },
+        {
+          "q": "Human 是否可以直接把某个 blocked 或 outcome-uncertain phase 手动改成 passed？",
+          "answer": "同意：不可以直接覆盖。Human 可以批准新的 reconciliation 或新 execution/attempt，也可以在 human_acceptance phase 做最终 Accept/Reject；只有对应可信观察器或 deterministic verifier 能产生 passed phase evidence；原有失败/不确定 evidence 永远保留；直接覆盖记录为非法状态变更并阻断 Graph。",
+          "note": "保持 Human 最终责任与事实证据不可伪造的边界。"
+        },
+        {
+          "q": "CLI status 是否需要同时展示 RealAgentDogfood lifecycle 和 Graph phase lifecycle？",
+          "answer": "同意：需要，并明确分层展示 execution_lifecycle 与 graph_phase。execution_lifecycle 展示 awaiting-human-approval、running、verification-pending 等；graph_phase 展示当前 phase、已完成 phases、下一 phase、phase status；两者不合并；不一致时 status 返回 outcome-uncertain 并展示冲突证据；status 保持只读，不自动推进 phase。",
+          "note": "降低多层生命周期的分析门槛，防止状态语义混淆。"
+        },
+        {
+          "q": "Graph mode 的 resume 输出是否采用 enrich，而不是替换现有 CLI lifecycle 输出？",
+          "answer": "同意：采用 enrich。保留现有 status、next_action、execution_id 等字段；增加 execution_lifecycle、graph_phase、phase_transition、evidence_refs；非 Graph mode 输出保持兼容；Graph mode 每次只返回一个 phase 的推进结果；新字段不覆盖旧字段含义。",
+          "note": "降低现有 CLI 兼容风险并简化 Human 对 Graph 状态的分析。"
+        },
+        {
+          "q": "Graph mode 的 resume 是否必须显式提供 --graph-plan，并校验它与 approval summary 中的 plan digest 一致？",
+          "answer": "同意：必须。Graph mode resume 要求 --graph-plan，重新 canonicalize 并校验 plan digest；校验 network_id、dogfood_id、execution_id、attempt、baseline、target/source/verifier、EvidenceStore 和 allowed files；与 approval summary 或 StateStore 任一不一致即 blocked；不从不可信临时路径或其他 CLI 参数重建 Graph plan。",
+          "note": "保证 resume 使用的资源图与最初 Human approval 完全一致。"
+        },
+        {
+          "q": "Graph coordinator lease 中的 coordinator_id 应如何绑定？",
+          "answer": "同意：绑定 Human approval 中的 Human identity 与当前 Coordinator session identity。human_id 表示最终责任人；coordinator_session_id 表示本次本机编排进程；lease 同时绑定两者、Graph plan digest、execution/attempt；Agent node_id 不能替代 human_id；session 重启后不能直接复用旧 lease，必须按恢复流程重新获取。",
+          "note": "区分责任归属、编排进程和执行节点身份。"
+        },
+        {
+          "q": "Coordinator session 重启后，是否需要重新进行 HumanSigner 签名才能恢复 Graph？",
+          "answer": "同意：不需要重新签名，但必须重新获取 Coordinator lease。复用仍有效的初始 Human approval；新 session 生成新的 coordinator_session_id；校验 approval、plan digest、execution/attempt、未过期和 StateStore phase；旧 lease 必须已释放或完成有界接管；关键绑定漂移或 approval 过期才重新 Human approval。",
+          "note": "兼顾恢复体验与 lease 身份安全。"
+        },
+        {
+          "q": "两个 Coordinator session 同时对同一个 Graph execution 调用 resume 时，StateStore revision conflict 如何处理？",
+          "answer": "同意：只有持有有效 Coordinator lease 且 revision 匹配者可以推进。先获得 lease 的调用者继续；其他调用者收到 coordinator-lease-conflict 或 revision-mismatch；不自动重试、不重新执行 Agent、不跨 phase 猜测；只读重新投影 StateStore 后返回当前 Graph phase；无法确认 winner 或 phase evidence 时返回 outcome-uncertain。",
+          "note": "实现单 Graph execution 的 single-writer 事实，避免并发 resume 造成重复副作用。"
+        },
+        {
+          "q": "Graph mode resume 期间 StateStore 不可用或读写超时时，应如何处理？",
+          "answer": "同意：fail-closed，不执行任何副作用。不启动 Agent、不推进 phase、不获取或续租 Coordinator lease；不将未读到状态解释为尚未执行；返回 outcome-uncertain 并记录 StateStore unavailable；恢复后由 Human+Coordinator 按既有 lease/reconciliation 流程继续。",
+          "note": "保证 StateStore 作为 Graph phase 真相源，不在状态缺失时猜测。"
+        },
+        {
+          "q": "EvidenceStore 不可用，但 StateStore 可用时，Graph phase 是否允许继续推进？",
+          "answer": "同意：不允许继续推进任何依赖该 Evidence 的 phase。不启动 Agent 或 verifier；已有 StateStore phase 记录保留；当前 phase 进入 outcome-uncertain 并记录 EvidenceStore unavailable；不把 StateStore digest 当作原始 Evidence 已可读取；EvidenceStore 恢复并完成 digest 校验后，才允许 Human+Coordinator 获得新 lease 继续。",
+          "note": "确保 phase progression 建立在可读取、可校验的原始证据上。"
+        },
+        {
+          "q": "写入一个 Graph phase 时，EvidenceStore 写入与 StateStore phase record 的顺序如何保证一致性？",
+          "answer": "同意：先写 EvidenceStore，再写 StateStore。先生成并持久化 content-addressed Evidence，校验 digest，再 append StateStore phase record；StateStore append 失败保留 orphan Evidence、不能推进 phase；重试只复用同一 digest；无法确认任一步结果进入 outcome-uncertain。",
+          "note": "使 phase projection 始终指向已持久化、可校验的原始证据。"
+        },
+        {
+          "q": "Graph phase 是否需要独立的 phase timeout？Human review 等待是否也受同一 timeout 约束？",
+          "answer": "同意：需要分层 timeout。source_execution 复用现有 Provider 15 分钟 timeout；scope_observation、independent_verification、post_merge_gate、cleanup 使用各自固定 bounded timeout；human_acceptance 不按进程 timeout 自动失败，可长期保持 review-pending；coordinator lease 仍需定期续租，Human 长时间未操作时 lease 到期并进入可恢复状态；timeout 只产生 blocked 或 outcome-uncertain，不自动重试。",
+          "note": "兼顾执行资源边界与 Human review 的真实等待时间。"
+        },
+        {
+          "q": "Graph phase 的 timeout 是否直接复用现有 Provider Registry、LocalProcessAdapter 和 verifier plan 的 bounded timeout 配置，而不是在 Graph orchestrator 中再定义一套独立数值？",
+          "answer": "同意：复用现有配置来源。Source Agent 使用 Provider Registry 的 15 分钟 timeout、5 秒 termination grace、stdout/stderr 10 MB；verifier 使用 verification plan 每条 command 的 timeout_ms；scope、post-merge gate、cleanup 复用对应 adapter 的 bounded timeout；Graph orchestrator 只读取、绑定和记录，不重复定义或临时放宽；缺少 timeout binding 进入 blocked。",
+          "note": "保持运行预算单一、可审计，避免 Graph 层悄然改变安全边界。"
+        },
+        {
+          "q": "Graph mode start 在尚未启动 Source Agent 时，初始 graph_phase 应如何展示？",
+          "answer": "同意：显式展示未开始状态。graph_phase.status=pending；current_phase=null；completed_phases=[]；next_phase=source_execution；execution_lifecycle 仍为 awaiting-human-approval；未经 Human approval 不创建 source_execution phase evidence 或启动 Agent。",
+          "note": "让 Human 清楚区分 Graph 已准备、已授权和已执行。"
+        },
+        {
+          "q": "Graph plan 在 awaiting-human-approval 状态长期未操作时，应如何处理 Human approval 的过期？",
+          "answer": "同意：保留 Graph plan，但拒绝过期 approval。start 创建的 Graph plan 和 pending read model 保留；approval 过期后 resume 不启动 Agent、不获取 Coordinator lease，返回 human-approval-expired；Human 可基于同一 plan 重新签署新的 approval；plan digest、资源绑定或目标发生变化则创建新的 execution/attempt。",
+          "note": "区分可长期保留的计划与有时效的执行授权。"
+        },
+        {
+          "q": "Human 是否需要一个显式取消 Graph execution 的操作？",
+          "answer": "同意：需要，但取消也是受约束的 phase transition。尚未启动 Agent 时可立即记录 cancelled；Source Agent 执行中先请求 TrustedRunner 终止并等待 termination proof；已有业务结果但未 cleanup 时取消只停止后续 phase，仍必须完成 cleanup；取消不删除 Evidence、不伪造 closed；Coordinator lease 释放失败进入 outcome-uncertain。",
+          "note": "补齐用户可控的停止路径，同时保留终止、证据和清理边界。"
+        },
+        {
+          "q": "cancelled 是否是当前 execution/attempt 的终态，还是允许直接恢复继续？",
+          "answer": "同意：cancelled 是当前 execution/attempt 的终态。不允许原 execution 继续推进；Evidence 永久保留；Human 仍要完成目标时创建新的 execution/attempt；新 attempt 重新绑定 plan、资源隔离、Human approval 和 Coordinator lease；不得把取消后的继续执行伪装成原 execution resume。",
+          "note": "保证取消具有明确语义，避免旧 execution 复活和证据混淆。"
+        },
+        {
+          "q": "Graph phase 是否需要在 StateStore 中写入可变的 in_progress phase record？",
+          "answer": "同意：不需要写入可变状态。StateStore 只追加 phase 最终结果 passed、blocked、outcome-uncertain；pending 由已完成 phase 前缀推导；in_progress 由有效 Coordinator lease 和执行上下文推导；Agent 执行中由 worker lease 与 execution evidence 表示；不通过更新覆盖 phase 状态，保持 append-only 和可重放。",
+          "note": "保持状态源不可变，降低恢复与审计复杂度。"
+        },
+        {
+          "q": "Human 取消 Graph execution 时，是否把 cancelled 作为 Graph phase 的一种 phase status？",
+          "answer": "同意：不把 cancelled 当作普通 phase result。Graph phase 仍只记录 passed、blocked、outcome-uncertain；取消作为独立 Graph execution terminal event；execution read model 展示 cancelled；已完成 phase 前缀和 Evidence 保留不变；取消事件之后禁止任何 phase record，除非创建新的 execution/attempt。",
+          "note": "保持 phase 结果语义稳定，把 execution 终止与 phase 观察分层。"
+        },
+        {
+          "q": "失败后创建新的 execution/attempt 时，是否允许复用原 Graph plan digest？",
+          "answer": "同意：允许复用不可变 plan，但必须重新绑定执行身份与授权。Graph plan 内容、资源路径、目标和 allowed files 不变时可复用原 plan_digest；新建 execution_id、递增 attempt、新 worker/coordinator leases，并重新 Human approval；plan 内容变化生成新 plan_digest；旧 execution evidence 不迁移为新 execution phase evidence，只作历史引用。",
+          "note": "区分稳定任务定义与每次执行的独立事实。"
+        },
+        {
+          "q": "当前 Graph plan_digest 包含 execution_id 和 attempt，与新 attempt 复用不可变 plan_digest 冲突，应如何修正？",
+          "answer": "同意：将 plan 定义与 execution binding 分离。plan_digest 只绑定不可变任务定义：goal、repo、baseline、worktree 拓扑、allowed files、execution/network policy；execution_id、attempt、Human approval、lease 属于独立 execution binding digest；新 attempt 可复用同一 plan_digest，但必须生成新的 execution binding digest 并重新 Human approval；plan schema 向后兼容迁移，不能静默改变旧 digest 含义。",
+          "note": "修正任务定义与执行事实的边界，支持安全重试和可复盘。"
+        },
+        {
+          "q": "旧版 Graph plan schema 与新 plan/execution digest 分离模型如何兼容？",
+          "answer": "做 enrich：保留旧字段和旧 plan_digest 语义，不把旧值重新解释；在现有 plan/output 上增加不可变任务定义 digest、execution binding digest 和 digest profile。旧 v1 记录继续可读、可校验、可回放；新建或 retry 使用 enrich 字段和新的 execution binding；不修改旧记录、不静默迁移旧 digest。",
+          "note": "采用增量兼容，降低现有 CLI/证据消费者升级成本。"
+        },
+        {
+          "q": "enrich 后 Graph plan/execution binding 的字段是否固定为 plan_digest、plan_definition_digest、execution_binding_digest、digest_profile 三层？",
+          "answer": "同意：固定为三层。保留旧 plan_digest 语义；plan_definition_digest 只绑定不可变任务定义；execution_binding_digest 绑定 execution_id、attempt、Human approval、lease 和运行时身份；digest_profile 明确 digest 计算规则与版本；新消费者优先校验后两个字段，旧消费者继续使用 plan_digest。",
+          "note": "让旧兼容字段、新任务定义和新执行事实各自有稳定语义。"
+        },
+        {
+          "q": "execution_binding_digest 包含 Coordinator lease，但 lease 只有 resume 时创建，是否分为预 lease binding 和最终 lease binding 两个阶段？",
+          "answer": "同意：分为两阶段 digest。execution_binding_digest 绑定 plan definition、execution/attempt、Human approval 和运行时身份，不包含尚未创建的 lease；coordinator_lease_digest 在 lease 创建后单独生成，绑定 session、lease、execution binding；phase evidence 同时引用两者；lease 续租不改变 execution binding digest，只产生新的 lease event/digest；approval summary 在 lease 创建前稳定签名。",
+          "note": "消除签名、授权和 lease 创建的时序循环。"
+        },
+        {
+          "q": "Human approval 签名应直接绑定尚未生成的 execution_binding_digest，还是绑定其组成字段？",
+          "answer": "同意：签名组成字段，由 Core 计算 digest。Human 签名绑定 plan_definition_digest、execution/attempt、goal、Provider、资源、scope、network policy、timeout 和身份；Core 根据验证后的 canonical binding 计算 execution_binding_digest；不要求 Human 预先签署尚未生成的 digest；digest 写入 approval summary、lease、phase evidence；组成字段漂移即校验失败。",
+          "note": "保持 Human 可读授权内容与 Core 派生完整性摘要的边界。"
+        },
+        {
+          "q": "同一个 execution 收到两份 Human approval 时，如何处理重复或冲突批准？",
+          "answer": "同意：按 approval digest 做幂等与冲突校验。相同 execution/attempt、相同 canonical approval digest 返回 duplicate；相同 execution/attempt、不同 approval digest 返回 approval-conflict，不启动 Agent；不覆盖第一份已记录 approval；目标、scope、Provider 或资源绑定变化创建新的 execution/attempt；只有获胜 approval 能生成 Coordinator lease。",
+          "note": "避免并发授权造成责任与绑定歧义。"
+        },
+        {
+          "q": "当前 Graph Atom 是否支持多个 Human 共同审批，还是只绑定一个最终责任 Human？",
+          "answer": "同意：当前 MVP 只绑定一个最终责任 Human。approval、Coordinator lease、Human Accept 都绑定同一 human_id；Agent 节点不能组成审批 quorum；多 Human quorum 留作未来扩展；更换责任 Human 时创建新 execution/attempt 并重新绑定授权。",
+          "note": "保持单 Agent OPN Atom 到 Graph Atom 的最小责任模型。"
+        },
+        {
+          "q": "当前 Graph Atom 的 plan 是否需要显式记录 Agent node binding，还是只记录 Provider/worktree？",
+          "answer": "同意：需要显式记录 provider-neutral node binding。记录 node_id、role、capabilities、worktree/resource binding；本次最小切片只声明一个 Source execution node Agent1；verifier 是 Core deterministic verifier，不声明为 Agent node；Provider 是 Agent1 的实现适配器，不等同于 node identity；后续 Agent2 可扩展 plan schema，但不改变当前切片语义。",
+          "note": "保持 OPN 节点、Provider 适配器和资源隔离的抽象分层。"
+        },
+        {
+          "q": "Graph plan 是否需要显式记录中心责任单元，还是仅记录 Agent nodes？",
+          "answer": "同意：必须显式记录中心责任单元。responsibility_unit.kind=human-plus-coordinator；绑定 human_id、Coordinator session、approval binding；中心责任单元不是 Agent node，不进入 Agent node 列表；Agent1/Agent2 只能出现在 execution node 列表；缺少中心责任单元绑定即 blocked。",
+          "note": "把 Human 或 Human+Agent 的中心责任边界落实为可验证 plan facts。"
+        },
+        {
+          "q": "Agent execution node 的 capabilities 是否必须由 Graph plan 预声明并在 admission 时验证？",
+          "answer": "同意：必须预声明并验证。plan 记录每个 node 的 required_capabilities；Trusted Runner/Provider Registry 提供实际 capability snapshot；admission 只在 required 与实际能力匹配时通过；Agent/Provider 不得自行扩大 capabilities；capability drift 使 execution blocked，不得继续 phase。",
+          "note": "将 Agent 节点能力纳入 Graph plan 和可信 admission 边界。"
+        },
+        {
+          "q": "Agent node 与 worktree/resource binding 是否必须是一对一且不可变？",
+          "answer": "同意：必须一对一、不可变。每个 execution node 绑定唯一 worktree/resource scope；同一 worktree 不能同时绑定两个 Agent node；执行期间不能更换 worktree、branch 或 allowed scope；资源隔离方案变更停止当前 execution 并创建新 execution/attempt；Coordinator 在 dispatch 前验证全部 resource bindings。",
+          "note": "将资源竞态隔离落实为 dispatch 前的不可变 Graph fact。"
+        },
+        {
+          "q": "当前 Graph Atom 是否允许动态 DAG 分支/汇合，还是先固定为一条可重放的线性 phase path？",
+          "answer": "同意：当前 MVP 固定线性 phase path：source_execution → scope_observation → independent_verification → human_acceptance → merge → post_merge_gate → cleanup。每个 phase 只有一个前置；Agent 不得动态添加、跳过或重排 phase；plan 可预留 directed-edge 字段但只接受固定边集合；多节点并行、分支、汇合留到后续 Graph milestone。",
+          "note": "先验证 Graph Engineering 最小闭环，再扩展 DAG 复杂度。"
+        },
+        {
+          "q": "Human 在 human_acceptance 阶段提出 revision 时，是否允许原 execution 继续修改后再审？",
+          "answer": "同意：不允许原 execution 继续写入。当前 execution 进入 request-revision 终态；Agent/Verifier Evidence 保留；同一不可变 plan 可创建新 execution/attempt 复用 plan_definition_digest；goal、scope、资源或 phase path 改变则新 plan digest；新 execution 必须重新 Human approval 和 Coordinator lease。",
+          "note": "避免在同一 execution 内混入不同目标和不可比证据。"
+        },
+        {
+          "q": "human_acceptance 的签名是否必须绑定截至当前 phase 的完整 Evidence set？",
+          "answer": "同意：必须绑定。绑定 source execution、scope、verifier、review package digest；绑定 source commit、plan definition、execution binding、target worktree、merge policy；Accept 后不允许追加或替换前置 Evidence；任一 Evidence 变化使 Accept digest 失效并重新 review；Human Accept 只授权当前精确 merge proposal。",
+          "note": "把 Human 最终决策绑定到可复盘的完整事实集合。"
+        },
+        {
+          "q": "Human Accept 后到实际 merge 之间，如果 target HEAD、source commit 或 worktree 状态发生变化，应如何处理？",
+          "answer": "同意：重新验证，任何漂移都使 Accept 失效。target HEAD 必须仍等于 Accept 绑定的 target commit；source HEAD、parent、changed files、clean status 不变；merge policy 仍为 fast-forward-only；任一漂移禁止 merge，进入 outcome-uncertain 或 request-revision；不自动重签或重试，重新生成 review package 并 Human Accept。",
+          "note": "防止 review 与实际 merge 对象不一致。"
+        },
+        {
+          "q": "fast-forward merge 命令执行结果不确定时，应如何恢复？",
+          "answer": "同意：不直接重试 merge，先观察事实。重新读取 target HEAD、source HEAD、branch refs、worktree 状态；target 已到达已批准 source commit 记录 merge succeeded；target 仍在原 commit 且 source 未漂移时可在新 Coordinator lease 下按同一 Accept 重试；无法确认或出现其他变化进入 outcome-uncertain 并重新 review；不以命令退出码作为唯一 merge 事实。",
+          "note": "避免 merge 不确定时重复副作用或误报成功。"
+        },
+        {
+          "q": "Graph closeout 清理三个 worktree 的顺序是否固定？",
+          "answer": "同意：固定为 source → verifier → target。source 在 merge 确认后清理；verifier 在验证 Evidence 持久化后清理；target 在 post-merge gate 完成后最后清理；每个 worktree 单独记录 cleanup proof；任一清理失败不回滚业务结果但整体不能 closed；EvidenceStore 永不随 worktree 清理。",
+          "note": "把资源生命周期变成可观察、可恢复的有序 phase。"
+        },
+        {
+          "q": "重复 resume 或 reconciliation 触发 cleanup 时，cleanup 是否必须幂等？",
+          "answer": "同意：必须幂等且绑定原始 worktree identity。已清理 worktree 返回相同 cleanup proof；未清理 worktree 只执行一次受绑定删除；路径、branch、HEAD 或 Git worktree registration 漂移时拒绝；不使用宽泛目录删除或 git worktree prune 代替定点清理；cleanup proof digest 相同才 duplicate，否则 outcome-uncertain。",
+          "note": "避免重复 cleanup 误删资源，并让 closeout 可恢复。"
+        },
+        {
+          "q": "worktree 清理完成后，是否同时删除本次 Graph dogfood 创建的 disposable branches？",
+          "answer": "同意：删除，但作为独立、定点、可证明的 cleanup 子步骤。只删除 Graph plan 明确声明且归 execution 所有的 branches；先移除 source/verifier/target worktree registration；branch HEAD 仍等于绑定 commit 才允许删除；删除失败记录独立 cleanup uncertainty；不删除 Human 原有 branch、远程 branch 或未绑定 ref。",
+          "note": "防止本地 disposable refs 长期残留，同时避免误删外部 refs。"
+        },
+        {
+          "q": "Graph dogfood 的 EvidenceStore 是否允许随 worktree closeout 自动清理？",
+          "answer": "同意：不允许自动清理。closeout 只清理 disposable worktrees 和 branches；EvidenceStore 保留原始 Evidence、digest、phase projection、cleanup proof；retention 由独立只读审计流程决定；删除 Evidence 必须单独 Human-approved；Evidence 缺失使历史 replay outcome-uncertain。",
+          "note": "保证真实 dogfood 可复盘，避免 closeout 误删证据。"
+        },
+        {
+          "q": "何时才能把路线图节点 1-6 失败恢复、重放与端到端 conformance 标记为 completed？",
+          "answer": "同意：只有真实闭环完成后。deterministic fixture 全部通过；真实 Source Agent 执行、scope、verifier、Human Accept、merge、post-merge gate 全部有 Evidence；source/verifier/target worktree 与 disposable branches 全部清理并有 proof；EvidenceStore 保留且可 replay；Graph status 为 closed；不能因代码实现或单元测试完成提前标记路线图完成。",
+          "note": "将路线图完成定义绑定到真实 OPN Graph 产品闭环，而非局部实现。"
+        },
+        {
+          "q": "Graph replay 是否必须完全 side-effect-free，只依赖 StateStore 与 EvidenceStore？",
+          "answer": "同意：必须。replay 只读取 StateStore phase records 和 EvidenceStore artifacts；不启动 Agent、Provider、verifier、merge、cleanup；不访问 Git worktree 作为实时事实来源；只能重建历史 read model、phase order、terminal outcome、digest 校验；Evidence 缺失、篡改或 digest 不匹配返回 outcome-uncertain。",
+          "note": "保证 replay 是可安全审计的历史投影，而不是隐式重执行。"
+        },
+        {
+          "q": "旧 execution 的 replay 是否必须使用当时记录的 schema/digest profile，而不是当前版本默认规则？",
+          "answer": "同意：必须使用历史 schema 与 digest profile。Evidence 自带 schema、version、profile；replay 按记录时 validator 解释；当前版本可增加兼容 validator 但不能用新规则改写旧结果；无对应 validator 返回 outcome-uncertain；replay 同时展示历史 profile 与当前 Core 版本。",
+          "note": "保持历史证据的语义稳定和跨版本可审计性。"
+        },
+        {
+          "q": "replay 发现 Evidence 缺失或损坏时，是否保留原 execution 历史 terminal status，同时额外标记 replay integrity failure？",
+          "answer": "同意：保留业务历史结果，额外标记 replay 不完整。不把原 closed 改写成 failed；replay read model 增加 integrity_status=incomplete；对外总体可审计结论为 outcome-uncertain；列出缺失或损坏 evidence refs；不自动补证据、不重新执行。",
+          "note": "解耦业务历史事实与当前 replay 完整性判断。"
+        },
+        {
+          "q": "Graph replay 的输出是否必须是确定性的、可再次 hash 的 read model？",
+          "answer": "同意：必须。输出使用 canonical JSON；字段顺序、phase 顺序、evidence refs 顺序固定；不包含当前时间、机器路径等非历史事实；replay digest 只由历史 StateStore/EvidenceStore 内容计算；同一历史输入得到相同 replay digest。",
+          "note": "保证 replay 可比较、可审计、可作为 conformance evidence。"
+        },
+        {
+          "q": "Graph replay 生成的 read model 是否默认只输出，不自动写回 StateStore/EvidenceStore？",
+          "answer": "同意：默认只读输出。replay 不追加 phase、lease、lifecycle event；replay digest 可由调用方显式保存为独立 audit artifact；保存不是 replay 本身的隐式副作用；持久化必须绑定 Human/Coordinator session、历史 execution、当前 Core version；replay 失败不能修改原始历史状态。",
+          "note": "保持 replay 与运行时状态写入严格分离。"
+        },
+        {
+          "q": "启动真实 dogfood 前，deterministic conformance fixture 是否必须覆盖新增的 lease、replay、digest 和 cancellation failure matrix？",
+          "answer": "同意：必须覆盖 worker lease acquire/release/abandoned；coordinator lease 冲突、续租、释放失败；StateStore/EvidenceStore 不可用；phase duplicate/conflict；execution binding 与 lease digest 漂移；concurrent resume revision conflict；cancellation、request-revision、replay integrity failure；每类都验证不会产生未授权副作用。",
+          "note": "先完成协议级失败矩阵，再启动真实副作用。"
+        },
+        {
+          "q": "deterministic failure matrix 通过后，是否必须生成可 replay 的 conformance Evidence，作为启动真实 dogfood 的前置 gate？",
+          "answer": "同意：必须。fixture 测试结果写入独立 EvidenceStore；绑定当前 Core commit、schema/profile、测试命令和 failure matrix digest；replay 必须重建相同结果；没有可 replay conformance Evidence，不创建真实 dogfood disposable worktrees、不请求 Human approval、不启动 Agent。",
+          "note": "把协议级验证证据置于真实副作用之前。"
+        },
+        {
+          "q": "真实 dogfood 请求 macOS Keychain Human approval 前，是否必须先展示可读的 preflight summary？",
+          "answer": "同意：必须。展示 goal、plan definition、execution/attempt、Agent node、worktree 拓扑、allowed files、timeout、network policy、前置 conformance Evidence digest 和下一 phase；Human 确认内容与签名 canonical payload 完全一致；summary 缺字段、digest 不一致或不可读时不弹 Keychain；Keychain 只批准 summary 中精确 execution，不批准未来变更。",
+          "note": "降低 Human approval 的理解门槛，确保签名内容可读且精确。"
+        },
+        {
+          "q": "Human 拒绝 approval 或 approval 在 Source Agent 启动前过期时，已准备 disposable worktrees/branches 如何处理？",
+          "answer": "同意：进入受约束的 pre-execution cleanup。不启动 Agent、不获取 worker lease；记录 rejected 或 human-approval-expired；按 source → verifier → target 顺序清理已准备资源；每个资源生成 cleanup proof；cleanup 失败进入 outcome-uncertain；EvidenceStore 和 Graph plan 保留，允许基于同一不可变 plan 创建新 execution/attempt。",
+          "note": "避免未执行资源泄漏，同时保留计划和审计证据。"
+        },
+        {
+          "q": "Human 在 approval 前取消的是 Graph plan，还是当前 execution/attempt？",
+          "answer": "同意：区分两种操作。取消当前 execution/attempt 记录 execution cancelled，plan 保留可复用；归档 Graph plan 需要独立 Human-approved plan archive event；归档 plan 不得创建新 execution；plan archive 不删除历史 Evidence；execution cancelled 不隐式归档或删除 plan。",
+          "note": "保留任务定义生命周期与执行生命周期的独立性。"
+        },
+        {
+          "q": "Graph plan 发生目标或资源变更时，是否需要显式 plan_revision 和 parent_plan_digest？",
+          "answer": "同意：需要。不修改原 plan；新 plan 递增 plan_revision 并记录 parent_plan_digest；新 execution 只绑定一个固定 plan revision；review/replay 可沿 parent 链追溯；plan revision 变化必须重新 Human approval。",
+          "note": "建立任务定义的可追溯版本链，避免 execution 混用不同计划。"
+        },
+        {
+          "q": "同一个 parent_plan_digest 是否允许创建多个并行的 plan revisions？",
+          "answer": "同意：允许创建多个候选 revision，但每个 revision 独立执行。每个 revision 有独立 plan_digest；不继承 parent approval、lease 或 Evidence；同一 OPN network 可并行不同 revision；每个 execution 只绑定一个 revision；Human 可分别批准或归档不采用的 revision。",
+          "note": "支持 Graph 方案探索，同时保持执行事实隔离。"
+        },
+        {
+          "q": "Human 归档一个仍有 active execution 的 Graph plan 时，应如何处理？",
+          "answer": "同意：禁止直接归档。先列出该 plan active executions、leases、未完成 phases；逐个 cancel 或完成 execution；确认 worker/coordinator leases 已释放或完成有界接管；再记录 plan archive event；归档失败或仍有 active execution 时保持 plan active，不产生隐式取消。",
+          "note": "避免计划归档掩盖仍运行或未收束的执行副作用。"
+        },
+        {
+          "q": "多个候选 plan revisions 是否需要独立的 revision lifecycle（draft、active、archived），而不是只靠 execution 状态判断？",
+          "answer": "同意：需要独立 lifecycle。draft 可继续编辑并产生子 revision但不可执行；active 可创建 execution且需 Human approval；archived 不可创建新 execution但历史 execution/Evidence 可 replay；revision lifecycle 与 execution lifecycle 分离；revision 状态变化 append-only 且 Human-approved。",
+          "note": "把任务定义生命周期与执行生命周期彻底分开。"
+        },
+        {
+          "q": "谁可以把 plan revision 从 draft 转为 active？",
+          "answer": "同意：只有最终责任 Human。Agent/Coordinator 可以生成 draft 和校验报告；只有 Human 签名 activation event 才能转为 active；activation 绑定 plan digest、revision、责任 Human、时间有效期；activation 后仍需具体 execution 的独立 Human approval；draft/active 不能由 Agent 自行切换。",
+          "note": "把任务定义可执行资格纳入 Human 最终责任边界。"
+        },
+        {
+          "q": "plan revision 的 active activation 是否需要过期/撤销机制？",
+          "answer": "同意：需要。activation 有有效期；Human 可显式 revoke；revoke 阻止新 execution，不回溯修改已完成 execution；active execution 后续 phase 仍校验 execution approval、lease 和 phase evidence；activation 到期或 revoke 后新 execution 必须重新 Human activation/approval；不删除历史 Evidence。",
+          "note": "支持 Human 对任务定义执行资格的持续控制。"
+        },
+        {
+          "q": "如果 plan activation 在 execution 运行期间被 revoke，当前 execution 是否继续推进？",
+          "answer": "同意：停止推进新的副作用，但不改写已发生事实。已完成 phase evidence 保留；正在运行 Source Agent 由 TrustedRunner 终止并等待 proof；execution 进入 blocked 或 outcome-uncertain；不再获取新的 phase lease；cleanup 仍必须完成；不回溯修改已完成 phase 或历史 Evidence。",
+          "note": "让 Human 撤销能力即时生效，同时保持事实和资源生命周期完整。"
+        },
+        {
+          "q": "plan activation 的 revoke 是否必须由同一最终责任 Human 签名？",
+          "answer": "同意：必须由最终责任 Human 签名。revoke 绑定 human_id、plan revision、activation digest、revoke reason；Agent/Coordinator 只能发现 activation 已撤销，不能自行撤销；revoke event append-only 不可覆盖；Human identity 不匹配拒绝 revoke；revoke 后按既定终止与 cleanup 流程收束 execution。",
+          "note": "保持任务定义执行资格的最终控制权属于 Human。"
+        },
+        {
+          "q": "被 revoke 的 plan activation 是否可以直接恢复，还是必须创建新的 activation？",
+          "answer": "同意：必须创建新的 activation。旧 activation 永久保持 revoked；Human 对同一 plan revision 重新签名生成新 activation；新 activation 有新的 digest、有效期和 reason；被 revoke 的 execution 不恢复，必须新 execution/attempt；历史 activation 链可 replay。",
+          "note": "保持授权撤销的不可逆审计语义。"
+        },
+        {
+          "q": "同一个 plan revision 是否允许同时存在多个有效 activation？",
+          "answer": "同意推荐方案：不允许。一个 revision 同时最多一个有效 activation；新 activation 创建前旧 activation 必须 expired、revoked 或明确 superseded；新 activation 不覆盖旧 activation，而追加 supersession event；active execution 继续绑定原 activation；新 execution 只能绑定当前唯一有效 activation。",
+          "note": "消除同一 revision 的授权歧义。"
+        },
+        {
+          "q": "activation superseded event 是否也必须由最终责任 Human 签名？",
+          "answer": "同意推荐方案：必须。事件绑定旧 activation digest、新 activation digest、plan revision、Human identity 和 reason；Agent/Coordinator 不能自行 supersede；supersession 不改写旧 execution；新 execution 只能使用新 activation；activation 链可 replay。",
+          "note": "保持授权替换的 Human-only、append-only 语义。"
+        },
+        {
+          "q": "已有 active execution 时，是否允许同一 plan revision 创建新的 superseding activation？",
+          "answer": "同意推荐方案：允许，但只影响未来 execution。已有 execution 继续绑定原 activation，不能被新 activation 偷换；新 activation 生效后新 execution 只能绑定它；若 Human 要停止旧 execution，必须单独 revoke/terminate 并完成 cleanup。",
+          "note": "区分授权更新与运行中 execution 的既有绑定。"
+        },
+        {
+          "q": "plan revision 从 draft 转 active 前，是否必须通过 Graph plan structural validation？",
+          "answer": "同意推荐方案：必须。验证固定 phase path、node bindings、responsibility unit、resource isolation、capabilities、timeout bindings、digest profile 和 EvidenceStore binding；任一缺失或漂移不得 activation。",
+          "note": "把 Human activation 建立在 Core 可验证的结构事实之上。"
+        },
+        {
+          "q": "Graph plan 的 directed edges 是否需要纳入 plan_definition_digest？",
+          "answer": "同意推荐方案：需要。即使当前只允许固定线性 path，phase 列表和 edge 集合也必须进入 plan_definition_digest；未来 DAG 扩展不能改变旧 plan 的解释。",
+          "note": "保证编排路径变化会产生新的任务定义事实。"
+        },
+        {
+          "q": "Graph plan 是否拒绝未知字段和未知 phase，而不是忽略它们？",
+          "answer": "同意推荐方案：拒绝。Core 对 plan、node、edge、responsibility unit、binding 和 digest profile 执行 strict schema validation；未知字段、未知 phase、重复 node/edge 或隐式默认值进入 blocked。",
+          "note": "避免不同版本或 Agent 私自扩展语义。"
+        },
+        {
+          "q": "enrich digest 字段是否需要同时写入 approval summary、worker context、phase evidence 和 replay read model？",
+          "answer": "同意推荐方案：需要。四类 artifact 都保留旧兼容字段，并 enrich 写入 plan_definition_digest、execution_binding_digest、coordinator_lease_digest、digest_profile；缺失或互相不一致即 blocked/outcome-uncertain。",
+          "note": "让所有边界 artifact 使用同一组可追溯绑定。"
+        },
+        {
+          "q": "Coordinator lease 是否需要独立的 lifecycle projection，而不是只读取最后一条 lease event？",
+          "answer": "同意推荐方案：需要。独立 projection 识别 acquired、renewed、released、abandoned、conflict 和 expired；只允许合法顺序；phase 推进必须读取 projection，不直接信任最后一条原始事件。",
+          "note": "避免 lease event 顺序或重复写入造成错误接管。"
+        },
+        {
+          "q": "Graph phase evidence 是否需要记录 phase actor kind 和 actor identity？",
+          "answer": "同意推荐方案：需要。source_execution 绑定 Agent node/worker；scope、verification、merge、cleanup 绑定 Coordinator/TrustedRunner/Core；human_acceptance 绑定 Human；actor 不匹配 phase role 即 blocked。",
+          "note": "把每个 phase 的责任主体落实为可验证事实。"
+        },
+        {
+          "q": "Graph phase 是否允许 Agent node 直接产出 passed 的 scope、review、merge 或 cleanup evidence？",
+          "answer": "同意推荐方案：不允许。Agent 只能产出自身 execution result；scope 由可信 Git observer、verification 由 Core verifier、review/merge 由 Human+Coordinator、cleanup 由可信 cleanup adapter 产出。",
+          "note": "保持 Agent 是被编排执行节点，不越权成为责任或验证主体。"
+        },
+        {
+          "q": "Graph CLI 是否需要显式区分 start、resume、status、cancel、replay、archive-plan 和 activate-plan 命令？",
+          "answer": "同意推荐方案：需要。每个命令单一职责；status/replay 只读；start/activate/cancel/archive-plan/resume 分别执行各自受约束写操作；不通过一个万能命令隐式跨越多个 lifecycle。",
+          "note": "降低 CLI 使用门槛并避免隐藏副作用。"
+        },
+        {
+          "q": "本批设计决策完成后，是否按 lease → digest enrich → phase evidence → coordinator resume → CLI read model → deterministic failure matrix → real dogfood 的顺序实现？",
+          "answer": "同意推荐方案：按此顺序实现，连续 TDD；每一层先有失败测试、再实现、再回归；在 failure matrix 和 replay Evidence 通过前不启动真实 Codex dogfood。",
+          "note": "将设计决策收敛为可执行的下一段路线。"
+        },
+        {
+          "q": "1-6 第一批 deterministic failure matrix 覆盖哪些场景？",
+          "answer": "全部纳入：lease 过期/digest mismatch、lifecycle revision conflict、source_execution phase append conflict、worker lease release conflict、provider cleanup uncertainty、同一事实幂等重放、不同 digest replay conflict；任一失败不得伪报 Graph completed",
+          "note": "先用可重放 fixture 锁定失败语义，再进入真实 dogfood。"
+        },
+        {
+          "q": "failure matrix 实现与验证结果是什么？",
+          "answer": "已完成 deterministic failure matrix：lease 过期/digest mismatch、lifecycle/phase/release revision conflict、cleanup uncertainty、同 digest replay 幂等、不同 digest replay conflict；Graph conformance phase 与总状态一致，任一失败不投影为 passed",
+          "note": "TDD 先红后绿；全包 npm test 432/432。下一步进入真实端到端 conformance 前的 Graph CLI read model 与 replay Evidence 检查。"
+        },
+        {
+          "q": "Graph CLI read model 应该展示哪些事实？",
+          "answer": "status 只读 enrich 展示 plan/definition digests、current/next phase、completed phases、actor/evidence refs、execution/worker/coordinator lease bindings 与最新 lease operation；不修改 lifecycle 或 StateStore",
+          "note": "通过 Graph CLI status 回归；普通非 Graph status 保持兼容。"
+        },
+        {
+          "q": "replay read model 的副作用边界是什么？",
+          "answer": "replay 只读重新投影已有 lifecycle、Graph phase 与 Evidence refs，并验证 digest/scope binding；不创建新 phase、不获取 lease、不执行 Provider、不写回原 execution",
+          "note": "真实 dogfood 前先锁定 replay 与 resume 的边界，避免 replay 隐式触发副作用。"
+        },
+        {
+          "q": "replay read model 实现与验证结果是什么？",
+          "answer": "同意：已实现只读 Graph replay read model；复用 lifecycle/phase projection，使用 EvidenceStore.readOnly 校验证据完整性、digest 与可选 scope binding；缺失或漂移证据返回 outcome-uncertain；scope 不匹配拒绝；不创建 phase、不获取 lease、不执行 Provider、不写回 StateStore/EvidenceStore。",
+          "note": "TDD focused replay tests 5/5；全包 npm test 432/432；npm run build 与 git diff --check 通过。下一步是将 replay 接入显式 replay CLI/read-only 命令，再进行真实端到端 conformance。"
+        },
+        {
+          "q": "是否将 replay read model 暴露为显式 CLI 命令？",
+          "answer": "同意：增加 real-agent-dogfood replay 命令；命令只读取 approval summary、StateStore phase/lifecycle 与 EvidenceStore，不获取 lease、不执行 Provider、不写回任何 execution；结论为 blocked/outcome-uncertain 时使用非零退出码并保留结构化 read model。",
+          "note": "CLI 回归验证 14/14；全包 npm test 432/432；npm run build 与 git diff --check 通过。真实 dogfood 仍未启动，下一步是基于 replay/conformance gate 做真实端到端准备。"
         }
       ],
-      "notes": "已完成第一阶段 deterministic Graph conformance fixture：复用 NativeOpnTracerConformanceReport，保持旧调用兼容；显式 Graph facts 追加 merge、post-merge-gate、cleanup、replay phases，并区分 passed、blocked、outcome-uncertain；fixture 覆盖完整成功链、merge blocked 与 cleanup-unresolved。真实 disposable worktree、真实 ZAgenticLoop dogfood、真实 merge 和端到端副作用 conformance 尚未执行。"
+      "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-04 22:12:05",
+    "updated": "2026-08-05 14:13:22",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

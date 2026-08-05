@@ -7,18 +7,33 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export type ContentAddressedEvidenceStore = {
   put(input: { content: string | Uint8Array; kind: string }): Promise<{ digest: string; size: number; path: string; kind: string }>;
   read(input: { digest: string; actor: string }): Promise<Buffer>;
+  readOnly(input: { digest: string }): Promise<Buffer>;
 };
 
 function digest(content: Uint8Array): string { return `sha256:${createHash('sha256').update(content).digest('hex')}`; }
 function requireDigest(value: string): string { if (!DIGEST.test(value)) throw new Error('evidence-digest-invalid'); return value.slice('sha256:'.length); }
 
-export async function createContentAddressedEvidenceStore(input: { root: string }): Promise<ContentAddressedEvidenceStore> {
+export async function createContentAddressedEvidenceStore(input: { root: string; initialize?: boolean }): Promise<ContentAddressedEvidenceStore> {
   if (!path.isAbsolute(input.root)) throw new Error('evidence-root-must-be-absolute');
-  await mkdir(input.root, { recursive: true, mode: 0o700 });
-  await chmod(input.root, 0o700);
+  if (input.initialize !== false) {
+    await mkdir(input.root, { recursive: true, mode: 0o700 });
+    await chmod(input.root, 0o700);
+  }
   const auditPath = path.join(input.root, 'access.log');
-  await writeFile(auditPath, '', { flag: 'a', mode: 0o600 });
-  await chmod(auditPath, 0o600);
+  if (input.initialize !== false) {
+    await writeFile(auditPath, '', { flag: 'a', mode: 0o600 });
+    await chmod(auditPath, 0o600);
+  }
+  async function readContent(value: { digest: string; actor?: string; audit: boolean }): Promise<Buffer> {
+    if (value.audit && !value.actor?.trim()) throw new Error('evidence-actor-required');
+    const hex = requireDigest(value.digest);
+    const target = path.join(input.root, hex.slice(0, 2), hex.slice(2));
+    let content: Buffer;
+    try { content = await readFile(target); } catch { throw new Error('evidence-not-found'); }
+    if (digest(content) !== value.digest) throw new Error('evidence-digest-drift');
+    if (value.audit) await appendFile(auditPath, `${JSON.stringify({ schema: 'zj-loop.evidence_access.v1', actor: value.actor, digest: value.digest, accessed_at: new Date().toISOString() })}\n`, { mode: 0o600 });
+    return content;
+  }
   return {
     async put(value) {
       if (!value.kind.trim()) throw new Error('evidence-kind-required');
@@ -42,14 +57,10 @@ export async function createContentAddressedEvidenceStore(input: { root: string 
       return { digest: fullDigest, size: bytes.byteLength, path: target, kind: value.kind };
     },
     async read(value) {
-      if (!value.actor.trim()) throw new Error('evidence-actor-required');
-      const hex = requireDigest(value.digest);
-      const target = path.join(input.root, hex.slice(0, 2), hex.slice(2));
-      let content: Buffer;
-      try { content = await readFile(target); } catch { throw new Error('evidence-not-found'); }
-      if (digest(content) !== value.digest) throw new Error('evidence-digest-drift');
-      await appendFile(auditPath, `${JSON.stringify({ schema: 'zj-loop.evidence_access.v1', actor: value.actor, digest: value.digest, accessed_at: new Date().toISOString() })}\n`, { mode: 0o600 });
-      return content;
+      return readContent({ ...value, audit: true });
+    },
+    async readOnly(value) {
+      return readContent({ ...value, audit: false });
     },
   };
 }

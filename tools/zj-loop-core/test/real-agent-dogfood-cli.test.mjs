@@ -130,6 +130,17 @@ test('Graph mode start reuses the exact prepared target and source worktrees', a
     assert.equal(output.status, 'awaiting-human-approval');
     assert.equal(output.dogfood_id, plan.dogfood_id);
     assert.equal(output.execution_id, plan.execution_id);
+    const beforeReplay = createSqliteStateStore({ filename: path.join(runtime, 'state.db') });
+    const beforeReplayRevision = await beforeReplay.getRevision(output.network_id);
+    await beforeReplay.close();
+    const replayed = await invoke(['replay', '--dogfood-id', output.dogfood_id, '--network-id', output.network_id, '--state-store', path.join(runtime, 'state.db'), '--evidence-store', evidence]);
+    assert.equal(replayed.exitCode, 2);
+    const replayOutput = JSON.parse(replayed.stdout);
+    assert.equal(replayOutput.status, 'outcome-uncertain');
+    assert.deepEqual(replayOutput.integrity_failures, ['graph-phase-missing']);
+    const afterReplay = createSqliteStateStore({ filename: path.join(runtime, 'state.db') });
+    assert.equal(await afterReplay.getRevision(output.network_id), beforeReplayRevision);
+    await afterReplay.close();
     const summary = JSON.parse(await readFile(output.approval_summary_path, 'utf8'));
     assert.equal(summary.graph_plan.plan_digest, plan.plan_digest);
     assert.equal(summary.worktree_path, source);

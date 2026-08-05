@@ -12,7 +12,11 @@ export type ContentAddressedEvidenceStore = {
         digest: string;
         actor: string;
     }): Promise<Buffer>;
+    readOnly(input: {
+        digest: string;
+    }): Promise<Buffer>;
 };
 export declare function createContentAddressedEvidenceStore(input: {
     root: string;
+    initialize?: boolean;
 }): Promise<ContentAddressedEvidenceStore>;
