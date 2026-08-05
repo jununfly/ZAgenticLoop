@@ -1268,6 +1268,41 @@
           "q": "Authority foreground start assembly 实现结果是什么？",
           "answer": "同意：新增 provider-neutral Authority foreground service 与 start assembly；assembly 创建 network-scoped StateStore revocation authority 和 Authority IPC server，按 readiness → binding 0600 持久化 → stop 清理顺序运行；binding 独立记录 Authority identity、StateStore identity/path、peer/process identity 和 socket。",
           "note": "TDD focused + Authority peer/revocation 回归 7/7；npm run build 通过。当前仍未开放 CLI，真实平台 gate 由注入的 peer verifier 提供。"
+        },
+        {
+          "q": "Authority 下一步是否先补 start failure matrix？",
+          "answer": "同意：先补齐 Authority start failure matrix，再接真实平台配置和 CLI。",
+          "note": "先锁定失败收束，避免把环境失败与生命周期契约混在一起。"
+        },
+        {
+          "q": "Authority start failure matrix 如何收束？",
+          "answer": "同意：readiness blocked、socket binding mismatch、binding 校验/持久化失败、重复 start 均关闭已启动 server，不留下新的 binding；失败只返回 blocked/error，不伪造 started。",
+          "note": "保持 foreground service 的启动原子性。"
+        },
+        {
+          "q": "Authority stop 或 close 失败如何处理？",
+          "answer": "同意：保留 binding 和残留资源事实，返回 outcome-uncertain；不得删除 binding 伪装清理成功，也不得自动全量 revoke active auth_ref。",
+          "note": "后续进入 bounded reconciliation 或 Human manual cleanup。"
+        },
+        {
+          "q": "macOS peer verifier 如何接入 Authority start？",
+          "answer": "同意：通过 provider-neutral peer verifier factory 显式注入；macOS 使用 pinned process-audit helper，配置只含 helper/identity digest 和路径，不含 secret；Linux/Windows 暂不宣称已实现，直接 fail-closed。",
+          "note": "保持平台适配与 Authority 核心解耦。"
+        },
+        {
+          "q": "Authority start CLI 何时开放？",
+          "answer": "同意：在 external authority readiness、真实 peer verifier、binding lifecycle 和 config loader 均完成前，CLI start 保持显式 blocked；不通过内存 fixture 或弱校验降级。",
+          "note": "避免暴露不可安全使用的启动入口。"
+        },
+        {
+          "q": "Authority stop 是否全量撤销 active auth_ref？",
+          "answer": "同意：首版不做无边界全量撤销；先拒绝新请求并 bounded drain，已知 execution 按绑定 cleanup 收束，无法证明的 ref 保持 outcome-uncertain。",
+          "note": "不误伤其他 Runtime/network scope，不伪造 cleanup 事实。"
+        },
+        {
+          "q": "Authority foreground start failure matrix 实现结果是什么？",
+          "answer": "同意：readiness blocked、socket mismatch、launcher.start 抛错、binding 持久化失败都会触发 close-once 且不宣称 started；stop/close 失败保留 binding 并返回 outcome-uncertain。",
+          "note": "TDD focused 3/3；npm run build 通过。启动原子性和不伪造 cleanup 已锁定。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1275,7 +1310,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 22:23:58",
+    "updated": "2026-08-05 22:40:03",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

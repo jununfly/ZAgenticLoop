@@ -26,23 +26,31 @@ export function createProviderAuthAuthorityForegroundService(input: {
   const now = input.now ?? (() => new Date().toISOString());
   let started = false;
   let persisted: ProviderAuthAuthorityBinding | undefined;
+  let closed = false;
+  const closeOnce = async () => { if (closed) return; closed = true; await input.launcher.close(); };
   return {
     async start() {
       if (started) throw new Error('provider-auth-authority-foreground-already-started');
-      await input.launcher.start();
-      const readiness = await input.launcher.readiness();
-      if (readiness.status === 'blocked') { await input.launcher.close(); throw new Error(readiness.reason); }
-      if (readiness.socket_path !== input.binding.socket_path) { await input.launcher.close(); throw new Error('provider-auth-authority-foreground-socket-binding-mismatch'); }
-      const binding = createProviderAuthAuthorityBinding({ ...input.binding, pid, started_at: now() });
-      try { await persistProviderAuthAuthorityBinding(input.binding_path, binding); } catch (error) { await input.launcher.close(); throw error; }
-      persisted = binding;
-      started = true;
-      return { status: 'started', binding };
+      closed = false;
+      try {
+        await input.launcher.start();
+        const readiness = await input.launcher.readiness();
+        if (readiness.status === 'blocked') throw new Error(readiness.reason);
+        if (readiness.socket_path !== input.binding.socket_path) throw new Error('provider-auth-authority-foreground-socket-binding-mismatch');
+        const binding = createProviderAuthAuthorityBinding({ ...input.binding, pid, started_at: now() });
+        await persistProviderAuthAuthorityBinding(input.binding_path, binding);
+        persisted = binding;
+        started = true;
+        return { status: 'started', binding };
+      } catch (error) {
+        await closeOnce().catch(() => undefined);
+        throw error;
+      }
     },
     async stop() {
       if (!started) return { status: 'stopped' };
       try {
-        await input.launcher.close();
+        await closeOnce();
         if (persisted) await unlink(input.binding_path).catch(() => undefined);
         started = false;
         persisted = undefined;
