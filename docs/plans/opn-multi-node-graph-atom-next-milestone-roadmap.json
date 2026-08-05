@@ -1078,6 +1078,11 @@
           "q": "1-6 StateStore resolver 与 service-only runtime adapter 回归结果是什么？",
           "answer": "同意：StateStore resolver 与 service-only runtime adapter 已完成并纳入 Provider Runtime contract；resolver 只返回当前 network 的 active、digest-matched、未撤销 ref；service adapter 拒绝 issueRef/consumeSecret，仅允许 verify/launch/cleanup。",
           "note": "StateStore resolver 1/1；service adapter + launcher focused 4/4；Provider IPC 回归 17/17；全包 npm test 432/432；npm run build 通过。下一施工单元为正式 foreground start/status/stop CLI 与 binding artifact。"
+        },
+        {
+          "q": "1-6 Runtime service status/stop 是否允许只凭 binding artifact 中的 PID 操作？",
+          "answer": "同意推荐方案：不允许 PID-only stop。status/stop 必须通过 provider-neutral RuntimeProcessIdentityVerifier 校验 PID、启动事实、service identity 与 socket binding；macOS 使用真实 process-audit，Linux/Windows 使用对应原生进程身份观察；无法证明身份时 status 为 outcome-uncertain，stop 拒绝发送终止信号。",
+          "note": "Runtime binding artifact TDD 2/2；npm run build 通过。下一步实现 process identity verifier contract，再装配 start/status/stop CLI。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1085,7 +1090,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:13:19",
+    "updated": "2026-08-05 17:23:26",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
