@@ -1368,6 +1368,31 @@
           "q": "Authority 专用 child process wrapper 实现结果是什么？",
           "answer": "同意：新增专用 child wrapper；先读取 validated config，再固定使用 process.execPath、包内 provider-auth-authority-child-cli.js、--config <path>，cwd 为 config 目录，空环境并委托 bounded launcher；调用方不能覆盖 executable/args。",
           "note": "TDD focused 4/4；npm run build 通过。真实 macOS child entrypoint 已有 spawn 回归，CLI start orchestration 仍未开放。"
+        },
+        {
+          "q": "Authority external start controller 是否先于 CLI 实现？",
+          "answer": "同意：先实现 provider-neutral external start controller；默认使用专用 child wrapper，允许测试注入 launcher；CLI 暂不开放 start。",
+          "note": "把组合生命周期做成可测试深模块。"
+        },
+        {
+          "q": "child readiness 后如何确认 Authority 真正启动完成？",
+          "answer": "同意：controller 在 bounded 窗口内回读并严格校验 config.binding_path 的 Authority binding；只凭 socket ready 不宣称 started。",
+          "note": "避免 child 进程已监听但 binding 未持久化的半启动状态。"
+        },
+        {
+          "q": "start binding 应校验哪些稳定事实？",
+          "answer": "同意：至少精确匹配 network_id、socket_path、authority_contract_digest、state_store_identity_digest、state_store_path 和 process_identity_digest；PID/started_at 由 child 事实产生并回传。",
+          "note": "防止错误 config、旧 binding 或其他 Authority 实例被误认。"
+        },
+        {
+          "q": "external stop 的成功条件是什么？",
+          "answer": "同意：launcher close 成功后 bounded 回读确认 binding 已删除；close 失败、binding 残留或事实未知均返回 outcome-uncertain，不删除残留 artifact。",
+          "note": "保持进程生命周期和 binding cleanup 的可证明性。"
+        },
+        {
+          "q": "Authority external start controller 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral external start controller；默认使用专用 child wrapper，启动后先检查 socket readiness，再 bounded 回读并校验 Authority binding 的 network/socket/contract/StateStore/process identity；stop 后确认 binding 删除，残留或 close 失败返回 outcome-uncertain。",
+          "note": "TDD focused 2/2；npm run build 通过。CLI start 仍保持薄层未开放。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1375,7 +1400,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 23:18:51",
+    "updated": "2026-08-05 23:24:57",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
