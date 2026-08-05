@@ -1393,6 +1393,31 @@
           "q": "Authority external start controller 实现结果是什么？",
           "answer": "同意：新增 provider-neutral external start controller；默认使用专用 child wrapper，启动后先检查 socket readiness，再 bounded 回读并校验 Authority binding 的 network/socket/contract/StateStore/process identity；stop 后确认 binding 删除，残留或 close 失败返回 outcome-uncertain。",
           "note": "TDD focused 2/2；npm run build 通过。CLI start 仍保持薄层未开放。"
+        },
+        {
+          "q": "Authority CLI 是否复用 Runtime 的 start/status/stop --json 交互契约？",
+          "answer": "同意：复用同一命令形状、结构化 schema、退出码和 side_effects_executed 语义；Authority 只替换 binding、verifier 与 lifecycle 实现。",
+          "note": "保持用户可见控制面一致。"
+        },
+        {
+          "q": "Authority CLI status/stop 如何验证进程身份？",
+          "answer": "同意：macOS 使用 pinned process-audit Authority verifier；缺少 helper 或非支持平台时 fail-closed；不使用 PID-only 或内存 verifier 作为真实 CLI 默认。",
+          "note": "阻止 PID reuse 和错误进程操作。"
+        },
+        {
+          "q": "Authority CLI stop 的 stopped 条件是什么？",
+          "answer": "同意：先通过 process identity verifier，再发送 SIGTERM；必须确认 Authority socket 不再 ready 且 binding 已由 child 删除；残留 binding 不得被 CLI 删除，返回 outcome-uncertain。",
+          "note": "保持 child cleanup 的责任归属和证据完整性。"
+        },
+        {
+          "q": "Authority CLI start 是否现在开放？",
+          "answer": "同意：暂保持 blocked；在 CLI 自身作为 foreground supervisor、external launcher 所有权和信号收束边界明确前，不把 start 做成会遗留不可管理 child 的命令。",
+          "note": "避免 CLI start 产生孤儿 Authority 进程。"
+        },
+        {
+          "q": "Authority CLI 实现结果是什么？",
+          "answer": "同意：新增与 Provider Runtime 一致的 Authority start/status/stop --json CLI 契约；status 只读，stop 使用 macOS pinned process-audit Authority verifier，并要求 socket 关闭且 binding 已被 child 删除；start 暂 blocked，避免产生无 supervisor 的孤儿 child。",
+          "note": "TDD focused 4/4；npm run build 通过。CLI status/stop 已有契约，CLI start 仍需明确 foreground supervisor ownership 后再开放。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1400,7 +1425,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 23:24:57",
+    "updated": "2026-08-05 23:30:11",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

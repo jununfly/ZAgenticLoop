@@ -219,3 +219,23 @@ export function createMacOSProviderRuntimeProcessIdentityVerifier(input) {
         },
     };
 }
+export function createMacOSProviderAuthAuthorityProcessIdentityVerifier(input) {
+    const timeout = input.timeout_ms ?? 2_000;
+    return {
+        async verify({ binding }) {
+            if (process.platform !== 'darwin')
+                return { status: 'blocked', reason: 'provider-auth-authority-process-identity-unavailable' };
+            if (!DIGEST.test(binding.process_identity_digest))
+                return { status: 'blocked', reason: 'provider-auth-authority-process-identity-mismatch' };
+            try {
+                const response = await readNativeResponseForPid(input, binding.pid, timeout);
+                if (response.status !== 'verified' || response.identity_digest !== identityDigest(response) || response.identity_digest !== binding.process_identity_digest)
+                    return { status: 'blocked', reason: 'provider-auth-authority-process-identity-mismatch' };
+                return { status: 'verified', facts: { service_id: binding.service_id, pid: binding.pid, started_at: binding.started_at, process_identity_digest: response.identity_digest } };
+            }
+            catch {
+                return { status: 'blocked', reason: 'provider-auth-authority-process-identity-unavailable' };
+            }
+        },
+    };
+}

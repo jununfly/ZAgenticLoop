@@ -9,6 +9,8 @@ import type {
   TrustedRunnerPeerVerification,
 } from './trusted-runner-peer-identity.js';
 import { bootstrapIdentityDigest, type BootstrapIdentityFacts } from './bootstrap-protocol.js';
+import type { ProviderAuthAuthorityProcessIdentityVerifier } from './provider-auth-authority-process-identity.js';
+import type { ProviderAuthAuthorityBinding } from './provider-auth-authority-binding.js';
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const RESPONSE_SCHEMA = 'zj-loop.macos_process_audit_peer_identity.v1';
@@ -198,6 +200,25 @@ export function createMacOSProviderRuntimeProcessIdentityVerifier(input: {
         if (response.status !== 'verified' || response.identity_digest !== identityDigest(response) || response.identity_digest !== binding.process_identity_digest) return { status: 'blocked', reason: 'provider-runtime-process-identity-mismatch' };
         return { status: 'verified', facts: { service_id: binding.service_id, pid: binding.pid, started_at: binding.started_at, process_identity_digest: response.identity_digest } };
       } catch { return { status: 'blocked', reason: 'provider-runtime-process-identity-unavailable' }; }
+    },
+  };
+}
+
+export function createMacOSProviderAuthAuthorityProcessIdentityVerifier(input: {
+  helper_path: string;
+  helper_digest: string;
+  timeout_ms?: number;
+}): ProviderAuthAuthorityProcessIdentityVerifier {
+  const timeout = input.timeout_ms ?? 2_000;
+  return {
+    async verify({ binding }: { binding: ProviderAuthAuthorityBinding }) {
+      if (process.platform !== 'darwin') return { status: 'blocked', reason: 'provider-auth-authority-process-identity-unavailable' };
+      if (!DIGEST.test(binding.process_identity_digest)) return { status: 'blocked', reason: 'provider-auth-authority-process-identity-mismatch' };
+      try {
+        const response = await readNativeResponseForPid(input, binding.pid, timeout);
+        if (response.status !== 'verified' || response.identity_digest !== identityDigest(response) || response.identity_digest !== binding.process_identity_digest) return { status: 'blocked', reason: 'provider-auth-authority-process-identity-mismatch' };
+        return { status: 'verified', facts: { service_id: binding.service_id, pid: binding.pid, started_at: binding.started_at, process_identity_digest: response.identity_digest } };
+      } catch { return { status: 'blocked', reason: 'provider-auth-authority-process-identity-unavailable' }; }
     },
   };
 }
