@@ -1,4 +1,8 @@
 import type { LocalProcessAdapter, LocalProcessHandle } from './local-process-adapter.js';
+import { createLocalProcessAdapter } from './local-process-adapter.js';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readProviderAuthAuthorityStartConfig } from './provider-auth-authority-start-config-store.js';
 
 export type ProviderAuthAuthorityExternalProcessLauncher = {
   start(): Promise<void>;
@@ -60,4 +64,28 @@ export function createProviderAuthAuthorityExternalProcessLauncher(input: {
       } finally { if (timer) clearTimeout(timer); }
     },
   };
+}
+
+export async function createProviderAuthAuthorityChildProcessLauncher(input: {
+  config_path: string;
+  process_adapter?: LocalProcessAdapter;
+  probe_socket?: (socketPath: string) => Promise<boolean>;
+  timeout_ms?: number;
+  termination_grace_ms?: number;
+  close_timeout_ms?: number;
+}): Promise<ProviderAuthAuthorityExternalProcessLauncher> {
+  if (typeof input.config_path !== 'string' || !input.config_path.startsWith('/') || input.config_path.includes('\0')) throw new Error('provider-auth-authority-child-config-path-invalid');
+  const config = await readProviderAuthAuthorityStartConfig(input.config_path);
+  const childEntrypoint = fileURLToPath(new URL('./provider-auth-authority-child-cli.js', import.meta.url));
+  return createProviderAuthAuthorityExternalProcessLauncher({
+    executable: process.execPath,
+    args: [childEntrypoint, '--config', input.config_path],
+    cwd: dirname(input.config_path),
+    socket_path: config.socket_path,
+    process_adapter: input.process_adapter ?? createLocalProcessAdapter(),
+    probe_socket: input.probe_socket,
+    timeout_ms: input.timeout_ms,
+    termination_grace_ms: input.termination_grace_ms,
+    close_timeout_ms: input.close_timeout_ms,
+  });
 }

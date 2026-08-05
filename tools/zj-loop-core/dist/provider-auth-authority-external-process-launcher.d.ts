@@ -21,3 +21,11 @@ export declare function createProviderAuthAuthorityExternalProcessLauncher(input
     termination_grace_ms?: number;
     close_timeout_ms?: number;
 }): ProviderAuthAuthorityExternalProcessLauncher;
+export declare function createProviderAuthAuthorityChildProcessLauncher(input: {
+    config_path: string;
+    process_adapter?: LocalProcessAdapter;
+    probe_socket?: (socketPath: string) => Promise<boolean>;
+    timeout_ms?: number;
+    termination_grace_ms?: number;
+    close_timeout_ms?: number;
+}): Promise<ProviderAuthAuthorityExternalProcessLauncher>;

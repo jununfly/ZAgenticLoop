@@ -1,3 +1,7 @@
+import { createLocalProcessAdapter } from './local-process-adapter.js';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readProviderAuthAuthorityStartConfig } from './provider-auth-authority-start-config-store.js';
 async function defaultProbe(socketPath) {
     const net = await import('node:net');
     return await new Promise((resolve) => {
@@ -55,4 +59,21 @@ export function createProviderAuthAuthorityExternalProcessLauncher(input) {
             }
         },
     };
+}
+export async function createProviderAuthAuthorityChildProcessLauncher(input) {
+    if (typeof input.config_path !== 'string' || !input.config_path.startsWith('/') || input.config_path.includes('\0'))
+        throw new Error('provider-auth-authority-child-config-path-invalid');
+    const config = await readProviderAuthAuthorityStartConfig(input.config_path);
+    const childEntrypoint = fileURLToPath(new URL('./provider-auth-authority-child-cli.js', import.meta.url));
+    return createProviderAuthAuthorityExternalProcessLauncher({
+        executable: process.execPath,
+        args: [childEntrypoint, '--config', input.config_path],
+        cwd: dirname(input.config_path),
+        socket_path: config.socket_path,
+        process_adapter: input.process_adapter ?? createLocalProcessAdapter(),
+        probe_socket: input.probe_socket,
+        timeout_ms: input.timeout_ms,
+        termination_grace_ms: input.termination_grace_ms,
+        close_timeout_ms: input.close_timeout_ms,
+    });
 }

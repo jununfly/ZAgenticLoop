@@ -1343,6 +1343,31 @@
           "q": "真实 Authority child entrypoint 实现结果是什么？",
           "answer": "同意：新增独立 provider-auth-authority-child CLI；读取 validated config，macOS 通过 pinned process-audit helper 构造 peer gate，启动 StateStore-backed Authority IPC 并保持前台运行；SIGTERM/SIGINT 执行 bounded stop/StateStore close，失败返回非零且不伪造 cleanup 成功。",
           "note": "真实 spawn 生命周期测试 1/1，Authority 相关回归 9/9；npm run build 通过。Linux/Windows child peer adapter 尚未实现，CLI start orchestration 尚未开放。"
+        },
+        {
+          "q": "Authority external launcher 是否增加专用 child wrapper？",
+          "answer": "同意：新增专用 Authority child process launcher；固定使用 process.execPath 与包内 child CLI，只接受 validated config path；通用 launcher 保留为底层能力，不作为 Authority 默认入口。",
+          "note": "收紧真实 Authority 的可执行边界。"
+        },
+        {
+          "q": "Authority child wrapper 的 cwd、环境和 detached 策略是什么？",
+          "answer": "同意：cwd 使用 config 所在目录；业务路径仍必须绝对路径；环境保持空 allowlist；不使用 shell、不 detached、不 unref。",
+          "note": "让 child 进程可追踪、可终止、可审计。"
+        },
+        {
+          "q": "Authority child wrapper 是否允许调用方覆盖 executable/args？",
+          "answer": "同意：不允许；Node executable、child entrypoint 和 --config 参数由 wrapper 固定生成，调用方只能提供 config path 与 bounded process options。",
+          "note": "避免把 Authority 入口退化为任意命令执行器。"
+        },
+        {
+          "q": "Authority child wrapper readiness 后由谁持久化 binding？",
+          "answer": "同意：child 内部的 Authority foreground service 在 readiness 后持久化 binding；外部 wrapper 只负责启动、probe、cancel 和 bounded wait，不重复写 binding。",
+          "note": "保持单一 binding 生命周期和责任归属。"
+        },
+        {
+          "q": "Authority 专用 child process wrapper 实现结果是什么？",
+          "answer": "同意：新增专用 child wrapper；先读取 validated config，再固定使用 process.execPath、包内 provider-auth-authority-child-cli.js、--config <path>，cwd 为 config 目录，空环境并委托 bounded launcher；调用方不能覆盖 executable/args。",
+          "note": "TDD focused 4/4；npm run build 通过。真实 macOS child entrypoint 已有 spawn 回归，CLI start orchestration 仍未开放。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1350,7 +1375,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 22:56:44",
+    "updated": "2026-08-05 23:18:51",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
