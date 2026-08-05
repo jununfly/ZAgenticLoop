@@ -215,6 +215,7 @@ export * from './framed-json-unix.js';
 export * from './provider-auth-authority-ipc-protocol.js';
 export * from './provider-auth-authority-ipc.js';
 export * from './provider-auth-revocation-authority.js';
+export * from './provider-auth-authority-binding.js';
 export * from './trusted-runner-post-run-ipc.js';
 export * from './trusted-runner-peer-identity.js';
 export * from './macos-process-audit-peer-identity.js';
