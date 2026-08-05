@@ -1338,6 +1338,11 @@
           "q": "Authority bounded external process launcher 实现结果是什么？",
           "answer": "同意：新增 provider-neutral bounded external process launcher；复用 LocalProcessAdapter，固定绝对 executable/cwd/argv、空环境、输出/运行/终止预算；readiness 通过 socket probe，close 必须 cancel 并 bounded wait，超时不伪造 stopped。",
           "note": "TDD focused 3/3；npm run build 通过。尚未提供真实 Authority child entrypoint，也未开放 CLI start。"
+        },
+        {
+          "q": "真实 Authority child entrypoint 实现结果是什么？",
+          "answer": "同意：新增独立 provider-auth-authority-child CLI；读取 validated config，macOS 通过 pinned process-audit helper 构造 peer gate，启动 StateStore-backed Authority IPC 并保持前台运行；SIGTERM/SIGINT 执行 bounded stop/StateStore close，失败返回非零且不伪造 cleanup 成功。",
+          "note": "真实 spawn 生命周期测试 1/1，Authority 相关回归 9/9；npm run build 通过。Linux/Windows child peer adapter 尚未实现，CLI start orchestration 尚未开放。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1345,7 +1350,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 22:48:04",
+    "updated": "2026-08-05 22:56:44",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

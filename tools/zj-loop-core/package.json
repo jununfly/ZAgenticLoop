@@ -41,6 +41,7 @@
     "zj-loop-agent-context-review": "./dist/agent-context-capability-review-cli.js",
     "zj-loop-human-approval-ui": "./dist/human-approval-ui-cli.js"
     ,"zj-loop-provider-runtime": "./dist/provider-runtime-cli.js"
+    ,"zj-loop-provider-auth-authority-child": "./dist/provider-auth-authority-child-cli.js"
   },
   "exports": {
     ".": {
