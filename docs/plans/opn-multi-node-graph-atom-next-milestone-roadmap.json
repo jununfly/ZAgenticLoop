@@ -1248,6 +1248,16 @@
           "q": "Authority IPC 与 StateStore revocation writer 首条实现结果是什么？",
           "answer": "同意：Authority IPC 已具备 provider-neutral framing、独立 Authority frame schema、一次性 challenge、单 request connection、pinned contract/runtime binding 校验；StateStore revocation authority 生成稳定 event_id，append-only 写入 revocation fact，支持 duplicate、network drift blocked 与 bounded revision retry/outcome-uncertain。",
           "note": "TDD focused transport/protocol/IPC 8/8，StateStore authority 6/6；npm run build 与 git diff --check 通过。下一步装配 Authority server handler、真实 peer verifier 与独立 authority binding lifecycle。"
+        },
+        {
+          "q": "Authority 下一步先实现什么？",
+          "answer": "同意方案 1：先接入真实平台 peer verifier；macOS 复用 process-audit，Linux/Windows 保持 provider-neutral 接口并暂不伪装已实现。",
+          "note": "身份验证是 Authority start 的安全前置条件；先锁定真实 peer gate，再做 foreground lifecycle 装配。"
+        },
+        {
+          "q": "Authority peer verifier 适配结果是什么？",
+          "answer": "同意：新增 provider-neutral Authority peer gate；可接入现有 TrustedRunnerPeerIdentityVerifier，并提供 macOS process-audit helper 工厂。Authority server 只在 pinned peer identity verified 后进入 decoder；Linux/Windows 仍保持 provider-neutral，未宣称平台实现完成。",
+          "note": "TDD focused 3/3；npm run build 通过。下一步可将该 gate 接入 Authority foreground start assembly。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1255,7 +1265,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 20:06:02",
+    "updated": "2026-08-05 21:42:09",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
