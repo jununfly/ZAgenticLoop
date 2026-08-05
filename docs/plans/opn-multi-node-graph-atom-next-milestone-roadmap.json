@@ -1448,6 +1448,36 @@
           "q": "replay Evidence/read model integrity gate 实现结果是什么？",
           "answer": "同意：replay 新增纯读 StateEvent integrity gate，校验 schema/network/aggregate/event type、payload_sha256、网络级 revision 递增、revision/id 冲突与语义 projection；accepted 只有 graph 已完成 post_merge_gate 与 cleanup 且 cleanup passed 才能投影 passed；事实损坏或生命周期/Graph 终态不一致返回 outcome-uncertain/incomplete，scope mismatch 继续直接拒绝。",
           "note": "TDD replay/Graph/lifecycle/UI 回归 20/20；npm run build 与 git diff --check 通过；Evidence 使用 readOnly，不获取 lease、不写 StateStore、不写 access audit。"
+        },
+        {
+          "q": "现有 conformance 命令是否扩展为完整 Graph conformance 入口？",
+          "answer": "同意：扩展为完整 Graph conformance orchestration；保留 npm test 作为独立项目级质量 Evidence，不将其冒充 OPN Graph 闭环。",
+          "note": "下一步先实现 provider-neutral orchestration core，再接 CLI。"
+        },
+        {
+          "q": "完整 Graph conformance 的阶段顺序是什么？",
+          "answer": "同意：固定为 source_execution → scope_observation → independent_verification → human_acceptance → merge → post_merge_gate → cleanup → replay/read-model；任一阶段 blocked 或 outcome-uncertain 立即停在该阶段并保留事实。",
+          "note": "沿用现有 Graph phase contract，避免另造第二套生命周期。"
+        },
+        {
+          "q": "conformance orchestration 的副作用权限如何划分？",
+          "answer": "同意：真实 Provider 只允许在 source worktree 执行；Coordinator/Core 负责 scope observation、验证编排、merge admission、cleanup 和 replay；Human 负责最终 acceptance 与 merge authorization；不得把 Agent 自报作为可信事实。",
+          "note": "保持 Human/Human+Agent 中心责任单元与 Agent 执行节点的边界。"
+        },
+        {
+          "q": "首个完整 conformance 是否直接强制 macOS Keychain 与真实 Codex？",
+          "answer": "同意：核心先 provider-neutral、所有外部能力显式注入；真实 macOS Keychain/Codex 作为 production adapter 和真实 dogfood 路径，测试使用 deterministic fixture，禁止 fake fallback 混入真实路径。",
+          "note": "避免环境不可用阻塞契约开发，也不伪造真实验证。"
+        },
+        {
+          "q": "完整 conformance 的成功条件是什么？",
+          "answer": "同意：所有 Graph phase 均有绑定 Evidence，source scope 与独立验证通过，Human acceptance/merge authorization 绑定无漂移，merge 后 gate 通过，三个 worktree cleanup 可证明，replay read model 为 complete/passed；否则不宣称 closed。",
+          "note": "将业务结果、资源清理和 replay 完整性同时纳入闭环。"
+        },
+        {
+          "q": "provider-neutral Graph conformance orchestration core 实现结果是什么？",
+          "answer": "同意：新增 runRealAgentDogfoodGraphConformance；严格按七个 Graph phase 顺序执行，每个 passed phase 必须提供 sha256 Evidence digest；阶段失败立即停止；全部 phase 通过后必须通过 replay status=passed、integrity=complete 且 read_model_digest 有效，才返回 closed；核心不执行隐藏副作用。",
+          "note": "TDD conformance 回归 5/5；npm run build 通过。CLI 仍需接入真实、可验证的阶段 adapter，普通 JSON manifest 不得冒充可信 Evidence。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1455,7 +1485,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 23:52:14",
+    "updated": "2026-08-06 00:08:30",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

@@ -3,12 +3,44 @@ import { createHash } from 'node:crypto';
 import { execFile as execFileCallback } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { REAL_AGENT_DOGFOOD_GRAPH_PHASES } from './real-agent-dogfood-graph-orchestrator.js';
 const execFile = promisify(execFileCallback);
 export const REAL_AGENT_DOGFOOD_CONFORMANCE_SCHEMA = 'zj-loop.real_agent_dogfood_conformance_evidence.v1';
 export const REAL_AGENT_DOGFOOD_CONFORMANCE_DIGEST_PROFILE = 'zj-loop.real-agent-dogfood-conformance.v1';
 export const REAL_AGENT_DOGFOOD_CONFORMANCE_COMMAND = ['npm', 'test'];
 const FAILURE_MATRIX = ['worker-lease-expiry', 'worker-lease-digest-mismatch', 'lifecycle-revision-conflict', 'graph-phase-append-conflict', 'worker-lease-release-conflict', 'cleanup-uncertainty', 'replay-idempotency', 'replay-digest-conflict'];
 export const REAL_AGENT_DOGFOOD_FAILURE_MATRIX_DIGEST = `sha256:${createHash('sha256').update(JSON.stringify(FAILURE_MATRIX), 'utf8').digest('hex')}`;
+function validEvidenceDigest(value) { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
+export async function runRealAgentDogfoodGraphConformance(input) {
+    void input.plan;
+    const phaseEvidence = {};
+    const completed = [];
+    for (const phase of REAL_AGENT_DOGFOOD_GRAPH_PHASES) {
+        let result;
+        try {
+            result = await input.stages[phase]();
+        }
+        catch {
+            result = { status: 'outcome-uncertain', reason: `${phase.replaceAll('_', '-')}-outcome-uncertain` };
+        }
+        if (result.status !== 'passed')
+            return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: result.status, completed_phases: completed, current_phase: phase, ...(result.reason ? { reason: result.reason } : {}), phase_evidence: phaseEvidence, side_effects_executed: completed.includes('merge') };
+        if (!validEvidenceDigest(result.evidence_digest))
+            return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'outcome-uncertain', completed_phases: completed, current_phase: phase, reason: 'phase-evidence-required', phase_evidence: phaseEvidence, side_effects_executed: completed.includes('merge') };
+        phaseEvidence[phase] = result.evidence_digest;
+        completed.push(phase);
+    }
+    let replay;
+    try {
+        replay = await input.replay();
+    }
+    catch {
+        return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'outcome-uncertain', completed_phases: completed, reason: 'replay-outcome-uncertain', phase_evidence: phaseEvidence, side_effects_executed: true };
+    }
+    if (replay.status !== 'passed' || replay.integrity_status !== 'complete' || !validEvidenceDigest(replay.read_model_digest))
+        return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'outcome-uncertain', completed_phases: completed, reason: 'replay-gate-failed', phase_evidence: phaseEvidence, replay, side_effects_executed: true };
+    return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'closed', completed_phases: completed, phase_evidence: phaseEvidence, replay, side_effects_executed: true };
+}
 function canonical(value) {
     const json = canonicalize(value);
     if (typeof json !== 'string')

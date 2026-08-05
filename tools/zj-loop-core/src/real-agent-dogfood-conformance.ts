@@ -4,6 +4,7 @@ import { execFile as execFileCallback } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { ContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
+import { REAL_AGENT_DOGFOOD_GRAPH_PHASES, type RealAgentDogfoodGraphPhase, type RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
 
 const execFile = promisify(execFileCallback);
 export const REAL_AGENT_DOGFOOD_CONFORMANCE_SCHEMA = 'zj-loop.real_agent_dogfood_conformance_evidence.v1' as const;
@@ -11,6 +12,46 @@ export const REAL_AGENT_DOGFOOD_CONFORMANCE_DIGEST_PROFILE = 'zj-loop.real-agent
 export const REAL_AGENT_DOGFOOD_CONFORMANCE_COMMAND = ['npm', 'test'] as const;
 const FAILURE_MATRIX = ['worker-lease-expiry', 'worker-lease-digest-mismatch', 'lifecycle-revision-conflict', 'graph-phase-append-conflict', 'worker-lease-release-conflict', 'cleanup-uncertainty', 'replay-idempotency', 'replay-digest-conflict'] as const;
 export const REAL_AGENT_DOGFOOD_FAILURE_MATRIX_DIGEST = `sha256:${createHash('sha256').update(JSON.stringify(FAILURE_MATRIX), 'utf8').digest('hex')}`;
+
+export type RealAgentDogfoodGraphConformanceStageResult = {
+  status: 'passed' | 'blocked' | 'outcome-uncertain';
+  reason?: string;
+  evidence_digest?: string;
+};
+
+export type RealAgentDogfoodGraphConformanceResult = {
+  schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1';
+  status: 'closed' | 'blocked' | 'outcome-uncertain';
+  completed_phases: RealAgentDogfoodGraphPhase[];
+  current_phase?: RealAgentDogfoodGraphPhase;
+  reason?: string;
+  phase_evidence: Partial<Record<RealAgentDogfoodGraphPhase, string>>;
+  replay?: { status: 'passed' | 'blocked' | 'outcome-uncertain'; integrity_status: 'complete' | 'incomplete'; read_model_digest: string };
+  side_effects_executed: boolean;
+};
+
+type GraphConformanceStages = { [phase in RealAgentDogfoodGraphPhase]: () => Promise<RealAgentDogfoodGraphConformanceStageResult> };
+type GraphReplayGate = () => Promise<{ status: 'passed' | 'blocked' | 'outcome-uncertain'; integrity_status: 'complete' | 'incomplete'; read_model_digest: string }>;
+
+function validEvidenceDigest(value: unknown): value is string { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
+
+export async function runRealAgentDogfoodGraphConformance(input: { plan: RealAgentDogfoodGraphPlan; stages: GraphConformanceStages; replay: GraphReplayGate }): Promise<RealAgentDogfoodGraphConformanceResult> {
+  void input.plan;
+  const phaseEvidence: Partial<Record<RealAgentDogfoodGraphPhase, string>> = {};
+  const completed: RealAgentDogfoodGraphPhase[] = [];
+  for (const phase of REAL_AGENT_DOGFOOD_GRAPH_PHASES) {
+    let result: RealAgentDogfoodGraphConformanceStageResult;
+    try { result = await input.stages[phase](); } catch { result = { status: 'outcome-uncertain', reason: `${phase.replaceAll('_', '-')}-outcome-uncertain` }; }
+    if (result.status !== 'passed') return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: result.status, completed_phases: completed, current_phase: phase, ...(result.reason ? { reason: result.reason } : {}), phase_evidence: phaseEvidence, side_effects_executed: completed.includes('merge') };
+    if (!validEvidenceDigest(result.evidence_digest)) return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'outcome-uncertain', completed_phases: completed, current_phase: phase, reason: 'phase-evidence-required', phase_evidence: phaseEvidence, side_effects_executed: completed.includes('merge') };
+    phaseEvidence[phase] = result.evidence_digest;
+    completed.push(phase);
+  }
+  let replay: Awaited<ReturnType<GraphReplayGate>>;
+  try { replay = await input.replay(); } catch { return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'outcome-uncertain', completed_phases: completed, reason: 'replay-outcome-uncertain', phase_evidence: phaseEvidence, side_effects_executed: true }; }
+  if (replay.status !== 'passed' || replay.integrity_status !== 'complete' || !validEvidenceDigest(replay.read_model_digest)) return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'outcome-uncertain', completed_phases: completed, reason: 'replay-gate-failed', phase_evidence: phaseEvidence, replay, side_effects_executed: true };
+  return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: 'closed', completed_phases: completed, phase_evidence: phaseEvidence, replay, side_effects_executed: true };
+}
 
 export type RealAgentDogfoodConformanceEvidence = {
   schema: typeof REAL_AGENT_DOGFOOD_CONFORMANCE_SCHEMA;
