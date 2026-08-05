@@ -26,19 +26,19 @@ export async function revokeProviderAuthRefOverIpc(input: ProviderAuthAuthorityR
   let connection: FramedJsonConnection | undefined;
   let resolveResponse: (value: ProviderAuthAuthorityRevokeClientResult) => void = () => undefined;
   const response = new Promise<ProviderAuthAuthorityRevokeClientResult>((resolve) => { resolveResponse = resolve; });
+  const nonce = randomUUID();
   try {
     connection = await connectUnixFramedJson({ socket_path: input.socket_path, correlation_id, timeout_ms: input.timeout_ms, validate: validateProviderAuthAuthorityIpcFrame, on_frames: (frames) => {
       const frame = frames.find((candidate) => candidate.kind === 'revoke-response' || candidate.kind === 'error');
       if (!frame) return;
       if (frame.kind === 'error') { const errorPayload = frame.payload as Record<string, unknown> | undefined; const reason = typeof errorPayload?.reason === 'string' ? errorPayload.reason : 'provider-auth-authority-error'; resolveResponse({ status: 'blocked', reason }); return; }
       const payload = frame.payload as ProviderAuthAuthorityRevokeResponse;
-      const request = createProviderAuthAuthorityRevokeRequest({ request_id: input.request_id, network_id: input.network_id, runtime_id: input.runtime_id, runtime_binding: input.runtime_binding, auth_ref_id: input.auth_ref_id, auth_ref_digest: input.auth_ref_digest, authority_contract_digest: input.authority_contract_digest, revoke_reason: input.revoke_reason });
+      const request = createProviderAuthAuthorityRevokeRequest({ request_id: input.request_id, network_id: input.network_id, runtime_id: input.runtime_id, runtime_binding: input.runtime_binding, auth_ref_id: input.auth_ref_id, auth_ref_digest: input.auth_ref_digest, authority_contract_digest: input.authority_contract_digest, revoke_reason: input.revoke_reason, nonce });
       if (payload.request_id !== request.request_id || payload.network_id !== request.network_id || payload.runtime_id !== request.runtime_id || payload.request_digest !== request.request_digest) { resolveResponse({ status: 'outcome-uncertain', reason: 'provider-auth-authority-response-binding-mismatch' }); return; }
       resolveResponse(payload);
     }});
-    const nonce = randomUUID();
     await connection.send(createProviderAuthAuthorityIpcFrame({ correlation_id, sequence: 1, kind: 'challenge', nonce, payload: { schema: CHALLENGE_SCHEMA, nonce } }));
-    const request = createProviderAuthAuthorityRevokeRequest({ request_id: input.request_id, network_id: input.network_id, runtime_id: input.runtime_id, runtime_binding: input.runtime_binding, auth_ref_id: input.auth_ref_id, auth_ref_digest: input.auth_ref_digest, authority_contract_digest: input.authority_contract_digest, revoke_reason: input.revoke_reason });
+    const request = createProviderAuthAuthorityRevokeRequest({ request_id: input.request_id, network_id: input.network_id, runtime_id: input.runtime_id, runtime_binding: input.runtime_binding, auth_ref_id: input.auth_ref_id, auth_ref_digest: input.auth_ref_digest, authority_contract_digest: input.authority_contract_digest, revoke_reason: input.revoke_reason, nonce });
     await connection.send(createProviderAuthAuthorityIpcFrame({ correlation_id, sequence: 2, kind: 'revoke-request', payload: request }));
     return await Promise.race([response, new Promise<ProviderAuthAuthorityRevokeClientResult>((resolve) => setTimeout(() => resolve({ status: 'outcome-uncertain', reason: 'provider-auth-authority-timeout' }), input.timeout_ms ?? 5_000))]);
   } catch { return { status: 'outcome-uncertain', reason: 'provider-auth-authority-ipc-unavailable' }; }
@@ -58,6 +58,7 @@ export function createProviderAuthAuthorityIpcServer(input: { socket_path: strin
       }
       if (frame.kind !== 'revoke-request' || !state.challenged) { connection.close(); return; }
       const request = frame.payload as ProviderAuthAuthorityRevokeRequest;
+      if (request.nonce !== state.nonce) { connection.close(); return; }
       if (request.authority_contract_digest !== input.expected_authority_contract_digest) { await connection.send(createProviderAuthAuthorityIpcFrame({ correlation_id: frame.correlation_id, sequence: 1, kind: 'error', payload: { schema: ERROR_SCHEMA, reason: 'provider-auth-authority-contract-mismatch' } })); state.responded = true; return; }
       const result = await input.handle_revoke(request);
       await connection.send(createProviderAuthAuthorityIpcFrame({ correlation_id: frame.correlation_id, sequence: 1, kind: 'revoke-response', payload: createProviderAuthAuthorityRevokeResponse(result) }));

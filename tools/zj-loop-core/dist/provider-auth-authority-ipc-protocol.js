@@ -8,7 +8,7 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const ID = /^[^\s\0]{1,256}$/;
 const KINDS = ['challenge', 'revoke-request', 'revoke-response', 'error'];
 const FRAME_KEYS = new Set(['schema', 'version', 'kind', 'correlation_id', 'sequence', 'nonce', 'payload']);
-const REQUEST_KEYS = new Set(['schema', 'request_id', 'network_id', 'runtime_id', 'runtime_binding', 'auth_ref_id', 'auth_ref_digest', 'authority_contract_digest', 'revoke_reason', 'request_digest']);
+const REQUEST_KEYS = new Set(['schema', 'request_id', 'network_id', 'runtime_id', 'runtime_binding', 'auth_ref_id', 'auth_ref_digest', 'authority_contract_digest', 'revoke_reason', 'nonce', 'request_digest']);
 const RESPONSE_KEYS = new Set(['schema', 'status', 'request_id', 'network_id', 'runtime_id', 'request_digest', 'event_digest', 'reason']);
 const STATUSES = ['revoked', 'duplicate', 'blocked', 'outcome-uncertain'];
 function canonical(value) { const result = canonicalize(value); if (typeof result !== 'string')
@@ -20,9 +20,9 @@ export function validateProviderAuthAuthorityRevokeRequest(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
         return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
     const item = value;
-    if (Object.keys(item).some((key) => !REQUEST_KEYS.has(key)) || item.schema !== PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA || !validId(item.request_id) || !validId(item.network_id) || !validId(item.runtime_id) || validateProviderRuntimeIdentityBinding(item.runtime_binding).status === 'blocked' || !validId(item.auth_ref_id) || !validDigest(item.auth_ref_digest) || !validDigest(item.authority_contract_digest) || !validId(item.revoke_reason) || !validDigest(item.request_digest))
+    if (Object.keys(item).some((key) => !REQUEST_KEYS.has(key)) || item.schema !== PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA || !validId(item.request_id) || !validId(item.network_id) || !validId(item.runtime_id) || validateProviderRuntimeIdentityBinding(item.runtime_binding).status === 'blocked' || !validId(item.auth_ref_id) || !validDigest(item.auth_ref_digest) || !validDigest(item.authority_contract_digest) || !validId(item.revoke_reason) || !validId(item.nonce) || !validDigest(item.request_digest))
         return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
-    const { request_digest: _, ...unsigned } = item;
+    const { request_digest: _, nonce: __, ...unsigned } = item;
     return digest(unsigned) === item.request_digest ? { status: 'valid', request: item } : { status: 'blocked', reason: 'provider-auth-authority-revoke-request-digest-invalid' };
 }
 function validateResponse(value) {
@@ -33,7 +33,8 @@ function validateResponse(value) {
 }
 export function createProviderAuthAuthorityRevokeRequest(input) {
     const unsigned = { schema: PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA, ...structuredClone(input) };
-    const request = { ...unsigned, request_digest: digest(unsigned) };
+    const { nonce: _, ...digestable } = unsigned;
+    const request = { ...unsigned, request_digest: digest(digestable) };
     if (validateProviderAuthAuthorityRevokeRequest(request).status === 'blocked')
         throw new Error('provider-auth-authority-revoke-request-invalid');
     return request;

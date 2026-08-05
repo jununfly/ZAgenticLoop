@@ -25,6 +25,7 @@ export type ProviderAuthAuthorityRevokeRequest = {
     auth_ref_digest: string;
     authority_contract_digest: string;
     revoke_reason: string;
+    nonce: string;
     request_digest: string;
 };
 export type ProviderAuthAuthorityRevokeResponse = {

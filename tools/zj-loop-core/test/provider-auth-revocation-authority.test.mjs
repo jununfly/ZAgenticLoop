@@ -9,7 +9,7 @@ import { createProviderAuthStateStoreAuthorityIpcServer, createProviderAuthState
 import { revokeProviderAuthRefOverIpc } from '../dist/provider-auth-authority-ipc.js';
 
 const digest = (value) => `sha256:${Buffer.from(value).toString('hex').padEnd(64, '0').slice(0, 64)}`;
-function request() { return createProviderAuthAuthorityRevokeRequest({ request_id: 'request-1', network_id: 'network-1', runtime_id: 'runtime-1', runtime_binding: { runtime_identity_fingerprint: digest('identity'), runtime_manifest_digest: digest('manifest'), provider_capabilities_digest: digest('capabilities') }, auth_ref_id: 'auth-ref-1', auth_ref_digest: digest('ref'), authority_contract_digest: digest('authority-contract'), revoke_reason: 'cleanup' }); }
+function request() { return createProviderAuthAuthorityRevokeRequest({ request_id: 'request-1', network_id: 'network-1', runtime_id: 'runtime-1', runtime_binding: { runtime_identity_fingerprint: digest('identity'), runtime_manifest_digest: digest('manifest'), provider_capabilities_digest: digest('capabilities') }, auth_ref_id: 'auth-ref-1', auth_ref_digest: digest('ref'), authority_contract_digest: digest('authority-contract'), revoke_reason: 'cleanup', nonce: 'nonce-1' }); }
 
 test('StateStore revocation authority records an append-only fact and returns duplicate on retry', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-revocation-authority-'));

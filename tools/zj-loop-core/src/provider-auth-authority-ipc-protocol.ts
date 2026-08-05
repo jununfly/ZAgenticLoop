@@ -10,13 +10,13 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const ID = /^[^\s\0]{1,256}$/;
 const KINDS = ['challenge', 'revoke-request', 'revoke-response', 'error'] as const;
 const FRAME_KEYS = new Set(['schema', 'version', 'kind', 'correlation_id', 'sequence', 'nonce', 'payload']);
-const REQUEST_KEYS = new Set(['schema', 'request_id', 'network_id', 'runtime_id', 'runtime_binding', 'auth_ref_id', 'auth_ref_digest', 'authority_contract_digest', 'revoke_reason', 'request_digest']);
+const REQUEST_KEYS = new Set(['schema', 'request_id', 'network_id', 'runtime_id', 'runtime_binding', 'auth_ref_id', 'auth_ref_digest', 'authority_contract_digest', 'revoke_reason', 'nonce', 'request_digest']);
 const RESPONSE_KEYS = new Set(['schema', 'status', 'request_id', 'network_id', 'runtime_id', 'request_digest', 'event_digest', 'reason']);
 const STATUSES = ['revoked', 'duplicate', 'blocked', 'outcome-uncertain'] as const;
 
 export type ProviderAuthAuthorityIpcFrameKind = typeof KINDS[number];
 export type ProviderAuthAuthorityIpcFrame = { schema: typeof PROVIDER_AUTH_AUTHORITY_IPC_FRAME_SCHEMA; version: 1; kind: ProviderAuthAuthorityIpcFrameKind; correlation_id: string; sequence: number; nonce?: string; payload?: Record<string, unknown> };
-export type ProviderAuthAuthorityRevokeRequest = { schema: typeof PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA; request_id: string; network_id: string; runtime_id: string; runtime_binding: ProviderRuntimeIdentityBinding; auth_ref_id: string; auth_ref_digest: string; authority_contract_digest: string; revoke_reason: string; request_digest: string };
+export type ProviderAuthAuthorityRevokeRequest = { schema: typeof PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA; request_id: string; network_id: string; runtime_id: string; runtime_binding: ProviderRuntimeIdentityBinding; auth_ref_id: string; auth_ref_digest: string; authority_contract_digest: string; revoke_reason: string; nonce: string; request_digest: string };
 export type ProviderAuthAuthorityRevokeResponse = { schema: typeof PROVIDER_AUTH_AUTHORITY_REVOKE_RESPONSE_SCHEMA; status: typeof STATUSES[number]; request_id: string; network_id: string; runtime_id: string; request_digest: string; event_digest?: string; reason?: string };
 
 function canonical(value: unknown): string { const result = canonicalize(value); if (typeof result !== 'string') throw new Error('provider-auth-authority-canonicalization-invalid'); return result; }
@@ -27,8 +27,8 @@ function validDigest(value: unknown): value is string { return typeof value === 
 export function validateProviderAuthAuthorityRevokeRequest(value: unknown): { status: 'valid'; request: ProviderAuthAuthorityRevokeRequest } | { status: 'blocked'; reason: string } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
   const item = value as Record<string, unknown>;
-  if (Object.keys(item).some((key) => !REQUEST_KEYS.has(key)) || item.schema !== PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA || !validId(item.request_id) || !validId(item.network_id) || !validId(item.runtime_id) || validateProviderRuntimeIdentityBinding(item.runtime_binding).status === 'blocked' || !validId(item.auth_ref_id) || !validDigest(item.auth_ref_digest) || !validDigest(item.authority_contract_digest) || !validId(item.revoke_reason) || !validDigest(item.request_digest)) return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
-  const { request_digest: _, ...unsigned } = item;
+  if (Object.keys(item).some((key) => !REQUEST_KEYS.has(key)) || item.schema !== PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA || !validId(item.request_id) || !validId(item.network_id) || !validId(item.runtime_id) || validateProviderRuntimeIdentityBinding(item.runtime_binding).status === 'blocked' || !validId(item.auth_ref_id) || !validDigest(item.auth_ref_digest) || !validDigest(item.authority_contract_digest) || !validId(item.revoke_reason) || !validId(item.nonce) || !validDigest(item.request_digest)) return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
+  const { request_digest: _, nonce: __, ...unsigned } = item;
   return digest(unsigned) === item.request_digest ? { status: 'valid', request: item as ProviderAuthAuthorityRevokeRequest } : { status: 'blocked', reason: 'provider-auth-authority-revoke-request-digest-invalid' };
 }
 
@@ -40,7 +40,8 @@ function validateResponse(value: unknown): value is ProviderAuthAuthorityRevokeR
 
 export function createProviderAuthAuthorityRevokeRequest(input: Omit<ProviderAuthAuthorityRevokeRequest, 'schema' | 'request_digest'>): ProviderAuthAuthorityRevokeRequest {
   const unsigned = { schema: PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA, ...structuredClone(input) };
-  const request = { ...unsigned, request_digest: digest(unsigned) };
+  const { nonce: _, ...digestable } = unsigned;
+  const request = { ...unsigned, request_digest: digest(digestable) };
   if (validateProviderAuthAuthorityRevokeRequest(request).status === 'blocked') throw new Error('provider-auth-authority-revoke-request-invalid');
   return request;
 }
