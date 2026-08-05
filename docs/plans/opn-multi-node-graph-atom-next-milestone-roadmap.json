@@ -1303,6 +1303,31 @@
           "q": "Authority foreground start failure matrix 实现结果是什么？",
           "answer": "同意：readiness blocked、socket mismatch、launcher.start 抛错、binding 持久化失败都会触发 close-once 且不宣称 started；stop/close 失败保留 binding 并返回 outcome-uncertain。",
           "note": "TDD focused 3/3；npm run build 通过。启动原子性和不伪造 cleanup 已锁定。"
+        },
+        {
+          "q": "Authority 是否需要独立的 secret-free start config？",
+          "answer": "同意：新增独立 Authority start config，不复用 Runtime config；包含 network/socket/correlation/contract/identity/StateStore/binding 与可选 macOS helper 字段，未知或 secret 字段 fail-closed。",
+          "note": "Authority 与 Runtime 生命周期及权限边界不同，配置契约也独立。"
+        },
+        {
+          "q": "Authority config loader 是否只允许绝对路径并复用严格 schema 校验？",
+          "answer": "同意：只读取绝对路径 JSON，未知字段、JSON 非法、路径非法和 secret 字段均 blocked；不从 config 读取 secret、token 或 Keychain material。",
+          "note": "保持配置可审计且不扩大 Authority 权限。"
+        },
+        {
+          "q": "macOS peer gate 如何从 Authority config 装配？",
+          "answer": "同意：config loader 只提供 helper path/digest 和 expected peer identity digest；独立 factory 创建 pinned process-audit peer gate；非 macOS 或 helper 校验失败直接 blocked。",
+          "note": "平台适配保持在边界层，核心 assembly 继续 provider-neutral。"
+        },
+        {
+          "q": "Authority CLI start 何时开放？",
+          "answer": "同意：先不开放真实 start；必须先有 external process launcher、config loader、真实 peer gate 和 binding lifecycle 的完整受控链路；CLI status/stop 只允许读取并验证已有 binding。",
+          "note": "避免当前 in-process assembly 被误认为可长期运行的 Authority daemon。"
+        },
+        {
+          "q": "Authority start config/loader 实现结果是什么？",
+          "answer": "同意：新增独立 secret-free Authority start config 与绝对路径 loader；config 绑定 network/socket/correlation/peer/contract/Authority identity/StateStore identity/path/process identity/binding，macOS helper path/digest 必须成对；未知或 secret 字段 fail-closed。",
+          "note": "TDD focused 3/3；npm run build 通过。CLI start 仍保持 blocked。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1310,7 +1335,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 22:40:03",
+    "updated": "2026-08-05 22:43:10",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
