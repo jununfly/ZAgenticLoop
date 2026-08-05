@@ -8,6 +8,10 @@ import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
 import { projectRealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import { executeRealAgentDogfoodWorker } from './real-agent-dogfood-worker-runner.js';
+import { releaseRealAgentDogfoodWorkerLease } from './real-agent-dogfood-worker.js';
+import { createRealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
+import { appendRealAgentDogfoodGraphPhaseRecord, createRealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
+import { realAgentDogfoodWorkerLeaseDigest } from './real-agent-dogfood-digests.js';
 import { createProviderRuntimeIpcCleanupCoordinator } from './provider-auth-ipc-cleanup-client.js';
 import { createProviderRuntimeIpcProvider } from './provider-auth-ipc-provider-client.js';
 import { createTrustedRunnerPostRunProofFactory } from './trusted-runner-post-run-ipc.js';
@@ -44,7 +48,7 @@ async function runWorkerContext(contextPath) {
     if (context.schema !== 'zj-loop.real_agent_dogfood_worker_context.v1')
         throw new Error('worker-context-schema-invalid');
     const required = ['state_store', 'evidence_store', 'network_id', 'dogfood_id', 'execution_id', 'worker_id', 'lease_id', 'worktree_path', 'executable', 'goal'];
-    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || typeof context.adapter_contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.adapter_contract_digest) || !context.binding || !context.admission_bound_execution || !context.provider_auth_ref || !context.runtime_binding || !Number.isInteger(context.expected_revision))
+    if (required.some((key) => typeof context[key] !== 'string' || context[key] === '') || typeof context.adapter_contract_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.adapter_contract_digest) || typeof context.execution_binding_digest !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(context.execution_binding_digest) || !context.binding || !context.admission_bound_execution || !context.provider_auth_ref || !context.runtime_binding || !Number.isInteger(context.expected_revision))
         throw new Error('worker-context-invalid');
     if (context.provider_id !== 'codex')
         throw new Error('provider-not-registered');
@@ -82,13 +86,42 @@ async function runWorkerContext(contextPath) {
             throw new Error('worker-lifecycle-not-running');
         const leaseSnapshot = await stateStore.readEvents({ network_id: context.network_id, aggregate_type: 'real-agent-dogfood-worker', aggregate_id: lifecycle.execution_id });
         const lease = leaseSnapshot.events.at(-1)?.payload;
-        if (!lease || lease.lease_id !== context.lease_id || lease.worker_id !== context.worker_id || typeof lease.expires_at !== 'string' || Date.parse(lease.expires_at) <= Date.now())
+        if (!lease || lease.lease_id !== context.lease_id || lease.worker_id !== context.worker_id || lease.operation !== 'acquired' && lease.operation !== 'renewed' || lease.execution_binding_digest !== context.execution_binding_digest || typeof lease.expires_at !== 'string' || Date.parse(lease.expires_at) <= Date.now() || typeof lease.worker_lease_digest !== 'string' || lease.worker_lease_digest !== realAgentDogfoodWorkerLeaseDigest({ execution_binding_digest: context.execution_binding_digest, execution_id: context.execution_id, lease_id: context.lease_id, worker_id: context.worker_id, expires_at: lease.expires_at }))
             throw new Error('worker-lease-invalid');
         const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store });
         const provider = runtimeProvider;
         const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, execution_mode: context.execution_mode, git_scope: context.git_scope, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision });
-        if (result.status !== 'verification-pending' || context.graph_mode === true)
-            return context.graph_mode === true ? { ...result, graph_source_execution_complete: result.status === 'verification-pending', verifier_started: false } : result;
+        if (context.graph_mode === true) {
+            if (!context.graph_plan)
+                throw new Error('worker-graph-context-invalid');
+            const graphPlan = createRealAgentDogfoodGraphPlan(context.graph_plan);
+            if (graphPlan.dogfood_id !== context.dogfood_id || graphPlan.execution_id !== context.execution_id || graphPlan.plan_digest !== context.graph_plan.plan_digest)
+                throw new Error('worker-graph-plan-binding-invalid');
+            const phaseStatus = result.status === 'verification-pending' ? 'passed' : result.status;
+            const phase = createRealAgentDogfoodGraphPhaseRecord({
+                plan: graphPlan,
+                network_id: context.network_id,
+                phase: 'source_execution',
+                status: phaseStatus,
+                completed_phases: phaseStatus === 'passed' ? ['source_execution'] : [],
+                reason: result.reason_code,
+                actor_kind: 'agent-node',
+                actor_identity: context.worker_id,
+                evidence_digest: result.provider_fact_digest,
+                evidence_refs: [result.provider_fact_digest, result.stdout_digest, result.stderr_digest],
+                execution_binding_digest: context.execution_binding_digest,
+                worker_lease_digest: lease.worker_lease_digest,
+            });
+            const phaseResult = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore, plan: graphPlan, network_id: context.network_id, record: phase, expected_revision: result.revision });
+            if (phaseResult.status !== 'recorded')
+                return { ...result, status: 'outcome-uncertain', graph_source_execution_complete: false, graph_phase_recorded: false, worker_lease_released: false, verifier_started: false, reason_code: 'graph-source-execution-record-uncertain', next_action: 'human-reconcile-execution' };
+            const released = await releaseRealAgentDogfoodWorkerLease({ stateStore, network_id: context.network_id, execution_id: context.execution_id, lease_id: context.lease_id, worker_id: context.worker_id, execution_binding_digest: context.execution_binding_digest, expected_revision: phaseResult.revision });
+            if (released.status !== 'released')
+                return { ...result, status: 'outcome-uncertain', graph_source_execution_complete: false, graph_phase_recorded: true, worker_lease_released: false, verifier_started: false, reason_code: 'worker-lease-release-uncertain', next_action: 'human-reconcile-execution' };
+            return { ...result, graph_source_execution_complete: result.status === 'verification-pending', graph_phase_recorded: true, worker_lease_released: true, verifier_started: false };
+        }
+        if (result.status !== 'verification-pending')
+            return result;
         const verifierContextPath = `${contextPath}.verifier.json`;
         await writeFile(verifierContextPath, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_verifier_context.v1', state_store: context.state_store, evidence_store: context.evidence_store, network_id: context.network_id, dogfood_id: context.dogfood_id, execution_id: context.execution_id, attempt: lifecycle.attempt, verifier_id: `verifier-${context.execution_id}`, provider_fact_digest: result.provider_fact_digest, stdout_digest: result.stdout_digest, stderr_digest: result.stderr_digest, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
         const verifierCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-verifier-cli.js');

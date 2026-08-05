@@ -50,3 +50,17 @@ export function realAgentDogfoodCoordinatorLeaseDigest(input) {
         expires_at: input.expires_at,
     });
 }
+export function realAgentDogfoodWorkerLeaseDigest(input) {
+    requireDigest(input.execution_binding_digest, 'execution-binding-digest');
+    if (!input.execution_id.trim() || !input.lease_id.trim() || !input.worker_id.trim() || !Number.isFinite(Date.parse(input.expires_at)))
+        throw new Error('worker-lease-digest-input-invalid');
+    return digest({
+        schema: 'zj-loop.real-agent-dogfood.worker-lease.v1',
+        digest_profile: REAL_AGENT_DOGFOOD_DIGEST_PROFILE,
+        execution_binding_digest: input.execution_binding_digest,
+        execution_id: input.execution_id,
+        lease_id: input.lease_id,
+        worker_id: input.worker_id,
+        expires_at: input.expires_at,
+    });
+}

@@ -25,6 +25,11 @@ function assertRecord(record, plan) {
     const hasIdentity = record.actor_identity !== undefined;
     if (hasKind !== hasIdentity || hasKind && (!PHASE_ACTOR_KINDS[record.phase].includes(record.actor_kind) || !record.actor_identity?.trim()))
         throw new Error('graph-state-actor-binding-invalid');
+    const hasEvidence = record.evidence_digest !== undefined || record.evidence_refs !== undefined;
+    if (hasEvidence && (!/^sha256:[0-9a-f]{64}$/.test(record.evidence_digest ?? '') || !Array.isArray(record.evidence_refs) || record.evidence_refs.length === 0 || record.evidence_refs.some((ref) => !/^sha256:[0-9a-f]{64}$/.test(ref))))
+        throw new Error('graph-state-evidence-binding-invalid');
+    if (record.actor_kind === 'agent-node' && (!hasEvidence || !/^sha256:[0-9a-f]{64}$/.test(record.execution_binding_digest ?? '') || !/^sha256:[0-9a-f]{64}$/.test(record.worker_lease_digest ?? '')))
+        throw new Error('graph-state-execution-binding-required');
 }
 export function createRealAgentDogfoodGraphPhaseRecord(input) {
     assertPlanBinding({ plan: input.plan, network_id: input.network_id, dogfood_id: input.plan.dogfood_id, execution_id: input.plan.execution_id });
@@ -42,6 +47,9 @@ export function createRealAgentDogfoodGraphPhaseRecord(input) {
         completed_phases: completed,
         reason: input.reason ?? null,
         ...(input.actor_kind !== undefined || input.actor_identity !== undefined ? { actor_kind: input.actor_kind, actor_identity: input.actor_identity } : {}),
+        ...(input.evidence_digest !== undefined || input.evidence_refs !== undefined ? { evidence_digest: input.evidence_digest, evidence_refs: input.evidence_refs ? [...input.evidence_refs] : input.evidence_refs } : {}),
+        ...(input.execution_binding_digest !== undefined ? { execution_binding_digest: input.execution_binding_digest } : {}),
+        ...(input.worker_lease_digest !== undefined ? { worker_lease_digest: input.worker_lease_digest } : {}),
     };
     assertRecord(record, input.plan);
     return Object.freeze(record);

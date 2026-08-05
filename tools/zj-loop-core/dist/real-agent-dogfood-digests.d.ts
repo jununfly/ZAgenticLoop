@@ -20,3 +20,10 @@ export declare function realAgentDogfoodCoordinatorLeaseDigest(input: {
     coordinator_id: string;
     expires_at: string;
 }): string;
+export declare function realAgentDogfoodWorkerLeaseDigest(input: {
+    execution_binding_digest: string;
+    execution_id: string;
+    lease_id: string;
+    worker_id: string;
+    expires_at: string;
+}): string;

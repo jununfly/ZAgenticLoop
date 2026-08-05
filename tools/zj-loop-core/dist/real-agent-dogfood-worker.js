@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { realAgentDogfoodWorkerLeaseDigest } from './real-agent-dogfood-digests.js';
 export const REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA = 'zj-loop.real_agent_dogfood_worker_lease.v1';
 export const REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE = 'real-agent-dogfood-worker';
 const AGGREGATE = REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE;
@@ -12,7 +13,7 @@ function latest(events) {
     if (!event)
         return null;
     const fact = event.payload;
-    if (fact.schema !== REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA || fact.network_id !== event.network_id || fact.execution_id !== event.aggregate_id || !['acquired', 'renewed', 'released', 'abandoned'].includes(fact.operation) || !/^sha256:[0-9a-f]{64}$/.test(fact.execution_binding_digest))
+    if (fact.schema !== REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA || fact.network_id !== event.network_id || fact.execution_id !== event.aggregate_id || !['acquired', 'renewed', 'released', 'abandoned'].includes(fact.operation) || !/^sha256:[0-9a-f]{64}$/.test(fact.execution_binding_digest) || !/^sha256:[0-9a-f]{64}$/.test(fact.worker_lease_digest))
         throw new Error('worker-lease-fact-invalid');
     return { fact, revision: event.revision };
 }
@@ -20,7 +21,7 @@ async function readLease(input) {
     return latest((await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: AGGREGATE, aggregate_id: input.execution_id })).events);
 }
 function event(input) {
-    const fact = { schema: REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA, network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, execution_binding_digest: input.execution_binding_digest, operation: input.operation, issued_at: input.now, expires_at: input.expires_at };
+    const fact = { schema: REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA, network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, execution_binding_digest: input.execution_binding_digest, worker_lease_digest: realAgentDogfoodWorkerLeaseDigest({ execution_binding_digest: input.execution_binding_digest, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, expires_at: input.expires_at }), operation: input.operation, issued_at: input.now, expires_at: input.expires_at };
     return { event_id: `${input.lease_id}:${input.operation}:${input.now}:${randomUUID()}`, aggregate_type: AGGREGATE, aggregate_id: input.execution_id, event_type: 'real-agent-dogfood-worker.lease', occurred_at: input.now, payload: fact };
 }
 export async function acquireRealAgentDogfoodWorkerLease(input) {

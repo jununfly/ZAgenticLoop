@@ -15,6 +15,10 @@ export type RealAgentDogfoodGraphPhaseRecord = {
     reason: string | null;
     actor_kind?: RealAgentDogfoodGraphActorKind;
     actor_identity?: string;
+    evidence_digest?: string;
+    evidence_refs?: string[];
+    execution_binding_digest?: string;
+    worker_lease_digest?: string;
 };
 export type RealAgentDogfoodGraphActorKind = 'agent-node' | 'coordinator' | 'trusted-runner' | 'core' | 'human';
 export declare function createRealAgentDogfoodGraphPhaseRecord(input: {
@@ -26,6 +30,10 @@ export declare function createRealAgentDogfoodGraphPhaseRecord(input: {
     reason?: string;
     actor_kind?: RealAgentDogfoodGraphActorKind;
     actor_identity?: string;
+    evidence_digest?: string;
+    evidence_refs?: readonly string[];
+    execution_binding_digest?: string;
+    worker_lease_digest?: string;
 }): RealAgentDogfoodGraphPhaseRecord;
 export declare function projectRealAgentDogfoodGraphPhaseRecord(input: {
     plan: RealAgentDogfoodGraphPlan;

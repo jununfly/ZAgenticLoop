@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SqliteStateStore, StateEvent } from './sqlite-state-store.js';
+import { realAgentDogfoodWorkerLeaseDigest } from './real-agent-dogfood-digests.js';
 
 export const REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA = 'zj-loop.real_agent_dogfood_worker_lease.v1' as const;
 export const REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE = 'real-agent-dogfood-worker' as const;
@@ -19,6 +20,7 @@ type LeaseFact = {
   lease_id: string;
   worker_id: string;
   execution_binding_digest: string;
+  worker_lease_digest: string;
   operation: 'acquired' | 'renewed' | 'released' | 'abandoned';
   issued_at: string;
   expires_at: string;
@@ -35,7 +37,7 @@ function latest(events: StateEvent[]): { fact: LeaseFact; revision: number } | n
   const event = events.at(-1);
   if (!event) return null;
   const fact = event.payload as LeaseFact;
-  if (fact.schema !== REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA || fact.network_id !== event.network_id || fact.execution_id !== event.aggregate_id || !['acquired', 'renewed', 'released', 'abandoned'].includes(fact.operation) || !/^sha256:[0-9a-f]{64}$/.test(fact.execution_binding_digest)) throw new Error('worker-lease-fact-invalid');
+  if (fact.schema !== REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA || fact.network_id !== event.network_id || fact.execution_id !== event.aggregate_id || !['acquired', 'renewed', 'released', 'abandoned'].includes(fact.operation) || !/^sha256:[0-9a-f]{64}$/.test(fact.execution_binding_digest) || !/^sha256:[0-9a-f]{64}$/.test(fact.worker_lease_digest)) throw new Error('worker-lease-fact-invalid');
   return { fact, revision: event.revision };
 }
 
@@ -44,7 +46,7 @@ async function readLease(input: { stateStore: SqliteStateStore; network_id: stri
 }
 
 function event(input: { network_id: string; execution_id: string; lease_id: string; worker_id: string; execution_binding_digest: string; operation: LeaseFact['operation']; now: string; expires_at: string }) {
-  const fact: LeaseFact = { schema: REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA, network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, execution_binding_digest: input.execution_binding_digest, operation: input.operation, issued_at: input.now, expires_at: input.expires_at };
+  const fact: LeaseFact = { schema: REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA, network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, execution_binding_digest: input.execution_binding_digest, worker_lease_digest: realAgentDogfoodWorkerLeaseDigest({ execution_binding_digest: input.execution_binding_digest, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, expires_at: input.expires_at }), operation: input.operation, issued_at: input.now, expires_at: input.expires_at };
   return { event_id: `${input.lease_id}:${input.operation}:${input.now}:${randomUUID()}`, aggregate_type: AGGREGATE, aggregate_id: input.execution_id, event_type: 'real-agent-dogfood-worker.lease', occurred_at: input.now, payload: fact };
 }
 
