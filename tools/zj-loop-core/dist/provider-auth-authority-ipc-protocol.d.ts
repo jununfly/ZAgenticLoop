@@ -1,0 +1,44 @@
+import { type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
+import type { FramedJsonValidation } from './framed-json-transport.js';
+export declare const PROVIDER_AUTH_AUTHORITY_IPC_FRAME_SCHEMA: "zj-loop.provider_auth_authority_ipc_frame.v1";
+export declare const PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA: "zj-loop.provider_auth_authority_revoke_request.v1";
+export declare const PROVIDER_AUTH_AUTHORITY_REVOKE_RESPONSE_SCHEMA: "zj-loop.provider_auth_authority_revoke_response.v1";
+declare const KINDS: readonly ["challenge", "revoke-request", "revoke-response", "error"];
+declare const STATUSES: readonly ["revoked", "duplicate", "blocked", "outcome-uncertain"];
+export type ProviderAuthAuthorityIpcFrameKind = typeof KINDS[number];
+export type ProviderAuthAuthorityIpcFrame = {
+    schema: typeof PROVIDER_AUTH_AUTHORITY_IPC_FRAME_SCHEMA;
+    version: 1;
+    kind: ProviderAuthAuthorityIpcFrameKind;
+    correlation_id: string;
+    sequence: number;
+    nonce?: string;
+    payload?: Record<string, unknown>;
+};
+export type ProviderAuthAuthorityRevokeRequest = {
+    schema: typeof PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA;
+    request_id: string;
+    network_id: string;
+    runtime_id: string;
+    runtime_binding: ProviderRuntimeIdentityBinding;
+    auth_ref_id: string;
+    auth_ref_digest: string;
+    authority_contract_digest: string;
+    revoke_reason: string;
+    request_digest: string;
+};
+export type ProviderAuthAuthorityRevokeResponse = {
+    schema: typeof PROVIDER_AUTH_AUTHORITY_REVOKE_RESPONSE_SCHEMA;
+    status: typeof STATUSES[number];
+    request_id: string;
+    network_id: string;
+    runtime_id: string;
+    request_digest: string;
+    event_digest?: string;
+    reason?: string;
+};
+export declare function createProviderAuthAuthorityRevokeRequest(input: Omit<ProviderAuthAuthorityRevokeRequest, 'schema' | 'request_digest'>): ProviderAuthAuthorityRevokeRequest;
+export declare function createProviderAuthAuthorityRevokeResponse(input: Omit<ProviderAuthAuthorityRevokeResponse, 'schema'>): ProviderAuthAuthorityRevokeResponse;
+export declare function createProviderAuthAuthorityIpcFrame(input: Omit<ProviderAuthAuthorityIpcFrame, 'schema' | 'version'>): ProviderAuthAuthorityIpcFrame;
+export declare function validateProviderAuthAuthorityIpcFrame(value: unknown): FramedJsonValidation;
+export {};

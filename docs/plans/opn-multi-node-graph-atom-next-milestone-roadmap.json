@@ -1238,6 +1238,11 @@
           "q": "Human 手动 revoke 与 Runtime cleanup revoke 如何区分？",
           "answer": "同意：使用不同 command/reason/schema projection；Runtime cleanup 只能撤销其原 execution-scoped ref，Human revoke 可按 Human authority contract 撤销更高层授权，但仍 append-only、可审计、不可被 Runtime 代替。",
           "note": "责任主体、权限范围和审计路径保持不对称：Human 能做最终撤销决策，Agent/Runtime 只能请求既定生命周期收束。"
+        },
+        {
+          "q": "Authority IPC transport 与 revoke command 首条实现结果是什么？",
+          "answer": "同意：新增 provider-neutral length-prefixed JSON codec 与 Unix server/client；peer gate 先于 decoder；ProviderAuth 与 Authority 使用独立 frame schema；Authority revoke client/server 完成一次性 challenge、单 request connection、contract/runtime binding 校验和 revoked/duplicate/blocked/outcome-uncertain 映射。",
+          "note": "TDD focused 8/8；npm run build 与 git diff --check 通过。Authority handler 仍由外部注入，下一步接 append-only StateStore revocation writer 与有限 revision-conflict retry。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1245,7 +1250,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 18:23:10",
+    "updated": "2026-08-05 20:00:15",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
