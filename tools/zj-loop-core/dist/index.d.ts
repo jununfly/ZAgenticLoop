@@ -211,6 +211,7 @@ export * from './provider-auth-authority-foreground-service.js';
 export * from './provider-auth-authority-start-assembly.js';
 export * from './provider-auth-authority-start-config.js';
 export * from './provider-auth-authority-start-config-store.js';
+export * from './provider-auth-authority-external-process-launcher.js';
 export * from './trusted-runner-post-run-ipc.js';
 export * from './trusted-runner-peer-identity.js';
 export * from './macos-process-audit-peer-identity.js';
