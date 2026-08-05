@@ -235,4 +235,5 @@ export * from './real-agent-dogfood-graph-source-execution-adapter.js';
 export * from './real-agent-dogfood-graph-scope-observation-adapter.js';
 export * from './real-agent-dogfood-graph-independent-verification-adapter.js';
 export * from './real-agent-dogfood-graph-human-acceptance-adapter.js';
+export * from './real-agent-dogfood-graph-merge-adapter.js';
 export * from './real-agent-dogfood-self-audit.js';

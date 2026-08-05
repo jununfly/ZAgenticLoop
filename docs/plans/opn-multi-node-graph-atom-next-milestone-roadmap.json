@@ -1588,6 +1588,56 @@
           "q": "human_acceptance Graph adapter 实现结果是什么？",
           "answer": "同意：新增 provider-neutral human_acceptance Graph adapter；它只消费已通过的 source_execution、scope_observation、independent_verification 和 accepted ReviewHandoff，严格验证 ECDSA-P256 HumanAcceptanceRecord 的 Human identity、network、execution、plan/revision/digest、handoff、verification 与 merge authorization 绑定，写入独立 Graph Evidence，并返回 actor_kind=human 的 passed phase record。签名、上游事实或 Evidence 写入无法证明时 fail-closed 为 blocked 或 outcome-uncertain；不执行 merge、cleanup，不接受 Agent/Coordinator 代替 Human 决策，也不改变 rejected/request-revision 的既有恢复生命周期。",
           "note": "TDD 新增成功、plan/handoff binding drift、Evidence write uncertainty 三项测试；Graph adapter focused 16/16、完整 npm test 432/432、build 与 git diff --check 通过；已从包入口导出并纳入标准 Graph adapter 测试脚本。"
+        },
+        {
+          "q": "merge Graph adapter 是否复用 NativeOpnGraphMerge？",
+          "answer": "同意：新增 provider-neutral merge Graph adapter，复用现有 NativeOpnGraphMerge admission/execution contract；不新增第二套合并语义。adapter 只消费已通过 human_acceptance，并把真实 merge 结果转换为 Graph phase record 和 Evidence。",
+          "note": "保持 Human authorization、fast-forward-only 与既有 merge admission 一致。"
+        },
+        {
+          "q": "merge 前必须重新观察哪些事实？",
+          "answer": "同意：每次 merge 前由可信 Coordinator/adapter 重新观察 target ref、target worktree ref、target HEAD、source commit reachable、fast-forward 可行性、target clean 和 scope digest；任何 binding drift 为 blocked，事实不可读为 outcome-uncertain。",
+          "note": "不复用过期的 human_acceptance 时点观察，避免 TOCTOU。"
+        },
+        {
+          "q": "merge 的副作用策略是什么？",
+          "answer": "同意：只允许已授权 target worktree 上的 fast-forward merge；禁止 shell 拼接、强制 merge、rebase、自动解决冲突、push、创建 MR 或修改远程仓库；merge 执行后必须重新读取 target HEAD 证明等于 source commit。",
+          "note": "将本地 Graph dogfood 的 merge 副作用限制在明确授权的 disposable target worktree。"
+        },
+        {
+          "q": "merge phase 的 actor 和 Evidence 如何绑定？",
+          "answer": "同意：merge phase actor_kind 固定为 coordinator 或 human，优先由 Coordinator 执行已获 Human authorization 的 merge；Evidence 绑定 acceptance digest、merge authorization digest、scope digest、expected target HEAD、source commit 和 observed final HEAD；merge 已执行但最终事实不可读时返回 outcome-uncertain。",
+          "note": "Human 保持最终授权，Coordinator 只执行被授权的确定性副作用。"
+        },
+        {
+          "q": "post_merge_gate adapter 的固定验证内容是什么？",
+          "answer": "同意：target worktree 只读验证 target/source commit、fast-forward confirmed、target clean、scope digest、git diff --check，以及固定项目验证命令；命令列表和输出摘要写入独立 Evidence；命令失败为 blocked，观察不完整为 outcome-uncertain。",
+          "note": "复用现有 evaluateNativeOpnGraphPostMergeGate，并补齐真实命令与 Evidence。"
+        },
+        {
+          "q": "post_merge_gate 是否允许重新修改仓库？",
+          "answer": "同意：不允许。post_merge_gate 只能只读观察和运行验证命令；不得修复文件、重新提交、重新 merge 或由 Agent 根据失败自动改代码。失败后由 Human 决定 revision/new attempt。",
+          "note": "保持验证节点与执行节点、中心责任单元的职责分离。"
+        },
+        {
+          "q": "cleanup Graph adapter 的资源范围和成功条件是什么？",
+          "answer": "同意：清理 target、source、verifier 三个 disposable worktree，并证明 Git worktree 注册删除、路径不存在且没有残留 execution binding；EvidenceStore 保留不删除。所有事实证明后 cleanup passed，否则 cleanup-unresolved 或 outcome-uncertain，不伪造 closed。",
+          "note": "把 worktree 资源生命周期作为独立 Graph phase 管理。"
+        },
+        {
+          "q": "完整七阶段接入后是否仍必须 replay？",
+          "answer": "同意：必须。merge、post_merge_gate、cleanup 全部 passed 也只能表示阶段事实完成；最终必须通过纯读 replay/read-model integrity gate，确认 phase 顺序、Evidence digest、StateEvent revision、lifecycle/graph 终态一致，才允许 Graph closed。",
+          "note": "防止执行链成功但持久化事实链不完整。"
+        },
+        {
+          "q": "本批决策后的实现顺序是什么？",
+          "answer": "同意：按 merge adapter → post_merge_gate adapter → cleanup adapter → Coordinator wiring → deterministic full-chain fixtures → 本机 disposable real-agent dogfood 顺序推进；每个 adapter 独立 TDD，失败立即停在当前 phase。",
+          "note": "控制变更粒度，避免把 merge、验证和清理环境问题混在一起。"
+        },
+        {
+          "q": "merge Graph adapter 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral merge Graph adapter；它只消费已通过且由 Human actor 绑定的 human_acceptance phase，严格复用 NativeOpnGraphMerge admission/execution contract，要求 Human-approved merge authorization、target/source/ref/scope/cleanliness 和 fast-forward facts；成功后写入独立 merge Evidence 并返回 coordinator actor 的 passed phase record，blocked/outcome-uncertain 结果保留对应 phase record；不新增合并语义，不 push、不创建 MR、不执行 rebase 或自动修复。",
+          "note": "TDD 覆盖 fast-forward 成功、Human authorization drift 阻断和 merge result 不可证明的 outcome-uncertain；Graph adapter 19/19、完整 npm test 432/432、build 与 git diff --check 通过；已从包入口导出并纳入标准 Graph adapter 测试脚本。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection、Graph CLI status read model、source_execution、scope_observation 与 independent_verification adapters。independent_verification 采用固定 bounded commands、disposable verifier worktree、HEAD/cleanliness observation 和 EvidenceStore digest 绑定；macOS symlink canonical path 已纳入验证。标准 Graph adapter 回归与完整 npm test 均通过。下一步为接入剩余 Graph phase adapters 与真实端到端 conformance 前的 replay/read-model integrity gate。"
@@ -1595,7 +1645,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 01:13:25",
+    "updated": "2026-08-06 01:25:02",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
