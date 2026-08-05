@@ -18,4 +18,6 @@ test('Authority protocol rejects request digest drift, unknown fields, secrets, 
   assert.equal(validateProviderAuthAuthorityIpcFrame({ ...validFrame, payload: { ...request, request_digest: digest('wrong') } }).status, 'blocked');
   assert.equal(validateProviderAuthAuthorityIpcFrame({ ...createProviderAuthAuthorityIpcFrame({ correlation_id: 'corr-1', sequence: 1, kind: 'revoke-request', payload: request }), secret: 'must-not-travel' }).status, 'blocked');
   assert.throws(() => createProviderAuthAuthorityRevokeResponse({ status: 'revoked', request_id: request.request_id, network_id: request.network_id, runtime_id: request.runtime_id, request_digest: request.request_digest }), /event-digest-required/);
+  const responseFrame = createProviderAuthAuthorityIpcFrame({ correlation_id: 'corr-1', sequence: 2, kind: 'revoke-response', payload: createProviderAuthAuthorityRevokeResponse({ status: 'revoked', request_id: request.request_id, network_id: request.network_id, runtime_id: request.runtime_id, request_digest: request.request_digest, event_digest: digest('event') }) });
+  assert.equal(validateProviderAuthAuthorityIpcFrame({ ...responseFrame, payload: { ...responseFrame.payload, event_digest: undefined } }).status, 'blocked');
 });

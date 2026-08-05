@@ -37,6 +37,13 @@ export type ProviderAuthAuthorityRevokeResponse = {
     event_digest?: string;
     reason?: string;
 };
+export declare function validateProviderAuthAuthorityRevokeRequest(value: unknown): {
+    status: 'valid';
+    request: ProviderAuthAuthorityRevokeRequest;
+} | {
+    status: 'blocked';
+    reason: string;
+};
 export declare function createProviderAuthAuthorityRevokeRequest(input: Omit<ProviderAuthAuthorityRevokeRequest, 'schema' | 'request_digest'>): ProviderAuthAuthorityRevokeRequest;
 export declare function createProviderAuthAuthorityRevokeResponse(input: Omit<ProviderAuthAuthorityRevokeResponse, 'schema'>): ProviderAuthAuthorityRevokeResponse;
 export declare function createProviderAuthAuthorityIpcFrame(input: Omit<ProviderAuthAuthorityIpcFrame, 'schema' | 'version'>): ProviderAuthAuthorityIpcFrame;

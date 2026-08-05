@@ -16,34 +16,34 @@ function canonical(value) { const result = canonicalize(value); if (typeof resul
 function digest(value) { return `sha256:${createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`; }
 function validId(value) { return typeof value === 'string' && ID.test(value); }
 function validDigest(value) { return typeof value === 'string' && DIGEST.test(value); }
-function validateRequest(value) {
+export function validateProviderAuthAuthorityRevokeRequest(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
-        return false;
+        return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
     const item = value;
     if (Object.keys(item).some((key) => !REQUEST_KEYS.has(key)) || item.schema !== PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA || !validId(item.request_id) || !validId(item.network_id) || !validId(item.runtime_id) || validateProviderRuntimeIdentityBinding(item.runtime_binding).status === 'blocked' || !validId(item.auth_ref_id) || !validDigest(item.auth_ref_digest) || !validDigest(item.authority_contract_digest) || !validId(item.revoke_reason) || !validDigest(item.request_digest))
-        return false;
+        return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
     const { request_digest: _, ...unsigned } = item;
-    return digest(unsigned) === item.request_digest;
+    return digest(unsigned) === item.request_digest ? { status: 'valid', request: item } : { status: 'blocked', reason: 'provider-auth-authority-revoke-request-digest-invalid' };
 }
 function validateResponse(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
         return false;
     const item = value;
-    return Object.keys(item).some((key) => !RESPONSE_KEYS.has(key)) === false && item.schema === PROVIDER_AUTH_AUTHORITY_REVOKE_RESPONSE_SCHEMA && STATUSES.includes(item.status) && validId(item.request_id) && validId(item.network_id) && validId(item.runtime_id) && validDigest(item.request_digest) && (item.event_digest === undefined || validDigest(item.event_digest)) && (item.reason === undefined || validId(item.reason));
+    return Object.keys(item).some((key) => !RESPONSE_KEYS.has(key)) === false && item.schema === PROVIDER_AUTH_AUTHORITY_REVOKE_RESPONSE_SCHEMA && STATUSES.includes(item.status) && validId(item.request_id) && validId(item.network_id) && validId(item.runtime_id) && validDigest(item.request_digest) && (item.event_digest === undefined || validDigest(item.event_digest)) && (!['revoked', 'duplicate'].includes(item.status) || validDigest(item.event_digest)) && (item.reason === undefined || validId(item.reason));
 }
 export function createProviderAuthAuthorityRevokeRequest(input) {
     const unsigned = { schema: PROVIDER_AUTH_AUTHORITY_REVOKE_REQUEST_SCHEMA, ...structuredClone(input) };
     const request = { ...unsigned, request_digest: digest(unsigned) };
-    if (!validateRequest(request))
+    if (validateProviderAuthAuthorityRevokeRequest(request).status === 'blocked')
         throw new Error('provider-auth-authority-revoke-request-invalid');
     return request;
 }
 export function createProviderAuthAuthorityRevokeResponse(input) {
     const response = { schema: PROVIDER_AUTH_AUTHORITY_REVOKE_RESPONSE_SCHEMA, ...structuredClone(input) };
-    if (!validateResponse(response))
-        throw new Error('provider-auth-authority-revoke-response-invalid');
     if (['revoked', 'duplicate'].includes(response.status) && !response.event_digest)
         throw new Error('provider-auth-authority-revoke-event-digest-required');
+    if (!validateResponse(response))
+        throw new Error('provider-auth-authority-revoke-response-invalid');
     return response;
 }
 export function createProviderAuthAuthorityIpcFrame(input) {
@@ -62,7 +62,7 @@ export function validateProviderAuthAuthorityIpcFrame(value) {
         return { status: 'blocked', reason: 'provider-auth-authority-frame-nonce-invalid' };
     if (item.kind === 'challenge' && !validId(item.nonce))
         return { status: 'blocked', reason: 'provider-auth-authority-challenge-nonce-required' };
-    if (item.kind === 'revoke-request' && !validateRequest(item.payload))
+    if (item.kind === 'revoke-request' && validateProviderAuthAuthorityRevokeRequest(item.payload).status === 'blocked')
         return { status: 'blocked', reason: 'provider-auth-authority-revoke-request-invalid' };
     if (item.kind === 'revoke-response' && !validateResponse(item.payload))
         return { status: 'blocked', reason: 'provider-auth-authority-revoke-response-invalid' };
