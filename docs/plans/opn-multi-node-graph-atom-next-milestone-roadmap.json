@@ -1538,6 +1538,56 @@
           "q": "independent_verification phase adapter 实现结果是什么？",
           "answer": "同意：新增 provider-neutral independent_verification adapter；它只消费已通过的 source_execution 与 scope_observation，读取 source HEAD 创建固定且可重放的 verification plan，在 disposable verifier worktree 顺序执行 bounded commands，独立观察 verifier HEAD 与 cleanliness，并把结果写入 EvidenceStore。所有命令、HEAD、worktree 或 Evidence 事实通过校验后才返回 passed；固定命令失败返回 blocked，超时/观察/Evidence 不确定返回 outcome-uncertain；不调用 Provider、不获取 lease、不推进 Human acceptance、merge、cleanup，也不改变 replay 纯读边界。",
           "note": "TDD 覆盖成功与固定命令失败；修复 macOS /tmp -> /private/tmp canonical path 误判；Graph adapter focused 10/10、完整 npm test 432/432、build 与 git diff --check 通过。"
+        },
+        {
+          "q": "human_acceptance adapter 的授权边界是什么？",
+          "answer": "同意推荐方案：只接受真实 HumanSigner 产生的 ECDSA-P256 签名 acceptance；签名必须绑定 network、execution、plan digest/revision、review handoff、independent verification、merge authorization、Human identity 和有效时间；Agent、Coordinator、内存 signer 或 CLI 参数不能替代真实 Human acceptance。",
+          "note": "保持 Human 是最终接受和 merge 决策主体，adapter 不执行任何副作用。"
+        },
+        {
+          "q": "human_acceptance adapter 的输入与成功条件是什么？",
+          "answer": "同意推荐方案：只消费已通过且 binding 完整的 independent_verification、review handoff 和 Graph plan；先验证 review package 的 source commit、scope digest、verification digest、target worktree 与 merge authorization 一致，再验证 Human 签名；全部通过后返回 human_acceptance=passed，否则返回 blocked 或 outcome-uncertain。",
+          "note": "不让单独的签名或单独的 review handoff 脱离 Graph 事实成立。"
+        },
+        {
+          "q": "rejected、request-revision 和 accepted 如何映射到 Graph phase？",
+          "answer": "同意推荐方案：当前 Graph phase 只把真实 Human acceptance 映射为 passed；rejected/request-revision 不伪造 accepted record，分别由既有生命周期/恢复协议承载，并在 Graph projection 中停留为 blocked；签名、review 或事实无法确认则为 outcome-uncertain。",
+          "note": "保持 Graph phase 状态与 OPN 用户生命周期解耦，不扩张现有 HumanAcceptanceRecord 的 accepted-only 契约。"
+        },
+        {
+          "q": "human_acceptance 是否写入 Evidence 和 StateStore？",
+          "answer": "同意：adapter 负责生成或验证绑定的 acceptance Evidence，并返回带 human actor、acceptance digest、review handoff digest 和 merge authorization digest 的 phase record；Coordinator 负责唯一的 StateStore revision CAS append；adapter 不直接推进后续 phase。",
+          "note": "延续现有 Coordinator 唯一 Graph phase 写入边界。"
+        },
+        {
+          "q": "merge phase 下一步如何接入？",
+          "answer": "同意推荐方案：复用现有 Native OPN Graph merge admission/execution contract；只允许 Human acceptance 已通过、scope digest 一致、target/source 身份一致、target clean、source reachable 且 fast-forward 可行时执行；merge 只执行 fast-forward，不由 Agent 或普通 Coordinator 自行绕过 authorization。",
+          "note": "优先复用已有 merge 实现，避免产生第二套合并语义。"
+        },
+        {
+          "q": "post_merge_gate adapter 的职责是什么？",
+          "answer": "同意推荐方案：由 Coordinator/TrustedRunner 在 target worktree 只读观察 merge 后 target/source commit、fast-forward 事实、cleanliness、scope digest、git diff --check 和固定项目验证命令；命令与输出写入独立 Evidence；任何失败为 blocked，事实不可读为 outcome-uncertain。",
+          "note": "验证结果与 merge 副作用分离，禁止 Provider 自报或仅凭进程退出码宣称通过。"
+        },
+        {
+          "q": "cleanup adapter 的成功条件是什么？",
+          "answer": "同意推荐方案：由 Coordinator/TrustedRunner 执行 bounded cleanup，并独立证明 target、source、verifier 三个 worktree 已删除、Git worktree 注册已移除、无残留 binding；cleanup 不删除 EvidenceStore；任何残留或事实不确定进入 cleanup-unresolved/outcome-uncertain，不回滚已验证业务结果。",
+          "note": "保持业务结果和资源生命周期分离，支持后续 reconciliation/Human manual cleanup。"
+        },
+        {
+          "q": "完整 Graph conformance 的接入顺序是什么？",
+          "answer": "同意：固定接入 human_acceptance → merge → post_merge_gate → cleanup adapters；每阶段由 Coordinator 按顺序 CAS append，阶段失败立即停止；cleanup 完成后仍必须执行纯读 replay/read-model integrity gate，只有 replay complete/passed 才允许 closed。",
+          "note": "与现有七阶段 Graph path 和 replay contract 保持一致。"
+        },
+        {
+          "q": "这一批完成后如何验证？",
+          "answer": "同意推荐方案：先用 deterministic fixture 为每个 adapter 覆盖 success、blocked、outcome-uncertain、binding drift、append conflict 和 idempotent replay，再运行完整 npm test；所有 fixture 通过后，才进入一次本机 disposable real-agent dogfood，不 push、不创建 MR、不修改远程状态。",
+          "note": "将协议缺陷与真实 Provider/Keychain/环境问题分开定位。"
+        },
+        {
+          "q": "human_acceptance Graph adapter 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral human_acceptance Graph adapter；它只消费已通过的 source_execution、scope_observation、independent_verification 和 accepted ReviewHandoff，严格验证 ECDSA-P256 HumanAcceptanceRecord 的 Human identity、network、execution、plan/revision/digest、handoff、verification 与 merge authorization 绑定，写入独立 Graph Evidence，并返回 actor_kind=human 的 passed phase record。签名、上游事实或 Evidence 写入无法证明时 fail-closed 为 blocked 或 outcome-uncertain；不执行 merge、cleanup，不接受 Agent/Coordinator 代替 Human 决策，也不改变 rejected/request-revision 的既有恢复生命周期。",
+          "note": "TDD 新增成功、plan/handoff binding drift、Evidence write uncertainty 三项测试；Graph adapter focused 16/16、完整 npm test 432/432、build 与 git diff --check 通过；已从包入口导出并纳入标准 Graph adapter 测试脚本。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection、Graph CLI status read model、source_execution、scope_observation 与 independent_verification adapters。independent_verification 采用固定 bounded commands、disposable verifier worktree、HEAD/cleanliness observation 和 EvidenceStore digest 绑定；macOS symlink canonical path 已纳入验证。标准 Graph adapter 回归与完整 npm test 均通过。下一步为接入剩余 Graph phase adapters 与真实端到端 conformance 前的 replay/read-model integrity gate。"
@@ -1545,7 +1595,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 00:49:24",
+    "updated": "2026-08-06 01:13:25",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
