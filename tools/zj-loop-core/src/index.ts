@@ -244,4 +244,5 @@ export * from './real-agent-dogfood-preflight.js';
 export * from './real-agent-dogfood-conformance.js';
 export * from './real-agent-dogfood-graph-conformance-coordinator.js';
 export * from './real-agent-dogfood-graph-source-execution-adapter.js';
+export * from './real-agent-dogfood-graph-scope-observation-adapter.js';
 export * from './real-agent-dogfood-self-audit.js';

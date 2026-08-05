@@ -5,12 +5,13 @@ import type { SqliteStateStore } from './sqlite-state-store.js';
 import type { RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import type { RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
-import { executeRealAgentDogfoodWorker } from './real-agent-dogfood-worker-runner.js';
+import { executeRealAgentDogfoodWorker, type RealAgentDogfoodWorkerResult } from './real-agent-dogfood-worker-runner.js';
 export type RealAgentDogfoodGraphSourceExecutionAdapterResult = {
     status: 'passed' | 'blocked' | 'outcome-uncertain';
     reason?: string;
     evidence_digest?: string;
     record?: RealAgentDogfoodGraphPhaseRecord;
+    worker_result?: RealAgentDogfoodWorkerResult;
 };
 type WorkerRunner = typeof executeRealAgentDogfoodWorker;
 export declare function createRealAgentDogfoodGraphSourceExecutionAdapter(input: {

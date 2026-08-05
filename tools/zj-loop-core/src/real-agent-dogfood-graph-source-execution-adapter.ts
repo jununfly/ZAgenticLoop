@@ -18,6 +18,7 @@ export type RealAgentDogfoodGraphSourceExecutionAdapterResult = {
   reason?: string;
   evidence_digest?: string;
   record?: RealAgentDogfoodGraphPhaseRecord;
+  worker_result?: RealAgentDogfoodWorkerResult;
 };
 
 type WorkerRunner = typeof executeRealAgentDogfoodWorker;
@@ -70,6 +71,6 @@ export function createRealAgentDogfoodGraphSourceExecutionAdapter(input: {
     const status = result.status === 'verification-pending' && releaseOk ? 'passed' : result.status === 'blocked' && releaseOk ? 'blocked' : 'outcome-uncertain';
     const reason = releaseOk ? result.reason_code : 'source-execution-worker-lease-release-uncertain';
     const record = evidence ? createRealAgentDogfoodGraphPhaseRecord({ plan: input.plan, network_id: input.network_id, phase: 'source_execution', status, completed_phases: status === 'passed' ? ['source_execution'] : [], reason, actor_kind: 'agent-node', actor_identity: input.worker_id, evidence_digest: evidence, evidence_refs: [evidence], execution_binding_digest: input.execution_binding_digest, worker_lease_digest: workerDigest }) : undefined;
-    return { status, ...(reason ? { reason } : {}), ...(evidence ? { evidence_digest: evidence } : {}), ...(record ? { record } : {}) };
+    return { status, ...(reason ? { reason } : {}), ...(evidence ? { evidence_digest: evidence } : {}), ...(record ? { record } : {}), worker_result: result };
   };
 }

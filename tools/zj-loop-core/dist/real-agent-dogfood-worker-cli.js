@@ -8,9 +8,9 @@ import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
 import { projectRealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 import { executeRealAgentDogfoodWorker } from './real-agent-dogfood-worker-runner.js';
-import { releaseRealAgentDogfoodWorkerLease } from './real-agent-dogfood-worker.js';
 import { createRealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
-import { appendRealAgentDogfoodGraphPhaseRecord, createRealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
+import { appendRealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
+import { createRealAgentDogfoodGraphSourceExecutionAdapter } from './real-agent-dogfood-graph-source-execution-adapter.js';
 import { realAgentDogfoodWorkerLeaseDigest } from './real-agent-dogfood-digests.js';
 import { createProviderRuntimeIpcCleanupCoordinator } from './provider-auth-ipc-cleanup-client.js';
 import { createProviderRuntimeIpcProvider } from './provider-auth-ipc-provider-client.js';
@@ -90,36 +90,23 @@ async function runWorkerContext(contextPath) {
             throw new Error('worker-lease-invalid');
         const evidenceStore = await createContentAddressedEvidenceStore({ root: context.evidence_store });
         const provider = runtimeProvider;
-        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, execution_mode: context.execution_mode, git_scope: context.git_scope, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision });
         if (context.graph_mode === true) {
             if (!context.graph_plan)
                 throw new Error('worker-graph-context-invalid');
             const graphPlan = createRealAgentDogfoodGraphPlan(context.graph_plan);
             if (graphPlan.dogfood_id !== context.dogfood_id || graphPlan.execution_id !== context.execution_id || graphPlan.plan_digest !== context.graph_plan.plan_digest)
                 throw new Error('worker-graph-plan-binding-invalid');
-            const phaseStatus = result.status === 'verification-pending' ? 'passed' : result.status;
-            const phase = createRealAgentDogfoodGraphPhaseRecord({
-                plan: graphPlan,
-                network_id: context.network_id,
-                phase: 'source_execution',
-                status: phaseStatus,
-                completed_phases: phaseStatus === 'passed' ? ['source_execution'] : [],
-                reason: result.reason_code,
-                actor_kind: 'agent-node',
-                actor_identity: context.worker_id,
-                evidence_digest: result.provider_fact_digest,
-                evidence_refs: [result.provider_fact_digest, result.stdout_digest, result.stderr_digest],
-                execution_binding_digest: context.execution_binding_digest,
-                worker_lease_digest: lease.worker_lease_digest,
-            });
-            const phaseResult = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore, plan: graphPlan, network_id: context.network_id, record: phase, expected_revision: result.revision });
+            const sourceAdapter = createRealAgentDogfoodGraphSourceExecutionAdapter({ plan: graphPlan, network_id: context.network_id, state_store: stateStore, evidence_store: evidenceStore, lifecycle, worker_id: context.worker_id, execution_binding_digest: context.execution_binding_digest, executable: context.executable, args: context.binding.args, admission_bound_execution: context.admission_bound_execution, goal: context.goal, provider, provider_cleanup, post_run_proof_factory });
+            const adapterResult = await sourceAdapter();
+            const workerResult = adapterResult.worker_result;
+            if (!adapterResult.record)
+                return { ...(workerResult ?? {}), status: adapterResult.status, graph_source_execution_complete: false, graph_phase_recorded: false, worker_lease_released: false, verifier_started: false, reason_code: adapterResult.reason ?? 'graph-source-execution-record-missing', next_action: 'human-reconcile-execution' };
+            const phaseResult = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore, plan: graphPlan, network_id: context.network_id, record: adapterResult.record, expected_revision: await stateStore.getRevision(context.network_id) });
             if (phaseResult.status !== 'recorded')
-                return { ...result, status: 'outcome-uncertain', graph_source_execution_complete: false, graph_phase_recorded: false, worker_lease_released: false, verifier_started: false, reason_code: 'graph-source-execution-record-uncertain', next_action: 'human-reconcile-execution' };
-            const released = await releaseRealAgentDogfoodWorkerLease({ stateStore, network_id: context.network_id, execution_id: context.execution_id, lease_id: context.lease_id, worker_id: context.worker_id, execution_binding_digest: context.execution_binding_digest, expected_revision: phaseResult.revision });
-            if (released.status !== 'released')
-                return { ...result, status: 'outcome-uncertain', graph_source_execution_complete: false, graph_phase_recorded: true, worker_lease_released: false, verifier_started: false, reason_code: 'worker-lease-release-uncertain', next_action: 'human-reconcile-execution' };
-            return { ...result, graph_source_execution_complete: result.status === 'verification-pending', graph_phase_recorded: true, worker_lease_released: true, verifier_started: false };
+                return { ...(workerResult ?? {}), status: 'outcome-uncertain', graph_source_execution_complete: false, graph_phase_recorded: false, worker_lease_released: true, verifier_started: false, reason_code: 'graph-source-execution-record-uncertain', next_action: 'human-reconcile-execution' };
+            return { ...(workerResult ?? {}), status: adapterResult.status, graph_source_execution_complete: adapterResult.status === 'passed', graph_phase_recorded: true, worker_lease_released: true, verifier_started: false, reason_code: adapterResult.reason ?? workerResult?.reason_code, next_action: adapterResult.status === 'passed' ? 'run-independent-verifier' : 'human-reconcile-execution' };
         }
+        const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: context.worker_id, lease_id: context.lease_id, binding: context.binding, admission_bound_execution: context.admission_bound_execution, worktree_path: context.worktree_path, executable: context.executable, goal: context.goal, execution_mode: context.execution_mode, git_scope: context.git_scope, provider, provider_cleanup, post_run_proof_factory, expected_revision: context.expected_revision });
         if (result.status !== 'verification-pending')
             return result;
         const verifierContextPath = `${contextPath}.verifier.json`;

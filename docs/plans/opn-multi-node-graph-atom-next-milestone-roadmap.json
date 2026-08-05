@@ -1523,6 +1523,16 @@
           "q": "真实 source_execution phase adapter 实现结果是什么？",
           "answer": "同意：新增 provider-neutral source_execution adapter；它只在 plan.source_worktree 中复用真实 worker runner，先校验 lifecycle、admission、execution binding 和 source scope，再获取 worker lease、执行 Provider、记录 Provider fact Evidence、观察 Git scope，最后释放 worker lease；只有 worker verification-pending 且 lease release 可证明时才返回 Graph phase passed，否则返回 blocked/outcome-uncertain，并保留合法失败 record；Human acceptance、merge、replay 不由该 adapter 执行。",
           "note": "focused adapter/Coordinator/worker 回归 15/15；npm test、npm run build、git diff --check 通过。生产默认调用真实 worker runner，测试仅注入 runner 观察绑定；下一步接入 source adapter 到真实 Graph execution wiring，再实现 scope_observation adapter。"
+        },
+        {
+          "q": "source_execution adapter 如何接入真实 Graph execution wiring？",
+          "answer": "同意：worker CLI 的 graph_mode 只通过 source_execution adapter 执行、记录和释放 worker lease，不再重复实现 phase record；adapter 产出的可信 record 由 Graph wiring 以当前 StateStore revision CAS append。非 Graph worker 路径保持原有生命周期，不提前改变 Human acceptance、merge 或 replay。",
+          "note": "Graph adapter/worker CLI 回归通过；标准 npm test 已纳入 test:real-agent-dogfood-graph-adapters。"
+        },
+        {
+          "q": "scope_observation adapter 的职责与成功条件是什么？",
+          "answer": "同意：scope_observation 由 Coordinator 侧只读观察 source worktree 的 baseline、changed_files、uncommitted_files、commit parent 和 git diff --check；将独立脱敏 Observation 写入 EvidenceStore；只有 scope valid 才返回 passed，否则保留 blocked record 或在事实不可得时 outcome-uncertain；不调用 Provider、不获取 lease、不执行 merge。",
+          "note": "新增真实 Git fixture 覆盖合法 scope 与额外 committed file；Evidence 通过 digest 绑定 Graph record。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1530,7 +1540,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 00:33:25",
+    "updated": "2026-08-06 00:41:10",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
