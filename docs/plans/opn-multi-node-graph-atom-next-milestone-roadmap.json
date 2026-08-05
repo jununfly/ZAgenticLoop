@@ -988,6 +988,36 @@
           "q": "是否将 replay read model 暴露为显式 CLI 命令？",
           "answer": "同意：增加 real-agent-dogfood replay 命令；命令只读取 approval summary、StateStore phase/lifecycle 与 EvidenceStore，不获取 lease、不执行 Provider、不写回任何 execution；结论为 blocked/outcome-uncertain 时使用非零退出码并保留结构化 read model。",
           "note": "CLI 回归验证 14/14；全包 npm test 432/432；npm run build 与 git diff --check 通过。真实 dogfood 仍未启动，下一步是基于 replay/conformance gate 做真实端到端准备。"
+        },
+        {
+          "q": "是否新增独立的 real-agent-dogfood preflight gate？",
+          "answer": "同意：新增只读 preflight 命令；不创建 worktree、branch、lease 或 lifecycle event；校验 Graph plan、基线、目标文件、路径隔离、Provider executable、Runtime IPC 配置和 deterministic conformance Evidence；Keychain 只检查配置可用性，不弹批准 UI；任一缺失返回 blocked，通过后才允许 Human approval。",
+          "note": "作为真实副作用前的唯一前置 gate，避免 start 隐式承担环境检查。实现后补 CLI/TDD 回归并保留稳定 gate digest。"
+        },
+        {
+          "q": "real-agent-dogfood preflight 实现与验证结果是什么？",
+          "answer": "同意：已实现独立只读 preflight gate，校验 Graph plan/基线/目标文件/EvidenceStore 隔离/Provider identity 与 executable/macOS Keychain 配置/Provider Runtime IPC/deterministic conformance Evidence；不创建 worktree、branch、lease、lifecycle event，不调用 Keychain identity/sign。",
+          "note": "focused preflight + CLI/Graph CLI 回归 12/12；npm run build 与 git diff --check 通过。下一步跑全包回归，再根据 gate 结果决定是否进入真实 Human approval。"
+        },
+        {
+          "q": "是否新增独立的 deterministic conformance Evidence 生成命令？",
+          "answer": "同意：新增 conformance 命令执行固定 deterministic test suite，并将测试命令、Core commit、failure matrix digest、digest profile、exit status 与输出摘要写入仓库外 content-addressed EvidenceStore；命令不创建 worktree、不请求 Human approval、不启动真实 Agent；preflight 只读取该 Evidence。",
+          "note": "conformance Evidence 是真实 dogfood 的前置 gate；测试执行器可注入 fixture，生产命令使用固定 npm test 入口，失败也保留 blocked Evidence。"
+        },
+        {
+          "q": "deterministic conformance Evidence 生成与严格 preflight 绑定结果是什么？",
+          "answer": "同意：已实现独立 conformance 命令/生成器；固定执行 npm test，写入 Core commit、plan digest、test command、failure matrix digest、digest profile、exit code 和 output digest；preflight 严格校验这些字段，失败 artifact 保留为 blocked。",
+          "note": "conformance/preflight focused 5/5；全包 npm test 432/432；npm run build 与 git diff --check 通过。下一步是基于当前真实 plan 生成仓库外 conformance Evidence，再运行只读 preflight。"
+        },
+        {
+          "q": "conformance Evidence 与真实 preflight 结果是什么？",
+          "answer": "同意：基于当前 commit c81abaa8 生成真实仓库外 conformance Evidence，digest 为 sha256:870d9287cc756f018379596a667c5c6aea6a859e46cc826ace75388dcf3afa0e，npm test 通过；真实只读 preflight 通过 baseline/目标文件/隔离/Provider/keychain/conformance gates，仅 provider-runtime-ipc 因真实 socket 未配置而 blocked。",
+          "note": "preflight digest 为 sha256:703067abb9acd03952d862a8c61e310a5c59c638e94543b4e72318e9fd06e0a3；未启动 Agent、未获取 lease、未创建 worktree、未弹 Keychain。"
+        },
+        {
+          "q": "1-6 本轮是否完成本机真实 Provider Runtime IPC launcher 与 preflight socket readiness gate？",
+          "answer": "同意：新增 provider-neutral launcher 组合层，复用现有 createProviderAuthRuntimeIpcSidecar 与 Codex provider adapter；启动时固定 provider executable、working directory、auth/runtime contract，提供真实 Unix socket readiness、bounded close 和幂等清理；preflight 改为真实 socket connect 探活。",
+          "note": "TDD focused launcher 2/2；preflight/conformance 7/7；全包 npm test 432/432；npm run build 与 git diff --check 通过。尚未完成真实 macOS Provider Runtime 的实际启动与 Human approval dogfood，provider-runtime-ipc 仍需真实 socket/peer 验证。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -995,7 +1025,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 14:13:22",
+    "updated": "2026-08-05 15:03:21",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

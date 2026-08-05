@@ -23,6 +23,8 @@ import { projectRealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-gr
 import { evaluateRealAgentDogfoodCoordinatorResumeGate } from './real-agent-dogfood-coordinator-resume-gate.js';
 import { createContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
 import { replayRealAgentDogfoodGraphReadModel } from './real-agent-dogfood-replay.js';
+import { preflightRealAgentDogfood } from './real-agent-dogfood-preflight.js';
+import { generateRealAgentDogfoodConformanceEvidence } from './real-agent-dogfood-conformance.js';
 const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export function defaultRealAgentDogfoodRuntimePaths(platform = process.platform, home = os.homedir(), env = process.env) {
@@ -482,14 +484,35 @@ async function replay(options) {
         await stateStore.close();
     }
 }
+async function preflight(options) {
+    const planPath = required(options, 'graph-plan');
+    const plan = createRealAgentDogfoodGraphPlan(JSON.parse(await readFile(planPath, 'utf8')));
+    const evidencePath = await canonicalPath(required(options, 'evidence-store'));
+    const runtimeValue = required(options, 'provider-runtime-ipc');
+    let providerRuntimeIpc;
+    try {
+        providerRuntimeIpc = JSON.parse(runtimeValue);
+    }
+    catch {
+        throw new Error('provider-runtime-ipc-json-invalid');
+    }
+    const evidenceStore = await createContentAddressedEvidenceStore({ root: evidencePath, initialize: false });
+    const result = await preflightRealAgentDogfood({ plan, repo_root: required(options, 'repo'), evidence_store: evidenceStore, conformance_evidence_digest: required(options, 'conformance-evidence'), provider_id: required(options, 'provider-id'), provider_executable: required(options, 'executable'), provider_runtime_ipc: providerRuntimeIpc, human: { human_id: required(options, 'human-id'), key_tag: required(options, 'key-tag'), helper_path: required(options, 'helper-path') } });
+    return { ...result, side_effects_executed: false };
+}
+async function conformance(options) {
+    const plan = createRealAgentDogfoodGraphPlan(JSON.parse(await readFile(required(options, 'graph-plan'), 'utf8')));
+    const evidenceStore = await createContentAddressedEvidenceStore({ root: await canonicalPath(required(options, 'evidence-store')) });
+    return generateRealAgentDogfoodConformanceEvidence({ repo_root: required(options, 'repo'), plan_digest: plan.plan_digest, evidenceStore });
+}
 export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
     const outputIo = io ?? defaultCliIo;
     return runCli({
         name: CLI_NAME,
         description: 'Prepare and inspect a provider-neutral OPN real-agent dogfood lifecycle.',
-        usage: `${CLI_NAME} <start|status|replay> [options]`,
+        usage: `${CLI_NAME} <start|status|replay|preflight|conformance> [options]`,
         options: [
-            { name: 'command', type: 'positional', description: 'start, status, or replay' },
+            { name: 'command', type: 'positional', description: 'start, status, replay, preflight, or conformance' },
             { name: 'goal', type: 'string', description: 'Human-readable goal' },
             { name: 'repo', type: 'string', description: 'Target repository path' },
             { name: 'provider-id', flag: 'provider-id', type: 'string', description: 'Provider identity' },
@@ -510,6 +533,9 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'human-id', flag: 'human-id', type: 'string', description: 'Final responsibility Human id for Graph resume' },
             { name: 'coordinator-id', flag: 'coordinator-id', type: 'string', description: 'Coordinator identity for Graph resume' },
             { name: 'session-id', flag: 'session-id', type: 'string', description: 'Coordinator session identity for Graph resume' },
+            { name: 'conformance-evidence', flag: 'conformance-evidence', type: 'string', description: 'Digest of deterministic conformance Evidence for preflight' },
+            { name: 'key-tag', flag: 'key-tag', type: 'string', description: 'macOS Keychain key tag for preflight configuration' },
+            { name: 'helper-path', flag: 'helper-path', type: 'string', description: 'macOS Keychain helper path for preflight configuration' },
         ],
         async handler({ options }) {
             const command = String(options.command ?? '');
@@ -527,6 +553,16 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
                 const result = await replay(options);
                 outputIo.stdout(JSON.stringify(result, null, 2));
                 return result.status === 'blocked' || result.status === 'outcome-uncertain' ? 2 : 0;
+            }
+            if (command === 'preflight') {
+                const result = await preflight(options);
+                outputIo.stdout(JSON.stringify(result, null, 2));
+                return result.status === 'blocked' ? 2 : 0;
+            }
+            if (command === 'conformance') {
+                const result = await conformance(options);
+                outputIo.stdout(JSON.stringify(result, null, 2));
+                return result.status === 'blocked' ? 2 : 0;
             }
             if (command === 'resume') {
                 const result = await resume(options);
