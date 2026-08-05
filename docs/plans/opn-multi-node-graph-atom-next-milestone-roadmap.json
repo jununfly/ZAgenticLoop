@@ -1533,14 +1533,19 @@
           "q": "scope_observation adapter 的职责与成功条件是什么？",
           "answer": "同意：scope_observation 由 Coordinator 侧只读观察 source worktree 的 baseline、changed_files、uncommitted_files、commit parent 和 git diff --check；将独立脱敏 Observation 写入 EvidenceStore；只有 scope valid 才返回 passed，否则保留 blocked record 或在事实不可得时 outcome-uncertain；不调用 Provider、不获取 lease、不执行 merge。",
           "note": "新增真实 Git fixture 覆盖合法 scope 与额外 committed file；Evidence 通过 digest 绑定 Graph record。"
+        },
+        {
+          "q": "independent_verification phase adapter 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral independent_verification adapter；它只消费已通过的 source_execution 与 scope_observation，读取 source HEAD 创建固定且可重放的 verification plan，在 disposable verifier worktree 顺序执行 bounded commands，独立观察 verifier HEAD 与 cleanliness，并把结果写入 EvidenceStore。所有命令、HEAD、worktree 或 Evidence 事实通过校验后才返回 passed；固定命令失败返回 blocked，超时/观察/Evidence 不确定返回 outcome-uncertain；不调用 Provider、不获取 lease、不推进 Human acceptance、merge、cleanup，也不改变 replay 纯读边界。",
+          "note": "TDD 覆盖成功与固定命令失败；修复 macOS /tmp -> /private/tmp canonical path 误判；Graph adapter focused 10/10、完整 npm test 432/432、build 与 git diff --check 通过。"
         }
       ],
-      "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
+      "notes": "已完成 deterministic failure matrix、Graph conformance phase projection、Graph CLI status read model、source_execution、scope_observation 与 independent_verification adapters。independent_verification 采用固定 bounded commands、disposable verifier worktree、HEAD/cleanliness observation 和 EvidenceStore digest 绑定；macOS symlink canonical path 已纳入验证。标准 Graph adapter 回归与完整 npm test 均通过。下一步为接入剩余 Graph phase adapters 与真实端到端 conformance 前的 replay/read-model integrity gate。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 00:41:10",
+    "updated": "2026-08-06 00:49:24",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
