@@ -1518,6 +1518,11 @@
           "q": "Coordinator lease 与 resume gate 实现结果是什么？",
           "answer": "同意：Coordinator run 现在先取得与 execution binding、Human、coordinator、session 绑定的 coordinator lease；每个待执行 phase 前执行 resume gate，历史 passed phase 必须有合法 actor binding，lease 或事实不满足时不启动 adapter 并返回 outcome-uncertain；Graph phase append 继续使用网络 revision CAS。",
           "note": "TDD focused 回归 19/19；npm test 通过；npm run build 与 git diff --check 通过。下一步进入真实可验证 phase adapter 接入，不改变 replay 纯读和 Human 最终接受边界。"
+        },
+        {
+          "q": "真实 source_execution phase adapter 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral source_execution adapter；它只在 plan.source_worktree 中复用真实 worker runner，先校验 lifecycle、admission、execution binding 和 source scope，再获取 worker lease、执行 Provider、记录 Provider fact Evidence、观察 Git scope，最后释放 worker lease；只有 worker verification-pending 且 lease release 可证明时才返回 Graph phase passed，否则返回 blocked/outcome-uncertain，并保留合法失败 record；Human acceptance、merge、replay 不由该 adapter 执行。",
+          "note": "focused adapter/Coordinator/worker 回归 15/15；npm test、npm run build、git diff --check 通过。生产默认调用真实 worker runner，测试仅注入 runner 观察绑定；下一步接入 source adapter 到真实 Graph execution wiring，再实现 scope_observation adapter。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1525,7 +1530,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 00:26:27",
+    "updated": "2026-08-06 00:33:25",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

@@ -1,0 +1,34 @@
+import { type RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
+import type { RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
+import type { ContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
+import type { SqliteStateStore } from './sqlite-state-store.js';
+import type { RealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
+import type { AdmissionBoundExecution } from './trusted-runner-admission-binding.js';
+import type { RealAgentDogfoodPostRunProofFactory } from './real-agent-dogfood-post-run-proof.js';
+import { executeRealAgentDogfoodWorker } from './real-agent-dogfood-worker-runner.js';
+export type RealAgentDogfoodGraphSourceExecutionAdapterResult = {
+    status: 'passed' | 'blocked' | 'outcome-uncertain';
+    reason?: string;
+    evidence_digest?: string;
+    record?: RealAgentDogfoodGraphPhaseRecord;
+};
+type WorkerRunner = typeof executeRealAgentDogfoodWorker;
+export declare function createRealAgentDogfoodGraphSourceExecutionAdapter(input: {
+    plan: RealAgentDogfoodGraphPlan;
+    network_id: string;
+    state_store: SqliteStateStore;
+    evidence_store: ContentAddressedEvidenceStore;
+    lifecycle: RealAgentDogfoodLifecycle;
+    worker_id: string;
+    execution_binding_digest: string;
+    executable: string;
+    args: string[];
+    admission_bound_execution: AdmissionBoundExecution;
+    goal: string;
+    provider: Parameters<WorkerRunner>[0]['provider'];
+    provider_cleanup?: Parameters<WorkerRunner>[0]['provider_cleanup'];
+    post_run_proof_factory?: RealAgentDogfoodPostRunProofFactory;
+    worker_runner?: WorkerRunner;
+    now?: string;
+}): () => Promise<RealAgentDogfoodGraphSourceExecutionAdapterResult>;
+export {};
