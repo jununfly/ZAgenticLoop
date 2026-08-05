@@ -1098,6 +1098,11 @@
           "q": "1-6 Provider Runtime lifecycle CLI 命令名称校正",
           "answer": "命令名称为 zj-loop-provider-runtime，支持 status 和 stop；start 暂为显式 blocked。",
           "note": "上一条记录中的 shell backtick 被命令行解释为命令替换，已用不含 shell 标记的明确命令名补正。"
+        },
+        {
+          "q": "1-6 macOS Runtime process identity adapter 的实现结果是什么？",
+          "answer": "同意：扩展现有 macOS Security process-audit helper 支持按 PID 观察签名身份；Runtime verifier 校验 helper digest、PID 对应的 signing identity digest 与 binding.process_identity_digest 精确一致。未提供 pinned helper 时仍 fail-closed。",
+          "note": "macOS helper PID path 真实编译并通过；macOS process-audit 回归 7/7；Provider Runtime lifecycle/CLI targeted 5/5。Linux/Windows 原生 adapter 尚未实现，foreground start bootstrap 仍 blocked。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1105,7 +1110,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:34:27",
+    "updated": "2026-08-05 17:39:41",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

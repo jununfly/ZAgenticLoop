@@ -5,6 +5,7 @@ import { defaultCliIo, runCli, type CliIo } from './cli.js';
 import { readProviderRuntimeServiceBinding } from './provider-runtime-service-binding.js';
 import { createInMemoryProviderRuntimeProcessIdentityVerifier } from './provider-runtime-process-identity.js';
 import { createProviderRuntimeServiceLifecycle } from './provider-runtime-service-lifecycle.js';
+import { createMacOSProviderRuntimeProcessIdentityVerifier } from './macos-process-audit-peer-identity.js';
 
 const SCHEMA = 'zj-loop.provider_runtime_cli.v1';
 
@@ -20,6 +21,8 @@ export function runProviderRuntimeCli(argv: readonly string[] = process.argv.sli
     options: [
       { name: 'command', type: 'positional', description: 'start, status, or stop' },
       { name: 'binding', type: 'string', description: 'Runtime binding artifact path' },
+      { name: 'macos_helper', flag: 'macos-helper', type: 'string', description: 'Pinned macOS process-audit helper path' },
+      { name: 'macos_helper_digest', flag: 'macos-helper-digest', type: 'string', description: 'SHA-256 digest of the macOS process-audit helper' },
       { name: 'json', type: 'boolean', description: 'Emit structured JSON', default: false },
     ],
     async handler({ options }) {
@@ -33,7 +36,9 @@ export function runProviderRuntimeCli(argv: readonly string[] = process.argv.sli
       }
       const readBinding = deps?.read_binding ?? readProviderRuntimeServiceBinding;
       const binding = await readBinding(bindingPath);
-      const lifecycle = deps?.lifecycle ?? createProviderRuntimeServiceLifecycle({ verifier: createInMemoryProviderRuntimeProcessIdentityVerifier({ available: false }) });
+      const lifecycle = deps?.lifecycle ?? createProviderRuntimeServiceLifecycle({ verifier: typeof options.macos_helper === 'string' && typeof options.macos_helper_digest === 'string'
+        ? createMacOSProviderRuntimeProcessIdentityVerifier({ helper_path: options.macos_helper, helper_digest: options.macos_helper_digest })
+        : createInMemoryProviderRuntimeProcessIdentityVerifier({ available: false }) });
       const result = command === 'status'
         ? await lifecycle.status({ binding })
         : command === 'stop'

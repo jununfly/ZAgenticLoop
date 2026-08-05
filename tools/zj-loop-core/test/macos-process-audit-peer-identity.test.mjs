@@ -55,6 +55,35 @@ async function helperIdentity(binary, socket) {
   });
 }
 
+async function helperPidIdentity(binary, pid) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(binary, ['--pid', String(pid)], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.once('error', reject);
+    child.once('close', (code) => {
+      if (code !== 0) return reject(new Error(stderr || `helper-exit-${code}`));
+      try { resolve(JSON.parse(stdout.trim())); } catch (error) { reject(error); }
+    });
+  });
+}
+
+test('macOS process-audit helper observes a Runtime service by PID', { skip: !isMacOS }, async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-process-audit-pid-'));
+  try {
+    const binary = await compileHelper(root);
+    const first = await helperPidIdentity(binary, process.pid);
+    const second = await helperPidIdentity(binary, process.pid);
+    assert.equal(first.status, 'verified');
+    assert.equal(first.process_id, process.pid);
+    assert.match(first.identity_digest, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(first.identity_digest, second.identity_digest);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 async function connectedPair(socketPath) {
   const server = net.createServer();
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(socketPath, resolve); });

@@ -21,3 +21,8 @@ export declare function createMacOSProcessAuditBootstrapPeerIdentityVerifier(inp
     helper_digest: string;
     timeout_ms?: number;
 }): TrustedRunnerPeerIdentityVerifier;
+export declare function createMacOSProviderRuntimeProcessIdentityVerifier(input: {
+    helper_path: string;
+    helper_digest: string;
+    timeout_ms?: number;
+}): import('./provider-runtime-process-identity.js').ProviderRuntimeProcessIdentityVerifier;

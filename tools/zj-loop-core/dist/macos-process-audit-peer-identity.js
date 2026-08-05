@@ -87,6 +87,42 @@ async function invokeHelper(helperPath, socketFd, timeoutMs) {
         });
     });
 }
+async function invokePidHelper(helperPath, pid, timeoutMs) {
+    return await new Promise((resolve, reject) => {
+        const child = spawn(helperPath, ['--pid', String(pid)], { stdio: ['ignore', 'pipe', 'pipe'] });
+        if (!child.stdout || !child.stderr) {
+            child.kill('SIGKILL');
+            reject(new Error('macos-process-audit-helper-pipes-unavailable'));
+            return;
+        }
+        let stdout = '';
+        let stderr = '';
+        const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('macos-process-audit-helper-timeout')); }, timeoutMs);
+        child.stdout.setEncoding('utf8');
+        child.stderr.setEncoding('utf8');
+        child.stdout.on('data', (chunk) => { stdout += chunk; if (stdout.length > 16 * 1024)
+            child.kill('SIGKILL'); });
+        child.stderr.on('data', (chunk) => { stderr += chunk; if (stderr.length > 4 * 1024)
+            child.kill('SIGKILL'); });
+        child.once('error', (error) => { clearTimeout(timer); reject(error); });
+        child.once('close', (code) => {
+            clearTimeout(timer);
+            if (code !== 0) {
+                reject(new Error(stderr.trim() || `macos-process-audit-helper-exit-${code ?? 'unknown'}`));
+                return;
+            }
+            try {
+                const parsed = parseResponse(JSON.parse(stdout.trim()));
+                if (!parsed)
+                    throw new Error('macos-process-audit-helper-response-invalid');
+                resolve(parsed);
+            }
+            catch (error) {
+                reject(error);
+            }
+        });
+    });
+}
 async function readNativeResponse(input, socket) {
     if (process.platform !== 'darwin')
         throw new Error('macos-process-audit-platform-unsupported');
@@ -102,6 +138,16 @@ async function readNativeResponse(input, socket) {
     if (helperBytes.byteLength === 0 || `sha256:${createHash('sha256').update(helperBytes).digest('hex')}` !== input.helper_digest)
         throw new Error('macos-process-audit-helper-digest-invalid');
     return invokeHelper(input.helper_path, socketFd, timeout);
+}
+async function readNativeResponseForPid(input, pid, timeoutMs) {
+    if (process.platform !== 'darwin')
+        throw new Error('macos-process-audit-platform-unsupported');
+    if (!Number.isInteger(pid) || pid < 1 || !DIGEST.test(input.helper_digest))
+        throw new Error('macos-process-audit-process-invalid');
+    const helperBytes = await readFile(input.helper_path);
+    if (helperBytes.byteLength === 0 || `sha256:${createHash('sha256').update(helperBytes).digest('hex')}` !== input.helper_digest)
+        throw new Error('macos-process-audit-helper-digest-invalid');
+    return invokePidHelper(input.helper_path, pid, timeoutMs);
 }
 function nativeFacts(response) {
     if (response.status !== 'verified' || !Number.isInteger(response.process_id) || typeof response.signing_identifier !== 'string' || typeof response.code_directory_hash !== 'string')
@@ -151,5 +197,25 @@ export function createMacOSProcessAuditBootstrapPeerIdentityVerifier(input) {
         catch (error) {
             return blocked(error instanceof Error ? error.message : 'macos-process-audit-failed');
         }
+    };
+}
+export function createMacOSProviderRuntimeProcessIdentityVerifier(input) {
+    const timeout = input.timeout_ms ?? 2_000;
+    return {
+        async verify({ binding }) {
+            if (process.platform !== 'darwin')
+                return { status: 'blocked', reason: 'provider-runtime-process-identity-unavailable' };
+            if (!DIGEST.test(binding.process_identity_digest))
+                return { status: 'blocked', reason: 'provider-runtime-process-identity-mismatch' };
+            try {
+                const response = await readNativeResponseForPid(input, binding.pid, timeout);
+                if (response.status !== 'verified' || response.identity_digest !== identityDigest(response) || response.identity_digest !== binding.process_identity_digest)
+                    return { status: 'blocked', reason: 'provider-runtime-process-identity-mismatch' };
+                return { status: 'verified', facts: { service_id: binding.service_id, pid: binding.pid, started_at: binding.started_at, process_identity_digest: response.identity_digest } };
+            }
+            catch {
+                return { status: 'blocked', reason: 'provider-runtime-process-identity-unavailable' };
+            }
+        },
     };
 }

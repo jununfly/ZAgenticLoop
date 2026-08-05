@@ -54,10 +54,17 @@ func processIdentity(_ pid: pid_t) -> (String, String?, String)? {
     return (identifier, team, codeDirectoryHash(information, identifier: identifier, team: team))
 }
 
-guard CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--socket-fd", let fd = Int32(CommandLine.arguments[2]), fd >= 0 else { blocked("macos-process-audit-arguments-invalid") }
-var peerPid: pid_t = 0
-var length = socklen_t(MemoryLayout<pid_t>.size)
-guard getsockopt(fd, SOL_LOCAL, LOCAL_PEERPID, &peerPid, &length) == 0, peerPid > 0 else { blocked("macos-process-audit-peer-pid-unavailable") }
+let peerPid: pid_t
+if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--socket-fd", let fd = Int32(CommandLine.arguments[2]), fd >= 0 {
+    var socketPid: pid_t = 0
+    var length = socklen_t(MemoryLayout<pid_t>.size)
+    guard getsockopt(fd, SOL_LOCAL, LOCAL_PEERPID, &socketPid, &length) == 0, socketPid > 0 else { blocked("macos-process-audit-peer-pid-unavailable") }
+    peerPid = socketPid
+} else if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--pid", let pid = pid_t(CommandLine.arguments[2]), pid > 0 {
+    peerPid = pid
+} else {
+    blocked("macos-process-audit-arguments-invalid")
+}
 guard let (identifier, team, cdHash) = processIdentity(peerPid) else { blocked("macos-process-audit-signing-identity-unavailable") }
 let material: [String: Any?] = ["code_directory_hash": cdHash, "process_id": peerPid, "signing_identifier": identifier, "team_identifier": team]
 let materialData = try! JSONSerialization.data(withJSONObject: material.compactMapValues { $0 }, options: [.sortedKeys, .withoutEscapingSlashes])
