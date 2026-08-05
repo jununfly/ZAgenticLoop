@@ -3,7 +3,7 @@ import { access, mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { createProviderAuthAuthorityStartAssembly } from '../dist/provider-auth-authority-start-assembly.js';
+import { createProviderAuthAuthorityStartAssembly, createProviderAuthAuthorityStartAssemblyFromConfig } from '../dist/provider-auth-authority-start-assembly.js';
 import { revokeProviderAuthRefOverIpc } from '../dist/provider-auth-authority-ipc.js';
 
 const digest = (value) => `sha256:${Buffer.from(value).toString('hex').padEnd(64, '0').slice(0, 64)}`;
@@ -34,4 +34,14 @@ test('Authority start assembly starts StateStore-backed IPC, persists binding, a
   assert.deepEqual(await assembly.service.stop(), { status: 'stopped' });
   await assert.rejects(() => access(path.join(root, 'authority-binding.json')));
   await assembly.close();
+});
+
+test('Authority start assembly accepts only a validated secret-free config', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-authority-start-config-assembly-'));
+  const assembly = createProviderAuthAuthorityStartAssemblyFromConfig({
+    config: { schema: 'zj-loop.provider_auth_authority_start_config.v1', network_id: 'network-1', socket_path: path.join(root, 'authority.sock'), correlation_id: 'authority-correlation', expected_peer_identity_digest: 'a'.repeat(64), authority_contract_digest: digest('contract'), authority_identity_digest: digest('authority'), state_store_identity_digest: digest('state-store'), state_store_path: path.join(root, 'state.db'), binding_path: path.join(root, 'binding.json'), process_identity_digest: digest('process') },
+    verify_peer: () => true,
+  });
+  await assembly.close();
+  assert.throws(() => createProviderAuthAuthorityStartAssemblyFromConfig({ config: { network_id: 'network-1' }, verify_peer: () => true }), /start-config-invalid/);
 });

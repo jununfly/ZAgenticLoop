@@ -1328,6 +1328,11 @@
           "q": "Authority start config/loader 实现结果是什么？",
           "answer": "同意：新增独立 secret-free Authority start config 与绝对路径 loader；config 绑定 network/socket/correlation/peer/contract/Authority identity/StateStore identity/path/process identity/binding，macOS helper path/digest 必须成对；未知或 secret 字段 fail-closed。",
           "note": "TDD focused 3/3；npm run build 通过。CLI start 仍保持 blocked。"
+        },
+        {
+          "q": "Authority validated config 如何接入 assembly？",
+          "answer": "同意：新增从 validated Authority config 创建 assembly 的入口；assembly 重新执行 schema 校验，peer gate 仍由外部注入，config 不直接授予平台或 secret 能力。",
+          "note": "TDD focused 2/2；npm run build 通过。macOS factory 与 external process launcher 仍未接入。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1335,7 +1340,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 22:43:10",
+    "updated": "2026-08-05 22:44:11",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
