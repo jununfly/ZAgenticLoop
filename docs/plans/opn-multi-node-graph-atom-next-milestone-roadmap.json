@@ -1088,6 +1088,16 @@
           "q": "1-6 Runtime process identity verifier contract 的实现结果是什么？",
           "answer": "同意：新增 provider-neutral RuntimeProcessIdentityVerifier；固定 foreground binding 的 service_id、PID、started_at 与 process_identity_digest 必须精确匹配；in-memory verifier 仅用于 deterministic test fixture，真实 macOS/Linux/Windows adapter 后续接入平台原生观察能力。",
           "note": "TDD focused 3/3；npm run build 通过。Runtime binding artifact 现已强制包含 process_identity_digest，正式 start/status/stop CLI 必须在 status/stop 前调用该 verifier；无法证明身份时 status 为 outcome-uncertain，stop 拒绝发送终止信号。"
+        },
+        {
+          "q": "1-6 Provider Runtime lifecycle CLI 的实现结果是什么？",
+          "answer": "同意：新增 provider-neutral  CLI；status 只读并输出 identity/socket 投影，stop 只能经 RuntimeProcessIdentityVerifier 后终止并等待 bounded shutdown；start 当前显式 blocked，直到 foreground bootstrap、authority resolver 与平台 peer/process adapter 完整接入。",
+          "note": "TDD focused 5/5；npm run build 与 git diff --check 通过。当前 CLI 不宣称真实 foreground Runtime 已启动，避免把未配置的 bootstrap 当作成功。"
+        },
+        {
+          "q": "1-6 Provider Runtime lifecycle CLI 命令名称校正",
+          "answer": "命令名称为 zj-loop-provider-runtime，支持 status 和 stop；start 暂为显式 blocked。",
+          "note": "上一条记录中的 shell backtick 被命令行解释为命令替换，已用不含 shell 标记的明确命令名补正。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1095,7 +1105,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:29:30",
+    "updated": "2026-08-05 17:34:27",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
