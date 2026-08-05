@@ -231,6 +231,11 @@
           "q": "cleanup Graph adapter 实现结果是什么？",
           "answer": "同意：新增 provider-neutral cleanup Graph adapter；先对 target/source/verifier 三个 plan-bound disposable worktree 做完整预检，再使用普通 git worktree remove argv 清理，禁止 force 删除、任意路径和远程副作用；清理后复验路径不存在、Git registration 移除和无残留。清理成功且业务前缀完整通过时返回 phase=cleanup passed；业务 merge/post_merge_gate 失败时仍可独立清理并写 cleanup Evidence，但不伪造线性 cleanup Graph phase。dirty/mismatch 为 blocked，事实不可读为 outcome-uncertain，重复调用幂等。",
           "note": "TDD 覆盖 cleanup success、幂等、dirty worktree 阻断、Git observation uncertainty、业务失败后的独立 Evidence；Graph adapter focused 26/26，已从包入口导出并纳入标准测试脚本。"
+        },
+        {
+          "q": "Coordinator 真实 adapters wiring 的实现结果是什么？",
+          "answer": "同意：新增 WithRealAdapters Coordinator factory，统一创建并串联 source_execution、scope_observation、independent_verification、human_acceptance、merge、post_merge_gate、cleanup 七个真实 adapter；从 StateStore 恢复已存在的 phase record，按阶段动态传递上游 record，复用 Coordinator 的 lease、resume gate、顺序停止、CAS append 和 replay，不允许 adapter 绕过 Coordinator 写 StateStore。任一 phase 失败立即停止，cleanup 仍遵守业务失败后的独立 Evidence 边界。",
+          "note": "新增 wiring focused test：真实 source adapter lifecycle 不满足时返回 outcome-uncertain，后续 phase 不调用且不写伪造 Graph record；Graph adapter focused 27/27。"
         }
       ],
       "notes": "已完成 Graph Worker lease 双绑定、Coordinator resume gate、source_execution Evidence 写入与 Worker lease release，提交 4c988a13。仍需完成 Review Handoff Graph projection、merge/closeout，以及失败恢复、重放和端到端 conformance 闭环。下一施工重点转入 1-6。"
@@ -1750,7 +1755,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 02:04:17",
+    "updated": "2026-08-06 02:13:54",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
