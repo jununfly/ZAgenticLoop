@@ -209,6 +209,7 @@ export * from './provider-runtime-foreground-service.js';
 export * from './provider-runtime-start-config.js';
 export * from './provider-runtime-start-assembly.js';
 export * from './provider-runtime-launcher-factory.js';
+export * from './provider-runtime-start-config-store.js';
 export * from './trusted-runner-post-run-ipc.js';
 export * from './trusted-runner-peer-identity.js';
 export * from './macos-process-audit-peer-identity.js';

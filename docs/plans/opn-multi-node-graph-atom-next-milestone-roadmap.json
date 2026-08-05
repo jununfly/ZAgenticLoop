@@ -1123,6 +1123,11 @@
           "q": "1-6 macOS Runtime launcher factory 的实现结果是什么？",
           "answer": "同意：新增 macOS launcher factory，固定使用 Security process-audit peer verifier、config 中的 expected peer identity、provider executable/cwd、contract digests、runtime binding 和 network-scoped auth_ref resolver；非 macOS 不降级为弱校验，直接 blocked。",
           "note": "TDD focused 4/4（非 macOS 分支按平台 skip）；npm run build 与 git diff --check 通过。下一步接 config loader 与外部 revoke authority，完成 CLI start 装配。"
+        },
+        {
+          "q": "1-6 Runtime start config loader 的实现结果是什么？",
+          "answer": "同意：新增持久化 config loader；只读取绝对路径文件，解析后复用 start config schema 校验，读取失败、JSON 非法、未知字段或 secret 字段均 fail-closed。",
+          "note": "TDD focused 4/4；npm run build 与 git diff --check 通过。CLI start 的剩余阻塞是外部 revoke authority 的显式入口，不能从配置文件读取 secret 或自行获得 revoke 权限。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1130,7 +1135,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:48:58",
+    "updated": "2026-08-05 17:50:17",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
