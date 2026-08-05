@@ -6,19 +6,23 @@ import path from 'node:path';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { abandonRealAgentDogfoodWorkerLease, acquireRealAgentDogfoodWorkerLease, releaseRealAgentDogfoodWorkerLease, renewRealAgentDogfoodWorkerLease } from '../dist/real-agent-dogfood-worker.js';
 
+const bindingDigest = 'sha256:' + 'a'.repeat(64);
+
 test('worker lease is CAS-backed, idempotent, and cannot be taken over after expiry', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-lease-'));
   const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
   try {
     await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
-    const first = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-1', now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
+    const first = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-1', execution_binding_digest: bindingDigest, now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
     assert.equal(first.status, 'acquired');
-    const repeated = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-2', now: '2026-08-01T12:00:01.000Z', ttl_ms: 30_000 });
+    const repeated = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-2', execution_binding_digest: bindingDigest, now: '2026-08-01T12:00:01.000Z', ttl_ms: 30_000 });
     assert.equal(repeated.status, 'reused');
     assert.equal(repeated.lease_id, first.lease_id);
-    const renewed = await renewRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', lease_id: first.lease_id, worker_id: 'worker-1', expected_revision: repeated.revision, now: '2026-08-01T12:00:10.000Z', ttl_ms: 30_000 });
+    const drifted = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-2', execution_binding_digest: 'sha256:' + 'b'.repeat(64), now: '2026-08-01T12:00:02.000Z', ttl_ms: 30_000 });
+    assert.deepEqual(drifted, { status: 'blocked', reason: 'worker-lease-mismatch' });
+    const renewed = await renewRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', lease_id: first.lease_id, worker_id: 'worker-1', execution_binding_digest: bindingDigest, expected_revision: repeated.revision, now: '2026-08-01T12:00:10.000Z', ttl_ms: 30_000 });
     assert.equal(renewed.status, 'renewed');
-    const expired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-3', now: '2026-08-01T12:01:00.000Z', ttl_ms: 30_000 });
+    const expired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-3', execution_binding_digest: bindingDigest, now: '2026-08-01T12:01:00.000Z', ttl_ms: 30_000 });
     assert.deepEqual(expired, { status: 'blocked', reason: 'worker-lease-expired' });
   } finally {
     await store.close();
@@ -31,9 +35,9 @@ test('worker lease can be explicitly released by its holder', async () => {
   const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
   try {
     await store.createNetwork({ network_id: 'network-release-1', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
-    const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-1', execution_id: 'execution-release-1', worker_id: 'worker-1', now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
+    const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-1', execution_id: 'execution-release-1', worker_id: 'worker-1', execution_binding_digest: bindingDigest, now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
     assert.equal(acquired.status, 'acquired');
-    const released = await releaseRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-1', execution_id: 'execution-release-1', lease_id: acquired.lease_id, worker_id: 'worker-1', expected_revision: acquired.revision, now: '2026-08-01T12:00:05.000Z' });
+    const released = await releaseRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-1', execution_id: 'execution-release-1', lease_id: acquired.lease_id, worker_id: 'worker-1', execution_binding_digest: bindingDigest, expected_revision: acquired.revision, now: '2026-08-01T12:00:05.000Z' });
     assert.deepEqual(released, { status: 'released', lease_id: acquired.lease_id, worker_id: 'worker-1', revision: 3 });
     const events = (await store.readEvents({ network_id: 'network-release-1', aggregate_type: 'real-agent-dogfood-worker', aggregate_id: 'execution-release-1' })).events;
     assert.equal(events.at(-1).payload.operation, 'released');
@@ -48,11 +52,11 @@ test('expired worker lease can be explicitly abandoned and then reacquired', asy
   const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
   try {
     await store.createNetwork({ network_id: 'network-abandon-1', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
-    const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', worker_id: 'worker-1', now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
+    const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', worker_id: 'worker-1', execution_binding_digest: bindingDigest, now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
     assert.equal(acquired.status, 'acquired');
-    const abandoned = await abandonRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', lease_id: acquired.lease_id, worker_id: 'worker-1', expected_revision: acquired.revision, now: '2026-08-01T12:00:30.000Z' });
+    const abandoned = await abandonRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', lease_id: acquired.lease_id, worker_id: 'worker-1', execution_binding_digest: bindingDigest, expected_revision: acquired.revision, now: '2026-08-01T12:00:30.000Z' });
     assert.deepEqual(abandoned, { status: 'abandoned', lease_id: acquired.lease_id, worker_id: 'worker-1', revision: 3 });
-    const reacquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', worker_id: 'worker-2', now: '2026-08-01T12:00:31.000Z', ttl_ms: 30_000 });
+    const reacquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', worker_id: 'worker-2', execution_binding_digest: bindingDigest, now: '2026-08-01T12:00:31.000Z', ttl_ms: 30_000 });
     assert.equal(reacquired.status, 'acquired');
     assert.notEqual(reacquired.lease_id, acquired.lease_id);
   } finally {

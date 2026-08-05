@@ -10,13 +10,17 @@ import { appendRealAgentDogfoodEvent, createRealAgentDogfoodDraft, createRealAge
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { verifyHumanApprovalContextDetailed } from './human-authority.js';
 import { acquireRealAgentDogfoodWorkerLease } from './real-agent-dogfood-worker.js';
+import { acquireRealAgentDogfoodCoordinatorLease, releaseRealAgentDogfoodCoordinatorLease } from './real-agent-dogfood-coordinator-lease.js';
 import { prepareRealAgentDogfoodWorktree } from './real-agent-dogfood-worktree.js';
 import { buildCodexInvocation, validateCodexExecutionModeBinding } from './codex-agent-provider-adapter.js';
-import { createRealAgentDogfoodExecutionBinding } from './real-agent-dogfood-binding.js';
+import { createRealAgentDogfoodExecutionBinding, createRealAgentDogfoodExecutionBindingDigest } from './real-agent-dogfood-binding.js';
 import { trustedRunnerAdmissionBundleDigest, validateAdmissionBoundExecution } from './trusted-runner-admission-binding.js';
 import { admitTrustedRunnerExecution, readTrustedRunnerRegistry } from './trusted-runner-registry-store.js';
 import { createProviderRuntimeAdapterContract, providerRuntimeAdapterContractDigest } from './provider-runtime-adapter.js';
 import { createRealAgentDogfoodGraphPlan, validateRealAgentDogfoodGraphWorktrees } from './real-agent-dogfood-graph-orchestrator.js';
+import { REAL_AGENT_DOGFOOD_GRAPH_PHASES } from './real-agent-dogfood-graph-orchestrator.js';
+import { projectRealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
+import { evaluateRealAgentDogfoodCoordinatorResumeGate } from './real-agent-dogfood-coordinator-resume-gate.js';
 const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 export function defaultRealAgentDogfoodRuntimePaths(platform = process.platform, home = os.homedir(), env = process.env) {
@@ -315,13 +319,8 @@ async function resume(options) {
                 return outputLifecycle(blocked.lifecycle, { provider_invoked: false });
             }
         }
-        const workerId = `worker-${randomUUID()}`;
-        const lease = await acquireRealAgentDogfoodWorkerLease({ stateStore, network_id: networkId, execution_id: lifecycle.execution_id, worker_id: workerId });
-        if (lease.status === 'blocked')
-            throw new Error(lease.reason);
-        if (lease.status !== 'acquired' && lease.status !== 'reused' && lease.status !== 'renewed')
-            throw new Error('worker-lease-terminal');
-        let workerContext;
+        let executionBindingDigest;
+        let codexInvocation;
         if (lifecycle.provider_id === 'codex') {
             if (typeof summary.goal !== 'string' || typeof summary.executable !== 'string' || typeof summary.worktree_path !== 'string')
                 throw new Error('worker-context-source-missing');
@@ -329,11 +328,54 @@ async function resume(options) {
                 throw new Error('execution-mode-binding-invalid');
             if (summary.execution_mode === 'write-enabled' && (!Array.isArray(summary.allowed_files) || summary.allowed_files.length === 0 || typeof summary.repo !== 'string' || typeof summary.base_commit !== 'string'))
                 throw new Error('write-scope-summary-binding-invalid');
-            const invocation = buildCodexInvocation({ executable: summary.executable, cwd: summary.worktree_path, mode: summary.execution_mode });
-            const modeBinding = validateCodexExecutionModeBinding({ mode: summary.execution_mode, admitted_args: admissionBoundExecution?.preflight.args ?? [], invocation_args: invocation.args });
+            codexInvocation = buildCodexInvocation({ executable: summary.executable, cwd: summary.worktree_path, mode: summary.execution_mode });
+            const modeBinding = validateCodexExecutionModeBinding({ mode: summary.execution_mode, admitted_args: admissionBoundExecution?.preflight.args ?? [], invocation_args: codexInvocation.args });
             if (modeBinding.status === 'blocked')
                 throw new Error(modeBinding.reason);
-            const binding = await createRealAgentDogfoodExecutionBinding({ executable: invocation.executable, args: invocation.args, cwd: invocation.cwd, worktree_path: summary.worktree_path, lease_id: lease.lease_id });
+            executionBindingDigest = await createRealAgentDogfoodExecutionBindingDigest({ executable: codexInvocation.executable, args: codexInvocation.args, cwd: codexInvocation.cwd, worktree_path: summary.worktree_path });
+        }
+        else {
+            executionBindingDigest = digest({ schema: 'zj-loop.real_agent_dogfood_execution_binding.v1', execution_id: lifecycle.execution_id, attempt: lifecycle.attempt, provider_id: lifecycle.provider_id, adapter_contract_digest: summary.adapter_contract_digest, worktree_path: summary.worktree_path });
+        }
+        let coordinatorLease;
+        if (summary.graph_plan && typeof summary.graph_plan === 'object') {
+            const humanId = required(options, 'human-id');
+            const coordinatorId = required(options, 'coordinator-id');
+            const sessionId = required(options, 'session-id');
+            const graphPlan = createRealAgentDogfoodGraphPlan(summary.graph_plan);
+            if (graphPlan.dogfood_id !== dogfoodId || graphPlan.execution_id !== lifecycle.execution_id || graphPlan.plan_digest !== summary.graph_plan.plan_digest)
+                throw new Error('graph-plan-resume-binding-invalid');
+            const graphSnapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood-graph', aggregate_id: dogfoodId });
+            const phase = projectRealAgentDogfoodGraphPhaseRecord({ plan: graphPlan, events: graphSnapshot.events });
+            const nextPhase = REAL_AGENT_DOGFOOD_GRAPH_PHASES[phase?.completed_phases.length ?? 0];
+            if (!nextPhase || phase?.status === 'blocked' || phase?.status === 'outcome-uncertain' || phase && (!phase.actor_kind || !phase.actor_identity)) {
+                const gate = evaluateRealAgentDogfoodCoordinatorResumeGate({ execution_id: lifecycle.execution_id, execution_binding_digest: executionBindingDigest, lease: { status: 'blocked', reason: 'graph-phase-not-ready' }, phase, next_phase: nextPhase ?? 'cleanup' });
+                return outputLifecycle(lifecycle, { provider_invoked: false, graph_resume_gate: gate });
+            }
+            coordinatorLease = await acquireRealAgentDogfoodCoordinatorLease({ stateStore, network_id: networkId, execution_id: lifecycle.execution_id, human_id: humanId, coordinator_id: coordinatorId, session_id: sessionId, execution_binding_digest: executionBindingDigest });
+            const activeCoordinatorLease = coordinatorLease.status === 'acquired' || coordinatorLease.status === 'reused' || coordinatorLease.status === 'renewed'
+                ? { ...coordinatorLease, execution_id: lifecycle.execution_id, execution_binding_digest: executionBindingDigest }
+                : null;
+            const gate = evaluateRealAgentDogfoodCoordinatorResumeGate({ execution_id: lifecycle.execution_id, execution_binding_digest: executionBindingDigest, lease: activeCoordinatorLease ?? { status: 'blocked', reason: 'coordinator-lease-unavailable' }, phase, next_phase: nextPhase });
+            if (gate.status === 'blocked') {
+                if (activeCoordinatorLease)
+                    await releaseRealAgentDogfoodCoordinatorLease({ stateStore, network_id: networkId, execution_id: lifecycle.execution_id, lease_id: activeCoordinatorLease.lease_id, human_id: humanId, coordinator_id: coordinatorId, expected_revision: activeCoordinatorLease.revision });
+                return outputLifecycle(lifecycle, { provider_invoked: false, graph_resume_gate: gate });
+            }
+        }
+        const workerId = `worker-${randomUUID()}`;
+        const lease = await acquireRealAgentDogfoodWorkerLease({ stateStore, network_id: networkId, execution_id: lifecycle.execution_id, worker_id: workerId, execution_binding_digest: executionBindingDigest });
+        if (lease.status === 'blocked')
+            throw new Error(lease.reason);
+        if (lease.status !== 'acquired' && lease.status !== 'reused' && lease.status !== 'renewed')
+            throw new Error('worker-lease-terminal');
+        let workerContext;
+        if (lifecycle.provider_id === 'codex') {
+            if (!codexInvocation || typeof summary.worktree_path !== 'string')
+                throw new Error('worker-context-source-missing');
+            const binding = await createRealAgentDogfoodExecutionBinding({ executable: codexInvocation.executable, args: codexInvocation.args, cwd: codexInvocation.cwd, worktree_path: summary.worktree_path, lease_id: lease.lease_id });
+            if (binding.execution_binding_digest !== executionBindingDigest)
+                throw new Error('worker-execution-binding-digest-mismatch');
             workerContext = { path: path.join(evidenceStore, `${dogfoodId}.worker-context.json`), binding };
         }
         const running = createRealAgentDogfoodTransition({ lifecycle, to: 'running', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:running`, occurred_at: new Date().toISOString(), approval_digest: digest(envelope.approval), next_action: 'provider-execution' });
@@ -343,7 +385,7 @@ async function resume(options) {
         if (!workerContext)
             return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
         try {
-            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, runtime_binding: admissionBoundExecution?.binding.runtime_binding, adapter_contract_digest: summary.adapter_contract_digest, graph_mode: Boolean(summary.graph_plan), execution_mode: summary.execution_mode, git_scope: summary.execution_mode === 'write-enabled' ? { repo_root: summary.repo, baseline_commit: summary.base_commit, allowed_files: summary.allowed_files } : undefined, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+            await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, runtime_binding: admissionBoundExecution?.binding.runtime_binding, adapter_contract_digest: summary.adapter_contract_digest, graph_mode: Boolean(summary.graph_plan), execution_mode: summary.execution_mode, git_scope: summary.execution_mode === 'write-enabled' ? { repo_root: summary.repo, baseline_commit: summary.base_commit, allowed_files: summary.allowed_files } : undefined, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, execution_binding_digest: executionBindingDigest, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
             const workerContextPayload = JSON.parse(await readFile(workerContext.path, 'utf8'));
             workerContextPayload.provider_runtime_ipc = providerRuntimeIpc;
             await writeFile(workerContext.path, `${JSON.stringify(workerContextPayload, null, 2)}\n`, { mode: 0o600 });
@@ -407,6 +449,9 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'provider-runtime-ipc', flag: 'provider-runtime-ipc', type: 'string', description: 'Persisted Provider Runtime IPC binding JSON for Codex resume' },
             { name: 'worktree-root', flag: 'worktree-root', type: 'string', description: 'Directory for isolated execution worktrees' },
             { name: 'graph-plan', flag: 'graph-plan', type: 'string', description: 'Persisted Graph dogfood plan using prepared target/source/verifier worktrees' },
+            { name: 'human-id', flag: 'human-id', type: 'string', description: 'Final responsibility Human id for Graph resume' },
+            { name: 'coordinator-id', flag: 'coordinator-id', type: 'string', description: 'Coordinator identity for Graph resume' },
+            { name: 'session-id', flag: 'session-id', type: 'string', description: 'Coordinator session identity for Graph resume' },
         ],
         async handler({ options }) {
             const command = String(options.command ?? '');

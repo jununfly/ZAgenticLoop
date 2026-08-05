@@ -141,6 +141,51 @@ test('Graph mode start reuses the exact prepared target and source worktrees', a
   }
 });
 
+test('Graph mode resume gates worker start behind the Coordinator lease and shared execution digest', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-graph-resume-'));
+  const repo = path.join(root, 'repo');
+  const runtime = path.join(root, 'runtime');
+  const target = path.join(root, 'target');
+  const source = path.join(root, 'source');
+  const verifier = path.join(root, 'verifier');
+  const evidence = path.join(root, 'evidence');
+  const statePath = path.join(runtime, 'state.db');
+  const planPath = path.join(root, 'graph-plan.json');
+  await mkdir(repo); await mkdir(runtime); await mkdir(verifier);
+  await initGitRepo(repo);
+  const baseline = (await run('git', ['rev-parse', 'HEAD'], { cwd: repo })).stdout.trim();
+  await run('git', ['worktree', 'add', '-b', 'dogfood-target-resume', target, baseline], { cwd: repo });
+  await run('git', ['worktree', 'add', '-b', 'dogfood-source-resume', source, baseline], { cwd: repo });
+  const plan = createRealAgentDogfoodGraphPlan({ dogfood_id: 'dogfood-graph-resume', execution_id: 'execution-graph-resume', attempt: 1, goal: 'gate graph resume', repo_root: source, baseline_commit: baseline, target_worktree: target, source_worktree: source, verifier_worktree: verifier, evidence_store: evidence, allowed_files: ['README.md'], execution_mode: 'write-enabled', network_policy: 'network-allowed' });
+  await writeFile(planPath, `${JSON.stringify(plan, null, 2)}\n`);
+  try {
+    const started = await invoke(['start', '--goal', plan.goal, '--repo', source, '--provider-id', 'provider-1', '--adapter', 'adapter-1', '--executable', '/usr/bin/true', '--network-policy', 'network-allowed', '--execution-mode', 'write-enabled', '--allowed-file', 'README.md', '--graph-plan', planPath, '--state-store', statePath, '--evidence-store', evidence]);
+    assert.equal(started.exitCode, 0, started.stderr);
+    const created = JSON.parse(started.stdout);
+    const summary = JSON.parse(await readFile(created.approval_summary_path, 'utf8'));
+    const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64) });
+    const approval = await authority.signApprovalContext({ action: 'real-agent-dogfood.approve', request_id: created.dogfood_id, request_digest: summary.summary_digest, network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64), issued_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() });
+    await writeFile(path.join(evidence, 'approval-graph.json'), JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, lifecycle_revision: 4, policy_digest: summary.policy_digest, approval_summary_digest: summary.summary_digest, approval, identity: authority.getPublicIdentity() }));
+    const resumed = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-graph', '--human-id', 'human-1', '--coordinator-id', 'coordinator-1', '--session-id', 'session-1', '--state-store', statePath, '--evidence-store', evidence]);
+    assert.equal(resumed.exitCode, 0, resumed.stderr);
+    const output = JSON.parse(resumed.stdout);
+    assert.equal(output.status, 'running');
+    assert.equal(output.provider_invoked, false);
+    const store = createSqliteStateStore({ filename: statePath });
+    try {
+      const coordinator = await store.readEvents({ network_id: created.network_id, aggregate_type: 'real-agent-dogfood-graph-coordinator', aggregate_id: created.execution_id });
+      const worker = await store.readEvents({ network_id: created.network_id, aggregate_type: 'real-agent-dogfood-worker', aggregate_id: created.execution_id });
+      assert.equal(coordinator.events.at(-1).payload.operation, 'acquired');
+      assert.equal(worker.events.at(-1).payload.operation, 'acquired');
+      assert.match(worker.events.at(-1).payload.execution_binding_digest, /^sha256:[0-9a-f]{64}$/);
+    } finally { await store.close(); }
+  } finally {
+    await run('git', ['worktree', 'remove', '--force', source], { cwd: repo }).catch(() => {});
+    await run('git', ['worktree', 'remove', '--force', target], { cwd: repo }).catch(() => {});
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('status is read-only and reports the next human action', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-status-'));
   const repo = path.join(root, 'repo');

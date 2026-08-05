@@ -38,6 +38,7 @@ export declare function acquireRealAgentDogfoodWorkerLease(input: {
     network_id: string;
     execution_id: string;
     worker_id: string;
+    execution_binding_digest: string;
     now?: string;
     ttl_ms?: number;
 }): Promise<RealAgentDogfoodWorkerLeaseResult>;
@@ -47,6 +48,7 @@ export declare function renewRealAgentDogfoodWorkerLease(input: {
     execution_id: string;
     lease_id: string;
     worker_id: string;
+    execution_binding_digest: string;
     expected_revision: number;
     now?: string;
     ttl_ms?: number;
@@ -57,6 +59,7 @@ export declare function releaseRealAgentDogfoodWorkerLease(input: {
     execution_id: string;
     lease_id: string;
     worker_id: string;
+    execution_binding_digest: string;
     expected_revision: number;
     now?: string;
 }): Promise<RealAgentDogfoodWorkerLeaseResult>;
@@ -66,6 +69,7 @@ export declare function abandonRealAgentDogfoodWorkerLease(input: {
     execution_id: string;
     lease_id: string;
     worker_id: string;
+    execution_binding_digest: string;
     expected_revision: number;
     now?: string;
 }): Promise<RealAgentDogfoodWorkerLeaseResult>;
