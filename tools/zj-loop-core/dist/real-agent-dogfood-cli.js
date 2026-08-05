@@ -263,6 +263,7 @@ async function resume(options) {
         if (verifyHumanApprovalContextDetailed({ identity: envelope.identity, context: envelope.approval, require_v2: true }).status !== 'current-v2-accepted')
             throw new Error('human-approval-signature-invalid');
         let admissionBoundExecution;
+        let providerRuntimeIpc;
         if (lifecycle.provider_id === 'codex') {
             const admissionContextPath = typeof options['admission-context'] === 'string' ? options['admission-context'] : '';
             if (!admissionContextPath) {
@@ -288,11 +289,38 @@ async function resume(options) {
                     throw new Error('admission-invalid-record-conflict');
                 return outputLifecycle(blocked.lifecycle, { provider_invoked: false });
             }
+            const providerRuntimeIpcPath = typeof options['provider-runtime-ipc'] === 'string' ? options['provider-runtime-ipc'] : '';
+            if (!providerRuntimeIpcPath) {
+                const blocked = createRealAgentDogfoodTransition({ lifecycle, to: 'blocked', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:provider-runtime-ipc-required`, occurred_at: new Date().toISOString(), fact_digest: digest({ reason_code: 'provider-runtime-ipc-required' }), reason_code: 'provider-runtime-ipc-required', next_action: 'configure-provider-runtime-ipc' });
+                const blockedResult = await append(stateStore, networkId, blocked.event, snapshot.snapshot_revision);
+                if (blockedResult.status === 'conflict')
+                    throw new Error('provider-runtime-ipc-required-record-conflict');
+                return outputLifecycle(blocked.lifecycle, { provider_invoked: false });
+            }
+            try {
+                providerRuntimeIpc = JSON.parse(await readFile(providerRuntimeIpcPath, 'utf8'));
+            }
+            catch {
+                const blocked = createRealAgentDogfoodTransition({ lifecycle, to: 'blocked', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:provider-runtime-ipc-invalid`, occurred_at: new Date().toISOString(), fact_digest: digest({ reason_code: 'provider-runtime-ipc-invalid' }), reason_code: 'provider-runtime-ipc-invalid', next_action: 'configure-provider-runtime-ipc' });
+                const blockedResult = await append(stateStore, networkId, blocked.event, snapshot.snapshot_revision);
+                if (blockedResult.status === 'conflict')
+                    throw new Error('provider-runtime-ipc-invalid-record-conflict');
+                return outputLifecycle(blocked.lifecycle, { provider_invoked: false });
+            }
+            if (!providerRuntimeIpc || typeof providerRuntimeIpc.socket_path !== 'string' || !providerRuntimeIpc.socket_path.trim() || typeof providerRuntimeIpc.contract_digest !== 'string' || !DIGEST.test(providerRuntimeIpc.contract_digest) || !providerRuntimeIpc.runtime_binding || JSON.stringify(providerRuntimeIpc.runtime_binding) !== JSON.stringify(admissionBoundExecution.binding.runtime_binding)) {
+                const blocked = createRealAgentDogfoodTransition({ lifecycle, to: 'blocked', event_id: `${dogfoodId}:attempt-${lifecycle.attempt}:provider-runtime-ipc-binding-invalid`, occurred_at: new Date().toISOString(), fact_digest: digest({ reason_code: 'provider-runtime-ipc-binding-invalid' }), reason_code: 'provider-runtime-ipc-binding-invalid', next_action: 'configure-provider-runtime-ipc' });
+                const blockedResult = await append(stateStore, networkId, blocked.event, snapshot.snapshot_revision);
+                if (blockedResult.status === 'conflict')
+                    throw new Error('provider-runtime-ipc-binding-invalid-record-conflict');
+                return outputLifecycle(blocked.lifecycle, { provider_invoked: false });
+            }
         }
         const workerId = `worker-${randomUUID()}`;
         const lease = await acquireRealAgentDogfoodWorkerLease({ stateStore, network_id: networkId, execution_id: lifecycle.execution_id, worker_id: workerId });
         if (lease.status === 'blocked')
             throw new Error(lease.reason);
+        if (lease.status !== 'acquired' && lease.status !== 'reused' && lease.status !== 'renewed')
+            throw new Error('worker-lease-terminal');
         let workerContext;
         if (lifecycle.provider_id === 'codex') {
             if (typeof summary.goal !== 'string' || typeof summary.executable !== 'string' || typeof summary.worktree_path !== 'string')
@@ -316,6 +344,9 @@ async function resume(options) {
             return outputLifecycle(running.lifecycle, { provider_invoked: false, worker_id: lease.worker_id, worker_lease_id: lease.lease_id, worker_lease_expires_at: lease.expires_at, approval_digest: running.lifecycle.approval_digest });
         try {
             await writeFile(workerContext.path, `${JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_worker_context.v1', provider_id: lifecycle.provider_id, provider_auth_ref: admissionBoundExecution?.binding.provider_auth_ref, runtime_binding: admissionBoundExecution?.binding.runtime_binding, adapter_contract_digest: summary.adapter_contract_digest, graph_mode: Boolean(summary.graph_plan), execution_mode: summary.execution_mode, git_scope: summary.execution_mode === 'write-enabled' ? { repo_root: summary.repo, baseline_commit: summary.base_commit, allowed_files: summary.allowed_files } : undefined, state_store: statePath, evidence_store: evidenceStore, network_id: networkId, dogfood_id: dogfoodId, execution_id: lifecycle.execution_id, worker_id: lease.worker_id, lease_id: lease.lease_id, binding: workerContext.binding, admission_bound_execution: admissionBoundExecution, worktree_path: workerContext.binding.worktree_path, executable: workerContext.binding.executable, goal: summary.goal, expected_revision: result.revision }, null, 2)}\n`, { mode: 0o600 });
+            const workerContextPayload = JSON.parse(await readFile(workerContext.path, 'utf8'));
+            workerContextPayload.provider_runtime_ipc = providerRuntimeIpc;
+            await writeFile(workerContext.path, `${JSON.stringify(workerContextPayload, null, 2)}\n`, { mode: 0o600 });
             const workerCli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'real-agent-dogfood-worker-cli.js');
             const child = spawn(process.execPath, [workerCli, 'worker', '--provider-id', 'codex', '--context', workerContext.path], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
             child.unref();
@@ -373,6 +404,7 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'network-id', flag: 'network-id', type: 'string', description: 'Network id for status' },
             { name: 'approval-id', flag: 'approval-id', type: 'string', description: 'Persisted approval envelope id for resume' },
             { name: 'admission-context', flag: 'admission-context', type: 'string', description: 'Persisted AdmissionBoundExecution artifact for resume' },
+            { name: 'provider-runtime-ipc', flag: 'provider-runtime-ipc', type: 'string', description: 'Persisted Provider Runtime IPC binding JSON for Codex resume' },
             { name: 'worktree-root', flag: 'worktree-root', type: 'string', description: 'Directory for isolated execution worktrees' },
             { name: 'graph-plan', flag: 'graph-plan', type: 'string', description: 'Persisted Graph dogfood plan using prepared target/source/verifier worktrees' },
         ],

@@ -16,6 +16,8 @@ export const REAL_AGENT_DOGFOOD_GRAPH_PHASES = [
     'post_merge_gate',
     'cleanup',
 ];
+export const REAL_AGENT_DOGFOOD_GRAPH_DIGEST_PROFILE = 'zj-loop.real-agent-dogfood-graph-digest.v1';
+export const REAL_AGENT_DOGFOOD_GRAPH_EDGES = REAL_AGENT_DOGFOOD_GRAPH_PHASES.slice(0, -1).map((phase, index) => ({ from: phase, to: REAL_AGENT_DOGFOOD_GRAPH_PHASES[index + 1] }));
 function canonical(value) {
     const result = canonicalize(value);
     if (typeof result !== 'string')
@@ -23,6 +25,24 @@ function canonical(value) {
     return result;
 }
 function digest(value) { return `sha256:${createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`; }
+function planDefinition(unsigned) {
+    return {
+        schema: REAL_AGENT_DOGFOOD_GRAPH_ORCHESTRATOR_SCHEMA,
+        goal: unsigned.goal,
+        repo_root: unsigned.repo_root,
+        baseline_commit: unsigned.baseline_commit,
+        target_worktree: unsigned.target_worktree,
+        source_worktree: unsigned.source_worktree,
+        verifier_worktree: unsigned.verifier_worktree,
+        evidence_store: unsigned.evidence_store,
+        allowed_files: [...unsigned.allowed_files],
+        execution_mode: unsigned.execution_mode,
+        network_policy: unsigned.network_policy,
+        phases: [...REAL_AGENT_DOGFOOD_GRAPH_PHASES],
+        edges: REAL_AGENT_DOGFOOD_GRAPH_EDGES,
+        nodes: [{ node_id: 'Agent1', role: 'source-execution', capabilities: ['write-scoped-source-worktree'], worktree: unsigned.source_worktree }],
+    };
+}
 function absolute(value) { return typeof value === 'string' && value.startsWith('/') && !value.includes('\0'); }
 export function createRealAgentDogfoodGraphPlan(input) {
     if (!input || !input.dogfood_id || !input.execution_id || !Number.isInteger(input.attempt) || input.attempt < 1 || !input.goal.trim() || !absolute(input.repo_root) || !COMMIT.test(input.baseline_commit) || !absolute(input.target_worktree) || !absolute(input.source_worktree) || !absolute(input.verifier_worktree) || !absolute(input.evidence_store) || !Array.isArray(input.allowed_files) || input.allowed_files.length !== 1 || input.allowed_files.some((file) => !file || file.startsWith('/') || file.includes('..') || file.includes('\0')) || input.execution_mode !== 'write-enabled' || input.network_policy !== 'network-allowed')
@@ -43,7 +63,7 @@ export function createRealAgentDogfoodGraphPlan(input) {
         execution_mode: input.execution_mode,
         network_policy: input.network_policy,
     };
-    return Object.freeze({ ...unsigned, plan_digest: digest(unsigned) });
+    return Object.freeze({ ...unsigned, plan_digest: digest(unsigned), plan_definition_digest: digest(planDefinition(unsigned)), digest_profile: REAL_AGENT_DOGFOOD_GRAPH_DIGEST_PROFILE });
 }
 async function git(cwd, args) {
     const result = await execFile('git', args, { cwd, maxBuffer: 1024 * 1024 });

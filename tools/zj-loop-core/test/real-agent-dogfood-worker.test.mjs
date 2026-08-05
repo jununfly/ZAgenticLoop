@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
-import { acquireRealAgentDogfoodWorkerLease, renewRealAgentDogfoodWorkerLease } from '../dist/real-agent-dogfood-worker.js';
+import { abandonRealAgentDogfoodWorkerLease, acquireRealAgentDogfoodWorkerLease, releaseRealAgentDogfoodWorkerLease, renewRealAgentDogfoodWorkerLease } from '../dist/real-agent-dogfood-worker.js';
 
 test('worker lease is CAS-backed, idempotent, and cannot be taken over after expiry', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-lease-'));
@@ -20,6 +20,41 @@ test('worker lease is CAS-backed, idempotent, and cannot be taken over after exp
     assert.equal(renewed.status, 'renewed');
     const expired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-1', execution_id: 'execution-1', worker_id: 'worker-3', now: '2026-08-01T12:01:00.000Z', ttl_ms: 30_000 });
     assert.deepEqual(expired, { status: 'blocked', reason: 'worker-lease-expired' });
+  } finally {
+    await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('worker lease can be explicitly released by its holder', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-lease-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-release-1', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
+    const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-1', execution_id: 'execution-release-1', worker_id: 'worker-1', now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
+    assert.equal(acquired.status, 'acquired');
+    const released = await releaseRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-release-1', execution_id: 'execution-release-1', lease_id: acquired.lease_id, worker_id: 'worker-1', expected_revision: acquired.revision, now: '2026-08-01T12:00:05.000Z' });
+    assert.deepEqual(released, { status: 'released', lease_id: acquired.lease_id, worker_id: 'worker-1', revision: 3 });
+    const events = (await store.readEvents({ network_id: 'network-release-1', aggregate_type: 'real-agent-dogfood-worker', aggregate_id: 'execution-release-1' })).events;
+    assert.equal(events.at(-1).payload.operation, 'released');
+  } finally {
+    await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('expired worker lease can be explicitly abandoned and then reacquired', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-worker-lease-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-abandon-1', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
+    const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', worker_id: 'worker-1', now: '2026-08-01T12:00:00.000Z', ttl_ms: 30_000 });
+    assert.equal(acquired.status, 'acquired');
+    const abandoned = await abandonRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', lease_id: acquired.lease_id, worker_id: 'worker-1', expected_revision: acquired.revision, now: '2026-08-01T12:00:30.000Z' });
+    assert.deepEqual(abandoned, { status: 'abandoned', lease_id: acquired.lease_id, worker_id: 'worker-1', revision: 3 });
+    const reacquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-abandon-1', execution_id: 'execution-abandon-1', worker_id: 'worker-2', now: '2026-08-01T12:00:31.000Z', ttl_ms: 30_000 });
+    assert.equal(reacquired.status, 'acquired');
+    assert.notEqual(reacquired.lease_id, acquired.lease_id);
   } finally {
     await store.close();
     await rm(root, { recursive: true, force: true });

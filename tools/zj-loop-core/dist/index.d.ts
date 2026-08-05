@@ -163,6 +163,8 @@ export * from './trusted-environment-proof.js';
 export * from './real-agent-dogfood-lifecycle.js';
 export * from './real-agent-dogfood-cli.js';
 export * from './real-agent-dogfood-worker.js';
+export * from './real-agent-dogfood-coordinator-lease.js';
+export * from './real-agent-dogfood-digests.js';
 export * from './real-agent-dogfood-worktree.js';
 export * from './content-addressed-evidence-store.js';
 export * from './real-agent-dogfood-worker-runner.js';

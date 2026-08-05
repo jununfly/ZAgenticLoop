@@ -210,7 +210,7 @@ test('resume consumes a persisted signed approval reference and enters running e
   }
 });
 
-test('resume starts a detached Codex worker with a persisted execution context', async () => {
+test('resume blocks before running when the Codex Runtime IPC binding is missing', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-detached-worker-'));
   const repo = path.join(root, 'repo');
   const runtime = path.join(root, 'runtime');
@@ -256,9 +256,9 @@ test('resume starts a detached Codex worker with a persisted execution context',
     const resumed = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-detached', '--admission-context', admissionContextPath, '--state-store', statePath, '--evidence-store', evidencePath]);
     assert.equal(resumed.exitCode, 0, resumed.stderr);
     const output = JSON.parse(resumed.stdout);
-    assert.equal(output.status, 'running');
-    assert.equal(output.worker_started, true);
-    assert.match(output.worker_context_path, /worker-context\.json$/);
+    assert.equal(output.status, 'blocked');
+    assert.equal(output.reason_code, 'provider-runtime-ipc-required');
+    assert.equal(output.next_action, 'configure-provider-runtime-ipc');
     const store = createSqliteStateStore({ filename: statePath });
     try {
       let latest;
@@ -268,7 +268,9 @@ test('resume starts a detached Codex worker with a persisted execution context',
         if (latest === 'outcome-uncertain' || latest === 'blocked') break;
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      assert.equal(latest, 'outcome-uncertain');
+      assert.equal(latest, 'blocked');
+      const leases = await store.readEvents({ network_id: created.network_id, aggregate_type: 'real-agent-dogfood-worker', aggregate_id: created.execution_id });
+      assert.equal(leases.events.length, 0);
     } finally {
       await store.close();
     }

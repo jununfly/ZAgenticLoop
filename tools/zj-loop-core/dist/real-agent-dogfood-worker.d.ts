@@ -20,8 +20,18 @@ export type RealAgentDogfoodWorkerLeaseResult = {
     expires_at: string;
     revision: number;
 } | {
+    status: 'released';
+    lease_id: string;
+    worker_id: string;
+    revision: number;
+} | {
+    status: 'abandoned';
+    lease_id: string;
+    worker_id: string;
+    revision: number;
+} | {
     status: 'blocked';
-    reason: 'worker-lease-expired' | 'worker-lease-mismatch';
+    reason: 'worker-lease-expired' | 'worker-lease-mismatch' | 'worker-lease-released' | 'worker-lease-abandoned';
 };
 export declare function acquireRealAgentDogfoodWorkerLease(input: {
     stateStore: SqliteStateStore;
@@ -40,4 +50,22 @@ export declare function renewRealAgentDogfoodWorkerLease(input: {
     expected_revision: number;
     now?: string;
     ttl_ms?: number;
+}): Promise<RealAgentDogfoodWorkerLeaseResult>;
+export declare function releaseRealAgentDogfoodWorkerLease(input: {
+    stateStore: SqliteStateStore;
+    network_id: string;
+    execution_id: string;
+    lease_id: string;
+    worker_id: string;
+    expected_revision: number;
+    now?: string;
+}): Promise<RealAgentDogfoodWorkerLeaseResult>;
+export declare function abandonRealAgentDogfoodWorkerLease(input: {
+    stateStore: SqliteStateStore;
+    network_id: string;
+    execution_id: string;
+    lease_id: string;
+    worker_id: string;
+    expected_revision: number;
+    now?: string;
 }): Promise<RealAgentDogfoodWorkerLeaseResult>;

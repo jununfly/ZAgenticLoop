@@ -18,6 +18,8 @@ export const REAL_AGENT_DOGFOOD_GRAPH_PHASES = [
   'post_merge_gate',
   'cleanup',
 ] as const;
+export const REAL_AGENT_DOGFOOD_GRAPH_DIGEST_PROFILE = 'zj-loop.real-agent-dogfood-graph-digest.v1' as const;
+export const REAL_AGENT_DOGFOOD_GRAPH_EDGES = REAL_AGENT_DOGFOOD_GRAPH_PHASES.slice(0, -1).map((phase, index) => ({ from: phase, to: REAL_AGENT_DOGFOOD_GRAPH_PHASES[index + 1] }));
 export type RealAgentDogfoodGraphPhase = typeof REAL_AGENT_DOGFOOD_GRAPH_PHASES[number];
 
 export type RealAgentDogfoodGraphPlan = {
@@ -36,6 +38,8 @@ export type RealAgentDogfoodGraphPlan = {
   execution_mode: 'write-enabled';
   network_policy: 'network-allowed';
   plan_digest: string;
+  plan_definition_digest: string;
+  digest_profile: typeof REAL_AGENT_DOGFOOD_GRAPH_DIGEST_PROFILE;
 };
 
 export type RealAgentDogfoodGraphResult = {
@@ -57,6 +61,36 @@ function canonical(value: unknown): string {
 }
 
 function digest(value: unknown): string { return `sha256:${createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`; }
+
+function planDefinition(unsigned: {
+  goal: string;
+  repo_root: string;
+  baseline_commit: string;
+  target_worktree: string;
+  source_worktree: string;
+  verifier_worktree: string;
+  evidence_store: string;
+  allowed_files: readonly string[];
+  execution_mode: 'write-enabled';
+  network_policy: 'network-allowed';
+}) {
+  return {
+    schema: REAL_AGENT_DOGFOOD_GRAPH_ORCHESTRATOR_SCHEMA,
+    goal: unsigned.goal,
+    repo_root: unsigned.repo_root,
+    baseline_commit: unsigned.baseline_commit,
+    target_worktree: unsigned.target_worktree,
+    source_worktree: unsigned.source_worktree,
+    verifier_worktree: unsigned.verifier_worktree,
+    evidence_store: unsigned.evidence_store,
+    allowed_files: [...unsigned.allowed_files],
+    execution_mode: unsigned.execution_mode,
+    network_policy: unsigned.network_policy,
+    phases: [...REAL_AGENT_DOGFOOD_GRAPH_PHASES],
+    edges: REAL_AGENT_DOGFOOD_GRAPH_EDGES,
+    nodes: [{ node_id: 'Agent1', role: 'source-execution', capabilities: ['write-scoped-source-worktree'], worktree: unsigned.source_worktree }],
+  } as const;
+}
 
 function absolute(value: unknown): value is string { return typeof value === 'string' && value.startsWith('/') && !value.includes('\0'); }
 
@@ -92,7 +126,7 @@ export function createRealAgentDogfoodGraphPlan(input: {
     execution_mode: input.execution_mode,
     network_policy: input.network_policy,
   } as const;
-  return Object.freeze({ ...unsigned, plan_digest: digest(unsigned) });
+  return Object.freeze({ ...unsigned, plan_digest: digest(unsigned), plan_definition_digest: digest(planDefinition(unsigned)), digest_profile: REAL_AGENT_DOGFOOD_GRAPH_DIGEST_PROFILE });
 }
 
 async function git(cwd: string, args: string[]): Promise<string> {

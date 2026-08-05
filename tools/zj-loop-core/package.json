@@ -71,6 +71,8 @@
     "test:real-agent-dogfood-lifecycle": "npm run build && node --test test/real-agent-dogfood-lifecycle.test.mjs",
     "test:real-agent-dogfood-cli": "npm run build && node --test test/real-agent-dogfood-cli.test.mjs",
     "test:real-agent-dogfood-worker": "npm run build && node --test test/real-agent-dogfood-worker.test.mjs",
+    "test:real-agent-dogfood-coordinator-lease": "npm run build && node --test test/real-agent-dogfood-coordinator-lease.test.mjs",
+    "test:real-agent-dogfood-digests": "npm run build && node --test test/real-agent-dogfood-digests.test.mjs",
     "test:real-agent-dogfood-worktree": "npm run build && node --test test/real-agent-dogfood-worktree.test.mjs",
     "test:content-addressed-evidence-store": "npm run build && node --test test/content-addressed-evidence-store.test.mjs",
     "test:real-agent-dogfood-worker-runner": "npm run build && node --test test/real-agent-dogfood-worker-runner.test.mjs",

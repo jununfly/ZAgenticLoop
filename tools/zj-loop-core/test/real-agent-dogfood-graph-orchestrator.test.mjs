@@ -12,6 +12,16 @@ const plan = () => createRealAgentDogfoodGraphPlan(base);
 const passed = async () => ({ status: 'passed' });
 const stages = (calls) => Object.fromEntries(['source_execution', 'scope_observation', 'independent_verification', 'human_acceptance', 'merge', 'post_merge_gate', 'cleanup'].map((name) => [name, async () => { calls.push(name); return { status: 'passed' }; }]));
 
+test('Graph plan enrich keeps the legacy digest while separating retry-stable definition digest', () => {
+  const first = plan();
+  const retry = createRealAgentDogfoodGraphPlan({ ...base, execution_id: 'execution-2', attempt: 2 });
+  assert.match(first.plan_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.match(first.plan_definition_digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(first.digest_profile, 'zj-loop.real-agent-dogfood-graph-digest.v1');
+  assert.equal(first.plan_definition_digest, retry.plan_definition_digest);
+  assert.notEqual(first.plan_digest, retry.plan_digest);
+});
+
 test('Graph orchestrator advances exactly one phase per call', async () => {
   const calls = [];
   const result = await advanceRealAgentDogfoodGraph({ plan: plan(), ...stages(calls) });

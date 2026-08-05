@@ -8,7 +8,9 @@ export type RealAgentDogfoodWorkerLeaseResult =
   | { status: 'acquired'; lease_id: string; worker_id: string; expires_at: string; revision: number }
   | { status: 'reused'; lease_id: string; worker_id: string; expires_at: string; revision: number }
   | { status: 'renewed'; lease_id: string; worker_id: string; expires_at: string; revision: number }
-  | { status: 'blocked'; reason: 'worker-lease-expired' | 'worker-lease-mismatch' };
+  | { status: 'released'; lease_id: string; worker_id: string; revision: number }
+  | { status: 'abandoned'; lease_id: string; worker_id: string; revision: number }
+  | { status: 'blocked'; reason: 'worker-lease-expired' | 'worker-lease-mismatch' | 'worker-lease-released' | 'worker-lease-abandoned' };
 
 type LeaseFact = {
   schema: typeof REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA;
@@ -16,7 +18,7 @@ type LeaseFact = {
   execution_id: string;
   lease_id: string;
   worker_id: string;
-  operation: 'acquired' | 'renewed';
+  operation: 'acquired' | 'renewed' | 'released' | 'abandoned';
   issued_at: string;
   expires_at: string;
 };
@@ -32,7 +34,7 @@ function latest(events: StateEvent[]): { fact: LeaseFact; revision: number } | n
   const event = events.at(-1);
   if (!event) return null;
   const fact = event.payload as LeaseFact;
-  if (fact.schema !== REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA || fact.network_id !== event.network_id || fact.execution_id !== event.aggregate_id) throw new Error('worker-lease-fact-invalid');
+  if (fact.schema !== REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA || fact.network_id !== event.network_id || fact.execution_id !== event.aggregate_id || !['acquired', 'renewed', 'released', 'abandoned'].includes(fact.operation)) throw new Error('worker-lease-fact-invalid');
   return { fact, revision: event.revision };
 }
 
@@ -40,7 +42,7 @@ async function readLease(input: { stateStore: SqliteStateStore; network_id: stri
   return latest((await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: AGGREGATE, aggregate_id: input.execution_id })).events);
 }
 
-function event(input: { network_id: string; execution_id: string; lease_id: string; worker_id: string; operation: 'acquired' | 'renewed'; now: string; expires_at: string }) {
+function event(input: { network_id: string; execution_id: string; lease_id: string; worker_id: string; operation: LeaseFact['operation']; now: string; expires_at: string }) {
   const fact: LeaseFact = { schema: REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA, network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, operation: input.operation, issued_at: input.now, expires_at: input.expires_at };
   return { event_id: `${input.lease_id}:${input.operation}:${input.now}:${randomUUID()}`, aggregate_type: AGGREGATE, aggregate_id: input.execution_id, event_type: 'real-agent-dogfood-worker.lease', occurred_at: input.now, payload: fact };
 }
@@ -50,8 +52,14 @@ export async function acquireRealAgentDogfoodWorkerLease(input: { stateStore: Sq
   const ttl = input.ttl_ms ?? 30_000;
   const current = await readLease(input);
   if (current) {
+    if (current.fact.operation === 'released') {
+      // A terminal lease fact permits a new worker lease for the same execution.
+    } else if (current.fact.operation === 'abandoned') {
+      // An abandoned lease fact also permits a new worker lease for the same execution.
+    } else {
     if (Date.parse(now) >= Date.parse(current.fact.expires_at)) return { status: 'blocked', reason: 'worker-lease-expired' };
     return { status: 'reused', lease_id: current.fact.lease_id, worker_id: current.fact.worker_id, expires_at: current.fact.expires_at, revision: current.revision };
+    }
   }
   const leaseId = `lease-${input.execution_id}-${randomUUID()}`;
   const result = await input.stateStore.appendEvent({ network_id: input.network_id, expected_revision: await input.stateStore.getRevision(input.network_id), event: event({ network_id: input.network_id, execution_id: input.execution_id, lease_id: leaseId, worker_id: input.worker_id, operation: 'acquired', now, expires_at: expiry(now, ttl) }) });
@@ -63,9 +71,42 @@ export async function renewRealAgentDogfoodWorkerLease(input: { stateStore: Sqli
   const now = input.now ?? new Date().toISOString();
   const ttl = input.ttl_ms ?? 30_000;
   const current = await readLease(input);
-  if (!current || current.fact.lease_id !== input.lease_id || current.fact.worker_id !== input.worker_id || Date.parse(now) >= Date.parse(current.fact.expires_at)) return { status: 'blocked', reason: current ? 'worker-lease-expired' : 'worker-lease-mismatch' };
+  if (!current || current.fact.lease_id !== input.lease_id || current.fact.worker_id !== input.worker_id) return { status: 'blocked', reason: 'worker-lease-mismatch' };
+  if (current.fact.operation === 'released') return { status: 'blocked', reason: 'worker-lease-released' };
+  if (current.fact.operation === 'abandoned' || Date.parse(now) >= Date.parse(current.fact.expires_at)) return { status: 'blocked', reason: current.fact.operation === 'abandoned' ? 'worker-lease-abandoned' : 'worker-lease-expired' };
   const expiresAt = expiry(now, ttl);
   const result = await input.stateStore.appendEvent({ network_id: input.network_id, expected_revision: input.expected_revision, event: event({ network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, operation: 'renewed', now, expires_at: expiresAt }) });
   if (result.status !== 'recorded') return { status: 'blocked', reason: 'worker-lease-mismatch' };
   return { status: 'renewed', lease_id: input.lease_id, worker_id: input.worker_id, expires_at: expiresAt, revision: result.revision as number };
+}
+
+export async function releaseRealAgentDogfoodWorkerLease(input: { stateStore: SqliteStateStore; network_id: string; execution_id: string; lease_id: string; worker_id: string; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerLeaseResult> {
+  const now = input.now ?? new Date().toISOString();
+  const current = await readLease(input);
+  if (!current || current.fact.lease_id !== input.lease_id || current.fact.worker_id !== input.worker_id) return { status: 'blocked', reason: 'worker-lease-mismatch' };
+  if (current.fact.operation === 'released') return { status: 'blocked', reason: 'worker-lease-released' };
+  if (current.fact.operation === 'abandoned' || Date.parse(now) >= Date.parse(current.fact.expires_at)) return { status: 'blocked', reason: current.fact.operation === 'abandoned' ? 'worker-lease-abandoned' : 'worker-lease-expired' };
+  const result = await input.stateStore.appendEvent({
+    network_id: input.network_id,
+    expected_revision: input.expected_revision,
+    event: event({ network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, operation: 'released', now, expires_at: current.fact.expires_at }),
+  });
+  if (result.status !== 'recorded') return { status: 'blocked', reason: 'worker-lease-mismatch' };
+  return { status: 'released', lease_id: input.lease_id, worker_id: input.worker_id, revision: result.revision as number };
+}
+
+export async function abandonRealAgentDogfoodWorkerLease(input: { stateStore: SqliteStateStore; network_id: string; execution_id: string; lease_id: string; worker_id: string; expected_revision: number; now?: string }): Promise<RealAgentDogfoodWorkerLeaseResult> {
+  const now = input.now ?? new Date().toISOString();
+  const current = await readLease(input);
+  if (!current || current.fact.lease_id !== input.lease_id || current.fact.worker_id !== input.worker_id) return { status: 'blocked', reason: 'worker-lease-mismatch' };
+  if (current.fact.operation === 'released') return { status: 'blocked', reason: 'worker-lease-released' };
+  if (current.fact.operation === 'abandoned') return { status: 'blocked', reason: 'worker-lease-abandoned' };
+  if (Date.parse(now) < Date.parse(current.fact.expires_at)) return { status: 'blocked', reason: 'worker-lease-expired' };
+  const result = await input.stateStore.appendEvent({
+    network_id: input.network_id,
+    expected_revision: input.expected_revision,
+    event: event({ network_id: input.network_id, execution_id: input.execution_id, lease_id: input.lease_id, worker_id: input.worker_id, operation: 'abandoned', now, expires_at: current.fact.expires_at }),
+  });
+  if (result.status !== 'recorded') return { status: 'blocked', reason: 'worker-lease-mismatch' };
+  return { status: 'abandoned', lease_id: input.lease_id, worker_id: input.worker_id, revision: result.revision as number };
 }
