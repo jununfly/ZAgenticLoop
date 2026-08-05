@@ -5,7 +5,7 @@ import path from 'node:path';
 import { validateProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 export const PROVIDER_RUNTIME_SERVICE_BINDING_SCHEMA = 'zj-loop.provider_runtime_service_binding.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
-const KEYS = new Set(['schema', 'service_id', 'network_id', 'socket_path', 'provider_id', 'provider_executable', 'working_directory', 'contract_digest', 'adapter_contract_digest', 'runtime_binding', 'pid', 'started_at', 'binding_digest']);
+const KEYS = new Set(['schema', 'service_id', 'network_id', 'socket_path', 'provider_id', 'provider_executable', 'working_directory', 'contract_digest', 'adapter_contract_digest', 'runtime_binding', 'process_identity_digest', 'pid', 'started_at', 'binding_digest']);
 function canonical(value) { const result = canonicalize(value); if (typeof result !== 'string')
     throw new Error('provider-runtime-service-binding-canonicalization-invalid'); return result; }
 function digest(value) { return `sha256:${createHash('sha256').update(canonical(value), 'utf8').digest('hex')}`; }
@@ -21,7 +21,7 @@ export function validateProviderRuntimeServiceBinding(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value))
         return { status: 'blocked', reason: 'provider-runtime-service-binding-invalid' };
     const item = value;
-    if (Object.keys(item).some((key) => !KEYS.has(key)) || item.schema !== PROVIDER_RUNTIME_SERVICE_BINDING_SCHEMA || !text(item.service_id) || !text(item.network_id) || !text(item.socket_path) || !item.socket_path.startsWith('/') || !text(item.provider_id) || !text(item.provider_executable) || !item.provider_executable.startsWith('/') || !text(item.working_directory) || !item.working_directory.startsWith('/') || !DIGEST.test(String(item.contract_digest)) || !DIGEST.test(String(item.adapter_contract_digest)) || validateProviderRuntimeIdentityBinding(item.runtime_binding).status === 'blocked' || !Number.isInteger(item.pid) || item.pid < 1 || !Number.isFinite(Date.parse(String(item.started_at))) || !DIGEST.test(String(item.binding_digest)))
+    if (Object.keys(item).some((key) => !KEYS.has(key)) || item.schema !== PROVIDER_RUNTIME_SERVICE_BINDING_SCHEMA || !text(item.service_id) || !text(item.network_id) || !text(item.socket_path) || !item.socket_path.startsWith('/') || !text(item.provider_id) || !text(item.provider_executable) || !item.provider_executable.startsWith('/') || !text(item.working_directory) || !item.working_directory.startsWith('/') || !DIGEST.test(String(item.contract_digest)) || !DIGEST.test(String(item.adapter_contract_digest)) || validateProviderRuntimeIdentityBinding(item.runtime_binding).status === 'blocked' || !DIGEST.test(String(item.process_identity_digest)) || !Number.isInteger(item.pid) || item.pid < 1 || !Number.isFinite(Date.parse(String(item.started_at))) || !DIGEST.test(String(item.binding_digest)))
         return { status: 'blocked', reason: 'provider-runtime-service-binding-invalid' };
     const { binding_digest: _, ...unsigned } = item;
     if (digest(unsigned) !== item.binding_digest)

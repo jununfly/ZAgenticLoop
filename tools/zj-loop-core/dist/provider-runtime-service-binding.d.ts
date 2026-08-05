@@ -11,6 +11,7 @@ export type ProviderRuntimeServiceBinding = {
     contract_digest: string;
     adapter_contract_digest: string;
     runtime_binding: ProviderRuntimeIdentityBinding;
+    process_identity_digest: string;
     pid: number;
     started_at: string;
     binding_digest: string;

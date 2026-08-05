@@ -1083,6 +1083,11 @@
           "q": "1-6 Runtime service status/stop 是否允许只凭 binding artifact 中的 PID 操作？",
           "answer": "同意推荐方案：不允许 PID-only stop。status/stop 必须通过 provider-neutral RuntimeProcessIdentityVerifier 校验 PID、启动事实、service identity 与 socket binding；macOS 使用真实 process-audit，Linux/Windows 使用对应原生进程身份观察；无法证明身份时 status 为 outcome-uncertain，stop 拒绝发送终止信号。",
           "note": "Runtime binding artifact TDD 2/2；npm run build 通过。下一步实现 process identity verifier contract，再装配 start/status/stop CLI。"
+        },
+        {
+          "q": "1-6 Runtime process identity verifier contract 的实现结果是什么？",
+          "answer": "同意：新增 provider-neutral RuntimeProcessIdentityVerifier；固定 foreground binding 的 service_id、PID、started_at 与 process_identity_digest 必须精确匹配；in-memory verifier 仅用于 deterministic test fixture，真实 macOS/Linux/Windows adapter 后续接入平台原生观察能力。",
+          "note": "TDD focused 3/3；npm run build 通过。Runtime binding artifact 现已强制包含 process_identity_digest，正式 start/status/stop CLI 必须在 status/stop 前调用该 verifier；无法证明身份时 status 为 outcome-uncertain，stop 拒绝发送终止信号。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1090,7 +1095,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:23:26",
+    "updated": "2026-08-05 17:29:30",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

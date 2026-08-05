@@ -11,7 +11,7 @@ const binding = { runtime_identity_fingerprint: digest('identity'), runtime_mani
 test('Runtime service binding is secret-free, content-addressed, and persisted with private permissions', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-runtime-binding-'));
   const file = path.join(root, 'runtime', 'binding.json');
-  const value = createProviderRuntimeServiceBinding({ service_id: 'service-1', network_id: 'network-1', socket_path: path.join(root, 'runtime.sock'), provider_id: 'codex', provider_executable: '/usr/bin/codex', working_directory: '/tmp', contract_digest: digest('contract'), adapter_contract_digest: digest('adapter'), runtime_binding: binding, pid: 1234, started_at: '2026-08-05T12:00:00.000Z' });
+  const value = createProviderRuntimeServiceBinding({ service_id: 'service-1', network_id: 'network-1', socket_path: path.join(root, 'runtime.sock'), provider_id: 'codex', provider_executable: '/usr/bin/codex', working_directory: '/tmp', contract_digest: digest('contract'), adapter_contract_digest: digest('adapter'), runtime_binding: binding, process_identity_digest: digest('process'), pid: 1234, started_at: '2026-08-05T12:00:00.000Z' });
   assert.equal(validateProviderRuntimeServiceBinding(value).status, 'valid');
   assert.equal(JSON.stringify(value).includes('secret'), false);
   await persistProviderRuntimeServiceBinding(file, value);
@@ -21,7 +21,7 @@ test('Runtime service binding is secret-free, content-addressed, and persisted w
 });
 
 test('Runtime service binding rejects digest drift and unknown fields', () => {
-  const value = createProviderRuntimeServiceBinding({ service_id: 'service-2', network_id: 'network-2', socket_path: '/tmp/runtime.sock', provider_id: 'codex', provider_executable: '/usr/bin/codex', working_directory: '/tmp', contract_digest: digest('contract'), adapter_contract_digest: digest('adapter'), runtime_binding: binding, pid: 1234, started_at: '2026-08-05T12:00:00.000Z' });
+  const value = createProviderRuntimeServiceBinding({ service_id: 'service-2', network_id: 'network-2', socket_path: '/tmp/runtime.sock', provider_id: 'codex', provider_executable: '/usr/bin/codex', working_directory: '/tmp', contract_digest: digest('contract'), adapter_contract_digest: digest('adapter'), runtime_binding: binding, process_identity_digest: digest('process'), pid: 1234, started_at: '2026-08-05T12:00:00.000Z' });
   assert.equal(validateProviderRuntimeServiceBinding({ ...value, binding_digest: digest('wrong') }).status, 'blocked');
   assert.equal(validateProviderRuntimeServiceBinding({ ...value, extra: true }).status, 'blocked');
 });

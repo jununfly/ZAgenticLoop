@@ -189,6 +189,8 @@ export * from './provider-auth-runtime-ipc-launcher.js';
 export * from './provider-auth-ref-store.js';
 export * from './provider-auth-runtime-service.js';
 export * from './provider-runtime-service-binding.js';
+export * from './provider-runtime-process-identity.js';
+export * from './provider-runtime-service-lifecycle.js';
 export * from './trusted-runner-post-run-ipc.js';
 export * from './trusted-runner-peer-identity.js';
 export * from './macos-process-audit-peer-identity.js';
