@@ -177,7 +177,7 @@ export function createProviderRuntimeCleanupCoordinator(input: { runtime: Provid
   };
 }
 
-export function createInMemoryProviderAuthRuntime(input: { runtime_id: string; provider_ids: string[]; runtime_binding?: ProviderRuntimeIdentityBinding; now?: () => string }): ProviderAuthRuntime {
+export function createInMemoryProviderAuthRuntime(input: { runtime_id: string; provider_ids: string[]; runtime_binding?: ProviderRuntimeIdentityBinding; now?: () => string; ref_resolver?: (ref_digest: string) => Promise<ProviderAuthRef | undefined>; revoke_ref?: (input: { auth_ref_id: string }) => Promise<{ status: 'revoked' } | { status: 'blocked'; reason: string }> }): ProviderAuthRuntime {
   const secrets = new Map<string, string>();
   const refs = new Map<string, ProviderAuthRef>();
   const handles = new Map<string, ProviderLaunchHandle>();
@@ -204,15 +204,17 @@ export function createInMemoryProviderAuthRuntime(input: { runtime_id: string; p
       return { status: 'issued', ref };
     },
     async verify(request) {
-      const current = refs.get(request.ref.auth_ref_id);
+      const current = refs.get(request.ref.auth_ref_id) ?? await input.ref_resolver?.(request.ref.ref_digest);
       if (!current || !validRef(current) || current.ref_digest !== request.ref.ref_digest) return { status: 'blocked', reason: 'provider-auth-ref-invalid' };
+      if (!refs.has(current.auth_ref_id)) refs.set(current.auth_ref_id, current);
       if (current.network_id !== request.network_id || current.node_id !== request.node_id || current.provider_id !== request.provider_id || current.execution_id !== request.execution_id || current.attempt !== request.attempt) return { status: 'blocked', reason: 'provider-auth-ref-binding-mismatch' };
       if (Date.parse(request.now ?? now()) < Date.parse(current.issued_at) || Date.parse(request.now ?? now()) >= Date.parse(current.expires_at)) return { status: 'blocked', reason: 'provider-auth-ref-expired' };
       return { status: 'valid', ref: current };
     },
     async revoke(request) {
       const current = refs.get(request.auth_ref_id);
-      if (!current) return { status: 'blocked', reason: 'provider-auth-ref-not-found' };
+      if (!current) return input.revoke_ref ? input.revoke_ref(request) : { status: 'blocked', reason: 'provider-auth-ref-not-found' };
+      if (input.revoke_ref) return input.revoke_ref(request);
       const revoked = { ...current, status: 'revoked' as const };
       const { ref_digest: _, ...unsigned } = revoked;
       refs.set(revoked.auth_ref_id, { ...revoked, ref_digest: digest(unsigned) });

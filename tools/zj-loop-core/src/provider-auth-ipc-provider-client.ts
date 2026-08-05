@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { connectUnixProviderAuthIpc } from './provider-auth-ipc-unix.js';
 import { createProviderAuthIpcFrame, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
-import { validateProviderLaunchHandle, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
+import { validateProviderAuthRef, validateProviderLaunchHandle, type ProviderAuthRef, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { validateProviderResult, type ProviderResult } from './provider-runtime-adapter.js';
 import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
 
@@ -31,6 +31,7 @@ export function createProviderRuntimeIpcProvider(input: {
   provider_id: string;
   execution_id: string;
   attempt: number;
+  auth_ref?: ProviderAuthRef;
   auth_ref_digest: string;
   contract_digest: string;
   adapter_contract_digest: string;
@@ -42,6 +43,7 @@ export function createProviderRuntimeIpcProvider(input: {
   return {
     async run(request) {
       if (!request.cwd || !request.executable) throw new Error('provider-runtime-ipc-provider-resource-invalid');
+      if (input.auth_ref !== undefined && (validateProviderAuthRef(input.auth_ref).status === 'blocked' || input.auth_ref.ref_digest !== input.auth_ref_digest)) throw new Error('provider-runtime-ipc-provider-auth-ref-invalid');
       if (!DIGEST.test(input.auth_ref_digest) || !DIGEST.test(input.contract_digest) || !DIGEST.test(input.adapter_contract_digest)) throw new Error('provider-runtime-ipc-provider-contract-invalid');
       const timeout = input.timeout_ms ?? 15_000;
       if (!Number.isInteger(timeout) || timeout < 1 || timeout > 120_000) throw new Error('provider-runtime-ipc-provider-timeout-invalid');
@@ -75,7 +77,7 @@ export function createProviderRuntimeIpcProvider(input: {
           }
         }});
         timer = setTimeout(() => rejectTerminal(new Error('provider-runtime-ipc-provider-timeout')), timeout);
-          await connection.send(createProviderAuthIpcFrame({ correlation_id, sequence: 1, network_id: input.network_id, node_id: input.node_id, provider_runtime_id: input.provider_runtime_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, kind: 'challenge', nonce: randomUUID(), payload: { schema: LAUNCH_REQUEST_SCHEMA, auth_ref_digest: input.auth_ref_digest, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, ...input.runtime_binding, task: { ...(input.task ?? {}), goal: request.prompt, execution_mode: request.mode ?? 'read-only' } } }));
+          await connection.send(createProviderAuthIpcFrame({ correlation_id, sequence: 1, network_id: input.network_id, node_id: input.node_id, provider_runtime_id: input.provider_runtime_id, provider_id: input.provider_id, execution_id: input.execution_id, attempt: input.attempt, kind: 'challenge', nonce: randomUUID(), payload: { schema: LAUNCH_REQUEST_SCHEMA, auth_ref_digest: input.auth_ref_digest, ...(input.auth_ref ? { auth_ref: input.auth_ref } : {}), contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, ...input.runtime_binding, task: { ...(input.task ?? {}), goal: request.prompt, execution_mode: request.mode ?? 'read-only' } } }));
         const frame = await terminal;
         if (frame.kind !== 'result') {
           if (frame.kind === 'error' && frame.payload && typeof frame.payload === 'object' && !Array.isArray(frame.payload) && typeof frame.payload.code === 'string' && frame.payload.code.trim()) throw new Error(frame.payload.code);

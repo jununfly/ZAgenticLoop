@@ -19,7 +19,11 @@ export declare function createProviderAuthRuntimeIpcSidecar(input: {
     runtime_binding: ProviderRuntimeIdentityBinding;
     challenge_ttl_ms?: number;
     runtime: ProviderAuthRuntime;
-    auth_ref: ProviderAuthRef;
+    auth_ref?: ProviderAuthRef;
+    resolve_auth_ref?: (input: {
+        auth_ref_digest: string;
+        auth_ref?: ProviderAuthRef;
+    }) => Promise<ProviderAuthRef | undefined> | ProviderAuthRef | undefined;
     contract_digest: string;
     adapter_contract_digest: string;
     invoke: (input: {

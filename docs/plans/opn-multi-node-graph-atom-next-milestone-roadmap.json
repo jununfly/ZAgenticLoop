@@ -1018,6 +1018,66 @@
           "q": "1-6 本轮是否完成本机真实 Provider Runtime IPC launcher 与 preflight socket readiness gate？",
           "answer": "同意：新增 provider-neutral launcher 组合层，复用现有 createProviderAuthRuntimeIpcSidecar 与 Codex provider adapter；启动时固定 provider executable、working directory、auth/runtime contract，提供真实 Unix socket readiness、bounded close 和幂等清理；preflight 改为真实 socket connect 探活。",
           "note": "TDD focused launcher 2/2；preflight/conformance 7/7；全包 npm test 432/432；npm run build 与 git diff --check 通过。尚未完成真实 macOS Provider Runtime 的实际启动与 Human approval dogfood，provider-runtime-ipc 仍需真实 socket/peer 验证。"
+        },
+        {
+          "q": "1-6 Provider Runtime launcher 的正式入口采用独立命令，还是嵌入 real-agent-dogfood start？",
+          "answer": "同意推荐方案：新增独立 Provider Runtime start/status/stop 命令；Provider Runtime 生命周期与 Dogfood execution 生命周期分离，preflight 读取并验证 Runtime binding，Runtime 可复用且不由 dogfood start 隐式启动。",
+          "note": "已确认下一实现方向。"
+        },
+        {
+          "q": "1-6 Provider Runtime 如何处理每次 execution 的授权绑定？",
+          "answer": "同意推荐方案：独立 Runtime service 只绑定 provider executable、runtime identity 和 adapter contract；每次 execution 通过现有 challenge/launch/cleanup IPC 请求携带并验证自己的 auth_ref、execution_id、attempt 与 binding；不新增第二套 socket 协议。",
+          "note": "当前 sidecar 的单 auth_ref 实现需要扩展为按请求解析授权；launch handle 仍严格 execution-scoped，Runtime 不保存跨 execution 业务状态。"
+        },
+        {
+          "q": "1-6 Provider Runtime service 首版采用 foreground 还是 daemon 形态？",
+          "answer": "同意推荐方案：首版采用受控 foreground service；start 启动并保持进程运行，status 只读探活，stop 发送受控终止并等待 bounded shutdown；daemon、自启动和系统服务集成后续再做。",
+          "note": "先验证 Runtime contract 与真实 IPC，不把 OS service manager 行为混入 OPN 核心。"
+        },
+        {
+          "q": "1-6 Runtime binding artifact 如何持久化？",
+          "answer": "同意推荐方案：写入仓库外的用户级 Runtime 目录，使用固定 schema、绝对 socket path、service identity、runtime binding、contract digests、PID/启动时间事实与 binding digest；文件权限 0600；status/preflight 只读校验，不把 secret 写入 artifact。",
+          "note": "binding artifact 是 service discovery/readiness 事实，不是授权凭据；auth_ref 仍按 execution 产生并独立验证。"
+        },
+        {
+          "q": "1-6 生产 Provider Runtime 的 peer identity 如何验证？",
+          "answer": "同意推荐方案：生产路径必须使用平台真实 peer verifier；macOS 使用 process-audit verifier，Linux/Windows 使用对应原生 peer credential verifier；in-memory verifier 仅限测试 fixture，不得作为真实 preflight 通过条件。",
+          "note": "避免用 fixture socket 或自报身份冒充真实 Runtime/Agent 边界。"
+        },
+        {
+          "q": "1-6 Provider Runtime stop 遇到活动 execution 时如何收束？",
+          "answer": "同意推荐方案：stop 先拒绝新请求，等待 bounded grace；活动 handle 能证明 cleanup 才记录 cleaned，否则记录 cleanup-uncertain；绝不伪造 cleanup 成功；service stop 结果与 execution 业务结果分离。",
+          "note": "保留 handle、execution 和 cleanup Evidence，允许后续 bounded reconciliation。"
+        },
+        {
+          "q": "1-6 真实 macOS dogfood 的最小验证顺序是什么？",
+          "answer": "同意推荐方案：先运行 deterministic conformance 与只读 preflight，再启动真实 foreground Runtime，验证真实 socket/peer readiness；随后执行一次 read-only Codex invocation，验证 result/cleanup；最后关闭 Runtime 并运行只读 replay/preflight，确认事实闭环。",
+          "note": "在真实副作用之前保留所有 gate；本阶段不做 write-enabled merge，不扩展 endpoint 级网络治理。"
+        },
+        {
+          "q": "1-6 多 execution Runtime IPC 动态授权绑定实现结果是什么？",
+          "answer": "同意：Provider client 可携带无 secret 的 auth_ref；Runtime sidecar 按 auth_ref_digest resolver 解析并严格校验 auth_ref、digest、execution/attempt 与 runtime binding；固定单 execution launcher 继续兼容；同一 foreground service 已通过两个 execution 连续 launch/cleanup。",
+          "note": "TDD focused Provider Runtime IPC 回归 17/17；npm run build 通过。下一关键决策是跨进程 ProviderAuthRef authority 的存储/验证来源，不能依赖 in-memory fixture。"
+        },
+        {
+          "q": "1-6 跨进程 Runtime 如何获得 ProviderAuthRef authority？",
+          "answer": "同意推荐方案：ProviderAuthRef 的无 secret 元数据作为网络级 StateStore append-only issuance/revocation 事实；Runtime service 按 network scope 与 auth_ref_digest 读取并校验；secret 不进入 StateStore、binding artifact 或 IPC，ProviderAuthRuntime/Keychain authority 独立管理 secret。",
+          "note": "保持 StateStore 网络级资源与中心责任边界；下一步实现 provider-neutral ref resolver/store contract，并先用 SQLite StateStore fixture 做 TDD。"
+        },
+        {
+          "q": "1-6 Runtime service 是否可以自行 issue/revoke ProviderAuthRef？",
+          "answer": "同意推荐方案：不可以。Runtime service 只拥有 network-scoped ref resolver、verify、launch、cleanup 能力；issue/revoke/consumeSecret 继续由独立 ProviderAuthRuntime/Keychain authority 负责。service binding 与 StateStore resolver 不包含 secret，也不能替代 Human authorization。",
+          "note": "StateStore resolver TDD 1/1；npm run build 通过。下一步实现 service-only runtime adapter 的能力下界。"
+        },
+        {
+          "q": "1-6 service-only runtime adapter 实现结果是什么？",
+          "answer": "同意：service-only adapter 只提供 inspect/verify/launch/cleanup；issueRef 与 consumeSecret 明确 blocked；auth_ref 通过 StateStore resolver 读取，resolver 成功后仅缓存无 secret metadata，cleanup 将 revoke 委托给外部 authority；handle 与 cleanup proof 继续沿用既有 contract。",
+          "note": "TDD targeted 4/4；StateStore resolver 1/1；Provider IPC 回归 17/17；npm run build 通过。正式 start/status/stop CLI 仍需装配 Runtime authority、binding artifact 与受控 foreground 生命周期。"
+        },
+        {
+          "q": "1-6 StateStore resolver 与 service-only runtime adapter 回归结果是什么？",
+          "answer": "同意：StateStore resolver 与 service-only runtime adapter 已完成并纳入 Provider Runtime contract；resolver 只返回当前 network 的 active、digest-matched、未撤销 ref；service adapter 拒绝 issueRef/consumeSecret，仅允许 verify/launch/cleanup。",
+          "note": "StateStore resolver 1/1；service adapter + launcher focused 4/4；Provider IPC 回归 17/17；全包 npm test 432/432；npm run build 通过。下一施工单元为正式 foreground start/status/stop CLI 与 binding artifact。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1025,7 +1085,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 15:03:21",
+    "updated": "2026-08-05 17:13:19",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

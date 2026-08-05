@@ -68,7 +68,7 @@ async function runWorkerContext(contextPath) {
     const runtimeIpc = context.provider_runtime_ipc;
     if (!runtimeIpc || !runtimeIpc.runtime_binding || JSON.stringify(runtimeIpc.runtime_binding) !== JSON.stringify(context.runtime_binding))
         throw new Error('worker-provider-runtime-ipc-required');
-    const runtimeProvider = createProviderRuntimeIpcProvider({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, network_id: context.network_id, node_id: authRef.node_id, provider_runtime_id: authRef.provider_runtime_id, provider_id: context.provider_id, execution_id: context.execution_id, attempt: authRef.attempt, auth_ref_digest: authRef.ref_digest, contract_digest: runtimeIpc.contract_digest, adapter_contract_digest: context.adapter_contract_digest, runtime_binding: runtimeIpc.runtime_binding });
+    const runtimeProvider = createProviderRuntimeIpcProvider({ socket_path: runtimeIpc.socket_path, correlation_id: runtimeIpc.correlation_id, timeout_ms: runtimeIpc.timeout_ms, network_id: context.network_id, node_id: authRef.node_id, provider_runtime_id: authRef.provider_runtime_id, provider_id: context.provider_id, execution_id: context.execution_id, attempt: authRef.attempt, auth_ref: authRef, auth_ref_digest: authRef.ref_digest, contract_digest: runtimeIpc.contract_digest, adapter_contract_digest: context.adapter_contract_digest, runtime_binding: runtimeIpc.runtime_binding });
     const provider_cleanup = async () => {
         const handle = runtimeProvider.getLaunchHandle();
         if (!handle)

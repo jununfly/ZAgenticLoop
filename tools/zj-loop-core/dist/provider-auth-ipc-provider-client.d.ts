@@ -1,4 +1,4 @@
-import { type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
+import { type ProviderAuthRef, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { type ProviderResult } from './provider-runtime-adapter.js';
 import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
 export type ProviderRuntimeIpcRunResult = {
@@ -21,6 +21,7 @@ export declare function createProviderRuntimeIpcProvider(input: {
     provider_id: string;
     execution_id: string;
     attempt: number;
+    auth_ref?: ProviderAuthRef;
     auth_ref_digest: string;
     contract_digest: string;
     adapter_contract_digest: string;

@@ -1,4 +1,4 @@
-import { type ProviderAuthRef, type ProviderAuthRuntime, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
+import { validateProviderAuthRef, type ProviderAuthRef, type ProviderAuthRuntime, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { validateProviderResult, type ProviderResult } from './provider-runtime-adapter.js';
 import { createProviderAuthIpcFrame, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from './provider-auth-ipc-unix.js';
@@ -29,7 +29,8 @@ export function createProviderAuthRuntimeIpcSidecar(input: {
   runtime_binding: ProviderRuntimeIdentityBinding;
   challenge_ttl_ms?: number;
   runtime: ProviderAuthRuntime;
-  auth_ref: ProviderAuthRef;
+  auth_ref?: ProviderAuthRef;
+  resolve_auth_ref?: (input: { auth_ref_digest: string; auth_ref?: ProviderAuthRef }) => Promise<ProviderAuthRef | undefined> | ProviderAuthRef | undefined;
   contract_digest: string;
   adapter_contract_digest: string;
   invoke: (input: { task: Record<string, unknown>; handle: ProviderLaunchHandle }) => Promise<ProviderRuntimeSidecarInvocation>;
@@ -61,9 +62,13 @@ export function createProviderAuthRuntimeIpcSidecar(input: {
       const payload = frame.payload;
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) { await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++); return; }
       const value = payload as Record<string, unknown>;
-      if (Object.keys(value).some((key) => !['schema', 'auth_ref_digest', 'contract_digest', 'adapter_contract_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'task'].includes(key)) || value.schema !== LAUNCH_REQUEST_SCHEMA || value.auth_ref_digest !== input.auth_ref.ref_digest || value.contract_digest !== input.contract_digest || value.adapter_contract_digest !== input.adapter_contract_digest || value.runtime_identity_fingerprint !== input.runtime_binding.runtime_identity_fingerprint || value.runtime_manifest_digest !== input.runtime_binding.runtime_manifest_digest || value.provider_capabilities_digest !== input.runtime_binding.provider_capabilities_digest || !value.task || typeof value.task !== 'object' || Array.isArray(value.task)) { await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++); return; }
+      const candidateValidation = value.auth_ref === undefined ? undefined : validateProviderAuthRef(value.auth_ref);
+      const candidateAuthRef = candidateValidation?.status === 'valid' ? value.auth_ref as ProviderAuthRef : undefined;
+      if (value.auth_ref !== undefined && !candidateAuthRef) { await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++); return; }
+      const authRef = await input.resolve_auth_ref?.({ auth_ref_digest: String(value.auth_ref_digest), auth_ref: candidateAuthRef }) ?? input.auth_ref;
+      if (Object.keys(value).some((key) => !['schema', 'auth_ref_digest', 'auth_ref', 'contract_digest', 'adapter_contract_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'task'].includes(key)) || value.schema !== LAUNCH_REQUEST_SCHEMA || !authRef || (candidateAuthRef !== undefined && candidateAuthRef.ref_digest !== value.auth_ref_digest) || value.auth_ref_digest !== authRef.ref_digest || value.contract_digest !== input.contract_digest || value.adapter_contract_digest !== input.adapter_contract_digest || value.runtime_identity_fingerprint !== input.runtime_binding.runtime_identity_fingerprint || value.runtime_manifest_digest !== input.runtime_binding.runtime_manifest_digest || value.provider_capabilities_digest !== input.runtime_binding.provider_capabilities_digest || !value.task || typeof value.task !== 'object' || Array.isArray(value.task)) { await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++); return; }
       let launch: Awaited<ReturnType<ProviderAuthRuntime['launch']>>;
-      try { launch = await input.runtime.launch({ ref: input.auth_ref, network_id: frame.network_id, node_id: frame.node_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, runtime_binding: input.runtime_binding, issued_at: now(), expires_at: input.auth_ref.expires_at }); } catch { await error(connection, frame, 'provider-auth-ipc-launch-failed', state.sequence++); return; }
+      try { launch = await input.runtime.launch({ ref: authRef, network_id: frame.network_id, node_id: frame.node_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, runtime_binding: input.runtime_binding, issued_at: now(), expires_at: authRef.expires_at }); } catch { await error(connection, frame, 'provider-auth-ipc-launch-failed', state.sequence++); return; }
       if (launch.status === 'blocked') { await error(connection, frame, launch.reason, state.sequence++); return; }
       const handle = launch.handle;
       state.activeHandle = handle;

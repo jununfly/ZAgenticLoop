@@ -208,4 +208,13 @@ export declare function createInMemoryProviderAuthRuntime(input: {
     provider_ids: string[];
     runtime_binding?: ProviderRuntimeIdentityBinding;
     now?: () => string;
+    ref_resolver?: (ref_digest: string) => Promise<ProviderAuthRef | undefined>;
+    revoke_ref?: (input: {
+        auth_ref_id: string;
+    }) => Promise<{
+        status: 'revoked';
+    } | {
+        status: 'blocked';
+        reason: string;
+    }>;
 }): ProviderAuthRuntime;

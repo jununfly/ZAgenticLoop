@@ -53,6 +53,41 @@ async function fixture() {
   return { root, launcher, issued };
 }
 
+test('provider runtime launcher reuses one service for separately bound executions', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-launcher-multi-'));
+  const runtime = createInMemoryProviderAuthRuntime({ runtime_id: 'runtime-multi', provider_ids: ['codex'], runtime_binding: binding, now: () => '2020-01-01T00:00:00.000Z' });
+  const issue = (execution_id) => runtime.issueRef({ network_id: 'network-multi', node_id: 'node-multi', provider_id: 'codex', execution_id, attempt: 1, audience: 'model-api', scope: [], secret: 'secret', issued_at: '2020-01-01T00:00:00.000Z', expires_at: '2099-01-01T00:00:00.000Z', human_authorized: true });
+  const first = await issue('execution-multi-1');
+  const second = await issue('execution-multi-2');
+  assert.equal(first.status, 'issued');
+  assert.equal(second.status, 'issued');
+  const refs = new Map([[first.ref.ref_digest, first.ref], [second.ref.ref_digest, second.ref]]);
+  const launcher = createProviderAuthRuntimeIpcLauncher({
+    socket_path: path.join(root, 'runtime.sock'),
+    correlation_id: 'launcher-multi',
+    expected_peer_identity_digest: 'a'.repeat(64),
+    verify_peer: createInMemoryTrustedRunnerPeerIdentityVerifier({ identity: { schema: 'zj-loop.trusted_runner_peer_identity.v1', platform: 'darwin', kind: 'process-audit', identity_digest: 'a'.repeat(64), process_id: 42 } }),
+    runtime,
+    resolve_auth_ref: async ({ auth_ref_digest }) => refs.get(auth_ref_digest),
+    contract_digest: digest('contract'),
+    adapter_contract_digest: digest('adapter'),
+    runtime_binding: binding,
+    provider_executable: '/provider',
+    working_directory: '/tmp',
+    process_adapter: processAdapter(),
+  });
+  try {
+    await launcher.start();
+    for (const issued of [first, second]) {
+      const provider = createProviderRuntimeIpcProvider({ socket_path: path.join(root, 'runtime.sock'), correlation_id: 'launcher-multi', network_id: 'network-multi', node_id: 'node-multi', provider_runtime_id: 'runtime-multi', provider_id: 'codex', execution_id: issued.ref.execution_id, attempt: 1, auth_ref: issued.ref, auth_ref_digest: issued.ref.ref_digest, contract_digest: digest('contract'), adapter_contract_digest: digest('adapter'), runtime_binding: binding });
+      const result = await provider.run({ cwd: '/tmp', prompt: issued.ref.execution_id, executable: '/provider' });
+      assert.equal(result.status, 'completed');
+      const cleanup = createProviderRuntimeIpcCleanupCoordinator({ socket_path: path.join(root, 'runtime.sock'), correlation_id: 'launcher-multi', handle: result.launch_handle, network_id: 'network-multi', node_id: 'node-multi', provider_id: 'codex', execution_id: issued.ref.execution_id, attempt: 1 });
+      assert.equal((await cleanup()).status, 'cleaned');
+    }
+  } finally { await launcher.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('provider runtime launcher reports socket readiness and relays a real provider invocation', async () => {
   const f = await fixture();
   try {

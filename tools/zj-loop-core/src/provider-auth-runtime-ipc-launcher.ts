@@ -39,7 +39,8 @@ export function createProviderAuthRuntimeIpcLauncher(input: {
   expected_peer_identity_digest: string;
   verify_peer: TrustedRunnerPeerIdentityVerifier;
   runtime: ProviderAuthRuntime;
-  auth_ref: ProviderAuthRef;
+  auth_ref?: ProviderAuthRef;
+  resolve_auth_ref?: (input: { auth_ref_digest: string; auth_ref?: ProviderAuthRef }) => Promise<ProviderAuthRef | undefined> | ProviderAuthRef | undefined;
   contract_digest: string;
   adapter_contract_digest: string;
   runtime_binding: ProviderRuntimeIdentityBinding;
@@ -58,6 +59,7 @@ export function createProviderAuthRuntimeIpcLauncher(input: {
   if (!input.working_directory.startsWith('/')) throw new Error('provider-runtime-ipc-working-directory-must-be-absolute');
   if (!validDigest(input.contract_digest) || !validDigest(input.adapter_contract_digest)) throw new Error('provider-runtime-ipc-contract-digest-invalid');
   if (!input.runtime || typeof input.runtime.launch !== 'function' || typeof input.runtime.cleanup !== 'function') throw new Error('provider-runtime-ipc-runtime-invalid');
+  if (!input.auth_ref && !input.resolve_auth_ref) throw new Error('provider-runtime-ipc-auth-ref-resolver-required');
   const processAdapter = input.process_adapter ?? createLocalProcessAdapter();
   const provider = createCodexAgentProviderAdapter({ process_adapter: processAdapter, executable: input.provider_executable });
   const timeoutMs = input.invocation_timeout_ms ?? 120_000;
@@ -71,6 +73,7 @@ export function createProviderAuthRuntimeIpcLauncher(input: {
     verify_peer: input.verify_peer,
     runtime: input.runtime,
     auth_ref: input.auth_ref,
+    resolve_auth_ref: input.resolve_auth_ref,
     contract_digest: input.contract_digest,
     adapter_contract_digest: input.adapter_contract_digest,
     runtime_binding: input.runtime_binding,

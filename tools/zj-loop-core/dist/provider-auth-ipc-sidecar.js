@@ -1,3 +1,4 @@
+import { validateProviderAuthRef } from './provider-auth-runtime.js';
 import { validateProviderResult } from './provider-runtime-adapter.js';
 import { createProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from './provider-auth-ipc-unix.js';
@@ -45,13 +46,20 @@ export function createProviderAuthRuntimeIpcSidecar(input) {
                     return;
                 }
                 const value = payload;
-                if (Object.keys(value).some((key) => !['schema', 'auth_ref_digest', 'contract_digest', 'adapter_contract_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'task'].includes(key)) || value.schema !== LAUNCH_REQUEST_SCHEMA || value.auth_ref_digest !== input.auth_ref.ref_digest || value.contract_digest !== input.contract_digest || value.adapter_contract_digest !== input.adapter_contract_digest || value.runtime_identity_fingerprint !== input.runtime_binding.runtime_identity_fingerprint || value.runtime_manifest_digest !== input.runtime_binding.runtime_manifest_digest || value.provider_capabilities_digest !== input.runtime_binding.provider_capabilities_digest || !value.task || typeof value.task !== 'object' || Array.isArray(value.task)) {
+                const candidateValidation = value.auth_ref === undefined ? undefined : validateProviderAuthRef(value.auth_ref);
+                const candidateAuthRef = candidateValidation?.status === 'valid' ? value.auth_ref : undefined;
+                if (value.auth_ref !== undefined && !candidateAuthRef) {
+                    await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++);
+                    return;
+                }
+                const authRef = await input.resolve_auth_ref?.({ auth_ref_digest: String(value.auth_ref_digest), auth_ref: candidateAuthRef }) ?? input.auth_ref;
+                if (Object.keys(value).some((key) => !['schema', 'auth_ref_digest', 'auth_ref', 'contract_digest', 'adapter_contract_digest', 'runtime_identity_fingerprint', 'runtime_manifest_digest', 'provider_capabilities_digest', 'task'].includes(key)) || value.schema !== LAUNCH_REQUEST_SCHEMA || !authRef || (candidateAuthRef !== undefined && candidateAuthRef.ref_digest !== value.auth_ref_digest) || value.auth_ref_digest !== authRef.ref_digest || value.contract_digest !== input.contract_digest || value.adapter_contract_digest !== input.adapter_contract_digest || value.runtime_identity_fingerprint !== input.runtime_binding.runtime_identity_fingerprint || value.runtime_manifest_digest !== input.runtime_binding.runtime_manifest_digest || value.provider_capabilities_digest !== input.runtime_binding.provider_capabilities_digest || !value.task || typeof value.task !== 'object' || Array.isArray(value.task)) {
                     await error(connection, frame, 'provider-auth-ipc-launch-request-invalid', state.sequence++);
                     return;
                 }
                 let launch;
                 try {
-                    launch = await input.runtime.launch({ ref: input.auth_ref, network_id: frame.network_id, node_id: frame.node_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, runtime_binding: input.runtime_binding, issued_at: now(), expires_at: input.auth_ref.expires_at });
+                    launch = await input.runtime.launch({ ref: authRef, network_id: frame.network_id, node_id: frame.node_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, contract_digest: input.contract_digest, adapter_contract_digest: input.adapter_contract_digest, runtime_binding: input.runtime_binding, issued_at: now(), expires_at: authRef.expires_at });
                 }
                 catch {
                     await error(connection, frame, 'provider-auth-ipc-launch-failed', state.sequence++);
