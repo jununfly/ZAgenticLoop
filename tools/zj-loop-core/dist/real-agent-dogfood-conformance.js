@@ -13,9 +13,14 @@ export const REAL_AGENT_DOGFOOD_FAILURE_MATRIX_DIGEST = `sha256:${createHash('sh
 function validEvidenceDigest(value) { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
 export async function runRealAgentDogfoodGraphConformance(input) {
     void input.plan;
-    const phaseEvidence = {};
-    const completed = [];
-    for (const phase of REAL_AGENT_DOGFOOD_GRAPH_PHASES) {
+    const seed = [...(input.completed_phases ?? [])];
+    if (seed.some((phase, index) => phase !== REAL_AGENT_DOGFOOD_GRAPH_PHASES[index]))
+        throw new Error('graph-conformance-completed-phases-invalid');
+    const phaseEvidence = { ...(input.phase_evidence ?? {}) };
+    if (seed.some((phase) => !validEvidenceDigest(phaseEvidence[phase])))
+        throw new Error('graph-conformance-history-evidence-invalid');
+    const completed = seed;
+    for (const phase of REAL_AGENT_DOGFOOD_GRAPH_PHASES.slice(seed.length)) {
         let result;
         try {
             result = await input.stages[phase]();

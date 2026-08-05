@@ -1478,6 +1478,36 @@
           "q": "provider-neutral Graph conformance orchestration core 实现结果是什么？",
           "answer": "同意：新增 runRealAgentDogfoodGraphConformance；严格按七个 Graph phase 顺序执行，每个 passed phase 必须提供 sha256 Evidence digest；阶段失败立即停止；全部 phase 通过后必须通过 replay status=passed、integrity=complete 且 read_model_digest 有效，才返回 closed；核心不执行隐藏副作用。",
           "note": "TDD conformance 回归 5/5；npm run build 通过。CLI 仍需接入真实、可验证的阶段 adapter，普通 JSON manifest 不得冒充可信 Evidence。"
+        },
+        {
+          "q": "Graph conformance Coordinator 是否负责 phase StateStore append 与 revision CAS？",
+          "answer": "同意：Coordinator 是 Graph phase 事实的唯一编排写入者；每个 adapter 结果先经 phase/plan/network 校验，再以当前网络 revision CAS append；冲突不重写事实，返回 outcome-uncertain。",
+          "note": "保持 append-only StateStore 与中心协调责任边界。"
+        },
+        {
+          "q": "Graph phase adapter 必须返回什么？",
+          "answer": "同意：adapter 必须返回真实的 phase record、Evidence digest 和状态；Coordinator 不根据 status 自行合成 Evidence、actor、lease 或执行事实；缺任一绑定即 blocked/outcome-uncertain。",
+          "note": "禁止 Agent/CLI 自报替代可信观察。"
+        },
+        {
+          "q": "Coordinator 是否支持从已有 completed phase prefix 恢复？",
+          "answer": "同意：支持。读取并投影已有 Graph facts，跳过已完成 passed prefix，只执行 next phase；已有 phase Evidence 绑定进入 conformance core，历史事实不重复写入。",
+          "note": "复用 Coordinator resume gate 的事实，不重复执行已完成节点。"
+        },
+        {
+          "q": "phase adapter 失败时如何收束？",
+          "answer": "同意：若 adapter 提供合法 blocked/outcome-uncertain record，先 append 该事实再停止；缺 record 或 append conflict 时返回 outcome-uncertain，不继续后续 phase。",
+          "note": "业务失败和事实无法写入必须区分。"
+        },
+        {
+          "q": "Coordinator 完成七阶段后是否仍必须 replay？",
+          "answer": "同意：必须；replay status=passed、integrity=complete、read_model_digest 有效才返回 closed，否则 outcome-uncertain。",
+          "note": "阶段完成不等价于证据闭环完成。"
+        },
+        {
+          "q": "Graph conformance Coordinator 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral Graph conformance Coordinator，并从包入口导出；Coordinator 读取并投影 Graph StateStore facts，以 phase/plan/network binding 校验 adapter record，再用 revision CAS append；支持从 passed prefix resume，合法失败事实先 append 后停止，append conflict 返回 outcome-uncertain；七阶段完成后仍必须通过 replay status=passed、integrity=complete、read_model_digest 有效才返回 closed。",
+          "note": "TDD 相关回归 19/19；npm run build、包入口导出检查与 git diff --check 通过。下一步是接入真实可验证 phase adapters，并完成真实端到端 conformance 前的 replay/read-model integrity gate。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1485,7 +1515,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 00:08:30",
+    "updated": "2026-08-06 00:19:25",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

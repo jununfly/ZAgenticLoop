@@ -229,4 +229,5 @@ export * from './real-agent-dogfood-evidence-integrity.js';
 export * from './real-agent-dogfood-replay.js';
 export * from './real-agent-dogfood-preflight.js';
 export * from './real-agent-dogfood-conformance.js';
+export * from './real-agent-dogfood-graph-conformance-coordinator.js';
 export * from './real-agent-dogfood-self-audit.js';

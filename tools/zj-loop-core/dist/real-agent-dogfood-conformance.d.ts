@@ -35,6 +35,8 @@ export declare function runRealAgentDogfoodGraphConformance(input: {
     plan: RealAgentDogfoodGraphPlan;
     stages: GraphConformanceStages;
     replay: GraphReplayGate;
+    completed_phases?: readonly RealAgentDogfoodGraphPhase[];
+    phase_evidence?: Partial<Record<RealAgentDogfoodGraphPhase, string>>;
 }): Promise<RealAgentDogfoodGraphConformanceResult>;
 export type RealAgentDogfoodConformanceEvidence = {
     schema: typeof REAL_AGENT_DOGFOOD_CONFORMANCE_SCHEMA;

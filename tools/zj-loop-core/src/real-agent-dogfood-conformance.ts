@@ -35,11 +35,14 @@ type GraphReplayGate = () => Promise<{ status: 'passed' | 'blocked' | 'outcome-u
 
 function validEvidenceDigest(value: unknown): value is string { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
 
-export async function runRealAgentDogfoodGraphConformance(input: { plan: RealAgentDogfoodGraphPlan; stages: GraphConformanceStages; replay: GraphReplayGate }): Promise<RealAgentDogfoodGraphConformanceResult> {
+export async function runRealAgentDogfoodGraphConformance(input: { plan: RealAgentDogfoodGraphPlan; stages: GraphConformanceStages; replay: GraphReplayGate; completed_phases?: readonly RealAgentDogfoodGraphPhase[]; phase_evidence?: Partial<Record<RealAgentDogfoodGraphPhase, string>> }): Promise<RealAgentDogfoodGraphConformanceResult> {
   void input.plan;
-  const phaseEvidence: Partial<Record<RealAgentDogfoodGraphPhase, string>> = {};
-  const completed: RealAgentDogfoodGraphPhase[] = [];
-  for (const phase of REAL_AGENT_DOGFOOD_GRAPH_PHASES) {
+  const seed = [...(input.completed_phases ?? [])];
+  if (seed.some((phase, index) => phase !== REAL_AGENT_DOGFOOD_GRAPH_PHASES[index])) throw new Error('graph-conformance-completed-phases-invalid');
+  const phaseEvidence: Partial<Record<RealAgentDogfoodGraphPhase, string>> = { ...(input.phase_evidence ?? {}) };
+  if (seed.some((phase) => !validEvidenceDigest(phaseEvidence[phase]))) throw new Error('graph-conformance-history-evidence-invalid');
+  const completed: RealAgentDogfoodGraphPhase[] = seed;
+  for (const phase of REAL_AGENT_DOGFOOD_GRAPH_PHASES.slice(seed.length)) {
     let result: RealAgentDogfoodGraphConformanceStageResult;
     try { result = await input.stages[phase](); } catch { result = { status: 'outcome-uncertain', reason: `${phase.replaceAll('_', '-')}-outcome-uncertain` }; }
     if (result.status !== 'passed') return { schema: 'zj-loop.real_agent_dogfood_graph_conformance.v1', status: result.status, completed_phases: completed, current_phase: phase, ...(result.reason ? { reason: result.reason } : {}), phase_evidence: phaseEvidence, side_effects_executed: completed.includes('merge') };
