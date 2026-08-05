@@ -1418,6 +1418,11 @@
           "q": "Authority CLI 实现结果是什么？",
           "answer": "同意：新增与 Provider Runtime 一致的 Authority start/status/stop --json CLI 契约；status 只读，stop 使用 macOS pinned process-audit Authority verifier，并要求 socket 关闭且 binding 已被 child 删除；start 暂 blocked，避免产生无 supervisor 的孤儿 child。",
           "note": "TDD focused 4/4；npm run build 通过。CLI status/stop 已有契约，CLI start 仍需明确 foreground supervisor ownership 后再开放。"
+        },
+        {
+          "q": "1-6 Authority CLI start 是否由 CLI 自身承担前台 supervisor 生命周期？",
+          "answer": "同意推荐方案：CLI start 作为前台 supervisor，持有 external Authority controller；启动后保持运行，首个 SIGINT/SIGTERM 触发 bounded stop，只有确认 binding 清除才返回成功；重复信号忽略，stop 不确定则返回 outcome-uncertain 与非零退出码。",
+          "note": "TDD Authority CLI 3/3、Authority 回归 9/9、npm run build 通过；已接入真实 external start controller，未使用内存 fixture 降级生产路径。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1425,7 +1430,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 23:30:11",
+    "updated": "2026-08-05 23:36:23",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

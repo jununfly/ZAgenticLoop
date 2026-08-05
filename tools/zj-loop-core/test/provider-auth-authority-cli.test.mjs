@@ -28,9 +28,81 @@ test('Authority CLI stop maps binding residue to outcome-uncertain and never del
   assert.deepEqual(capture.output[0], { schema: 'zj-loop.provider_auth_authority_cli.v1', status: 'outcome-uncertain', reason: 'provider-auth-authority-binding-residue', side_effects_executed: false });
 });
 
-test('Authority CLI keeps start blocked until supervisor ownership is configured', async () => {
+test('Authority CLI start stays foreground and stops exactly once on the first signal', async () => {
   const capture = io();
-  const code = await runProviderAuthAuthorityCli(['start', '--config', '/tmp/authority-config.json', '--json'], capture.io);
+  const signalTarget = {
+    listeners: new Map(),
+    on(signal, listener) { this.listeners.set(signal, listener); },
+    off(signal, listener) { if (this.listeners.get(signal) === listener) this.listeners.delete(signal); },
+  };
+  let stopCalls = 0;
+  const controller = {
+    async start() { return { status: 'started', binding }; },
+    async stop() { stopCalls += 1; return { status: 'stopped' }; },
+  };
+  const run = runProviderAuthAuthorityCli(['start', '--config', '/tmp/authority-config.json', '--json'], capture.io, {
+    create_controller: async () => controller,
+    signal_target: signalTarget,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(capture.output[0].status, 'started');
+  assert.equal(stopCalls, 0);
+  const onSigterm = signalTarget.listeners.get('SIGTERM');
+  onSigterm();
+  onSigterm();
+  const code = await run;
+  assert.equal(code, 0);
+  assert.equal(stopCalls, 1);
+  assert.deepEqual(capture.output[1], { schema: 'zj-loop.provider_auth_authority_cli.v1', status: 'stopped', signal: 'SIGTERM', side_effects_executed: true });
+});
+
+test('Authority CLI start reports stop uncertainty and returns nonzero', async () => {
+  const capture = io();
+  const signalTarget = {
+    listeners: new Map(),
+    on(signal, listener) { this.listeners.set(signal, listener); },
+    off(signal, listener) { if (this.listeners.get(signal) === listener) this.listeners.delete(signal); },
+  };
+  const controller = {
+    async start() { return { status: 'started', binding }; },
+    async stop() { return { status: 'outcome-uncertain', reason: 'provider-auth-authority-binding-residue' }; },
+  };
+  const run = runProviderAuthAuthorityCli(['start', '--config', '/tmp/authority-config.json', '--json'], capture.io, {
+    create_controller: async () => controller,
+    signal_target: signalTarget,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  await signalTarget.listeners.get('SIGINT')();
+  assert.equal(await run, 2);
+  assert.deepEqual(capture.output[1], { schema: 'zj-loop.provider_auth_authority_cli.v1', status: 'outcome-uncertain', signal: 'SIGINT', reason: 'provider-auth-authority-binding-residue', side_effects_executed: false });
+});
+
+test('Authority CLI start converts an unexpected stop error to uncertainty', async () => {
+  const capture = io();
+  const signalTarget = {
+    listeners: new Map(),
+    on(signal, listener) { this.listeners.set(signal, listener); },
+    off(signal, listener) { if (this.listeners.get(signal) === listener) this.listeners.delete(signal); },
+  };
+  const controller = {
+    async start() { return { status: 'started', binding }; },
+    async stop() { throw new Error('close failed'); },
+  };
+  const run = runProviderAuthAuthorityCli(['start', '--config', '/tmp/authority-config.json', '--json'], capture.io, {
+    create_controller: async () => controller,
+    signal_target: signalTarget,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  signalTarget.listeners.get('SIGTERM')();
+  assert.equal(await run, 2);
+  assert.deepEqual(capture.output[1], { schema: 'zj-loop.provider_auth_authority_cli.v1', status: 'outcome-uncertain', signal: 'SIGTERM', reason: 'provider-auth-authority-cli-stop-failed', side_effects_executed: false });
+});
+
+test('Authority CLI start maps controller startup failure to blocked', async () => {
+  const capture = io();
+  const code = await runProviderAuthAuthorityCli(['start', '--config', '/tmp/authority-config.json', '--json'], capture.io, {
+    create_controller: async () => { throw new Error('provider-auth-authority-binding-mismatch'); },
+  });
   assert.equal(code, 2);
-  assert.deepEqual(capture.output[0], { schema: 'zj-loop.provider_auth_authority_cli.v1', status: 'blocked', reason: 'provider-auth-authority-start-supervisor-not-configured', side_effects_executed: false });
+  assert.deepEqual(capture.output[0], { schema: 'zj-loop.provider_auth_authority_cli.v1', status: 'blocked', reason: 'provider-auth-authority-binding-mismatch', side_effects_executed: false });
 });
