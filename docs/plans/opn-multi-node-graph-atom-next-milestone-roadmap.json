@@ -1113,6 +1113,11 @@
           "q": "1-6 Provider Runtime start config contract 的实现结果是什么？",
           "answer": "同意：新增 secret-free provider runtime start config schema；固定 network/runtime/provider/socket/peer/contract/StateStore/binding 配置，所有路径必须绝对路径，digest 必须匹配；macOS helper path 与 digest 必须成对；未知或 secret 字段 fail-closed。",
           "note": "TDD focused 7/7；npm run build 与 git diff --check 通过。下一步用 validated config 装配 StateStore resolver、service-only adapter、launcher 与 foreground service。"
+        },
+        {
+          "q": "1-6 Runtime start assembly 的实现结果是什么？",
+          "answer": "同意：新增 start assembly；从 validated config 创建 network-scoped StateStore resolver 与 service-only Runtime，要求外部提供 revoke authority、launcher factory 和当前进程 identity digest，再构造 foreground service；Runtime 不取得 issueRef/consumeSecret 权限。",
+          "note": "TDD focused 5/5；npm run build 与 git diff --check 通过。下一步把 launcher factory 接到真实 macOS peer verifier、Codex provider adapter 与 start CLI 的 config loader。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1120,7 +1125,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 17:45:04",
+    "updated": "2026-08-05 17:46:45",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

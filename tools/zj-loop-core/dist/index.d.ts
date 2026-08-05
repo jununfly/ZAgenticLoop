@@ -195,6 +195,7 @@ export * from './provider-runtime-service-lifecycle.js';
 export * from './provider-runtime-cli.js';
 export * from './provider-runtime-foreground-service.js';
 export * from './provider-runtime-start-config.js';
+export * from './provider-runtime-start-assembly.js';
 export * from './trusted-runner-post-run-ipc.js';
 export * from './trusted-runner-peer-identity.js';
 export * from './macos-process-audit-peer-identity.js';
