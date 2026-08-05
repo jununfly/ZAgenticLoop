@@ -1258,6 +1258,16 @@
           "q": "Authority peer verifier 适配结果是什么？",
           "answer": "同意：新增 provider-neutral Authority peer gate；可接入现有 TrustedRunnerPeerIdentityVerifier，并提供 macOS process-audit helper 工厂。Authority server 只在 pinned peer identity verified 后进入 decoder；Linux/Windows 仍保持 provider-neutral，未宣称平台实现完成。",
           "note": "TDD focused 3/3；npm run build 通过。下一步可将该 gate 接入 Authority foreground start assembly。"
+        },
+        {
+          "q": "下一步如何装配 Authority foreground start？",
+          "answer": "同意方案 1：先实现 provider-neutral Authority start assembly；注入 StateStore、revocation authority、peer gate、launcher 和 binding persistence，完成 deterministic lifecycle 测试后再开放 CLI。",
+          "note": "避免 CLI 先暴露未完成的 Authority bootstrap；先锁定启动顺序、身份绑定和失败收束。"
+        },
+        {
+          "q": "Authority foreground start assembly 实现结果是什么？",
+          "answer": "同意：新增 provider-neutral Authority foreground service 与 start assembly；assembly 创建 network-scoped StateStore revocation authority 和 Authority IPC server，按 readiness → binding 0600 持久化 → stop 清理顺序运行；binding 独立记录 Authority identity、StateStore identity/path、peer/process identity 和 socket。",
+          "note": "TDD focused + Authority peer/revocation 回归 7/7；npm run build 通过。当前仍未开放 CLI，真实平台 gate 由注入的 peer verifier 提供。"
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection 修复和 Graph CLI status read model。status 只读展示 plan/phase/actor/evidence/digest/lease facts；全包 npm test 432/432。下一步为真实端到端 conformance 前的 replay Evidence/read model 完整性检查。"
@@ -1265,7 +1275,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-05 21:42:09",
+    "updated": "2026-08-05 22:23:58",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
