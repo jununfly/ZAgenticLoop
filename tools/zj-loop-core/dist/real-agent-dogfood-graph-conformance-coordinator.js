@@ -41,7 +41,7 @@ export async function createRealAgentDogfoodGraphConformanceCoordinator(input) {
                         return result;
                     if (!result.record)
                         return { status: 'outcome-uncertain', reason: 'graph-phase-record-required' };
-                    const appended = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore: input.state_store, plan: input.plan, network_id: input.network_id, record: result.record, expected_revision: expectedRevision });
+                    const appended = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore: input.state_store, plan: input.plan, network_id: input.network_id, record: result.record, expected_revision: result.state_revision ?? expectedRevision });
                     if (appended.status === 'conflict' || appended.revision === undefined)
                         return { status: 'outcome-uncertain', reason: 'graph-phase-append-conflict' };
                     expectedRevision = appended.revision;

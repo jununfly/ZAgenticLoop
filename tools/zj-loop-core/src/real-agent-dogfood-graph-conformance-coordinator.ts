@@ -10,6 +10,8 @@ export type RealAgentDogfoodGraphPhaseAdapterResult = {
   reason?: string;
   evidence_digest?: string;
   record?: RealAgentDogfoodGraphPhaseRecord;
+  /** StateStore revision after adapter-owned facts, before the phase CAS append. */
+  state_revision?: number;
 };
 
 export type RealAgentDogfoodGraphConformanceCoordinator = {
@@ -55,7 +57,7 @@ export async function createRealAgentDogfoodGraphConformanceCoordinator(input: {
         if (result.status === 'passed' && (!result.record || !DIGEST.test(result.evidence_digest ?? result.record.evidence_digest ?? ''))) return { status: 'outcome-uncertain' as const, reason: 'phase-evidence-required' };
         if (result.status !== 'passed' && !result.record) return result;
         if (!result.record) return { status: 'outcome-uncertain' as const, reason: 'graph-phase-record-required' };
-        const appended = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore: input.state_store, plan: input.plan, network_id: input.network_id, record: result.record, expected_revision: expectedRevision });
+        const appended = await appendRealAgentDogfoodGraphPhaseRecord({ stateStore: input.state_store, plan: input.plan, network_id: input.network_id, record: result.record, expected_revision: result.state_revision ?? expectedRevision });
         if (appended.status === 'conflict' || appended.revision === undefined) return { status: 'outcome-uncertain' as const, reason: 'graph-phase-append-conflict' };
         expectedRevision = appended.revision;
         projected = result.record;

@@ -7,6 +7,8 @@ export type RealAgentDogfoodGraphPhaseAdapterResult = {
     reason?: string;
     evidence_digest?: string;
     record?: RealAgentDogfoodGraphPhaseRecord;
+    /** StateStore revision after adapter-owned facts, before the phase CAS append. */
+    state_revision?: number;
 };
 export type RealAgentDogfoodGraphConformanceCoordinator = {
     run(): Promise<RealAgentDogfoodGraphConformanceResult>;

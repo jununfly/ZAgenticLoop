@@ -12,6 +12,7 @@ export type RealAgentDogfoodGraphSourceExecutionAdapterResult = {
     evidence_digest?: string;
     record?: RealAgentDogfoodGraphPhaseRecord;
     worker_result?: RealAgentDogfoodWorkerResult;
+    state_revision?: number;
 };
 type WorkerRunner = typeof executeRealAgentDogfoodWorker;
 export declare function createRealAgentDogfoodGraphSourceExecutionAdapter(input: {

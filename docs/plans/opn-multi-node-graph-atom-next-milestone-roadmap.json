@@ -374,10 +374,12 @@
     "1-6": {
       "id": "1-6",
       "label": "失败恢复、重放与端到端 conformance",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-6-1"
+      ],
       "decisions": [
         {
           "q": "1-6 是否先实现可重放的完整 conformance fixture，再执行真实 disposable dogfood？",
@@ -1751,11 +1753,32 @@
         }
       ],
       "notes": "已完成 deterministic failure matrix、Graph conformance phase projection、Graph CLI status read model、source_execution、scope_observation 与 independent_verification adapters。independent_verification 采用固定 bounded commands、disposable verifier worktree、HEAD/cleanliness observation 和 EvidenceStore digest 绑定；macOS symlink canonical path 已纳入验证。标准 Graph adapter 回归与完整 npm test 均通过。下一步为接入剩余 Graph phase adapters 与真实端到端 conformance 前的 replay/read-model integrity gate。"
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "deterministic full-chain Graph conformance fixture",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "全链路 fixture 是否必须使用真实七阶段 adapters、临时 Git worktrees、SqliteStateStore、content-addressed EvidenceStore，并在 cleanup 后 replay 为完整闭环？",
+          "answer": "同意：fixture 必须走 source_execution → scope_observation → independent_verification → human_acceptance → merge → post_merge_gate → cleanup 的真实 adapter wiring；使用受控临时 Git 仓库与真实本地 merge/cleanup，StateStore 与 EvidenceStore 持久化事实，最终 replay 只读重建 closed/complete。",
+          "note": "只允许 worker/provider 在 fixture 内受控；不引入 fake phase adapter，后续真实 disposable dogfood 以此为前置 conformance gate。"
+        },
+        {
+          "q": "本轮 deterministic full-chain fixture 的实现结果是什么？",
+          "answer": "已完成：新增真实七阶段 Graph conformance fixture；临时 Git 仓库执行 source scope、独立 verifier worktree、Human signed acceptance、真实 fast-forward merge、post-merge gates、三 worktree cleanup；Coordinator 使用 source adapter 返回的内部 StateStore revision 完成 phase CAS；cleanup 后 replay 只读得到 passed/complete。",
+          "note": "fixture 不执行远程 push/MR；provider 仅为受控测试 runner，后续再做 disposable real-agent dogfood。"
+        }
+      ],
+      "notes": "真实七阶段 adapter wiring 与 cleanup 后 replay 已通过；下一步为 replay/read-model integrity gap 审查或 disposable real-agent dogfood。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 02:13:54",
+    "updated": "2026-08-06 02:30:09",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
