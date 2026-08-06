@@ -1,0 +1,328 @@
+{
+  "title": "OPN 真实可用与用户价值验证里程碑",
+  "description": "以同机多 Agent、跨设备组网和真实协作开发为目标，先验证产品可用性与用户价值，正式发布能力后置。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN 真实可用与用户价值验证里程碑",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [
+        {
+          "q": "当前路线图的目标是正式发布还是先让产品真实可用？",
+          "answer": "先让产品真实可用并验证用户价值；正式发布、Developer ID、notarization、安装包和自动更新后置。",
+          "note": "路线图以 Human 可实际使用的 OPN 协作为出口，不以发布工程完整性作为前置条件。"
+        },
+        {
+          "q": "从当前 Runtime Trust 到真实 OPN co-work 需要几个里程碑？",
+          "answer": "采用五个：M1 Runtime Trust、M2 同机 Graph Atom、M3 跨设备 Graph Atom、M4 写入型 Development Job、M5 真实用户价值 Dogfood。",
+          "note": "每个里程碑必须有可运行出口，不能只完成协议或 fixture。"
+        },
+        {
+          "q": "是否允许在正式发布能力未完成时长期使用 development channel？",
+          "answer": "允许；development channel 是长期支持的开发测试产品形态，具备完整安全门槛但不承诺官方发布者身份。",
+          "note": "不让 Developer ID 阻塞用户价值验证。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "M1：长期开发测试版 Runtime Trust",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-1-1",
+        "1-1-2"
+      ],
+      "decisions": [
+        {
+          "q": "M1 的开发测试信任根是什么？",
+          "answer": "Runtime 可使用 ad-hoc/codesign，artifact manifest 必须经过已注册 HumanSigner approval，启动时校验 manifest、实际文件 digest、CDHash 和 PID identity。",
+          "note": "完整性与 Human 批准是当前必要门槛。"
+        },
+        {
+          "q": "M1 的完成出口是什么？",
+          "answer": "可以在真实设备上 bootstrap、Human approve 并启动一个 signed Runtime，漂移、撤销、过期和身份不匹配会 fail closed。",
+          "note": "仅有 contract 或 fixture 不算完成。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "M2：同机 Multi-Agent Graph Atom",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2",
+        "1-2-3"
+      ],
+      "decisions": [
+        {
+          "q": "M2 的中心责任单元如何定义？",
+          "answer": "由 Human 或 Human+Agent 承担；Agent1、Agent2 等是被编排执行节点，不能改变最终决策和责任归属。",
+          "note": "与既定 OPN 责任模型一致。"
+        },
+        {
+          "q": "M2 是否先做同机只读任务？",
+          "answer": "是；先让同一设备上的两个真实 Agent 通过 Directed Graph 完成只读任务，再进入跨设备和写入型任务。",
+          "note": "降低变量，优先验证 Graph Engineering 与 Loop Engineering 的协作体验。"
+        },
+        {
+          "q": "M2 是否绑定具体 Codex/Workbuddy？",
+          "answer": "不绑定；使用 Agent1、Agent2 等通用节点抽象，Codex/Workbuddy 只是当前设备上的 provider 实例。",
+          "note": "保持 provider-neutral，可持续扩展。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "M3：跨设备 Multi-node Graph Atom",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2",
+        "1-3-3"
+      ],
+      "decisions": [
+        {
+          "q": "M3 的首个跨设备拓扑是什么？",
+          "answer": "设备 A 上 Human+Agent1 作为中心责任单元，设备 A 上 Agent2 和设备 B 上 Agent3 作为执行节点。",
+          "note": "直接覆盖用户描述的真实场景。"
+        },
+        {
+          "q": "M3 的 StateStore 属于谁？",
+          "answer": "StateStore 是独立网络级资源；中心节点拥有事件协调权，不因成为中心自动获得存储权或改变存储位置的权力。",
+          "note": "延续既定网络资源边界。"
+        },
+        {
+          "q": "M3 的完成出口是什么？",
+          "answer": "三节点真实只读 Graph Task 能完成 pairing、secure transport、reconnect、delivery、Evidence 汇聚、独立验证和 Human review。",
+          "note": "必须是真实跨设备路径，不接受仅 fixture 通过。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "M4：写入型 OPN Development Job",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3"
+      ],
+      "decisions": [
+        {
+          "q": "写入型任务的资源竞态由谁负责？",
+          "answer": "中心责任单元在分派前完成任务编排与资源隔离检查；如果知道合理隔离方案就决策，不知道就 grill Human；OPN 不接管外部文件系统竞态。",
+          "note": "保持产品边界正确。"
+        },
+        {
+          "q": "第一条写入型任务采用什么隔离方式？",
+          "answer": "同一 repo 为不同 Agent 创建独立 branch/worktree；Agent 完成后提交 commit，由中心节点先合并，再做总体验证和 Human accept。",
+          "note": "先验证可解释、可回收的 Git 隔离路径。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "M5：真实用户价值 Dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2",
+        "1-5-3"
+      ],
+      "decisions": [
+        {
+          "q": "M5 的 dogfood 项目选择什么？",
+          "answer": "选择 ZAgenticLoop 自身，边真实使用、边开发和修正产品。",
+          "note": "让产品在自身真实工作流中接受检验。"
+        },
+        {
+          "q": "M5 的 baseline 是什么？",
+          "answer": "以 Single-Agent OPN Atom 为 baseline，不比较 Human 单独完成任务的效率。",
+          "note": "比较 Graph Atom、跨设备和多节点能力相对单 Agent 的增量价值。"
+        },
+        {
+          "q": "M5 如何判断用户价值？",
+          "answer": "同时记录任务是否完成、人工介入次数、等待/恢复成本、Evidence 可读性、失败可解释性、结果质量和 Human 主观愿意继续使用程度。",
+          "note": "不追求伪精确的单一效率数字，而观察真实持续使用价值。"
+        },
+        {
+          "q": "M5 完成后的下一步是什么？",
+          "answer": "根据真实 dogfood 反馈再规划下一张路线图，不在当前五个里程碑中无限扩展正式发布事项。",
+          "note": "保持路线图边界和产品迭代节奏。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "完成 development artifact bootstrap 与 Human approval",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "真实 signed Runtime dogfood 启动门禁通过",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "同机 Agent node enrollment 与中心责任单元",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "同机 Directed Graph 执行、Evidence 与 Human review",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-3": {
+      "id": "1-2-3",
+      "label": "同机真实双 Agent 只读任务通过",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "跨设备 pairing、device identity 与 secure transport",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "跨设备 reconnect、replay 与 StateStore 协作",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-3": {
+      "id": "1-3-3",
+      "label": "跨设备真实三节点只读任务通过",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "任务编排资源隔离检查与 worktree 策略",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "多 Agent commit、中心合并与合并后验证",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "真实写入型开发任务 Human accept 通过",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "选择真实 dogfood 任务并建立 baseline",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "记录用户价值、体验和失败恢复反馈",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-3": {
+      "id": "1-5-3",
+      "label": "根据真实反馈规划下一里程碑",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-08-06 14:10:10",
+    "updated": "2026-08-06 14:11:22",
+    "md_file": "docs/plans/opn-real-use-validation-milestones-roadmap.md"
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "title": "OPN 长期开发测试版 Runtime Artifact 信任链",
+  "description": "建立不依赖 Developer ID 也可长期使用、具备明确安全门槛的 development Runtime artifact trust channel。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "OPN 长期开发测试版 Runtime Artifact 信任链",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "设计 HumanSigner artifact approval envelope",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "artifact approval 是否独立于 manifest，签名 manifest_digest 而不是把签名直接嵌入 manifest？",
+          "answer": "采用独立 approval envelope，签名 manifest_digest。",
+          "note": "manifest 保持不可变且可复用，不同 Human、网络和设备可以分别批准同一 artifact。"
+        },
+        {
+          "q": "approval envelope 使用什么签名格式？",
+          "answer": "复用 HumanSigner：ECDSA P-256/SHA-256、DER、low-S、JCS canonical JSON 和域分离前缀。",
+          "note": "与现有 Human acceptance/local execution approval 保持统一。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "确定开发测试版信任根与多设备授权边界",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "开发测试版的信任根是否由已注册 HumanSigner 提供，而不是由 manifest 自带公钥自证？",
+          "answer": "是。只信任 StateStore/网络注册的 HumanSigner identity，manifest 自带公钥不能成为信任根。",
+          "note": "防止重新生成 manifest 或 approval 后自行获得信任。"
+        },
+        {
+          "q": "多设备是否共享同一个 artifact approval？",
+          "answer": "默认按 Human identity + network + device scope 绑定；跨设备复用必须显式授权，不因同一 Human 自动继承。",
+          "note": "保留 OPN 多设备边界，避免一台设备的本地批准无声扩散。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "确定 approval 生命周期、撤销与 artifact 更新规则",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [],
+      "decisions": [
+        {
+          "q": "approval 生命周期如何处理 artifact 更新？",
+          "answer": "approval 绑定不可变 manifest_digest；任何 Runtime/helper/配置 digest 变化都必须生成新 manifest 并重新 Human 批准。",
+          "note": "禁止原地更新旧 artifact 或复用旧签名。"
+        },
+        {
+          "q": "approval 是否需要有效期和撤销？",
+          "answer": "需要 issued_at、expires_at 和可追加的 revoke fact；过期或撤销后启动直接 blocked，历史证据保留。",
+          "note": "开发版长期可用不等于永久无条件信任。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "实现 artifact approval 与 Runtime 启动门禁",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2",
+        "1-4-3"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "验证长期开发测试版真实使用闭环",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "实现 approval contract 与 P-256 签名验证",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "签名验证失败时是否允许降级到 ad-hoc/codesign 或内存 signer？",
+          "answer": "不允许。ad-hoc 只描述产物签名类型，不能替代 Human approval；内存 signer 只用于 fixture。",
+          "note": "真实 Runtime 和真实 dogfood 必须使用持久 HumanSigner。"
+        },
+        {
+          "q": "approval envelope 的最小绑定字段是什么？",
+          "answer": "绑定 network_id、node_id、device_id、artifact_id、manifest_digest、profile、platform、issued_at、expires_at、human_id、signer_fingerprint 和 action；signature 只签这些 unsigned fields。",
+          "note": "禁止只签 artifact digest 而遗漏网络、设备和责任主体上下文。"
+        },
+        {
+          "q": "approval 是否需要 canonicalization profile、profile digest 和 domain separation？",
+          "answer": "需要。使用固定 JCS profile digest，并对  域分离后签名。",
+          "note": "防止同一签名被跨协议重放。"
+        },
+        {
+          "q": "approval 是否包含 side_effects_executed 字段？",
+          "answer": "包含且固定为 false；approval 只表达授权事实，不代表 Runtime 已启动或 artifact 已成功执行。",
+          "note": "执行事实由 Runtime lifecycle/evidence 单独记录。"
+        },
+        {
+          "q": "Runtime launcher 如何获得 approval？",
+          "answer": "通过受信 StateStore/resolver 按 network、node、device、manifest_digest 查询最新有效 approval，并验证 signer identity、有效期、撤销和上下文绑定。",
+          "note": "不接受仅由命令行传入、未验证来源的 JSON approval。"
+        },
+        {
+          "q": "approval 失效时 Runtime 如何处理？",
+          "answer": "启动前 blocked；运行中发现撤销、过期或 StateStore 不可验证时，不伪造成功，进入 outcome-uncertain/blocked，并保留原始 evidence。",
+          "note": "不自动回退到 ad-hoc、内存 signer 或旧 approval。"
+        },
+        {
+          "q": "approval 是否需要 canonicalization profile、profile digest 和 domain separation？",
+          "answer": "需要。使用固定 JCS profile digest，并对固定的 ZJ-LOOP/PROVIDER-RUNTIME-ARTIFACT-APPROVAL/V1 域分离前缀签名；实现时前缀末尾使用 NUL 字节。",
+          "note": "更正上一条被 shell 转义截断的记录，防止同一签名被跨协议重放。"
+        }
+      ],
+      "notes": "Implemented provider-runtime-artifact-approval.v1 with HumanSigner P-256/JCS/domain-separated signing, context binding, expiry/future-time checks, revoked input, and side_effects_executed=false safety gate. Tests pass."
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "接入 manifest digest、实际文件 digest 与进程身份校验",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Runtime 启动门禁是否同时校验 approval、manifest、文件 digest、codesign/CDHash 和 PID identity？",
+          "answer": "是，任一校验失败均不启动 IPC sidecar，并返回 blocked。",
+          "note": "形成开发测试版的最小安全闭环。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-4-3": {
+      "id": "1-4-3",
+      "label": "实现开发测试版 artifact bootstrap",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "development artifact bootstrap 是否自动批准新产物？",
+          "answer": "不自动批准。bootstrap 只生成/签名产物和 manifest，并创建待 Human approval 的 challenge；批准后才可启动。",
+          "note": "构建自动化不应获得 Human 责任权限。"
+        },
+        {
+          "q": "approval 应存在哪里？",
+          "answer": "原始 approval fact 写入网络级 StateStore；本地文件只作为受保护的 cache/ref，启动时必须回 StateStore 或可信 resolver 校验撤销与 revision。",
+          "note": "避免拷贝一个旧 approval 文件绕过撤销。"
+        },
+        {
+          "q": "谁可以批准、撤销和跨设备授权？",
+          "answer": "只有 Human responsibility unit 通过已注册 HumanSigner 执行；Agent、Runtime、bootstrap 和 UI session 不能改变信任。",
+          "note": "Agent 只能提出 challenge，不能自授权限。"
+        },
+        {
+          "q": "artifact bootstrap 的输入输出是什么？",
+          "answer": "输入是已构建 Runtime/helper；输出是固定 artifact 目录、manifest、manifest digest 和待批准 challenge；不生成 accepted approval。",
+          "note": "构建与责任批准保持分离。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "覆盖签名漂移、撤销、过期和跨设备场景",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "测试是否覆盖 drift、过期、撤销、跨设备和 replay？",
+          "answer": "全部覆盖，并要求失败关闭、不可生成成功 Evidence、不可复用旧 approval。",
+          "note": "验证的是安全边界而不只是 happy path。"
+        },
+        {
+          "q": "同一 artifact 跨设备如何使用？",
+          "answer": "每个 device 默认产生独立 approval；跨设备复用必须由 Human 显式签发新的 device-bound approval，不能复制本地 approval 文件。",
+          "note": "保留多设备责任边界。"
+        },
+        {
+          "q": "approval replay 如何阻断？",
+          "answer": "绑定唯一 approval_id、manifest_digest、device_id、revision 和有效期；StateStore 对重复/旧 revision 做幂等或冲突阻断。",
+          "note": "旧 approval 不能覆盖新状态。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "运行真实 signed Runtime dogfood",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [
+        {
+          "q": "真实 dogfood 是否使用与正式 launcher 相同的 approval/manifest gate？",
+          "answer": "是。只替换 artifact provenance profile 为 development-local，不替换验证路径。",
+          "note": "避免 fixture 通过而真实路径失败。"
+        }
+      ],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-08-06 13:45:53",
+    "updated": "2026-08-06 14:00:01",
+    "md_file": "docs/plans/opn-development-runtime-artifact-roadmap.md"
+  }
+}
