@@ -35,7 +35,7 @@ export declare function createGitLabDependencySweeperRepairMr(input: {
 } | {
     schema: string;
     status: string;
-    outcome: "created" | "duplicate";
+    outcome: "duplicate" | "created";
     audit: Record<string, unknown>;
     merge_request: {
         iid: number;

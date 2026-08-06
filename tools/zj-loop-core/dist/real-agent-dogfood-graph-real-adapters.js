@@ -8,6 +8,7 @@ import { createRealAgentDogfoodGraphScopeObservationAdapter } from './real-agent
 import { createRealAgentDogfoodGraphSourceExecutionAdapter } from './real-agent-dogfood-graph-source-execution-adapter.js';
 import { REAL_AGENT_DOGFOOD_GRAPH_PHASES } from './real-agent-dogfood-graph-orchestrator.js';
 import { projectRealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
+import { validateOpnGraphAtomEnrollmentSnapshot } from './opn-graph-atom-enrollment.js';
 function remember(results, result) {
     if (result.record)
         results[result.record.phase] = result.record;
@@ -24,6 +25,13 @@ async function loadPhaseResults(input) {
     return results;
 }
 export async function createRealAgentDogfoodGraphConformanceCoordinatorWithRealAdapters(input) {
+    if (input.enrollment) {
+        const enrollment = validateOpnGraphAtomEnrollmentSnapshot(input.enrollment);
+        if (enrollment.status === 'blocked')
+            throw new Error(`graph-atom-enrollment-${enrollment.reason}`);
+        if (input.enrollment.network_id !== input.network_id || input.enrollment.center.human_id !== input.human_id)
+            throw new Error('graph-atom-enrollment-coordinator-binding-invalid');
+    }
     const phaseResults = await loadPhaseResults({ stateStore: input.state_store, plan: input.plan, network_id: input.network_id });
     const runAndRemember = async (run) => {
         const result = await run();

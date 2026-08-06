@@ -104,7 +104,7 @@ test('worker context invokes the provider through the Runtime IPC channel', asyn
     const awaiting = createRealAgentDogfoodTransition({ lifecycle: ready.lifecycle, to: 'awaiting-human-approval', event_id: 'awaiting-cli', occurred_at: '2026-08-01T12:00:02.000Z', fact_digest: 'sha256:' + 'a'.repeat(64), next_action: 'human-approval' });
     let revision = 1;
     for (const event of [draft.event, ready.event, awaiting.event]) await appendRealAgentDogfoodEvent({ stateStore: store, expected_revision: revision++, event });
-    const invocationArgs = ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', worktree];
+    const invocationArgs = ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--cd', worktree];
     const bindingDigest = (await createRealAgentDogfoodExecutionBinding({ executable, args: invocationArgs, cwd: worktree, worktree_path: worktree, lease_id: 'lease-placeholder' })).execution_binding_digest;
     const lease = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-cli', execution_id: 'execution-cli', worker_id: 'worker-cli', execution_binding_digest: bindingDigest, now: new Date().toISOString(), ttl_ms: 600_000 });
     assert.equal(lease.status, 'acquired');

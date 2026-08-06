@@ -38,7 +38,7 @@
     "1-1": {
       "id": "1-1",
       "label": "M1：长期开发测试版 Runtime Trust",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -57,12 +57,12 @@
           "note": "仅有 contract 或 fixture 不算完成。"
         }
       ],
-      "notes": ""
+      "notes": "M1 Runtime Trust complete."
     },
     "1-2": {
       "id": "1-2",
       "label": "M2：同机 Multi-Agent Graph Atom",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -87,12 +87,12 @@
           "note": "保持 provider-neutral，可持续扩展。"
         }
       ],
-      "notes": ""
+      "notes": "M1 complete. Begin same-device Graph Atom by composing existing Agent registration/enrollment, OrchestrationPlan center role, and Human responsibility-unit validation."
     },
     "1-3": {
       "id": "1-3",
       "label": "M3：跨设备 Multi-node Graph Atom",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -182,82 +182,245 @@
     "1-1-1": {
       "id": "1-1-1",
       "label": "完成 development artifact bootstrap 与 Human approval",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "M1 bootstrap 是否提供统一 CLI 入口？",
+          "answer": "提供 ，由它准备 artifact、生成 manifest、创建 Human approval challenge 并生成 start config；不要求用户手工拼接底层文件。",
+          "note": "把开发测试版从底层 contract 变成可实际使用路径。"
+        },
+        {
+          "q": "bootstrap 是否自动产生 accepted Human approval？",
+          "answer": "不自动。bootstrap 可以构建和 ad-hoc 签名 artifact，但 accepted approval 必须由 HumanSigner 明确签发。",
+          "note": "构建自动化不能替代 Human responsibility unit。"
+        },
+        {
+          "q": "bootstrap 默认使用什么 Runtime 来源？",
+          "answer": "默认使用显式指定并复制到固定 artifact 目录的 Runtime executable/helper；禁止隐式依赖可漂移的系统路径或 Homebrew Node。",
+          "note": "实际运行文件必须可寻址、可摘要和可复验。"
+        },
+        {
+          "q": "bootstrap 是否支持用户显式指定 artifact 来源？",
+          "answer": "支持；用户可指定 Runtime/helper 来源，但 bootstrap 必须复制到自己的 artifact 目录并重新计算 digest，不能直接信任来源路径。",
+          "note": "来源可替换，验证规则不变。"
+        },
+        {
+          "q": "相同输入重复 bootstrap 如何处理？",
+          "answer": "按 artifact digest 幂等复用已有 manifest/challenge；来源 digest 变化则创建新的 artifact_id、manifest_digest 和 approval challenge，禁止原地覆盖旧 artifact。",
+          "note": "保持历史证据和 approval 绑定稳定。"
+        },
+        {
+          "q": "bootstrap 输出格式是什么？",
+          "answer": "同时提供机器可读 JSON 和简短 Human summary；JSON 包含 artifact 路径、manifest digest、approval_id、下一步动作和 blocked reason。",
+          "note": "CLI 可被 Web UI、脚本和后续 orchestrator 复用。"
+        },
+        {
+          "q": "Human approval 如何接入 bootstrap？",
+          "answer": "bootstrap 生成持久 approval challenge，复用现有 HumanSigner/Approval UI； 或 UI action 只引用 challenge/manifest digest，不能直接提交未持久化 approval JSON。",
+          "note": "统一现有 Human approval 体验和审计边界。"
+        },
+        {
+          "q": "start config 是否由用户手工维护？",
+          "answer": "不作为正常路径；bootstrap 在 approval 成功后生成或更新受保护 start config，start 只读取并重新校验它。",
+          "note": "减少路径、digest 和 binding 手工漂移。"
+        },
+        {
+          "q": "bootstrap 失败或 approval 缺失时是否保留半成品？",
+          "answer": "保留可审计的 manifest/challenge 和失败事实，但不生成可启动的 accepted binding；敏感临时文件清理，失败状态可诊断。",
+          "note": "区分可恢复准备事实与可运行授权。"
+        },
+        {
+          "q": "M1 是否同时实现 Windows/Linux artifact bootstrap？",
+          "answer": "不阻塞 M1；先实现 macOS 真实路径，contract 保持 provider-neutral，Windows/Linux 只保留清晰的 blocked/extension 边界。",
+          "note": "先验证当前真实设备场景，不伪造跨平台通过。"
+        },
+        {
+          "q": "bootstrap 是否负责多个 Agent 节点的组网？",
+          "answer": "不负责；M1 只准备并启动一个本机 Provider Runtime。多 Agent enrollment、Graph dispatch 和跨设备 pairing 分别属于 M2/M3。",
+          "note": "保持里程碑边界，避免 bootstrap 膨胀成组网系统。"
+        },
+        {
+          "q": "M1 bootstrap 是否提供统一 CLI 入口？",
+          "answer": "提供统一的 zj-loop-provider-runtime bootstrap CLI 入口，由它准备 artifact、生成 manifest、创建 Human approval challenge 并生成 start config；不要求用户手工拼接底层文件。",
+          "note": "更正上一条被 shell 命令替换截断的记录。"
+        },
+        {
+          "q": "Human approval 如何接入 bootstrap？",
+          "answer": "bootstrap 生成持久 approval challenge，复用现有 HumanSigner/Approval UI；approve CLI 或 UI action 只引用 challenge/manifest digest，不能直接提交未持久化 approval JSON。",
+          "note": "更正上一条被 shell 命令替换截断的记录。"
+        }
+      ],
+      "notes": "Bootstrap, challenge-bound approve, StateStore persistence, launcher approval gate, and validation matrix implemented and tested."
     },
     "1-1-2": {
       "id": "1-1-2",
       "label": "真实 signed Runtime dogfood 启动门禁通过",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Real macOS dogfood passed with ad-hoc signed Node/helper artifacts, real Swift process-audit helper, StateStore approval, and macOS Keychain HumanSigner; ForegroundService reached Unix socket readiness."
     },
     "1-2-1": {
       "id": "1-2-1",
       "label": "同机 Agent node enrollment 与中心责任单元",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Added and tested provider-neutral GraphAtomEnrollmentSnapshot: same-device binding, approved Agent registrations, explicit Human/Human+Agent center responsibility, center-agent enrollment, and canonical snapshot digest."
     },
     "1-2-2": {
       "id": "1-2-2",
       "label": "同机 Directed Graph 执行、Evidence 与 Human review",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "Bound the existing real Graph coordinator to GraphAtomEnrollmentSnapshot and verified the complete seven-phase Directed Graph chain: source execution, scope observation, independent verification, Human acceptance, merge, post-merge gate, cleanup, replay."
     },
     "1-2-3": {
       "id": "1-2-3",
       "label": "同机真实双 Agent 只读任务通过",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "M2-3真实 Agent 验证顺序",
+          "answer": "先方案1：两个独立的真实 Agent provider 会话完成同机只读 Graph Atom 证据闭环；随后方案2：在不破坏 provider-neutral 协议的前提下评估并接入 WorkBuddy GUI bridge。",
+          "note": "Agent1/Agent2 是协议层通用节点；Codex 双会话仅作为当前可运行 provider 的验证实例，不代表产品绑定 Codex。方案2 依赖 WorkBuddy 可调用接口或明确的 GUI bridge 边界。"
+        },
+        {
+          "q": "方案2 WorkBuddy 接入边界",
+          "answer": "采用 WorkBuddy 安装包内可验证的 codebuddy 非交互 CLI 作为 provider adapter；不做 GUI 自动化。固定 --print、--output-format json、--tools Read、--permission-mode dontAsk、--no-session-persistence，并继续通过 Agent1/Agent2 provider-neutral runner。",
+          "note": "WorkBuddy 单 provider 真实只读执行通过，adapter 与 26 项相关回归通过。一次 Codex+WorkBuddy 并发运行出现 WorkBuddy 进程未在预期窗口退出，已清理残留；混合并发稳定性仍是后续增强项，不宣称已完成跨 provider 并发验收。"
+        },
+        {
+          "q": "WorkBuddy 与用户现有会话的兼容",
+          "answer": "按 OPN invocation session_id、adapter 返回的 child PID 和 invocation digest 区分本次执行；只允许观察和清理本次 LocalProcessHandle，不扫描、不接管、不终止用户已有 WorkBuddy 会话。",
+          "note": "WorkBuddy CLI 的 session_id 作为调用级身份绑定；用户正在使用 WorkBuddy 不构成 OPN 阻塞。若子进程超时，只将本次执行标记为 outcome-uncertain 并清理本次 child，不能据全局进程状态推断任务结果。"
+        }
+      ],
+      "notes": "方案1真实闭环通过：同一 macOS 设备的 Graph Atom enrollment 绑定 Agent1/Agent2，两个独立 Codex provider 进程以 read-only scope 并行执行，状态 passed。enrollment_digest=sha256:128def7b7ea367e5b9c01f1bc504ea8410acd5163c1a0de3e6707acc785cd03b；aggregate_evidence_digest=sha256:6af77ba3ef81abd5d4692fb7ff4fdd3d58be63bac339f1a13c5aa8b70aaf0c18。方案2转入 WorkBuddy bridge 可调用性探查，协议仍保持 Agent1/Agent2 provider-neutral。"
     },
     "1-3-1": {
       "id": "1-3-1",
       "label": "跨设备 pairing、device identity 与 secure transport",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "M2 混合 provider 并发稳定性是否阻塞 M3？",
+          "answer": "不阻塞 M2；作为后续增强，在真实 dogfood 前专项验证。",
+          "note": "WorkBuddy 单 provider 与 adapter 已通过；一次混合并发退出延迟按 invocation session/PID fail-closed，不扩大为全局进程判断。"
+        },
+        {
+          "q": "M3 的产品范围是什么？",
+          "answer": "同一个人的多设备/Agent 通过 ZAgenticLoop 组网；中心责任单元仍是 Human 或 Human+Agent；首个退出条件是跨两台设备的三节点只读 Graph Atom。",
+          "note": "Agent1/Agent2/Agent3 是通用节点抽象，不绑定 Codex、WorkBuddy 或其他具体 provider。"
+        },
+        {
+          "q": "M3 是否允许写入目标代码库或解决外部资源竞态？",
+          "answer": "不允许。M3 只验证组网、路由、传输、重连、Evidence、验证和 Human review；写入隔离属于后续 Development Job。",
+          "note": "遵守产品边界：资源隔离由中心责任单元在任务编排时决策，不由 Transport 核心接管。"
+        },
+        {
+          "q": "StateStore 的归属是什么？",
+          "answer": "StateStore 是独立网络级资源；中心节点拥有事件协调权，不因成为中心自动获得存储权或改变存储位置。",
+          "note": "事实与存储权限保持独立，跨设备 adapter 不能把本地状态冒充网络级事实。"
+        },
+        {
+          "q": "Transport 的语义是什么？",
+          "answer": "Transport provider-neutral，传输有界 Envelope、事件标识和 Evidence/Artifact 引用；采用 at-least-once，receiver 以 message_id + envelope_digest 去重，支持 bounded retry 和 out-of-order，不承诺 exactly-once 或全局顺序。",
+          "note": "复用已完成 TransportEnvelope、RelayDelivery 和 ArtifactStore 边界。"
+        },
+        {
+          "q": "Pairing 与设备身份采用什么密码学方案？",
+          "answer": "统一采用 ECDSA P-256；首个 secure transport adapter 采用 TLS 1.3 + 双向 P-256 mTLS；Envelope 与具体网络实现解耦。",
+          "note": "复用已完成 HumanSigner、Pairing identity 与 TLS adapter；Ed25519 不作为新 Transport pairing 算法。"
+        }
+      ],
+      "notes": "已有 Pairing HTTP、P-256 device identity/proof、Human approval binding、SQLite pairing record store、TLS 1.3 + P-256 mTLS transport 组合验证完成；23 项 pairing/identity/transport conformance 全部通过，未绑定具体 Provider。"
     },
     "1-3-2": {
       "id": "1-3-2",
       "label": "跨设备 reconnect、replay 与 StateStore 协作",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "重连和 Replay 的事实源是什么？",
+          "answer": "session、lease、retry、dedupe、blocked 和 delivery 状态持久化到网络级 StateStore；Transport adapter 保持无状态；Replay 纯读、确定性、不启动 Agent。",
+          "note": "复用 SQLite StateStore-backed TransportDeliveryStore 与已有 offline replay conformance。"
+        }
+      ],
+      "notes": "已有 SQLite StateStore-backed TransportDeliveryStore 与 deterministic Transport replay conformance 满足 reconnect、lease retry、reoffer、新 attempt、dedupe、out-of-order、重启恢复和最终 ack；19 项相关测试全部通过。"
     },
     "1-3-3": {
       "id": "1-3-3",
       "label": "跨设备真实三节点只读任务通过",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-3",
-      "children": [],
-      "decisions": [],
-      "notes": ""
+      "children": [
+        "1-3-3-1",
+        "1-3-3-2"
+      ],
+      "decisions": [
+        {
+          "q": "M3 的真实验收条件是什么？",
+          "answer": "至少两台设备、Agent1/Agent2/Agent3 三个真实执行节点、一个 Human 或 Human+Agent 中心责任单元，完成跨设备 pairing、只读任务路由、断线重连、Evidence 汇聚、独立验证和 Human review。",
+          "note": "不要求 provider 特定组合；真实 provider 由设备可用性决定，但每个节点必须有可验证 execution/evidence。"
+        },
+        {
+          "q": "真实第二台设备不可用时的预演边界",
+          "answer": "先用本机隔离的 DeviceA/DeviceB/DeviceC 做 transport 全链路 preflight，但只记录为 preflight，不标记 M3 完成；随后接入第二台真实设备完成最终验收。",
+          "note": "本机进程隔离不能证明物理跨设备、网络断开或设备身份边界；preflight 只复用真实 TLS/Pairing/Transport/StateStore 组件验证三节点协议路径。"
+        },
+        {
+          "q": "首个真实跨设备网络采用什么连接范围？",
+          "answer": "先支持同一局域网内的 HTTPS/TLS 直连；不把公网穿透、复杂 endpoint network policy 和云 relay 纳入 M3 必需条件。",
+          "note": "先验证 OPN 价值与跨设备协议闭环，公网 relay 与 endpoint 级治理后置。"
+        },
+        {
+          "q": "StateStore 的物理部署怎么处理？",
+          "answer": "逻辑上仍是独立网络级资源；MVP 可物理部署在任一明确设备或独立服务上，但必须有独立 endpoint、credential、scope 和审计，不因中心角色自动获得全部读写权。",
+          "note": "物理位置可替换，网络级 ownership 与中心协调权分离。"
+        },
+        {
+          "q": "Pairing 的用户体验怎么做？",
+          "answer": "采用短时效、一次性、Human-approved pairing invitation；可用 QR/deep link 或本地复制链接承载，不在日志和普通 Evidence 中暴露 credential。",
+          "note": "先实现可验证的 invitation contract，UI 载体可替换。"
+        },
+        {
+          "q": "设备私钥怎么处理？",
+          "answer": "优先平台 Keychain/CNG/PKCS#11/TPM2；开发阶段允许显式受控 fallback，但 key fingerprint、device identity 和 rotation/revoke 仍必须进入 pairing/state contract。",
+          "note": "不让正式 Developer ID 发布条件阻塞开发验证，但不牺牲身份绑定事实。"
+        },
+        {
+          "q": "真实三节点是否绑定具体 Agent？",
+          "answer": "不绑定。验收使用 Agent1/Agent2/Agent3 抽象；Codex、WorkBuddy 只是当前可用 provider 实例。",
+          "note": "保持 provider-neutral，允许不同设备使用不同 Agent provider。"
+        },
+        {
+          "q": "M3 是否加入写入型任务？",
+          "answer": "不加入。M3 只读；写入型 Development Job 进入 M4。",
+          "note": "资源隔离与 merge 责任留在中心任务编排边界。"
+        }
+      ],
+      "notes": "真实 Mac + Windows Endpoint/HTTPS 已通过；真实 Windows enrollment、Human approval、credential claim、跨设备 Graph read-only task 尚未完成。"
     },
     "1-4-1": {
       "id": "1-4-1",
@@ -318,11 +481,54 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-3-3-1": {
+      "id": "1-3-3-1",
+      "label": "Mac OPN endpoint 启动与跨设备端口可达性验证",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [],
+      "notes": "已在真实 Mac + 异地 Windows 设备完成验证：Mac 100.119.216.26:43123 通过 Tailscale DERP underlay 监听，Windows Test-NetConnection 成功，HTTPS /healthz 成功。"
+    },
+    "1-3-3-2": {
+      "id": "1-3-3-2",
+      "label": "Windows Agent 身份初始化与一次性 pairing request",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [
+        "1-3-3-2-1",
+        "1-3-3-2-2"
+      ],
+      "decisions": [],
+      "notes": "Join API/CLI 与 identity bootstrap 已完成；尚需真实 CSR 签发、Windows join、Human approval、enrollment projection。"
+    },
+    "1-3-3-2-1": {
+      "id": "1-3-3-2-1",
+      "label": "Windows Agent 本地 P-256 身份与证书 bootstrap",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": "已实现并验证 zj-loop-opn-agent-identity init：生成本地 P-256 私钥、CSR 和 certificate_status=pending metadata；默认拒绝覆盖已有输出。使用显式 openssl_bin/OPENSSL_BIN，未把 CA 私钥带入 Agent。"
+    },
+    "1-3-3-2-2": {
+      "id": "1-3-3-2-2",
+      "label": "Windows CSR 签发、真实 join request 与 Human approval",
+      "status": "pending",
+      "mode": "explore",
+      "parent": "1-3-3-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-06 14:10:10",
-    "updated": "2026-08-06 14:11:22",
+    "updated": "2026-08-06 22:17:21",
     "md_file": "docs/plans/opn-real-use-validation-milestones-roadmap.md"
   }
 }

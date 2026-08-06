@@ -8,6 +8,7 @@ import { createRealAgentDogfoodGraphScopeObservationAdapter } from './real-agent
 import { createRealAgentDogfoodGraphSourceExecutionAdapter } from './real-agent-dogfood-graph-source-execution-adapter.js';
 import { type RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
+import { type OpnGraphAtomEnrollmentSnapshot } from './opn-graph-atom-enrollment.js';
 type SourceConfig = Omit<Parameters<typeof createRealAgentDogfoodGraphSourceExecutionAdapter>[0], 'plan' | 'network_id'>;
 type ScopeConfig = Omit<Parameters<typeof createRealAgentDogfoodGraphScopeObservationAdapter>[0], 'plan' | 'network_id' | 'source_phase'>;
 type VerificationConfig = Omit<Parameters<typeof createRealAgentDogfoodGraphIndependentVerificationAdapter>[0], 'plan' | 'network_id' | 'source_phase' | 'scope_phase'>;
@@ -32,6 +33,7 @@ export declare function createRealAgentDogfoodGraphConformanceCoordinatorWithRea
     session_id: string;
     execution_binding_digest: string;
     state_store: SqliteStateStore;
+    enrollment?: OpnGraphAtomEnrollmentSnapshot;
     real_adapters: RealAgentDogfoodGraphRealAdapterConfig;
     replay: () => Promise<{
         status: 'passed' | 'blocked' | 'outcome-uncertain';

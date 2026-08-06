@@ -6,6 +6,13 @@ export type ProviderRuntimeArtifactVerification = {
     status: 'blocked';
     reason: string;
 };
+export declare function inspectMacOSSignature(filePath: string): Promise<{
+    identifier: string;
+    team_id: string | null;
+    code_directory_hash: string;
+    kind: 'ad-hoc' | 'developer-id';
+    notarized: boolean;
+}>;
 export declare function createProviderRuntimeArtifactVerifier(input: {
     manifest_path: string;
     runtime_artifact_path: string;

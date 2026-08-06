@@ -6,7 +6,7 @@ test('Codex extension builds the fixed read-only invocation without shell compos
   const invocation = buildCodexInvocation({ executable: '/opt/codex/bin/codex', cwd: '/tmp/task' });
   assert.deepEqual(invocation, {
     executable: '/opt/codex/bin/codex',
-    args: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', '/tmp/task'],
+    args: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--cd', '/tmp/task', '--skip-git-repo-check'],
     cwd: '/tmp/task',
   });
 });
@@ -33,7 +33,7 @@ test('Codex extension delegates one bounded prompt to the provider-neutral proce
     max_stderr_bytes: 1024,
   });
   assert.equal(result.status, 'completed');
-  assert.deepEqual(result.invocation.args, ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', '/tmp/task']);
+  assert.deepEqual(result.invocation.args, ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--cd', '/tmp/task', '--skip-git-repo-check']);
   assert.equal(calls[0].cwd, '/tmp/task');
   assert.deepEqual(calls[0].args, result.invocation.args);
   assert.deepEqual(calls[1], { stdin: 'Review the repository' });
@@ -41,8 +41,8 @@ test('Codex extension delegates one bounded prompt to the provider-neutral proce
 
 test('Codex extension builds an explicit write-enabled invocation without changing the read-only default', () => {
   const invocation = buildCodexInvocation({ executable: '/opt/codex/bin/codex', cwd: '/tmp/task', mode: 'write-enabled' });
-  assert.deepEqual(invocation.args, ['exec', '--json', '--ephemeral', '--sandbox', 'workspace-write', '--ask-for-approval', 'never', '--cd', '/tmp/task']);
-  assert.deepEqual(buildCodexInvocation({ executable: '/opt/codex/bin/codex', cwd: '/tmp/task' }).args, ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', '/tmp/task']);
+  assert.deepEqual(invocation.args, ['exec', '--json', '--ephemeral', '--sandbox', 'workspace-write', '--cd', '/tmp/task', '--skip-git-repo-check']);
+  assert.deepEqual(buildCodexInvocation({ executable: '/opt/codex/bin/codex', cwd: '/tmp/task' }).args, ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--cd', '/tmp/task', '--skip-git-repo-check']);
 });
 
 test('Codex write scope accepts only the exact test file and a clean commit on the dogfood baseline', () => {

@@ -9,6 +9,7 @@ import { createRealAgentDogfoodGraphSourceExecutionAdapter } from './real-agent-
 import { REAL_AGENT_DOGFOOD_GRAPH_PHASES, type RealAgentDogfoodGraphPhase, type RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
 import { projectRealAgentDogfoodGraphPhaseRecord, type RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
+import { validateOpnGraphAtomEnrollmentSnapshot, type OpnGraphAtomEnrollmentSnapshot } from './opn-graph-atom-enrollment.js';
 
 type SourceConfig = Omit<Parameters<typeof createRealAgentDogfoodGraphSourceExecutionAdapter>[0], 'plan' | 'network_id'>;
 type ScopeConfig = Omit<Parameters<typeof createRealAgentDogfoodGraphScopeObservationAdapter>[0], 'plan' | 'network_id' | 'source_phase'>;
@@ -53,9 +54,15 @@ export async function createRealAgentDogfoodGraphConformanceCoordinatorWithRealA
   session_id: string;
   execution_binding_digest: string;
   state_store: SqliteStateStore;
+  enrollment?: OpnGraphAtomEnrollmentSnapshot;
   real_adapters: RealAgentDogfoodGraphRealAdapterConfig;
   replay: () => Promise<{ status: 'passed' | 'blocked' | 'outcome-uncertain'; integrity_status: 'complete' | 'incomplete'; read_model_digest: string }>;
 }): Promise<RealAgentDogfoodGraphConformanceCoordinator> {
+  if (input.enrollment) {
+    const enrollment = validateOpnGraphAtomEnrollmentSnapshot(input.enrollment);
+    if (enrollment.status === 'blocked') throw new Error(`graph-atom-enrollment-${enrollment.reason}`);
+    if (input.enrollment.network_id !== input.network_id || input.enrollment.center.human_id !== input.human_id) throw new Error('graph-atom-enrollment-coordinator-binding-invalid');
+  }
   const phaseResults = await loadPhaseResults({ stateStore: input.state_store, plan: input.plan, network_id: input.network_id });
   const runAndRemember = async (run: () => Promise<RealAgentDogfoodGraphPhaseAdapterResult>) => {
     const result = await run();

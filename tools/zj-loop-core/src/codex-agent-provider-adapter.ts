@@ -69,7 +69,7 @@ export function buildCodexInvocation(input: { executable: string; cwd: string; m
   if (mode !== 'read-only' && mode !== 'write-enabled') throw new Error('codex-execution-mode-invalid');
   return {
     executable: input.executable,
-    args: ['exec', '--json', '--ephemeral', '--sandbox', mode === 'write-enabled' ? 'workspace-write' : 'read-only', '--ask-for-approval', 'never', '--cd', input.cwd],
+    args: ['exec', '--json', '--ephemeral', '--sandbox', mode === 'write-enabled' ? 'workspace-write' : 'read-only', '--cd', input.cwd, '--skip-git-repo-check'],
     cwd: input.cwd,
   };
 }

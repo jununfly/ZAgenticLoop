@@ -56,7 +56,7 @@ test('registry requires an explicit write-enabled mode and forwards it to Codex'
     },
   });
   await provider.run({ cwd: '/tmp/worktree', prompt: 'write the test', executable: '/opt/codex/bin/codex', mode: 'write-enabled' });
-  assert.deepEqual(calls[0].args, ['exec', '--json', '--ephemeral', '--sandbox', 'workspace-write', '--ask-for-approval', 'never', '--cd', '/tmp/worktree']);
+  assert.deepEqual(calls[0].args, ['exec', '--json', '--ephemeral', '--sandbox', 'workspace-write', '--cd', '/tmp/worktree', '--skip-git-repo-check']);
 });
 
 test('registry preserves a trusted post-run proof factory as provider capability', () => {

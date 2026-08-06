@@ -43,6 +43,9 @@
     ,"zj-loop-provider-runtime": "./dist/provider-runtime-cli.js"
     ,"zj-loop-provider-auth-authority-child": "./dist/provider-auth-authority-child-cli.js"
     ,"zj-loop-provider-auth-authority": "./dist/provider-auth-authority-cli.js"
+    ,"zj-loop-opn-endpoint": "./dist/opn-endpoint-cli.js"
+    ,"zj-loop-opn-agent-join": "./dist/opn-agent-join-cli.js"
+    ,"zj-loop-opn-agent-identity": "./dist/opn-agent-identity-bootstrap-cli.js"
   },
   "exports": {
     ".": {

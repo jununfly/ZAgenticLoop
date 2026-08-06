@@ -47,7 +47,7 @@ export declare function createGitLabCiSweeperIssueFixRequest(input: {
 } | {
     schema: string;
     status: string;
-    outcome: "created" | "duplicate" | "recovered-duplicate";
+    outcome: "duplicate" | "created" | "recovered-duplicate";
     audit: Record<string, unknown>;
     issue: {
         iid: number;
@@ -143,7 +143,7 @@ export declare function appendGitLabCiSweeperLifecycleEvidence(input: {
         schema: string;
         request_id: string;
         claim_id: string;
-        status: "running" | "completed" | "failed";
+        status: "failed" | "running" | "completed";
         evidence: Record<string, unknown>;
         recorded_at: string;
     };
@@ -195,7 +195,7 @@ export declare function createGitLabCiSweeperRepairMr(input: {
 } | {
     schema: string;
     status: string;
-    outcome: "created" | "duplicate";
+    outcome: "duplicate" | "created";
     audit: Record<string, unknown>;
     merge_request: {
         iid: number;
@@ -363,7 +363,7 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
     } | {
         schema: string;
         status: string;
-        outcome: "created" | "duplicate";
+        outcome: "duplicate" | "created";
         audit: Record<string, unknown>;
         merge_request: {
             iid: number;
@@ -418,7 +418,7 @@ export declare function executeGitLabCiSweeperRepairMr(input: {
             schema: string;
             request_id: string;
             claim_id: string;
-            status: "running" | "completed" | "failed";
+            status: "failed" | "running" | "completed";
             evidence: Record<string, unknown>;
             recorded_at: string;
         };

@@ -20,7 +20,7 @@ async function fixture() {
   await writeFile(executable, '#!/bin/sh\n');
   await chmod(executable, 0o755);
   const plan = createRealAgentDogfoodGraphPlan({ dogfood_id: 'dogfood-source-adapter', execution_id: 'execution-source-adapter', attempt: 1, goal: 'source', repo_root: source, baseline_commit: 'a'.repeat(40), target_worktree: path.join(root, 'target'), source_worktree: source, verifier_worktree: path.join(root, 'verifier'), evidence_store: path.join(root, 'evidence'), allowed_files: ['README.md'], execution_mode: 'write-enabled', network_policy: 'network-allowed' });
-  const args = ['exec', '--json', '--ephemeral', '--sandbox', 'workspace-write', '--ask-for-approval', 'never', '--cd', source];
+    const args = ['exec', '--json', '--ephemeral', '--sandbox', 'workspace-write', '--cd', source];
   const executionBindingDigest = await createRealAgentDogfoodExecutionBindingDigest({ executable, args, cwd: source, worktree_path: source });
   const draft = createRealAgentDogfoodDraft({ network_id: 'network-source-adapter', dogfood_id: plan.dogfood_id, execution_id: plan.execution_id, attempt: 1, provider_id: 'codex', adapter_version: 'codex-agent-provider.v1', created_at: '2026-08-06T00:00:00.000Z' });
   const running = createRealAgentDogfoodTransition({ lifecycle: draft.lifecycle, to: 'preflight-ready', event_id: 'preflight', occurred_at: '2026-08-06T00:00:01.000Z', fact_digest: digest('b'), next_action: 'human-approval' });

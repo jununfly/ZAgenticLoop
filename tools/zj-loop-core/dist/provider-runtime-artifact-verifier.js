@@ -9,7 +9,7 @@ function absolute(value) { return typeof value === 'string' && value.startsWith(
 async function fileDigest(filePath) {
     return digestBytes(await readFile(filePath));
 }
-async function inspectMacOSSignature(filePath) {
+export async function inspectMacOSSignature(filePath) {
     await execFile('/usr/bin/codesign', ['--verify', '--strict', filePath]);
     const details = await execFile('/usr/bin/codesign', ['-dvvv', '--strict', filePath]);
     const output = `${details.stdout}\n${details.stderr}`;

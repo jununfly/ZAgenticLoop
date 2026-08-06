@@ -56,7 +56,7 @@ async function buildAdapterContractDigest(input: { provider_id: string; adapter:
     adapter_id: input.provider_id,
     adapter_version: input.adapter,
     binary_digest: `sha256:${createHash('sha256').update(await readFile(input.executable)).digest('hex')}`,
-    argv_policy_digest: digest({ provider_id: input.provider_id, adapter: input.adapter, network_policy: input.network_policy, argv_policy: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--ask-for-approval', 'never', '--cd', '<isolated-worktree>'] }),
+    argv_policy_digest: digest({ provider_id: input.provider_id, adapter: input.adapter, network_policy: input.network_policy, argv_policy: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--cd', '<isolated-worktree>'] }),
   });
   return providerRuntimeAdapterContractDigest(contract);
 }

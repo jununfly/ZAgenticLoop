@@ -25,6 +25,7 @@ export declare function createProviderRuntimeStartAssembly(input: {
         runtime: ProviderAuthRuntime;
         resolver: ProviderAuthRefResolver;
         config: ProviderRuntimeStartConfig;
+        state_store: SqliteStateStore;
     }) => ProviderAuthRuntimeIpcLauncher;
     process_id?: number;
     now?: () => string;

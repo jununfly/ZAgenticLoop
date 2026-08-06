@@ -1,6 +1,20 @@
 import { createMacOSProcessAuditPeerIdentityVerifier } from './macos-process-audit-peer-identity.js';
 import { createProviderAuthRuntimeIpcLauncher } from './provider-auth-runtime-ipc-launcher.js';
 import { createProviderRuntimeArtifactVerifier } from './provider-runtime-artifact-verifier.js';
+import { readProviderRuntimeArtifactApproval } from './provider-runtime-artifact-approval-store.js';
+export async function verifyProviderRuntimeTrustBeforeLaunch(input) {
+    const artifact = await input.verify_artifact();
+    if (artifact.status === 'blocked')
+        return artifact;
+    const approval = await readProviderRuntimeArtifactApproval({
+        stateStore: input.state_store,
+        expected: { network_id: input.config.network_id, node_id: input.config.runtime_id, device_id: input.config.runtime_id, manifest: artifact.manifest },
+        now: input.now,
+    });
+    if (approval.status === 'blocked')
+        return { status: 'blocked', reason: approval.reason };
+    return artifact;
+}
 export function createMacOSProviderRuntimeLauncher(input) {
     if (process.platform !== 'darwin')
         throw new Error('provider-runtime-macos-launcher-platform-unsupported');
@@ -31,6 +45,11 @@ export function createMacOSProviderRuntimeLauncher(input) {
             const result = await artifactVerifier.verify();
             if (result.status === 'blocked')
                 throw new Error(result.reason);
+            if (!input.state_store)
+                throw new Error('provider-runtime-artifact-approval-state-store-required');
+            const trust = await verifyProviderRuntimeTrustBeforeLaunch({ verify_artifact: async () => result, state_store: input.state_store, config: input.config, now: input.now?.() });
+            if (trust.status === 'blocked')
+                throw new Error(trust.reason);
             await launcher.start();
         },
         readiness: launcher.readiness,

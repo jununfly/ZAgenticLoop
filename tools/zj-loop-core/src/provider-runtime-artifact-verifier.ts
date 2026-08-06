@@ -15,7 +15,7 @@ async function fileDigest(filePath: string): Promise<string> {
   return digestBytes(await readFile(filePath));
 }
 
-async function inspectMacOSSignature(filePath: string): Promise<{ identifier: string; team_id: string | null; code_directory_hash: string; kind: 'ad-hoc' | 'developer-id'; notarized: boolean }> {
+export async function inspectMacOSSignature(filePath: string): Promise<{ identifier: string; team_id: string | null; code_directory_hash: string; kind: 'ad-hoc' | 'developer-id'; notarized: boolean }> {
   await execFile('/usr/bin/codesign', ['--verify', '--strict', filePath]);
   const details = await execFile('/usr/bin/codesign', ['-dvvv', '--strict', filePath]);
   const output = `${details.stdout}\n${details.stderr}`;

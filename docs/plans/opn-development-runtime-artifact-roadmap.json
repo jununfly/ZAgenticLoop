@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN 长期开发测试版 Runtime Artifact 信任链",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -17,7 +17,7 @@
         "1-5"
       ],
       "decisions": [],
-      "notes": ""
+      "notes": "M1 development Runtime Trust completed: approval contract, artifact/file/process gate, bootstrap, approval persistence, validation matrix, and real macOS dogfood."
     },
     "1-1": {
       "id": "1-1",
@@ -85,7 +85,7 @@
     "1-4": {
       "id": "1-4",
       "label": "实现 artifact approval 与 Runtime 启动门禁",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -99,7 +99,7 @@
     "1-5": {
       "id": "1-5",
       "label": "验证长期开发测试版真实使用闭环",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -107,7 +107,7 @@
         "1-5-2"
       ],
       "decisions": [],
-      "notes": ""
+      "notes": "Development Runtime trust chain validated end-to-end on macOS with real signed artifacts, StateStore approval, Keychain HumanSigner, and foreground socket readiness."
     },
     "1-4-1": {
       "id": "1-4-1",
@@ -174,7 +174,7 @@
     "1-4-3": {
       "id": "1-4-3",
       "label": "实现开发测试版 artifact bootstrap",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-4",
       "children": [],
@@ -200,12 +200,12 @@
           "note": "构建与责任批准保持分离。"
         }
       ],
-      "notes": ""
+      "notes": "Implemented development artifact bootstrap, challenge-bound Human approve CLI, network-level StateStore approval fact with CAS/idempotency/conflict/revocation semantics, and launcher pre-start approval gate. Verified with provider runtime artifact, approval store, launcher, start assembly, and CLI tests."
     },
     "1-5-1": {
       "id": "1-5-1",
       "label": "覆盖签名漂移、撤销、过期和跨设备场景",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [],
@@ -226,12 +226,12 @@
           "note": "旧 approval 不能覆盖新状态。"
         }
       ],
-      "notes": ""
+      "notes": "Verified signature drift, expiry/future time, Human authority revocation, duplicate/conflict replay semantics, and explicit per-device approval. Fixed resolver to select matching device/artifact approvals without cross-device shadowing."
     },
     "1-5-2": {
       "id": "1-5-2",
       "label": "运行真实 signed Runtime dogfood",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-5",
       "children": [],
@@ -242,12 +242,12 @@
           "note": "避免 fixture 通过而真实路径失败。"
         }
       ],
-      "notes": ""
+      "notes": "Completed real macOS dogfood: compiled Swift process-audit helper, bootstrapped and ad-hoc signed actual Node Runtime/helper artifacts, persisted approval in SQLite StateStore, and started real ForegroundService through the artifact + Human approval gate with Unix socket readiness. Repeated with macOS Keychain P-256 HumanSigner."
     }
   },
   "metadata": {
     "created": "2026-08-06 13:45:53",
-    "updated": "2026-08-06 14:00:01",
+    "updated": "2026-08-06 14:45:12",
     "md_file": "docs/plans/opn-development-runtime-artifact-roadmap.md"
   }
 }
