@@ -198,6 +198,8 @@ export * from './provider-runtime-start-config.js';
 export * from './provider-runtime-start-assembly.js';
 export * from './provider-runtime-launcher-factory.js';
 export * from './provider-runtime-start-config-store.js';
+export * from './provider-runtime-artifact-manifest.js';
+export * from './provider-runtime-artifact-verifier.js';
 export * from './framed-json-transport.js';
 export * from './framed-json-unix.js';
 export * from './provider-auth-authority-ipc-protocol.js';

@@ -17,6 +17,10 @@ export type ProviderRuntimeStartConfig = {
     binding_path: string;
     macos_helper_path?: string;
     macos_helper_digest?: string;
+    artifact_manifest_path?: string;
+    runtime_artifact_path?: string;
+    helper_artifact_path?: string;
+    artifact_profile?: 'development-local' | 'production';
 };
 export declare function validateProviderRuntimeStartConfig(value: unknown): {
     status: 'valid';
