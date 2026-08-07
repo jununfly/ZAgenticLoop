@@ -208,6 +208,10 @@ export function createPairingHttpServer(input: {
         const records = await input.recordStore.list(pairingRequest.network_id);
         const projection = projectPairingRequests({ network_id: pairingRequest.network_id, records, now: now() }).find((item) => item.request_id === pairingRequest.request_id);
         if (!projection) throw new Error('pairing-request-not-projectable');
+        if (projection.status === 'approved' && input.credentialIssue) {
+          const approval = records.find((candidate) => candidate.type === 'human-approved' && candidate.request_id === pairingRequest.request_id && candidate.request_digest === projection.request_digest);
+          if (approval && approval.type === 'human-approved') await input.credentialIssue.issue({ request_id: pairingRequest.request_id, network_id: pairingRequest.network_id, node_id: pairingRequest.node_id, request_digest: projection.request_digest, human_id: approval.human_id, capabilities: [...approval.approved_capabilities], issued_at: now(), expires_at: pairingRequest.expires_at });
+        }
         let session = [...sessions.values()].find((candidate) => candidate.request_id === pairingRequest.request_id && Date.parse(now()) < Date.parse(candidate.expires_at));
         if (!session) {
           const sessionId = randomBytes(18).toString('base64url');
