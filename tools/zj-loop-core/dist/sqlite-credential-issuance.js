@@ -113,6 +113,9 @@ export function credentialIssuanceDigest(input) {
     return `sha256:${sha256CanonicalJson(issuanceValue(input))}`;
 }
 function pairingCredentialIssuanceDigest(input) {
+    return `sha256:${sha256CanonicalJson({ protocol: SQLITE_CREDENTIAL_ISSUANCE_SCHEMA, kind: 'pairing-approval', request_id: input.request_id, network_id: input.network_id, node_id: input.node_id, request_digest: input.request_digest, human_id: input.human_id, capabilities: [...new Set(input.capabilities)].sort(), expires_at: input.expires_at })}`;
+}
+function legacyPairingCredentialIssuanceDigest(input) {
     return `sha256:${sha256CanonicalJson({ protocol: SQLITE_CREDENTIAL_ISSUANCE_SCHEMA, kind: 'pairing-approval', request_id: input.request_id, network_id: input.network_id, node_id: input.node_id, request_digest: input.request_digest, human_id: input.human_id, capabilities: [...new Set(input.capabilities)].sort(), issued_at: input.issued_at, expires_at: input.expires_at })}`;
 }
 export function createSqliteCredentialIssuance(input) {
@@ -196,10 +199,13 @@ export function createSqliteCredentialIssuance(input) {
             const intentExpiresAt = new Date(Math.min(expiresAt, currentTime + 50 * 60 * 1000)).toISOString();
             const credentialId = `credential_${issuanceDigest.slice('sha256:'.length, 'sha256:'.length + 32)}`;
             return atomic((database, appendEvent) => {
-                const existing = database.prepare('SELECT request_id, issuance_digest, credential_id, intent_expires_at, claimed_at FROM credential_issue_intents WHERE request_id = ?').get(request.request_id);
+                const existing = database.prepare('SELECT request_id, issuance_digest, credential_id, intent_expires_at, issued_at, claimed_at FROM credential_issue_intents WHERE request_id = ?').get(request.request_id);
                 if (existing) {
-                    if (existing.issuance_digest !== issuanceDigest.slice('sha256:'.length))
+                    const legacyDigest = legacyPairingCredentialIssuanceDigest({ ...request, issued_at: existing.issued_at });
+                    if (existing.issuance_digest !== issuanceDigest.slice('sha256:'.length) && existing.issuance_digest !== legacyDigest.slice('sha256:'.length))
                         throw new Error('request-id-conflict');
+                    if (existing.issuance_digest === legacyDigest.slice('sha256:'.length))
+                        database.prepare('UPDATE credential_issue_intents SET issuance_digest = ? WHERE request_id = ?').run(issuanceDigest.slice('sha256:'.length), request.request_id);
                     if (!existing.claimed_at && currentTime >= parseTime(existing.intent_expires_at, 'intent-expiry-invalid'))
                         database.prepare('UPDATE credential_issue_intents SET intent_expires_at = ? WHERE request_id = ? AND claimed_at IS NULL').run(intentExpiresAt, request.request_id);
                     return { status: 'duplicate', credential_id: existing.credential_id, issuance_digest: issuanceDigest, intent_expires_at: !existing.claimed_at && currentTime >= parseTime(existing.intent_expires_at, 'intent-expiry-invalid') ? intentExpiresAt : existing.intent_expires_at };
