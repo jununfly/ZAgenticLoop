@@ -16,6 +16,11 @@ import { discoverProviderExecutable } from './provider-executable-discovery.js';
 import type { BoundedLoopTask } from './agent-task.js';
 import { createBoundedLoopTask } from './agent-task.js';
 
+export function createRetryBoundedLoopTask(task: BoundedLoopTask): BoundedLoopTask {
+  const { schema: _schema, task_digest: _task_digest, execution_id: _execution_id, attempt: _attempt, idempotency_key: _idempotency_key, ...definition } = task;
+  return createBoundedLoopTask({ ...definition, execution_id: `retry-${randomUUID()}`, attempt: task.attempt + 1, idempotency_key: `${task.idempotency_key}:retry:${randomUUID()}` });
+}
+
 const spec: CliSpec = {
   name: 'zj-loop-opn-agent-runner',
   description: 'Consume one OPN task and execute it with a local Codex or WorkBuddy provider.',
@@ -63,8 +68,7 @@ const spec: CliSpec = {
         const last = persisted.events.at(-1)?.payload as { execution?: { status?: string } } | undefined;
         if (last?.execution?.status !== 'failed') throw new Error('opn-agent-retry-requires-failed-execution');
         retry_of_execution_id = task.execution_id;
-        const { task_digest: _task_digest, execution_id: _execution_id, attempt: _attempt, idempotency_key: _idempotency_key, ...definition } = task;
-        task = createBoundedLoopTask({ ...definition, execution_id: `retry-${randomUUID()}`, attempt: task.attempt + 1, idempotency_key: `${task.idempotency_key}:retry:${randomUUID()}` });
+        task = createRetryBoundedLoopTask(task);
       }
       const ca = await read('ca', 'opn-agent-runner-ca-required');
       const cert = await read('cert', 'opn-agent-runner-cert-required');

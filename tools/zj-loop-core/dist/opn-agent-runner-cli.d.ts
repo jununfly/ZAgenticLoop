@@ -1,2 +1,3 @@
 #!/usr/bin/env node
-export {};
+import type { BoundedLoopTask } from './agent-task.js';
+export declare function createRetryBoundedLoopTask(task: BoundedLoopTask): BoundedLoopTask;
