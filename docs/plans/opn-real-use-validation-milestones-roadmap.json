@@ -639,7 +639,7 @@
     "1-3-3-3-4": {
       "id": "1-3-3-3-4",
       "label": "基于 OPN 通路的 Agent adapter 协作",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3-3-3",
       "children": [],
@@ -655,7 +655,7 @@
           "note": "MCP/A2A 不能替代 OPN Core，也不能绕过 Provider Runtime 的执行边界。当前 dogfood 先验证 Provider Runtime 的真实 Agent task 闭环，再按实际 provider 能力增加 MCP/A2A extension；不因协议引入而提前扩大 M3 范围。"
         }
       ],
-      "notes": "已实现首条 provider-neutral Agent adapter tracer bullet：消费 agent.task Envelope，调用 NativeAgentRuntime，生成结构化 execution result Artifact，发送 agent.result Envelope，并在结果发送成功后 ack 输入消息；已增加 Codex/WorkBuddy provider-neutral executor 与 Windows-capable runner。Runner 支持显式 executable，也会按 PATH、Windows 用户级/系统级安装目录、WorkBuddy/CodeBuddy bundle 和有界目录扫描自动发现 Provider，不再把 PATH 作为安装判定。真实 task Artifact 已完成 Mac→Windows 投递；尚未完成真实 provider 执行和 agent.result 回传验收。"
+      "notes": "已实现首条 provider-neutral Agent adapter tracer bullet：消费 agent.task Envelope，调用 NativeAgentRuntime，生成结构化 execution result Artifact，发送 agent.result Envelope，并在结果发送成功后 ack 输入消息；已增加 Codex/WorkBuddy provider-neutral executor 与 Windows-capable runner。Runner 支持显式 executable，也会按 PATH、Windows 用户级/系统级安装目录、WorkBuddy/CodeBuddy bundle 和有界目录扫描自动发现 Provider；agent.task 以 Envelope Task Artifact 为权威来源，失败重试创建新的 execution/attempt。真实 Mac→Windows WorkBuddy task 协作已完成：前两次 Provider 启动失败被保留为 blocked execution，第三次 retry execution cross-device-agent-execution-20260807-retry-2 达到 evidence-recorded；Mac StateStore 收到 agent.result，Windows 完成结果 Artifact digest 校验，成功 envelope state=available。"
     },
     "1-3-3-3-5": {
       "id": "1-3-3-3-5",
