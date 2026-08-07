@@ -24,13 +24,16 @@
     ├── [ ][Y+] 1-5-2. 记录用户价值、体验和失败恢复反馈
     └── [ ][Y+] 1-5-3. 根据真实反馈规划下一里程碑
 
-### 当前施工：1-3-3-3-2. 双向结构化消息收发与 Evidence 投影
+### 当前施工：1-3-3-3-3. 跨设备 Artifact 文件传输与完整性校验
 
 Join API/CLI、CSR 签发、Windows join、Human approval 与 enrollment projection 已完成；跨设备 Co-work Channel 仍由 1-3-3-3 承载。
 
-当前已完成真实 Transport HTTP server 的 Core wiring：mTLS session、sender-bound envelope、StateStore offered/acknowledged facts 与 credential token verifier；Mac 中心节点已具备本地 StateStore-backed receive/ack 与 Inbox projection，并已用真实 Windows 消息验证。新增 provider-neutral Transport CLI：Windows `receive` 每次建立新 session 并 ack，Mac `local-send` 通过中心 StateStore 发回；Human OPN UI 已展示 Inbox projection。下一步是双机实际反向消息、重连和 UI 运行验收。
+当前已完成真实 Transport HTTP server 的 Core wiring：mTLS session、sender-bound envelope、StateStore offered/acknowledged facts 与 credential token verifier；Mac 中心节点已具备本地 StateStore-backed receive/ack 与 Inbox projection，并已用真实 Windows 消息验证。新增 provider-neutral Transport CLI：Windows `receive` 每次建立新 session 并 ack，Mac `local-send` 通过中心 StateStore 发回；Human OPN UI 已展示 Inbox projection。已完成真实 Mac↔Windows 双向消息、断开后新 session 重连、双端 CLI receive/ack 与 Mac OPN Inbox UI 运行验收。当前进入受控 Artifact 文件传输与完整性校验。
 
 **当前子树：**
 ├── [x][Y+] 1-3-3-2-1. Windows Agent 本地 P-256 身份与证书 bootstrap
 └── [x][X+] 1-3-3-2-2. Windows CSR 签发、真实 join request 与 Human approval
+
+1-3-3-3-2 已完成真实 Mac↔Windows 双向消息、断线后新 session 重连、双端 CLI receive/ack 与 Mac OPN Inbox UI 验收。
+1-3-3-3-3 已实现 bounded content-addressed ArtifactStore、HTTP metadata/byte transfer、digest 校验、StateStore transfer facts 与 `artifact-send`/`artifact-download` CLI；下一步是重启新版 endpoint 后完成真实 Mac↔Windows 文件传输验收。
 <!-- ROADMAP_SECTION_END -->

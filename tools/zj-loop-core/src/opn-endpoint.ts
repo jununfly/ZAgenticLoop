@@ -13,6 +13,8 @@ import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
 import type { TransportAdapter } from './transport-contract.js';
 import { projectOpnInbox } from './opn-transport-inbox.js';
+import { createOpnArtifactStore } from './opn-artifact-store.js';
+import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
 
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1' as const;
 
@@ -40,6 +42,7 @@ export async function createOpnEndpointServer(input: {
   local_node?: { node_id: string; display_name: string; agent_kind: string; agent_version: string };
   credentialVerifier?: CredentialVerifier | null;
   transport?: OpnTransportHttpService | null;
+  artifact_store?: import('./opn-artifact-store.js').OpnArtifactStore | null;
 }): Promise<OpnEndpoint> {
   requireText(input.bind, 'opn-endpoint-bind-required');
   requireText(input.network_id, 'opn-endpoint-network-id-required');
@@ -77,6 +80,7 @@ export async function createOpnEndpointServer(input: {
       },
     },
     transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
+    artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
     readinessCheck: {
       check: async () => {
         try {

@@ -4,6 +4,7 @@ import { createOpnEndpointServer, loadOpnEndpointTls } from './opn-endpoint.js';
 import { createPairingOwnerAuthenticator, loadPairingOwnerIdentity } from './pairing-owner-authenticator.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createSqliteCredentialIssuance } from './sqlite-credential-issuance.js';
+import { createOpnArtifactStore } from './opn-artifact-store.js';
 
 const spec: CliSpec = {
   name: 'zj-loop-opn-endpoint',
@@ -17,6 +18,7 @@ const spec: CliSpec = {
     { name: 'server_key', flag: 'server-key', type: 'string' as const, description: 'Server private key PEM path', valueName: 'PATH' },
     { name: 'server_cert', flag: 'server-cert', type: 'string' as const, description: 'Server certificate PEM path', valueName: 'PATH' },
     { name: 'client_ca', flag: 'client-ca', type: 'string' as const, description: 'Client CA certificate PEM path', valueName: 'PATH' },
+    { name: 'artifact_store', flag: 'artifact-store', type: 'string' as const, description: 'Content-addressed ArtifactStore directory', valueName: 'PATH' },
     { name: 'owner_human_id', flag: 'owner-human-id', type: 'string' as const, description: 'Development Human owner id' },
     { name: 'owner_public_key', flag: 'owner-public-key', type: 'string' as const, description: 'Development Human authority public key PEM path', valueName: 'PATH' },
     { name: 'owner_token', flag: 'owner-token', type: 'string' as const, description: 'Development owner authorization token' },
@@ -35,7 +37,7 @@ const spec: CliSpec = {
       : undefined;
     let endpoint;
     try {
-      endpoint = await createOpnEndpointServer({ bind, port, network_id, stateStore, tls, ownerAuthenticator, credentialVerifier: { verify: (input) => issuance.verifyCredential({ token: input.token, node_id: input.node_id, network_id: input.network_id ?? network_id, required_capabilities: input.required_capabilities }) }, credentialClaim: { claim: (input) => issuance.claimForPairingSession(input) }, credentialIssue: { issue: async (input) => { const result = await issuance.issuePairingIntent({ ...input, expected_revision: await stateStore.getRevision(input.network_id) }); return { status: result.status, credential_id: result.credential_id }; } } });
+      endpoint = await createOpnEndpointServer({ bind, port, network_id, stateStore, tls, ownerAuthenticator, artifact_store: createOpnArtifactStore({ root: String(options.artifact_store ?? `${String(options.state_store ?? '')}.artifacts`) }), credentialVerifier: { verify: (input) => issuance.verifyCredential({ token: input.token, node_id: input.node_id, network_id: input.network_id ?? network_id, required_capabilities: input.required_capabilities }) }, credentialClaim: { claim: (input) => issuance.claimForPairingSession(input) }, credentialIssue: { issue: async (input) => { const result = await issuance.issuePairingIntent({ ...input, expected_revision: await stateStore.getRevision(input.network_id) }); return { status: result.status, credential_id: result.credential_id }; } } });
     } catch (error) {
       await issuance.close();
       await stateStore.close();

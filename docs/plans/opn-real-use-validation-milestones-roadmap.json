@@ -597,7 +597,7 @@
     "1-3-3-3-2": {
       "id": "1-3-3-3-2",
       "label": "双向结构化消息收发与 Evidence 投影",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3-3-3",
       "children": [],
@@ -613,12 +613,12 @@
           "note": "避免 Web UI/demo 与真实 OPN transport 分叉；payload schema 可独立演进。"
         }
       ],
-      "notes": "已接入 StateStore-backed Transport HTTP server：真实 mTLS TransportAdapter 可完成 session、sender-bound envelope send、target receive 与 ack；offered/acknowledged facts append-only 持久化，credential token verifier 复用 pairing issuance。新增中心节点本地 StateStore-backed TransportAdapter，复用 receiveAndPersistOpnMessage 完成 Inbox projection 与 ack；新增 provider-neutral Transport CLI，Windows receive 每次建立新 session 并 ack，Mac local-send 通过中心 StateStore 发回；Human OPN UI 已提供 owner-scoped Inbox projection。仍需双机实际反向消息、重连和 UI 运行验收，之后才能标记 completed。"
+      "notes": "已接入 StateStore-backed Transport HTTP server：真实 mTLS TransportAdapter 可完成 session、sender-bound envelope send、target receive 与 ack；offered/acknowledged facts append-only 持久化，credential token verifier 复用 pairing issuance。新增中心节点本地 StateStore-backed TransportAdapter，复用 receiveAndPersistOpnMessage 完成 Inbox projection 与 ack；新增 provider-neutral Transport CLI，Windows receive 每次建立新 session 并 ack，Mac local-send 通过中心 StateStore 发回；Human OPN UI 已提供 owner-scoped Inbox projection。已完成真实 Mac↔Windows 双向消息、断开后新 session 重连、双端 CLI receive/ack 与 Mac OPN Inbox UI 运行验收。"
     },
     "1-3-3-3-3": {
       "id": "1-3-3-3-3",
       "label": "跨设备 Artifact 文件传输与完整性校验",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-3-3-3",
       "children": [],
@@ -634,7 +634,7 @@
           "note": "不把大文件塞进 StateStore 或消息 Envelope；不提供任意路径读写。开发期先支持小文件和明确大小上限。"
         }
       ],
-      "notes": ""
+      "notes": "已实现 bounded content-addressed ArtifactStore 与真实 HTTP transfer service：metadata 先登记，原始字节受 8 MiB 上限约束，服务端校验 size/digest 后追加 offered→stored→verified StateStore facts；GET 仅按 digest 读取，不接受任意远程路径。OPN endpoint 新增 --artifact-store，provider-neutral CLI 新增 artifact-send/artifact-download，并有本地 HTTP 回归覆盖。尚未完成真实 Mac↔Windows 文件传输验收。"
     },
     "1-3-3-3-4": {
       "id": "1-3-3-3-4",

@@ -6,6 +6,7 @@ import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
 import { createOpnTransportHttpService } from './opn-transport-http-server.js';
 import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
 import { projectOpnInbox } from './opn-transport-inbox.js';
+import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1';
 function requireText(value, error) {
     if (typeof value !== 'string' || !value.trim())
@@ -51,6 +52,7 @@ export async function createOpnEndpointServer(input) {
             },
         },
         transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
+        artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
         readinessCheck: {
             check: async () => {
                 try {

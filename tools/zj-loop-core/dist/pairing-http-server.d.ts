@@ -3,6 +3,7 @@ import type { PairingRecordStore } from './pairing-record-store.js';
 import { type HumanApprovalContext } from './human-authority.js';
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
+import type { OpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
@@ -79,4 +80,5 @@ export declare function createPairingHttpServer(input: {
     connectionReadModel?: PairingConnectionReadModelService | null;
     inboxReadModel?: PairingInboxReadModelService | null;
     transport?: OpnTransportHttpService | null;
+    artifactTransfer?: OpnArtifactTransferHttpService | null;
 }): Server;

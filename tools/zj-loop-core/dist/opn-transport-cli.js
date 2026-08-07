@@ -1,15 +1,39 @@
 #!/usr/bin/env node
-import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { request as httpsRequest } from 'node:https';
 import { runCli, defaultCliIo } from './cli.js';
 import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
+import { createOpnArtifactStore } from './opn-artifact-store.js';
 import { createTlsTransportAdapter } from './tls-transport-adapter.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createTransportEnvelope } from './transport-contract.js';
 const digest = 'sha256:' + '0'.repeat(64);
+const ARTIFACT_SCHEMA = 'zj-loop.opn_artifact.v1';
 async function textFile(path, error) {
     if (!path.trim())
         throw new Error(error);
     return readFile(path, 'utf8');
+}
+async function artifactRequest(input) {
+    const endpoint = new URL(input.endpoint);
+    const payload = input.body;
+    const options = { protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, method: input.method, path: `${endpoint.pathname.replace(/\/$/, '')}${input.pathname}`, ca: input.ca, cert: input.cert, key: input.key, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}`, ...(payload ? { 'content-length': payload.byteLength } : {}), ...input.headers } };
+    return new Promise((resolve, reject) => {
+        const req = httpsRequest(options, (response) => { const chunks = []; response.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))); response.on('end', () => resolve({ statusCode: response.statusCode ?? 0, headers: response.headers, body: Buffer.concat(chunks) })); });
+        req.on('error', reject);
+        if (payload)
+            req.write(payload);
+        req.end();
+    });
+}
+function parsedArtifactResponse(response) {
+    try {
+        return JSON.parse(response.body.toString('utf8'));
+    }
+    catch {
+        throw new Error(`opn-artifact-http-${response.statusCode}`);
+    }
 }
 function nodeId(options, session) {
     const value = typeof options.node_id === 'string' && options.node_id.trim() ? options.node_id : typeof session?.node_id === 'string' ? session.node_id : '';
@@ -45,7 +69,7 @@ function messageEnvelope(options, from_node_id) {
 export const opnTransportCliSpec = {
     name: 'zj-loop-opn-transport',
     description: 'Send and receive provider-neutral OPN transport envelopes.',
-    usage: 'zj-loop-opn-transport [receive|send|local-send] ...',
+    usage: 'zj-loop-opn-transport [receive|send|local-send|artifact-send|artifact-download] ...',
     options: [
         { name: 'command', type: 'positional', description: 'receive, send, or local-send', default: 'receive' },
         { name: 'endpoint', type: 'string', description: 'Remote OPN HTTPS endpoint' },
@@ -64,6 +88,11 @@ export const opnTransportCliSpec = {
         { name: 'plan_revision', flag: 'plan-revision', type: 'string', description: 'Plan revision for send' },
         { name: 'task_id', flag: 'task-id', type: 'string', description: 'Task id for send' },
         { name: 'notification_kind', flag: 'notification-kind', type: 'string', description: 'Notification kind for send' },
+        { name: 'file', type: 'string', description: 'Local file for artifact-send' },
+        { name: 'output', type: 'string', description: 'Local output path for artifact-download' },
+        { name: 'artifact_id', flag: 'artifact-id', type: 'string', description: 'Content digest for artifact-download' },
+        { name: 'transfer_id', flag: 'transfer-id', type: 'string', description: 'Transfer id for artifact-send' },
+        { name: 'artifact_store', flag: 'artifact-store', type: 'string', description: 'Local content-addressed ArtifactStore directory' },
     ],
     async handler({ options, io }) {
         const command = String(options.command ?? 'receive');
@@ -74,6 +103,50 @@ export const opnTransportCliSpec = {
         if (typeof options.session_file === 'string' && options.session_file.trim())
             sessionValue = JSON.parse(await textFile(options.session_file, 'opn-transport-session-file-required'));
         const localNodeId = nodeId(options, sessionValue);
+        if (command === 'artifact-send' || command === 'artifact-download') {
+            const endpoint = String(options.endpoint ?? '').trim();
+            const ca = await textFile(String(options.ca ?? ''), 'opn-artifact-ca-required');
+            const cert = await textFile(String(options.cert ?? ''), 'opn-artifact-client-cert-required');
+            const key = await textFile(String(options.key ?? ''), 'opn-artifact-client-key-required');
+            const bearer_token = (await textFile(String(options.credential_token_file ?? ''), 'opn-artifact-credential-token-required')).trim();
+            if (command === 'artifact-send') {
+                const file = String(options.file ?? '').trim();
+                if (!file)
+                    throw new Error('opn-artifact-file-required');
+                const bytes = await readFile(file);
+                const artifact_id = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+                const file_name = file.split(/[\\/]/).pop() ?? 'artifact.bin';
+                const transfer_id = String(options.transfer_id ?? `transfer-${Date.now()}`);
+                const metadata = { schema: ARTIFACT_SCHEMA, artifact_id, content_sha256: artifact_id, size_bytes: bytes.byteLength, file_name, media_type: 'application/octet-stream' };
+                const offered = await artifactRequest({ endpoint, ca, cert, key, bearer_token, method: 'POST', pathname: '/v1/artifacts', body: Buffer.from(JSON.stringify({ transfer_id, target_node_id: String(options.target_node_id ?? ''), metadata })), headers: { 'content-type': 'application/json' } });
+                if (offered.statusCode !== 200 && offered.statusCode !== 202)
+                    throw new Error(String(parsedArtifactResponse(offered).reason ?? 'opn-artifact-offer-failed'));
+                const uploaded = await artifactRequest({ endpoint, ca, cert, key, bearer_token, method: 'PUT', pathname: `/v1/artifacts/${encodeURIComponent(artifact_id)}`, body: bytes });
+                if (uploaded.statusCode !== 200 && uploaded.statusCode !== 201)
+                    throw new Error(String(parsedArtifactResponse(uploaded).reason ?? 'opn-artifact-upload-failed'));
+                io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: 'verified', transfer_id, artifact_id, size_bytes: bytes.byteLength, side_effects_executed: false }));
+                return;
+            }
+            const artifact_id = String(options.artifact_id ?? '').trim();
+            const output = String(options.output ?? '').trim();
+            const artifact_store = String(options.artifact_store ?? '').trim();
+            if (!/^sha256:[0-9a-f]{64}$/.test(artifact_id))
+                throw new Error('opn-artifact-id-required');
+            if (!artifact_store)
+                throw new Error('opn-artifact-store-required');
+            const downloaded = await artifactRequest({ endpoint, ca, cert, key, bearer_token, method: 'GET', pathname: `/v1/artifacts/${encodeURIComponent(artifact_id)}` });
+            if (downloaded.statusCode !== 200)
+                throw new Error(String(parsedArtifactResponse(downloaded).reason ?? 'opn-artifact-download-failed'));
+            const actual = `sha256:${createHash('sha256').update(downloaded.body).digest('hex')}`;
+            if (actual !== artifact_id)
+                throw new Error('opn-artifact-download-integrity-failed');
+            const store = createOpnArtifactStore({ root: artifact_store });
+            const stored = await store.put({ bytes: downloaded.body, file_name: output.split(/[\\/]/).pop() || 'artifact.bin', media_type: typeof downloaded.headers['content-type'] === 'string' ? downloaded.headers['content-type'] : 'application/octet-stream', expected_digest: artifact_id });
+            if (output)
+                await writeFile(output, downloaded.body, { flag: 'wx' });
+            io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: 'verified', artifact_id, size_bytes: downloaded.body.byteLength, artifact_store, ...(output ? { output } : {}), store_status: stored.status, side_effects_executed: false }));
+            return;
+        }
         if (command === 'local-send') {
             const stateStore = createSqliteStateStore({ filename: String(options.state_store ?? '') });
             try {

@@ -237,6 +237,8 @@ export function createPairingHttpServer(input) {
             return;
         }
         const nodeId = peerNodeId(socket);
+        if (input.artifactTransfer && await input.artifactTransfer.handle({ request, response, node_id: nodeId }))
+            return;
         if (input.transport && await input.transport.handle({ request, response, node_id: nodeId }))
             return;
         if (request.method === 'GET' && url.pathname === '/v1/connection') {

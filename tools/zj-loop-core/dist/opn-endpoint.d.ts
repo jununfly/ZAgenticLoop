@@ -29,6 +29,7 @@ export declare function createOpnEndpointServer(input: {
     };
     credentialVerifier?: CredentialVerifier | null;
     transport?: OpnTransportHttpService | null;
+    artifact_store?: import('./opn-artifact-store.js').OpnArtifactStore | null;
 }): Promise<OpnEndpoint>;
 export declare function loadOpnEndpointTls(input: {
     key_path: string;
