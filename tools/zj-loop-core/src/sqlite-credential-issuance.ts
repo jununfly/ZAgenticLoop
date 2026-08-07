@@ -35,8 +35,21 @@ export type CredentialClaimResult = {
   token?: string;
 };
 
+export type PairingCredentialIssuanceRequest = {
+  request_id: string;
+  network_id: string;
+  node_id: string;
+  request_digest: string;
+  human_id: string;
+  capabilities: string[];
+  issued_at: string;
+  expires_at: string;
+  expected_revision?: number;
+};
+
 export type SqliteCredentialIssuance = {
   issueIntent(input: CredentialIssuanceRequest): Promise<CredentialIssueIntentResult>;
+  issuePairingIntent(input: PairingCredentialIssuanceRequest): Promise<CredentialIssueIntentResult>;
   claim(input: { request_id: string; network_id: string; node_id: string; credential_id: string; now?: string }): Promise<CredentialClaimResult>;
   claimForPairingSession(input: { request_id: string; network_id: string; node_id: string; session_id: string; now?: string }): Promise<CredentialClaimResult>;
   revoke(input: { credential_id: string; request_id: string; reason: string; now?: string }): Promise<{ status: 'revoked' | 'duplicate'; credential_id: string; revoked_at?: string }>;
@@ -168,6 +181,10 @@ export function credentialIssuanceDigest(input: CredentialIssuanceRequest): stri
   return `sha256:${sha256CanonicalJson(issuanceValue(input))}`;
 }
 
+function pairingCredentialIssuanceDigest(input: PairingCredentialIssuanceRequest): string {
+  return `sha256:${sha256CanonicalJson({ protocol: SQLITE_CREDENTIAL_ISSUANCE_SCHEMA, kind: 'pairing-approval', request_id: input.request_id, network_id: input.network_id, node_id: input.node_id, request_digest: input.request_digest, human_id: input.human_id, capabilities: [...new Set(input.capabilities)].sort(), issued_at: input.issued_at, expires_at: input.expires_at })}`;
+}
+
 export function createSqliteCredentialIssuance(input: { filename: string; now?: () => string; stateStore?: SqliteStateStore }): SqliteCredentialIssuance {
   requireText(input.filename, 'credential-issuance-filename-required');
   const db = input.stateStore ? null : new Database(input.filename);
@@ -213,6 +230,34 @@ export function createSqliteCredentialIssuance(input: { filename: string; now?: 
         if (appendEvent) {
           const event = createCredentialIssueIntentEvent({ request_id: request.request_id, network_id: request.network_id, node_id: request.node_id, credential_id: credentialId, issuance_digest: issuanceDigest, capabilities, issued_at: request.issued_at, expires_at: request.expires_at, intent_expires_at: intentExpiresAt });
           const result = appendEvent({ network_id: request.network_id, expected_revision: request.expected_revision as number, event, now: current });
+          if (result.status === 'conflict') throw new Error(result.reason ?? 'event-conflict');
+        }
+        return { status: 'recorded', credential_id: credentialId, issuance_digest: issuanceDigest, intent_expires_at: intentExpiresAt };
+      });
+    },
+    async issuePairingIntent(request) {
+      for (const [value, error] of [[request.request_id, 'request-id-required'], [request.network_id, 'network-id-required'], [request.node_id, 'node-id-required'], [request.request_digest, 'request-digest-required'], [request.human_id, 'human-id-required']] as const) requireText(value, error);
+      const issuedAt = parseTime(request.issued_at, 'credential-issued-time-invalid');
+      const expiresAt = parseTime(request.expires_at, 'credential-expiry-invalid');
+      if (issuedAt >= expiresAt) throw new Error('credential-time-range-invalid');
+      const capabilities = [...new Set(request.capabilities)];
+      if (capabilities.some((capability) => !capability.trim())) throw new Error('credential-capability-invalid');
+      const issuanceDigest = pairingCredentialIssuanceDigest(request);
+      const intentExpiresAt = new Date(Math.min(expiresAt, issuedAt + 5 * 60 * 1000)).toISOString();
+      const credentialId = `credential_${issuanceDigest.slice('sha256:'.length, 'sha256:'.length + 32)}`;
+      return atomic((database, appendEvent) => {
+        const existing = database.prepare('SELECT request_id, issuance_digest, credential_id, intent_expires_at FROM credential_issue_intents WHERE request_id = ?').get(request.request_id) as { request_id: string; issuance_digest: string; credential_id: string; intent_expires_at: string } | undefined;
+        if (existing) {
+          if (existing.issuance_digest !== issuanceDigest.slice('sha256:'.length)) throw new Error('request-id-conflict');
+          return { status: 'duplicate', credential_id: existing.credential_id, issuance_digest: issuanceDigest, intent_expires_at: existing.intent_expires_at };
+        }
+        const occurredAt = request.issued_at;
+        database.prepare('INSERT INTO credential_issue_intents (request_id, issuance_digest, credential_id, network_id, node_id, intent_expires_at, issued_at, expires_at, claimed_at, token_hash, approval_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)').run(request.request_id, issuanceDigest.slice('sha256:'.length), credentialId, request.network_id, request.node_id, intentExpiresAt, request.issued_at, request.expires_at, JSON.stringify({ kind: 'pairing-approval', human_id: request.human_id, request_digest: request.request_digest, capabilities }));
+        database.prepare('INSERT INTO credential_issue_events (request_id, event_type, occurred_at, result_json) VALUES (?, ?, ?, ?)').run(request.request_id, 'credential-issued', occurredAt, JSON.stringify({ credential_id: credentialId, issuance_digest: issuanceDigest, source: 'pairing-approval' }));
+        if (appendEvent) {
+          const event = createCredentialIssueIntentEvent({ request_id: request.request_id, network_id: request.network_id, node_id: request.node_id, credential_id: credentialId, issuance_digest: issuanceDigest, capabilities, issued_at: request.issued_at, expires_at: request.expires_at, intent_expires_at: intentExpiresAt });
+          const currentRevision = (database.prepare('SELECT current_revision FROM network_metadata WHERE network_id = ?').get(request.network_id) as { current_revision: number }).current_revision;
+          const result = appendEvent({ network_id: request.network_id, expected_revision: request.expected_revision ?? currentRevision, event, now: occurredAt });
           if (result.status === 'conflict') throw new Error(result.reason ?? 'event-conflict');
         }
         return { status: 'recorded', credential_id: credentialId, issuance_digest: issuanceDigest, intent_expires_at: intentExpiresAt };

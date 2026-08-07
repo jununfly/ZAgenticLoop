@@ -124,7 +124,17 @@ The private key must remain on Windows. Transfer only the CSR to the Mac CA oper
 
 ### 3. Sign the CSR on the Mac
 
-Use the existing development CA on the Mac to sign the CSR. Never transfer `ca.key.pem` to Windows. Copy back only:
+Use the repository CLI on the Mac to sign the CSR. Never transfer `ca.key.pem` to Windows. For the development CA:
+
+```bash
+node tools/zj-loop-core/dist/opn-agent-identity-bootstrap-cli.js sign \
+  --csr /path/to/agent.csr.pem \
+  --ca-key /path/to/ca.key.pem \
+  --ca-cert /path/to/ca.cert.pem \
+  --output-cert /path/to/agent.cert.pem
+```
+
+Copy back only:
 
 - the signed Agent certificate
 - the CA certificate

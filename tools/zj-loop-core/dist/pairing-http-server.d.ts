@@ -34,6 +34,21 @@ export type CredentialClaimService = {
         token?: string;
     }>;
 };
+export type CredentialIssueService = {
+    issue(input: {
+        request_id: string;
+        network_id: string;
+        node_id: string;
+        request_digest: string;
+        human_id: string;
+        capabilities: string[];
+        issued_at: string;
+        expires_at: string;
+    }): Promise<{
+        status: 'recorded' | 'duplicate';
+        credential_id: string;
+    }>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -50,4 +65,5 @@ export declare function createPairingHttpServer(input: {
     now?: () => string;
     session_ttl_ms?: number;
     credentialClaim?: CredentialClaimService | null;
+    credentialIssue?: CredentialIssueService | null;
 }): Server;

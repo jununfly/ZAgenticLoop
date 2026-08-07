@@ -1,3 +1,23 @@
+import { projectEnrollment } from './node-enrollment.js';
+/** Project the pairing lifecycle into the node's enrollment read model. */
+export function projectPairingEnrollment(input) {
+    const requestRecord = input.records.find((record) => record.type === 'pairing-requested' && record.network_id === input.network_id && record.request.request_id === input.request_id);
+    if (!requestRecord || requestRecord.type !== 'pairing-requested')
+        throw new Error('pairing-request-not-found');
+    const identity = requestRecord.request.identity;
+    const records = input.records.filter((record) => record.network_id === input.network_id && (record.type === 'pairing-requested' ? record.request.request_id === input.request_id : record.request_id === input.request_id));
+    const events = records.flatMap((record) => {
+        if (record.type === 'pairing-requested')
+            return [{ type: 'identity-generated', event_id: record.event_id, node_id: identity.node_id, occurred_at: record.occurred_at }];
+        if (record.type === 'human-approved')
+            return [
+                { type: 'human-approved', event_id: record.event_id, node_id: identity.node_id, occurred_at: record.occurred_at },
+                { type: 'capability-ceiling-granted', event_id: `${record.event_id}:capability-ceiling`, node_id: identity.node_id, occurred_at: record.occurred_at, capabilities: [...record.approved_capabilities] },
+            ];
+        return record.type === 'pairing-rejected' ? [{ type: 're-enrolled', event_id: record.event_id, node_id: identity.node_id, occurred_at: record.occurred_at }] : [];
+    });
+    return projectEnrollment({ identity, events });
+}
 function conflict() {
     throw new Error('pairing-projection-conflict');
 }

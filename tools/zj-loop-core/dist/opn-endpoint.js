@@ -21,6 +21,9 @@ export async function createOpnEndpointServer(input) {
     const server = createPairingHttpServer({
         tls: input.tls,
         recordStore,
+        ownerAuthenticator: input.ownerAuthenticator,
+        credentialClaim: input.credentialClaim,
+        credentialIssue: input.credentialIssue,
         readinessCheck: {
             check: async () => {
                 try {

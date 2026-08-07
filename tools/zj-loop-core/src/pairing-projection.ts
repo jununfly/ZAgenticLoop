@@ -1,4 +1,4 @@
-import type { PairingRequest } from './node-enrollment.js';
+import { projectEnrollment, type EnrollmentEvent, type EnrollmentProjection, type PairingRequest, type NodeIdentity } from './node-enrollment.js';
 
 export type PairingLifecycleRecord =
   | { type: 'pairing-requested'; event_id: string; occurred_at: string; network_id: string; request: PairingRequest; request_digest: string }
@@ -18,6 +18,27 @@ export type PairingRequestProjection = {
   approved_capabilities: string[];
   reason: string | null;
 };
+
+/** Project the pairing lifecycle into the node's enrollment read model. */
+export function projectPairingEnrollment(input: {
+  network_id: string;
+  request_id: string;
+  records: PairingLifecycleRecord[];
+}): EnrollmentProjection {
+  const requestRecord = input.records.find((record) => record.type === 'pairing-requested' && record.network_id === input.network_id && record.request.request_id === input.request_id);
+  if (!requestRecord || requestRecord.type !== 'pairing-requested') throw new Error('pairing-request-not-found');
+  const identity: NodeIdentity = requestRecord.request.identity;
+  const records = input.records.filter((record) => record.network_id === input.network_id && (record.type === 'pairing-requested' ? record.request.request_id === input.request_id : record.request_id === input.request_id));
+  const events: EnrollmentEvent[] = records.flatMap((record): EnrollmentEvent[] => {
+    if (record.type === 'pairing-requested') return [{ type: 'identity-generated' as const, event_id: record.event_id, node_id: identity.node_id, occurred_at: record.occurred_at }];
+    if (record.type === 'human-approved') return [
+      { type: 'human-approved' as const, event_id: record.event_id, node_id: identity.node_id, occurred_at: record.occurred_at },
+      { type: 'capability-ceiling-granted' as const, event_id: `${record.event_id}:capability-ceiling`, node_id: identity.node_id, occurred_at: record.occurred_at, capabilities: [...record.approved_capabilities] },
+    ];
+    return record.type === 'pairing-rejected' ? [{ type: 're-enrolled' as const, event_id: record.event_id, node_id: identity.node_id, occurred_at: record.occurred_at }] : [];
+  });
+  return projectEnrollment({ identity, events });
+}
 
 function conflict(): never {
   throw new Error('pairing-projection-conflict');

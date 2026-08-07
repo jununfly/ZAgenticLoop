@@ -2,7 +2,7 @@ import { createHash, randomBytes, X509Certificate } from 'node:crypto';
 import { createServer, type Server, type ServerOptions } from 'node:https';
 import type { TLSSocket } from 'node:tls';
 import { createPairingApprovedRecord, createPairingRejectedRecord, createPairingRequestedRecord } from './pairing-records.js';
-import { projectPairingRequests, type PairingLifecycleRecord } from './pairing-projection.js';
+import { projectPairingEnrollment, projectPairingRequests, type PairingLifecycleRecord } from './pairing-projection.js';
 import type { PairingRecordStore } from './pairing-record-store.js';
 import { approvePairingRequest, pairingRequestDigest, type PairingRequest, type PairingRequestProof } from './node-enrollment.js';
 import { verifyPairingRequestProof } from './node-enrollment.js';
@@ -28,6 +28,10 @@ export type PairingOwnerAuthenticator = {
 
 export type CredentialClaimService = {
   claim(input: { request_id: string; session_id: string; network_id: string; node_id: string }): Promise<{ status: 'claimed' | 'duplicate'; credential_id: string; claimed_at: string; token?: string }>;
+};
+
+export type CredentialIssueService = {
+  issue(input: { request_id: string; network_id: string; node_id: string; request_digest: string; human_id: string; capabilities: string[]; issued_at: string; expires_at: string }): Promise<{ status: 'recorded' | 'duplicate'; credential_id: string }>;
 };
 
 function json(response: import('node:http').ServerResponse, statusCode: number, body: Record<string, unknown>): void {
@@ -75,7 +79,7 @@ function blocked(response: import('node:http').ServerResponse, reason: string): 
   json(response, errorStatus(reason), { schema: PAIRING_HTTP_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
 }
 
-function sessionResponse(session: PairingSession, projection: ReturnType<typeof projectPairingRequests>[number], token?: string): Record<string, unknown> {
+function sessionResponse(session: PairingSession, projection: ReturnType<typeof projectPairingRequests>[number], token?: string, enrollment?: unknown): Record<string, unknown> {
   return {
     session: {
       session_id: session.session_id,
@@ -87,6 +91,7 @@ function sessionResponse(session: PairingSession, projection: ReturnType<typeof 
       status: projection.status,
     },
     ...(token ? { session_token: token } : {}),
+    ...(enrollment ? { enrollment } : {}),
   };
 }
 
@@ -98,6 +103,7 @@ export function createPairingHttpServer(input: {
   now?: () => string;
   session_ttl_ms?: number;
   credentialClaim?: CredentialClaimService | null;
+  credentialIssue?: CredentialIssueService | null;
 }): Server {
   const now = input.now ?? (() => new Date().toISOString());
   const sessionTtl = input.session_ttl_ms ?? 5 * 60 * 1000;
@@ -156,14 +162,22 @@ export function createPairingHttpServer(input: {
         if (ownerApprove) {
           if (!Array.isArray(value.approved_capabilities) || value.approved_capabilities.some((capability) => typeof capability !== 'string')) throw new Error('approved-capabilities-invalid');
           if (JSON.stringify([...new Set(value.approved_capabilities)].sort()) !== JSON.stringify([...value.context.approved_capabilities].sort())) throw new Error('human-approval-context-invalid');
-          const approval = approvePairingRequest({ request: baseRecord.request, human_id: auth.human_id as string, approved_at: now(), approved_capabilities: value.approved_capabilities });
-          decision = createPairingApprovedRecord({ request: { request_id: projection.request_id, network_id: projection.network_id, node_id: projection.node_id, request_digest: projection.request_digest }, approval });
+          const existingApproval = records.find((record) => record.type === 'human-approved' && record.request_id === projection.request_id && record.request_digest === projection.request_digest);
+          if (existingApproval && existingApproval.type === 'human-approved') decision = existingApproval;
+          else {
+            const approval = approvePairingRequest({ request: baseRecord.request, human_id: auth.human_id as string, approved_at: now(), approved_capabilities: value.approved_capabilities });
+            decision = createPairingApprovedRecord({ request: { request_id: projection.request_id, network_id: projection.network_id, node_id: projection.node_id, request_digest: projection.request_digest }, approval });
+          }
         } else {
           if (typeof value.reason !== 'string' || !value.reason.trim()) throw new Error('pairing-rejection-reason-required');
           decision = createPairingRejectedRecord({ request: { request_id: projection.request_id, network_id: projection.network_id, node_id: projection.node_id, request_digest: projection.request_digest }, human_id: auth.human_id as string, rejected_at: now(), reason: value.reason });
         }
         const appended = await input.recordStore.appendIfPending({ request_id: projection.request_id, request_digest: projection.request_digest, record: decision, now: now() });
-        json(response, appended.status === 'duplicate' ? 200 : 201, { schema: PAIRING_HTTP_SCHEMA, status: appended.status === 'duplicate' ? 'existing' : 'recorded', request_id: projection.request_id, lifecycle: appended.record, side_effects_executed: appended.status === 'recorded' });
+        let credential;
+        if (ownerApprove && input.credentialIssue) {
+          credential = await input.credentialIssue.issue({ request_id: projection.request_id, network_id: projection.network_id, node_id: projection.node_id, request_digest: projection.request_digest, human_id: auth.human_id as string, capabilities: [...value.approved_capabilities as string[]], issued_at: appended.record.occurred_at, expires_at: baseRecord.request.expires_at });
+        }
+        json(response, appended.status === 'duplicate' ? 200 : 201, { schema: PAIRING_HTTP_SCHEMA, status: appended.status === 'duplicate' ? 'existing' : 'recorded', request_id: projection.request_id, lifecycle: appended.record, ...(credential ? { credential_id: credential.credential_id } : {}), side_effects_executed: appended.status === 'recorded' });
       } catch (error) {
         blocked(response, error instanceof Error && error.message === 'pairing-state-conflict' ? 'pairing-state-conflict' : error instanceof Error ? error.message : 'pairing-decision-invalid');
       }
@@ -201,7 +215,8 @@ export function createPairingHttpServer(input: {
           session = { session_id: sessionId, session_token_hash: tokenHash(token), session_token: token, request_id: pairingRequest.request_id, request_digest: pairingRequestDigest(pairingRequest), network_id: pairingRequest.network_id, node_id: nodeId, expires_at: new Date(Math.min(Date.parse(pairingRequest.expires_at), Date.parse(now()) + sessionTtl)).toISOString() };
           sessions.set(sessionId, session);
         }
-        json(response, appended.status === 'duplicate' ? 200 : 201, { schema: PAIRING_HTTP_SCHEMA, status: appended.status === 'duplicate' ? 'existing' : 'created', ...sessionResponse(session, projection, session.session_token), side_effects_executed: appended.status === 'recorded' });
+        const enrollment = projectPairingEnrollment({ network_id: session.network_id, request_id: session.request_id, records: await input.recordStore.list(session.network_id) });
+        json(response, appended.status === 'duplicate' ? 200 : 201, { schema: PAIRING_HTTP_SCHEMA, status: appended.status === 'duplicate' ? 'existing' : 'created', ...sessionResponse(session, projection, session.session_token, enrollment), side_effects_executed: appended.status === 'recorded' });
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'pairing-request-invalid';
         blocked(response, reason === 'pairing-event-conflict' ? 'pairing-request-conflict' : reason);
@@ -244,7 +259,8 @@ export function createPairingHttpServer(input: {
       const records = await input.recordStore.list(session.network_id);
       const projection = projectPairingRequests({ network_id: session.network_id, records, now: now() }).find((item) => item.request_id === session.request_id);
       if (!projection) { blocked(response, 'pairing-request-not-found'); return; }
-      json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', ...sessionResponse(session, projection), side_effects_executed: false });
+      const enrollment = projectPairingEnrollment({ network_id: session.network_id, request_id: session.request_id, records });
+      json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', ...sessionResponse(session, projection, undefined, enrollment), side_effects_executed: false });
       return;
     }
     blocked(response, 'route-not-found');

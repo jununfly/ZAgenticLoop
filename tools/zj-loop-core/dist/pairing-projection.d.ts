@@ -1,4 +1,4 @@
-import type { PairingRequest } from './node-enrollment.js';
+import { type EnrollmentProjection, type PairingRequest } from './node-enrollment.js';
 export type PairingLifecycleRecord = {
     type: 'pairing-requested';
     event_id: string;
@@ -43,6 +43,12 @@ export type PairingRequestProjection = {
     approved_capabilities: string[];
     reason: string | null;
 };
+/** Project the pairing lifecycle into the node's enrollment read model. */
+export declare function projectPairingEnrollment(input: {
+    network_id: string;
+    request_id: string;
+    records: PairingLifecycleRecord[];
+}): EnrollmentProjection;
 export declare function projectPairingRequests(input: {
     network_id: string;
     records: PairingLifecycleRecord[];

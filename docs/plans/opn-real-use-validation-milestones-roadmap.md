@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-use-validation-milestones-roadmap.json` | 最后更新: 2026-08-06 22:17:21
+> 数据文件: `opn-real-use-validation-milestones-roadmap.json` | 最后更新: 2026-08-07 14:57:15
 
 [~][X+] 1. OPN 真实可用与用户价值验证里程碑
 ├── [x][Y+] 1-1. M1：长期开发测试版 Runtime Trust
@@ -26,9 +26,9 @@
 
 ### 当前施工：1-3-3-2. Windows Agent 身份初始化与一次性 pairing request
 
-Join API/CLI 与 identity bootstrap 已完成；尚需真实 CSR 签发、Windows join、Human approval、enrollment projection。
+Join API/CLI、CSR 签发、Windows join、Human approval 与 enrollment projection 已完成；跨设备 Co-work Channel 仍由 1-3-3-3 承载。
 
 **当前子树：**
 ├── [x][Y+] 1-3-3-2-1. Windows Agent 本地 P-256 身份与证书 bootstrap
-└── [ ][X+] 1-3-3-2-2. Windows CSR 签发、真实 join request 与 Human approval
+└── [x][X+] 1-3-3-2-2. Windows CSR 签发、真实 join request 与 Human approval
 <!-- ROADMAP_SECTION_END -->

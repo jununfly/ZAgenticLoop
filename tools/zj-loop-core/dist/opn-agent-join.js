@@ -26,6 +26,28 @@ function parseEndpoint(value) {
         throw new Error('opn-agent-join-https-required');
     return endpoint;
 }
+function requestSessionEndpoint(input) {
+    const endpoint = parseEndpoint(input.endpoint);
+    const body = input.body ?? '';
+    const options = { protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, path: input.path, method: input.method, ca: input.ca, cert: input.cert, key: input.key, servername: input.server_name ?? endpoint.hostname, rejectUnauthorized: true, minVersion: 'TLSv1.3', timeout: input.timeout_ms ?? 10_000, headers: { authorization: `Bearer ${input.authorization}`, ...(body ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) } : {}) } };
+    return new Promise((resolve, reject) => {
+        const req = httpsRequest(options, (response) => { let text = ''; response.setEncoding('utf8'); response.on('data', (chunk) => { text += chunk; }); response.on('end', () => { try {
+            resolve({ statusCode: response.statusCode ?? 0, body: text ? JSON.parse(text) : null });
+        }
+        catch {
+            reject(new Error('opn-agent-join-response-invalid'));
+        } }); });
+        req.on('timeout', () => req.destroy(new Error('opn-agent-join-timeout')));
+        req.on('error', reject);
+        req.end(body);
+    });
+}
+export function fetchOpnAgentJoinStatus(input) {
+    return requestSessionEndpoint({ ...input, path: `/v1/pairing-requests/${encodeURIComponent(input.session.session_id)}/status`, method: 'GET', authorization: input.session.session_token });
+}
+export function claimOpnAgentCredential(input) {
+    return requestSessionEndpoint({ ...input, path: `/v1/pairing-requests/${encodeURIComponent(input.session.request_id)}/credential/claim`, method: 'POST', body: '{}', authorization: input.session.session_token });
+}
 export function submitOpnAgentJoinRequest(input) {
     const endpoint = parseEndpoint(input.endpoint);
     if (!input.ca || !input.cert || !input.key)

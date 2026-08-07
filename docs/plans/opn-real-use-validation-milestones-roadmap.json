@@ -376,7 +376,8 @@
       "parent": "1-3",
       "children": [
         "1-3-3-1",
-        "1-3-3-2"
+        "1-3-3-2",
+        "1-3-3-3"
       ],
       "decisions": [
         {
@@ -418,6 +419,11 @@
           "q": "M3 是否加入写入型任务？",
           "answer": "不加入。M3 只读；写入型 Development Job 进入 M4。",
           "note": "资源隔离与 merge 责任留在中心任务编排边界。"
+        },
+        {
+          "q": "跨设备 Co-work Channel 是否继续承载在 M3 的 1-3-3 下？",
+          "answer": "是，作为 1-3-3 下的 1-3-3-3 纵切；先完成 1-3-3-2-2 的真实 join、Human approval 与 enrollment，再实现 Co-work Channel，最终用它验收 M3。",
+          "note": "不新建独立路线图，不先做脱离 OPN 身份、StateStore 和真实通路的 Web demo。"
         }
       ],
       "notes": "真实 Mac + Windows Endpoint/HTTPS 已通过；真实 Windows enrollment、Human approval、credential claim、跨设备 Graph read-only task 尚未完成。"
@@ -503,7 +509,7 @@
         "1-3-3-2-2"
       ],
       "decisions": [],
-      "notes": "Join API/CLI 与 identity bootstrap 已完成；尚需真实 CSR 签发、Windows join、Human approval、enrollment projection。"
+      "notes": "Join API/CLI、CSR 签发、Windows join、Human approval 与 enrollment projection 已完成；跨设备 Co-work Channel 仍由 1-3-3-3 承载。"
     },
     "1-3-3-2-1": {
       "id": "1-3-3-2-1",
@@ -518,17 +524,159 @@
     "1-3-3-2-2": {
       "id": "1-3-3-2-2",
       "label": "Windows CSR 签发、真实 join request 与 Human approval",
-      "status": "pending",
-      "mode": "explore",
+      "status": "completed",
+      "mode": "exploit",
       "parent": "1-3-3-2",
       "children": [],
       "decisions": [],
+      "notes": "已实现 Mac 侧 P-256 CSR signer（开发 CA、clientAuth EKU、拒绝覆盖）；endpoint CLI 接入 Human Authority、pairing approve、CAS 幂等 credential intent/one-time claim；join session status 由同一 append-only pairing history 投影 enrollment identity/status/capability ceiling。已用真实 CLI join、Human approval、status projection、credential claim 和 retry 回归验证。"
+    },
+    "1-3-3-3": {
+      "id": "1-3-3-3",
+      "label": "跨设备 OPN Co-work Channel 连接、消息、Artifact、Agent 与 Human action 闭环",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [
+        "1-3-3-3-1",
+        "1-3-3-3-2",
+        "1-3-3-3-3",
+        "1-3-3-3-4",
+        "1-3-3-3-5"
+      ],
+      "decisions": [
+        {
+          "q": "Local Web Console 的部署和权威边界是什么？",
+          "answer": "每台 OPN 设备各自运行 Local Web Console；UI 只读取本机 Core projection/Evidence，Human action 提交给本机 Core，再由 OPN 通路传播事实。",
+          "note": "不让远端浏览器直读另一台设备的数据库，也不让 UI 绕过 Core gate；每台设备保持节点自治。"
+        },
+        {
+          "q": "开发期安全策略如何取舍？",
+          "answer": "采用 OPN Development Dogfood Trust Profile：保留 mTLS、设备身份、digest、基本脱敏和 Human gate；暂不阻塞于企业级 RBAC、细粒度 endpoint policy、复杂轮换、合规留存和生产签名。",
+          "note": "先验证跨设备产品价值和功能闭环，再以独立增强路线叠加治理，不把正式发布条件前置为 M3 阻塞。"
+        },
+        {
+          "q": "Co-work Channel 的验收顺序是什么？",
+          "answer": "依次验证：设备连接、双向结构化消息、双端 Web projection、Artifact 传输与校验、Agent adapter 协作、HumanActionRequest 双端显示与处理、Evidence 汇聚和 replay。",
+          "note": "每一步都基于真实 OPN 通路；loopback 只能作为回归，不替代 Mac/Windows 物理验收。"
+        },
+        {
+          "q": "Co-work Channel 何时算完成？",
+          "answer": "两台真实设备在同一 network 中，能完成至少一轮双向消息、一份 Artifact、一项 Agent 处理和一项 Human action；两端 UI 可观察完整状态，Evidence 可重读验证，断线重连后不重复伪造结果。",
+          "note": "完成后再用该通路承载 M3 三节点只读 Graph Atom；不因 Web UI 单独可用而提前宣称 M3 完成。"
+        },
+        {
+          "q": "MVP 的 StateStore 物理部署怎么处理？",
+          "answer": "使用一个明确配置的网络级 StateStore 作为 canonical facts authority；当前 dogfood 可部署在 Mac endpoint 所在设备，Windows 保持本地 projection/read model，通过 OPN 接收事实和状态。",
+          "note": "部署在 Mac 不等于中心自动拥有存储权；逻辑 ownership、scope 和写入 gate 仍独立。暂不实现 distributed multi-master StateStore。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3-3-3-1": {
+      "id": "1-3-3-3-1",
+      "label": "连接状态与 Local Web Console",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Local Web Console 的默认监听范围是什么？",
+          "answer": "默认只绑定 localhost；开发调试需要时由 Human 显式选择 Tailscale 地址或其他受控地址暴露。",
+          "note": "不把 Web UI 默认暴露到整个局域网；当前只保留最小开发期边界。"
+        },
+        {
+          "q": "Local Web Console 第一版显示范围是什么？",
+          "answer": "先提供连接/设备、Inbox/Outbox、消息时间线、Artifact transfer、Human action、Evidence 和 blocked/uncertain 状态；采用本机 projection，UI 不直接启动 Agent 或修改 StateStore。",
+          "note": "先做可观察和可操作的 dogfood console，不先做完整运维后台、复杂图编辑器或企业权限面板。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3-3-3-2": {
+      "id": "1-3-3-3-2",
+      "label": "双向结构化消息收发与 Evidence 投影",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "双向消息的 canonical 载体是什么？",
+          "answer": "使用 provider-neutral OPN Envelope，包含 network/event/message/correlation/sender/receiver/type/payload-ref/status/digest；消息进入本地 StateStore projection 后由 UI 展示。",
+          "note": "MCP/A2A 可以作为 payload 或 Agent adapter 的应用层协议，不替代 OPN 身份、路由、Evidence 和 Human lifecycle。"
+        },
+        {
+          "q": "消息通路是否新建一套 Co-work 专用协议？",
+          "answer": "不新建第二套传输协议；复用现有 OPN Envelope、Relay session、bounded delivery、dedupe、retry、replay 和 StateStore facts，在其上增加 user-visible message types 与 projection。",
+          "note": "避免 Web UI/demo 与真实 OPN transport 分叉；payload schema 可独立演进。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3-3-3-3": {
+      "id": "1-3-3-3-3",
+      "label": "跨设备 Artifact 文件传输与完整性校验",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "文件传输的最小产品语义是什么？",
+          "answer": "文件作为受控 Artifact 传输：先计算 digest 和 metadata，再通过 OPN 通路传输，接收端校验后写入本地 ArtifactStore；默认不直接写入任意远程路径。",
+          "note": "支持进度、有限重试、重复传输去重和失败原因；不实现远程文件系统或目标代码库锁。"
+        },
+        {
+          "q": "Artifact 文件的 metadata 与字节如何传输？",
+          "answer": "StateStore 只记录 Artifact metadata、digest、transfer lifecycle 和引用；实际字节通过受控 HTTPS Artifact transfer endpoint 分块或有界传输，接收端写入本地 content-addressed ArtifactStore 后回传验证事实。",
+          "note": "不把大文件塞进 StateStore 或消息 Envelope；不提供任意路径读写。开发期先支持小文件和明确大小上限。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3-3-3-4": {
+      "id": "1-3-3-3-4",
+      "label": "基于 OPN 通路的 Agent adapter 协作",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Agent 如何基于这条通路协作？",
+          "answer": "本机 Agent adapter 消费 OPN task/message Envelope，调用本机实际 Agent；Agent 结果转换为结构化 outcome/Evidence，再通过 OPN 返回。",
+          "note": "OPN 是设备和任务协作通路；MCP 用于 Agent-tool，A2A 用于 Agent-Agent，均通过 adapter 接入且不是核心依赖。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3-3-3-5": {
+      "id": "1-3-3-3-5",
+      "label": "Human action 请求在双端 Web Console 显示与处理",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Human action 如何跨设备呈现？",
+          "answer": "产生结构化 HumanActionRequest；发起端和目标端 Local Web Console 都显示 pending、原因、所需动作和关联 Evidence；Human 的决定由本机 Core 记录并传播。",
+          "note": "Agent 不能伪造 Human decision；跨设备 UI 只显示事实，不直接替另一台设备执行授权。"
+        },
+        {
+          "q": "当前只有一个 Human 时 Human action 怎么验收？",
+          "answer": "以 Mac Human 作为当前唯一真实决策者；Windows UI 必须显示 pending/reason/context，但不要求 Windows Human 完成审批。后续多 Human 扩展不阻塞当前 M3。",
+          "note": "保留协议上的 Human action 双端可见与 signed decision 边界，避免为了多用户场景提前堆叠身份治理。"
+        }
+      ],
       "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-06 14:10:10",
-    "updated": "2026-08-06 22:17:21",
+    "updated": "2026-08-07 14:57:15",
     "md_file": "docs/plans/opn-real-use-validation-milestones-roadmap.md"
   }
 }

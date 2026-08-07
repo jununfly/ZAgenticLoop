@@ -26,8 +26,20 @@ export type CredentialClaimResult = {
     claimed_at: string;
     token?: string;
 };
+export type PairingCredentialIssuanceRequest = {
+    request_id: string;
+    network_id: string;
+    node_id: string;
+    request_digest: string;
+    human_id: string;
+    capabilities: string[];
+    issued_at: string;
+    expires_at: string;
+    expected_revision?: number;
+};
 export type SqliteCredentialIssuance = {
     issueIntent(input: CredentialIssuanceRequest): Promise<CredentialIssueIntentResult>;
+    issuePairingIntent(input: PairingCredentialIssuanceRequest): Promise<CredentialIssueIntentResult>;
     claim(input: {
         request_id: string;
         network_id: string;
