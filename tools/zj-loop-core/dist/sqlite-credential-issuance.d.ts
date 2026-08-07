@@ -54,6 +54,18 @@ export type SqliteCredentialIssuance = {
         session_id: string;
         now?: string;
     }): Promise<CredentialClaimResult>;
+    verifyCredential(input: {
+        token: string;
+        node_id: string;
+        network_id: string;
+        required_capabilities?: string[];
+        now?: string;
+    }): Promise<{
+        status: 'allowed' | 'blocked';
+        credential_id?: string;
+        expires_at?: string;
+        reason?: string;
+    }>;
     revoke(input: {
         credential_id: string;
         request_id: string;

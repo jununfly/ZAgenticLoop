@@ -35,7 +35,7 @@ const spec = {
             : undefined;
         let endpoint;
         try {
-            endpoint = await createOpnEndpointServer({ bind, port, network_id, stateStore, tls, ownerAuthenticator, credentialClaim: { claim: (input) => issuance.claimForPairingSession(input) }, credentialIssue: { issue: async (input) => { const result = await issuance.issuePairingIntent({ ...input, expected_revision: await stateStore.getRevision(input.network_id) }); return { status: result.status, credential_id: result.credential_id }; } } });
+            endpoint = await createOpnEndpointServer({ bind, port, network_id, stateStore, tls, ownerAuthenticator, credentialVerifier: { verify: (input) => issuance.verifyCredential({ token: input.token, node_id: input.node_id, network_id: input.network_id ?? network_id, required_capabilities: input.required_capabilities }) }, credentialClaim: { claim: (input) => issuance.claimForPairingSession(input) }, credentialIssue: { issue: async (input) => { const result = await issuance.issuePairingIntent({ ...input, expected_revision: await stateStore.getRevision(input.network_id) }); return { status: result.status, credential_id: result.credential_id }; } } });
         }
         catch (error) {
             await issuance.close();

@@ -7,6 +7,9 @@ import { createSqlitePairingRecordStore } from './sqlite-pairing-record-store.js
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { projectPairingRequests } from './pairing-projection.js';
 import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
+import { createOpnTransportHttpService } from './opn-transport-http-server.js';
+import type { CredentialVerifier } from './sqlite-state-store-server.js';
+import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1' as const;
 
@@ -31,6 +34,8 @@ export async function createOpnEndpointServer(input: {
   credentialIssue?: CredentialIssueService | null;
   connectionReadModel?: PairingConnectionReadModelService | null;
   local_node?: { node_id: string; display_name: string; agent_kind: string; agent_version: string };
+  credentialVerifier?: CredentialVerifier | null;
+  transport?: OpnTransportHttpService | null;
 }): Promise<OpnEndpoint> {
   requireText(input.bind, 'opn-endpoint-bind-required');
   requireText(input.network_id, 'opn-endpoint-network-id-required');
@@ -61,6 +66,7 @@ export async function createOpnEndpointServer(input: {
     credentialClaim: input.credentialClaim,
     credentialIssue: input.credentialIssue,
     connectionReadModel,
+    transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
     readinessCheck: {
       check: async () => {
         try {

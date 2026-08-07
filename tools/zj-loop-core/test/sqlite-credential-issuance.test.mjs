@@ -36,6 +36,8 @@ test('SQLite credential issuance binds issue intent to signed Human approval and
     const claimed = await issuance.claim({ request_id: base.request_id, network_id: base.network_id, node_id: base.node_id, credential_id: first.credential_id, now: '2026-07-30T01:02:00.000Z' });
     assert.equal(claimed.status, 'claimed');
     assert.match(claimed.token, /^[A-Za-z0-9_-]{40,}$/);
+    assert.deepEqual(await issuance.verifyCredential({ token: claimed.token, network_id: base.network_id, node_id: base.node_id, required_capabilities: ['state.read'], now: '2026-07-30T01:02:30.000Z' }), { status: 'allowed', credential_id: first.credential_id, expires_at: base.expires_at });
+    assert.deepEqual(await issuance.verifyCredential({ token: claimed.token, network_id: base.network_id, node_id: 'node-2', now: '2026-07-30T01:02:30.000Z' }), { status: 'blocked', reason: 'credential-node-mismatch' });
     const claimRetry = await issuance.claim({ request_id: base.request_id, network_id: base.network_id, node_id: base.node_id, credential_id: first.credential_id, now: '2026-07-30T01:03:00.000Z' });
     assert.deepEqual(claimRetry, { status: 'duplicate', credential_id: first.credential_id, claimed_at: '2026-07-30T01:02:00.000Z' });
     assert.equal('token' in claimRetry, false);

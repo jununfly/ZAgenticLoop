@@ -52,6 +52,7 @@ export type SqliteCredentialIssuance = {
   issuePairingIntent(input: PairingCredentialIssuanceRequest): Promise<CredentialIssueIntentResult>;
   claim(input: { request_id: string; network_id: string; node_id: string; credential_id: string; now?: string }): Promise<CredentialClaimResult>;
   claimForPairingSession(input: { request_id: string; network_id: string; node_id: string; session_id: string; now?: string }): Promise<CredentialClaimResult>;
+  verifyCredential(input: { token: string; node_id: string; network_id: string; required_capabilities?: string[]; now?: string }): Promise<{ status: 'allowed' | 'blocked'; credential_id?: string; expires_at?: string; reason?: string }>;
   revoke(input: { credential_id: string; request_id: string; reason: string; now?: string }): Promise<{ status: 'revoked' | 'duplicate'; credential_id: string; revoked_at?: string }>;
   close(): Promise<void>;
 };
@@ -301,6 +302,27 @@ export function createSqliteCredentialIssuance(input: { filename: string; now?: 
       const row = await atomic((database) => database.prepare('SELECT credential_id FROM credential_issue_intents WHERE request_id = ? AND network_id = ? AND node_id = ?').get(request.request_id, request.network_id, request.node_id) as { credential_id: string } | undefined);
       if (!row) throw new Error('credential-not-available');
       return this.claim({ ...request, credential_id: row.credential_id });
+    },
+    async verifyCredential(request) {
+      requireText(request.token, 'credential-token-required');
+      requireText(request.node_id, 'credential-node-id-required');
+      requireText(request.network_id, 'credential-network-id-required');
+      const current = request.now ?? now();
+      const currentTime = parseTime(current, 'credential-clock-invalid');
+      return atomic((database) => {
+        const row = database.prepare('SELECT credential_id, network_id, node_id, expires_at, claimed_at, token_hash, revoked_at, approval_json FROM credential_issue_intents WHERE token_hash = ?').get(hashToken(request.token)) as { credential_id: string; network_id: string; node_id: string; expires_at: string; claimed_at: string | null; token_hash: string | null; revoked_at: string | null; approval_json: string } | undefined;
+        if (!row) return { status: 'blocked' as const, reason: 'credential-invalid' };
+        if (!row.claimed_at || !row.token_hash) return { status: 'blocked' as const, reason: 'credential-not-claimed' };
+        if (row.revoked_at) return { status: 'blocked' as const, reason: 'credential-revoked' };
+        if (row.network_id !== request.network_id) return { status: 'blocked' as const, reason: 'credential-network-mismatch' };
+        if (row.node_id !== request.node_id) return { status: 'blocked' as const, reason: 'credential-node-mismatch' };
+        if (currentTime >= parseTime(row.expires_at, 'credential-expiry-invalid')) return { status: 'blocked' as const, reason: 'credential-expired' };
+        const approval = JSON.parse(row.approval_json) as { capabilities?: unknown; approved_capabilities?: unknown };
+        const declared = approval.capabilities ?? approval.approved_capabilities;
+        const capabilities = new Set(Array.isArray(declared) ? declared.filter((value): value is string => typeof value === 'string') : []);
+        if ((request.required_capabilities ?? []).some((capability) => !capabilities.has(capability))) return { status: 'blocked' as const, reason: 'credential-capability-mismatch' };
+        return { status: 'allowed' as const, credential_id: row.credential_id, expires_at: row.expires_at };
+      });
     },
     async revoke(request) {
       requireText(request.credential_id, 'credential-id-required');

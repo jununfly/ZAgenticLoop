@@ -261,6 +261,34 @@ export function createSqliteCredentialIssuance(input) {
                 throw new Error('credential-not-available');
             return this.claim({ ...request, credential_id: row.credential_id });
         },
+        async verifyCredential(request) {
+            requireText(request.token, 'credential-token-required');
+            requireText(request.node_id, 'credential-node-id-required');
+            requireText(request.network_id, 'credential-network-id-required');
+            const current = request.now ?? now();
+            const currentTime = parseTime(current, 'credential-clock-invalid');
+            return atomic((database) => {
+                const row = database.prepare('SELECT credential_id, network_id, node_id, expires_at, claimed_at, token_hash, revoked_at, approval_json FROM credential_issue_intents WHERE token_hash = ?').get(hashToken(request.token));
+                if (!row)
+                    return { status: 'blocked', reason: 'credential-invalid' };
+                if (!row.claimed_at || !row.token_hash)
+                    return { status: 'blocked', reason: 'credential-not-claimed' };
+                if (row.revoked_at)
+                    return { status: 'blocked', reason: 'credential-revoked' };
+                if (row.network_id !== request.network_id)
+                    return { status: 'blocked', reason: 'credential-network-mismatch' };
+                if (row.node_id !== request.node_id)
+                    return { status: 'blocked', reason: 'credential-node-mismatch' };
+                if (currentTime >= parseTime(row.expires_at, 'credential-expiry-invalid'))
+                    return { status: 'blocked', reason: 'credential-expired' };
+                const approval = JSON.parse(row.approval_json);
+                const declared = approval.capabilities ?? approval.approved_capabilities;
+                const capabilities = new Set(Array.isArray(declared) ? declared.filter((value) => typeof value === 'string') : []);
+                if ((request.required_capabilities ?? []).some((capability) => !capabilities.has(capability)))
+                    return { status: 'blocked', reason: 'credential-capability-mismatch' };
+                return { status: 'allowed', credential_id: row.credential_id, expires_at: row.expires_at };
+            });
+        },
         async revoke(request) {
             requireText(request.credential_id, 'credential-id-required');
             requireText(request.request_id, 'request-id-required');

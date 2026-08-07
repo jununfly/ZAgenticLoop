@@ -597,7 +597,7 @@
     "1-3-3-3-2": {
       "id": "1-3-3-3-2",
       "label": "双向结构化消息收发与 Evidence 投影",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-3-3-3",
       "children": [],
@@ -613,7 +613,7 @@
           "note": "避免 Web UI/demo 与真实 OPN transport 分叉；payload schema 可独立演进。"
         }
       ],
-      "notes": ""
+      "notes": "已接入 StateStore-backed Transport HTTP server：真实 mTLS TransportAdapter 可完成 session、sender-bound envelope send、target receive 与 ack；offered/acknowledged facts append-only 持久化，credential token verifier 复用 pairing issuance。仍需在 Mac/Windows 实际 endpoint 上完成双向消息与重连验收，之后才能标记 completed。"
     },
     "1-3-3-3-3": {
       "id": "1-3-3-3-3",

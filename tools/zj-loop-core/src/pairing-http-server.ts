@@ -7,6 +7,7 @@ import type { PairingRecordStore } from './pairing-record-store.js';
 import { approvePairingRequest, pairingRequestDigest, type PairingRequest, type PairingRequestProof } from './node-enrollment.js';
 import { verifyPairingRequestProof } from './node-enrollment.js';
 import { validateHumanAuthorityV2Binding, type HumanApprovalContext } from './human-authority.js';
+import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 
 export const PAIRING_HTTP_SCHEMA = 'zj-loop.pairing_http.v1' as const;
 const MAX_BODY_BYTES = 64 * 1024;
@@ -110,6 +111,7 @@ export function createPairingHttpServer(input: {
   credentialClaim?: CredentialClaimService | null;
   credentialIssue?: CredentialIssueService | null;
   connectionReadModel?: PairingConnectionReadModelService | null;
+  transport?: OpnTransportHttpService | null;
 }): Server {
   const now = input.now ?? (() => new Date().toISOString());
   // FIXME: During development dogfood this is intentionally 50 minutes instead of 5; restore 5 minutes for the production release.
@@ -196,6 +198,7 @@ export function createPairingHttpServer(input: {
       return;
     }
     const nodeId = peerNodeId(socket) as string;
+    if (input.transport && await input.transport.handle({ request, response, node_id: nodeId })) return;
     if (request.method === 'GET' && url.pathname === '/v1/connection') {
       if (!input.connectionReadModel) { blocked(response, 'connection-read-model-unavailable'); return; }
       try { json(response, 200, await input.connectionReadModel.read()); } catch { blocked(response, 'connection-read-model-unavailable'); }

@@ -3,6 +3,7 @@ import { createPairingHttpServer } from './pairing-http-server.js';
 import { createSqlitePairingRecordStore } from './sqlite-pairing-record-store.js';
 import { projectPairingRequests } from './pairing-projection.js';
 import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
+import { createOpnTransportHttpService } from './opn-transport-http-server.js';
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1';
 function requireText(value, error) {
     if (typeof value !== 'string' || !value.trim())
@@ -41,6 +42,7 @@ export async function createOpnEndpointServer(input) {
         credentialClaim: input.credentialClaim,
         credentialIssue: input.credentialIssue,
         connectionReadModel,
+        transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
         readinessCheck: {
             check: async () => {
                 try {

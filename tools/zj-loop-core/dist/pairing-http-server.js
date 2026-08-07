@@ -209,6 +209,8 @@ export function createPairingHttpServer(input) {
             return;
         }
         const nodeId = peerNodeId(socket);
+        if (input.transport && await input.transport.handle({ request, response, node_id: nodeId }))
+            return;
         if (request.method === 'GET' && url.pathname === '/v1/connection') {
             if (!input.connectionReadModel) {
                 blocked(response, 'connection-read-model-unavailable');

@@ -1,6 +1,7 @@
 import { type Server, type ServerOptions } from 'node:https';
 import type { PairingRecordStore } from './pairing-record-store.js';
 import { type HumanApprovalContext } from './human-authority.js';
+import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
@@ -70,4 +71,5 @@ export declare function createPairingHttpServer(input: {
     credentialClaim?: CredentialClaimService | null;
     credentialIssue?: CredentialIssueService | null;
     connectionReadModel?: PairingConnectionReadModelService | null;
+    transport?: OpnTransportHttpService | null;
 }): Server;
