@@ -9,7 +9,8 @@ export function pairingRecordsEquivalent(left, right) {
     if (left.type === 'pairing-requested' && right.type === 'pairing-requested') {
         const normalize = (record) => {
             const { certificate_pem: _certificatePem, ...identity } = record.request.identity;
-            return { ...record, request: { ...record.request, identity } };
+            const { occurred_at: _occurredAt, ...event } = record;
+            return { ...event, request: { ...record.request, identity } };
         };
         return canonicalizeJson(normalize(left)) === canonicalizeJson(normalize(right));
     }
