@@ -3,9 +3,17 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createLocalProcessAdapter } from '../dist/local-process-adapter.js';
+import { buildLocalProcessSpawn, createLocalProcessAdapter } from '../dist/local-process-adapter.js';
 
 const node = process.execPath;
+
+test('local process adapter wraps Windows command shims without passing a shell command to spawn', () => {
+  assert.deepEqual(buildLocalProcessSpawn({ platform: 'win32', executable: 'C:\\Program Files\\WorkBuddy\\codebuddy.cmd', args: ['--print', 'hello world'], comspec: 'C:\\Windows\\System32\\cmd.exe' }), {
+    executable: 'C:\\Windows\\System32\\cmd.exe',
+    args: ['/d', '/s', '/c', '\"C:\\Program Files\\WorkBuddy\\codebuddy.cmd\" --print \"hello world\"'],
+    shell: false,
+  });
+});
 
 async function tempCwd() {
   return mkdtemp(path.join(os.tmpdir(), 'zj-local-process-'));

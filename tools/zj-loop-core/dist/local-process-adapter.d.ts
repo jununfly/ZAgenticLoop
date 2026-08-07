@@ -31,4 +31,14 @@ export type LocalProcessHandle = {
 export type LocalProcessAdapter = {
     launch(spec: LocalProcessLaunchSpec): Promise<LocalProcessHandle>;
 };
+export declare function buildLocalProcessSpawn(input: {
+    executable: string;
+    args: string[];
+    platform?: NodeJS.Platform;
+    comspec?: string;
+}): {
+    executable: string;
+    args: string[];
+    shell: false;
+};
 export declare function createLocalProcessAdapter(): LocalProcessAdapter;

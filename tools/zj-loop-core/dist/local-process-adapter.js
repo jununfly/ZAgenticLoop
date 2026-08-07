@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
+import path from 'node:path';
 export const LOCAL_PROCESS_ADAPTER_SCHEMA = 'zj-loop.local_process_adapter.v1';
 const MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
 const ENV_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -55,15 +56,28 @@ function kill(child) {
     if (!child.killed && child.exitCode === null)
         child.kill('SIGTERM');
 }
+function windowsCommandLineQuote(value) {
+    if (!/[\s"]/.test(value))
+        return value;
+    return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
+}
+export function buildLocalProcessSpawn(input) {
+    const platform = input.platform ?? process.platform;
+    if (platform !== 'win32' || !['.cmd', '.bat'].includes(path.win32.extname(input.executable).toLowerCase()))
+        return { executable: input.executable, args: input.args, shell: false };
+    const command = [input.executable, ...input.args].map(windowsCommandLineQuote).join(' ');
+    return { executable: input.comspec ?? process.env.ComSpec ?? 'cmd.exe', args: ['/d', '/s', '/c', command], shell: false };
+}
 export function createLocalProcessAdapter() {
     return {
         async launch(spec) {
             validateSpec(spec);
             await validateCwd(spec.cwd);
-            const child = spawn(spec.executable, spec.args, {
+            const spawnSpec = buildLocalProcessSpawn({ executable: spec.executable, args: spec.args });
+            const child = spawn(spawnSpec.executable, spawnSpec.args, {
                 cwd: spec.cwd,
                 env: Object.fromEntries(Object.entries(spec.env)),
-                shell: false,
+                shell: spawnSpec.shell,
                 stdio: ['pipe', 'pipe', 'pipe'],
                 windowsHide: true,
             });

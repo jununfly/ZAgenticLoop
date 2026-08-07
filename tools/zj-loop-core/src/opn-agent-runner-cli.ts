@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { runCli, type CliSpec } from './cli.js';
 import { createCodexAgentProviderAdapter } from './codex-agent-provider-adapter.js';
 import { createWorkBuddyCodeProviderAdapter } from './workbuddy-code-provider-adapter.js';
@@ -13,6 +14,7 @@ import { createOpnAgentAdapter, createProviderBackedNativeAgentExecutor } from '
 import { createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
 import { discoverProviderExecutable } from './provider-executable-discovery.js';
 import type { BoundedLoopTask } from './agent-task.js';
+import { createBoundedLoopTask } from './agent-task.js';
 
 const spec: CliSpec = {
   name: 'zj-loop-opn-agent-runner',
@@ -33,13 +35,14 @@ const spec: CliSpec = {
     { name: 'executable', type: 'string', description: 'Optional provider executable path; otherwise auto-discover' },
     { name: 'cwd', type: 'string', description: 'Provider working directory' },
     { name: 'session_id', flag: 'session-id', type: 'string', description: 'WorkBuddy session id' },
+    { name: 'retry_failed', flag: 'retry-failed', type: 'boolean', description: 'Create a new execution attempt only after the persisted execution failed' },
   ],
   async handler({ options, io }) {
     if (String(options.command ?? '') !== 'run') throw new Error('opn-agent-runner-command-invalid');
     const read = async (name: string, error: string) => { const value = String(options[name] ?? '').trim(); if (!value) throw new Error(error); return readFile(value, 'utf8'); };
     const network_id = String(options.network_id ?? '').trim();
     const node_id = String(options.node_id ?? '').trim();
-    const task = JSON.parse(await read('task_file', 'opn-agent-runner-task-required')) as BoundedLoopTask;
+    let task = JSON.parse(await read('task_file', 'opn-agent-runner-task-required')) as BoundedLoopTask;
     const providerKind = String(options.provider ?? '').trim() as 'codex' | 'workbuddy-code';
     if (providerKind !== 'codex' && providerKind !== 'workbuddy-code') throw new Error('opn-agent-runner-provider-invalid');
     const processAdapter = createLocalProcessAdapter();
@@ -54,6 +57,15 @@ const spec: CliSpec = {
     const stateStore = createSqliteStateStore({ filename: String(options.artifact_store ?? '').trim() + '.runner-state.db' });
     try {
       await stateStore.createNetwork({ network_id, owner_id: 'human-1' });
+      let retry_of_execution_id: string | undefined;
+      if (options.retry_failed === true) {
+        const persisted = await stateStore.readEvents({ network_id, aggregate_type: 'native-agent-execution', aggregate_id: task.execution_id });
+        const last = persisted.events.at(-1)?.payload as { execution?: { status?: string } } | undefined;
+        if (last?.execution?.status !== 'failed') throw new Error('opn-agent-retry-requires-failed-execution');
+        retry_of_execution_id = task.execution_id;
+        const { task_digest: _task_digest, execution_id: _execution_id, attempt: _attempt, idempotency_key: _idempotency_key, ...definition } = task;
+        task = createBoundedLoopTask({ ...definition, execution_id: `retry-${randomUUID()}`, attempt: task.attempt + 1, idempotency_key: `${task.idempotency_key}:retry:${randomUUID()}` });
+      }
       const ca = await read('ca', 'opn-agent-runner-ca-required');
       const cert = await read('cert', 'opn-agent-runner-cert-required');
       const key = await read('key', 'opn-agent-runner-key-required');
@@ -66,7 +78,7 @@ const spec: CliSpec = {
         const runtime = createNativeAgentRuntime({ stateStore, registration: createAgentRegistration({ agent_id: node_id, display_name: providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task.task_kind], evidence_kinds: task.expected_evidence_kinds, protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` }), executor });
         const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore: createOpnArtifactStore({ root: String(options.artifact_store ?? '') }), publishArtifact: publisher.publish, agent_id: node_id });
         const result = await adapter.processNext({ session_id: session.session_id, resolveTask: () => task });
-        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', ...result }));
+        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', ...(retry_of_execution_id ? { retry_of_execution_id, execution_id: task.execution_id } : {}), ...result }));
       } finally { await transport.closeSession({ session_id: session.session_id }); }
     } finally { await stateStore.close(); }
   },
