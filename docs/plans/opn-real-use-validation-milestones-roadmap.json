@@ -648,9 +648,14 @@
           "q": "Agent 如何基于这条通路协作？",
           "answer": "本机 Agent adapter 消费 OPN task/message Envelope，调用本机实际 Agent；Agent 结果转换为结构化 outcome/Evidence，再通过 OPN 返回。",
           "note": "OPN 是设备和任务协作通路；MCP 用于 Agent-tool，A2A 用于 Agent-Agent，均通过 adapter 接入且不是核心依赖。"
+        },
+        {
+          "q": "直接调用 Agent CLI、MCP 和 A2A 的职责如何划分？",
+          "answer": "OPN Core 负责网络身份、路由、StateStore、Evidence、Human gate 和生命周期；Provider Runtime 负责与本机实际 Agent 建立稳定的受控连接、lease、超时和重连。直接 CLI 调用仅作为开发期 fallback，不作为长期稳定集成边界；MCP 作为 Agent-to-Tool/Resource 语义适配层，A2A 作为 Agent-to-Agent 语义适配层，二者都通过 OPN Core/Provider Runtime 接入。",
+          "note": "MCP/A2A 不能替代 OPN Core，也不能绕过 Provider Runtime 的执行边界。当前 dogfood 先验证 Provider Runtime 的真实 Agent task 闭环，再按实际 provider 能力增加 MCP/A2A extension；不因协议引入而提前扩大 M3 范围。"
         }
       ],
-      "notes": "已实现首条 provider-neutral Agent adapter tracer bullet：消费 agent.task Envelope，调用 NativeAgentRuntime，生成结构化 execution result Artifact，发送 agent.result Envelope，并在结果发送成功后 ack 输入消息；本地 StateStore/ArtifactStore 回归通过。尚未接入真实 Codex/WorkBuddy provider，也尚未完成真实 Mac↔Windows Agent task 协作验收。"
+      "notes": "已实现首条 provider-neutral Agent adapter tracer bullet：消费 agent.task Envelope，调用 NativeAgentRuntime，生成结构化 execution result Artifact，发送 agent.result Envelope，并在结果发送成功后 ack 输入消息；已增加 Codex/WorkBuddy provider-neutral executor 与 Windows-capable runner。Runner 支持显式 executable，也会按 PATH、Windows 用户级/系统级安装目录、WorkBuddy/CodeBuddy bundle 和有界目录扫描自动发现 Provider，不再把 PATH 作为安装判定。真实 task Artifact 已完成 Mac→Windows 投递；尚未完成真实 provider 执行和 agent.result 回传验收。"
     },
     "1-3-3-3-5": {
       "id": "1-3-3-3-5",

@@ -11,6 +11,7 @@ import { createNativeAgentRuntime } from './native-agent-runtime.js';
 import { createAgentRegistration } from './agent-registration.js';
 import { createOpnAgentAdapter, createProviderBackedNativeAgentExecutor } from './opn-agent-adapter.js';
 import { createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
+import { discoverProviderExecutable } from './provider-executable-discovery.js';
 import type { BoundedLoopTask } from './agent-task.js';
 
 const spec: CliSpec = {
@@ -29,7 +30,7 @@ const spec: CliSpec = {
     { name: 'task_file', flag: 'task-file', type: 'string', description: 'Local task JSON path' },
     { name: 'artifact_store', flag: 'artifact-store', type: 'string', description: 'Local ArtifactStore directory' },
     { name: 'provider', type: 'string', description: 'codex or workbuddy-code' },
-    { name: 'executable', type: 'string', description: 'Provider executable path' },
+    { name: 'executable', type: 'string', description: 'Optional provider executable path; otherwise auto-discover' },
     { name: 'cwd', type: 'string', description: 'Provider working directory' },
     { name: 'session_id', flag: 'session-id', type: 'string', description: 'WorkBuddy session id' },
   ],
@@ -42,7 +43,11 @@ const spec: CliSpec = {
     const providerKind = String(options.provider ?? '').trim() as 'codex' | 'workbuddy-code';
     if (providerKind !== 'codex' && providerKind !== 'workbuddy-code') throw new Error('opn-agent-runner-provider-invalid');
     const processAdapter = createLocalProcessAdapter();
-    const executable = String(options.executable ?? '').trim();
+    const discovery = await discoverProviderExecutable({ provider: providerKind, explicit: String(options.executable ?? '') });
+    if (discovery.status !== 'found' || !discovery.executable) {
+      throw new Error(`opn-agent-provider-executable-unavailable:${JSON.stringify(discovery)}`);
+    }
+    const executable = discovery.executable;
     const provider = providerKind === 'codex'
       ? createCodexAgentProviderAdapter({ process_adapter: processAdapter, executable })
       : createWorkBuddyCodeProviderAdapter({ process_adapter: processAdapter, executable, session_id: String(options.session_id ?? '').trim() });
