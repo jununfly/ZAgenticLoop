@@ -26,8 +26,8 @@ type DiscoveryInput = {
 type PathApi = typeof path | typeof path.win32;
 
 const WINDOWS_PROVIDER_NAMES: Record<ProviderExecutableKind, string[]> = {
-  codex: ['codex.exe', 'codex.cmd', 'codex'],
-  'workbuddy-code': ['codebuddy.exe', 'codebuddy.cmd', 'codebuddy', 'workbuddy.exe', 'workbuddy.cmd', 'workbuddy'],
+  codex: ['codex.exe', 'codex.cmd'],
+  'workbuddy-code': ['codebuddy.exe', 'codebuddy.cmd', 'workbuddy.exe', 'workbuddy.cmd'],
 };
 
 const POSIX_PROVIDER_NAMES: Record<ProviderExecutableKind, string[]> = {

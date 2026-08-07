@@ -2,8 +2,8 @@ import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 export const PROVIDER_EXECUTABLE_DISCOVERY_SCHEMA = 'zj-loop.provider_executable_discovery.v1';
 const WINDOWS_PROVIDER_NAMES = {
-    codex: ['codex.exe', 'codex.cmd', 'codex'],
-    'workbuddy-code': ['codebuddy.exe', 'codebuddy.cmd', 'codebuddy', 'workbuddy.exe', 'workbuddy.cmd', 'workbuddy'],
+    codex: ['codex.exe', 'codex.cmd'],
+    'workbuddy-code': ['codebuddy.exe', 'codebuddy.cmd', 'workbuddy.exe', 'workbuddy.cmd'],
 };
 const POSIX_PROVIDER_NAMES = {
     codex: ['codex'],

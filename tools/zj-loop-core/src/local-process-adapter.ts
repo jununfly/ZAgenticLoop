@@ -95,8 +95,10 @@ export function createLocalProcessAdapter(): LocalProcessAdapter {
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       });
-      const pid = child.pid;
-      if (!pid) throw new Error('local-process-spawn-failed');
+      // A missing executable can emit `error` before a pid exists. Register the
+      // listener before treating pid absence as a result, otherwise ENOENT is
+      // surfaced as an unhandled ChildProcess error.
+      const pid = child.pid ?? 0;
       let stdout: Buffer<ArrayBufferLike> = Buffer.alloc(0);
       let stderr: Buffer<ArrayBufferLike> = Buffer.alloc(0);
       let terminationReason: LocalProcessResult['reason'];

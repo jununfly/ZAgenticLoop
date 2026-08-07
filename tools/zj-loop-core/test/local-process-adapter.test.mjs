@@ -46,6 +46,19 @@ test('local process adapter rejects shell command strings and relative cwd befor
   }), { message: 'local-process-cwd-must-be-absolute' });
 });
 
+test('local process adapter converts a missing executable into a structured spawn failure', async () => {
+  const cwd = await tempCwd();
+  const adapter = createLocalProcessAdapter();
+  const handle = await adapter.launch({
+    executable: path.join(cwd, 'missing-provider.exe'), args: [], cwd, env_allowlist: [], env: {},
+    max_stdout_bytes: 1024, max_stderr_bytes: 1024, timeout_ms: 1000, termination_grace_ms: 100,
+  });
+  const result = await handle.wait();
+  assert.equal(result.status, 'failed');
+  assert.equal(result.reason, 'spawn-failed');
+  assert.equal(result.success, false);
+});
+
 test('local process adapter rejects env values outside the declared allowlist', async () => {
   const cwd = await tempCwd();
   const adapter = createLocalProcessAdapter();
