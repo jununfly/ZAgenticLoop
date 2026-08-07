@@ -98,6 +98,7 @@ export * from './loopback-relay-server.js';
 export * from './human-approval-ui.js';
 export * from './opn-connection-read-model.js';
 export * from './opn-message-read-model.js';
+export * from './opn-transport-inbox.js';
 export * from './sqlite-credential-issuance.js';
 export * from './credential-issuance-events.js';
 export * from './protocol-registry.js';
