@@ -4,6 +4,7 @@ import type { HumanSigner } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import { type HumanApprovalContext } from './human-authority.js';
+import { createHumanActionDecision, type HumanActionRequest } from './human-action.js';
 export declare const HUMAN_APPROVAL_UI_SCHEMA: "zj-loop.human_approval_ui.v1";
 export type HumanApprovalUiUpstream = {
     list(input: {
@@ -32,6 +33,17 @@ export type HumanApprovalUiUpstream = {
     evidence?(input: {
         network_id: string;
         evidence_id: string;
+    }): Promise<Record<string, unknown>>;
+    humanActions?(): Promise<{
+        requests: Array<HumanActionRequest & {
+            status?: string;
+            decision?: Record<string, unknown>;
+        }>;
+    }>;
+    decideHumanAction?(input: {
+        network_id: string;
+        request: HumanActionRequest;
+        decision: Awaited<ReturnType<typeof createHumanActionDecision>>;
     }): Promise<Record<string, unknown>>;
 };
 export type HumanApprovalUiGraphUpstream = {

@@ -18,6 +18,12 @@
       <p class="lede">Inspect each node, choose the smallest capability grant, and sign only what you understand.</p>
       <div id="human-card" class="identity-panel" aria-live="polite">Loading Human identity...</div>
     </section>
+    <section class="workspace action-workspace" aria-label="Human action requests">
+      <div class="section-heading"><div><p class="eyebrow">HUMAN ACTIONS</p><h2>Needs your decision</h2></div><span id="action-status">Loading</span></div>
+      <div id="action-list" class="request-list" aria-live="polite"></div>
+      <div id="action-empty" class="empty-state" hidden>No pending Human actions.</div>
+      <div id="action-error" class="error-state" hidden></div>
+    </section>
     <section class="workspace" aria-label="Pairing requests">
       <div class="section-heading"><div><p class="eyebrow">PENDING REQUESTS</p><h2>Needs your decision</h2></div><button id="refresh" class="button button-secondary" type="button">Refresh</button></div>
       <div id="request-list" class="request-list" aria-live="polite"></div>

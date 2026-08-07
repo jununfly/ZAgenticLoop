@@ -4,10 +4,12 @@ import { type HumanApprovalContext } from './human-authority.js';
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import type { OpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
+import type { HumanActionReadModel } from './human-action-opn-projection.js';
+import type { HumanActionDecision, HumanActionRequest } from './human-action.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
-        action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject';
+        action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide';
         authorization: string | null;
         request_id?: string;
         request_digest?: string;
@@ -60,6 +62,19 @@ export type PairingInboxReadModelService = {
         network_id: string;
     }): Promise<OpnMessageReadModel[]>;
 };
+export type HumanActionReadModelService = {
+    read(input: {
+        network_id: string;
+        node_id: string;
+    }): Promise<HumanActionReadModel>;
+};
+export type HumanActionCommandService = {
+    decide(input: {
+        network_id: string;
+        request: HumanActionRequest;
+        decision: HumanActionDecision;
+    }): Promise<Record<string, unknown>>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -79,6 +94,8 @@ export declare function createPairingHttpServer(input: {
     credentialIssue?: CredentialIssueService | null;
     connectionReadModel?: PairingConnectionReadModelService | null;
     inboxReadModel?: PairingInboxReadModelService | null;
+    humanActionReadModel?: HumanActionReadModelService | null;
+    humanActionCommand?: HumanActionCommandService | null;
     transport?: OpnTransportHttpService | null;
     artifactTransfer?: OpnArtifactTransferHttpService | null;
 }): Server;

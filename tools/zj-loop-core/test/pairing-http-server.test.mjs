@@ -17,6 +17,8 @@ import { createPairingHttpServer } from '../dist/pairing-http-server.js';
 import { createInMemoryHumanAuthorityProvider, verifyHumanApprovalContext } from '../dist/human-authority.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createSqliteCredentialIssuance, credentialIssuanceDigest } from '../dist/sqlite-credential-issuance.js';
+import { createInMemoryHumanSigner } from '../dist/human-signer.js';
+import { createHumanActionRequest, createHumanActionDecision } from '../dist/human-action.js';
 
 const OPENSSL_BIN = process.env.OPENSSL_BIN ?? (existsSync('/opt/homebrew/opt/openssl@3/bin/openssl') ? '/opt/homebrew/opt/openssl@3/bin/openssl' : 'openssl');
 
@@ -99,16 +101,38 @@ test('OPN connection route returns the injected read model without side effects'
 
 test('Owner Inbox route returns the injected projection without transport side effects', { skip: !supportsP256Certificates }, async () => {
   const model = [{ message_id: 'message-1', delivery_state: 'acknowledged' }];
+  const actions = { schema: 'zj-loop.human_action_opn_read_model.v1', network_id: 'network-1', requests: [{ request_id: 'action-1', status: 'pending', reason: 'Review evidence.' }], side_effects_executed: false };
   const value = await fixture({
-    ownerAuthenticator: { authenticate: ({ action, authorization }) => action === 'pairing.inbox' && authorization === 'Bearer owner-token' ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } },
+    ownerAuthenticator: { authenticate: ({ action, authorization }) => (action === 'pairing.inbox' || action === 'human.action.list') && authorization === 'Bearer owner-token' ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } },
     inboxReadModel: { read: async ({ network_id }) => network_id === 'network-1' ? model : [] },
+    humanActionReadModel: { read: async ({ network_id }) => network_id === 'network-1' ? actions : { ...actions, requests: [] } },
   });
   const response = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/inbox?network_id=network-1', headers: { authorization: 'Bearer owner-token' } });
   assert.equal(response.statusCode, 200);
   assert.deepEqual(response.body.messages, model);
   const blockedResponse = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/inbox?network_id=network-1', headers: { authorization: 'Bearer wrong' } });
   assert.equal(blockedResponse.statusCode, 403);
+  const humanActions = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/human-actions?network_id=network-1', headers: { authorization: 'Bearer owner-token' } });
+  assert.equal(humanActions.statusCode, 200);
+  assert.equal(humanActions.body.requests[0].request_id, 'action-1');
   await close(value);
+});
+
+test('Owner Human action decision route verifies the signed decision before dispatching', { skip: !supportsP256Certificates }, async () => {
+  const serverMaterial = await certificate('localhost');
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  const requestValue = createHumanActionRequest({ network_id: 'network-1', request_id: 'action-1', action_type: 'agent.result.review', reason: 'Review result.', context: { task_id: 'task-1' }, evidence_refs: [], requester_node_id: 'agent-1', target_node_id: 'agent-2', created_at: '2026-07-29T03:00:00.000Z', expires_at: '2026-07-29T04:00:00.000Z' });
+  const decision = await createHumanActionDecision({ signer, request: requestValue, decision: 'approved', reason: 'Reviewed.', decided_at: '2026-07-29T03:10:00.000Z' });
+  let dispatched;
+  const server = createPairingHttpServer({ tls: serverMaterial, recordStore: createInMemoryPairingRecordStore(), now: () => '2026-07-29T03:11:00.000Z', ownerAuthenticator: { authenticate: ({ action, authorization }) => (action === 'human.action.decide' && authorization === 'Bearer owner-token') ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } }, humanActionReadModel: { read: async () => ({ schema: 'zj-loop.human_action_opn_read_model.v1', network_id: 'network-1', requests: [{ ...requestValue, status: 'pending' }], side_effects_executed: false }) }, humanActionCommand: { decide: async (value) => { dispatched = value; return { status: 'sent' }; } } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const response = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/human-actions/action-1/decision', method: 'POST', headers: { authorization: 'Bearer owner-token' }, body: { network_id: 'network-1', request_digest: requestValue.request_digest, decision } });
+    assert.equal(response.statusCode, 201, JSON.stringify(response.body));
+    assert.equal(dispatched.decision.decision_digest, decision.decision_digest);
+    const tampered = await request({ address: server.address(), server: serverMaterial, path: '/v1/owner/human-actions/action-1/decision', method: 'POST', headers: { authorization: 'Bearer owner-token' }, body: { network_id: 'network-1', request_digest: requestValue.request_digest, decision: { ...decision, reason: 'tampered' } } });
+    assert.equal(tampered.statusCode, 400);
+  } finally { await new Promise((resolve) => server.close(resolve)); await rm(serverMaterial.root, { recursive: true, force: true }); }
 });
 
 test('Pairing rejects business requests without a client certificate', async () => {

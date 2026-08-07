@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { createInMemoryHumanSigner } from '../dist/human-signer.js';
 import { verifyHumanApprovalContext } from '../dist/human-authority.js';
 import { createHumanApprovalUiServer } from '../dist/human-approval-ui.js';
+import { createHumanActionRequest } from '../dist/human-action.js';
 
 function request({ address, path, method = 'GET', body, headers = {} }) {
   const payload = body === undefined ? undefined : JSON.stringify(body);
@@ -141,6 +142,46 @@ test('Human approval UI serves a usable static shell and records structured reje
     const response = await requestHttp({ address, path: '/ui/pairing-requests/request-1/reject', method: 'POST', headers: { cookie, origin }, body: { request_digest: 'a'.repeat(64), reason: 'endpoint-unexpected' } });
     assert.equal(response.status, 201);
     assert.equal(rejected[0].reason, 'endpoint-unexpected');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('Human approval UI displays and signs a Human action decision through the Core gate', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  const action = createHumanActionRequest({
+    network_id: 'network-1', request_id: 'action-1', action_type: 'agent.result.review',
+    reason: 'The remote Agent reported a result for your review.', context: { task_id: 'task-1' },
+    evidence_refs: [{ artifact_id: `sha256:${'a'.repeat(64)}`, kind: 'artifact' }], requester_node_id: 'agent-1',
+    created_at: '2026-07-30T00:00:00.000Z', expires_at: '2026-07-30T01:00:00.000Z',
+  });
+  const decisions = [];
+  const server = createHumanApprovalUiServer({
+    signer, network_id: 'network-1', bootstrap_token: 'action-bootstrap',
+    upstream: {
+      async list() { return { requests: [] }; },
+      async humanActions() { return { requests: [action] }; },
+      async decideHumanAction(input) { decisions.push(input); return { status: 'recorded' }; },
+    },
+    now: () => '2026-07-30T00:05:00.000Z',
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const bootstrapped = await requestHttp({ address, path: '/ui/bootstrap?token=action-bootstrap' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    const listed = await requestHttp({ address, path: '/ui/human-actions', headers: { cookie } });
+    assert.equal(listed.status, 200);
+    assert.equal(listed.body.requests[0].request_id, 'action-1');
+    const origin = `http://127.0.0.1:${address.port}`;
+    const decided = await requestHttp({ address, path: '/ui/human-actions/action-1/decision', method: 'POST', headers: { cookie, origin }, body: { request_digest: action.request_digest, decision: 'approved', reason: 'Reviewed the evidence.' } });
+    assert.equal(decided.status, 201);
+    assert.equal(decisions.length, 1);
+    assert.equal(decisions[0].decision.decision, 'approved');
+    assert.equal(decisions[0].decision.human_id, 'human-1');
+    assert.equal(decisions[0].decision.request_digest, action.request_digest);
+    const badOrigin = await requestHttp({ address, path: '/ui/human-actions/action-1/decision', method: 'POST', headers: { cookie, origin: 'https://evil.example' }, body: { request_digest: action.request_digest, decision: 'approved', reason: 'nope' } });
+    assert.equal(badOrigin.status, 403);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

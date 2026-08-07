@@ -79,6 +79,8 @@ export * from './agent-review-handoff.js';
 export * from './native-agent-graph-bridge.js';
 export * from './human-authority.js';
 export * from './human-signer.js';
+export * from './human-action.js';
+export * from './human-action-opn-projection.js';
 export * from './parse-bounded-json.js';
 export * from './approval-canonicalization.js';
 export * from './macos-keychain-human-signer.js';

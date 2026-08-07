@@ -15,6 +15,8 @@ import type { TransportAdapter } from './transport-contract.js';
 import { projectOpnInbox } from './opn-transport-inbox.js';
 import { createOpnArtifactStore } from './opn-artifact-store.js';
 import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
+import { projectOpnHumanActions } from './human-action-opn-projection.js';
+import { createTransportEnvelope } from './transport-contract.js';
 
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1' as const;
 
@@ -53,6 +55,7 @@ export async function createOpnEndpointServer(input: {
   await input.stateStore.getRevision(input.network_id);
   const recordStore = createSqlitePairingRecordStore({ stateStore: input.stateStore });
   const localNodeId = input.local_node?.node_id ?? `endpoint:${input.network_id}`;
+  const localTransport = createLocalOpnTransportAdapter({ stateStore: input.stateStore, network_id: input.network_id, node_id: localNodeId });
   const connectionReadModel = input.connectionReadModel ?? {
     async read() {
       const records = await recordStore.list(input.network_id);
@@ -79,6 +82,23 @@ export async function createOpnEndpointServer(input: {
         return projectOpnInbox({ stateStore: input.stateStore, network_id, node_id: localNodeId });
       },
     },
+    humanActionReadModel: input.artifact_store ? {
+      async read({ network_id, node_id }) {
+        return projectOpnHumanActions({ stateStore: input.stateStore, artifactStore: input.artifact_store!, network_id, node_id });
+      },
+    } : null,
+    humanActionCommand: input.artifact_store ? {
+      async decide({ network_id, request, decision }) {
+        const targetNodeId = request.target_node_id;
+        if (!targetNodeId?.trim() || targetNodeId === localNodeId) throw new Error('human-action-target-node-invalid');
+        const bytes = Buffer.from(JSON.stringify(decision));
+        const artifact = await input.artifact_store!.put({ bytes, file_name: `${decision.request_id}.decision.json`, media_type: 'application/json' });
+        const taskId = typeof request.context.task_id === 'string' ? request.context.task_id : request.request_id;
+        const envelope = createTransportEnvelope({ message_id: `human-action-decision:${decision.request_id}:${decision.decision_digest}`, network_id, event_id: `human-action-decision-event:${decision.decision_digest}`, plan_id: 'opn-human-action', plan_revision: 1, task_id: taskId, from_node_id: localNodeId, target_node_id: targetNodeId, notification_kind: 'human.action.decision', state: 'available', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }], created_at: decision.decided_at, expires_at: request.expires_at });
+        const session = await localTransport.openSession({ network_id, node_id: localNodeId });
+        try { const sent = await localTransport.send({ session_id: session.session_id, envelope }); return { status: sent.status, artifact_id: artifact.metadata.artifact_id, message_id: envelope.message_id, target_node_id: targetNodeId }; } finally { await localTransport.closeSession({ session_id: session.session_id }); }
+      },
+    } : null,
     transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
     artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
     readinessCheck: {
@@ -92,8 +112,6 @@ export async function createOpnEndpointServer(input: {
       },
     },
   });
-  const localTransport = createLocalOpnTransportAdapter({ stateStore: input.stateStore, network_id: input.network_id, node_id: localNodeId });
-
   await new Promise<void>((resolve, reject) => {
     const onError = (error: Error) => {
       server.off('listening', onListening);

@@ -9,6 +9,7 @@ import type { HumanSigner, HumanSignerIdentity } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload, type HumanApprovalContext } from './human-authority.js';
+import { createHumanActionDecision, type HumanActionRequest } from './human-action.js';
 
 export const HUMAN_APPROVAL_UI_SCHEMA = 'zj-loop.human_approval_ui.v1' as const;
 
@@ -19,6 +20,8 @@ export type HumanApprovalUiUpstream = {
   approve?(input: { network_id: string; request_id: string; request_digest: string; approved_capabilities: string[]; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
   reject?(input: { network_id: string; request_id: string; request_digest: string; reason: string; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
   evidence?(input: { network_id: string; evidence_id: string }): Promise<Record<string, unknown>>;
+  humanActions?(): Promise<{ requests: Array<HumanActionRequest & { status?: string; decision?: Record<string, unknown> }> }>;
+  decideHumanAction?(input: { network_id: string; request: HumanActionRequest; decision: Awaited<ReturnType<typeof createHumanActionDecision>> }): Promise<Record<string, unknown>>;
 };
 
 export type HumanApprovalUiGraphUpstream = {
@@ -181,6 +184,35 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.messages) { blocked(response, 503, 'inbox-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.messages()), side_effects_executed: false }); } catch { blocked(response, 503, 'inbox-read-model-unavailable'); }
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/ui/human-actions') {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.upstream.humanActions) { blocked(response, 503, 'human-actions-read-model-unavailable'); return; }
+      try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.humanActions()), side_effects_executed: false }); } catch { blocked(response, 503, 'human-actions-read-model-unavailable'); }
+      return;
+    }
+    const actionDecisionMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/human-actions\/([^/]+)\/decision$/) : null;
+    if (actionDecisionMatch) {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
+      if (!input.upstream.humanActions || !input.upstream.decideHumanAction) { blocked(response, 503, 'human-action-decision-unavailable'); return; }
+      let body: Record<string, unknown>;
+      try { body = await readBody(request); } catch (error) { blocked(response, 400, error instanceof Error ? error.message : 'ui-json-invalid'); return; }
+      const requestId = decodeURIComponent(actionDecisionMatch[1]);
+      const requestDigest = typeof body.request_digest === 'string' ? body.request_digest : '';
+      const decision = body.decision === 'approved' || body.decision === 'rejected' ? body.decision : null;
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+      if (!requestDigest || !decision || !reason) { blocked(response, 400, 'human-action-decision-input-invalid'); return; }
+      let current: HumanActionRequest | undefined;
+      try { current = (await input.upstream.humanActions()).requests.find((item) => item.request_id === requestId); } catch { blocked(response, 503, 'human-actions-read-model-unavailable'); return; }
+      if (!current) { blocked(response, 404, 'human-action-request-not-found'); return; }
+      if (current.network_id !== input.network_id || current.status !== 'pending' || current.request_digest !== requestDigest) { blocked(response, 409, 'human-action-state-conflict'); return; }
+      let signed;
+      try { signed = await createHumanActionDecision({ signer: input.signer, request: current, decision, reason, decided_at: now() }); } catch { blocked(response, 400, 'human-action-decision-signing-failed'); return; }
+      let result: Record<string, unknown>;
+      try { result = await input.upstream.decideHumanAction({ network_id: input.network_id, request: current, decision: signed }); } catch { blocked(response, 503, 'human-action-decision-forwarding-failed'); return; }
+      json(response, 201, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'recorded', request_id: requestId, decision: signed, result, side_effects_executed: true });
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/events') {
@@ -374,6 +406,14 @@ export function createPairingHttpUpstream(input: PairingHttpUpstreamInput): Huma
       if (!input.network_id?.trim()) throw new Error('pairing-upstream-network-id-required');
       const result = await requestPairingApi(input, `${pathFor('/v1/owner/inbox')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
       return { messages: Array.isArray(result.messages) ? result.messages as OpnMessageReadModel[] : [] };
+    },
+  async humanActions() {
+      if (!input.network_id?.trim()) throw new Error('pairing-upstream-network-id-required');
+      const result = await requestPairingApi(input, `${pathFor('/v1/owner/human-actions')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
+      return { requests: Array.isArray(result.requests) ? result.requests as HumanActionRequest[] : [] };
+    },
+    async decideHumanAction(value) {
+      return requestPairingApi(input, pathFor(`/v1/owner/human-actions/${encodeURIComponent(value.request.request_id)}/decision`), 'POST', { network_id: value.network_id, request_digest: value.request.request_digest, decision: value.decision });
     },
     async list({ network_id }) {
       const result = await requestPairingApi(input, `${pathFor('/v1/owner/pairing-requests')}?network_id=${encodeURIComponent(network_id)}`, 'GET');

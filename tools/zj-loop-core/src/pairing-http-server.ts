@@ -10,6 +10,9 @@ import { validateHumanAuthorityV2Binding, type HumanApprovalContext } from './hu
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import type { OpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
+import type { HumanActionReadModel } from './human-action-opn-projection.js';
+import type { HumanActionDecision, HumanActionRequest } from './human-action.js';
+import { verifyHumanActionDecision } from './human-action.js';
 
 export const PAIRING_HTTP_SCHEMA = 'zj-loop.pairing_http.v1' as const;
 const MAX_BODY_BYTES = 64 * 1024;
@@ -26,7 +29,7 @@ type PairingSession = {
 };
 
 export type PairingOwnerAuthenticator = {
-  authenticate(input: { action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject'; authorization: string | null; request_id?: string; request_digest?: string; context?: HumanApprovalContext; require_v2?: boolean; peer_fingerprint?: string }): Promise<{ status: 'allowed' | 'blocked'; human_id?: string; reason?: string }> | { status: 'allowed' | 'blocked'; human_id?: string; reason?: string };
+  authenticate(input: { action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide'; authorization: string | null; request_id?: string; request_digest?: string; context?: HumanApprovalContext; require_v2?: boolean; peer_fingerprint?: string }): Promise<{ status: 'allowed' | 'blocked'; human_id?: string; reason?: string }> | { status: 'allowed' | 'blocked'; human_id?: string; reason?: string };
 };
 
 export type CredentialClaimService = {
@@ -43,6 +46,13 @@ export type PairingConnectionReadModelService = {
 
 export type PairingInboxReadModelService = {
   read(input: { network_id: string }): Promise<OpnMessageReadModel[]>;
+};
+
+export type HumanActionReadModelService = {
+  read(input: { network_id: string; node_id: string }): Promise<HumanActionReadModel>;
+};
+export type HumanActionCommandService = {
+  decide(input: { network_id: string; request: HumanActionRequest; decision: HumanActionDecision }): Promise<Record<string, unknown>>;
 };
 
 function json(response: import('node:http').ServerResponse, statusCode: number, body: Record<string, unknown>): void {
@@ -118,6 +128,8 @@ export function createPairingHttpServer(input: {
   credentialIssue?: CredentialIssueService | null;
   connectionReadModel?: PairingConnectionReadModelService | null;
   inboxReadModel?: PairingInboxReadModelService | null;
+  humanActionReadModel?: HumanActionReadModelService | null;
+  humanActionCommand?: HumanActionCommandService | null;
   transport?: OpnTransportHttpService | null;
   artifactTransfer?: OpnArtifactTransferHttpService | null;
 }): Server {
@@ -138,6 +150,8 @@ export function createPairingHttpServer(input: {
     const url = new URL(request.url ?? '/', 'https://pairing.local');
     const ownerList = request.method === 'GET' && url.pathname === '/v1/owner/pairing-requests';
     const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
+    const ownerHumanActions = request.method === 'GET' && url.pathname === '/v1/owner/human-actions';
+    const ownerHumanActionDecision = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/human-actions\/([^/]+)\/decision$/);
     const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);
     const ownerReject = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/reject$/);
     if (ownerInbox) {
@@ -148,6 +162,36 @@ export function createPairingHttpServer(input: {
       if (auth.status !== 'allowed') { blocked(response, auth.reason ?? 'owner-not-authorized'); return; }
       if (!input.inboxReadModel) { blocked(response, 'inbox-read-model-unavailable'); return; }
       try { json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, messages: await input.inboxReadModel.read({ network_id: networkId }), side_effects_executed: false }); } catch { blocked(response, 'inbox-read-model-unavailable'); }
+      return;
+    }
+    if (ownerHumanActions || ownerHumanActionDecision) {
+      if (!input.ownerAuthenticator) { blocked(response, 'owner-authenticator-unavailable'); return; }
+      let value: Record<string, unknown> = {};
+      if (ownerHumanActionDecision) {
+        try { value = await readBody(request) as Record<string, unknown>; } catch (error) { blocked(response, error instanceof Error ? error.message : 'json-invalid'); return; }
+      }
+      const networkId = typeof value.network_id === 'string' ? value.network_id : url.searchParams.get('network_id');
+      if (!networkId?.trim()) { blocked(response, 'network-id-required'); return; }
+      const action = ownerHumanActionDecision ? 'human.action.decide' : 'human.action.list';
+      const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action, authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
+      if (auth.status !== 'allowed') { blocked(response, auth.reason ?? 'owner-not-authorized'); return; }
+      if (!input.humanActionReadModel) { blocked(response, 'human-actions-read-model-unavailable'); return; }
+      try {
+        const model = await input.humanActionReadModel.read({ network_id: networkId, node_id: '' });
+        if (ownerHumanActionDecision) {
+          if (!input.humanActionCommand) { blocked(response, 'human-action-command-unavailable'); return; }
+          const requestId = decodeURIComponent(ownerHumanActionDecision[1]);
+          const current = model.requests.find((item) => item.request_id === requestId);
+          const decision = value.decision as HumanActionDecision | undefined;
+          if (!current) { blocked(response, 'human-action-request-not-found'); return; }
+          if (current.status !== 'pending' || current.request_digest !== value.request_digest) { blocked(response, 'human-action-state-conflict'); return; }
+          if (!decision || verifyHumanActionDecision({ request: { ...current, status: 'pending' }, decision, now: now() }).status !== 'valid') { blocked(response, 'human-action-decision-invalid'); return; }
+          const result = await input.humanActionCommand.decide({ network_id: networkId, request: { ...current, status: 'pending' }, decision });
+          json(response, 201, { schema: PAIRING_HTTP_SCHEMA, status: 'recorded', request_id: requestId, result, side_effects_executed: true });
+          return;
+        }
+        json(response, 200, { ...model, side_effects_executed: false });
+      } catch { blocked(response, 'human-actions-read-model-unavailable'); }
       return;
     }
     if (ownerList || ownerApprove || ownerReject) {
@@ -217,6 +261,13 @@ export function createPairingHttpServer(input: {
       return;
     }
     const nodeId = peerNodeId(socket) as string;
+    if (request.method === 'GET' && url.pathname === '/v1/human-actions') {
+      if (!input.humanActionReadModel) { blocked(response, 'human-actions-read-model-unavailable'); return; }
+      const networkId = url.searchParams.get('network_id');
+      if (!networkId?.trim()) { blocked(response, 'network-id-required'); return; }
+      try { json(response, 200, { ...(await input.humanActionReadModel.read({ network_id: networkId, node_id: nodeId })), side_effects_executed: false }); } catch { blocked(response, 'human-actions-read-model-unavailable'); }
+      return;
+    }
     if (input.artifactTransfer && await input.artifactTransfer.handle({ request, response, node_id: nodeId })) return;
     if (input.transport && await input.transport.handle({ request, response, node_id: nodeId })) return;
     if (request.method === 'GET' && url.pathname === '/v1/connection') {

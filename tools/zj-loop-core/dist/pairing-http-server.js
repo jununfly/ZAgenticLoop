@@ -5,6 +5,7 @@ import { projectPairingEnrollment, projectPairingRequests } from './pairing-proj
 import { approvePairingRequest, pairingRequestDigest } from './node-enrollment.js';
 import { verifyPairingRequestProof } from './node-enrollment.js';
 import { validateHumanAuthorityV2Binding } from './human-authority.js';
+import { verifyHumanActionDecision } from './human-action.js';
 export const PAIRING_HTTP_SCHEMA = 'zj-loop.pairing_http.v1';
 const MAX_BODY_BYTES = 64 * 1024;
 function json(response, statusCode, body) {
@@ -102,6 +103,8 @@ export function createPairingHttpServer(input) {
         const url = new URL(request.url ?? '/', 'https://pairing.local');
         const ownerList = request.method === 'GET' && url.pathname === '/v1/owner/pairing-requests';
         const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
+        const ownerHumanActions = request.method === 'GET' && url.pathname === '/v1/owner/human-actions';
+        const ownerHumanActionDecision = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/human-actions\/([^/]+)\/decision$/);
         const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);
         const ownerReject = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/reject$/);
         if (ownerInbox) {
@@ -128,6 +131,69 @@ export function createPairingHttpServer(input) {
             }
             catch {
                 blocked(response, 'inbox-read-model-unavailable');
+            }
+            return;
+        }
+        if (ownerHumanActions || ownerHumanActionDecision) {
+            if (!input.ownerAuthenticator) {
+                blocked(response, 'owner-authenticator-unavailable');
+                return;
+            }
+            let value = {};
+            if (ownerHumanActionDecision) {
+                try {
+                    value = await readBody(request);
+                }
+                catch (error) {
+                    blocked(response, error instanceof Error ? error.message : 'json-invalid');
+                    return;
+                }
+            }
+            const networkId = typeof value.network_id === 'string' ? value.network_id : url.searchParams.get('network_id');
+            if (!networkId?.trim()) {
+                blocked(response, 'network-id-required');
+                return;
+            }
+            const action = ownerHumanActionDecision ? 'human.action.decide' : 'human.action.list';
+            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action, authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
+            if (auth.status !== 'allowed') {
+                blocked(response, auth.reason ?? 'owner-not-authorized');
+                return;
+            }
+            if (!input.humanActionReadModel) {
+                blocked(response, 'human-actions-read-model-unavailable');
+                return;
+            }
+            try {
+                const model = await input.humanActionReadModel.read({ network_id: networkId, node_id: '' });
+                if (ownerHumanActionDecision) {
+                    if (!input.humanActionCommand) {
+                        blocked(response, 'human-action-command-unavailable');
+                        return;
+                    }
+                    const requestId = decodeURIComponent(ownerHumanActionDecision[1]);
+                    const current = model.requests.find((item) => item.request_id === requestId);
+                    const decision = value.decision;
+                    if (!current) {
+                        blocked(response, 'human-action-request-not-found');
+                        return;
+                    }
+                    if (current.status !== 'pending' || current.request_digest !== value.request_digest) {
+                        blocked(response, 'human-action-state-conflict');
+                        return;
+                    }
+                    if (!decision || verifyHumanActionDecision({ request: { ...current, status: 'pending' }, decision, now: now() }).status !== 'valid') {
+                        blocked(response, 'human-action-decision-invalid');
+                        return;
+                    }
+                    const result = await input.humanActionCommand.decide({ network_id: networkId, request: { ...current, status: 'pending' }, decision });
+                    json(response, 201, { schema: PAIRING_HTTP_SCHEMA, status: 'recorded', request_id: requestId, result, side_effects_executed: true });
+                    return;
+                }
+                json(response, 200, { ...model, side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 'human-actions-read-model-unavailable');
             }
             return;
         }
@@ -237,6 +303,24 @@ export function createPairingHttpServer(input) {
             return;
         }
         const nodeId = peerNodeId(socket);
+        if (request.method === 'GET' && url.pathname === '/v1/human-actions') {
+            if (!input.humanActionReadModel) {
+                blocked(response, 'human-actions-read-model-unavailable');
+                return;
+            }
+            const networkId = url.searchParams.get('network_id');
+            if (!networkId?.trim()) {
+                blocked(response, 'network-id-required');
+                return;
+            }
+            try {
+                json(response, 200, { ...(await input.humanActionReadModel.read({ network_id: networkId, node_id: nodeId })), side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 'human-actions-read-model-unavailable');
+            }
+            return;
+        }
         if (input.artifactTransfer && await input.artifactTransfer.handle({ request, response, node_id: nodeId }))
             return;
         if (input.transport && await input.transport.handle({ request, response, node_id: nodeId }))
