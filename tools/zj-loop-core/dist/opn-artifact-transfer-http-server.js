@@ -80,6 +80,19 @@ export async function projectOpnArtifactTransfers(input) {
     }
     return [...records.values()];
 }
+export async function recordLocalOpnArtifactTransfer(input) {
+    const now = input.now ?? new Date().toISOString();
+    const stored = await input.artifactStore.put({ bytes: input.bytes, file_name: input.file_name, media_type: input.media_type });
+    const transfer = { metadata: stored.metadata, transfer_id: input.transfer_id, sender_node_id: input.sender_node_id, target_node_id: input.target_node_id, status: 'offered' };
+    const append = async (event_type, status) => {
+        const revision = await input.stateStore.getRevision(input.network_id);
+        return input.stateStore.appendEvent({ network_id: input.network_id, expected_revision: revision, now, event: { event_id: `${event_type}:${transfer.transfer_id}:${transfer.metadata.artifact_id}`, aggregate_type: OPN_ARTIFACT_TRANSFER_AGGREGATE, aggregate_id: transfer.transfer_id, event_type, occurred_at: now, payload: { schema: OPN_ARTIFACT_TRANSFER_SCHEMA, transfer: { ...transfer, status } } } });
+    };
+    await append(OPN_ARTIFACT_OFFERED_EVENT, 'offered');
+    await append(OPN_ARTIFACT_STORED_EVENT, 'stored');
+    await append(OPN_ARTIFACT_VERIFIED_EVENT, 'verified');
+    return { metadata: stored.metadata, status: 'verified' };
+}
 export function createOpnArtifactTransferHttpService(input) {
     if (!input.network_id.trim())
         throw new Error('opn-artifact-network-id-required');

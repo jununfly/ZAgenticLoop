@@ -1,5 +1,6 @@
 import { providerResultFromLocalProcess } from './provider-runtime-adapter.js';
 export const CODEX_AGENT_PROVIDER_SCHEMA = 'zj-loop.codex_agent_provider.v1';
+function absolutePath(value) { return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('\\\\'); }
 export function validateCodexExecutionModeBinding(input) {
     if (input.mode !== 'read-only' && input.mode !== 'write-enabled')
         return { status: 'blocked', reason: 'execution-mode-argv-mismatch' };
@@ -24,7 +25,7 @@ export function validateCodexWriteScope(input) {
 export function buildCodexInvocation(input) {
     if (!input.executable || input.executable.includes('\0'))
         throw new Error('codex-executable-required');
-    if (!input.cwd || !input.cwd.startsWith('/') || input.cwd.includes('\0'))
+    if (!input.cwd || !absolutePath(input.cwd) || input.cwd.includes('\0'))
         throw new Error('codex-cwd-must-be-absolute');
     const mode = input.mode ?? 'read-only';
     if (mode !== 'read-only' && mode !== 'write-enabled')

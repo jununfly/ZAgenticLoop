@@ -8,10 +8,11 @@ export type WorkBuddyCodeRunResult = Omit<LocalProcessResult, 'schema'> & { sche
 
 type ProcessAdapter = Pick<LocalProcessAdapter, 'launch'>;
 const SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+function absolutePath(value: string): boolean { return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('\\\\'); }
 
 export function buildWorkBuddyCodeInvocation(input: { executable: string; cwd: string; session_id: string }): WorkBuddyCodeInvocation {
-  if (!input.executable || !input.executable.startsWith('/') || input.executable.includes('\0')) throw new Error('workbuddy-code-executable-required');
-  if (!input.cwd || !input.cwd.startsWith('/') || input.cwd.includes('\0')) throw new Error('workbuddy-code-cwd-must-be-absolute');
+  if (!input.executable || !absolutePath(input.executable) || input.executable.includes('\0')) throw new Error('workbuddy-code-executable-required');
+  if (!input.cwd || !absolutePath(input.cwd) || input.cwd.includes('\0')) throw new Error('workbuddy-code-cwd-must-be-absolute');
   if (!SESSION_ID.test(input.session_id)) throw new Error('workbuddy-code-session-id-invalid');
   return { executable: input.executable, args: ['--print', '--output-format', 'json', '--tools', 'Read', '--permission-mode', 'dontAsk', '--no-session-persistence', '--session-id', input.session_id], cwd: input.cwd, session_id: input.session_id };
 }

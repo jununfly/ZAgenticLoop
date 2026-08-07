@@ -45,13 +45,17 @@ function requireText(value: unknown, error: string): asserts value is string {
   if (typeof value !== 'string' || value.length === 0 || value.includes('\0')) throw new Error(error);
 }
 
+function absolutePath(value: unknown): value is string {
+  return typeof value === 'string' && (value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('\\\\'));
+}
+
 function validateSpec(spec: LocalProcessLaunchSpec): void {
   if (!spec || typeof spec !== 'object') throw new Error('local-process-spec-invalid');
   requireText(spec.executable, 'local-process-executable-required');
-  if (!spec.executable.startsWith('/')) throw new Error('local-process-executable-must-be-absolute');
+  if (!absolutePath(spec.executable)) throw new Error('local-process-executable-must-be-absolute');
   if (!Array.isArray(spec.args) || !spec.args.every((arg) => typeof arg === 'string' && !arg.includes('\0'))) throw new Error('local-process-args-invalid');
   requireText(spec.cwd, 'local-process-cwd-required');
-  if (!spec.cwd.startsWith('/')) throw new Error('local-process-cwd-must-be-absolute');
+  if (!absolutePath(spec.cwd)) throw new Error('local-process-cwd-must-be-absolute');
   if (!Array.isArray(spec.env_allowlist) || new Set(spec.env_allowlist).size !== spec.env_allowlist.length || !spec.env_allowlist.every((key) => typeof key === 'string' && ENV_KEY.test(key))) throw new Error('local-process-env-allowlist-invalid');
   if (!spec.env || typeof spec.env !== 'object' || Array.isArray(spec.env)) throw new Error('local-process-env-invalid');
   for (const [key, value] of Object.entries(spec.env)) {

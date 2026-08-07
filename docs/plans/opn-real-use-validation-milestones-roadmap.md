@@ -24,7 +24,7 @@
     ├── [ ][Y+] 1-5-2. 记录用户价值、体验和失败恢复反馈
     └── [ ][Y+] 1-5-3. 根据真实反馈规划下一里程碑
 
-### 当前施工：1-3-3-3-3. 跨设备 Artifact 文件传输与完整性校验
+### 当前施工：1-3-3-3-4. 基于 OPN 通路的 Agent adapter 协作
 
 Join API/CLI、CSR 签发、Windows join、Human approval 与 enrollment projection 已完成；跨设备 Co-work Channel 仍由 1-3-3-3 承载。
 
@@ -35,5 +35,7 @@ Join API/CLI、CSR 签发、Windows join、Human approval 与 enrollment project
 └── [x][X+] 1-3-3-2-2. Windows CSR 签发、真实 join request 与 Human approval
 
 1-3-3-3-2 已完成真实 Mac↔Windows 双向消息、断线后新 session 重连、双端 CLI receive/ack 与 Mac OPN Inbox UI 验收。
-1-3-3-3-3 已实现 bounded content-addressed ArtifactStore、HTTP metadata/byte transfer、digest 校验、StateStore transfer facts 与 `artifact-send`/`artifact-download` CLI；下一步是重启新版 endpoint 后完成真实 Mac↔Windows 文件传输验收。
+1-3-3-3-3 已实现 bounded content-addressed ArtifactStore、HTTP metadata/byte transfer、digest 校验、StateStore transfer facts 与 `artifact-send`/`artifact-download` CLI，并完成真实 Windows→Mac endpoint→Windows round-trip 验收：Mac 返回 `verified`，Windows 本地 ArtifactStore 返回 `store_status: stored`。
+当前进入基于 OPN 通路的 Agent adapter 协作；不得把 Agent provider 直接耦合进核心 Transport。
+已完成第一条 adapter tracer bullet：`agent.task` → NativeAgentRuntime → result Artifact → `agent.result` → input ack；下一步接入现有 provider-neutral 本机 Agent provider，并用真实 Mac↔Windows task 协作验收。
 <!-- ROADMAP_SECTION_END -->

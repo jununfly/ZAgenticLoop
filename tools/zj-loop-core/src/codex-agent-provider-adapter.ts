@@ -43,6 +43,8 @@ export type CodexWriteScopeFacts = {
 
 export type CodexWriteScopeResult = { status: 'valid' } | { status: 'blocked'; reason: 'write-scope-file-drift' | 'write-scope-dirty' | 'write-scope-parent-drift' | 'write-scope-diff-check' };
 
+function absolutePath(value: string): boolean { return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('\\\\'); }
+
 export function validateCodexExecutionModeBinding(input: { mode: CodexExecutionMode; admitted_args: string[]; invocation_args: string[] }): { status: 'valid' } | { status: 'blocked'; reason: 'execution-mode-argv-mismatch' } {
   if (input.mode !== 'read-only' && input.mode !== 'write-enabled') return { status: 'blocked', reason: 'execution-mode-argv-mismatch' };
   return JSON.stringify(input.admitted_args) === JSON.stringify(input.invocation_args)
@@ -64,7 +66,7 @@ export function validateCodexWriteScope(input: CodexWriteScopeFacts): CodexWrite
 
 export function buildCodexInvocation(input: { executable: string; cwd: string; mode?: CodexExecutionMode }): CodexInvocation {
   if (!input.executable || input.executable.includes('\0')) throw new Error('codex-executable-required');
-  if (!input.cwd || !input.cwd.startsWith('/') || input.cwd.includes('\0')) throw new Error('codex-cwd-must-be-absolute');
+  if (!input.cwd || !absolutePath(input.cwd) || input.cwd.includes('\0')) throw new Error('codex-cwd-must-be-absolute');
   const mode = input.mode ?? 'read-only';
   if (mode !== 'read-only' && mode !== 'write-enabled') throw new Error('codex-execution-mode-invalid');
   return {

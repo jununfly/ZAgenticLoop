@@ -5,6 +5,8 @@ import { request as httpsRequest } from 'node:https';
 import { runCli, defaultCliIo } from './cli.js';
 import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
 import { createOpnArtifactStore } from './opn-artifact-store.js';
+import { validateBoundedLoopTask } from './agent-task.js';
+import { recordLocalOpnArtifactTransfer } from './opn-artifact-transfer-http-server.js';
 import { createTlsTransportAdapter } from './tls-transport-adapter.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createTransportEnvelope } from './transport-contract.js';
@@ -93,6 +95,7 @@ export const opnTransportCliSpec = {
         { name: 'artifact_id', flag: 'artifact-id', type: 'string', description: 'Content digest for artifact-download' },
         { name: 'transfer_id', flag: 'transfer-id', type: 'string', description: 'Transfer id for artifact-send' },
         { name: 'artifact_store', flag: 'artifact-store', type: 'string', description: 'Local content-addressed ArtifactStore directory' },
+        { name: 'task_file', flag: 'task-file', type: 'string', description: 'Bounded Loop task JSON for local-task-send' },
     ],
     async handler({ options, io }) {
         const command = String(options.command ?? 'receive');
@@ -103,6 +106,31 @@ export const opnTransportCliSpec = {
         if (typeof options.session_file === 'string' && options.session_file.trim())
             sessionValue = JSON.parse(await textFile(options.session_file, 'opn-transport-session-file-required'));
         const localNodeId = nodeId(options, sessionValue);
+        if (command === 'local-task-send') {
+            const stateStore = createSqliteStateStore({ filename: String(options.state_store ?? '') });
+            try {
+                const taskPath = String(options.task_file ?? '').trim();
+                const artifactRoot = String(options.artifact_store ?? '').trim();
+                if (!taskPath || !artifactRoot)
+                    throw new Error('opn-task-file-and-artifact-store-required');
+                const task = JSON.parse(await readFile(taskPath, 'utf8'));
+                const validation = validateBoundedLoopTask(task);
+                if (validation.status !== 'valid')
+                    throw new Error(validation.reason);
+                const bytes = await readFile(taskPath);
+                const artifact = await recordLocalOpnArtifactTransfer({ network_id, stateStore, artifactStore: createOpnArtifactStore({ root: artifactRoot }), bytes, file_name: `${task.task_id}.json`, media_type: 'application/json', transfer_id: `task-artifact:${String(options.message_id ?? `agent-task-${Date.now()}`)}`, sender_node_id: localNodeId, target_node_id: String(options.target_node_id ?? '') });
+                const adapter = createLocalOpnTransportAdapter({ stateStore, network_id, node_id: localNodeId });
+                const session = await adapter.openSession({ network_id, node_id: localNodeId });
+                const envelope = createTransportEnvelope({ message_id: String(options.message_id ?? `agent-task-${Date.now()}`), network_id, event_id: String(options.event_id ?? `agent-event-${Date.now()}`), plan_id: String(options.plan_id ?? 'opn-agent-task'), plan_revision: Number(options.plan_revision ?? 1), task_id: task.task_id, from_node_id: localNodeId, target_node_id: String(options.target_node_id ?? ''), notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }, ...task.input_artifact_refs.map((artifact_id) => ({ artifact_id, content_sha256: artifact_id, kind: 'artifact' }))], created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 50 * 60 * 1000).toISOString() });
+                const result = await adapter.send({ session_id: session.session_id, envelope });
+                await adapter.closeSession({ session_id: session.session_id });
+                io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: envelope.message_id, task_id: task.task_id, task_artifact_id: artifact.metadata.artifact_id, target_node_id: envelope.target_node_id, side_effects_executed: false }));
+                return;
+            }
+            finally {
+                await stateStore.close();
+            }
+        }
         if (command === 'artifact-send' || command === 'artifact-download') {
             const endpoint = String(options.endpoint ?? '').trim();
             const ca = await textFile(String(options.ca ?? ''), 'opn-artifact-ca-required');

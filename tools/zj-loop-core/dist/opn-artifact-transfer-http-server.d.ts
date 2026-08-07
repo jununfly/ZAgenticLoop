@@ -25,6 +25,21 @@ export declare function projectOpnArtifactTransfers(input: {
     stateStore: SqliteStateStore;
     network_id: string;
 }): Promise<TransferRecord[]>;
+export declare function recordLocalOpnArtifactTransfer(input: {
+    network_id: string;
+    stateStore: SqliteStateStore;
+    artifactStore: OpnArtifactStore;
+    bytes: Uint8Array;
+    file_name: string;
+    media_type: string;
+    transfer_id: string;
+    sender_node_id: string;
+    target_node_id: string;
+    now?: string;
+}): Promise<{
+    metadata: OpnArtifactMetadata;
+    status: 'verified';
+}>;
 export declare function createOpnArtifactTransferHttpService(input: {
     network_id: string;
     stateStore: SqliteStateStore;

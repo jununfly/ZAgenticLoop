@@ -1,9 +1,10 @@
 export const WORKBUDDY_CODE_PROVIDER_SCHEMA = 'zj-loop.workbuddy_code_provider.v1';
 const SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+function absolutePath(value) { return value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('\\\\'); }
 export function buildWorkBuddyCodeInvocation(input) {
-    if (!input.executable || !input.executable.startsWith('/') || input.executable.includes('\0'))
+    if (!input.executable || !absolutePath(input.executable) || input.executable.includes('\0'))
         throw new Error('workbuddy-code-executable-required');
-    if (!input.cwd || !input.cwd.startsWith('/') || input.cwd.includes('\0'))
+    if (!input.cwd || !absolutePath(input.cwd) || input.cwd.includes('\0'))
         throw new Error('workbuddy-code-cwd-must-be-absolute');
     if (!SESSION_ID.test(input.session_id))
         throw new Error('workbuddy-code-session-id-invalid');
