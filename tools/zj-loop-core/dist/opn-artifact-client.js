@@ -1,4 +1,5 @@
 import { request } from 'node:https';
+import { createHash } from 'node:crypto';
 export function createTlsOpnArtifactPublisher(input) {
     const base = new URL(input.endpoint);
     const call = (method, pathname, body, headers) => new Promise((resolve, reject) => {
@@ -16,6 +17,25 @@ export function createTlsOpnArtifactPublisher(input) {
             const uploaded = await call('PUT', `/v1/artifacts/${encodeURIComponent(inputValue.metadata.artifact_id)}`, inputValue.bytes, {});
             if (uploaded.statusCode !== 200 && uploaded.statusCode !== 201)
                 throw new Error('opn-artifact-publish-upload-failed');
+        },
+    };
+}
+export function createTlsOpnArtifactDownloader(input) {
+    const base = new URL(input.endpoint);
+    return {
+        async download(artifact_id) {
+            const options = { protocol: 'https:', hostname: base.hostname, port: base.port || 443, method: 'GET', path: `${base.pathname.replace(/\/$/, '')}/v1/artifacts/${encodeURIComponent(artifact_id)}`, ca: input.ca, cert: input.cert, key: input.key, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}` } };
+            const body = await new Promise((resolve, reject) => {
+                const req = request(options, (response) => { const chunks = []; response.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))); response.on('end', () => resolve({ statusCode: response.statusCode ?? 0, body: Buffer.concat(chunks) })); });
+                req.on('error', reject);
+                req.end();
+            });
+            if (body.statusCode !== 200)
+                throw new Error('opn-artifact-download-failed');
+            const actual = `sha256:${createHash('sha256').update(body.body).digest('hex')}`;
+            if (actual !== artifact_id)
+                throw new Error('opn-artifact-download-integrity-failed');
+            return body.body;
         },
     };
 }

@@ -11,7 +11,7 @@ import { createOpnArtifactStore } from './opn-artifact-store.js';
 import { createNativeAgentRuntime } from './native-agent-runtime.js';
 import { createAgentRegistration } from './agent-registration.js';
 import { createOpnAgentAdapter, createProviderBackedNativeAgentExecutor } from './opn-agent-adapter.js';
-import { createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
+import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
 import { discoverProviderExecutable } from './provider-executable-discovery.js';
 import { createBoundedLoopTask } from './agent-task.js';
 export function createRetryBoundedLoopTask(task) {
@@ -77,12 +77,27 @@ const spec = {
             const bearer_token = (await read('credential_token_file', 'opn-agent-runner-token-required')).trim();
             const transport = createTlsTransportAdapter({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const publisher = createTlsOpnArtifactPublisher({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
+            const downloader = createTlsOpnArtifactDownloader({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const session = await transport.openSession({ network_id, node_id });
             try {
                 const executor = createProviderBackedNativeAgentExecutor({ provider_kind: providerKind, provider, cwd: String(options.cwd ?? ''), prompt: (value) => value.objective });
                 const runtime = createNativeAgentRuntime({ stateStore, registration: createAgentRegistration({ agent_id: node_id, display_name: providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task.task_kind], evidence_kinds: task.expected_evidence_kinds, protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` }), executor });
-                const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore: createOpnArtifactStore({ root: String(options.artifact_store ?? '') }), publishArtifact: publisher.publish, agent_id: node_id });
-                const result = await adapter.processNext({ session_id: session.session_id, resolveTask: () => task });
+                const artifactStore = createOpnArtifactStore({ root: String(options.artifact_store ?? '') });
+                const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore, publishArtifact: publisher.publish, agent_id: node_id });
+                const result = await adapter.processNext({
+                    session_id: session.session_id,
+                    resolveTask: async (envelope) => {
+                        const taskRef = envelope.artifact_refs[0];
+                        if (!taskRef)
+                            throw new Error('opn-agent-task-artifact-missing');
+                        const bytes = await downloader.download(taskRef.artifact_id);
+                        const stored = await artifactStore.put({ bytes, file_name: `${envelope.task_id}.task.json`, media_type: 'application/json', expected_digest: taskRef.artifact_id });
+                        const remoteTask = JSON.parse(stored.metadata ? bytes.toString('utf8') : '{}');
+                        if (remoteTask.task_id !== envelope.task_id)
+                            throw new Error('opn-agent-task-id-mismatch');
+                        return remoteTask;
+                    },
+                });
                 io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', ...(retry_of_execution_id ? { retry_of_execution_id, execution_id: task.execution_id } : {}), ...result }));
             }
             finally {

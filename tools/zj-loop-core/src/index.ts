@@ -151,6 +151,7 @@ export * from './transport-replay-conformance.js';
 export * from './codex-agent-provider-adapter.js';
 export * from './workbuddy-code-provider-adapter.js';
 export * from './provider-executable-discovery.js';
+export * from './opn-artifact-client.js';
 export * from './local-process-adapter.js';
 export * from './local-execution-preflight.js';
 export * from './local-execution-approval.js';
