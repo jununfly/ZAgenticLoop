@@ -42,16 +42,6 @@ export function submitOpnAgentJoinRequest(input) {
         key: input.key,
         servername: input.server_name ?? endpoint.hostname,
         rejectUnauthorized: true,
-        // The OPN endpoint certificate is issued with only a CN (no SAN). Modern
-        // Node refuses CN-only matching in checkServerIdentity, so we replicate
-        // the intended CN equality check here. Server identity is still bound by
-        // the pinned Dev CA via `ca` + `rejectUnauthorized`.
-        checkServerIdentity: (hostname, cert) => {
-            const cn = cert && cert.subject && cert.subject.CN;
-            if (cn === hostname)
-                return undefined;
-            return new Error(`Host: ${hostname}. is not cert's CN: ${cn}`);
-        },
         minVersion: 'TLSv1.3',
         timeout: input.timeout_ms ?? 10_000,
         headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) },

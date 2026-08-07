@@ -138,7 +138,7 @@ Use the same network id and a fresh stable request id:
 ```powershell
 node dist/opn-agent-join-cli.js `
   --endpoint https://100.119.216.26:43123 `
-  --server-name "ZAgenticLoop OPN Endpoint" `
+  --server-name 100.119.216.26 `
   --network-id opn-dogfood-20260806 `
   --request-id win-agent-20260806-001 `
   --display-name "Windows Agent" `

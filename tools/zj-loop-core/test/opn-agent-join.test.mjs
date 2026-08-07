@@ -15,7 +15,7 @@ async function certificate(root, name) {
   const keyPath = path.join(root, `${name}.key.pem`);
   const certPath = path.join(root, `${name}.cert.pem`);
   execFileSync(OPENSSL_BIN, ['ecparam', '-name', 'prime256v1', '-genkey', '-noout', '-out', keyPath]);
-  execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${name}`, '-days', '1']);
+  execFileSync(OPENSSL_BIN, ['req', '-x509', '-new', '-key', keyPath, '-out', certPath, '-subj', `/CN=${name}`, '-addext', `subjectAltName=DNS:${name},IP:127.0.0.1`, '-days', '1']);
   return { key: await readFile(keyPath, 'utf8'), cert: await readFile(certPath, 'utf8') };
 }
 
