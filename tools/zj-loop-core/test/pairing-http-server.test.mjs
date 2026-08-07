@@ -97,6 +97,20 @@ test('OPN connection route returns the injected read model without side effects'
   await close(value);
 });
 
+test('Owner Inbox route returns the injected projection without transport side effects', { skip: !supportsP256Certificates }, async () => {
+  const model = [{ message_id: 'message-1', delivery_state: 'acknowledged' }];
+  const value = await fixture({
+    ownerAuthenticator: { authenticate: ({ action, authorization }) => action === 'pairing.inbox' && authorization === 'Bearer owner-token' ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } },
+    inboxReadModel: { read: async ({ network_id }) => network_id === 'network-1' ? model : [] },
+  });
+  const response = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/inbox?network_id=network-1', headers: { authorization: 'Bearer owner-token' } });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body.messages, model);
+  const blockedResponse = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/inbox?network_id=network-1', headers: { authorization: 'Bearer wrong' } });
+  assert.equal(blockedResponse.statusCode, 403);
+  await close(value);
+});
+
 test('Pairing rejects business requests without a client certificate', async () => {
   const serverMaterial = await certificate('localhost');
   const server = createPairingHttpServer({ tls: serverMaterial, recordStore: createInMemoryPairingRecordStore() });

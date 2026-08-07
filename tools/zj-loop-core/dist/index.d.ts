@@ -100,6 +100,8 @@ export * from './opn-connection-read-model.js';
 export * from './opn-message-read-model.js';
 export * from './opn-transport-inbox.js';
 export * from './opn-transport-http-server.js';
+export * from './opn-center-transport.js';
+export * from './opn-transport-cli.js';
 export * from './sqlite-credential-issuance.js';
 export * from './credential-issuance-events.js';
 export * from './protocol-registry.js';

@@ -2,6 +2,7 @@ import { type Server } from 'node:http';
 import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
+import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import { type HumanApprovalContext } from './human-authority.js';
 export declare const HUMAN_APPROVAL_UI_SCHEMA: "zj-loop.human_approval_ui.v1";
 export type HumanApprovalUiUpstream = {
@@ -11,6 +12,9 @@ export type HumanApprovalUiUpstream = {
         requests: PairingRequestProjection[];
     }>;
     connection?(): Promise<Record<string, unknown>>;
+    messages?(): Promise<{
+        messages: OpnMessageReadModel[];
+    }>;
     approve?(input: {
         network_id: string;
         request_id: string;
@@ -75,6 +79,7 @@ export type HumanApprovalUiServerInput = {
 };
 export type PairingHttpUpstreamInput = {
     endpoint: string;
+    network_id?: string;
     authorization?: string;
     ca?: string;
     cert?: string;

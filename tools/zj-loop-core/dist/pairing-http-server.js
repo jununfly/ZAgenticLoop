@@ -101,8 +101,36 @@ export function createPairingHttpServer(input) {
         }
         const url = new URL(request.url ?? '/', 'https://pairing.local');
         const ownerList = request.method === 'GET' && url.pathname === '/v1/owner/pairing-requests';
+        const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
         const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);
         const ownerReject = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/reject$/);
+        if (ownerInbox) {
+            if (!input.ownerAuthenticator) {
+                blocked(response, 'owner-authenticator-unavailable');
+                return;
+            }
+            const networkId = url.searchParams.get('network_id');
+            if (!networkId?.trim()) {
+                blocked(response, 'network-id-required');
+                return;
+            }
+            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action: 'pairing.inbox', authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
+            if (auth.status !== 'allowed') {
+                blocked(response, auth.reason ?? 'owner-not-authorized');
+                return;
+            }
+            if (!input.inboxReadModel) {
+                blocked(response, 'inbox-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, messages: await input.inboxReadModel.read({ network_id: networkId }), side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 'inbox-read-model-unavailable');
+            }
+            return;
+        }
         if (ownerList || ownerApprove || ownerReject) {
             if (!input.ownerAuthenticator) {
                 blocked(response, 'owner-authenticator-unavailable');

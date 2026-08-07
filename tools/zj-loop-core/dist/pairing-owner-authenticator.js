@@ -27,7 +27,7 @@ export function createPairingOwnerAuthenticator(input) {
         authenticate(request) {
             if (!bearerMatches(request.authorization, input.owner_token))
                 return blocked();
-            if (request.action === 'pairing.list')
+            if (request.action === 'pairing.list' || request.action === 'pairing.inbox')
                 return { status: 'allowed', human_id: input.identity.human_id };
             const context = request.context;
             if (!context || !request.request_id || !request.request_digest || context.action !== request.action || context.request_id !== request.request_id || context.request_digest !== request.request_digest)

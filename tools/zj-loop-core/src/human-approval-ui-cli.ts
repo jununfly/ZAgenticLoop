@@ -42,7 +42,7 @@ process.exitCode = await runCli({
     const clientKey = await readFile(options['client-key'], 'utf8');
     let deviceFingerprint: string;
     try { deviceFingerprint = createHash('sha256').update(new X509Certificate(clientCert).raw).digest('hex'); } catch { throw new Error('human-device-client-cert-invalid'); }
-    const upstream = createPairingHttpUpstream({ endpoint: pairingEndpoint, authorization: typeof options['owner-authorization'] === 'string' ? options['owner-authorization'] : undefined, ca: typeof options.ca === 'string' ? await readFile(options.ca, 'utf8') : undefined, cert: clientCert, key: clientKey, device_fingerprint: deviceFingerprint });
+    const upstream = createPairingHttpUpstream({ network_id: networkId, endpoint: pairingEndpoint, authorization: typeof options['owner-authorization'] === 'string' ? options['owner-authorization'] : undefined, ca: typeof options.ca === 'string' ? await readFile(options.ca, 'utf8') : undefined, cert: clientCert, key: clientKey, device_fingerprint: deviceFingerprint });
     const bootstrapToken = randomBytes(32).toString('base64url');
     const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, bootstrap_token: bootstrapToken });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));

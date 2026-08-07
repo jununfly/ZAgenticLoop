@@ -35,6 +35,7 @@ test('Human approval UI exchanges a one-time bootstrap token for a session and l
     bootstrap_token: 'bootstrap-1',
     upstream: {
       async connection() { return { schema: 'zj-loop.opn_connection_read_model.v1', network_id: 'network-1', status: 'connected', peers: [], side_effects_executed: false }; },
+      async messages() { return { messages: [{ message_id: 'message-1', notification_kind: 'dogfood-message', delivery_state: 'acknowledged' }] }; },
       async list() {
         return { requests: [{ request_id: 'request-1', status: 'pending', request_digest: 'a'.repeat(64), node_id: 'node-1', display_name: 'Workbuddy', agent_kind: 'workbuddy', endpoint: 'https://workbuddy.local', requested_capabilities: ['event.consume'], expires_at: '2026-07-30T01:00:00.000Z' }] };
       },
@@ -59,6 +60,9 @@ test('Human approval UI exchanges a one-time bootstrap token for a session and l
     const connection = await request({ address, path: '/ui/connection', headers: { cookie } });
     assert.equal(connection.status, 200);
     assert.equal(connection.body.status, 'connected');
+    const inbox = await request({ address, path: '/ui/inbox', headers: { cookie } });
+    assert.equal(inbox.status, 200);
+    assert.equal(inbox.body.messages[0].message_id, 'message-1');
     const opnPage = await request({ address, path: '/ui/opn' });
     assert.equal(opnPage.status, 200);
     assert.match(opnPage.body, /设备协作状态/);

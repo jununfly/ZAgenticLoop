@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner, HumanSignerIdentity } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
+import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload, type HumanApprovalContext } from './human-authority.js';
 
 export const HUMAN_APPROVAL_UI_SCHEMA = 'zj-loop.human_approval_ui.v1' as const;
@@ -14,6 +15,7 @@ export const HUMAN_APPROVAL_UI_SCHEMA = 'zj-loop.human_approval_ui.v1' as const;
 export type HumanApprovalUiUpstream = {
   list(input: { network_id: string }): Promise<{ requests: PairingRequestProjection[] }>;
   connection?(): Promise<Record<string, unknown>>;
+  messages?(): Promise<{ messages: OpnMessageReadModel[] }>;
   approve?(input: { network_id: string; request_id: string; request_digest: string; approved_capabilities: string[]; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
   reject?(input: { network_id: string; request_id: string; request_digest: string; reason: string; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
   evidence?(input: { network_id: string; evidence_id: string }): Promise<Record<string, unknown>>;
@@ -39,6 +41,7 @@ export type HumanApprovalUiServerInput = {
 
 export type PairingHttpUpstreamInput = {
   endpoint: string;
+  network_id?: string;
   authorization?: string;
   ca?: string;
   cert?: string;
@@ -172,6 +175,12 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.connection) { blocked(response, 503, 'connection-read-model-unavailable'); return; }
       try { json(response, 200, await input.upstream.connection()); } catch { blocked(response, 503, 'connection-read-model-unavailable'); }
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/ui/inbox') {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.upstream.messages) { blocked(response, 503, 'inbox-read-model-unavailable'); return; }
+      try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.messages()), side_effects_executed: false }); } catch { blocked(response, 503, 'inbox-read-model-unavailable'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/events') {
@@ -360,6 +369,11 @@ export function createPairingHttpUpstream(input: PairingHttpUpstreamInput): Huma
   return {
     async connection() {
       return requestPairingApi(input, `${pathFor('/v1/connection')}`, 'GET');
+    },
+    async messages() {
+      if (!input.network_id?.trim()) throw new Error('pairing-upstream-network-id-required');
+      const result = await requestPairingApi(input, `${pathFor('/v1/owner/inbox')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
+      return { messages: Array.isArray(result.messages) ? result.messages as OpnMessageReadModel[] : [] };
     },
     async list({ network_id }) {
       const result = await requestPairingApi(input, `${pathFor('/v1/owner/pairing-requests')}?network_id=${encodeURIComponent(network_id)}`, 'GET');

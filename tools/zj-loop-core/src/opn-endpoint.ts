@@ -10,11 +10,15 @@ import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
 import { createOpnTransportHttpService } from './opn-transport-http-server.js';
 import type { CredentialVerifier } from './sqlite-state-store-server.js';
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
+import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
+import type { TransportAdapter } from './transport-contract.js';
+import { projectOpnInbox } from './opn-transport-inbox.js';
 
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1' as const;
 
 export type OpnEndpoint = {
   address: AddressInfo;
+  localTransport: TransportAdapter;
   close(): Promise<void>;
 };
 
@@ -45,6 +49,7 @@ export async function createOpnEndpointServer(input: {
 
   await input.stateStore.getRevision(input.network_id);
   const recordStore = createSqlitePairingRecordStore({ stateStore: input.stateStore });
+  const localNodeId = input.local_node?.node_id ?? `endpoint:${input.network_id}`;
   const connectionReadModel = input.connectionReadModel ?? {
     async read() {
       const records = await recordStore.list(input.network_id);
@@ -66,6 +71,11 @@ export async function createOpnEndpointServer(input: {
     credentialClaim: input.credentialClaim,
     credentialIssue: input.credentialIssue,
     connectionReadModel,
+    inboxReadModel: {
+      async read({ network_id }) {
+        return projectOpnInbox({ stateStore: input.stateStore, network_id, node_id: localNodeId });
+      },
+    },
     transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
     readinessCheck: {
       check: async () => {
@@ -78,6 +88,7 @@ export async function createOpnEndpointServer(input: {
       },
     },
   });
+  const localTransport = createLocalOpnTransportAdapter({ stateStore: input.stateStore, network_id: input.network_id, node_id: localNodeId });
 
   await new Promise<void>((resolve, reject) => {
     const onError = (error: Error) => {
@@ -100,6 +111,7 @@ export async function createOpnEndpointServer(input: {
   }
   return {
     address,
+    localTransport,
     close: () => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())),
   };
 }

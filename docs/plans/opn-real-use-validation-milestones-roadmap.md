@@ -28,7 +28,7 @@
 
 Join API/CLI、CSR 签发、Windows join、Human approval 与 enrollment projection 已完成；跨设备 Co-work Channel 仍由 1-3-3-3 承载。
 
-当前已完成真实 Transport HTTP server 的 Core wiring：mTLS session、sender-bound envelope、StateStore offered/acknowledged facts 与 credential token verifier。下一步是 Mac/Windows 实际 endpoint 双向消息、重连与 UI 投影验收。
+当前已完成真实 Transport HTTP server 的 Core wiring：mTLS session、sender-bound envelope、StateStore offered/acknowledged facts 与 credential token verifier；Mac 中心节点已具备本地 StateStore-backed receive/ack 与 Inbox projection，并已用真实 Windows 消息验证。新增 provider-neutral Transport CLI：Windows `receive` 每次建立新 session 并 ack，Mac `local-send` 通过中心 StateStore 发回；Human OPN UI 已展示 Inbox projection。下一步是双机实际反向消息、重连和 UI 运行验收。
 
 **当前子树：**
 ├── [x][Y+] 1-3-3-2-1. Windows Agent 本地 P-256 身份与证书 bootstrap

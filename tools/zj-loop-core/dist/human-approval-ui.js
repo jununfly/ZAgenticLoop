@@ -143,6 +143,23 @@ export function createHumanApprovalUiServer(input) {
             }
             return;
         }
+        if (request.method === 'GET' && url.pathname === '/ui/inbox') {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.upstream.messages) {
+                blocked(response, 503, 'inbox-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.messages()), side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'inbox-read-model-unavailable');
+            }
+            return;
+        }
         if (request.method === 'GET' && url.pathname === '/ui/events') {
             if (!validSession(request, sessions, now)) {
                 blocked(response, 401, 'ui-session-required');
@@ -510,6 +527,12 @@ export function createPairingHttpUpstream(input) {
     return {
         async connection() {
             return requestPairingApi(input, `${pathFor('/v1/connection')}`, 'GET');
+        },
+        async messages() {
+            if (!input.network_id?.trim())
+                throw new Error('pairing-upstream-network-id-required');
+            const result = await requestPairingApi(input, `${pathFor('/v1/owner/inbox')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
+            return { messages: Array.isArray(result.messages) ? result.messages : [] };
         },
         async list({ network_id }) {
             const result = await requestPairingApi(input, `${pathFor('/v1/owner/pairing-requests')}?network_id=${encodeURIComponent(network_id)}`, 'GET');

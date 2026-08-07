@@ -4,9 +4,11 @@ import type { CredentialClaimService, CredentialIssueService, PairingConnectionR
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import type { CredentialVerifier } from './sqlite-state-store-server.js';
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
+import type { TransportAdapter } from './transport-contract.js';
 export declare const OPN_ENDPOINT_SCHEMA: "zj-loop.opn_endpoint.v1";
 export type OpnEndpoint = {
     address: AddressInfo;
+    localTransport: TransportAdapter;
     close(): Promise<void>;
 };
 export declare function createOpnEndpointServer(input: {

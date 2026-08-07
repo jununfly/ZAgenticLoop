@@ -33,7 +33,7 @@ export function createPairingOwnerAuthenticator(input: {
   return {
     authenticate(request) {
       if (!bearerMatches(request.authorization, input.owner_token)) return blocked();
-      if (request.action === 'pairing.list') return { status: 'allowed', human_id: input.identity.human_id };
+      if (request.action === 'pairing.list' || request.action === 'pairing.inbox') return { status: 'allowed', human_id: input.identity.human_id };
       const context = request.context;
       if (!context || !request.request_id || !request.request_digest || context.action !== request.action || context.request_id !== request.request_id || context.request_digest !== request.request_digest) return blocked();
       if (request.action === 'pairing.approve' && request.require_v2 !== true) return blocked();

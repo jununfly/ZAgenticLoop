@@ -2,10 +2,11 @@ import { type Server, type ServerOptions } from 'node:https';
 import type { PairingRecordStore } from './pairing-record-store.js';
 import { type HumanApprovalContext } from './human-authority.js';
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
+import type { OpnMessageReadModel } from './opn-message-read-model.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
-        action: 'pairing.list' | 'pairing.approve' | 'pairing.reject';
+        action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject';
         authorization: string | null;
         request_id?: string;
         request_digest?: string;
@@ -53,6 +54,11 @@ export type CredentialIssueService = {
 export type PairingConnectionReadModelService = {
     read(): Promise<Record<string, unknown>>;
 };
+export type PairingInboxReadModelService = {
+    read(input: {
+        network_id: string;
+    }): Promise<OpnMessageReadModel[]>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -71,5 +77,6 @@ export declare function createPairingHttpServer(input: {
     credentialClaim?: CredentialClaimService | null;
     credentialIssue?: CredentialIssueService | null;
     connectionReadModel?: PairingConnectionReadModelService | null;
+    inboxReadModel?: PairingInboxReadModelService | null;
     transport?: OpnTransportHttpService | null;
 }): Server;
