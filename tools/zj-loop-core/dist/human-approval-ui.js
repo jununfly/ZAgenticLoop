@@ -48,10 +48,16 @@ function blocked(response, statusCode, reason) {
 }
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/human-approval');
 const GRAPH_UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/graph-review');
+const OPN_UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/opn');
 const GRAPH_UI_ASSETS = {
     '/ui/graph-review': { file: 'index.html', contentType: 'text/html; charset=utf-8' },
     '/assets/graph-review-ui.css': { file: 'graph-review-ui.css', contentType: 'text/css; charset=utf-8' },
     '/assets/graph-review-ui.js': { file: 'graph-review-ui.js', contentType: 'text/javascript; charset=utf-8' },
+};
+const OPN_UI_ASSETS = {
+    '/ui/opn': { file: 'index.html', contentType: 'text/html; charset=utf-8' },
+    '/assets/opn-ui.css': { file: 'opn-ui.css', contentType: 'text/css; charset=utf-8' },
+    '/assets/opn-ui.js': { file: 'opn-ui.js', contentType: 'text/javascript; charset=utf-8' },
 };
 const UI_ASSETS = {
     '/': { file: 'index.html', contentType: 'text/html; charset=utf-8' },
@@ -118,6 +124,23 @@ export function createHumanApprovalUiServer(input) {
             }
             const identity = await Promise.resolve(input.signer.getPublicIdentity());
             json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', human: publicIdentity(identity), network_id: input.network_id, side_effects_executed: false });
+            return;
+        }
+        if (request.method === 'GET' && url.pathname === '/ui/connection') {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.upstream.connection) {
+                blocked(response, 503, 'connection-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, await input.upstream.connection());
+            }
+            catch {
+                blocked(response, 503, 'connection-read-model-unavailable');
+            }
             return;
         }
         if (request.method === 'GET' && url.pathname === '/ui/events') {
@@ -254,6 +277,20 @@ export function createHumanApprovalUiServer(input) {
             }
             catch {
                 blocked(response, 503, 'graph-ui-assets-unavailable');
+            }
+            return;
+        }
+        if (request.method === 'GET' && OPN_UI_ASSETS[url.pathname]) {
+            const asset = OPN_UI_ASSETS[url.pathname];
+            try {
+                const content = await readFile(path.join(OPN_UI_ROOT, asset.file));
+                response.statusCode = 200;
+                response.setHeader('content-type', asset.contentType);
+                response.setHeader('content-length', content.byteLength);
+                response.end(content);
+            }
+            catch {
+                blocked(response, 503, 'ui-assets-unavailable');
             }
             return;
         }
@@ -471,6 +508,9 @@ export function createPairingHttpUpstream(input) {
     const base = new URL(input.endpoint);
     const pathFor = (path) => `${base.pathname.replace(/\/$/, '')}${path}`;
     return {
+        async connection() {
+            return requestPairingApi(input, `${pathFor('/v1/connection')}`, 'GET');
+        },
         async list({ network_id }) {
             const result = await requestPairingApi(input, `${pathFor('/v1/owner/pairing-requests')}?network_id=${encodeURIComponent(network_id)}`, 'GET');
             return { requests: Array.isArray(result.requests) ? result.requests : [] };

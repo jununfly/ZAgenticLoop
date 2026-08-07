@@ -17,6 +17,12 @@ export declare function createOpnEndpointServer(input: {
     credentialClaim?: CredentialClaimService | null;
     credentialIssue?: CredentialIssueService | null;
     connectionReadModel?: PairingConnectionReadModelService | null;
+    local_node?: {
+        node_id: string;
+        display_name: string;
+        agent_kind: string;
+        agent_version: string;
+    };
 }): Promise<OpnEndpoint>;
 export declare function loadOpnEndpointTls(input: {
     key_path: string;

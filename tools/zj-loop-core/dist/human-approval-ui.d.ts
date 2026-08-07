@@ -10,6 +10,7 @@ export type HumanApprovalUiUpstream = {
     }): Promise<{
         requests: PairingRequestProjection[];
     }>;
+    connection?(): Promise<Record<string, unknown>>;
     approve?(input: {
         network_id: string;
         request_id: string;

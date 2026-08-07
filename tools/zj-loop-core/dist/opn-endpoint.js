@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { createPairingHttpServer } from './pairing-http-server.js';
 import { createSqlitePairingRecordStore } from './sqlite-pairing-record-store.js';
+import { projectPairingRequests } from './pairing-projection.js';
+import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1';
 function requireText(value, error) {
     if (typeof value !== 'string' || !value.trim())
@@ -18,13 +20,27 @@ export async function createOpnEndpointServer(input) {
         throw new Error('opn-endpoint-tls-material-required');
     await input.stateStore.getRevision(input.network_id);
     const recordStore = createSqlitePairingRecordStore({ stateStore: input.stateStore });
+    const connectionReadModel = input.connectionReadModel ?? {
+        async read() {
+            const records = await recordStore.list(input.network_id);
+            const projections = projectPairingRequests({ network_id: input.network_id, records });
+            return createOpnConnectionReadModel({
+                network_id: input.network_id,
+                local_node: input.local_node ?? { node_id: `endpoint:${input.network_id}`, display_name: 'OPN Endpoint', agent_kind: 'endpoint', agent_version: 'dev' },
+                peers: projections.map((projection) => {
+                    const base = records.find((record) => record.type === 'pairing-requested' && record.request.request_id === projection.request_id);
+                    return { ...projection, endpoint: base?.type === 'pairing-requested' ? base.request.endpoint : undefined };
+                }),
+            });
+        },
+    };
     const server = createPairingHttpServer({
         tls: input.tls,
         recordStore,
         ownerAuthenticator: input.ownerAuthenticator,
         credentialClaim: input.credentialClaim,
         credentialIssue: input.credentialIssue,
-        connectionReadModel: input.connectionReadModel,
+        connectionReadModel,
         readinessCheck: {
             check: async () => {
                 try {

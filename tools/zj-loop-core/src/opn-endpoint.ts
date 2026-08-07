@@ -5,6 +5,8 @@ import { createPairingHttpServer } from './pairing-http-server.js';
 import type { CredentialClaimService, CredentialIssueService, PairingConnectionReadModelService, PairingOwnerAuthenticator } from './pairing-http-server.js';
 import { createSqlitePairingRecordStore } from './sqlite-pairing-record-store.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
+import { projectPairingRequests } from './pairing-projection.js';
+import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
 
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1' as const;
 
@@ -28,6 +30,7 @@ export async function createOpnEndpointServer(input: {
   credentialClaim?: CredentialClaimService | null;
   credentialIssue?: CredentialIssueService | null;
   connectionReadModel?: PairingConnectionReadModelService | null;
+  local_node?: { node_id: string; display_name: string; agent_kind: string; agent_version: string };
 }): Promise<OpnEndpoint> {
   requireText(input.bind, 'opn-endpoint-bind-required');
   requireText(input.network_id, 'opn-endpoint-network-id-required');
@@ -37,13 +40,27 @@ export async function createOpnEndpointServer(input: {
 
   await input.stateStore.getRevision(input.network_id);
   const recordStore = createSqlitePairingRecordStore({ stateStore: input.stateStore });
+  const connectionReadModel = input.connectionReadModel ?? {
+    async read() {
+      const records = await recordStore.list(input.network_id);
+      const projections = projectPairingRequests({ network_id: input.network_id, records });
+      return createOpnConnectionReadModel({
+        network_id: input.network_id,
+        local_node: input.local_node ?? { node_id: `endpoint:${input.network_id}`, display_name: 'OPN Endpoint', agent_kind: 'endpoint', agent_version: 'dev' },
+        peers: projections.map((projection) => {
+          const base = records.find((record) => record.type === 'pairing-requested' && record.request.request_id === projection.request_id);
+          return { ...projection, endpoint: base?.type === 'pairing-requested' ? base.request.endpoint : undefined };
+        }),
+      });
+    },
+  };
   const server = createPairingHttpServer({
     tls: input.tls,
     recordStore,
     ownerAuthenticator: input.ownerAuthenticator,
     credentialClaim: input.credentialClaim,
     credentialIssue: input.credentialIssue,
-    connectionReadModel: input.connectionReadModel,
+    connectionReadModel,
     readinessCheck: {
       check: async () => {
         try {
