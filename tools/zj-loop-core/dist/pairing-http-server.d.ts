@@ -49,6 +49,9 @@ export type CredentialIssueService = {
         credential_id: string;
     }>;
 };
+export type PairingConnectionReadModelService = {
+    read(): Promise<Record<string, unknown>>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -66,4 +69,5 @@ export declare function createPairingHttpServer(input: {
     session_ttl_ms?: number;
     credentialClaim?: CredentialClaimService | null;
     credentialIssue?: CredentialIssueService | null;
+    connectionReadModel?: PairingConnectionReadModelService | null;
 }): Server;

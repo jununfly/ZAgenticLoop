@@ -34,6 +34,10 @@ export type CredentialIssueService = {
   issue(input: { request_id: string; network_id: string; node_id: string; request_digest: string; human_id: string; capabilities: string[]; issued_at: string; expires_at: string }): Promise<{ status: 'recorded' | 'duplicate'; credential_id: string }>;
 };
 
+export type PairingConnectionReadModelService = {
+  read(): Promise<Record<string, unknown>>;
+};
+
 function json(response: import('node:http').ServerResponse, statusCode: number, body: Record<string, unknown>): void {
   const encoded = JSON.stringify(body);
   response.statusCode = statusCode;
@@ -69,6 +73,7 @@ function errorStatus(reason: string): number {
   if (reason === 'pairing-request-not-found' || reason === 'route-not-found') return 404;
   if (reason === 'owner-authenticator-unavailable') return 503;
   if (reason === 'owner-authentication-required' || reason === 'owner-not-authorized') return 403;
+  if (reason === 'connection-read-model-unavailable') return 503;
   if (reason === 'pairing-request-conflict' || reason === 'pairing-projection-conflict') return 409;
   if (reason === 'credential-claim-unavailable') return 503;
   if (reason === 'credential-not-available' || reason === 'intent-expired' || reason === 'credential-claim-conflict') return 409;
@@ -104,6 +109,7 @@ export function createPairingHttpServer(input: {
   session_ttl_ms?: number;
   credentialClaim?: CredentialClaimService | null;
   credentialIssue?: CredentialIssueService | null;
+  connectionReadModel?: PairingConnectionReadModelService | null;
 }): Server {
   const now = input.now ?? (() => new Date().toISOString());
   // FIXME: During development dogfood this is intentionally 50 minutes instead of 5; restore 5 minutes for the production release.
@@ -190,6 +196,11 @@ export function createPairingHttpServer(input: {
       return;
     }
     const nodeId = peerNodeId(socket) as string;
+    if (request.method === 'GET' && url.pathname === '/v1/connection') {
+      if (!input.connectionReadModel) { blocked(response, 'connection-read-model-unavailable'); return; }
+      try { json(response, 200, await input.connectionReadModel.read()); } catch { blocked(response, 'connection-read-model-unavailable'); }
+      return;
+    }
     if (request.method === 'POST' && url.pathname === '/v1/pairing-requests') {
       let body: unknown;
       try { body = await readBody(request); } catch (error) { blocked(response, error instanceof Error ? error.message : 'json-invalid'); return; }

@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import type { ServerOptions } from 'node:https';
 import { createPairingHttpServer } from './pairing-http-server.js';
-import type { CredentialClaimService, CredentialIssueService, PairingOwnerAuthenticator } from './pairing-http-server.js';
+import type { CredentialClaimService, CredentialIssueService, PairingConnectionReadModelService, PairingOwnerAuthenticator } from './pairing-http-server.js';
 import { createSqlitePairingRecordStore } from './sqlite-pairing-record-store.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
 
@@ -27,6 +27,7 @@ export async function createOpnEndpointServer(input: {
   ownerAuthenticator?: PairingOwnerAuthenticator | null;
   credentialClaim?: CredentialClaimService | null;
   credentialIssue?: CredentialIssueService | null;
+  connectionReadModel?: PairingConnectionReadModelService | null;
 }): Promise<OpnEndpoint> {
   requireText(input.bind, 'opn-endpoint-bind-required');
   requireText(input.network_id, 'opn-endpoint-network-id-required');
@@ -42,6 +43,7 @@ export async function createOpnEndpointServer(input: {
     ownerAuthenticator: input.ownerAuthenticator,
     credentialClaim: input.credentialClaim,
     credentialIssue: input.credentialIssue,
+    connectionReadModel: input.connectionReadModel,
     readinessCheck: {
       check: async () => {
         try {

@@ -88,6 +88,15 @@ test('Pairing healthz is unauthenticated and readyz reflects injected dependency
   await rm(serverMaterial.root, { recursive: true, force: true });
 });
 
+test('OPN connection route returns the injected read model without side effects', { skip: !supportsP256Certificates }, async () => {
+  const model = { schema: 'zj-loop.opn_connection_read_model.v1', network_id: 'network-1', status: 'connected', local_node: { node_id: 'mac-node' }, peers: [], side_effects_executed: false };
+  const value = await fixture({ connectionReadModel: { read: async () => model } });
+  const response = await request({ address: value.address, server: value.serverMaterial, client: value.clientMaterial, path: '/v1/connection' });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.body, model);
+  await close(value);
+});
+
 test('Pairing rejects business requests without a client certificate', async () => {
   const serverMaterial = await certificate('localhost');
   const server = createPairingHttpServer({ tls: serverMaterial, recordStore: createInMemoryPairingRecordStore() });

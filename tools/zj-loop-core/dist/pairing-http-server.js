@@ -54,6 +54,8 @@ function errorStatus(reason) {
         return 503;
     if (reason === 'owner-authentication-required' || reason === 'owner-not-authorized')
         return 403;
+    if (reason === 'connection-read-model-unavailable')
+        return 503;
     if (reason === 'pairing-request-conflict' || reason === 'pairing-projection-conflict')
         return 409;
     if (reason === 'credential-claim-unavailable')
@@ -207,6 +209,19 @@ export function createPairingHttpServer(input) {
             return;
         }
         const nodeId = peerNodeId(socket);
+        if (request.method === 'GET' && url.pathname === '/v1/connection') {
+            if (!input.connectionReadModel) {
+                blocked(response, 'connection-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, await input.connectionReadModel.read());
+            }
+            catch {
+                blocked(response, 'connection-read-model-unavailable');
+            }
+            return;
+        }
         if (request.method === 'POST' && url.pathname === '/v1/pairing-requests') {
             let body;
             try {

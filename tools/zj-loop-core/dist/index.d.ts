@@ -96,6 +96,7 @@ export * from './content-addressed-artifact-store.js';
 export * from './relay-contract.js';
 export * from './loopback-relay-server.js';
 export * from './human-approval-ui.js';
+export * from './opn-connection-read-model.js';
 export * from './sqlite-credential-issuance.js';
 export * from './credential-issuance-events.js';
 export * from './protocol-registry.js';

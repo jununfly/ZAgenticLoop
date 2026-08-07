@@ -24,6 +24,7 @@ export async function createOpnEndpointServer(input) {
         ownerAuthenticator: input.ownerAuthenticator,
         credentialClaim: input.credentialClaim,
         credentialIssue: input.credentialIssue,
+        connectionReadModel: input.connectionReadModel,
         readinessCheck: {
             check: async () => {
                 try {
