@@ -2,8 +2,8 @@ export declare const REAL_AGENT_DOGFOOD_GRAPH_ORCHESTRATOR_SCHEMA: "zj-loop.real
 export declare const REAL_AGENT_DOGFOOD_GRAPH_PHASES: readonly ["source_execution", "scope_observation", "independent_verification", "human_acceptance", "merge", "post_merge_gate", "cleanup"];
 export declare const REAL_AGENT_DOGFOOD_GRAPH_DIGEST_PROFILE: "zj-loop.real-agent-dogfood-graph-digest.v1";
 export declare const REAL_AGENT_DOGFOOD_GRAPH_EDGES: {
-    from: "cleanup" | "merge" | "post_merge_gate" | "source_execution" | "scope_observation" | "independent_verification" | "human_acceptance";
-    to: "cleanup" | "merge" | "post_merge_gate" | "source_execution" | "scope_observation" | "independent_verification" | "human_acceptance";
+    from: "cleanup" | "merge" | "source_execution" | "independent_verification" | "post_merge_gate" | "scope_observation" | "human_acceptance";
+    to: "cleanup" | "merge" | "source_execution" | "independent_verification" | "post_merge_gate" | "scope_observation" | "human_acceptance";
 }[];
 export type RealAgentDogfoodGraphPhase = typeof REAL_AGENT_DOGFOOD_GRAPH_PHASES[number];
 export type RealAgentDogfoodGraphPlan = {

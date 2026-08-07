@@ -92,7 +92,7 @@
     "1-3": {
       "id": "1-3",
       "label": "M3：跨设备 Multi-node Graph Atom",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -371,13 +371,14 @@
     "1-3-3": {
       "id": "1-3-3",
       "label": "跨设备真实三节点只读任务通过",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-3",
       "children": [
         "1-3-3-1",
         "1-3-3-2",
-        "1-3-3-3"
+        "1-3-3-3",
+        "1-3-3-4"
       ],
       "decisions": [
         {
@@ -424,6 +425,56 @@
           "q": "跨设备 Co-work Channel 是否继续承载在 M3 的 1-3-3 下？",
           "answer": "是，作为 1-3-3 下的 1-3-3-3 纵切；先完成 1-3-3-2-2 的真实 join、Human approval 与 enrollment，再实现 Co-work Channel，最终用它验收 M3。",
           "note": "不新建独立路线图，不先做脱离 OPN 身份、StateStore 和真实通路的 Web demo。"
+        },
+        {
+          "q": "M3 三节点 Graph Atom 的真实拓扑如何实例化？",
+          "answer": "采用 Mac OPN endpoint + Mac 本地 Agent1 + Windows Agent2：Mac endpoint 承担 Coordinator、Canonical StateStore 与 Human Approval UI；Agent1 和 Agent2 是两个独立真实执行节点；Windows 继续通过现有 OPN Transport 接入。",
+          "note": "复用现有两台设备，不虚构第三台物理设备；三节点指中心节点、Mac Agent1、Windows Agent2。"
+        },
+        {
+          "q": "三节点 Graph Atom 的中心责任单元如何划分？",
+          "answer": "中心责任单元固定为 Human + Coordinator；Coordinator 负责创建 Graph、路由依赖、聚合 Evidence 和生成 Review Handoff，但不能替代 Human 做最终接受或拒绝；Agent1/Agent2 只能提交结构化结果与 Evidence refs。",
+          "note": "保持 Human 最终责任不对称，且不让任一 Agent 自报 Graph 完成。"
+        },
+        {
+          "q": "M3 首个真实只读 Graph Atom 采用什么任务拓扑？",
+          "answer": "采用严格 DAG：Agent1 在 Mac 对固定 read-only snapshot 执行 source analysis，Coordinator 将其结构化输出和绑定的 Evidence 传给 Agent2，Agent2 在 Windows 独立执行 verification，Coordinator 在 Mac 做 canonical aggregation，随后生成 Review Handoff，由 Mac Human Approval UI 完成最终 decision。",
+          "note": "必须证明依赖、跨设备 Evidence 传递、独立验证和 Human 最终边界；不引入 merge 或写入。"
+        },
+        {
+          "q": "M3 是否绑定 Codex 或 WorkBuddy provider？",
+          "answer": "不绑定。协议与验收只使用 Agent1、Agent2；当前 dogfood 可由 Mac 上可用的 Codex/WorkBuddy 与 Windows 上可用的 WorkBuddy 作为 provider 实例，Provider 不可用时记录 blocked/skipped，不改变 Graph 语义。",
+          "note": "Codex 和 WorkBuddy 是当前设备实例，不是产品协议中的指定对象。"
+        },
+        {
+          "q": "M3 的只读边界与验收出口是什么？",
+          "answer": "所有 Agent execution、Artifact、Transport、StateStore projection 和 replay 均为 read-only；不修改源码、分支、worktree、配置或远端平台。只有当三节点事实链完整、Agent2 独立验证通过、Evidence digest 可重放、Review Handoff 到达 Human UI 且 Human decision 已签名时，M3 才算通过；provider 启动失败、依赖缺失、证据不完整、身份或 digest 漂移均为 blocked/outcome-uncertain，不得标记通过。",
+          "note": "M3 验证产品可用性，不提前承担 M4 写入型 Development Job 的复杂度。"
+        },
+        {
+          "q": "M3 真实 dogfood 的只读任务选什么？",
+          "answer": "选择一个对 ZAgenticLoop 本身有真实价值且有界的任务：Agent1 分析指定版本的 OPN/Graph 实现并生成结构化 findings Artifact；Agent2 只基于 Agent1 的输入 Evidence 与同一只读任务上下文独立复核 findings，输出 verified/blocked 及差异；不要求修改代码。",
+          "note": "任务本身服务于当前产品开发，能验证协作价值，又不会把 M3 混入写入型开发。"
+        },
+        {
+          "q": "Mac Agent1 与 Windows Agent2 如何获得一致输入？",
+          "answer": "Coordinator 在 Mac 创建带 plan/task/snapshot digest 的 bounded task Artifact；Agent1 使用 Mac 本地只读快照，Agent2 通过 OPN Artifact transfer 获取其声明的输入 Artifact 和必要上下文；两端必须回报 task_digest、input_artifact_ids 与 execution digest，任何漂移即 blocked。",
+          "note": "跨设备共享的是可验证 Artifact 和 digest，不共享隐式本地路径。"
+        },
+        {
+          "q": "真实 Provider 的选择与不可用处理如何定义？",
+          "answer": "运行时通过现有 Provider registry/launcher 发现本机可用 Agent；本次 dogfood 优先 Mac 使用当前可用 Provider、Windows 使用已验证可启动的 WorkBuddy Provider。发现、启动或输出协议不满足时记录结构化 blocked，不通过替换为伪造结果。",
+          "note": "真实验证优先，但 Provider 环境问题不能污染 OPN Graph 协议语义。"
+        },
+        {
+          "q": "M3 的失败、重连和重试如何处理？",
+          "answer": "Transport 断线允许沿现有 session/credential 机制重连并继续读取；Agent execution 不自动重试，不覆盖原 execution。确定失败记录 failed/blocked；进程终止、结果或 Evidence 无法确认记录 outcome-uncertain，必须由 Coordinator 生成新的显式 retry execution 或进入 Human review。",
+          "note": "保留事实链和责任边界，避免重复执行造成不可解释结果。"
+        },
+        {
+          "q": "Human 最终 decision 如何影响 M3 结果？",
+          "answer": "Mac Human Approval UI 只消费 Coordinator 生成的 Review Handoff；Human 必须看到 Agent1 findings、Agent2 verification、aggregation digest 和异常说明后签名 approve 或 reject。approve 才允许 Graph Atom 进入 M3 passed；reject、过期或未决均保持未完成，不由 Agent 或 Windows UI 推断通过。",
+          "note": "复用已验收的 Human action request/decision Artifact 与 Windows 只读投影。"
         }
       ],
       "notes": "真实 Mac + Windows Endpoint/HTTPS 已通过；真实 Windows enrollment、Human approval、credential claim、跨设备 Graph read-only task 尚未完成。"
@@ -677,11 +728,27 @@
         }
       ],
       "notes": "已完成真实验收：Mac 生成 HumanActionRequest，Windows receive/ack；Mac Human UI 经 Keychain 生成 signed decision，decision Artifact 通过 OPN 发送，Windows read-only projection 显示 approved。"
+    },
+    "1-3-3-4": {
+      "id": "1-3-3-4",
+      "label": "三节点只读 Graph Atom contract 与 OPN Transport wiring",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-3-3",
+      "children": [],
+      "decisions": [
+        {
+          "q": "本阶段的实现边界是什么？",
+          "answer": "新增 provider-neutral read-only Graph Atom contract；start/complete 分离 Mac Coordinator 路由与 Windows Agent2 verification；source/verification Artifact 通过 OPN Transport 与 digest 绑定；Human review 保留在 Mac；不接入写入型七阶段 Graph adapter，不执行 merge 或工作区副作用。",
+          "note": "第一条 M3 纵切先证明跨设备只读事实链，真实 Provider launcher 与 Human signed decision wiring 作为后续纵切。"
+        }
+      ],
+      "notes": "已完成 provider-neutral read-only Graph Atom contract；start/complete 分离 Mac Coordinator 路由与后续 verification；source Artifact、verification Artifact、digest binding、Human Review Handoff 已实现。Local OPN StateStore Transport 已通过 receive/ack 集成测试。新增只读 Web Console projection 与 GET /ui/graph-atoms API，Windows 可显示 awaiting-verification 与最终 decision，未提供写入接口。真实 Windows Agent2 verification 回送与 Mac completion coordinator wiring 仍在后续切片。"
     }
   },
   "metadata": {
     "created": "2026-08-06 14:10:10",
-    "updated": "2026-08-08 00:10:00",
+    "updated": "2026-08-08 00:40:23",
     "md_file": "docs/plans/opn-real-use-validation-milestones-roadmap.md"
   }
 }

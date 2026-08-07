@@ -161,6 +161,23 @@ export function createHumanApprovalUiServer(input) {
             }
             return;
         }
+        if (request.method === 'GET' && url.pathname === '/ui/graph-atoms') {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.upstream.graphAtoms) {
+                blocked(response, 503, 'graph-atom-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.graphAtoms()), side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'graph-atom-read-model-unavailable');
+            }
+            return;
+        }
         if (request.method === 'GET' && url.pathname === '/ui/human-actions') {
             if (!validSession(request, sessions, now)) {
                 blocked(response, 401, 'ui-session-required');

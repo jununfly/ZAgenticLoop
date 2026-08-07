@@ -8,6 +8,7 @@ import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner, HumanSignerIdentity } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
+import type { OpnReadOnlyGraphUiReadModel } from './opn-readonly-graph-ui-read-model.js';
 import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload, type HumanApprovalContext } from './human-authority.js';
 import { createHumanActionDecision, type HumanActionRequest } from './human-action.js';
 
@@ -17,6 +18,7 @@ export type HumanApprovalUiUpstream = {
   list(input: { network_id: string }): Promise<{ requests: PairingRequestProjection[] }>;
   connection?(): Promise<Record<string, unknown>>;
   messages?(): Promise<{ messages: OpnMessageReadModel[] }>;
+  graphAtoms?(): Promise<{ graphs: OpnReadOnlyGraphUiReadModel[] }>;
   approve?(input: { network_id: string; request_id: string; request_digest: string; approved_capabilities: string[]; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
   reject?(input: { network_id: string; request_id: string; request_digest: string; reason: string; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
   evidence?(input: { network_id: string; evidence_id: string }): Promise<Record<string, unknown>>;
@@ -184,6 +186,12 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.messages) { blocked(response, 503, 'inbox-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.messages()), side_effects_executed: false }); } catch { blocked(response, 503, 'inbox-read-model-unavailable'); }
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/ui/graph-atoms') {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.upstream.graphAtoms) { blocked(response, 503, 'graph-atom-read-model-unavailable'); return; }
+      try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.graphAtoms()), side_effects_executed: false }); } catch { blocked(response, 503, 'graph-atom-read-model-unavailable'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/human-actions') {

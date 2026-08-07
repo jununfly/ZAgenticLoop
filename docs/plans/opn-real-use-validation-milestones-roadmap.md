@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-real-use-validation-milestones-roadmap.json` | 最后更新: 2026-08-07 18:35:00
+> 数据文件: `opn-real-use-validation-milestones-roadmap.json` | 最后更新: 2026-08-08 00:40:23
 
 [~][X+] 1. OPN 真实可用与用户价值验证里程碑
 ├── [x][Y+] 1-1. M1：长期开发测试版 Runtime Trust
@@ -11,10 +11,10 @@
 │   ├── [x][Y+] 1-2-1. 同机 Agent node enrollment 与中心责任单元
 │   ├── [x][Y+] 1-2-2. 同机 Directed Graph 执行、Evidence 与 Human review
 │   └── [x][Y+] 1-2-3. 同机真实双 Agent 只读任务通过
-├── [~][Y+] 1-3. M3：跨设备 Multi-node Graph Atom
+├── [x][Y+] 1-3. M3：跨设备 Multi-node Graph Atom
 │   ├── [x][Y+] 1-3-1. 跨设备 pairing、device identity 与 secure transport
 │   ├── [x][Y+] 1-3-2. 跨设备 reconnect、replay 与 StateStore 协作
-│   └── [~][Y+] 1-3-3. 跨设备真实三节点只读任务通过
+│   └── [x][Y+] 1-3-3. 跨设备真实三节点只读任务通过
 ├── [ ][Y+] 1-4. M4：写入型 OPN Development Job
 │   ├── [ ][Y+] 1-4-1. 任务编排资源隔离检查与 worktree 策略
 │   ├── [ ][Y+] 1-4-2. 多 Agent commit、中心合并与合并后验证
@@ -24,19 +24,22 @@
     ├── [ ][Y+] 1-5-2. 记录用户价值、体验和失败恢复反馈
     └── [ ][Y+] 1-5-3. 根据真实反馈规划下一里程碑
 
-### 当前施工：1-3-3-3 已完成，准备收敛 M3 剩余 Graph Atom 验收
+### 当前施工：1. OPN 真实可用与用户价值验证里程碑
 
-Join API/CLI、CSR 签发、Windows join、Human approval 与 enrollment projection 已完成；跨设备 Co-work Channel 仍由 1-3-3-3 承载。
-
-当前已完成真实 Transport HTTP server 的 Core wiring：mTLS session、sender-bound envelope、StateStore offered/acknowledged facts 与 credential token verifier；Mac 中心节点已具备本地 StateStore-backed receive/ack 与 Inbox projection，并已用真实 Windows 消息验证。新增 provider-neutral Transport CLI：Windows `receive` 每次建立新 session 并 ack，Mac `local-send` 通过中心 StateStore 发回；Human OPN UI 已展示 Inbox projection。双向消息、断线重连、Artifact round-trip、WorkBuddy Agent task 与 Human action request/decision 均已完成真实 Mac/Windows 验收。Human action 验收证据：request `human-action-dogfood-1786117785218`，decision digest `sha256:0a906652...`，Windows read-only projection 状态为 `approved`。
+**决策：**
+- Q: 当前路线图的目标是正式发布还是先让产品真实可用？ → 先让产品真实可用并验证用户价值；正式发布、Developer ID、notarization、安装包和自动更新后置。 (路线图以 Human 可实际使用的 OPN 协作为出口，不以发布工程完整性作为前置条件。)
+- Q: 从当前 Runtime Trust 到真实 OPN co-work 需要几个里程碑？ → 采用五个：M1 Runtime Trust、M2 同机 Graph Atom、M3 跨设备 Graph Atom、M4 写入型 Development Job、M5 真实用户价值 Dogfood。 (每个里程碑必须有可运行出口，不能只完成协议或 fixture。)
+- Q: 是否允许在正式发布能力未完成时长期使用 development channel？ → 允许；development channel 是长期支持的开发测试产品形态，具备完整安全门槛但不承诺官方发布者身份。 (不让 Developer ID 阻塞用户价值验证。)
 
 **当前子树：**
-├── [x][Y+] 1-3-3-2-1. Windows Agent 本地 P-256 身份与证书 bootstrap
-└── [x][X+] 1-3-3-2-2. Windows CSR 签发、真实 join request 与 Human approval
-
-1-3-3-3-2 已完成真实 Mac↔Windows 双向消息、断线后新 session 重连、双端 CLI receive/ack 与 Mac OPN Inbox UI 验收。
-1-3-3-3-3 已实现 bounded content-addressed ArtifactStore、HTTP metadata/byte transfer、digest 校验、StateStore transfer facts 与 `artifact-send`/`artifact-download` CLI，并完成真实 Windows→Mac endpoint→Windows round-trip 验收：Mac 返回 `verified`，Windows 本地 ArtifactStore 返回 `store_status: stored`。
-已完成基于 OPN 通路的 Agent adapter 协作；不得把 Agent provider 直接耦合进核心 Transport。
-已完成真实 WorkBuddy 跨设备 task 闭环：`agent.task` → Envelope Task Artifact → NativeAgentRuntime → WorkBuddy Provider → result Artifact → `agent.result` → input ack。前两次 Provider 启动失败保留为 blocked execution，第三次新 attempt 达到 `evidence-recorded`，Mac StateStore 收到 `agent.result`，Windows 完成结果 Artifact digest 校验。
-已完成 Human action 闭环：Mac 生成 request Artifact 并通过 OPN 发送，Windows receive/ack；Mac Human Approval UI 经 Keychain signer 生成 decision Artifact，endpoint 通过 OPN 发送，Windows read-only projection 显示 `approved`。`1-3-3-3` 已完成，`1-3-3` 总节点仍保持进行中，等待 M3 的三节点 Graph Atom 只读任务验收。
+├── [x][Y+] 1-1. M1：长期开发测试版 Runtime Trust
+│   ... 2 more child nodes; run tree 1-1 --depth 2 for full view
+├── [x][Y+] 1-2. M2：同机 Multi-Agent Graph Atom
+│   ... 3 more child nodes; run tree 1-2 --depth 2 for full view
+├── [x][Y+] 1-3. M3：跨设备 Multi-node Graph Atom
+│   ... 3 more child nodes; run tree 1-3 --depth 2 for full view
+├── [ ][Y+] 1-4. M4：写入型 OPN Development Job
+│   ... 3 more child nodes; run tree 1-4 --depth 2 for full view
+└── [ ][Y+] 1-5. M5：真实用户价值 Dogfood
+    ... 3 more child nodes; run tree 1-5 --depth 2 for full view
 <!-- ROADMAP_SECTION_END -->
