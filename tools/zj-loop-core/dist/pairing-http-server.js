@@ -84,7 +84,8 @@ function sessionResponse(session, projection, token, enrollment) {
 }
 export function createPairingHttpServer(input) {
     const now = input.now ?? (() => new Date().toISOString());
-    const sessionTtl = input.session_ttl_ms ?? 5 * 60 * 1000;
+    // FIXME: During development dogfood this is intentionally 50 minutes instead of 5; restore 5 minutes for the production release.
+    const sessionTtl = input.session_ttl_ms ?? 50 * 60 * 1000;
     const sessions = new Map();
     return createServer({ ...input.tls, requestCert: true, rejectUnauthorized: false }, async (request, response) => {
         if (request.method === 'GET' && request.url === '/healthz') {

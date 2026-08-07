@@ -192,7 +192,8 @@ export function createSqliteCredentialIssuance(input) {
             const issuanceDigest = pairingCredentialIssuanceDigest(request);
             const current = now();
             const currentTime = parseTime(current, 'credential-clock-invalid');
-            const intentExpiresAt = new Date(Math.min(expiresAt, currentTime + 5 * 60 * 1000)).toISOString();
+            // FIXME: During development dogfood this is intentionally 50 minutes instead of 5; restore 5 minutes for the production release.
+            const intentExpiresAt = new Date(Math.min(expiresAt, currentTime + 50 * 60 * 1000)).toISOString();
             const credentialId = `credential_${issuanceDigest.slice('sha256:'.length, 'sha256:'.length + 32)}`;
             return atomic((database, appendEvent) => {
                 const existing = database.prepare('SELECT request_id, issuance_digest, credential_id, intent_expires_at, claimed_at FROM credential_issue_intents WHERE request_id = ?').get(request.request_id);
