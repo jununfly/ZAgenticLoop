@@ -1,6 +1,19 @@
 import { projectPairingRequests } from './pairing-projection.js';
+import { canonicalizeJson } from './sqlite-state-store.js';
 function clone(value) {
     return structuredClone(value);
+}
+export function pairingRecordsEquivalent(left, right) {
+    if (left.type !== right.type || left.event_id !== right.event_id || left.network_id !== right.network_id)
+        return false;
+    if (left.type === 'pairing-requested' && right.type === 'pairing-requested') {
+        const normalize = (record) => {
+            const { certificate_pem: _certificatePem, ...identity } = record.request.identity;
+            return { ...record, request: { ...record.request, identity } };
+        };
+        return canonicalizeJson(normalize(left)) === canonicalizeJson(normalize(right));
+    }
+    return canonicalizeJson(left) === canonicalizeJson(right);
 }
 export function createInMemoryPairingRecordStore() {
     const records = new Map();
@@ -10,7 +23,7 @@ export function createInMemoryPairingRecordStore() {
                 throw new Error('pairing-event-id-required');
             const existing = records.get(record.event_id);
             if (existing) {
-                if (JSON.stringify(existing) !== JSON.stringify(record))
+                if (!pairingRecordsEquivalent(existing, record))
                     throw new Error('pairing-event-conflict');
                 return { status: 'duplicate', record: clone(existing) };
             }
@@ -22,7 +35,7 @@ export function createInMemoryPairingRecordStore() {
             const projection = projectPairingRequests({ network_id: input.record.network_id, records: storedRecords, ...(input.now ? { now: input.now } : {}) }).find((item) => item.request_id === input.request_id);
             if (!projection || projection.request_digest !== input.request_digest || projection.status !== 'pending') {
                 const existing = storedRecords.find((record) => record.event_id === input.record.event_id);
-                if (existing && JSON.stringify(existing) === JSON.stringify(input.record))
+                if (existing && pairingRecordsEquivalent(existing, input.record))
                     return { status: 'duplicate', record: clone(existing) };
                 throw new Error('pairing-state-conflict');
             }

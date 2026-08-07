@@ -17,6 +17,15 @@ test('Pairing record store rejects event ID reuse with different content', async
   await assert.rejects(() => store.append({ ...record, occurred_at: '2026-07-29T00:01:00.000Z' }), { message: 'pairing-event-conflict' });
 });
 
+test('Pairing request retries tolerate PEM line-ending normalization while preserving certificate identity', async () => {
+  const store = createInMemoryPairingRecordStore();
+  const pemRecord = { ...record, event_id: 'pairing-requested:pair-pem-retry', request: { ...record.request, request_id: 'pair-pem-retry', identity: { ...record.request.identity, certificate_pem: '-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n' } } };
+  await store.append(pemRecord);
+  const retry = { ...pemRecord, request: { ...pemRecord.request, identity: { ...pemRecord.request.identity, certificate_pem: pemRecord.request.identity.certificate_pem.replaceAll('\\n', '\\r\\n') } } };
+  const result = await store.append(retry);
+  assert.equal(result.status, 'duplicate');
+});
+
 test('Pairing record store never returns records from another network', async () => {
   const store = createInMemoryPairingRecordStore();
   await store.append(record);

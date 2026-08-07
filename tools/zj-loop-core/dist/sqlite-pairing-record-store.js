@@ -1,5 +1,5 @@
-import { canonicalizeJson } from './sqlite-state-store.js';
 import { projectPairingRequests } from './pairing-projection.js';
+import { pairingRecordsEquivalent } from './pairing-record-store.js';
 export const SQLITE_PAIRING_RECORD_STORE_SCHEMA = 'zj-loop.sqlite_pairing_record_store.v1';
 function requireText(value, error) {
     if (!value.trim())
@@ -31,7 +31,7 @@ function eventFor(record) {
     };
 }
 function sameRecord(left, right) {
-    return canonicalizeJson(left) === canonicalizeJson(right);
+    return pairingRecordsEquivalent(left, right);
 }
 export function createSqlitePairingRecordStore(input) {
     if (!input.stateStore)

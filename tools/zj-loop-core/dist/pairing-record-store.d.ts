@@ -17,4 +17,5 @@ export type PairingRecordStore = {
     }>;
     list(network_id: string): Promise<PairingLifecycleRecord[]>;
 };
+export declare function pairingRecordsEquivalent(left: PairingLifecycleRecord, right: PairingLifecycleRecord): boolean;
 export declare function createInMemoryPairingRecordStore(): PairingRecordStore;
