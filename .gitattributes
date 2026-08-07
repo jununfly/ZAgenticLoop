@@ -1,0 +1,18 @@
+# Normalize line endings for build outputs and TypeScript sources.
+# Without this, `tsc` on Windows writes CRLF, and core.autocrlf rewrites
+# them again on stage, producing hundreds of phantom line-ending diffs
+# after a clean rebuild (see commit history around the dist rebuild on
+# 2026-08-07).
+* text=auto
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.d.ts text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.cjs  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.html text eol=lf
+*.css  text eol=lf
