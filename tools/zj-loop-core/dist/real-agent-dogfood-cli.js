@@ -121,6 +121,7 @@ async function append(stateStore, networkId, event, expectedRevision) {
 async function start(options) {
     const repoInput = required(options, 'repo');
     const goal = required(options, 'goal');
+    const humanId = typeof options['human-id'] === 'string' && options['human-id'].trim() !== '' ? options['human-id'].trim() : 'human-1';
     const providerId = required(options, 'provider-id');
     const adapter = required(options, 'adapter');
     const executable = required(options, 'executable');
@@ -165,7 +166,7 @@ async function start(options) {
         throw new Error(`worktree-${worktree.reason}`);
     const stateStore = createSqliteStateStore({ filename: paths.stateStore });
     try {
-        await stateStore.createNetwork({ network_id: networkId, owner_id: 'human-local', now });
+        await stateStore.createNetwork({ network_id: networkId, owner_id: humanId, now });
         const draft = createRealAgentDogfoodDraft({ network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, provider_id: providerId, adapter_version: adapter, created_at: now });
         let revision = 1;
         await append(stateStore, networkId, draft.event, revision++);
@@ -175,7 +176,7 @@ async function start(options) {
         await append(stateStore, networkId, preflight.event, revision++);
         const awaiting = createRealAgentDogfoodTransition({ lifecycle: preflight.lifecycle, to: 'awaiting-human-approval', event_id: `${dogfoodId}:awaiting-human-approval`, occurred_at: now, fact_digest: policyDigest, next_action: 'human-approval' });
         await append(stateStore, networkId, awaiting.event, revision++);
-        const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, adapter_contract_digest: adapterContractDigest, executable, network_policy: networkPolicy, execution_mode: mode, allowed_files: allowedFiles, graph_plan: graphPlan, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
+        const summaryBase = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: awaiting.lifecycle.status, network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, human_id: humanId, goal, repo: paths.repo, worktree_path: worktree.worktree_path, branch: worktree.branch, base_commit: worktree.base_commit, provider_id: providerId, adapter: adapter, adapter_contract_digest: adapterContractDigest, executable, network_policy: networkPolicy, execution_mode: mode, allowed_files: allowedFiles, graph_plan: graphPlan, policy_digest: policyDigest, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
         const summary = { ...summaryBase, summary_digest: digest(summaryBase) };
         const summaryPath = path.join(paths.evidenceStore, `${dogfoodId}.approval-summary.json`);
         await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, { mode: 0o600 });
@@ -530,7 +531,7 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'provider-runtime-ipc', flag: 'provider-runtime-ipc', type: 'string', description: 'Persisted Provider Runtime IPC binding JSON for Codex resume' },
             { name: 'worktree-root', flag: 'worktree-root', type: 'string', description: 'Directory for isolated execution worktrees' },
             { name: 'graph-plan', flag: 'graph-plan', type: 'string', description: 'Persisted Graph dogfood plan using prepared target/source/verifier worktrees' },
-            { name: 'human-id', flag: 'human-id', type: 'string', description: 'Final responsibility Human id for Graph resume' },
+            { name: 'human-id', flag: 'human-id', type: 'string', description: 'Human owner identity (default: human-1)' },
             { name: 'coordinator-id', flag: 'coordinator-id', type: 'string', description: 'Coordinator identity for Graph resume' },
             { name: 'session-id', flag: 'session-id', type: 'string', description: 'Coordinator session identity for Graph resume' },
             { name: 'conformance-evidence', flag: 'conformance-evidence', type: 'string', description: 'Digest of deterministic conformance Evidence for preflight' },

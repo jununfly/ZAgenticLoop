@@ -76,6 +76,7 @@ test('start persists preparation and returns awaiting-human-approval without run
     const summary = JSON.parse(await readFile(output.approval_summary_path, 'utf8'));
     assert.equal(summary.goal, 'verify the atom');
     assert.equal(summary.status, 'awaiting-human-approval');
+    assert.equal(summary.human_id, 'human-1');
     assert.equal(summary.execution_mode, 'read-only');
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -285,7 +286,7 @@ test('resume blocks before running when the Codex Runtime IPC binding is missing
   const statePath = path.join(runtime, 'state.db');
   const evidencePath = path.join(runtime, 'evidence');
   try {
-    const started = await invoke(['start', '--goal', 'run detached atom', '--repo', repo, '--provider-id', 'codex', '--adapter', 'codex-agent-provider.v1', '--executable', executable, '--network-policy', 'network-denied', '--state-store', statePath, '--evidence-store', evidencePath, '--worktree-root', path.join(runtime, 'worktrees')]);
+    const started = await invoke(['start', '--goal', 'run detached atom', '--repo', repo, '--human-id', 'human-local', '--provider-id', 'codex', '--adapter', 'codex-agent-provider.v1', '--executable', executable, '--network-policy', 'network-denied', '--state-store', statePath, '--evidence-store', evidencePath, '--worktree-root', path.join(runtime, 'worktrees')]);
     const created = JSON.parse(started.stdout);
     const summary = JSON.parse(await readFile(created.approval_summary_path, 'utf8'));
     const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64) });

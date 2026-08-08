@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Multi-node Graph Atom E2E 下一里程碑",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -16,7 +16,8 @@
         "1-4",
         "1-5",
         "1-6",
-        "1-7"
+        "1-7",
+        "1-8"
       ],
       "decisions": [
         {
@@ -28,6 +29,11 @@
           "q": "完成 Graph Worker lease、Coordinator resume gate 与 source_execution closeout 后，下一步如何推进？",
           "answer": "先同步路线图状态与决策事实，再继续 1-6 失败恢复、重放与端到端 conformance",
           "note": "1-4 保留 in_progress；已完成 Worker lease 双绑定、Coordinator resume gate、Graph source_execution Evidence/lease closeout。后续聚焦 1-6 的失败矩阵、重放和真实/端到端 conformance。"
+        },
+        {
+          "q": "当前相关路线图没有 in-progress 叶节点，是否新建下一里程碑承载本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑？",
+          "answer": "同意：新建 1-8，本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑。",
+          "note": "使用真实 Runtime binding、execution 专属 auth-ref/admission、全新 disposable Graph attempt，重新完成 Human approval 与 source_execution 到 Human acceptance 的 Evidence 闭环。"
         }
       ],
       "notes": ""
@@ -1915,11 +1921,72 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-8": {
+      "id": "1-8",
+      "label": "本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-8-1",
+        "1-8-2",
+        "1-8-3",
+        "1-8-4"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-8-1": {
+      "id": "1-8-1",
+      "label": "创建绑定当前 Runtime 的 disposable Graph plan 与 worktrees",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": "已创建并验证 disposable Graph plan/worktrees，baseline=73752d6939dc0ee7a6c88cc8bd4c01e2f99b0cb5。"
+    },
+    "1-8-2": {
+      "id": "1-8-2",
+      "label": "初始化 execution 专属 ProviderAuthRef 与 TrustedRunner admission",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [
+        {
+          "q": "当前 development Runtime 的 auth-ref 是否可以跨 execution 复用？",
+          "answer": "不可以：auth-ref 必须绑定本次 execution/attempt；为新的 Graph attempt 重启 disposable development Runtime 并发行新的 execution-specific ref。",
+          "note": "保持 ProviderAuthRef、Runtime binding、admission、worker context 四方严格绑定，避免为续跑便利而放宽安全边界。"
+        }
+      ],
+      "notes": "已为 retry4 真实写入 Human authority revision 5、TrustedRunner registry revision 6，并生成 execution-specific ProviderAuthRef、Runtime binding 与 admission artifact。"
+    },
+    "1-8-3": {
+      "id": "1-8-3",
+      "label": "重新完成 Human approval 并 resume source execution",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": "retry4 已通过真实 macOS Keychain Human approval、admission 校验和 Coordinator resume gate，source worker 已启动。"
+    },
+    "1-8-4": {
+      "id": "1-8-4",
+      "label": "完成跨设备 independent verification 与 Human acceptance",
+      "status": "blocked",
+      "mode": "exploit",
+      "parent": "1-8",
+      "children": [],
+      "decisions": [],
+      "notes": "真实 Runtime provider execution 被记录为 provider-adapter-exception；cleanup=uncertain(provider-runtime-launch-handle-missing)，且 source worktree commit_parent=76097e02f6e64f7bcdba95d770df2bcbce0eca30 与 baseline=73752d6939dc0ee7a6c88cc8bd4c01e2f99b0cb5 不一致，write-scope=file-drift，尚未进入 verification/Human acceptance。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-08 17:14:11",
+    "updated": "2026-08-08 18:32:01",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
