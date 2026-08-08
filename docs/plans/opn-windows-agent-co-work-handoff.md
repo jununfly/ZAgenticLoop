@@ -6,6 +6,11 @@
 
 ## Read First
 
+For cross-platform implementation, shell authoring, environment reporting, and
+Agent handoff conventions, read:
+
+- `docs/devs/cross-platform-development-conventions.md`
+
 The roadmap is the source of truth:
 
 - `docs/plans/opn-real-use-validation-milestones-roadmap.json`
