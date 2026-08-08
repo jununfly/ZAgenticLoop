@@ -4,6 +4,8 @@ import { realAgentDogfoodWorkerLeaseDigest } from './real-agent-dogfood-digests.
 
 export const REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA = 'zj-loop.real_agent_dogfood_worker_lease.v1' as const;
 export const REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE = 'real-agent-dogfood-worker' as const;
+// The provider runtime is bounded at 120 seconds; keep the worker lease alive through its termination grace period.
+export const REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS = 180_000;
 
 export type RealAgentDogfoodWorkerLeaseResult =
   | { status: 'acquired'; lease_id: string; worker_id: string; expires_at: string; revision: number }
@@ -52,7 +54,7 @@ function event(input: { network_id: string; execution_id: string; lease_id: stri
 
 export async function acquireRealAgentDogfoodWorkerLease(input: { stateStore: SqliteStateStore; network_id: string; execution_id: string; worker_id: string; execution_binding_digest: string; now?: string; ttl_ms?: number }): Promise<RealAgentDogfoodWorkerLeaseResult> {
   const now = input.now ?? new Date().toISOString();
-  const ttl = input.ttl_ms ?? 30_000;
+  const ttl = input.ttl_ms ?? REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS;
   const current = await readLease(input);
   if (current) {
     if (current.fact.operation === 'released') {
@@ -73,7 +75,7 @@ export async function acquireRealAgentDogfoodWorkerLease(input: { stateStore: Sq
 
 export async function renewRealAgentDogfoodWorkerLease(input: { stateStore: SqliteStateStore; network_id: string; execution_id: string; lease_id: string; worker_id: string; execution_binding_digest: string; expected_revision: number; now?: string; ttl_ms?: number }): Promise<RealAgentDogfoodWorkerLeaseResult> {
   const now = input.now ?? new Date().toISOString();
-  const ttl = input.ttl_ms ?? 30_000;
+  const ttl = input.ttl_ms ?? REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS;
   const current = await readLease(input);
   if (!current || current.fact.lease_id !== input.lease_id || current.fact.worker_id !== input.worker_id || current.fact.execution_binding_digest !== input.execution_binding_digest) return { status: 'blocked', reason: 'worker-lease-mismatch' };
   if (current.fact.operation === 'released') return { status: 'blocked', reason: 'worker-lease-released' };

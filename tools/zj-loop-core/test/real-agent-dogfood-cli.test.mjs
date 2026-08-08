@@ -304,6 +304,7 @@ test('resume blocks before running when the Codex Runtime IPC binding is missing
     const admission = admitTrustedRunnerExecution({ snapshot: registry.snapshot, runner_id: 'runner-detached', required_capabilities: ['process-boundary'] });
     assert.equal(admission.status, 'admitted');
     const admissionContextPath = path.join(evidencePath, 'admission-bound-execution.json');
+    const providerRuntimePath = path.join(evidencePath, 'provider-runtime-ipc.json');
     const admissionBoundExecution = createAdmissionBoundExecution({
       preflight: { network_id: created.network_id, plan_id: 'plan-detached', plan_revision: 1, task_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, provider_id: 'codex', adapter_version: 'codex-agent-provider.v1', executable: summary.executable, executable_digest: 'sha256:' + 'a'.repeat(64), args: ['exec', '--json', '--ephemeral', '--sandbox', 'read-only', '--cd', summary.worktree_path], argv_digest: 'sha256:' + 'b'.repeat(64), cwd: summary.worktree_path, cwd_digest: 'sha256:' + 'c'.repeat(64), env_allowlist: [], env_policy_digest: 'sha256:' + 'd'.repeat(64), sandbox_policy_digest: 'sha256:' + 'e'.repeat(64), network_policy: { mode: 'network-denied', policy_digest: 'sha256:' + 'f'.repeat(64) }, timeout_ms: 30_000, termination_grace_ms: 1_000, max_stdout_bytes: 1024 * 1024, max_stderr_bytes: 1024 * 1024, orchestration_preflight_digest: 'sha256:' + '1'.repeat(64), issued_at: '2026-08-01T12:00:00.000Z', expires_at: '2026-08-01T13:00:00.000Z' },
       execution: { helper: { helper_id: 'helper-detached', helper_version: '1', protocol_version: 'zj-loop.trusted_runner_protocol.v1', executable_digest: 'sha256:' + '2'.repeat(64) } },
@@ -311,9 +312,11 @@ test('resume blocks before running when the Codex Runtime IPC binding is missing
       runtime_binding: runtimeBinding,
     });
     await writeFile(admissionContextPath, JSON.stringify(admissionBoundExecution));
-    const bound = await invoke(['bind-admission', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--admission-context', admissionContextPath, '--state-store', statePath, '--evidence-store', evidencePath]);
+    await writeFile(providerRuntimePath, JSON.stringify({ socket_path: path.join(runtime, 'provider-runtime.sock'), contract_digest: 'sha256:' + '9'.repeat(64), adapter_contract_digest: 'sha256:' + '8'.repeat(64), runtime_binding: runtimeBinding }));
+    const bound = await invoke(['bind-admission', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--admission-context', admissionContextPath, '--provider-runtime-ipc', providerRuntimePath, '--state-store', statePath, '--evidence-store', evidencePath]);
     assert.equal(bound.exitCode, 0, bound.stderr);
     const boundSummary = JSON.parse(await readFile(created.approval_summary_path, 'utf8'));
+    assert.equal(boundSummary.adapter_contract_digest, 'sha256:' + '8'.repeat(64));
     const approval = await authority.signApprovalContext({ action: 'real-agent-dogfood.approve', request_id: created.dogfood_id, request_digest: boundSummary.summary_digest, network_id: created.network_id, device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64), issued_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() });
     await writeFile(path.join(evidencePath, 'approval-detached.json'), JSON.stringify({ schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: created.dogfood_id, execution_id: created.execution_id, attempt: 1, lifecycle_revision: 4, policy_digest: boundSummary.policy_digest, approval_summary_digest: boundSummary.summary_digest, admission_digest: boundSummary.admission_digest, provider_auth_ref: boundSummary.provider_auth_ref, runtime_binding: boundSummary.runtime_binding, approval, identity: authority.getPublicIdentity() }));
     const resumed = await invoke(['resume', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--approval-id', 'approval-detached', '--admission-context', admissionContextPath, '--state-store', statePath, '--evidence-store', evidencePath]);

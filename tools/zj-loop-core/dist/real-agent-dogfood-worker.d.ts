@@ -1,6 +1,7 @@
 import type { SqliteStateStore } from './sqlite-state-store.js';
 export declare const REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA: "zj-loop.real_agent_dogfood_worker_lease.v1";
 export declare const REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE: "real-agent-dogfood-worker";
+export declare const REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS = 180000;
 export type RealAgentDogfoodWorkerLeaseResult = {
     status: 'acquired';
     lease_id: string;

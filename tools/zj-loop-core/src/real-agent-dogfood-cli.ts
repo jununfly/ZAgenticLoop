@@ -36,7 +36,7 @@ const CLI_NAME = 'zj-loop-real-agent-dogfood';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 
 type RuntimePaths = { state_store: string; evidence_store: string; worktree_root: string };
-type ProviderRuntimeIpcBinding = { socket_path: string; correlation_id?: string; timeout_ms?: number; contract_digest: string; runtime_binding: { runtime_identity_fingerprint: string; runtime_manifest_digest: string; provider_capabilities_digest: string } };
+type ProviderRuntimeIpcBinding = { socket_path: string; correlation_id?: string; timeout_ms?: number; contract_digest: string; adapter_contract_digest: string; runtime_binding: { runtime_identity_fingerprint: string; runtime_manifest_digest: string; provider_capabilities_digest: string } };
 
 export function defaultRealAgentDogfoodRuntimePaths(platform = process.platform, home = os.homedir(), env = process.env): RuntimePaths {
   const root = platform === 'darwin'
@@ -226,11 +226,17 @@ async function bindAdmission(options: Record<string, string | boolean | undefine
     if (replayed.status === 'blocked') throw new Error(`trusted-runner-admission-${replayed.reason}`);
     const replayedBinding = { ...replayed.binding, provider_auth_ref: admission.binding.provider_auth_ref, runtime_binding: admission.binding.runtime_binding };
     if (!admissionBindingsEqual(replayedBinding, admission.binding)) throw new Error('trusted-runner-admission-binding-provenance-mismatch');
+    let runtimeIpc: ProviderRuntimeIpcBinding | undefined;
+    const runtimeIpcPath = typeof options['provider-runtime-ipc'] === 'string' ? options['provider-runtime-ipc'] : '';
+    if (runtimeIpcPath) {
+      try { runtimeIpc = JSON.parse(await readFile(runtimeIpcPath, 'utf8')) as ProviderRuntimeIpcBinding; } catch { throw new Error('provider-runtime-ipc-invalid'); }
+      if (!runtimeIpc || typeof runtimeIpc.socket_path !== 'string' || !runtimeIpc.socket_path.trim() || !DIGEST.test(runtimeIpc.contract_digest) || !DIGEST.test(runtimeIpc.adapter_contract_digest) || JSON.stringify(runtimeIpc.runtime_binding) !== JSON.stringify(admission.binding.runtime_binding)) throw new Error('provider-runtime-ipc-binding-invalid');
+    }
     const summaryPath = path.join(evidenceStore, `${dogfoodId}.approval-summary.json`);
     const summary = JSON.parse(await readFile(summaryPath, 'utf8')) as Record<string, unknown>;
     if (summary.network_id !== networkId || summary.execution_id !== lifecycle.execution_id || summary.attempt !== lifecycle.attempt) throw new Error('admission-bind-summary-mismatch');
     const { summary_digest: _, ...summaryBase } = summary;
-    const boundSummaryBase = { ...summaryBase, admission_digest: trustedRunnerAdmissionBundleDigest(admission), provider_auth_ref: admission.binding.provider_auth_ref, runtime_binding: admission.binding.runtime_binding };
+    const boundSummaryBase = { ...summaryBase, ...(runtimeIpc ? { adapter_contract_digest: runtimeIpc.adapter_contract_digest } : {}), admission_digest: trustedRunnerAdmissionBundleDigest(admission), provider_auth_ref: admission.binding.provider_auth_ref, runtime_binding: admission.binding.runtime_binding };
     const boundSummary = { ...boundSummaryBase, summary_digest: digest(boundSummaryBase) };
     await writeFile(summaryPath, `${JSON.stringify(boundSummary, null, 2)}\n`, { mode: 0o600 });
     return outputLifecycle(lifecycle, { provider_invoked: false, approval_summary_path: summaryPath, approval_summary_digest: boundSummary.summary_digest, admission_digest: boundSummary.admission_digest });

@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-08 18:32:01
+> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-08 18:44:14
 
 [~][X+] 1. OPN Multi-node Graph Atom E2E 下一里程碑
 ├── [x][Y+] 1-1. Multi-node Graph Atom 场景与 Single-Agent baseline 增量
@@ -20,13 +20,12 @@
     ├── [x][Y+] 1-8-1. 创建绑定当前 Runtime 的 disposable Graph plan 与 worktrees
     ├── [x][Y+] 1-8-2. 初始化 execution 专属 ProviderAuthRef 与 TrustedRunner admission
     ├── [x][Y+] 1-8-3. 重新完成 Human approval 并 resume source execution
-    └── [!][Y+] 1-8-4. 完成跨设备 independent verification 与 Human acceptance
+    └── [~][Y+] 1-8-4. 完成跨设备 independent verification 与 Human acceptance
 
-### 当前施工：1-8. 本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑
+### 当前施工：1-8-4. 完成跨设备 independent verification 与 Human acceptance
 
-**当前子树：**
-├── [x][Y+] 1-8-1. 创建绑定当前 Runtime 的 disposable Graph plan 与 worktrees
-├── [x][Y+] 1-8-2. 初始化 execution 专属 ProviderAuthRef 与 TrustedRunner admission
-├── [x][Y+] 1-8-3. 重新完成 Human approval 并 resume source execution
-└── [!][Y+] 1-8-4. 完成跨设备 independent verification 与 Human acceptance
+已修复并测试 Runtime adapter contract digest wiring；准备重新执行真实 provider launch。
+
+**决策：**
+- Q: 真实 Provider Runtime 的 adapter contract digest 如何绑定到 Graph execution？ → bind-admission 必须读取当前 Runtime IPC binding，并将其 adapter_contract_digest 绑定进 approval summary 与 worker context；不能继续使用启动前独立推导的 digest。 (修复 provider-runtime-launch-handle-missing 前的 contract mismatch，保持 Runtime binding 与 admission 四方一致。)
 <!-- ROADMAP_SECTION_END -->

@@ -1976,17 +1976,23 @@
     "1-8-4": {
       "id": "1-8-4",
       "label": "完成跨设备 independent verification 与 Human acceptance",
-      "status": "blocked",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-8",
       "children": [],
-      "decisions": [],
-      "notes": "真实 Runtime provider execution 被记录为 provider-adapter-exception；cleanup=uncertain(provider-runtime-launch-handle-missing)，且 source worktree commit_parent=76097e02f6e64f7bcdba95d770df2bcbce0eca30 与 baseline=73752d6939dc0ee7a6c88cc8bd4c01e2f99b0cb5 不一致，write-scope=file-drift，尚未进入 verification/Human acceptance。"
+      "decisions": [
+        {
+          "q": "真实 Provider Runtime 的 adapter contract digest 如何绑定到 Graph execution？",
+          "answer": "bind-admission 必须读取当前 Runtime IPC binding，并将其 adapter_contract_digest 绑定进 approval summary 与 worker context；不能继续使用启动前独立推导的 digest。",
+          "note": "修复 provider-runtime-launch-handle-missing 前的 contract mismatch，保持 Runtime binding 与 admission 四方一致。"
+        }
+      ],
+      "notes": "已修复并测试 Runtime adapter contract digest wiring；准备重新执行真实 provider launch。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-08 18:32:01",
+    "updated": "2026-08-08 18:44:14",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
