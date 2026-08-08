@@ -25,6 +25,11 @@ export type RealAgentDogfoodWorkerResult = {
 
 type ProviderCleanupResult = { status: 'cleaned'; proof_digest: string } | { status: 'uncertain'; reason: string };
 
+function providerExceptionReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(message) && message.length <= 96 ? message : 'provider-adapter-exception';
+}
+
 function validateAdmissionBoundExecution(input: { admission_bound_execution: AdmissionBoundExecution; lifecycle: RealAgentDogfoodLifecycle; executable: string; worktree_path: string }): void {
   const admission = input.admission_bound_execution;
   if (validateLocalExecutionPreflight(admission.preflight).status !== 'valid') throw new Error('worker-admission-preflight-invalid');
@@ -41,8 +46,8 @@ export async function executeRealAgentDogfoodWorker(input: { stateStore: SqliteS
   let result: ProviderResult;
   try {
     result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable, mode: input.execution_mode });
-  } catch {
-    result = { status: 'failed', success: false, pid: 0, exit_code: null, signal: null, stdout: '', stderr: '', reason: 'provider-adapter-exception' };
+  } catch (error) {
+    result = { status: 'failed', success: false, pid: 0, exit_code: null, signal: null, stdout: '', stderr: '', reason: providerExceptionReason(error) };
   }
   const normalized = result.provider_result ?? providerResultFromLocalProcess(result);
   const normalizedCheck = validateProviderResult(normalized);

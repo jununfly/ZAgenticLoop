@@ -196,9 +196,9 @@ test('worker converts provider exceptions into a cleanup-gated failure fact', as
   try {
     const result = await executeRealAgentDogfoodWorker({ stateStore, evidenceStore, lifecycle, worker_id: 'worker-1', lease_id: 'lease-1', binding, admission_bound_execution, worktree_path: '/tmp/worktree', executable, goal: 'do the atom', provider: { async run() { throw new Error('provider-start-failed'); } }, provider_cleanup: async () => ({ status: 'cleaned', proof_digest: d('7') }), expected_revision: 5, now: '2026-08-01T12:00:04.000Z' });
     assert.equal(result.status, 'blocked');
-    assert.equal(result.reason_code, 'provider-provider-adapter-exception');
+    assert.equal(result.reason_code, 'provider-provider-start-failed');
     const fact = await evidenceStore.read({ digest: result.provider_fact_digest, actor: 'test' });
-    assert.match(fact.toString(), /provider-adapter-exception/);
+    assert.match(fact.toString(), /provider-start-failed/);
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
 

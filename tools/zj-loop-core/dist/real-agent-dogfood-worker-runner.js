@@ -4,6 +4,10 @@ import { verifyRealAgentDogfoodPostRunProof } from './real-agent-dogfood-post-ru
 import { validateLocalExecutionPreflight } from './local-execution-preflight.js';
 import { providerResultFromLocalProcess, validateProviderResult } from './provider-runtime-adapter.js';
 import { observeRealAgentDogfoodGitScope } from './real-agent-dogfood-git-scope.js';
+function providerExceptionReason(error) {
+    const message = error instanceof Error ? error.message : '';
+    return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(message) && message.length <= 96 ? message : 'provider-adapter-exception';
+}
 function validateAdmissionBoundExecution(input) {
     const admission = input.admission_bound_execution;
     if (validateLocalExecutionPreflight(admission.preflight).status !== 'valid')
@@ -25,8 +29,8 @@ export async function executeRealAgentDogfoodWorker(input) {
     try {
         result = await input.provider.run({ cwd: input.worktree_path, prompt: input.goal, executable: input.executable, mode: input.execution_mode });
     }
-    catch {
-        result = { status: 'failed', success: false, pid: 0, exit_code: null, signal: null, stdout: '', stderr: '', reason: 'provider-adapter-exception' };
+    catch (error) {
+        result = { status: 'failed', success: false, pid: 0, exit_code: null, signal: null, stdout: '', stderr: '', reason: providerExceptionReason(error) };
     }
     const normalized = result.provider_result ?? providerResultFromLocalProcess(result);
     const normalizedCheck = validateProviderResult(normalized);
