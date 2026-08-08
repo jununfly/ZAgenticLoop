@@ -65,7 +65,10 @@ export function createProviderAuthRuntimeIpcLauncher(input) {
             const modeValue = taskValue(task, 'execution_mode') ?? 'read-only';
             if (modeValue !== 'read-only' && modeValue !== 'write-enabled')
                 throw new Error('provider-runtime-ipc-task-mode-invalid');
-            const result = await provider.run({ cwd: input.working_directory, prompt, mode: modeValue, env_allowlist: [], env: {}, timeout_ms: timeoutMs, termination_grace_ms: terminationGraceMs, max_stdout_bytes: 10 * 1024 * 1024, max_stderr_bytes: 10 * 1024 * 1024 });
+            const envAllowlist = input.env_allowlist ?? [];
+            const env = input.env ?? {};
+            const boundedEnv = Object.fromEntries(envAllowlist.filter((key) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(key)).map((key) => [key, env[key] ?? process.env[key] ?? '']).filter(([, value]) => value !== ''));
+            const result = await provider.run({ cwd: input.working_directory, prompt, mode: modeValue, env_allowlist: Object.keys(boundedEnv), env: boundedEnv, timeout_ms: timeoutMs, termination_grace_ms: terminationGraceMs, max_stdout_bytes: 10 * 1024 * 1024, max_stderr_bytes: 10 * 1024 * 1024 });
             return { status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, stdout: result.stdout, stderr: result.stderr, provider_result: result.provider_result };
         },
     });

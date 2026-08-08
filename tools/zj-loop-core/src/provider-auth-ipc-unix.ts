@@ -37,7 +37,19 @@ export function createUnixProviderAuthIpcServer(input: { socket_path: string; co
         socket.on('error', () => connections.delete(socket));
       });
       await new Promise<void>((resolve, reject) => { server?.once('error', reject).listen(input.socket_path, resolve); });
-      await chmod(input.socket_path, 0o600);
+      // macOS can expose a connected Unix socket before its directory entry is
+      // visible to chmod. The socket is still live; retry briefly and tolerate
+      // only that platform race so startup does not leak a listening server.
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        try { await chmod(input.socket_path, 0o600); break; }
+        catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || attempt === 9) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+      }
     },
     async close(): Promise<void> {
       for (const socket of connections) socket.destroy();

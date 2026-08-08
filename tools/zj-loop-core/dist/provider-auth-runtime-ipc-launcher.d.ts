@@ -29,6 +29,8 @@ export declare function createProviderAuthRuntimeIpcLauncher(input: {
     provider_executable: string;
     working_directory: string;
     process_adapter?: LocalProcessAdapter;
+    env_allowlist?: string[];
+    env?: Record<string, string>;
     invocation_timeout_ms?: number;
     termination_grace_ms?: number;
 }): ProviderAuthRuntimeIpcLauncher;

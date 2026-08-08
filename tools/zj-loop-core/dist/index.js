@@ -217,6 +217,8 @@ export * from './provider-runtime-artifact-verifier.js';
 export * from './provider-runtime-artifact-approval.js';
 export * from './provider-runtime-artifact-approval-store.js';
 export * from './provider-runtime-artifact-bootstrap.js';
+export * from './provider-runtime-dev-entrypoint.js';
+export * from './provider-runtime-dev-cli.js';
 export * from './framed-json-transport.js';
 export * from './framed-json-unix.js';
 export * from './provider-auth-authority-ipc-protocol.js';
