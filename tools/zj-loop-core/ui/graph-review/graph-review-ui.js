@@ -2,7 +2,7 @@
   const state = { events: [], selected: null, accepted: new Set() };
   const $ = (id) => document.getElementById(id);
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-  const stateLabel = { 'review-ready': '等待 Human 审查', blocked: '已阻塞', 'scope-drift': 'Scope 不一致', accepted: '已接受' };
+  const stateLabel = { 'review-ready': '等待 Human 审查', 'pending-human-review': '等待 Human 审查', 'in-progress': 'Graph 执行中', 'outcome-uncertain': '结果不确定', approved: '已批准', blocked: '已阻塞', 'scope-drift': 'Scope 不一致', accepted: '已接受' };
   const stageLabel = { succeeded: '已完成', blocked: '已阻塞', passed: '已通过', accepted: '已接受', converged: '已收敛' };
   const api = async (path, options = {}) => {
     const response = await fetch(path, { credentials: 'same-origin', ...options, headers: { ...(options.body ? { 'content-type': 'application/json' } : {}), ...(options.headers || {}) } });
@@ -10,7 +10,7 @@
     if (!response.ok) throw new Error(body.reason || '请求受阻');
     return body;
   };
-  const fmt = (value) => new Date(value).toLocaleString('zh-CN', { hour12: false });
+  const fmt = (value) => { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleString('zh-CN', { hour12: false }) : '时间不可用'; };
   function setStatus(text, kind) { const node = $('connection-status'); node.textContent = text; node.className = `status status-${kind}`; }
   function renderEvents() { const list = $('event-list'); list.innerHTML = ''; $('empty-state').hidden = state.events.length !== 0; state.events.forEach((event) => { const accepted = state.accepted.has(event.event_id); const button = document.createElement('button'); button.type = 'button'; button.className = `event-item${state.selected?.event_id === event.event_id ? ' selected' : ''}`; button.innerHTML = `<span class="state state-${escapeHtml(accepted ? 'accepted' : event.status)}">${escapeHtml(accepted ? stateLabel.accepted : stateLabel[event.status] || event.status)}</span><h3>${escapeHtml(event.title)}</h3><p>${escapeHtml(fmt(event.created_at))}</p><small>${escapeHtml(accepted ? 'Acceptance Fact 已记录' : event.next_action?.label || '')}</small>`; button.addEventListener('click', () => loadDetail(event.event_id)); list.append(button); }); }
   function acceptancePanel(model) {
@@ -19,6 +19,7 @@
     return `<section class="acceptance-panel"><div><strong>接受当前 Review Handoff</strong><span>确认以下绑定摘要后，写入 Human Acceptance Fact。</span></div><dl class="acceptance-bindings"><div><dt>Event</dt><dd>${escapeHtml(model.event.event_id)}</dd></div><div><dt>Plan</dt><dd>${escapeHtml(model.plan.plan_id)} / revision ${escapeHtml(model.plan.plan_revision)}</dd></div><div><dt>Review Handoff</dt><dd>${escapeHtml(model.review_handoff.handoff_digest)}</dd></div><div><dt>Verification</dt><dd>${escapeHtml(model.verification.verification_digest)}</dd></div></dl><button id="accept-event" class="button button-primary" type="button">接受当前结果</button><p id="accept-error" class="accept-error" hidden></p></section>`;
   }
   function renderDetail(model, evidence) {
+    if (model.schema === 'zj-loop.real_agent_dogfood_graph_review_read_model.v1') return renderRealGraphDetail(model, evidence);
     const nodes = model.nodes.map((node) => `<article class="node${node.status === 'blocked' ? ' blocked' : ''}"><h3>${escapeHtml(node.label)}</h3><div class="node-meta"><span>${escapeHtml(node.assigned_node)}</span><span>${escapeHtml(stageLabel[node.status] || node.status)}</span><span>依赖：${escapeHtml(node.depends_on.length ? node.depends_on.join(', ') : '无')}</span></div><div class="digest">execution_digest: ${escapeHtml(node.execution.execution_digest)}</div></article>`).join('');
     const evidenceRows = evidence.map((item) => `<div class="evidence-row"><strong>${escapeHtml(item.kind)}</strong><div class="digest">${escapeHtml(item.artifact_id)} · ${escapeHtml(item.digest)}</div></div>`).join('');
     const blocked = model.blocking_reasons.length ? `<div class="notice notice-error"><strong>阻塞原因</strong><div>${model.blocking_reasons.map(escapeHtml).join('、')}</div></div>` : '';
@@ -27,11 +28,23 @@
     const button = $('accept-event');
     if (button) button.addEventListener('click', () => acceptEvent(model, evidence));
   }
+  function renderRealGraphDetail(model, evidence) {
+    const phases = model.completed_phases.map((phase) => `<span class="stage-arrow">${escapeHtml(phase)}</span>`).join('');
+    const blocked = model.blocking_reasons.length ? `<div class="notice notice-error"><strong>阻塞原因</strong><div>${model.blocking_reasons.map(escapeHtml).join('、')}</div></div>` : '';
+    const evidenceRows = evidence.map((item) => `<div class="evidence-row"><strong>${escapeHtml(item.kind)}</strong><div class="digest">${escapeHtml(item.artifact_id)} · ${escapeHtml(item.digest)}</div></div>`).join('');
+    const action = model.status === 'pending-human-review' && !state.accepted.has(model.event.event_id) ? `<section class="acceptance-panel"><div><strong>批准当前 Graph Review</strong><span>确认 replay 与 phase scope 后，写入 Human Acceptance Fact。</span></div><button id="accept-real-event" class="button button-primary" type="button">批准当前结果</button><p id="accept-error" class="accept-error" hidden></p></section>` : '';
+    $('detail-panel').innerHTML = `<div class="detail"><div class="detail-header"><div><p class="eyebrow">${escapeHtml(model.graph_id)}</p><h2>${escapeHtml(model.event.title)}</h2></div><span class="state state-${escapeHtml(model.status)}">${escapeHtml(stateLabel[model.status] || model.status)}</span></div>${blocked}<div class="summary-grid"><div><dt>Graph scope</dt><dd>${escapeHtml(model.network_id)} / ${escapeHtml(model.plan.plan_id)} / r${escapeHtml(model.plan.plan_revision)}</dd></div><div><dt>当前 phase</dt><dd>${escapeHtml(model.current_phase || '无')} · ${escapeHtml(model.phase_status || '无')}</dd></div><div><dt>Replay</dt><dd class="digest">${escapeHtml(model.source_replay_digest)}</dd></div></div>${action}<div><h3 class="section-title">已完成阶段</h3><div class="stage-list">${phases || '<span>尚未完成 phase</span>'}</div></div><div><h3 class="section-title">Evidence 引用</h3><div class="evidence-list">${evidenceRows || '<div class="notice">暂无 Evidence 引用。</div>'}</div></div><div class="next-action"><strong>下一步</strong><span>${escapeHtml(state.accepted.has(model.event.event_id) ? 'Human acceptance fact 已记录' : model.next_action.label)}</span></div></div>`;
+    const button = $('accept-real-event');
+    if (button) button.addEventListener('click', () => acceptEvent(model, evidence));
+  }
   async function acceptEvent(model, evidence) {
     const button = $('accept-event'); const error = $('accept-error');
     button.disabled = true; error.hidden = true;
     try {
-      const result = await api(`/ui/events/${encodeURIComponent(model.event.event_id)}/accept`, { method: 'POST', body: JSON.stringify({ network_id: model.network_id, plan_id: model.plan.plan_id, plan_revision: model.plan.plan_revision, plan_digest: model.plan.plan_digest, review_handoff_digest: model.review_handoff.handoff_digest, verification_digest: model.verification.verification_digest }) });
+      const payload = model.schema === 'zj-loop.real_agent_dogfood_graph_review_read_model.v1'
+        ? { network_id: model.network_id, plan_id: model.plan.plan_id, plan_revision: model.plan.plan_revision, plan_digest: model.plan.plan_digest }
+        : { network_id: model.network_id, plan_id: model.plan.plan_id, plan_revision: model.plan.plan_revision, plan_digest: model.plan.plan_digest, review_handoff_digest: model.review_handoff.handoff_digest, verification_digest: model.verification.verification_digest };
+      const result = await api(`/ui/events/${encodeURIComponent(model.event.event_id)}/accept`, { method: 'POST', body: JSON.stringify(payload) });
       if (result.status !== 'recorded' && result.status !== 'duplicate') throw new Error(result.reason || 'Acceptance 未记录');
       state.accepted.add(model.event.event_id); renderEvents(); renderDetail(model, evidence); setStatus(result.status === 'duplicate' ? '已接受' : '已记录', 'ok');
     } catch (reason) { button.disabled = false; error.hidden = false; error.textContent = reason.message; setStatus('接受受阻', 'error'); }

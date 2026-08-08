@@ -1,0 +1,21 @@
+import { type RealAgentDogfoodGraphHumanAcceptanceAdapterResult } from './real-agent-dogfood-graph-human-acceptance-adapter.js';
+import type { HumanSignerIdentity } from './human-signer.js';
+import type { ReviewHandoffRecord } from './review-handoff.js';
+import type { RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
+import type { RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
+import type { ContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
+import type { SqliteStateStore } from './sqlite-state-store.js';
+export declare function createRealAgentDogfoodGraphHumanAcceptanceStateStoreAdapter(input: {
+    stateStore: SqliteStateStore;
+    plan: RealAgentDogfoodGraphPlan;
+    network_id: string;
+    plan_id: string;
+    plan_revision: number;
+    human_id: string;
+    identity: HumanSignerIdentity;
+    handoff: ReviewHandoffRecord;
+    source_phase: RealAgentDogfoodGraphPhaseRecord;
+    scope_phase: RealAgentDogfoodGraphPhaseRecord;
+    verification_phase: RealAgentDogfoodGraphPhaseRecord;
+    evidence_store: Pick<ContentAddressedEvidenceStore, 'put'>;
+}): () => Promise<RealAgentDogfoodGraphHumanAcceptanceAdapterResult>;

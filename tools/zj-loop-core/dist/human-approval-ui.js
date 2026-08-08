@@ -271,7 +271,7 @@ export function createHumanApprovalUiServer(input) {
             }
             try {
                 const result = await input.graph.list();
-                const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, created_at: event.event.created_at, status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));
+                const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, ...('created_at' in event.event ? { created_at: event.event.created_at } : {}), status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));
                 json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, events, side_effects_executed: false });
             }
             catch {
@@ -302,8 +302,8 @@ export function createHumanApprovalUiServer(input) {
                 return;
             }
             const eventId = decodeURIComponent(graphAcceptMatch[1]);
-            const fields = ['network_id', 'plan_id', 'plan_digest', 'review_handoff_digest', 'verification_digest'];
-            if (fields.some((field) => typeof body[field] !== 'string' || !body[field].trim()) || !Number.isInteger(body.plan_revision)) {
+            const commonFields = ['network_id', 'plan_id', 'plan_digest'];
+            if (commonFields.some((field) => typeof body[field] !== 'string' || !body[field].trim()) || !Number.isInteger(body.plan_revision)) {
                 blocked(response, 400, 'ui-acceptance-input-invalid');
                 return;
             }
@@ -319,17 +319,23 @@ export function createHumanApprovalUiServer(input) {
                 blocked(response, 404, 'graph-event-not-found');
                 return;
             }
-            if (current.status !== 'review-ready') {
+            const realGraph = current.schema === 'zj-loop.real_agent_dogfood_graph_review_read_model.v1';
+            if (current.status !== 'review-ready' && !(realGraph && current.status === 'pending-human-review')) {
                 blocked(response, 409, 'graph-event-not-review-ready');
                 return;
             }
-            if (body.network_id !== current.network_id || body.plan_id !== current.plan.plan_id || body.plan_revision !== current.plan.plan_revision || body.plan_digest !== current.plan.plan_digest || body.review_handoff_digest !== current.review_handoff.handoff_digest || body.verification_digest !== current.verification.verification_digest) {
+            const legacy = current;
+            if (body.network_id !== current.network_id || body.plan_id !== current.plan.plan_id || body.plan_revision !== current.plan.plan_revision || body.plan_digest !== current.plan.plan_digest) {
+                blocked(response, 409, 'graph-acceptance-scope-conflict');
+                return;
+            }
+            if (!realGraph && (typeof body.review_handoff_digest !== 'string' || typeof body.verification_digest !== 'string' || body.review_handoff_digest !== legacy.review_handoff.handoff_digest || body.verification_digest !== legacy.verification.verification_digest)) {
                 blocked(response, 409, 'graph-acceptance-scope-conflict');
                 return;
             }
             let result;
             try {
-                result = await input.graph.accept({ network_id: input.network_id, event_id: eventId, plan_id: current.plan.plan_id, plan_revision: current.plan.plan_revision, plan_digest: current.plan.plan_digest, review_handoff_digest: current.review_handoff.handoff_digest, verification_digest: current.verification.verification_digest, accepted_at: now(), signer: input.signer });
+                result = await input.graph.accept({ network_id: input.network_id, event_id: eventId, plan_id: current.plan.plan_id, plan_revision: current.plan.plan_revision, plan_digest: current.plan.plan_digest, ...(realGraph ? {} : { review_handoff_digest: legacy.review_handoff.handoff_digest, verification_digest: legacy.verification.verification_digest }), accepted_at: now(), signer: input.signer });
             }
             catch {
                 blocked(response, 503, 'graph-upstream-acceptance-unavailable');

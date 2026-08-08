@@ -1,22 +1,45 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-06 02:30:09
+> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-08 16:33:44
 
 [~][X+] 1. OPN Multi-node Graph Atom E2E 下一里程碑
 ├── [x][Y+] 1-1. Multi-node Graph Atom 场景与 Single-Agent baseline 增量
-├── [~][Y+] 1-2. Human 中心责任单元与 Agent 节点组网
+├── [x][Y+] 1-2. Human 中心责任单元与 Agent 节点组网
+│   ├── [x][Y+] 1-2-1. Coordinator StateStore 原生 Graph read model 与 Human acceptance UI wiring
+│   └── [x][Y+] 1-2-2. 真实 Graph phase/replay facts 驱动 Human Review read model
 ├── [x][Y+] 1-3. Directed Task Graph 编排、依赖与资源隔离
 ├── [~][Y+] 1-4. 多节点执行、Evidence 聚合与独立验证
 ├── [x][Y+] 1-5. Review Handoff、Human 决策与 closeout
 └── [x][Y+] 1-6. 失败恢复、重放与端到端 conformance
     └── [x][Y+] 1-6-1. deterministic full-chain Graph conformance fixture
 
-### 当前施工：1-2. Human 中心责任单元与 Agent 节点组网
+### 当前施工：1-4. 多节点执行、Evidence 聚合与独立验证
 
-中心责任单元冻结为 Human + Coordinator Agent；Agent1/Agent2 是被编排执行节点。Coordinator 可推进 DAG、聚合 Evidence，但不能替代 Human 做最终接受、拒绝或责任决策。
+已完成 Graph Worker lease 双绑定、Coordinator resume gate、source_execution Evidence 写入与 Worker lease release，提交 4c988a13。仍需完成 Review Handoff Graph projection、merge/closeout，以及失败恢复、重放和端到端 conformance 闭环。下一施工重点转入 1-6。
 
 **决策：**
-- Q: 第一条 Graph Atom 的中心责任单元如何定义？ → 同意选 1：Human + Coordinator Agent 构成中心责任单元；Agent1 和 Agent2 是被编排执行节点。Coordinator 可推进 DAG、聚合 Evidence，但不能替代 Human 做最终接受、拒绝或责任决策。 (保持 Human 的最终责任、权限和决策不对称，同时验证 Agent 辅助中心编排的 ScaleUp 价值。)
-- Q: Coordinator、Agent1、Agent2 的 capability 如何划分？ → 同意选 1：按角色、任务、worktree、Evidence scope 做 capability ceiling；Coordinator 只能编排/聚合/准备 merge proposal，Agent1 只能写自己的 worktree，Agent2 只能读验证 worktree，Human 批准 merge 并作最终决策。 (Human 与 Agent 协议对称但责任、权限和最终决策不对称；任何节点不得通过 capability 扩张越过中心责任或资源边界。)
+- Q: Agent2 的独立验证如何保证独立性？ → 同意选 1：Agent2 使用独立 execution identity、独立只读 verifier worktree、Core verifier plan 和独立 Evidence；只接收 Agent1 精确 commit、Graph task contract、success criteria 与必要 scoped refs，不继承 Agent1 进程或运行态。 (相同 Provider 类型可以复用，但 execution、process state、worktree、verifier plan 和 Evidence 必须独立。)
+- Q: Agent1 与 Agent2 的结果由谁负责聚合？ → 同意选 1：由 Core 执行 canonical aggregation；Coordinator 只提交结构化 result/evidence refs、推进状态和展示结果，不能自行宣布 Graph Atom 完成；Human 依据 aggregation 进入 Review Handoff 与最终决策。 (避免协调 Agent 自己证明协调成功；Graph-level aggregation 必须可重放、可验证、可审计。)
+- Q: Graph-level aggregation 如何映射状态？ → 同意选 1：Graph-level 复用现有生命周期语义；running 表示仍有节点执行，blocked 表示已知失败，outcome-uncertain 表示无法证明事实，review-pending 表示 aggregation 完整但未 Human 决策，accepted/rejected/request-revision/closed 沿用既有 Review 与 Closeout lifecycle。 (不新造 Graph 专属状态机，保持 Loop、Graph、Review、Closeout 分层，避免相似状态漂移。)
+- Q: ZAgenticLoop 的第一条 Graph Atom dogfood 任务选什么？ → 同意选 1：实现 Graph-level canonical aggregation/conformance vertical slice；Agent1 实现 aggregation 与 projection，Agent2 基于 Agent1 commit 独立验证 schema、digest binding、dependency、isolation 和 failure matrix，Human + Coordinator 编排并批准 fast-forward merge。 (任务直接增强 ZAgenticLoop 核心 Graph 能力，边界清晰且可证明相对 Single-Agent baseline 的能力增量；legacy 清理和 UI 扩展不作为本纵切主任务。)
+- Q: Agent1 与 Agent2 的具体职责如何拆分？ → 同意选 1：Agent1 实现 Graph-level canonical aggregation、result projection、provider-neutral contract 与最小 fixture；Agent2 基于精确 commit 独立设计 verifier plan，编写独立 conformance tests，验证 schema/digest/dependency/isolation/failure/replay 并产出 findings。 (Agent2 不只复跑 Agent1 测试，也不另造第二套实现；独立性体现在验证计划、测试矩阵、execution、worktree 和 Evidence。)
+- Q: 第一条 Graph-level aggregation vertical slice 是否复用并扩展现有 native-opn-tracer-aggregation / native-opn-tracer-verification contract？ → 同意：复用并扩展现有 contract，不新建平行 aggregation schema。 (保持单一事实来源；只补 Graph Atom 所需的中心责任单元、资源隔离证明、Agent1 commit binding、Agent2 verifier 输入 binding、Graph lifecycle projection 与 Review Handoff integration。)
+- Q: Graph phase evidence 的 actor enrich 如何兼容既有 v1 evidence？ → 同意：新 evidence 可选记录 actor_kind 与 actor_identity，并按 phase actor 白名单校验；历史 v1 evidence 缺少这两个字段时继续可读取、投影和追加，不升级 schema、不伪造历史 actor。 (source_execution 绑定 agent-node；human_acceptance 绑定 human；scope、verification、post-merge gate、cleanup 绑定 coordinator/trusted-runner/core；merge 允许 coordinator 或 human。)
+- Q: execution_binding_digest 是否必须与 Worker lease 解耦？ → 同意：execution_binding_digest 只由 execution 的 executable、argv、cwd、worktree identity 及 executable digest 等固定事实生成，不包含 worker lease_id；Coordinator lease 与 Worker lease 分别绑定该 digest，worker binding 仍单独校验 lease_id。 (这样 Coordinator 可在获取 Worker lease 前完成 execution binding 校验，消除 resume 的依赖环；Worker lease 仍负责单 worker 所有权。)
+- Q: Worker lease 与 Coordinator resume gate 的最小接入顺序是什么？ → 同意：Graph resume 先校验已批准 execution definition，获取并校验 Coordinator lease，再获取携带同一 execution_binding_digest 的 Worker lease，最后才写入 running；lease、phase projection、digest 或身份任一不满足时 fail-closed，不启动 Agent。 (普通非 Graph mode 保持兼容；Graph mode 需要 human-id、coordinator-id、session-id；Coordinator lease 与 Worker lease 仍是独立 aggregate。)
+- Q: source_execution phase evidence 与 Worker lease release 由谁完成？ → 同意：Graph mode 下 Worker CLI 负责写入 Provider result Evidence、source_execution phase record 并释放自身 Worker lease；Coordinator 下一次 resume 只读取并验证这些事实，再推进 scope_observation。Worker 不得直接写 scope、verification、review、merge 或 cleanup phase。 (source phase actor_kind=agent-node；phase record 绑定 execution/attempt、plan digest、execution binding digest、worker lease digest、provider fact Evidence digest；任一收尾写入不确定时保持 outcome-uncertain，不宣称 Graph 完成。)
+- Q: post_merge_gate Graph adapter 实现结果是什么？ → 同意：新增 provider-neutral post_merge_gate Graph adapter；只消费 status=passed 且绑定一致的 merge phase 与 Human merge authorization，在 target worktree 只读观察 target/source commit、target ref、fast-forward confirmed、cleanliness 和 scope digest，严格按 git diff --check、project build、target test、Graph regression 四个固定 argv 命令顺序执行。非零退出为 blocked，timeout/事实不可读为 outcome-uncertain；Evidence 仅记录 bounded command metadata、exit code、timeout、stdout/stderr digest/size 与 commit/gate 摘要；不修改仓库、不重新 merge、不 push、不创建 MR。 (TDD 覆盖 success、fixed command failure、target observation uncertainty；Graph adapter focused 22/22、完整 npm test 432/432、build 与 git diff --check 通过；已从包入口导出并纳入标准 Graph adapter 测试脚本。)
+- Q: cleanup adapter 的实际职责边界是什么？ → 同意推荐方案：cleanup adapter 直接负责当前 Graph attempt 绑定的本地 disposable target、source、verifier worktree 清理；只操作 plan 精确绑定的路径和 Git registration，不删除 EvidenceStore、不修改远程仓库、不改变业务结果；清理后必须证明路径不存在、Git registration 已移除且无残留 execution binding。 (保持业务结果、资源生命周期和远程协作边界分离。)
+- Q: cleanup 是否允许在 merge 或 post_merge_gate 失败后运行？ → 同意推荐方案：允许。cleanup 是独立资源生命周期 phase，可在 merge/post_merge_gate passed、blocked 或 outcome-uncertain 后启动；但 cleanup passed 不能提升业务结果，业务失败仍由原 phase 保留。 (失败路径必须可回收本地资源，同时不掩盖业务失败。)
+- Q: cleanup 遇到 dirty worktree 是否强制删除？ → 同意推荐方案：默认不使用 force 删除；dirty、路径身份不匹配或 registration 指向其他路径时返回 blocked/cleanup-unresolved，保留现场交给 Human 决定 revision 或人工清理。只有未来显式 Human 授权的清理策略才可扩大删除权限。 (避免 cleanup 静默丢失 Agent 未提交变更和诊断事实。)
+- Q: cleanup 如何处理资源已经不存在的情况？ → 同意推荐方案：幂等处理。路径不存在且 Git registration 也不存在视为已清理；路径/registration 任一残留则继续清理并复验；查询失败或无法证明 registration 状态为 outcome-uncertain。 (允许 resume/retry，不重复制造副作用，也不把未知当成功。)
+- Q: cleanup 的 Git 操作如何约束？ → 同意推荐方案：只使用 execFile argv 调用针对精确 worktree path 的 git worktree remove/prune 与只读查询；禁止 shell 字符串、任意路径、仓库外删除、push、branch 删除、远程 API 和自动修复。prune 只能在确认属于本次 plan 的 registration 后执行。 (将 destructive surface 限定到 plan-bound disposable resources。)
+- Q: cleanup 的结果状态如何映射？ → 同意推荐方案：所有资源和 registration 均被清除且复验通过为 passed；确定性 dirty/mismatch/refusal 为 blocked，并在业务层投影 cleanup-unresolved；命令异常、状态读取失败或清理结果无法证明为 outcome-uncertain。 (区分可解释的清理拒绝与事实不可知。)
+- Q: cleanup Evidence 与 actor 如何绑定？ → 同意推荐方案：由 TrustedRunner/Core 执行，Graph record actor_kind 使用 trusted-runner/core/coordinator；Evidence 只保存 plan/network/execution binding、每个资源的 bounded before/after metadata、Git registration digest、命令 exit/status/reason，不保存无限制原始输出；StateStore 仍由 Coordinator CAS append。 (保持验证主体可信、证据有界、状态写入单一入口。)
+- Q: cleanup 完成后是否直接 closed？ → 同意推荐方案：不直接 closed。cleanup passed 后必须执行纯读 replay/read-model integrity gate，确认七阶段顺序、Evidence digest、StateEvent revision、lifecycle/Graph 终态一致且 read_model_digest 稳定，才允许 Graph closed；cleanup unresolved 或 replay 不确定均禁止 closed。 (最终完成是业务、资源和持久化事实三者共同闭环。)
+- Q: cleanup adapter 的 TDD 最小验证矩阵是什么？ → 同意推荐方案：覆盖全量清理成功、重复调用幂等、dirty worktree 阻断、registration/path mismatch 阻断、目标路径不存在且 registration 不存在的已清理事实、git 查询/删除异常导致 outcome-uncertain，以及 merge/post_merge_gate 失败后仍可独立清理；最后纳入 Graph adapter focused 与完整 npm test。 (先证明资源生命周期边界，再接 Coordinator wiring 和真实 disposable dogfood。)
+- Q: 业务 phase 失败后 cleanup 如何与严格线性 completed_phases 共存？ → 同意推荐方案：cleanup 仍可在 merge 或 post_merge_gate blocked/outcome-uncertain 后独立运行并写资源 cleanup Evidence，但不把 cleanup 追加到未完成业务前缀的 Graph completed_phases，也不伪造 phase=cleanup passed；只有 source_execution→scope_observation→independent_verification→human_acceptance→merge→post_merge_gate 全部 passed 时，cleanup 才生成线性 Graph phase record。业务失败、资源清理结果和最终 closed 保持分离。 (现有 Graph State 严格校验 completed_phases 为固定 phase 前缀；该约束防止 cleanup 成功掩盖业务失败。cleanup adapter 需要支持无 Graph record 的独立资源结果。)
+- Q: cleanup Graph adapter 实现结果是什么？ → 同意：新增 provider-neutral cleanup Graph adapter；先对 target/source/verifier 三个 plan-bound disposable worktree 做完整预检，再使用普通 git worktree remove argv 清理，禁止 force 删除、任意路径和远程副作用；清理后复验路径不存在、Git registration 移除和无残留。清理成功且业务前缀完整通过时返回 phase=cleanup passed；业务 merge/post_merge_gate 失败时仍可独立清理并写 cleanup Evidence，但不伪造线性 cleanup Graph phase。dirty/mismatch 为 blocked，事实不可读为 outcome-uncertain，重复调用幂等。 (TDD 覆盖 cleanup success、幂等、dirty worktree 阻断、Git observation uncertainty、业务失败后的独立 Evidence；Graph adapter focused 26/26，已从包入口导出并纳入标准测试脚本。)
+- Q: Coordinator 真实 adapters wiring 的实现结果是什么？ → 同意：新增 WithRealAdapters Coordinator factory，统一创建并串联 source_execution、scope_observation、independent_verification、human_acceptance、merge、post_merge_gate、cleanup 七个真实 adapter；从 StateStore 恢复已存在的 phase record，按阶段动态传递上游 record，复用 Coordinator 的 lease、resume gate、顺序停止、CAS append 和 replay，不允许 adapter 绕过 Coordinator 写 StateStore。任一 phase 失败立即停止，cleanup 仍遵守业务失败后的独立 Evidence 边界。 (新增 wiring focused test：真实 source adapter lifecycle 不满足时返回 outcome-uncertain，后续 phase 不调用且不写伪造 Graph record；Graph adapter focused 27/27。)
 <!-- ROADMAP_SECTION_END -->

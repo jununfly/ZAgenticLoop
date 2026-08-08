@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner, HumanSignerIdentity } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
+import type { RealAgentDogfoodGraphReviewReadModel } from './real-agent-dogfood-graph-review-read-model.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import type { OpnReadOnlyGraphUiReadModel } from './opn-readonly-graph-ui-read-model.js';
 import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload, type HumanApprovalContext } from './human-authority.js';
@@ -27,10 +28,10 @@ export type HumanApprovalUiUpstream = {
 };
 
 export type HumanApprovalUiGraphUpstream = {
-  list(): Promise<{ events: GraphAtomUiReadModel[] }>;
-  get(input: { event_id: string }): Promise<{ event: GraphAtomUiReadModel | null }>;
+  list(): Promise<{ events: Array<GraphAtomUiReadModel | RealAgentDogfoodGraphReviewReadModel> }>;
+  get(input: { event_id: string }): Promise<{ event: GraphAtomUiReadModel | RealAgentDogfoodGraphReviewReadModel | null }>;
   evidence(input: { event_id: string }): Promise<{ evidence: Array<{ kind: string; artifact_id: string; digest: string }> }>;
-  accept?(input: { network_id: string; event_id: string; plan_id: string; plan_revision: number; plan_digest: string; review_handoff_digest: string; verification_digest: string; accepted_at: string; signer: HumanSigner }): Promise<Record<string, unknown>>;
+  accept?(input: { network_id: string; event_id: string; plan_id: string; plan_revision: number; plan_digest: string; review_handoff_digest?: string; verification_digest?: string; accepted_at: string; signer: HumanSigner }): Promise<Record<string, unknown>>;
 };
 
 export type HumanApprovalUiServerInput = {
@@ -228,7 +229,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
       try {
         const result = await input.graph.list();
-        const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, created_at: event.event.created_at, status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));
+        const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, ...('created_at' in event.event ? { created_at: event.event.created_at } : {}), status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));
         json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, events, side_effects_executed: false });
       } catch { blocked(response, 503, 'graph-upstream-unavailable'); }
       return;
@@ -241,15 +242,18 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       let body: Record<string, unknown>;
       try { body = await readBody(request); } catch (error) { blocked(response, 400, error instanceof Error ? error.message : 'ui-json-invalid'); return; }
       const eventId = decodeURIComponent(graphAcceptMatch[1]);
-      const fields = ['network_id', 'plan_id', 'plan_digest', 'review_handoff_digest', 'verification_digest'];
-      if (fields.some((field) => typeof body[field] !== 'string' || !(body[field] as string).trim()) || !Number.isInteger(body.plan_revision)) { blocked(response, 400, 'ui-acceptance-input-invalid'); return; }
-      let current: GraphAtomUiReadModel | null;
+      const commonFields = ['network_id', 'plan_id', 'plan_digest'];
+      if (commonFields.some((field) => typeof body[field] !== 'string' || !(body[field] as string).trim()) || !Number.isInteger(body.plan_revision)) { blocked(response, 400, 'ui-acceptance-input-invalid'); return; }
+      let current: GraphAtomUiReadModel | RealAgentDogfoodGraphReviewReadModel | null;
       try { current = (await input.graph.get({ event_id: eventId })).event; } catch { blocked(response, 503, 'graph-upstream-unavailable'); return; }
       if (!current || current.network_id !== input.network_id || current.event.event_id !== eventId) { blocked(response, 404, 'graph-event-not-found'); return; }
-      if (current.status !== 'review-ready') { blocked(response, 409, 'graph-event-not-review-ready'); return; }
-      if (body.network_id !== current.network_id || body.plan_id !== current.plan.plan_id || body.plan_revision !== current.plan.plan_revision || body.plan_digest !== current.plan.plan_digest || body.review_handoff_digest !== current.review_handoff.handoff_digest || body.verification_digest !== current.verification.verification_digest) { blocked(response, 409, 'graph-acceptance-scope-conflict'); return; }
+      const realGraph = current.schema === 'zj-loop.real_agent_dogfood_graph_review_read_model.v1';
+      if (current.status !== 'review-ready' && !(realGraph && current.status === 'pending-human-review')) { blocked(response, 409, 'graph-event-not-review-ready'); return; }
+      const legacy = current as GraphAtomUiReadModel;
+      if (body.network_id !== current.network_id || body.plan_id !== current.plan.plan_id || body.plan_revision !== current.plan.plan_revision || body.plan_digest !== current.plan.plan_digest) { blocked(response, 409, 'graph-acceptance-scope-conflict'); return; }
+      if (!realGraph && (typeof body.review_handoff_digest !== 'string' || typeof body.verification_digest !== 'string' || body.review_handoff_digest !== legacy.review_handoff.handoff_digest || body.verification_digest !== legacy.verification.verification_digest)) { blocked(response, 409, 'graph-acceptance-scope-conflict'); return; }
       let result: Record<string, unknown>;
-      try { result = await input.graph.accept({ network_id: input.network_id, event_id: eventId, plan_id: current.plan.plan_id, plan_revision: current.plan.plan_revision, plan_digest: current.plan.plan_digest, review_handoff_digest: current.review_handoff.handoff_digest, verification_digest: current.verification.verification_digest, accepted_at: now(), signer: input.signer }); } catch { blocked(response, 503, 'graph-upstream-acceptance-unavailable'); return; }
+      try { result = await input.graph.accept({ network_id: input.network_id, event_id: eventId, plan_id: current.plan.plan_id, plan_revision: current.plan.plan_revision, plan_digest: current.plan.plan_digest, ...(realGraph ? {} : { review_handoff_digest: legacy.review_handoff.handoff_digest, verification_digest: legacy.verification.verification_digest }), accepted_at: now(), signer: input.signer }); } catch { blocked(response, 503, 'graph-upstream-acceptance-unavailable'); return; }
       const status = result.status;
       const statusCode = status === 'recorded' ? 201 : status === 'duplicate' ? 200 : status === 'conflict' || status === 'blocked' ? 409 : 503;
       json(response, statusCode, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...result, side_effects_executed: false });

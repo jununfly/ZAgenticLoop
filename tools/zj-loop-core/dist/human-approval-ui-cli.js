@@ -5,6 +5,10 @@ import { spawn } from 'node:child_process';
 import { runCli } from './cli.js';
 import { createMacOSKeychainHumanSigner } from './macos-keychain-human-signer.js';
 import { createHumanApprovalUiServer, createPairingHttpUpstream } from './human-approval-ui.js';
+import { createSqliteStateStore } from './sqlite-state-store.js';
+import { createStateStoreGraphAtomUiUpstream } from './state-store-graph-atom-ui-upstream.js';
+import { createContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
+import { createRealAgentDogfoodGraphReviewUpstream } from './real-agent-dogfood-graph-review-upstream.js';
 const argv = process.argv.slice(2);
 process.exitCode = await runCli({
     name: 'zj-loop-human-approval-ui',
@@ -22,6 +26,9 @@ process.exitCode = await runCli({
         { name: 'ca', type: 'string', description: 'Trusted Pairing API CA PEM path' },
         { name: 'client-cert', flag: 'client-cert', type: 'string', description: 'Optional Pairing API client certificate PEM path' },
         { name: 'client-key', flag: 'client-key', type: 'string', description: 'Optional Pairing API client key PEM path' },
+        { name: 'state-store', flag: 'state-store', type: 'string', description: 'Optional Coordinator SQLite StateStore for native Graph Review facts' },
+        { name: 'graph-plan', flag: 'graph-plan', type: 'string', description: 'Optional real Graph plan JSON path for replay-backed Review UI' },
+        { name: 'graph-evidence-store', flag: 'graph-evidence-store', type: 'string', description: 'EvidenceStore root for replay-backed Graph Review' },
         { name: 'open', type: 'boolean', description: 'Open the bootstrap URL in the default browser' },
     ],
     async handler({ io, options }) {
@@ -51,8 +58,23 @@ process.exitCode = await runCli({
             throw new Error('human-device-client-cert-invalid');
         }
         const upstream = createPairingHttpUpstream({ network_id: networkId, endpoint: pairingEndpoint, authorization: typeof options['owner-authorization'] === 'string' ? options['owner-authorization'] : undefined, ca: typeof options.ca === 'string' ? await readFile(options.ca, 'utf8') : undefined, cert: clientCert, key: clientKey, device_fingerprint: deviceFingerprint });
+        const stateStorePath = typeof options['state-store'] === 'string' ? options['state-store'].trim() : '';
+        const stateStore = stateStorePath ? createSqliteStateStore({ filename: stateStorePath }) : undefined;
+        let graph;
+        const graphPlanPath = typeof options['graph-plan'] === 'string' ? options['graph-plan'].trim() : '';
+        const graphEvidenceRoot = typeof options['graph-evidence-store'] === 'string' ? options['graph-evidence-store'].trim() : '';
+        if (stateStore && graphPlanPath) {
+            if (!graphEvidenceRoot)
+                throw new Error('graph-evidence-store-required-with-graph-plan');
+            const plan = JSON.parse(await readFile(graphPlanPath, 'utf8'));
+            const evidenceStore = await createContentAddressedEvidenceStore({ root: graphEvidenceRoot });
+            graph = createRealAgentDogfoodGraphReviewUpstream({ stateStore, evidenceStore, network_id: networkId, plans: [plan] });
+        }
+        else if (stateStore) {
+            graph = createStateStoreGraphAtomUiUpstream({ stateStore, network_id: networkId });
+        }
         const bootstrapToken = randomBytes(32).toString('base64url');
-        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, bootstrap_token: bootstrapToken });
+        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, graph, bootstrap_token: bootstrapToken });
         await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
         const address = server.address();
         if (!address || typeof address === 'string')
@@ -62,7 +84,7 @@ process.exitCode = await runCli({
         if (options.open === true && process.platform === 'darwin')
             spawn('open', [url], { stdio: 'ignore', detached: true }).unref();
         await new Promise((resolve) => {
-            const close = () => { server.close(() => resolve()); };
+            const close = () => { server.close(async () => { await stateStore?.close(); resolve(); }); };
             process.once('SIGINT', close);
             process.once('SIGTERM', close);
         });

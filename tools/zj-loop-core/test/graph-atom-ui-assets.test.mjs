@@ -10,6 +10,6 @@ test('Graph Review static shell exposes Chinese review states and responsive ass
     const address = server.address();
     const get = (path) => new Promise((resolve, reject) => { import('node:http').then(({ request }) => { const req = request({ hostname: '127.0.0.1', port: address.port, path }, (res) => { const chunks = []; res.on('data', (chunk) => chunks.push(chunk)); res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') })); }); req.on('error', reject); req.end(); }, reject); });
     const page = await get('/ui/graph-review'); const css = await get('/assets/graph-review-ui.css'); const js = await get('/assets/graph-review-ui.js');
-    assert.equal(page.status, 200); assert.match(page.body, /Graph Review/); assert.match(page.body, /zh-CN/); assert.equal(css.status, 200); assert.match(css.body, /@media/); assert.equal(js.status, 200); assert.match(js.body, /review-ready/); assert.match(js.body, /blocked/);
+  assert.equal(page.status, 200); assert.match(page.body, /Graph Review/); assert.match(page.body, /zh-CN/); assert.equal(css.status, 200); assert.match(css.body, /@media/); assert.equal(js.status, 200); assert.match(js.body, /review-ready/); assert.match(js.body, /pending-human-review/); assert.match(js.body, /accept-real-event/); assert.match(js.body, /blocked/);
   } finally { await new Promise((resolve) => server.close(resolve)); }
 });

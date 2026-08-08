@@ -1,7 +1,9 @@
 import { createRealAgentDogfoodGraphCleanupAdapter } from './real-agent-dogfood-graph-cleanup-adapter.js';
 import { createRealAgentDogfoodGraphConformanceCoordinator } from './real-agent-dogfood-graph-conformance-coordinator.js';
 import { createRealAgentDogfoodGraphHumanAcceptanceAdapter } from './real-agent-dogfood-graph-human-acceptance-adapter.js';
+import { createRealAgentDogfoodGraphHumanAcceptanceStateStoreAdapter } from './real-agent-dogfood-graph-human-acceptance-state-store-adapter.js';
 import { createRealAgentDogfoodGraphIndependentVerificationAdapter } from './real-agent-dogfood-graph-independent-verification-adapter.js';
+import { createRealAgentDogfoodGraphOpnIndependentVerificationAdapter } from './real-agent-dogfood-graph-opn-independent-verification-adapter.js';
 import { createRealAgentDogfoodGraphMergeAdapter } from './real-agent-dogfood-graph-merge-adapter.js';
 import { createRealAgentDogfoodGraphPostMergeGateAdapter } from './real-agent-dogfood-graph-post-merge-gate-adapter.js';
 import { createRealAgentDogfoodGraphScopeObservationAdapter } from './real-agent-dogfood-graph-scope-observation-adapter.js';
@@ -47,13 +49,24 @@ export async function createRealAgentDogfoodGraphConformanceCoordinatorWithRealA
         independent_verification: () => runAndRemember(() => {
             const source_phase = phaseResults.source_execution;
             const scope_phase = phaseResults.scope_observation;
-            return source_phase && scope_phase ? createRealAgentDogfoodGraphIndependentVerificationAdapter({ ...input.real_adapters.independent_verification, plan: input.plan, network_id: input.network_id, source_phase, scope_phase })() : Promise.resolve({ status: 'outcome-uncertain', reason: 'real-adapter-verification-prerequisite-unavailable' });
+            if (!source_phase || !scope_phase)
+                return Promise.resolve({ status: 'outcome-uncertain', reason: 'real-adapter-verification-prerequisite-unavailable' });
+            const config = input.real_adapters.independent_verification;
+            return config.opn
+                ? createRealAgentDogfoodGraphOpnIndependentVerificationAdapter({ ...config.opn, plan: input.plan, network_id: input.network_id, source_phase, scope_phase })()
+                : createRealAgentDogfoodGraphIndependentVerificationAdapter({ ...config, plan: input.plan, network_id: input.network_id, source_phase, scope_phase })();
         }),
         human_acceptance: () => runAndRemember(() => {
             const source_phase = phaseResults.source_execution;
             const scope_phase = phaseResults.scope_observation;
             const verification_phase = phaseResults.independent_verification;
-            return source_phase && scope_phase && verification_phase ? createRealAgentDogfoodGraphHumanAcceptanceAdapter({ ...input.real_adapters.human_acceptance, plan: input.plan, network_id: input.network_id, source_phase, scope_phase, verification_phase })() : Promise.resolve({ status: 'outcome-uncertain', reason: 'real-adapter-human-acceptance-prerequisite-unavailable' });
+            if (!source_phase || !scope_phase || !verification_phase)
+                return Promise.resolve({ status: 'outcome-uncertain', reason: 'real-adapter-human-acceptance-prerequisite-unavailable' });
+            const config = input.real_adapters.human_acceptance;
+            if (config.state_store) {
+                return createRealAgentDogfoodGraphHumanAcceptanceStateStoreAdapter({ ...config, stateStore: config.state_store, plan: input.plan, network_id: input.network_id, source_phase, scope_phase, verification_phase })();
+            }
+            return config.acceptance ? createRealAgentDogfoodGraphHumanAcceptanceAdapter({ ...config, acceptance: config.acceptance, plan: input.plan, network_id: input.network_id, source_phase, scope_phase, verification_phase })() : Promise.resolve({ status: 'outcome-uncertain', reason: 'real-adapter-human-acceptance-fact-source-unavailable' });
         }),
         merge: () => runAndRemember(() => {
             const human_acceptance_phase = phaseResults.human_acceptance;

@@ -65,10 +65,13 @@
     "1-2": {
       "id": "1-2",
       "label": "Human 中心责任单元与 Agent 节点组网",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
-      "children": [],
+      "children": [
+        "1-2-1",
+        "1-2-2"
+      ],
       "decisions": [
         {
           "q": "第一条 Graph Atom 的中心责任单元如何定义？",
@@ -79,6 +82,21 @@
           "q": "Coordinator、Agent1、Agent2 的 capability 如何划分？",
           "answer": "同意选 1：按角色、任务、worktree、Evidence scope 做 capability ceiling；Coordinator 只能编排/聚合/准备 merge proposal，Agent1 只能写自己的 worktree，Agent2 只能读验证 worktree，Human 批准 merge 并作最终决策。",
           "note": "Human 与 Agent 协议对称但责任、权限和最终决策不对称；任何节点不得通过 capability 扩张越过中心责任或资源边界。"
+        },
+        {
+          "q": "三节点 dogfood 完成后下一实现里程碑是什么？",
+          "answer": "同意：先将跨设备 Transport 与 Windows 独立验证标记为已完成验证切片，再补齐产品原生 Coordinator Graph read model 与标准 human_acceptance.v1 持久化/UI wiring；暂不扩展新的 dogfood 场景。",
+          "note": "真实 dogfood 已验证跨设备传输和独立验证，但临时 acceptance bridge 不等于产品原生 Human acceptance；下一步收束产品内生闭环。"
+        },
+        {
+          "q": "下一条产品原生 TDD 切片是什么？",
+          "answer": "同意：实现 StateStore/Coordinator → 原生 Graph read model → Human Approval UI → recordHumanAcceptance 的闭环，移除对临时 bridge 的依赖。",
+          "note": "human_acceptance.v1 与 StateStore fact 已存在；当前缺口是 Graph UI 仍依赖外部注入 upstream，未从 Coordinator 持久化事实自动投影。"
+        },
+        {
+          "q": "如何消除 Graph UI 的第二事实源？",
+          "answer": "同意：Graph UI read model 必须从真实 Graph phase records 与纯读 replay 推导；独立 graph-atom-ui fact 仅作为兼容输入，不能单独制造 review-ready 或 Human acceptance 前置事实。",
+          "note": "保持 StateStore append-only 与 replay 单一事实来源，避免 UI projection 成为可绕过 Coordinator phase gate 的第二状态机。"
         }
       ],
       "notes": "中心责任单元冻结为 Human + Coordinator Agent；Agent1/Agent2 是被编排执行节点。Coordinator 可推进 DAG、聚合 Evidence，但不能替代 Human 做最终接受、拒绝或责任决策。"
@@ -1774,11 +1792,65 @@
         }
       ],
       "notes": "真实七阶段 adapter wiring 与 cleanup 后 replay 已通过；下一步为 replay/read-model integrity gap 审查或 disposable real-agent dogfood。"
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "Coordinator StateStore 原生 Graph read model 与 Human acceptance UI wiring",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 StateStore 原生 Graph UI upstream、digest/scope fail-closed 校验、Human Approval UI /ui/events 接线，以及标准 createHumanAcceptance + recordHumanAcceptance 持久化与幂等 replay；human-approval-ui CLI 新增 --state-store。专用 Graph UI gate 6/6 通过。现有 opn-readonly-graph-verifier.test.mjs 仍独立失败 transport-envelope-invalid，未归因于本切片。"
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "真实 Graph phase/replay facts 驱动 Human Review read model",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [
+        "1-2-2-1"
+      ],
+      "decisions": [
+        {
+          "q": "真实 Graph read model 是否引入独立 schema？",
+          "answer": "同意：引入 real_agent_dogfood_graph_review_read_model.v1，Human Review UI 同时兼容旧 graph_atom_ui_read_model.v1 与真实七阶段 Graph 模型；迁移期间不伪造旧字段。",
+          "note": "旧模型固定两节点和 review-ready 语义，无法无损表达真实七阶段 Graph；新 schema 保留 phase/replay 状态真实性。"
+        },
+        {
+          "q": "真实 Graph Human acceptance 的副作用边界是什么？",
+          "answer": "同意：Human UI 只创建并持久化签名 human_acceptance.v1 fact；Coordinator resume 再调用真实 human_acceptance adapter，校验上游 phase/hand-off、写 Graph Evidence 并 CAS append phase record。UI 不直接写 Graph phase record。",
+          "note": "保持 Human 决策与 Coordinator phase 推进分离，避免 UI 绕过 lease、顺序和 CAS。"
+        }
+      ],
+      "notes": "已新增 real_agent_dogfood_graph_review_read_model.v1，从纯读 replay 保留七阶段、lifecycle、Evidence refs、阻塞/不确定状态；Human Approval UI 支持新旧 read model union，真实 Graph 只读展示，不进入旧 acceptance 路径。新增 Coordinator upstream 从 StateStore lifecycle/phase events + EvidenceStore replay 推导模型；CLI 支持 --graph-plan 与 --graph-evidence-store。专用 Graph UI gate 10/10、旧 UI/Human acceptance 回归 5/5 通过。"
+    },
+    "1-2-2-1": {
+      "id": "1-2-2-1",
+      "label": "phase-native Human acceptance fact 与 Coordinator adapter resume",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-2-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "真实 Graph UI accept 的输入和副作用是什么？",
+          "answer": "同意：UI 只提交 network/graph event/plan scope 与 plan digest；真实 upstream 从 StateStore 读取同 execution 绑定的 ReviewHandoff，创建签名 human_acceptance fact。UI 不接收或写 phase record，Coordinator resume 再推进 phase。",
+          "note": "避免把 handoff/phase 内部事实暴露给浏览器，也避免浏览器绕过 Coordinator CAS。"
+        },
+        {
+          "q": "下一验收如何验证 phase-native Human acceptance？",
+          "answer": "同意：使用真实 Mac/Windows 三节点 Graph dogfood，通过新版 Graph Review UI 完成验证结果进入 Mac StateStore、Human UI 批准写 acceptance fact、Coordinator resume 产出 human_acceptance phase 的闭环；不使用临时 bridge。",
+          "note": "这是产品原生 UI/StateStore/Coordinator 链路的首次真实验收，保留跨设备 Transport 与 Windows 独立验证边界。"
+        }
+      ],
+      "notes": "已完成 phase-native Human acceptance：UI 仅提交真实 Graph scope，pending-human-review 可批准；real Graph upstream 从 StateStore 找 execution/attempt/network 绑定的 ReviewHandoff，写签名 human_acceptance.v1 fact；Coordinator real adapter 支持 state_store 配置，resume 时读取 fact、复用真实 human_acceptance adapter 并产出 phase record，UI 不写 Graph phase。专用 gate 13/13，UI/adapter 回归 9/9。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-06 02:30:09",
+    "updated": "2026-08-08 16:33:44",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

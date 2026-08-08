@@ -2,6 +2,7 @@ import { type Server } from 'node:http';
 import type { PairingRequestProjection } from './pairing-projection.js';
 import type { HumanSigner } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
+import type { RealAgentDogfoodGraphReviewReadModel } from './real-agent-dogfood-graph-review-read-model.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import type { OpnReadOnlyGraphUiReadModel } from './opn-readonly-graph-ui-read-model.js';
 import { type HumanApprovalContext } from './human-authority.js';
@@ -52,12 +53,12 @@ export type HumanApprovalUiUpstream = {
 };
 export type HumanApprovalUiGraphUpstream = {
     list(): Promise<{
-        events: GraphAtomUiReadModel[];
+        events: Array<GraphAtomUiReadModel | RealAgentDogfoodGraphReviewReadModel>;
     }>;
     get(input: {
         event_id: string;
     }): Promise<{
-        event: GraphAtomUiReadModel | null;
+        event: GraphAtomUiReadModel | RealAgentDogfoodGraphReviewReadModel | null;
     }>;
     evidence(input: {
         event_id: string;
@@ -74,8 +75,8 @@ export type HumanApprovalUiGraphUpstream = {
         plan_id: string;
         plan_revision: number;
         plan_digest: string;
-        review_handoff_digest: string;
-        verification_digest: string;
+        review_handoff_digest?: string;
+        verification_digest?: string;
         accepted_at: string;
         signer: HumanSigner;
     }): Promise<Record<string, unknown>>;

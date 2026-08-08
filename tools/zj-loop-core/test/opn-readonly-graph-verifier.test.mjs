@@ -20,7 +20,7 @@ test('Agent2 verifier downloads source evidence, runs read-only provider, and se
     const envelope = createTransportEnvelope({
       message_id: 'verification-request-1', network_id: 'network-1', event_id: 'graph-1:verification', plan_id: 'plan-1', plan_revision: 1,
       task_id: 'task-1', from_node_id: 'Coordinator', target_node_id: 'Agent2', notification_kind: 'graph.verification.request', state: 'available',
-      artifact_refs: [{ artifact_id: source.metadata.artifact_id, content_sha256: source.metadata.content_sha256, kind: 'artifact' }], created_at: '2026-08-08T00:00:00.000Z', expires_at: '2026-08-08T01:00:00.000Z',
+      artifact_refs: [{ artifact_id: source.metadata.artifact_id, content_sha256: source.metadata.content_sha256, kind: 'artifact' }], created_at: '2026-08-08T00:00:00.000Z', expires_at: '2099-01-01T00:00:00.000Z',
     });
     const sent = [];
     let acknowledged;
@@ -49,7 +49,7 @@ test('Agent2 verifier rejects a request addressed to another node without provid
   const envelope = createTransportEnvelope({
     message_id: 'verification-request-2', network_id: 'network-1', event_id: 'graph-1:verification', plan_id: 'plan-1', plan_revision: 1,
     task_id: 'task-1', from_node_id: 'Coordinator', target_node_id: 'Agent3', notification_kind: 'graph.verification.request', state: 'available',
-    artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2026-08-08T00:00:00.000Z', expires_at: '2026-08-08T01:00:00.000Z',
+    artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2026-08-08T00:00:00.000Z', expires_at: '2099-01-01T00:00:00.000Z',
   });
   let invoked = false;
   const result = await processOpnReadOnlyGraphVerificationRequest({ envelope, verifier_node_id: 'Agent2', cwd: '/tmp', session_id: 'session-1', artifact_store: createOpnArtifactStore({ root: await mkdtemp(path.join(os.tmpdir(), 'zj-loop-opn-graph-verifier-invalid-')) }), downloadArtifact: async () => Buffer.alloc(0), provider: { async run() { invoked = true; throw new Error('must not run'); } }, transport: { async send() { throw new Error('must not send'); }, async acknowledge() { throw new Error('must not ack'); } } });
