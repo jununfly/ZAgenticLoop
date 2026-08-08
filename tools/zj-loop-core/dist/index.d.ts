@@ -274,3 +274,4 @@ export * from './opn-readonly-graph-ui-read-model.js';
 export * from './opn-readonly-graph-verification.js';
 export * from './opn-readonly-graph-verifier.js';
 export * from './opn-readonly-graph-coordinator.js';
+export * from './opn-graph-dogfood-cli.js';

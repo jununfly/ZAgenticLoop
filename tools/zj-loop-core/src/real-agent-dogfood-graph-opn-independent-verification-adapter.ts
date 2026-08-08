@@ -1,4 +1,4 @@
-import type { OpnArtifactStore } from './opn-artifact-store.js';
+import type { OpnArtifactMetadata, OpnArtifactStore } from './opn-artifact-store.js';
 import { createTransportEnvelope, type TransportAdapter } from './transport-contract.js';
 import { validateOpnReadOnlyGraphVerificationResult, type OpnReadOnlyGraphVerificationResult } from './opn-readonly-graph-verification.js';
 import { createRealAgentDogfoodGraphPhaseRecord, type RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
@@ -29,7 +29,7 @@ export function createRealAgentDogfoodGraphOpnIndependentVerificationAdapter(inp
   source_phase: RealAgentDogfoodGraphPhaseRecord;
   scope_phase: RealAgentDogfoodGraphPhaseRecord;
   source_evidence: () => Promise<Buffer>;
-  publish_artifact?: (input: { bytes: Buffer; metadata: { artifact_id: string; content_sha256: string; size_bytes: number; file_name: string; media_type: string }; transfer_id: string; target_node_id: string }) => Promise<void>;
+  publish_artifact?: (input: { bytes: Buffer; metadata: OpnArtifactMetadata; transfer_id: string; target_node_id: string }) => Promise<void>;
   download_artifact?: (artifact_id: string) => Promise<Buffer>;
   poll_attempts?: number;
   poll_delay_ms?: number;

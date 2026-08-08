@@ -1,4 +1,4 @@
-import type { OpnArtifactStore } from './opn-artifact-store.js';
+import type { OpnArtifactMetadata, OpnArtifactStore } from './opn-artifact-store.js';
 import { type TransportAdapter } from './transport-contract.js';
 import { type RealAgentDogfoodGraphPhaseRecord } from './real-agent-dogfood-graph-state.js';
 import type { RealAgentDogfoodGraphPlan } from './real-agent-dogfood-graph-orchestrator.js';
@@ -23,13 +23,7 @@ export declare function createRealAgentDogfoodGraphOpnIndependentVerificationAda
     source_evidence: () => Promise<Buffer>;
     publish_artifact?: (input: {
         bytes: Buffer;
-        metadata: {
-            artifact_id: string;
-            content_sha256: string;
-            size_bytes: number;
-            file_name: string;
-            media_type: string;
-        };
+        metadata: OpnArtifactMetadata;
         transfer_id: string;
         target_node_id: string;
     }) => Promise<void>;

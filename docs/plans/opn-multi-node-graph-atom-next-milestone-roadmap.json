@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Multi-node Graph Atom E2E 下一里程碑",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -15,7 +15,8 @@
         "1-3",
         "1-4",
         "1-5",
-        "1-6"
+        "1-6",
+        "1-7"
       ],
       "decisions": [
         {
@@ -135,7 +136,7 @@
     "1-4": {
       "id": "1-4",
       "label": "多节点执行、Evidence 聚合与独立验证",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [],
@@ -254,9 +255,14 @@
           "q": "Coordinator 真实 adapters wiring 的实现结果是什么？",
           "answer": "同意：新增 WithRealAdapters Coordinator factory，统一创建并串联 source_execution、scope_observation、independent_verification、human_acceptance、merge、post_merge_gate、cleanup 七个真实 adapter；从 StateStore 恢复已存在的 phase record，按阶段动态传递上游 record，复用 Coordinator 的 lease、resume gate、顺序停止、CAS append 和 replay，不允许 adapter 绕过 Coordinator 写 StateStore。任一 phase 失败立即停止，cleanup 仍遵守业务失败后的独立 Evidence 边界。",
           "note": "新增 wiring focused test：真实 source adapter lifecycle 不满足时返回 outcome-uncertain，后续 phase 不调用且不写伪造 Graph record；Graph adapter focused 27/27。"
+        },
+        {
+          "q": "当前 1-4 是否完成并转入真实三节点 Graph Atom dogfood？",
+          "answer": "同意：标记 1-4 completed，下一施工点进入真实 Mac/Windows 三节点 Graph Atom dogfood 验收。",
+          "note": "source execution、Evidence 聚合、独立验证与 OPN-backed verification 已具备；Review Handoff、closeout、replay 已由 1-5/1-6 覆盖。"
         }
       ],
-      "notes": "已完成 Graph Worker lease 双绑定、Coordinator resume gate、source_execution Evidence 写入与 Worker lease release，提交 4c988a13。仍需完成 Review Handoff Graph projection、merge/closeout，以及失败恢复、重放和端到端 conformance 闭环。下一施工重点转入 1-6。"
+      "notes": "已完成 source execution、scope observation、Evidence 聚合、独立验证，以及 OPN-backed independent verification adapter；Review Handoff、Human decision、closeout、replay 由 1-5/1-6 覆盖。"
     },
     "1-5": {
       "id": "1-5",
@@ -1846,11 +1852,74 @@
         }
       ],
       "notes": "已完成 phase-native Human acceptance：UI 仅提交真实 Graph scope，pending-human-review 可批准；real Graph upstream 从 StateStore 找 execution/attempt/network 绑定的 ReviewHandoff，写签名 human_acceptance.v1 fact；Coordinator real adapter 支持 state_store 配置，resume 时读取 fact、复用真实 human_acceptance adapter 并产出 phase record，UI 不写 Graph phase。专用 gate 13/13，UI/adapter 回归 9/9。"
+    },
+    "1-7": {
+      "id": "1-7",
+      "label": "真实 Mac/Windows 三节点 Graph Atom dogfood 验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-7-1",
+        "1-7-2"
+      ],
+      "decisions": [
+        {
+          "q": "真实 dogfood 入口如何与旧 OPN CLI 兼容？",
+          "answer": "同意：新增独立 opn-graph-dogfood-cli run，保留旧 opn-graph-coordinator-cli receive 不变；新 CLI 负责真实 phase-native OPN verification 的 wiring、等待和 phase CAS append。",
+          "note": "避免将旧三阶段 verifier result 接口与七阶段 Graph adapter 混在同一命令中，便于重复 dogfood 和失败诊断。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-7-1": {
+      "id": "1-7-1",
+      "label": "独立 OPN Graph dogfood CLI 与 phase CAS wiring",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [],
+      "decisions": [
+        {
+          "q": "独立 OPN Graph dogfood CLI 是否完成？",
+          "answer": "同意：标记 1-7-1 completed，下一步用该 CLI 接入现有 Mac/Windows 节点完成真实 verification 与 phase-native acceptance。",
+          "note": "CLI 已完成凭据/ArtifactStore/StateStore/Transport wiring；仅在 scope_observation passed 时路由，并由 Coordinator CAS append independent_verification。"
+        }
+      ],
+      "notes": "已新增 opn-graph-dogfood-cli run：从已通过的 source_execution/scope_observation prefix 出发，发布 OPN verification request，接收并校验 Windows result，CAS append independent_verification phase；旧 OPN CLI 保持兼容。完整 zj-loop-core npm test 通过。"
+    },
+    "1-7-2": {
+      "id": "1-7-2",
+      "label": "Mac/Windows 真实 verification result 与 phase-native acceptance 验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-7",
+      "children": [
+        "1-7-2-1"
+      ],
+      "decisions": [
+        {
+          "q": "scope continuation 的实现边界是什么？",
+          "answer": "同意：复用 Worker 已写入的 source_execution，scope-observation CLI 只读 replay source phase、调用现有 scope adapter 并 CAS append scope_observation；不重新执行 Agent、不改写 OPN transport。",
+          "note": "保持 source agent 与 Coordinator scope 责任分离，避免重复执行或伪造 phase prefix。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-7-2-1": {
+      "id": "1-7-2-1",
+      "label": "source_execution 到 scope_observation 的真实续接入口",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-7-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-08 16:33:44",
+    "updated": "2026-08-08 17:14:11",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
