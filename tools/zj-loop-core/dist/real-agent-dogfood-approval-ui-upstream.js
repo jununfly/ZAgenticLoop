@@ -3,6 +3,9 @@ import path from 'node:path';
 import { projectRealAgentDogfoodLifecycle } from './real-agent-dogfood-lifecycle.js';
 function text(value) { return typeof value === 'string' && value.trim() !== ''; }
 function digest(value) { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
+function approvalArtifactPath(evidenceRoot, dogfoodId, attempt) {
+    return path.join(evidenceRoot, attempt > 1 ? `${dogfoodId}.attempt-${attempt}.json` : `${dogfoodId}.json`);
+}
 export function createRealAgentDogfoodApprovalUiUpstream(input) {
     if (!input.network_id.trim() || !path.isAbsolute(input.evidenceRoot))
         throw new Error('real-agent-dogfood-approval-ui-input-invalid');
@@ -48,7 +51,7 @@ export function createRealAgentDogfoodApprovalUiUpstream(input) {
                 ...(summary.provider_auth_ref ? { provider_auth_ref: summary.provider_auth_ref } : {}),
                 ...(summary.runtime_binding ? { runtime_binding: summary.runtime_binding } : {}),
             };
-            const target = path.join(input.evidenceRoot, `${request.dogfood_id}.json`);
+            const target = approvalArtifactPath(input.evidenceRoot, request.dogfood_id, request.attempt);
             try {
                 const existing = JSON.parse(await readFile(target, 'utf8'));
                 if (existing.approval_summary_digest === request.summary_digest && existing.admission_digest === summary.admission_digest && JSON.stringify(existing.provider_auth_ref) === JSON.stringify(summary.provider_auth_ref) && JSON.stringify(existing.runtime_binding) === JSON.stringify(summary.runtime_binding))

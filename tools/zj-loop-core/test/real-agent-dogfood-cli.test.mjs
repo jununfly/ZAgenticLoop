@@ -13,6 +13,7 @@ import { createTrustedRunnerRegistryMutation, trustedRunnerCapabilitiesDigest } 
 import { admitTrustedRunnerExecution, recordTrustedRunnerRegistryMutation, readTrustedRunnerRegistry } from '../dist/trusted-runner-registry-store.js';
 import { providerAuthRefDigest } from '../dist/provider-auth-runtime.js';
 import { createRealAgentDogfoodGraphPlan } from '../dist/real-agent-dogfood-graph-orchestrator.js';
+import { createRealAgentDogfoodTransition, projectRealAgentDogfoodLifecycle } from '../dist/real-agent-dogfood-lifecycle.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -379,4 +380,46 @@ test('resume without a persisted approval remains awaiting-human-approval', asyn
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('retry creates a new attempt from blocked lifecycle and archives prior summary', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-retry-'));
+  const repo = path.join(root, 'repo');
+  const runtime = path.join(root, 'runtime');
+  await mkdir(repo);
+  await mkdir(runtime);
+  await initGitRepo(repo);
+  const statePath = path.join(runtime, 'state.db');
+  const evidencePath = path.join(runtime, 'evidence');
+  try {
+    const started = await invoke(['start', '--goal', 'retry the blocked execution', '--repo', repo, '--provider-id', 'provider-1', '--adapter', 'adapter-1', '--executable', '/usr/bin/true', '--network-policy', 'network-denied', '--state-store', statePath, '--evidence-store', evidencePath, '--worktree-root', path.join(runtime, 'worktrees')]);
+    const created = JSON.parse(started.stdout);
+    const store = createSqliteStateStore({ filename: statePath });
+    try {
+      const snapshot = await store.readEvents({ network_id: created.network_id, aggregate_type: 'real-agent-dogfood', aggregate_id: created.dogfood_id });
+      const lifecycle = projectRealAgentDogfoodLifecycle(snapshot.events);
+      const blocked = createRealAgentDogfoodTransition({ lifecycle, to: 'blocked', event_id: `${created.dogfood_id}:attempt-1:test-blocked`, occurred_at: '2026-08-01T00:00:00.000Z', fact_digest: `sha256:${'9'.repeat(64)}`, reason_code: 'test-blocked', next_action: 'retry' });
+      const appended = await store.appendEvent({ network_id: created.network_id, expected_revision: snapshot.snapshot_revision, event: blocked.event });
+      assert.equal(appended.status, 'recorded');
+    } finally { await store.close(); }
+    const retried = await invoke(['retry', '--dogfood-id', created.dogfood_id, '--network-id', created.network_id, '--execution-id', 'execution-retry-2', '--retry-reason', 'repair the admission binding', '--state-store', statePath, '--evidence-store', evidencePath]);
+    assert.equal(retried.exitCode, 0, retried.stderr);
+    const output = JSON.parse(retried.stdout);
+    assert.equal(output.status, 'awaiting-human-approval');
+    assert.equal(output.attempt, 2);
+    assert.equal(output.execution_id, 'execution-retry-2');
+    const currentSummary = JSON.parse(await readFile(output.approval_summary_path, 'utf8'));
+    assert.equal(currentSummary.attempt, 2);
+    assert.equal(currentSummary.execution_id, 'execution-retry-2');
+    assert.equal(currentSummary.admission_digest, undefined);
+    assert.equal(currentSummary.provider_auth_ref, undefined);
+    assert.equal(currentSummary.runtime_binding, undefined);
+    const archived = JSON.parse(await readFile(path.join(evidencePath, `${created.dogfood_id}.attempt-1.approval-summary.json`), 'utf8'));
+    assert.equal(archived.attempt, 1);
+    const finalStore = createSqliteStateStore({ filename: statePath });
+    try {
+      const events = await finalStore.readEvents({ network_id: created.network_id, aggregate_type: 'real-agent-dogfood', aggregate_id: created.dogfood_id });
+      assert.deepEqual(events.events.map((event) => event.payload.to_status), ['draft', 'preflight-ready', 'awaiting-human-approval', 'blocked', 'draft', 'preflight-ready', 'awaiting-human-approval']);
+    } finally { await finalStore.close(); }
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

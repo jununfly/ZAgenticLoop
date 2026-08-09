@@ -270,8 +270,9 @@ async function resume(options) {
         if (lifecycle.status !== 'awaiting-human-approval')
             return outputLifecycle(lifecycle, { provider_invoked: false });
         let envelope;
+        const attemptApprovalPath = (attempt) => path.join(evidenceStore, attempt > 1 ? `${approvalId}.attempt-${attempt}.json` : `${approvalId}.json`);
         try {
-            envelope = JSON.parse(await readFile(path.join(evidenceStore, `${approvalId}.json`), 'utf8'));
+            envelope = JSON.parse(await readFile(attemptApprovalPath(lifecycle.attempt), 'utf8'));
         }
         catch {
             return outputLifecycle(lifecycle, { provider_invoked: false, reason_code: 'human-approval-required', next_action: 'human-approval' });
@@ -426,6 +427,74 @@ async function resume(options) {
         await stateStore.close();
     }
 }
+async function retry(options) {
+    const dogfoodId = required(options, 'dogfood-id');
+    const networkId = required(options, 'network-id');
+    const defaults = defaultRealAgentDogfoodRuntimePaths();
+    const evidenceStore = await canonicalPath(typeof options['evidence-store'] === 'string' ? options['evidence-store'] : defaults.evidence_store);
+    const statePath = typeof options['state-store'] === 'string' ? options['state-store'] : defaults.state_store;
+    const stateStore = createSqliteStateStore({ filename: statePath });
+    try {
+        const snapshot = await stateStore.readEvents({ network_id: networkId, aggregate_type: 'real-agent-dogfood', aggregate_id: dogfoodId });
+        const lifecycle = projectRealAgentDogfoodLifecycle(snapshot.events);
+        if (lifecycle.dogfood_id !== dogfoodId || lifecycle.network_id !== networkId)
+            throw new Error('retry-lifecycle-binding-invalid');
+        if (!['blocked', 'outcome-uncertain', 'request-revision'].includes(lifecycle.status))
+            throw new Error('retry-lifecycle-status-invalid');
+        const summaryPath = path.join(evidenceStore, `${dogfoodId}.approval-summary.json`);
+        const previousSummaryText = await readFile(summaryPath, 'utf8');
+        const previousSummary = JSON.parse(previousSummaryText);
+        if (previousSummary.dogfood_id !== dogfoodId || previousSummary.network_id !== networkId || previousSummary.execution_id !== lifecycle.execution_id || previousSummary.attempt !== lifecycle.attempt || typeof previousSummary.summary_digest !== 'string')
+            throw new Error('retry-summary-binding-invalid');
+        const nextAttempt = lifecycle.attempt + 1;
+        const nextExecutionId = typeof options['execution-id'] === 'string' && options['execution-id'].trim() !== '' ? options['execution-id'].trim() : `execution-${randomUUID()}`;
+        if (!/^[A-Za-z0-9._:-]{1,256}$/.test(nextExecutionId) || nextExecutionId === lifecycle.execution_id)
+            throw new Error('retry-execution-id-invalid');
+        const retryReason = typeof options['retry-reason'] === 'string' && options['retry-reason'].trim() !== '' ? options['retry-reason'].trim() : 'human-requested-retry';
+        if (retryReason.length > 2048)
+            throw new Error('retry-reason-invalid');
+        let nextGraphPlan;
+        if (previousSummary.graph_plan && typeof previousSummary.graph_plan === 'object') {
+            nextGraphPlan = createRealAgentDogfoodGraphPlan({ ...previousSummary.graph_plan, attempt: nextAttempt, execution_id: nextExecutionId });
+            const graphPlanPath = typeof options['graph-plan'] === 'string' ? options['graph-plan'].trim() : '';
+            if (!graphPlanPath)
+                throw new Error('retry-graph-plan-path-required');
+            await writeFile(graphPlanPath, `${JSON.stringify(nextGraphPlan, null, 2)}\n`, { mode: 0o600 });
+        }
+        const archivedSummaryPath = path.join(evidenceStore, `${dogfoodId}.attempt-${lifecycle.attempt}.approval-summary.json`);
+        try {
+            await readFile(archivedSummaryPath, 'utf8');
+        }
+        catch {
+            await writeFile(archivedSummaryPath, previousSummaryText, { mode: 0o600, flag: 'wx' });
+        }
+        const now = new Date().toISOString();
+        let revision = snapshot.snapshot_revision;
+        const retryDraft = createRealAgentDogfoodTransition({ lifecycle, to: 'draft', event_id: `${dogfoodId}:attempt-${nextAttempt}:draft`, occurred_at: now, fact_digest: digest({ retry_of_execution_id: lifecycle.execution_id, retry_reason: retryReason }), next_action: 'prepare-preflight', attempt: nextAttempt, execution_id: nextExecutionId });
+        let result = await append(stateStore, networkId, retryDraft.event, revision);
+        if (result.status === 'conflict' || result.revision === undefined)
+            throw new Error('retry-draft-record-conflict');
+        revision = result.revision;
+        const preflight = createRealAgentDogfoodTransition({ lifecycle: retryDraft.lifecycle, to: 'preflight-ready', event_id: `${dogfoodId}:attempt-${nextAttempt}:preflight-ready`, occurred_at: now, fact_digest: typeof previousSummary.policy_digest === 'string' ? previousSummary.policy_digest : undefined, next_action: 'human-approval' });
+        result = await append(stateStore, networkId, preflight.event, revision);
+        if (result.status === 'conflict' || result.revision === undefined)
+            throw new Error('retry-preflight-record-conflict');
+        revision = result.revision;
+        const awaiting = createRealAgentDogfoodTransition({ lifecycle: preflight.lifecycle, to: 'awaiting-human-approval', event_id: `${dogfoodId}:attempt-${nextAttempt}:awaiting-human-approval`, occurred_at: now, fact_digest: typeof previousSummary.policy_digest === 'string' ? previousSummary.policy_digest : undefined, next_action: 'human-approval' });
+        result = await append(stateStore, networkId, awaiting.event, revision);
+        if (result.status === 'conflict' || result.revision === undefined)
+            throw new Error('retry-approval-record-conflict');
+        revision = result.revision;
+        const { summary_digest: _summaryDigest, status: _status, execution_id: _executionId, attempt: _attempt, lifecycle_revision: _lifecycleRevision, lifecycle_digest: _lifecycleDigest, admission_digest: _admissionDigest, provider_auth_ref: _providerAuthRef, runtime_binding: _runtimeBinding, graph_plan: _graphPlan, ...stableSummary } = previousSummary;
+        const summaryBase = { ...stableSummary, status: awaiting.lifecycle.status, execution_id: nextExecutionId, attempt: nextAttempt, ...(nextGraphPlan ? { graph_plan: nextGraphPlan } : {}), retry_of_execution_id: lifecycle.execution_id, retry_reason: retryReason, lifecycle_revision: revision, lifecycle_digest: awaiting.lifecycle.lifecycle_digest, created_at: now };
+        const summary = { ...summaryBase, summary_digest: digest(summaryBase) };
+        await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, { mode: 0o600 });
+        return outputLifecycle(awaiting.lifecycle, { provider_invoked: false, retry_of_execution_id: lifecycle.execution_id, retry_reason: retryReason, approval_summary_path: summaryPath, approval_summary_digest: summary.summary_digest, archived_approval_summary_path: archivedSummaryPath, ...(nextGraphPlan ? { graph_plan_path: typeof options['graph-plan'] === 'string' ? options['graph-plan'] : undefined, graph_plan_digest: nextGraphPlan.plan_digest } : {}) });
+    }
+    finally {
+        await stateStore.close();
+    }
+}
 async function status(options) {
     const dogfoodId = required(options, 'dogfood-id');
     const networkId = required(options, 'network-id');
@@ -526,7 +595,7 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
     return runCli({
         name: CLI_NAME,
         description: 'Prepare and inspect a provider-neutral OPN real-agent dogfood lifecycle.',
-        usage: `${CLI_NAME} <start|status|replay|preflight|conformance> [options]`,
+        usage: `${CLI_NAME} <start|status|retry|resume|replay|preflight|conformance> [options]`,
         options: [
             { name: 'command', type: 'positional', description: 'start, status, replay, preflight, or conformance' },
             { name: 'goal', type: 'string', description: 'Human-readable goal' },
@@ -542,6 +611,8 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             { name: 'dogfood-id', flag: 'dogfood-id', type: 'string', description: 'Dogfood id for status' },
             { name: 'network-id', flag: 'network-id', type: 'string', description: 'Network id for status' },
             { name: 'approval-id', flag: 'approval-id', type: 'string', description: 'Persisted approval envelope id for resume' },
+            { name: 'execution-id', flag: 'execution-id', type: 'string', description: 'New execution id for retry' },
+            { name: 'retry-reason', flag: 'retry-reason', type: 'string', description: 'Human-readable retry reason' },
             { name: 'admission-context', flag: 'admission-context', type: 'string', description: 'Persisted AdmissionBoundExecution artifact for resume' },
             { name: 'provider-runtime-ipc', flag: 'provider-runtime-ipc', type: 'string', description: 'Persisted Provider Runtime IPC binding JSON for Codex resume' },
             { name: 'worktree-root', flag: 'worktree-root', type: 'string', description: 'Directory for isolated execution worktrees' },
@@ -582,6 +653,11 @@ export function runRealAgentDogfoodCli(argv = process.argv.slice(2), io) {
             }
             if (command === 'resume') {
                 const result = await resume(options);
+                outputIo.stdout(JSON.stringify(result, null, 2));
+                return 0;
+            }
+            if (command === 'retry') {
+                const result = await retry(options);
                 outputIo.stdout(JSON.stringify(result, null, 2));
                 return 0;
             }

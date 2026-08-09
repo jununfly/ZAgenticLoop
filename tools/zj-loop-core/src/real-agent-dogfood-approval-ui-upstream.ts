@@ -43,6 +43,10 @@ type Summary = {
 function text(value: unknown): value is string { return typeof value === 'string' && value.trim() !== ''; }
 function digest(value: unknown): value is string { return typeof value === 'string' && /^sha256:[0-9a-f]{64}$/.test(value); }
 
+function approvalArtifactPath(evidenceRoot: string, dogfoodId: string, attempt: number): string {
+  return path.join(evidenceRoot, attempt > 1 ? `${dogfoodId}.attempt-${attempt}.json` : `${dogfoodId}.json`);
+}
+
 export function createRealAgentDogfoodApprovalUiUpstream(input: {
   stateStore: Pick<SqliteStateStore, 'readEvents'>;
   evidenceRoot: string;
@@ -82,7 +86,7 @@ export function createRealAgentDogfoodApprovalUiUpstream(input: {
         ...(summary.provider_auth_ref ? { provider_auth_ref: summary.provider_auth_ref } : {}),
         ...(summary.runtime_binding ? { runtime_binding: summary.runtime_binding } : {}),
       };
-      const target = path.join(input.evidenceRoot, `${request.dogfood_id}.json`);
+      const target = approvalArtifactPath(input.evidenceRoot, request.dogfood_id, request.attempt);
       try {
         const existing = JSON.parse(await readFile(target, 'utf8')) as { approval_summary_digest?: string; admission_digest?: string; provider_auth_ref?: unknown; runtime_binding?: unknown };
         if (existing.approval_summary_digest === request.summary_digest && existing.admission_digest === summary.admission_digest && JSON.stringify(existing.provider_auth_ref) === JSON.stringify(summary.provider_auth_ref) && JSON.stringify(existing.runtime_binding) === JSON.stringify(summary.runtime_binding)) return { status: 'duplicate', approval_id: request.dogfood_id, side_effects_executed: false };
