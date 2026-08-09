@@ -141,7 +141,7 @@ process.exitCode = await runCli({
         const bootstrapToken = randomBytes(32).toString('base64url');
         const controlToken = randomBytes(32).toString('base64url');
         let closeServer;
-        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, graph, dogfoodApprovals, bootstrap_token: bootstrapToken, control_token: controlToken, on_shutdown: () => { void closeServer?.(); } });
+        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, graph, dogfoodApprovals, bootstrap_token: bootstrapToken, session_store_path: path.join(runtimeDir, 'sessions.json'), control_token: controlToken, on_shutdown: () => { void closeServer?.(); } });
         const portValue = typeof options.port === 'string' && options.port.trim() !== '' ? Number(options.port) : 0;
         if (!Number.isInteger(portValue) || portValue < 0 || portValue > 65535)
             throw new Error('human-approval-ui-port-invalid');

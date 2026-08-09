@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { createInMemoryHumanSigner } from '../dist/human-signer.js';
 import { verifyHumanApprovalContext } from '../dist/human-authority.js';
 import { createHumanApprovalUiServer } from '../dist/human-approval-ui.js';
 import { createHumanActionRequest } from '../dist/human-action.js';
 import { createTransportEnvelope } from '../dist/transport-contract.js';
+import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition } from '../dist/real-agent-dogfood-lifecycle.js';
+import { createRealAgentDogfoodApprovalUiUpstream } from '../dist/real-agent-dogfood-approval-ui-upstream.js';
 
 function request({ address, path, method = 'GET', body, headers = {} }) {
   const payload = body === undefined ? undefined : JSON.stringify(body);
@@ -70,6 +75,50 @@ test('Human approval UI exchanges a one-time bootstrap token for a session and l
     assert.match(opnPage.body, /设备协作状态/);
     const replay = await request({ address, path: '/ui/bootstrap?token=bootstrap-1' });
     assert.equal(replay.status, 403);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('Human approval UI restores a browser session after Gateway restart', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-persistent' });
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-ui-session-'));
+  const sessionStorePath = path.join(root, 'sessions.json');
+  const create = (bootstrap_token) => createHumanApprovalUiServer({ signer, network_id: 'network-persistent', bootstrap_token, session_store_path: sessionStorePath, upstream: { async list() { return { requests: [] }; } }, now: () => '2026-07-30T00:00:00.000Z' });
+  const first = create('persistent-bootstrap-1');
+  await new Promise((resolve) => first.listen(0, '127.0.0.1', resolve));
+  let cookie;
+  try {
+    const address = first.address();
+    const bootstrapped = await request({ address, path: '/ui/bootstrap?token=persistent-bootstrap-1' });
+    cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    assert.equal((await request({ address, path: '/ui/session', headers: { cookie } })).status, 200);
+  } finally {
+    await new Promise((resolve) => first.close(resolve));
+  }
+  const second = create('persistent-bootstrap-2');
+  await new Promise((resolve) => second.listen(0, '127.0.0.1', resolve));
+  try {
+    const restored = await request({ address: second.address(), path: '/ui/session', headers: { cookie } });
+    assert.equal(restored.status, 200);
+    assert.equal(restored.body.network_id, 'network-persistent');
+  } finally {
+    await new Promise((resolve) => second.close(resolve));
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('Human approval UI self-bootstraps the stable loopback URL when no session exists', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-stable-url' });
+  const server = createHumanApprovalUiServer({ signer, network_id: 'network-stable-url', upstream: { async list() { return { requests: [] }; } } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const page = await request({ address, path: '/' });
+    assert.equal(page.status, 200);
+    assert.match(page.headers['set-cookie'][0], /^zj_loop_ui_session=/);
+    const cookie = page.headers['set-cookie'][0].split(';', 1)[0];
+    assert.equal((await request({ address, path: '/ui/session', headers: { cookie } })).status, 200);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
@@ -260,6 +309,37 @@ test('Human Approval UI exposes and signs Graph dogfood approval requests', asyn
     assert.equal(approved.context.action, 'real-agent-dogfood.approve');
     assert.equal(approved.context.network_id, 'network-1');
   } finally { await new Promise((resolve) => server.close(resolve)); }
+});
+
+test('Graph dogfood approval replaces a stale summary after admission binding and remains idempotent', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-dogfood-approval-'));
+  const dogfoodId = 'dogfood-approval-rebind-1';
+  const executionId = 'execution-approval-rebind-1';
+  const networkId = 'network-approval-rebind-1';
+  const oldDigest = `sha256:${'1'.repeat(64)}`;
+  const currentDigest = `sha256:${'2'.repeat(64)}`;
+  const plan = { dogfood_id: dogfoodId, execution_id: executionId, attempt: 1 };
+  const draft = createRealAgentDogfoodDraft({ network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, provider_id: 'codex', adapter_version: 'dev', created_at: '2026-07-30T00:00:00.000Z' });
+  const ready = createRealAgentDogfoodTransition({ lifecycle: draft.lifecycle, to: 'preflight-ready', event_id: `${dogfoodId}:ready`, occurred_at: '2026-07-30T00:01:00.000Z' });
+  const awaiting = createRealAgentDogfoodTransition({ lifecycle: ready.lifecycle, to: 'awaiting-human-approval', event_id: `${dogfoodId}:approval`, occurred_at: '2026-07-30T00:02:00.000Z' });
+  const stateStore = { async readEvents() { return { snapshot_revision: 3, events: [draft.event, ready.event, awaiting.event] }; } };
+  const summaryPath = path.join(root, `${dogfoodId}.approval-summary.json`);
+  const approvalPath = path.join(root, `${dogfoodId}.json`);
+  const summary = { schema: 'zj-loop.real_agent_dogfood_approval_summary.v1', status: 'awaiting-human-approval', network_id: networkId, dogfood_id: dogfoodId, execution_id: executionId, attempt: 1, goal: 'Rebind approval', execution_mode: 'write-enabled', allowed_files: ['README.md'], worktree_path: '/tmp/source', summary_digest: currentDigest, policy_digest: `sha256:${'3'.repeat(64)}`, lifecycle_revision: 4, admission_digest: `sha256:${'4'.repeat(64)}`, provider_auth_ref: { auth_ref_id: 'auth-1' }, runtime_binding: { runtime_identity_fingerprint: `sha256:${'5'.repeat(64)}` } };
+  await writeFile(summaryPath, JSON.stringify(summary));
+  await writeFile(approvalPath, JSON.stringify({ approval_summary_digest: oldDigest, stale: true }));
+  const upstream = createRealAgentDogfoodApprovalUiUpstream({ stateStore, evidenceRoot: root, network_id: networkId, plans: [plan] });
+  const requestValue = (await upstream.list()).requests[0];
+  const context = { action: 'real-agent-dogfood.approve', request_id: dogfoodId, request_digest: currentDigest, network_id: networkId, human_id: 'human-1' };
+  const identity = { human_id: 'human-1', schema: 'zj-loop.human_authority.v2' };
+  assert.equal((await upstream.approve({ request: requestValue, context, identity })).status, 'recorded');
+  const recorded = JSON.parse(await readFile(approvalPath, 'utf8'));
+  assert.equal(recorded.approval_summary_digest, currentDigest);
+  assert.equal(recorded.admission_digest, summary.admission_digest);
+  assert.deepEqual(recorded.provider_auth_ref, summary.provider_auth_ref);
+  assert.deepEqual(recorded.runtime_binding, summary.runtime_binding);
+  assert.equal((await upstream.approve({ request: requestValue, context, identity })).status, 'duplicate');
+  await rm(root, { recursive: true, force: true });
 });
 
 async function requestHttp(options) {

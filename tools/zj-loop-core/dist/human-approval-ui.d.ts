@@ -97,6 +97,7 @@ export type HumanApprovalUiServerInput = {
     graph?: HumanApprovalUiGraphUpstream;
     bootstrap_token?: string;
     session_ttl_ms?: number;
+    session_store_path?: string;
     now?: () => string;
     human_device?: {
         device_key_id: string;

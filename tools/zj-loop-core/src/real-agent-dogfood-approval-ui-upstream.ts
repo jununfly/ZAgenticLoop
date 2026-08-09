@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { HumanApprovalContext, HumanPublicIdentity } from './human-authority.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
@@ -35,6 +35,9 @@ type Summary = {
   allowed_files?: string[];
   worktree_path?: string;
   summary_digest?: string;
+  admission_digest?: string;
+  provider_auth_ref?: unknown;
+  runtime_binding?: unknown;
 };
 
 function text(value: unknown): value is string { return typeof value === 'string' && value.trim() !== ''; }
@@ -70,14 +73,30 @@ export function createRealAgentDogfoodApprovalUiUpstream(input: {
       const envelope = { schema: 'zj-loop.real_agent_dogfood_approval_envelope.v1', dogfood_id: request.dogfood_id, execution_id: request.execution_id, attempt: request.attempt, lifecycle_revision: 4, policy_digest: undefined, approval_summary_digest: request.summary_digest, approval: context, identity };
       const summary = JSON.parse(await readFile(path.join(input.evidenceRoot, `${request.dogfood_id}.approval-summary.json`), 'utf8')) as Summary & { policy_digest?: string; lifecycle_revision?: number; adapter_contract_digest?: string };
       if (!digest(summary.policy_digest) || !Number.isInteger(summary.lifecycle_revision)) throw new Error('real-agent-dogfood-approval-summary-invalid');
-      const boundEnvelope = { ...envelope, lifecycle_revision: summary.lifecycle_revision, policy_digest: summary.policy_digest };
+      if (summary.admission_digest !== undefined && !digest(summary.admission_digest)) throw new Error('real-agent-dogfood-approval-admission-digest-invalid');
+      const boundEnvelope = {
+        ...envelope,
+        lifecycle_revision: summary.lifecycle_revision,
+        policy_digest: summary.policy_digest,
+        ...(summary.admission_digest ? { admission_digest: summary.admission_digest } : {}),
+        ...(summary.provider_auth_ref ? { provider_auth_ref: summary.provider_auth_ref } : {}),
+        ...(summary.runtime_binding ? { runtime_binding: summary.runtime_binding } : {}),
+      };
       const target = path.join(input.evidenceRoot, `${request.dogfood_id}.json`);
       try {
-        const existing = JSON.parse(await readFile(target, 'utf8')) as { approval_summary_digest?: string };
-        if (existing.approval_summary_digest === request.summary_digest) return { status: 'duplicate', approval_id: request.dogfood_id, side_effects_executed: false };
-        return { status: 'conflict', reason: 'real-agent-dogfood-approval-id-conflict', side_effects_executed: false };
+        const existing = JSON.parse(await readFile(target, 'utf8')) as { approval_summary_digest?: string; admission_digest?: string; provider_auth_ref?: unknown; runtime_binding?: unknown };
+        if (existing.approval_summary_digest === request.summary_digest && existing.admission_digest === summary.admission_digest && JSON.stringify(existing.provider_auth_ref) === JSON.stringify(summary.provider_auth_ref) && JSON.stringify(existing.runtime_binding) === JSON.stringify(summary.runtime_binding)) return { status: 'duplicate', approval_id: request.dogfood_id, side_effects_executed: false };
       } catch { /* first approval */ }
-      await writeFile(target, `${JSON.stringify(boundEnvelope, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
+      // Admission binding can revise the approval summary while the lifecycle is still waiting for this human approval.
+      // Replace only that stale artifact, and publish the new envelope with a same-directory rename.
+      const temporaryTarget = `${target}.${process.pid}.${Date.now()}.tmp`;
+      try {
+        await writeFile(temporaryTarget, `${JSON.stringify(boundEnvelope, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
+        await rename(temporaryTarget, target);
+      } catch (error) {
+        await unlink(temporaryTarget).catch(() => undefined);
+        throw error;
+      }
       return { status: 'recorded', approval_id: request.dogfood_id, approved_at: now(), side_effects_executed: true };
     },
   };

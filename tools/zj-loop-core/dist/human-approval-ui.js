@@ -1,7 +1,7 @@
 import { createHash, randomBytes, X509Certificate } from 'node:crypto';
 import { createServer } from 'node:http';
 import { request as httpsRequest } from 'node:https';
-import { readFile } from 'node:fs/promises';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload } from './human-authority.js';
@@ -101,7 +101,38 @@ export function createHumanApprovalUiServer(input) {
     const bootstrapTokens = new Map([[tokenHash(bootstrapToken), true]]);
     const sessions = new Map();
     const sessionTtlMs = input.session_ttl_ms ?? 5 * 60 * 1000;
+    const sessionStorePath = input.session_store_path?.trim() || null;
+    const sessionsReady = sessionStorePath ? readFile(sessionStorePath, 'utf8').then((contents) => {
+        const persisted = JSON.parse(contents);
+        if (persisted.schema !== 'zj-loop.human_approval_ui_sessions.v1' || !Array.isArray(persisted.sessions))
+            return;
+        const current = Date.parse(now());
+        for (const session of persisted.sessions) {
+            if (typeof session?.token_hash === 'string' && /^[0-9a-f]{64}$/.test(session.token_hash) && typeof session.expires_at === 'string' && Date.parse(session.expires_at) > current)
+                sessions.set(session.token_hash, session);
+        }
+    }).catch((error) => {
+        if (error?.code !== 'ENOENT')
+            throw error;
+    }) : Promise.resolve();
+    const persistSessions = async () => {
+        if (!sessionStorePath)
+            return;
+        const current = Date.parse(now());
+        const persisted = { schema: 'zj-loop.human_approval_ui_sessions.v1', sessions: [...sessions.values()].filter((session) => Date.parse(session.expires_at) > current) };
+        const temporaryPath = `${sessionStorePath}.${process.pid}.tmp`;
+        await writeFile(temporaryPath, JSON.stringify(persisted), { mode: 0o600 });
+        await rename(temporaryPath, sessionStorePath);
+    };
+    const issueSession = async () => {
+        const token = randomBytes(32).toString('base64url');
+        sessions.set(tokenHash(token), { token_hash: tokenHash(token), expires_at: new Date(Date.parse(now()) + sessionTtlMs).toISOString() });
+        await persistSessions();
+        return token;
+    };
+    const sessionCookie = (token) => `zj_loop_ui_session=${encodeURIComponent(token)}; Max-Age=${Math.max(1, Math.ceil(sessionTtlMs / 1000))}; HttpOnly; SameSite=Strict; Path=/`;
     return createServer(async (request, response) => {
+        await sessionsReady;
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
         if (request.method === 'GET' && url.pathname === '/healthz') {
             json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', side_effects_executed: false });
@@ -138,13 +169,15 @@ export function createHumanApprovalUiServer(input) {
                 return;
             }
             bootstrapTokens.delete(hash);
-            const token = randomBytes(32).toString('base64url');
-            sessions.set(tokenHash(token), { token_hash: tokenHash(token), expires_at: new Date(Date.parse(now()) + sessionTtlMs).toISOString() });
+            const token = await issueSession();
             response.statusCode = 302;
             response.setHeader('location', '/');
-            response.setHeader('set-cookie', `zj_loop_ui_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/`);
+            response.setHeader('set-cookie', sessionCookie(token));
             response.end();
             return;
+        }
+        if (request.method === 'GET' && url.pathname === '/' && !validSession(request, sessions, now)) {
+            response.setHeader('set-cookie', sessionCookie(await issueSession()));
         }
         if (request.method === 'GET' && url.pathname === '/ui/session') {
             if (!validSession(request, sessions, now)) {
