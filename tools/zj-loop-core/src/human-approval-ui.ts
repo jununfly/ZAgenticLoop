@@ -48,6 +48,8 @@ export type HumanApprovalUiServerInput = {
   now?: () => string;
   human_device?: { device_key_id: string; device_fingerprint: string };
   dogfoodApprovals?: RealAgentDogfoodApprovalUiUpstream;
+  control_token?: string;
+  on_shutdown?: () => Promise<void> | void;
 };
 
 export type PairingHttpUpstreamInput = {
@@ -155,19 +157,41 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
   if (!input.network_id.trim()) throw new Error('human-approval-ui-network-id-required');
   const now = input.now ?? (() => new Date().toISOString());
   const bootstrapToken = input.bootstrap_token ?? randomBytes(32).toString('base64url');
-  const bootstrapHash = tokenHash(bootstrapToken);
+  const bootstrapTokens = new Map([[tokenHash(bootstrapToken), true]]);
   const sessions = new Map<string, UiSession>();
   const sessionTtlMs = input.session_ttl_ms ?? 5 * 60 * 1000;
-  let bootstrapUsed = false;
 
   return createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+    if (request.method === 'GET' && url.pathname === '/healthz') {
+      json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', side_effects_executed: false });
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/readyz') {
+      json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ready', side_effects_executed: false });
+      return;
+    }
+    const controlAuthorized = input.control_token && request.headers['x-zj-loop-control'] === input.control_token;
+    if (request.method === 'POST' && url.pathname === '/control/bootstrap') {
+      if (!controlAuthorized) { blocked(response, 401, 'gateway-control-token-required'); return; }
+      const token = randomBytes(32).toString('base64url');
+      bootstrapTokens.set(tokenHash(token), true);
+      json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'issued', url: `/ui/bootstrap?token=${encodeURIComponent(token)}`, side_effects_executed: false });
+      return;
+    }
+    if (request.method === 'POST' && url.pathname === '/control/stop') {
+      if (!controlAuthorized) { blocked(response, 401, 'gateway-control-token-required'); return; }
+      json(response, 202, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'stopping', side_effects_executed: true });
+      setImmediate(() => { void input.on_shutdown?.(); });
+      return;
+    }
     if (request.method === 'GET' && url.pathname === '/ui/bootstrap') {
-      if (bootstrapUsed || tokenHash(url.searchParams.get('token') ?? '') !== bootstrapHash) {
+      const hash = tokenHash(url.searchParams.get('token') ?? '');
+      if (!bootstrapTokens.has(hash)) {
         blocked(response, 403, 'bootstrap-token-invalid');
         return;
       }
-      bootstrapUsed = true;
+      bootstrapTokens.delete(hash);
       const token = randomBytes(32).toString('base64url');
       sessions.set(tokenHash(token), { token_hash: tokenHash(token), expires_at: new Date(Date.parse(now()) + sessionTtlMs).toISOString() });
       response.statusCode = 302;

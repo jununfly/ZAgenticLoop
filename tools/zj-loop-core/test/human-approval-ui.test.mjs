@@ -75,6 +75,40 @@ test('Human approval UI exchanges a one-time bootstrap token for a session and l
   }
 });
 
+test('Human approval UI exposes loopback health and controlled bootstrap renewal', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-gateway' });
+  let stopped = false;
+  const server = createHumanApprovalUiServer({
+    signer,
+    network_id: 'network-gateway',
+    bootstrap_token: 'gateway-bootstrap',
+    control_token: 'gateway-control',
+    on_shutdown() { stopped = true; },
+    upstream: { async list() { return { requests: [] }; } },
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const health = await request({ address, path: '/healthz' });
+    assert.equal(health.status, 200);
+    const ready = await request({ address, path: '/readyz' });
+    assert.equal(ready.status, 200);
+    const denied = await request({ address, path: '/control/bootstrap', method: 'POST' });
+    assert.equal(denied.status, 401);
+    const issued = await request({ address, path: '/control/bootstrap', method: 'POST', headers: { 'x-zj-loop-control': 'gateway-control' } });
+    assert.equal(issued.status, 200);
+    assert.match(issued.body.url, /^\/ui\/bootstrap\?token=/);
+    const renewed = await request({ address, path: issued.body.url });
+    assert.equal(renewed.status, 302);
+    const stop = await request({ address, path: '/control/stop', method: 'POST', headers: { 'x-zj-loop-control': 'gateway-control' } });
+    assert.equal(stop.status, 202);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(stopped, true);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('Human approval UI forwards same-origin structured messages through the local gateway', async () => {
   const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
   const sent = [];

@@ -103,6 +103,8 @@ export type HumanApprovalUiServerInput = {
         device_fingerprint: string;
     };
     dogfoodApprovals?: RealAgentDogfoodApprovalUiUpstream;
+    control_token?: string;
+    on_shutdown?: () => Promise<void> | void;
 };
 export type PairingHttpUpstreamInput = {
     endpoint: string;

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { createHash, randomBytes, X509Certificate } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { runCli } from './cli.js';
 import { createMacOSKeychainHumanSigner } from './macos-keychain-human-signer.js';
 import { createHumanApprovalUiServer, createPairingHttpUpstream } from './human-approval-ui.js';
@@ -11,10 +12,34 @@ import { createContentAddressedEvidenceStore } from './content-addressed-evidenc
 import { createRealAgentDogfoodGraphReviewUpstream } from './real-agent-dogfood-graph-review-upstream.js';
 import { createRealAgentDogfoodApprovalUiUpstream } from './real-agent-dogfood-approval-ui-upstream.js';
 const argv = process.argv.slice(2);
+async function readBinding(filename) {
+    try {
+        return JSON.parse(await readFile(filename, 'utf8'));
+    }
+    catch {
+        return null;
+    }
+}
+async function controlRequest(binding, action) {
+    const response = await fetch(`http://127.0.0.1:${binding.port}/control/${action}`, { method: 'POST', headers: { 'x-zj-loop-control': binding.control_token } });
+    const body = await response.json();
+    if (!response.ok)
+        throw new Error(String(body.reason ?? `gateway-${action}-failed`));
+    return body;
+}
+async function gatewayHealth(binding) {
+    try {
+        const response = await fetch(`http://127.0.0.1:${binding.port}/healthz`);
+        return response.ok;
+    }
+    catch {
+        return false;
+    }
+}
 process.exitCode = await runCli({
     name: 'zj-loop-human-approval-ui',
     description: 'Run the local Human approval UI.',
-    usage: 'zj-loop-human-approval-ui start [options]',
+    usage: 'zj-loop-human-approval-ui [start|status|open|stop] [options]',
     options: [
         { name: 'command', type: 'positional', description: 'start', default: 'start' },
         { name: 'network-id', flag: 'network-id', type: 'string', description: 'Configured network id' },
@@ -32,10 +57,46 @@ process.exitCode = await runCli({
         { name: 'graph-evidence-store', flag: 'graph-evidence-store', type: 'string', description: 'EvidenceStore root for replay-backed Graph Review' },
         { name: 'open', type: 'boolean', description: 'Open the bootstrap URL in the default browser' },
         { name: 'port', type: 'string', description: 'Local browser server port (0 chooses a free port)' },
+        { name: 'runtime-dir', flag: 'runtime-dir', type: 'string', description: 'Persistent local Gateway runtime directory' },
     ],
     async handler({ io, options }) {
-        if (String(options.command) !== 'start')
+        const command = String(options.command ?? 'start');
+        const runtimeDir = path.resolve(String(options['runtime-dir'] ?? path.join('.tmp', 'human-approval-ui')));
+        const bindingPath = path.join(runtimeDir, 'binding.json');
+        const existing = await readBinding(bindingPath);
+        if (command === 'status') {
+            const healthy = existing ? await gatewayHealth(existing) : false;
+            io.stdout(JSON.stringify({ schema: 'zj-loop.human_approval_ui_cli.v1', status: healthy ? 'running' : 'stopped', ...(existing ?? {}), side_effects_executed: false }));
+            return healthy ? 0 : 1;
+        }
+        if (command === 'open') {
+            if (!existing || !(await gatewayHealth(existing)))
+                throw new Error('human-approval-ui-gateway-not-running');
+            const issued = await controlRequest(existing, 'bootstrap');
+            const url = `http://127.0.0.1:${existing.port}${String(issued.url)}`;
+            io.stdout(JSON.stringify({ schema: 'zj-loop.human_approval_ui_cli.v1', status: 'ready', url, stable_url: `http://127.0.0.1:${existing.port}/`, side_effects_executed: false }));
+            if (options.open === true) {
+                const opener = process.platform === 'darwin' ? { command: 'open', args: [url] } : process.platform === 'win32' ? { command: 'cmd', args: ['/c', 'start', '', url] } : { command: 'xdg-open', args: [url] };
+                spawn(opener.command, opener.args, { stdio: 'ignore', detached: true, windowsHide: true }).unref();
+            }
+            return 0;
+        }
+        if (command === 'stop') {
+            if (!existing || !(await gatewayHealth(existing))) {
+                await rm(bindingPath, { force: true });
+                io.stdout(JSON.stringify({ schema: 'zj-loop.human_approval_ui_cli.v1', status: 'stopped', side_effects_executed: false }));
+                return 0;
+            }
+            const result = await controlRequest(existing, 'stop');
+            io.stdout(JSON.stringify({ schema: 'zj-loop.human_approval_ui_cli.v1', ...result }));
+            return 0;
+        }
+        if (command !== 'start')
             throw new Error('unsupported-human-approval-ui-command');
+        if (existing && await gatewayHealth(existing))
+            throw new Error('human-approval-ui-gateway-already-running');
+        await rm(bindingPath, { force: true });
+        await mkdir(runtimeDir, { recursive: true });
         const networkId = String(options['network-id'] ?? '').trim();
         const pairingEndpoint = String(options['pairing-endpoint'] ?? '').trim();
         const humanId = String(options['human-id'] ?? '').trim();
@@ -78,7 +139,9 @@ process.exitCode = await runCli({
             graph = createStateStoreGraphAtomUiUpstream({ stateStore, network_id: networkId });
         }
         const bootstrapToken = randomBytes(32).toString('base64url');
-        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, graph, dogfoodApprovals, bootstrap_token: bootstrapToken });
+        const controlToken = randomBytes(32).toString('base64url');
+        let closeServer;
+        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, graph, dogfoodApprovals, bootstrap_token: bootstrapToken, control_token: controlToken, on_shutdown: () => { void closeServer?.(); } });
         const portValue = typeof options.port === 'string' && options.port.trim() !== '' ? Number(options.port) : 0;
         if (!Number.isInteger(portValue) || portValue < 0 || portValue > 65535)
             throw new Error('human-approval-ui-port-invalid');
@@ -87,16 +150,30 @@ process.exitCode = await runCli({
         const address = server.address();
         if (!address || typeof address === 'string')
             throw new Error('human-approval-ui-address-unavailable');
+        const binding = { schema: 'zj-loop.human_approval_ui_binding.v1', pid: process.pid, port: address.port, control_token: controlToken, started_at: new Date().toISOString() };
+        const temporaryBindingPath = `${bindingPath}.${process.pid}.tmp`;
+        await writeFile(temporaryBindingPath, JSON.stringify(binding));
+        await rename(temporaryBindingPath, bindingPath);
         const url = `http://127.0.0.1:${address.port}/ui/bootstrap?token=${encodeURIComponent(bootstrapToken)}`;
-        io.stdout(JSON.stringify({ schema: 'zj-loop.human_approval_ui_cli.v1', status: 'listening', url, network_id: networkId, side_effects_executed: false }));
+        io.stdout(JSON.stringify({ schema: 'zj-loop.human_approval_ui_cli.v1', status: 'listening', url, stable_url: `http://127.0.0.1:${address.port}/`, runtime_dir: runtimeDir, network_id: networkId, side_effects_executed: false }));
         if (options.open === true) {
             const opener = process.platform === 'darwin' ? { command: 'open', args: [url] } : process.platform === 'win32' ? { command: 'cmd', args: ['/c', 'start', '', url] } : { command: 'xdg-open', args: [url] };
             spawn(opener.command, opener.args, { stdio: 'ignore', detached: true, windowsHide: true }).unref();
         }
         await new Promise((resolve) => {
-            const close = () => { server.close(async () => { await stateStore?.close(); resolve(); }); };
-            process.once('SIGINT', close);
-            process.once('SIGTERM', close);
+            let closed = false;
+            const close = async () => {
+                if (closed)
+                    return;
+                closed = true;
+                await new Promise((done) => server.close(() => done()));
+                await stateStore?.close();
+                await rm(bindingPath, { force: true });
+                resolve();
+            };
+            closeServer = close;
+            process.once('SIGINT', () => { void close(); });
+            process.once('SIGTERM', () => { void close(); });
         });
         return 0;
     },
