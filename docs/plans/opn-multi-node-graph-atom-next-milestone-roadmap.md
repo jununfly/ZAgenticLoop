@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-09 10:31:56
+> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-09 10:52:53
 
 [~][X+] 1. OPN Multi-node Graph Atom E2E 下一里程碑
 ├── [x][Y+] 1-1. Multi-node Graph Atom 场景与 Single-Agent baseline 增量
@@ -29,4 +29,5 @@
 - Q: 第一版 OPN Agent worker 采用单次 CLI 还是持续运行 worker？ → 采用持续运行的本地 gateway worker：自动创建/续期 session、receive/ack、bounded provider execution、幂等 agent.result reply 与断线重连；单次 CLI 仅作诊断工具。 (正式 co-work 主路径不能依赖人工重复执行 receive 命令。)
 - Q: 第一版 worker 如何处理未授权、超范围或需要 Human decision 的 agent.task？ → 只自动执行已绑定且已授权的 agent.task；超出 capability、写入范围或需要 Human decision 时生成 human.action.request 并停在 pending，不自行执行。 (保持最小安全门槛与 Human 最终接受边界，同时避免把安全策略堆成联调阻塞。)
 - Q: 发送方 Web UI 是否也必须看到通过 gateway 发出的 agent.task/agent.result？ → 是：同一 StateStore 的 offered facts 同时投影为 Outbox；接收方投影为 Inbox，双方 Web UI 展示同一条可校验消息的方向、digest 与 delivery state。 (补齐 POST /v1/owner/messages、POST /ui/messages、Owner Outbox 与 UI 发件箱；完整 envelope 仍是唯一可审计输入。)
+- Q: 跨设备 dogfood 验收方案是否需要作为 Agent 可直接读取的持久协议？ → 是：协议落库到 docs/devs/opn-cross-device-dogfood-validation-protocol.md；所有 Agent 先读取协议和 roadmap，再按 message-first、Web UI Outbox/Inbox、结构化失败格式协作。 (新增 gateway-send CLI 入口，禁止把手工 curl/聊天转述作为主验收路径。)
 <!-- ROADMAP_SECTION_END -->

@@ -24,3 +24,10 @@ test('transport CLI local-send writes a structured offered fact without exposing
     await reopened.close();
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('transport CLI exposes gateway-send as the message-first automation entrypoint', async () => {
+  const source = await readFile(new URL('../src/opn-transport-cli.ts', import.meta.url), 'utf8');
+  assert.match(source, /command === 'gateway-send'/);
+  assert.match(source, /\/v1\/owner\/messages/);
+  assert.match(source, /owner_token_file/);
+});

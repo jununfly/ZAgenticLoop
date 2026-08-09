@@ -71,9 +71,9 @@ function messageEnvelope(options, from_node_id) {
 export const opnTransportCliSpec = {
     name: 'zj-loop-opn-transport',
     description: 'Send and receive provider-neutral OPN transport envelopes.',
-    usage: 'zj-loop-opn-transport [receive|send|local-send|artifact-send|artifact-download] ...',
+    usage: 'zj-loop-opn-transport [receive|send|local-send|gateway-send|artifact-send|artifact-download] ...',
     options: [
-        { name: 'command', type: 'positional', description: 'receive, send, or local-send', default: 'receive' },
+        { name: 'command', type: 'positional', description: 'receive, send, local-send, or gateway-send', default: 'receive' },
         { name: 'endpoint', type: 'string', description: 'Remote OPN HTTPS endpoint' },
         { name: 'network_id', flag: 'network-id', type: 'string', description: 'OPN network id' },
         { name: 'node_id', flag: 'node-id', type: 'string', description: 'Local Agent or center node id' },
@@ -82,6 +82,7 @@ export const opnTransportCliSpec = {
         { name: 'cert', type: 'string', description: 'Client certificate PEM path' },
         { name: 'key', type: 'string', description: 'Client private key PEM path' },
         { name: 'credential_token_file', flag: 'credential-token-file', type: 'string', description: 'Opaque claimed credential token path' },
+        { name: 'owner_token_file', flag: 'owner-token-file', type: 'string', description: 'Owner authorization token path for gateway-send' },
         { name: 'session_file', flag: 'session-file', type: 'string', description: 'Join session file used to derive node id' },
         { name: 'state_store', flag: 'state-store', type: 'string', description: 'Local SQLite StateStore path for center commands' },
         { name: 'message_id', flag: 'message-id', type: 'string', description: 'Message id for send' },
@@ -189,6 +190,20 @@ export const opnTransportCliSpec = {
             finally {
                 await stateStore.close();
             }
+        }
+        if (command === 'gateway-send') {
+            const endpoint = String(options.endpoint ?? '').trim();
+            const ca = await textFile(String(options.ca ?? ''), 'opn-gateway-ca-required');
+            const cert = await textFile(String(options.cert ?? ''), 'opn-gateway-client-cert-required');
+            const key = await textFile(String(options.key ?? ''), 'opn-gateway-client-key-required');
+            const ownerToken = (await textFile(String(options.owner_token_file ?? ''), 'opn-gateway-owner-token-required')).trim();
+            const envelope = messageEnvelope(options, localNodeId);
+            const response = await artifactRequest({ endpoint, ca, cert, key, bearer_token: ownerToken, method: 'POST', pathname: '/v1/owner/messages', body: Buffer.from(JSON.stringify({ network_id, envelope })), headers: { 'content-type': 'application/json' } });
+            const result = parsedArtifactResponse(response);
+            if (response.statusCode !== 200 && response.statusCode !== 202)
+                throw new Error(String(result.reason ?? 'opn-gateway-message-send-failed'));
+            io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, gateway: endpoint, side_effects_executed: false }));
+            return;
         }
         const endpoint = String(options.endpoint ?? '').trim();
         const adapter = createTlsTransportAdapter({ endpoint, ca: await textFile(String(options.ca ?? ''), 'opn-transport-ca-required'), cert: await textFile(String(options.cert ?? ''), 'opn-transport-client-cert-required'), key: await textFile(String(options.key ?? ''), 'opn-transport-client-key-required'), bearer_token: (await textFile(String(options.credential_token_file ?? ''), 'opn-transport-credential-token-required')).trim() });

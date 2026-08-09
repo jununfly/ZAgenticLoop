@@ -2068,6 +2068,11 @@
           "q": "发送方 Web UI 是否也必须看到通过 gateway 发出的 agent.task/agent.result？",
           "answer": "是：同一 StateStore 的 offered facts 同时投影为 Outbox；接收方投影为 Inbox，双方 Web UI 展示同一条可校验消息的方向、digest 与 delivery state。",
           "note": "补齐 POST /v1/owner/messages、POST /ui/messages、Owner Outbox 与 UI 发件箱；完整 envelope 仍是唯一可审计输入。"
+        },
+        {
+          "q": "跨设备 dogfood 验收方案是否需要作为 Agent 可直接读取的持久协议？",
+          "answer": "是：协议落库到 docs/devs/opn-cross-device-dogfood-validation-protocol.md；所有 Agent 先读取协议和 roadmap，再按 message-first、Web UI Outbox/Inbox、结构化失败格式协作。",
+          "note": "新增 gateway-send CLI 入口，禁止把手工 curl/聊天转述作为主验收路径。"
         }
       ],
       "notes": ""
@@ -2075,7 +2080,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-09 10:31:56",
+    "updated": "2026-08-09 10:52:53",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
