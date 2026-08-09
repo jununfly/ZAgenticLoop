@@ -11,8 +11,8 @@ async function fileValue(name, filePath) {
     return (await readFile(path, 'utf8')).trim();
 }
 async function config() {
-    const identityDir = process.env.OPN_IDENTITY_DIR?.trim();
-    const sibling = (name) => identityDir ? path.join(identityDir, name) : undefined;
+    const nodeDir = process.env.OPN_NODE_DIR?.trim() || process.env.OPN_IDENTITY_DIR?.trim();
+    const sibling = (name) => nodeDir ? path.join(nodeDir, name) : undefined;
     const pathValue = (environmentName, siblingName) => process.env[environmentName]?.trim() || sibling(siblingName);
     const network_id = process.env.OPN_NETWORK_ID?.trim();
     const endpoint = process.env.OPN_ENDPOINT?.trim();

@@ -417,7 +417,7 @@ test('server lists all tools over stdio', async () => {
 
 test('OPN Gateway acknowledgement fails closed when local credentials are not configured', async () => {
   const root = await setup();
-  const names = ['OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
+  const names = ['OPN_NODE_DIR', 'OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
     for (const name of names) delete process.env[name];
@@ -446,7 +446,7 @@ test('OPN Agent task tool validates the bounded task before contacting the gatew
 
 test('OPN Gateway tools fail closed when local credentials are not configured', async () => {
   const root = await setup();
-  const names = ['OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
+  const names = ['OPN_NODE_DIR', 'OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
     for (const name of names) delete process.env[name];
@@ -462,12 +462,12 @@ test('OPN Gateway tools fail closed when local credentials are not configured', 
   }
 });
 
-test('OPN Gateway reports an incomplete identity directory without contacting the network', async () => {
+test('OPN Gateway reports an incomplete node directory without contacting the network', async () => {
   const root = await setup();
-  const names = ['OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
+  const names = ['OPN_NODE_DIR', 'OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
-    process.env.OPN_IDENTITY_DIR = root + '/missing-opn-identity';
+    process.env.OPN_NODE_DIR = root + '/missing-opn-node';
     process.env.OPN_NETWORK_ID = 'network-1';
     process.env.OPN_ENDPOINT = 'https://127.0.0.1:1';
     for (const name of ['OPN_NODE_ID', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE']) delete process.env[name];

@@ -24,14 +24,15 @@ Set `LOOP_PROJECT_ROOT` to your target project (defaults to `cwd`).
 ## OPN Gateway mode
 
 The same MCP server can expose the local OPN Gateway with one concentrated
-identity directory. Set `OPN_IDENTITY_DIR` to the directory containing
+OPN node directory. Set `OPN_NODE_DIR` to the directory containing
 `ca.cert.pem`, `agent.cert.pem`, `agent.key.pem`, and
 `join-session.json.credential-token`. The local artifact store defaults to an
 `artifacts` child in that directory. Also set `OPN_NETWORK_ID` and
 `OPN_ENDPOINT`; `OPN_NODE_ID` is derived from the agent certificate when it is
 omitted.
 
-The older `OPN_CA_FILE`, `OPN_CERT_FILE`, `OPN_KEY_FILE`,
+`OPN_IDENTITY_DIR` remains a deprecated compatibility alias. The older
+`OPN_CA_FILE`, `OPN_CERT_FILE`, `OPN_KEY_FILE`,
 `OPN_CREDENTIAL_TOKEN_FILE`, `OPN_ARTIFACT_STORE`, and `OPN_NODE_ID` variables
 remain supported as per-file compatibility overrides.
 

@@ -32,8 +32,8 @@ async function fileValue(name: string, filePath?: string): Promise<string> {
 }
 
 async function config(): Promise<GatewayConfig> {
-  const identityDir = process.env.OPN_IDENTITY_DIR?.trim();
-  const sibling = (name: string): string | undefined => identityDir ? path.join(identityDir, name) : undefined;
+  const nodeDir = process.env.OPN_NODE_DIR?.trim() || process.env.OPN_IDENTITY_DIR?.trim();
+  const sibling = (name: string): string | undefined => nodeDir ? path.join(nodeDir, name) : undefined;
   const pathValue = (environmentName: string, siblingName: string): string | undefined => process.env[environmentName]?.trim() || sibling(siblingName);
   const network_id = process.env.OPN_NETWORK_ID?.trim();
   const endpoint = process.env.OPN_ENDPOINT?.trim();
