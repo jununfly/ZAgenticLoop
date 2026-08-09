@@ -97,6 +97,18 @@ test('outbox projection exposes locally sent messages for the sender Web UI', as
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
 
+test('Inbox projection exposes a transport offer before a local worker persists its receive fact', async () => {
+  const { root, stateStore } = await fixture();
+  try {
+    const value = envelope({ message_id: 'transport-offer-visible', target_node_id: centerNode });
+    await offer(stateStore, value);
+    const projection = await projectOpnInbox({ stateStore, network_id: 'network-1', node_id: centerNode });
+    assert.equal(projection.length, 1);
+    assert.equal(projection[0].message_id, value.message_id);
+    assert.equal(projection[0].delivery_state, 'accepted');
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('center-local adapter completes the production Inbox receive, projection, and ack path', async () => {
   const { root, stateStore } = await fixture();
   try {

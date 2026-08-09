@@ -117,8 +117,16 @@ export async function receiveAndPersistOpnMessage(input: { transport: Pick<Trans
 }
 
 export async function projectOpnInbox(input: { stateStore: InboxStateStore; network_id: string; node_id: string }): Promise<OpnMessageReadModel[]> {
+  const transportEvents = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: 'opn-transport-message' })).events;
   const events = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: OPN_INBOX_AGGREGATE_TYPE })).events;
   const messages = new Map<string, { envelope: TransportEnvelope; acknowledged: boolean }>();
+  for (const event of transportEvents) {
+    const payload = event.payload as { schema?: string; envelope?: TransportEnvelope };
+    const envelope = payload.schema === 'zj-loop.opn_transport_http.v1' ? payload.envelope : undefined;
+    if (!envelope || envelope.target_node_id !== input.node_id) continue;
+    if (event.event_type === 'opn.transport.message.offered') messages.set(envelope.message_id, { envelope, acknowledged: false });
+    if (event.event_type === 'opn.transport.message.acknowledged' && messages.has(envelope.message_id)) messages.get(envelope.message_id)!.acknowledged = true;
+  }
   for (const event of events) {
     const payload = payloadOf(event);
     if (!payload || payload.envelope.target_node_id !== input.node_id) continue;
