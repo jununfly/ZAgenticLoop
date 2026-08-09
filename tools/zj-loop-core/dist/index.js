@@ -268,6 +268,7 @@ export * from './real-agent-dogfood-graph-real-adapters.js';
 export * from './real-agent-dogfood-self-audit.js';
 export * from './opn-endpoint.js';
 export * from './opn-agent-join.js';
+export * from './opn-agent-worker.js';
 export * from './opn-agent-certificate-signer.js';
 export * from './opn-agent-identity-bootstrap.js';
 export * from './opn-readonly-graph-atom.js';

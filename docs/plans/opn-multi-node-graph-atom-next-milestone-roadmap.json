@@ -1979,20 +1979,98 @@
       "status": "in_progress",
       "mode": "exploit",
       "parent": "1-8",
-      "children": [],
+      "children": [
+        "1-8-4-1"
+      ],
       "decisions": [
         {
           "q": "真实 Provider Runtime 的 adapter contract digest 如何绑定到 Graph execution？",
           "answer": "bind-admission 必须读取当前 Runtime IPC binding，并将其 adapter_contract_digest 绑定进 approval summary 与 worker context；不能继续使用启动前独立推导的 digest。",
           "note": "修复 provider-runtime-launch-handle-missing 前的 contract mismatch，保持 Runtime binding 与 admission 四方一致。"
+        },
+        {
+          "q": "retry6 是否复用 retry5 的 Runtime、StateStore、EvidenceStore、worktrees 与 auth/session？",
+          "answer": "否：创建全新的 disposable Graph attempt、Runtime、StateStore、EvidenceStore、worktrees 与 execution binding，不复用 retry5 的过期或失败状态。",
+          "note": "retry5 已产生失败事实，且 Runtime/auth 已退出或过期；retry6 必须保持 replay 与 Evidence 链隔离。"
+        },
+        {
+          "q": "retry6 的真实 source execution 是否继续使用 write-enabled 单文件变更？",
+          "answer": "是：继续使用 write-enabled；Agent 只能修改 source worktree 中一个明确允许的文件，以验证 scope observation、independent verification 与后续 Graph 链路。",
+          "note": "不使用 read-only 假验收；变更保持最小且 worktree disposable。"
+        },
+        {
+          "q": "retry6 的 source 允许文件与独立验证命令如何绑定？",
+          "answer": "采用现有 Graph plan 的单文件范围 tools/zj-loop-core/test/native-opn-tracer.test.mjs，并由 verifier 执行该文件对应的 bounded test。",
+          "note": "复用既有 disposable plan 约束，source Agent 不得修改其他文件；verifier 只读 source 结果并独立执行验证。"
+        },
+        {
+          "q": "跨设备真实联调是否改为 OPN message-first，而不是由 Human 手工转述命令和结果？",
+          "answer": "是：中心节点发送结构化 task/message；目标节点 Inbox 与 Web UI 展示并审计；节点内 Agent 自动消费执行，再通过 OPN 回复结构化 result/message；Human 只处理真实 action/decision。",
+          "note": "OPN Web UI 作为节点本地网关与审计窗口，联调过程本身必须验证产品通路。"
+        },
+        {
+          "q": "OPN 协作 task/result 消息如何承载任务详情与证据引用？",
+          "answer": "复用现有 TransportEnvelope 与 artifact_refs：task 使用 agent.task，详情放可校验 artifact；result 使用 agent.result，携带 execution 状态、reason、Evidence/Artifact refs；Inbox/Web UI 只读展示。",
+          "note": "复用 receive/ack、Inbox projection、artifact transfer 与审计模型，避免大 prompt 或非结构化内容进入消息正文。"
+        },
+        {
+          "q": "目标 OPN 节点是否由本地 Agent worker 自动消费 agent.task 并回复 agent.result？",
+          "answer": "是：节点 worker 自动执行 receive、校验、ack、bounded runner 与 result reply；Web UI 只展示消息并提供 Human action 入口，不直接执行任务。",
+          "note": "将人工转述从联调闭环中移除；Human action 仍必须经过 pending UI 与签名 decision 流程。"
+        },
+        {
+          "q": "retry6 的 verifier Agent 是否必须通过 OPN message 跨设备协作？本机第二个 Agent 是否允许直连 Coordinator？",
+          "answer": "不允许直连：Windows verifier 与本机第二个 Agent 都必须由各自 OPN 节点的本地 Web UI/gateway 接收 agent.task，经本地 Agent worker 执行，再通过 agent.result 回传。",
+          "note": "同机与跨机使用同一产品通路；Coordinator 只与 OPN transport/gateway 交互，避免联调特权路径。"
+        },
+        {
+          "q": "每个 OPN 节点的 Web UI 是否同时承担本地 gateway，而不仅是浏览器展示页？",
+          "answer": "是：Web UI 服务提供结构化 message ingress/egress API、Inbox/Outbox read model 与审计日志；Agent worker、Coordinator CLI 与浏览器统一经过 gateway，UI 不直接持有或修改业务状态。",
+          "note": "浏览器是 gateway 的可视化窗口；自动联调不依赖人工点击、复制命令或转述结果。"
+        },
+        {
+          "q": "OPN message-first 通路采用什么投递与重连语义？",
+          "answer": "采用至少一次投递与幂等消费：message_id/envelope_digest 去重，先持久化 Inbox 再 ack，断线自动重连与重试，Agent result 同样幂等；不宣称 exactly-once。",
+          "note": "复用现有 receive/ack 与 append-only StateStore，覆盖 macOS/Windows 网络抖动。"
+        },
+        {
+          "q": "Human action request/decision 是否也必须走同一条 OPN gateway/message 通路？",
+          "answer": "是：request 进入目标节点 Inbox/Web UI，Human 在目标 UI 查看并签名 decision，decision 通过 OPN 回传中心；Agent/Coordinator 不得伪造或替代 Human decision。",
+          "note": "统一任务协作、Human action、审计与回传通路，保持最终 Human acceptance 边界。"
         }
       ],
       "notes": "已修复并测试 Runtime adapter contract digest wiring；准备重新执行真实 provider launch。"
+    },
+    "1-8-4-1": {
+      "id": "1-8-4-1",
+      "label": "OPN gateway agent task/result 联调闭环",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-8-4",
+      "children": [],
+      "decisions": [
+        {
+          "q": "retry6 是否必须先经过 OPN gateway agent task/result 联调闭环？",
+          "answer": "是：先实现并验证 OPN gateway message-first 闭环，再启动 retry6；人工转述不能作为主验收路径。",
+          "note": "retry6 直接使用产品通路，覆盖本机第二 Agent 与 Windows Agent。"
+        },
+        {
+          "q": "第一版 OPN Agent worker 采用单次 CLI 还是持续运行 worker？",
+          "answer": "采用持续运行的本地 gateway worker：自动创建/续期 session、receive/ack、bounded provider execution、幂等 agent.result reply 与断线重连；单次 CLI 仅作诊断工具。",
+          "note": "正式 co-work 主路径不能依赖人工重复执行 receive 命令。"
+        },
+        {
+          "q": "第一版 worker 如何处理未授权、超范围或需要 Human decision 的 agent.task？",
+          "answer": "只自动执行已绑定且已授权的 agent.task；超出 capability、写入范围或需要 Human decision 时生成 human.action.request 并停在 pending，不自行执行。",
+          "note": "保持最小安全门槛与 Human 最终接受边界，同时避免把安全策略堆成联调阻塞。"
+        }
+      ],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-08 18:44:14",
+    "updated": "2026-08-09 10:10:53",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
