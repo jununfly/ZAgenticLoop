@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { connectUnixProviderAuthIpc } from './provider-auth-ipc-unix.js';
+import { connectUnixProviderAuthIpc, PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS } from './provider-auth-ipc-unix.js';
 import { createProviderAuthIpcFrame, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 import { validateProviderLaunchHandle, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 
@@ -30,7 +30,7 @@ export function createProviderRuntimeIpcCleanupCoordinator(input: ProviderRuntim
     if (handle.status === 'blocked') return { status: 'uncertain', reason: handle.reason };
     if (handle.handle.network_id !== input.network_id || handle.handle.node_id !== input.node_id || handle.handle.provider_id !== input.provider_id || handle.handle.execution_id !== input.execution_id || handle.handle.attempt !== input.attempt) return { status: 'uncertain', reason: 'provider-runtime-cleanup-binding-mismatch' };
     const timeout = input.timeout_ms ?? 5_000;
-    if (!Number.isInteger(timeout) || timeout < 1 || timeout > 60_000) return { status: 'uncertain', reason: 'provider-runtime-cleanup-timeout-invalid' };
+    if (!Number.isInteger(timeout) || timeout < 1 || timeout > PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS) return { status: 'uncertain', reason: 'provider-runtime-cleanup-timeout-invalid' };
     const correlation_id = input.correlation_id ?? `cleanup-${randomUUID()}`;
     let connection: Awaited<ReturnType<typeof connectUnixProviderAuthIpc>> | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;

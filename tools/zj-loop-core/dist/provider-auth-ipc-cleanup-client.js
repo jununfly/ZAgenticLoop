@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { connectUnixProviderAuthIpc } from './provider-auth-ipc-unix.js';
+import { connectUnixProviderAuthIpc, PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS } from './provider-auth-ipc-unix.js';
 import { createProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 import { validateProviderLaunchHandle } from './provider-auth-runtime.js';
 const CLEANUP_REQUEST_SCHEMA = 'zj-loop.provider_cleanup_request.v1';
@@ -16,7 +16,7 @@ export function createProviderRuntimeIpcCleanupCoordinator(input) {
         if (handle.handle.network_id !== input.network_id || handle.handle.node_id !== input.node_id || handle.handle.provider_id !== input.provider_id || handle.handle.execution_id !== input.execution_id || handle.handle.attempt !== input.attempt)
             return { status: 'uncertain', reason: 'provider-runtime-cleanup-binding-mismatch' };
         const timeout = input.timeout_ms ?? 5_000;
-        if (!Number.isInteger(timeout) || timeout < 1 || timeout > 60_000)
+        if (!Number.isInteger(timeout) || timeout < 1 || timeout > PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS)
             return { status: 'uncertain', reason: 'provider-runtime-cleanup-timeout-invalid' };
         const correlation_id = input.correlation_id ?? `cleanup-${randomUUID()}`;
         let connection;
