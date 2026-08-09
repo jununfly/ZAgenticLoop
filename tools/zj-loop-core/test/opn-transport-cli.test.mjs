@@ -38,3 +38,17 @@ test('transport CLI exposes gateway-task-send for artifact-backed Agent tasks', 
   assert.match(source, /notification_kind: 'agent.task'/);
   assert.match(source, /recordLocalOpnArtifactTransfer/);
 });
+
+test('transport CLI exposes session-open and reports session expires_at', async () => {
+  const source = await readFile(new URL('../src/opn-transport-cli.ts', import.meta.url), 'utf8');
+  assert.match(source, /command === 'session-open'/);
+  assert.match(source, /expires_at: session\.expires_at/);
+});
+
+test('transport CLI exposes result-send to reply agent.result to the task sender', async () => {
+  const source = await readFile(new URL('../src/opn-transport-cli.ts', import.meta.url), 'utf8');
+  assert.match(source, /command === 'result-send'/);
+  assert.match(source, /notification_kind: 'agent\.result'/);
+  assert.match(source, /agent-result:/);
+  assert.match(source, /createTlsOpnArtifactPublisher/);
+});

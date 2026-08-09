@@ -5,11 +5,14 @@ import { request as httpsRequest, type RequestOptions } from 'node:https';
 import { runCli, type CliIo, type CliSpec, defaultCliIo } from './cli.js';
 import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
 import { createOpnArtifactStore } from './opn-artifact-store.js';
+import { createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
 import { validateBoundedLoopTask } from './agent-task.js';
 import { recordLocalOpnArtifactTransfer } from './opn-artifact-transfer-http-server.js';
 import { createTlsTransportAdapter } from './tls-transport-adapter.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createTransportEnvelope } from './transport-contract.js';
+
+export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1' as const;
 
 const digest = 'sha256:' + '0'.repeat(64);
 const ARTIFACT_SCHEMA = 'zj-loop.opn_artifact.v1';
@@ -68,9 +71,9 @@ function messageEnvelope(options: Record<string, string | boolean | undefined>, 
 export const opnTransportCliSpec: CliSpec = {
   name: 'zj-loop-opn-transport',
   description: 'Send and receive provider-neutral OPN transport envelopes.',
-  usage: 'zj-loop-opn-transport [receive|send|local-send|gateway-send|gateway-task-send|artifact-send|artifact-download] ...',
+  usage: 'zj-loop-opn-transport [receive|send|session-open|result-send|local-send|gateway-send|gateway-task-send|artifact-send|artifact-download] ...',
   options: [
-    { name: 'command', type: 'positional', description: 'receive, send, local-send, gateway-send, or gateway-task-send', default: 'receive' },
+    { name: 'command', type: 'positional', description: 'receive, send, session-open, result-send, local-send, gateway-send, or gateway-task-send', default: 'receive' },
     { name: 'endpoint', type: 'string', description: 'Remote OPN HTTPS endpoint' },
     { name: 'network_id', flag: 'network-id', type: 'string', description: 'OPN network id' },
     { name: 'node_id', flag: 'node-id', type: 'string', description: 'Local Agent or center node id' },
@@ -94,6 +97,8 @@ export const opnTransportCliSpec: CliSpec = {
     { name: 'transfer_id', flag: 'transfer-id', type: 'string', description: 'Transfer id for artifact-send' },
     { name: 'artifact_store', flag: 'artifact-store', type: 'string', description: 'Local content-addressed ArtifactStore directory' },
     { name: 'task_file', flag: 'task-file', type: 'string', description: 'Bounded Loop task JSON for local-task-send' },
+    { name: 'result_file', flag: 'result-file', type: 'string', description: 'Result evidence JSON file for result-send (published as agent.result)' },
+    { name: 'result_status', flag: 'result-status', type: 'string', description: 'Result status for result-send: succeeded|blocked (default: succeeded)' },
   ],
   async handler({ options, io }) {
     const command = String(options.command ?? 'receive');
@@ -218,20 +223,44 @@ export const opnTransportCliSpec: CliSpec = {
     const adapter = createTlsTransportAdapter({ endpoint, ca: await textFile(String(options.ca ?? ''), 'opn-transport-ca-required'), cert: await textFile(String(options.cert ?? ''), 'opn-transport-client-cert-required'), key: await textFile(String(options.key ?? ''), 'opn-transport-client-key-required'), bearer_token: (await textFile(String(options.credential_token_file ?? ''), 'opn-transport-credential-token-required')).trim() });
     const session = await adapter.openSession({ network_id, node_id: localNodeId });
     try {
+      if (command === 'session-open') {
+        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: 'open', session_id: session.session_id, expires_at: session.expires_at, network_id, node_id: localNodeId, endpoint, reconnected: true, side_effects_executed: false }));
+        return;
+      }
       if (command === 'receive') {
         const envelope = await adapter.receive({ session_id: session.session_id });
         if (!envelope) {
-          io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: 'empty', session_id: session.session_id, reconnected: true, side_effects_executed: false }));
+          io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: 'empty', session_id: session.session_id, expires_at: session.expires_at, reconnected: true, side_effects_executed: false }));
           return;
         }
         const acknowledged = await adapter.acknowledge({ session_id: session.session_id, message_id: envelope.message_id, envelope_digest: envelope.envelope_digest });
-        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: acknowledged.status === 'duplicate' ? 'duplicate' : 'received', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, from_node_id: envelope.from_node_id, target_node_id: envelope.target_node_id, notification_kind: envelope.notification_kind, acknowledgement: acknowledged.status, session_id: session.session_id, reconnected: true, side_effects_executed: false }));
+        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: acknowledged.status === 'duplicate' ? 'duplicate' : 'received', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, from_node_id: envelope.from_node_id, target_node_id: envelope.target_node_id, notification_kind: envelope.notification_kind, acknowledgement: acknowledged.status, session_id: session.session_id, expires_at: session.expires_at, reconnected: true, side_effects_executed: false }));
+        return;
+      }
+      if (command === 'result-send') {
+        // result-send: 手动把任务结果作为 agent.result 回复给任务发送方（用 agent 自身 TLS 身份，不需要 owner token）
+        const target = String(options.target_node_id ?? '').trim();
+        const messageId = String(options.message_id ?? '').trim();
+        if (!target || !messageId) throw new Error('opn-result-target-and-message-id-required');
+        const resultFile = String(options.result_file ?? '').trim();
+        const resultStatus = String(options.result_status ?? 'succeeded').trim();
+        if (resultStatus !== 'succeeded' && resultStatus !== 'blocked') throw new Error('opn-result-status-invalid');
+        const artifactRoot = String(options.artifact_store ?? '').trim();
+        if (!artifactRoot) throw new Error('opn-result-artifact-store-required');
+        const resultBytes = resultFile ? await readFile(resultFile) : Buffer.from(JSON.stringify({ summary: String(options.task_id ?? messageId), reported_at: new Date().toISOString(), side_effects_executed: false }));
+        const artifact = await createOpnArtifactStore({ root: artifactRoot }).put({ bytes: resultBytes, file_name: `${String(options.task_id ?? messageId)}.agent-result.json`, media_type: 'application/json' });
+        const publisher = createTlsOpnArtifactPublisher({ endpoint, ca: await textFile(String(options.ca ?? ''), 'opn-transport-ca-required'), cert: await textFile(String(options.cert ?? ''), 'opn-transport-client-cert-required'), key: await textFile(String(options.key ?? ''), 'opn-transport-client-key-required'), bearer_token: (await textFile(String(options.credential_token_file ?? ''), 'opn-transport-credential-token-required')).trim() });
+        await publisher.publish({ bytes: resultBytes, metadata: artifact.metadata, transfer_id: `result-artifact:${messageId}`, target_node_id: target });
+        const now = new Date();
+        const response = createTransportEnvelope({ message_id: `agent-result:${messageId}`, network_id, event_id: String(options.event_id ?? `agent-event-${Date.now()}`), plan_id: String(options.plan_id ?? 'opn-agent-task'), plan_revision: Number(options.plan_revision ?? 1), task_id: String(options.task_id ?? 'opn-transport-result'), from_node_id: localNodeId, target_node_id: target, notification_kind: 'agent.result', state: resultStatus === 'succeeded' ? 'available' : 'blocked', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }], created_at: now.toISOString(), expires_at: new Date(now.getTime() + 50 * 60 * 1000).toISOString() });
+        const result = await adapter.send({ session_id: session.session_id, envelope: response });
+        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: response.message_id, envelope_digest: response.envelope_digest, target_node_id: target, notification_kind: 'agent.result', result_artifact_id: artifact.metadata.artifact_id, session_id: session.session_id, side_effects_executed: false }));
         return;
       }
       if (command !== 'send') throw new Error('opn-transport-command-invalid');
       const envelope = messageEnvelope(options, localNodeId);
       const result = await adapter.send({ session_id: session.session_id, envelope });
-      io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, session_id: session.session_id, reconnected: true, side_effects_executed: false }));
+      io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, session_id: session.session_id, expires_at: session.expires_at, reconnected: true, side_effects_executed: false }));
     } finally { await adapter.closeSession({ session_id: session.session_id }); }
   },
 };
