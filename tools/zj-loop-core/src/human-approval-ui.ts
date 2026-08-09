@@ -9,6 +9,7 @@ import type { HumanSigner, HumanSignerIdentity } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
 import type { RealAgentDogfoodGraphReviewReadModel } from './real-agent-dogfood-graph-review-read-model.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
+import type { TransportEnvelope } from './transport-contract.js';
 import type { OpnReadOnlyGraphUiReadModel } from './opn-readonly-graph-ui-read-model.js';
 import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA, humanAuthorityV2SigningPayload, type HumanApprovalContext } from './human-authority.js';
 import { createHumanActionDecision, type HumanActionRequest } from './human-action.js';
@@ -19,6 +20,8 @@ export type HumanApprovalUiUpstream = {
   list(input: { network_id: string }): Promise<{ requests: PairingRequestProjection[] }>;
   connection?(): Promise<Record<string, unknown>>;
   messages?(): Promise<{ messages: OpnMessageReadModel[] }>;
+  outbox?(): Promise<{ messages: OpnMessageReadModel[] }>;
+  sendMessage?(input: { network_id: string; envelope: TransportEnvelope }): Promise<Record<string, unknown>>;
   graphAtoms?(): Promise<{ graphs: OpnReadOnlyGraphUiReadModel[] }>;
   approve?(input: { network_id: string; request_id: string; request_digest: string; approved_capabilities: string[]; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
   reject?(input: { network_id: string; request_id: string; request_digest: string; reason: string; context: HumanApprovalContext }): Promise<Record<string, unknown>>;
@@ -187,6 +190,26 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.messages) { blocked(response, 503, 'inbox-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.messages()), side_effects_executed: false }); } catch { blocked(response, 503, 'inbox-read-model-unavailable'); }
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/ui/outbox') {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.upstream.outbox) { blocked(response, 503, 'outbox-read-model-unavailable'); return; }
+      try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.outbox()), side_effects_executed: false }); } catch { blocked(response, 503, 'outbox-read-model-unavailable'); }
+      return;
+    }
+    if (request.method === 'POST' && url.pathname === '/ui/messages') {
+      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
+      if (!input.upstream.sendMessage) { blocked(response, 503, 'message-send-unavailable'); return; }
+      let body: Record<string, unknown>;
+      try { body = await readBody(request); } catch (error) { blocked(response, 400, error instanceof Error ? error.message : 'ui-json-invalid'); return; }
+      const envelope = body.envelope as TransportEnvelope | undefined;
+      if (!envelope || typeof envelope !== 'object') { blocked(response, 400, 'ui-message-envelope-invalid'); return; }
+      try {
+        const result = await input.upstream.sendMessage({ network_id: input.network_id, envelope });
+        json(response, 202, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'accepted', message_id: envelope.message_id, result, side_effects_executed: false });
+      } catch (error) { blocked(response, 503, error instanceof Error ? error.message : 'message-send-failed'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/graph-atoms') {
@@ -418,6 +441,14 @@ export function createPairingHttpUpstream(input: PairingHttpUpstreamInput): Huma
       if (!input.network_id?.trim()) throw new Error('pairing-upstream-network-id-required');
       const result = await requestPairingApi(input, `${pathFor('/v1/owner/inbox')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
       return { messages: Array.isArray(result.messages) ? result.messages as OpnMessageReadModel[] : [] };
+    },
+    async outbox() {
+      if (!input.network_id?.trim()) throw new Error('pairing-upstream-network-id-required');
+      const result = await requestPairingApi(input, `${pathFor('/v1/owner/outbox')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
+      return { messages: Array.isArray(result.messages) ? result.messages as OpnMessageReadModel[] : [] };
+    },
+    async sendMessage(value) {
+      return requestPairingApi(input, pathFor('/v1/owner/messages'), 'POST', { network_id: value.network_id, envelope: value.envelope as unknown as Record<string, unknown> });
     },
   async humanActions() {
       if (!input.network_id?.trim()) throw new Error('pairing-upstream-network-id-required');

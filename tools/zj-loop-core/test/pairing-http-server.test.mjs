@@ -19,6 +19,7 @@ import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createSqliteCredentialIssuance, credentialIssuanceDigest } from '../dist/sqlite-credential-issuance.js';
 import { createInMemoryHumanSigner } from '../dist/human-signer.js';
 import { createHumanActionRequest, createHumanActionDecision } from '../dist/human-action.js';
+import { createTransportEnvelope } from '../dist/transport-contract.js';
 
 const OPENSSL_BIN = process.env.OPENSSL_BIN ?? (existsSync('/opt/homebrew/opt/openssl@3/bin/openssl') ? '/opt/homebrew/opt/openssl@3/bin/openssl' : 'openssl');
 
@@ -115,6 +116,21 @@ test('Owner Inbox route returns the injected projection without transport side e
   const humanActions = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/human-actions?network_id=network-1', headers: { authorization: 'Bearer owner-token' } });
   assert.equal(humanActions.statusCode, 200);
   assert.equal(humanActions.body.requests[0].request_id, 'action-1');
+  await close(value);
+});
+
+test('Owner message gateway validates and sends a structured envelope', { skip: !supportsP256Certificates }, async () => {
+  const value = await fixture({
+    ownerAuthenticator: { authenticate: ({ action, authorization }) => action === 'message.send' && authorization === 'Bearer owner-token' ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } },
+    ownerMessageCommand: { send: async ({ network_id, envelope }) => ({ status: 'accepted', network_id, message_id: envelope.message_id }) },
+  });
+  const envelope = createTransportEnvelope({ message_id: 'gateway-message-1', network_id: 'network-1', event_id: 'gateway-event-1', plan_id: 'opn-gateway', plan_revision: 1, task_id: 'gateway-task-1', from_node_id: 'endpoint:network-1', target_node_id: 'agent-1', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: `sha256:${'a'.repeat(64)}`, content_sha256: `sha256:${'a'.repeat(64)}`, kind: 'artifact' }], created_at: '2026-07-29T03:00:00.000Z', expires_at: '2026-07-29T04:00:00.000Z' });
+  const sent = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/messages', method: 'POST', headers: { authorization: 'Bearer owner-token' }, body: { network_id: 'network-1', envelope } });
+  assert.equal(sent.statusCode, 202);
+  assert.equal(sent.body.message_id, envelope.message_id);
+  const blocked = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/messages', method: 'POST', headers: { authorization: 'Bearer owner-token' }, body: { network_id: 'network-2', envelope } });
+  assert.equal(blocked.statusCode, 400);
+  assert.equal(blocked.body.reason, 'owner-message-network-mismatch');
   await close(value);
 });
 

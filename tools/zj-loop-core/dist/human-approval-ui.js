@@ -161,6 +161,58 @@ export function createHumanApprovalUiServer(input) {
             }
             return;
         }
+        if (request.method === 'GET' && url.pathname === '/ui/outbox') {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.upstream.outbox) {
+                blocked(response, 503, 'outbox-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.outbox()), side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'outbox-read-model-unavailable');
+            }
+            return;
+        }
+        if (request.method === 'POST' && url.pathname === '/ui/messages') {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (request.headers.origin !== `http://${request.headers.host}`) {
+                blocked(response, 403, 'ui-origin-invalid');
+                return;
+            }
+            if (!input.upstream.sendMessage) {
+                blocked(response, 503, 'message-send-unavailable');
+                return;
+            }
+            let body;
+            try {
+                body = await readBody(request);
+            }
+            catch (error) {
+                blocked(response, 400, error instanceof Error ? error.message : 'ui-json-invalid');
+                return;
+            }
+            const envelope = body.envelope;
+            if (!envelope || typeof envelope !== 'object') {
+                blocked(response, 400, 'ui-message-envelope-invalid');
+                return;
+            }
+            try {
+                const result = await input.upstream.sendMessage({ network_id: input.network_id, envelope });
+                json(response, 202, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'accepted', message_id: envelope.message_id, result, side_effects_executed: false });
+            }
+            catch (error) {
+                blocked(response, 503, error instanceof Error ? error.message : 'message-send-failed');
+            }
+            return;
+        }
         if (request.method === 'GET' && url.pathname === '/ui/graph-atoms') {
             if (!validSession(request, sessions, now)) {
                 blocked(response, 401, 'ui-session-required');
@@ -639,6 +691,15 @@ export function createPairingHttpUpstream(input) {
                 throw new Error('pairing-upstream-network-id-required');
             const result = await requestPairingApi(input, `${pathFor('/v1/owner/inbox')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
             return { messages: Array.isArray(result.messages) ? result.messages : [] };
+        },
+        async outbox() {
+            if (!input.network_id?.trim())
+                throw new Error('pairing-upstream-network-id-required');
+            const result = await requestPairingApi(input, `${pathFor('/v1/owner/outbox')}?network_id=${encodeURIComponent(input.network_id)}`, 'GET');
+            return { messages: Array.isArray(result.messages) ? result.messages : [] };
+        },
+        async sendMessage(value) {
+            return requestPairingApi(input, pathFor('/v1/owner/messages'), 'POST', { network_id: value.network_id, envelope: value.envelope });
         },
         async humanActions() {
             if (!input.network_id?.trim())

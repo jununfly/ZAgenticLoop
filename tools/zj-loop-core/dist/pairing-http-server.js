@@ -6,6 +6,7 @@ import { approvePairingRequest, pairingRequestDigest } from './node-enrollment.j
 import { verifyPairingRequestProof } from './node-enrollment.js';
 import { validateHumanAuthorityV2Binding } from './human-authority.js';
 import { verifyHumanActionDecision } from './human-action.js';
+import { validateTransportEnvelope } from './transport-contract.js';
 export const PAIRING_HTTP_SCHEMA = 'zj-loop.pairing_http.v1';
 const MAX_BODY_BYTES = 64 * 1024;
 function json(response, statusCode, body) {
@@ -103,11 +104,55 @@ export function createPairingHttpServer(input) {
         const url = new URL(request.url ?? '/', 'https://pairing.local');
         const ownerList = request.method === 'GET' && url.pathname === '/v1/owner/pairing-requests';
         const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
+        const ownerOutbox = request.method === 'GET' && url.pathname === '/v1/owner/outbox';
+        const ownerMessage = request.method === 'POST' && url.pathname === '/v1/owner/messages';
         const ownerHumanActions = request.method === 'GET' && url.pathname === '/v1/owner/human-actions';
         const ownerHumanActionDecision = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/human-actions\/([^/]+)\/decision$/);
         const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);
         const ownerReject = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/reject$/);
-        if (ownerInbox) {
+        if (ownerMessage) {
+            if (!input.ownerAuthenticator) {
+                blocked(response, 'owner-authenticator-unavailable');
+                return;
+            }
+            if (!input.ownerMessageCommand) {
+                blocked(response, 'owner-message-command-unavailable');
+                return;
+            }
+            let value;
+            try {
+                value = await readBody(request);
+            }
+            catch (error) {
+                blocked(response, error instanceof Error ? error.message : 'json-invalid');
+                return;
+            }
+            const networkId = typeof value.network_id === 'string' ? value.network_id : '';
+            const envelope = value.envelope;
+            if (!networkId.trim() || !envelope || validateTransportEnvelope(envelope).status !== 'valid') {
+                blocked(response, 'owner-message-envelope-invalid');
+                return;
+            }
+            const transportEnvelope = envelope;
+            if (transportEnvelope.network_id !== networkId) {
+                blocked(response, 'owner-message-network-mismatch');
+                return;
+            }
+            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action: 'message.send', authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
+            if (auth.status !== 'allowed') {
+                blocked(response, auth.reason ?? 'owner-not-authorized');
+                return;
+            }
+            try {
+                const result = await input.ownerMessageCommand.send({ network_id: networkId, envelope: transportEnvelope });
+                json(response, 202, { schema: PAIRING_HTTP_SCHEMA, status: 'accepted', network_id: networkId, message_id: transportEnvelope.message_id, envelope_digest: transportEnvelope.envelope_digest, result, side_effects_executed: false });
+            }
+            catch (error) {
+                blocked(response, error instanceof Error ? error.message : 'owner-message-send-failed');
+            }
+            return;
+        }
+        if (ownerInbox || ownerOutbox) {
             if (!input.ownerAuthenticator) {
                 blocked(response, 'owner-authenticator-unavailable');
                 return;
@@ -122,15 +167,16 @@ export function createPairingHttpServer(input) {
                 blocked(response, auth.reason ?? 'owner-not-authorized');
                 return;
             }
-            if (!input.inboxReadModel) {
-                blocked(response, 'inbox-read-model-unavailable');
+            const model = ownerOutbox ? input.outboxReadModel : input.inboxReadModel;
+            if (!model) {
+                blocked(response, ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable');
                 return;
             }
             try {
-                json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, messages: await input.inboxReadModel.read({ network_id: networkId }), side_effects_executed: false });
+                json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, messages: await model.read({ network_id: networkId }), side_effects_executed: false });
             }
             catch {
-                blocked(response, 'inbox-read-model-unavailable');
+                blocked(response, ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable');
             }
             return;
         }

@@ -6,10 +6,11 @@ import type { OpnMessageReadModel } from './opn-message-read-model.js';
 import type { OpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
 import type { HumanActionReadModel } from './human-action-opn-projection.js';
 import type { HumanActionDecision, HumanActionRequest } from './human-action.js';
+import { type TransportEnvelope } from './transport-contract.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
-        action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide';
+        action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide' | 'message.send';
         authorization: string | null;
         request_id?: string;
         request_digest?: string;
@@ -75,6 +76,12 @@ export type HumanActionCommandService = {
         decision: HumanActionDecision;
     }): Promise<Record<string, unknown>>;
 };
+export type OwnerMessageCommandService = {
+    send(input: {
+        network_id: string;
+        envelope: TransportEnvelope;
+    }): Promise<Record<string, unknown>>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -94,8 +101,10 @@ export declare function createPairingHttpServer(input: {
     credentialIssue?: CredentialIssueService | null;
     connectionReadModel?: PairingConnectionReadModelService | null;
     inboxReadModel?: PairingInboxReadModelService | null;
+    outboxReadModel?: PairingInboxReadModelService | null;
     humanActionReadModel?: HumanActionReadModelService | null;
     humanActionCommand?: HumanActionCommandService | null;
+    ownerMessageCommand?: OwnerMessageCommandService | null;
     transport?: OpnTransportHttpService | null;
     artifactTransfer?: OpnArtifactTransferHttpService | null;
 }): Server;

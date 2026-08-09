@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 import { createTransportEnvelope } from '../dist/transport-contract.js';
 import { createLocalOpnTransportAdapter } from '../dist/opn-center-transport.js';
-import { projectOpnInbox, receiveAndPersistOpnMessage } from '../dist/opn-transport-inbox.js';
+import { projectOpnInbox, projectOpnOutbox, receiveAndPersistOpnMessage } from '../dist/opn-transport-inbox.js';
 
 const digest = (digit) => `sha256:${digit.repeat(64)}`;
 const centerNode = 'endpoint:network-1';
@@ -80,6 +80,20 @@ test('center-local adapter can send a message through the same StateStore transp
     });
     const events = await stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'opn-transport-message', aggregate_id: value.message_id });
     assert.equal(events.events[0].event_type, 'opn.transport.message.offered');
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('outbox projection exposes locally sent messages for the sender Web UI', async () => {
+  const { root, stateStore } = await fixture();
+  try {
+    const adapter = createLocalOpnTransportAdapter({ stateStore, network_id: 'network-1', node_id: centerNode });
+    const session = await adapter.openSession({ network_id: 'network-1', node_id: centerNode });
+    const value = envelope({ message_id: 'center-to-agent-outbox', from_node_id: centerNode, target_node_id: 'agent-1' });
+    await adapter.send({ session_id: session.session_id, envelope: value });
+    const projection = await projectOpnOutbox({ stateStore, network_id: 'network-1', node_id: centerNode });
+    assert.equal(projection.length, 1);
+    assert.equal(projection[0].message_id, value.message_id);
+    assert.equal(projection[0].from_node_id, centerNode);
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
 

@@ -46,4 +46,9 @@ export declare function projectOpnInbox(input: {
     network_id: string;
     node_id: string;
 }): Promise<OpnMessageReadModel[]>;
+export declare function projectOpnOutbox(input: {
+    stateStore: InboxStateStore;
+    network_id: string;
+    node_id: string;
+}): Promise<OpnMessageReadModel[]>;
 export {};

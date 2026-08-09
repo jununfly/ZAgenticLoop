@@ -5,7 +5,7 @@ import { projectPairingRequests } from './pairing-projection.js';
 import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
 import { createOpnTransportHttpService } from './opn-transport-http-server.js';
 import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
-import { projectOpnInbox } from './opn-transport-inbox.js';
+import { projectOpnInbox, projectOpnOutbox } from './opn-transport-inbox.js';
 import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
 import { projectOpnHumanActions } from './human-action-opn-projection.js';
 import { createTransportEnvelope } from './transport-contract.js';
@@ -54,6 +54,11 @@ export async function createOpnEndpointServer(input) {
                 return projectOpnInbox({ stateStore: input.stateStore, network_id, node_id: localNodeId });
             },
         },
+        outboxReadModel: {
+            async read({ network_id }) {
+                return projectOpnOutbox({ stateStore: input.stateStore, network_id, node_id: localNodeId });
+            },
+        },
         humanActionReadModel: input.artifact_store ? {
             async read({ network_id, node_id }) {
                 return projectOpnHumanActions({ stateStore: input.stateStore, artifactStore: input.artifact_store, network_id, node_id });
@@ -78,6 +83,17 @@ export async function createOpnEndpointServer(input) {
                 }
             },
         } : null,
+        ownerMessageCommand: {
+            async send({ network_id, envelope }) {
+                const session = await localTransport.openSession({ network_id, node_id: localNodeId });
+                try {
+                    return await localTransport.send({ session_id: session.session_id, envelope });
+                }
+                finally {
+                    await localTransport.closeSession({ session_id: session.session_id });
+                }
+            },
+        },
         transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
         artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
         readinessCheck: {

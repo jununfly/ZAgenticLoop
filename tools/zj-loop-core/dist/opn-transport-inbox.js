@@ -113,3 +113,16 @@ export async function projectOpnInbox(input) {
     }
     return [...messages.values()].map((message) => createOpnMessageReadModel({ envelope: message.envelope, delivery_state: message.acknowledged ? 'acknowledged' : 'accepted' }));
 }
+export async function projectOpnOutbox(input) {
+    const events = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: 'opn-transport-message' })).events;
+    const messages = new Map();
+    for (const event of events) {
+        const payload = event.payload;
+        const envelope = payload.schema === 'zj-loop.opn_transport_http.v1' ? payload.envelope : undefined;
+        if (!envelope || envelope.from_node_id !== input.node_id)
+            continue;
+        if (event.event_type === 'opn.transport.message.offered')
+            messages.set(envelope.message_id, envelope);
+    }
+    return [...messages.values()].map((envelope) => createOpnMessageReadModel({ envelope, delivery_state: 'accepted' }));
+}

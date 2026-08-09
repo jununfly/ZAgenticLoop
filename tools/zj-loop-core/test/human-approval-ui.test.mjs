@@ -4,6 +4,7 @@ import { createInMemoryHumanSigner } from '../dist/human-signer.js';
 import { verifyHumanApprovalContext } from '../dist/human-authority.js';
 import { createHumanApprovalUiServer } from '../dist/human-approval-ui.js';
 import { createHumanActionRequest } from '../dist/human-action.js';
+import { createTransportEnvelope } from '../dist/transport-contract.js';
 
 function request({ address, path, method = 'GET', body, headers = {} }) {
   const payload = body === undefined ? undefined : JSON.stringify(body);
@@ -72,6 +73,25 @@ test('Human approval UI exchanges a one-time bootstrap token for a session and l
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test('Human approval UI forwards same-origin structured messages through the local gateway', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  const sent = [];
+  const envelope = createTransportEnvelope({ message_id: 'ui-message-1', network_id: 'network-1', event_id: 'ui-event-1', plan_id: 'opn-ui', plan_revision: 1, task_id: 'ui-task-1', from_node_id: 'endpoint:network-1', target_node_id: 'agent-1', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: `sha256:${'b'.repeat(64)}`, content_sha256: `sha256:${'b'.repeat(64)}`, kind: 'artifact' }], created_at: '2026-07-30T00:00:00.000Z', expires_at: '2026-07-30T01:00:00.000Z' });
+  const server = createHumanApprovalUiServer({ signer, network_id: 'network-1', bootstrap_token: 'message-bootstrap', upstream: { async list() { return { requests: [] }; }, async sendMessage(value) { sent.push(value); return { status: 'accepted' }; } }, now: () => '2026-07-30T00:00:00.000Z' });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const bootstrapped = await request({ address, path: '/ui/bootstrap?token=message-bootstrap' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    const origin = `http://127.0.0.1:${address.port}`;
+    const response = await request({ address, path: '/ui/messages', method: 'POST', headers: { cookie, origin }, body: { envelope } });
+    assert.equal(response.status, 202);
+    assert.equal(sent[0].envelope.message_id, 'ui-message-1');
+    const badOrigin = await request({ address, path: '/ui/messages', method: 'POST', headers: { cookie, origin: 'https://evil.example' }, body: { envelope } });
+    assert.equal(badOrigin.status, 403);
+  } finally { await new Promise((resolve) => server.close(resolve)); }
 });
 
 test('Human approval UI signs and forwards one approval only after same-origin and digest checks', async () => {

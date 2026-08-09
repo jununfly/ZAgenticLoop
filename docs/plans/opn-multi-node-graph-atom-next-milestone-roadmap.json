@@ -2063,6 +2063,11 @@
           "q": "第一版 worker 如何处理未授权、超范围或需要 Human decision 的 agent.task？",
           "answer": "只自动执行已绑定且已授权的 agent.task；超出 capability、写入范围或需要 Human decision 时生成 human.action.request 并停在 pending，不自行执行。",
           "note": "保持最小安全门槛与 Human 最终接受边界，同时避免把安全策略堆成联调阻塞。"
+        },
+        {
+          "q": "发送方 Web UI 是否也必须看到通过 gateway 发出的 agent.task/agent.result？",
+          "answer": "是：同一 StateStore 的 offered facts 同时投影为 Outbox；接收方投影为 Inbox，双方 Web UI 展示同一条可校验消息的方向、digest 与 delivery state。",
+          "note": "补齐 POST /v1/owner/messages、POST /ui/messages、Owner Outbox 与 UI 发件箱；完整 envelope 仍是唯一可审计输入。"
         }
       ],
       "notes": ""
@@ -2070,7 +2075,7 @@
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-09 10:10:53",
+    "updated": "2026-08-09 10:31:56",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

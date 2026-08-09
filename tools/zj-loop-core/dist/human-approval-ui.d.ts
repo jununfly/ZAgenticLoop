@@ -4,6 +4,7 @@ import type { HumanSigner } from './human-signer.js';
 import type { GraphAtomUiReadModel } from './graph-atom-ui-read-model.js';
 import type { RealAgentDogfoodGraphReviewReadModel } from './real-agent-dogfood-graph-review-read-model.js';
 import type { OpnMessageReadModel } from './opn-message-read-model.js';
+import type { TransportEnvelope } from './transport-contract.js';
 import type { OpnReadOnlyGraphUiReadModel } from './opn-readonly-graph-ui-read-model.js';
 import { type HumanApprovalContext } from './human-authority.js';
 import { createHumanActionDecision, type HumanActionRequest } from './human-action.js';
@@ -18,6 +19,13 @@ export type HumanApprovalUiUpstream = {
     messages?(): Promise<{
         messages: OpnMessageReadModel[];
     }>;
+    outbox?(): Promise<{
+        messages: OpnMessageReadModel[];
+    }>;
+    sendMessage?(input: {
+        network_id: string;
+        envelope: TransportEnvelope;
+    }): Promise<Record<string, unknown>>;
     graphAtoms?(): Promise<{
         graphs: OpnReadOnlyGraphUiReadModel[];
     }>;

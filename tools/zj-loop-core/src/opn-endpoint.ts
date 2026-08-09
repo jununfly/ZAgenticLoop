@@ -12,7 +12,7 @@ import type { CredentialVerifier } from './sqlite-state-store-server.js';
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 import { createLocalOpnTransportAdapter } from './opn-center-transport.js';
 import type { TransportAdapter } from './transport-contract.js';
-import { projectOpnInbox } from './opn-transport-inbox.js';
+import { projectOpnInbox, projectOpnOutbox } from './opn-transport-inbox.js';
 import { createOpnArtifactStore } from './opn-artifact-store.js';
 import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
 import { projectOpnHumanActions } from './human-action-opn-projection.js';
@@ -82,6 +82,11 @@ export async function createOpnEndpointServer(input: {
         return projectOpnInbox({ stateStore: input.stateStore, network_id, node_id: localNodeId });
       },
     },
+    outboxReadModel: {
+      async read({ network_id }) {
+        return projectOpnOutbox({ stateStore: input.stateStore, network_id, node_id: localNodeId });
+      },
+    },
     humanActionReadModel: input.artifact_store ? {
       async read({ network_id, node_id }) {
         return projectOpnHumanActions({ stateStore: input.stateStore, artifactStore: input.artifact_store!, network_id, node_id });
@@ -99,6 +104,13 @@ export async function createOpnEndpointServer(input: {
         try { const sent = await localTransport.send({ session_id: session.session_id, envelope }); return { status: sent.status, artifact_id: artifact.metadata.artifact_id, message_id: envelope.message_id, target_node_id: targetNodeId }; } finally { await localTransport.closeSession({ session_id: session.session_id }); }
       },
     } : null,
+    ownerMessageCommand: {
+      async send({ network_id, envelope }) {
+        const session = await localTransport.openSession({ network_id, node_id: localNodeId });
+        try { return await localTransport.send({ session_id: session.session_id, envelope }); }
+        finally { await localTransport.closeSession({ session_id: session.session_id }); }
+      },
+    },
     transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
     artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
     readinessCheck: {
