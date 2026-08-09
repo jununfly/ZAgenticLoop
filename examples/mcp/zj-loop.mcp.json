@@ -4,7 +4,10 @@
       "command": "npx",
       "args": ["-y", "@jununfly/zj-loop-mcp-server"],
       "env": {
-        "LOOP_PROJECT_ROOT": "."
+        "LOOP_PROJECT_ROOT": ".",
+        "OPN_NODE_DIR": "/path/to/opn-node",
+        "OPN_NETWORK_ID": "opn-dogfood-20260806",
+        "OPN_ENDPOINT": "https://100.119.216.26:43123"
       }
     }
   }

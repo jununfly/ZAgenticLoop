@@ -53,7 +53,10 @@ Add to your MCP config (`.mcp.json` or equivalent):
       "command": "npx",
       "args": ["-y", "@jununfly/zj-loop-mcp-server"],
       "env": {
-        "LOOP_PROJECT_ROOT": "."
+        "LOOP_PROJECT_ROOT": ".",
+        "OPN_NODE_DIR": "/path/to/opn-node",
+        "OPN_NETWORK_ID": "opn-dogfood-20260806",
+        "OPN_ENDPOINT": "https://100.119.216.26:43123"
       }
     }
   }
@@ -87,6 +90,11 @@ Add to your MCP config (`.mcp.json` or equivalent):
 | `loop_get_state` | MCP resolver evidence | Read a state file for current loop status |
 | `loop_recommend_pattern` | `@jununfly/zj-loop-core` semantic query | Recommend patterns for a use case description |
 | `loop_estimate_cost` | `@jununfly/zj-loop-core` semantic query | Estimate daily token cost for a pattern at L1/L2/L3 |
+| `opn_gateway_status` | Local OPN Gateway | Check configuration and mTLS transport connectivity |
+| `opn_inbox_read` | Local OPN Gateway | Read one pending message without acknowledging it |
+| `opn_inbox_ack` | Local OPN Gateway | Acknowledge a previously read message |
+| `opn_message_send` | Local OPN Gateway | Send a structured message artifact |
+| `opn_agent_task_send` | Local OPN Gateway | Validate and send a bounded `agent.task` artifact |
 
 ## Semantic API Compatibility
 
