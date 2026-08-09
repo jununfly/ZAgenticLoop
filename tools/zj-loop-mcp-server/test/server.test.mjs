@@ -462,6 +462,22 @@ test('OPN Gateway tools fail closed when local credentials are not configured', 
   }
 });
 
+test('OPN Gateway reports an invalid local config file without contacting the network', async () => {
+  const root = await setup();
+  const previous = process.env.OPN_CONFIG_FILE;
+  try {
+    process.env.OPN_CONFIG_FILE = root + '/missing-opn-config.json';
+    for (const name of ['OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE']) delete process.env[name];
+    const res = await callServer(root, [{ id: 1, method: 'tools/call', params: { name: 'opn_inbox_read', arguments: {} } }]);
+    const parsed = JSON.parse(res.get(1).result.content[0].text);
+    assert.deepEqual(parsed, { schema: 'zj-loop.opn_mcp_error.v1', status: 'blocked', reason: 'opn-gateway-config-file-invalid' });
+  } finally {
+    if (previous === undefined) delete process.env.OPN_CONFIG_FILE;
+    else process.env.OPN_CONFIG_FILE = previous;
+    await cleanup();
+  }
+});
+
 test('loop_list_patterns tool returns registry patterns', async () => {
   const root = await setup();
   try {

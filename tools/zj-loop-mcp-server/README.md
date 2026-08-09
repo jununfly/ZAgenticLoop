@@ -28,6 +28,22 @@ variables are configured: `OPN_NETWORK_ID`, `OPN_NODE_ID`, `OPN_ENDPOINT`,
 `OPN_CA_FILE`, `OPN_CERT_FILE`, `OPN_KEY_FILE`, `OPN_CREDENTIAL_TOKEN_FILE`,
 and `OPN_ARTIFACT_STORE`.
 
+For a stable per-machine setup, set only `OPN_CONFIG_FILE` to a local JSON file;
+individual environment variables override matching JSON fields:
+
+```json
+{
+  "network_id": "opn-dogfood-20260806",
+  "node_id": "<this-node-id>",
+  "endpoint": "https://100.119.216.26:43123",
+  "ca_file": "<local>/ca.cert.pem",
+  "cert_file": "<local>/agent.cert.pem",
+  "key_file": "<local>/agent.key.pem",
+  "credential_token_file": "<local>/join-session.json.credential-token",
+  "artifact_store": "<local>/artifacts"
+}
+```
+
 It adds `opn_inbox_read`, `opn_inbox_ack`, `opn_message_send`, and `opn_agent_task_send`. Credentials stay outside MCP
 tool arguments; the tools return structured blocked results when the gateway
 is not configured. OPN transport and artifact publication remain owned by
