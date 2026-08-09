@@ -11,6 +11,7 @@ import { createOpnArtifactStore } from './opn-artifact-store.js';
 import { createNativeAgentRuntime } from './native-agent-runtime.js';
 import { createAgentRegistration } from './agent-registration.js';
 import { createOpnAgentAdapter, createProviderBackedNativeAgentExecutor } from './opn-agent-adapter.js';
+import { createOpnAgentWorker } from './opn-agent-worker.js';
 import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
 import { discoverProviderExecutable } from './provider-executable-discovery.js';
 import { createBoundedLoopTask } from './agent-task.js';
@@ -18,12 +19,12 @@ export function createRetryBoundedLoopTask(task) {
     const { schema: _schema, task_digest: _task_digest, execution_id: _execution_id, attempt: _attempt, idempotency_key: _idempotency_key, ...definition } = task;
     return createBoundedLoopTask({ ...definition, execution_id: `retry-${randomUUID()}`, attempt: task.attempt + 1, idempotency_key: `${task.idempotency_key}:retry:${randomUUID()}` });
 }
-const spec = {
+export const opnAgentRunnerCliSpec = {
     name: 'zj-loop-opn-agent-runner',
     description: 'Consume one OPN task and execute it with a local Codex or WorkBuddy provider.',
-    usage: 'zj-loop-opn-agent-runner run ...',
+    usage: 'zj-loop-opn-agent-runner <run|worker> ...',
     options: [
-        { name: 'command', type: 'positional', description: 'run' },
+        { name: 'command', type: 'positional', description: 'run or worker' },
         { name: 'endpoint', type: 'string', description: 'OPN HTTPS endpoint' },
         { name: 'network_id', flag: 'network-id', type: 'string', description: 'OPN network id' },
         { name: 'node_id', flag: 'node-id', type: 'string', description: 'Agent node id' },
@@ -38,15 +39,18 @@ const spec = {
         { name: 'cwd', type: 'string', description: 'Provider working directory' },
         { name: 'session_id', flag: 'session-id', type: 'string', description: 'WorkBuddy session id' },
         { name: 'retry_failed', flag: 'retry-failed', type: 'boolean', description: 'Create a new execution attempt only after the persisted execution failed' },
+        { name: 'max_iterations', flag: 'max-iterations', type: 'string', description: 'Bounded worker poll count for diagnostics/tests' },
+        { name: 'idle_delay_ms', flag: 'idle-delay-ms', type: 'string', description: 'Worker delay after an empty poll in milliseconds' },
     ],
     async handler({ options, io }) {
-        if (String(options.command ?? '') !== 'run')
+        const command = String(options.command ?? '');
+        if (command !== 'run' && command !== 'worker')
             throw new Error('opn-agent-runner-command-invalid');
         const read = async (name, error) => { const value = String(options[name] ?? '').trim(); if (!value)
             throw new Error(error); return readFile(value, 'utf8'); };
         const network_id = String(options.network_id ?? '').trim();
         const node_id = String(options.node_id ?? '').trim();
-        let task = JSON.parse(await read('task_file', 'opn-agent-runner-task-required'));
+        let task = command === 'run' ? JSON.parse(await read('task_file', 'opn-agent-runner-task-required')) : undefined;
         const providerKind = String(options.provider ?? '').trim();
         if (providerKind !== 'codex' && providerKind !== 'workbuddy-code')
             throw new Error('opn-agent-runner-provider-invalid');
@@ -63,7 +67,7 @@ const spec = {
         try {
             await stateStore.createNetwork({ network_id, owner_id: 'human-1' });
             let retry_of_execution_id;
-            if (options.retry_failed === true) {
+            if (command === 'run' && options.retry_failed === true && task) {
                 const persisted = await stateStore.readEvents({ network_id, aggregate_type: 'native-agent-execution', aggregate_id: task.execution_id });
                 const last = persisted.events.at(-1)?.payload;
                 if (last?.execution?.status !== 'failed')
@@ -78,27 +82,48 @@ const spec = {
             const transport = createTlsTransportAdapter({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const publisher = createTlsOpnArtifactPublisher({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const downloader = createTlsOpnArtifactDownloader({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
-            const session = await transport.openSession({ network_id, node_id });
-            try {
-                const executor = createProviderBackedNativeAgentExecutor({ provider_kind: providerKind, provider, cwd: String(options.cwd ?? ''), prompt: (value) => value.objective });
-                const runtime = createNativeAgentRuntime({ stateStore, registration: createAgentRegistration({ agent_id: node_id, display_name: providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task.task_kind], evidence_kinds: task.expected_evidence_kinds, protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` }), executor });
-                const artifactStore = createOpnArtifactStore({ root: String(options.artifact_store ?? '') });
-                const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore, publishArtifact: publisher.publish, agent_id: node_id });
-                const result = await adapter.processNext({
-                    session_id: session.session_id,
-                    resolveTask: async (envelope) => {
-                        const taskRef = envelope.artifact_refs[0];
-                        if (!taskRef)
-                            throw new Error('opn-agent-task-artifact-missing');
-                        const bytes = await downloader.download(taskRef.artifact_id);
-                        const stored = await artifactStore.put({ bytes, file_name: `${envelope.task_id}.task.json`, media_type: 'application/json', expected_digest: taskRef.artifact_id });
-                        const remoteTask = JSON.parse(stored.metadata ? bytes.toString('utf8') : '{}');
-                        if (remoteTask.task_id !== envelope.task_id)
-                            throw new Error('opn-agent-task-id-mismatch');
-                        return remoteTask;
+            const executor = createProviderBackedNativeAgentExecutor({ provider_kind: providerKind, provider, cwd: String(options.cwd ?? ''), prompt: (value) => value.objective });
+            const runtime = createNativeAgentRuntime({ stateStore, registration: createAgentRegistration({ agent_id: node_id, display_name: providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task?.task_kind ?? 'agent.task'], evidence_kinds: task?.expected_evidence_kinds ?? ['agent.result'], protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` }), executor });
+            const artifactStore = createOpnArtifactStore({ root: String(options.artifact_store ?? '') });
+            const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore, publishArtifact: publisher.publish, agent_id: node_id });
+            const resolveTask = async (envelope) => {
+                const taskRef = envelope.artifact_refs[0];
+                if (!taskRef)
+                    throw new Error('opn-agent-task-artifact-missing');
+                const bytes = await downloader.download(taskRef.artifact_id);
+                const stored = await artifactStore.put({ bytes, file_name: `${envelope.task_id}.task.json`, media_type: 'application/json', expected_digest: taskRef.artifact_id });
+                const remoteTask = JSON.parse(stored.metadata ? bytes.toString('utf8') : '{}');
+                if (remoteTask.task_id !== envelope.task_id)
+                    throw new Error('opn-agent-task-id-mismatch');
+                return remoteTask;
+            };
+            if (command === 'worker') {
+                const maxIterationsValue = String(options.max_iterations ?? '').trim();
+                const idleDelayValue = String(options.idle_delay_ms ?? '').trim();
+                const worker = createOpnAgentWorker({
+                    network_id,
+                    node_id,
+                    transport,
+                    on_error: (error) => io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', mode: 'worker', status: 'reconnecting', reason: error instanceof Error ? error.message : 'opn-agent-worker-transport-failed', side_effects_executed: false })),
+                    processNext: async ({ session_id }) => {
+                        const result = await adapter.processNext({ session_id, resolveTask });
+                        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', mode: 'worker', ...result }));
+                        return result;
                     },
                 });
-                io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', ...(retry_of_execution_id ? { retry_of_execution_id, execution_id: task.execution_id } : {}), ...result }));
+                const max_iterations = maxIterationsValue ? Number(maxIterationsValue) : undefined;
+                const idle_delay_ms = idleDelayValue ? Number(idleDelayValue) : undefined;
+                const result = await worker.run({ ...(max_iterations === undefined ? {} : { max_iterations }), ...(idle_delay_ms === undefined ? {} : { idle_delay_ms }) });
+                io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', mode: 'worker', status: 'stopped', ...result, side_effects_executed: false }));
+                return;
+            }
+            const session = await transport.openSession({ network_id, node_id });
+            try {
+                const result = await adapter.processNext({
+                    session_id: session.session_id,
+                    resolveTask,
+                });
+                io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', ...(retry_of_execution_id && task ? { retry_of_execution_id, execution_id: task.execution_id } : {}), ...result }));
             }
             finally {
                 await transport.closeSession({ session_id: session.session_id });
@@ -110,4 +135,4 @@ const spec = {
     },
 };
 if (process.argv[1]?.endsWith('opn-agent-runner-cli.js'))
-    process.exitCode = await runCli(spec);
+    process.exitCode = await runCli(opnAgentRunnerCliSpec);

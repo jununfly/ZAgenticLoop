@@ -75,3 +75,32 @@ test('OPN Agent worker closes its session when a bounded run ends', async () => 
   assert.deepEqual(await worker.run({ max_iterations: 1, idle_delay_ms: 0 }), { iterations: 1, stopped: true });
   assert.deepEqual(calls, ['open', 'close']);
 });
+
+test('OPN Agent worker run loop reconnects without an external retry call', async () => {
+  const calls = [];
+  let attempt = 0;
+  const worker = createOpnAgentWorker({
+    network_id: 'network-1',
+    node_id: 'agent-1',
+    transport: {
+      async openSession() { const session_id = `session-${attempt + 1}`; calls.push(['open', session_id]); return { session_id }; },
+      async closeSession(input) { calls.push(['close', input.session_id]); },
+    },
+    processNext: async ({ session_id }) => {
+      calls.push(['process', session_id]);
+      attempt += 1;
+      if (attempt === 1) throw new Error('transport-session-expired');
+      return { status: 'empty', side_effects_executed: false };
+    },
+  });
+
+  assert.deepEqual(await worker.run({ max_iterations: 2, idle_delay_ms: 0 }), { iterations: 2, stopped: true });
+  assert.deepEqual(calls, [
+    ['open', 'session-1'],
+    ['process', 'session-1'],
+    ['close', 'session-1'],
+    ['open', 'session-2'],
+    ['process', 'session-2'],
+    ['close', 'session-2'],
+  ]);
+});

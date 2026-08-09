@@ -24,4 +24,5 @@ export declare function createOpnAgentWorker(input: {
     processNext(input: {
         session_id: string;
     }): Promise<OpnAgentWorkerProcessResult>;
+    on_error?: (error: unknown) => void;
 }): OpnAgentWorker;

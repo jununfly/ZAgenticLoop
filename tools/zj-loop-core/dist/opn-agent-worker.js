@@ -46,7 +46,17 @@ export function createOpnAgentWorker(input) {
             let iterations = 0;
             try {
                 while (!stopped && !options.signal?.aborted && (maxIterations === undefined || iterations < maxIterations)) {
-                    const result = await worker.runOnce();
+                    let result;
+                    try {
+                        result = await worker.runOnce();
+                    }
+                    catch (error) {
+                        input.on_error?.(error);
+                        iterations += 1;
+                        if (idleDelay > 0 && !stopped && !options.signal?.aborted)
+                            await delay(idleDelay);
+                        continue;
+                    }
                     iterations += 1;
                     if (result.status === 'empty' && idleDelay > 0 && !stopped && !options.signal?.aborted)
                         await delay(idleDelay);

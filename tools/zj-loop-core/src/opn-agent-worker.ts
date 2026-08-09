@@ -22,6 +22,7 @@ export function createOpnAgentWorker(input: {
   node_id: string;
   transport: Pick<TransportAdapter, 'openSession' | 'closeSession'>;
   processNext(input: { session_id: string }): Promise<OpnAgentWorkerProcessResult>;
+  on_error?: (error: unknown) => void;
 }): OpnAgentWorker {
   if (!input.network_id.trim() || !input.node_id.trim()) throw new Error('opn-agent-worker-identity-required');
   if (!input.transport || typeof input.transport.openSession !== 'function' || typeof input.transport.closeSession !== 'function') throw new Error('opn-agent-worker-transport-required');
@@ -61,7 +62,15 @@ export function createOpnAgentWorker(input: {
       let iterations = 0;
       try {
         while (!stopped && !options.signal?.aborted && (maxIterations === undefined || iterations < maxIterations)) {
-          const result = await worker.runOnce();
+          let result: OpnAgentWorkerProcessResult;
+          try {
+            result = await worker.runOnce();
+          } catch (error) {
+            input.on_error?.(error);
+            iterations += 1;
+            if (idleDelay > 0 && !stopped && !options.signal?.aborted) await delay(idleDelay);
+            continue;
+          }
           iterations += 1;
           if (result.status === 'empty' && idleDelay > 0 && !stopped && !options.signal?.aborted) await delay(idleDelay);
         }
