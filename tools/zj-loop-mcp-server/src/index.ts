@@ -24,6 +24,7 @@ import {
   loadRouteTable,
   summarizeOperationalContext,
 } from './resolver.js';
+import { opnInboxRead, opnMessageSend } from './opn-gateway.js';
 
 const server = new McpServer({
   name: 'zagenticloop',
@@ -426,6 +427,31 @@ server.tool(
       return { content: [{ type: 'text' as const, text: 'No registry found' }] };
     }
     return { content: [{ type: 'text' as const, text: formatCostEstimateMarkdown(registry, patternId, level, cadence) }] };
+  },
+);
+
+server.tool(
+  'opn_inbox_read',
+  'Read one pending OPN message through the local OPN Gateway without acknowledging it',
+  {},
+  async () => {
+    const result = await opnInboxRead();
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
+  },
+);
+
+server.tool(
+  'opn_message_send',
+  'Publish a structured message artifact and send its OPN envelope through the local Gateway',
+  {
+    targetNodeId: z.string().min(1),
+    message: z.string().min(1),
+    messageId: z.string().optional(),
+    notificationKind: z.string().optional(),
+  },
+  async ({ targetNodeId, message, messageId, notificationKind }) => {
+    const result = await opnMessageSend({ target_node_id: targetNodeId, message, message_id: messageId, notification_kind: notificationKind });
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
   },
 );
 

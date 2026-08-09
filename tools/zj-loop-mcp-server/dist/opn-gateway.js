@@ -1,0 +1,103 @@
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher, createTlsTransportAdapter, createTransportEnvelope, } from '@jununfly/zj-loop-core';
+const OPN_ARTIFACT_SCHEMA = 'zj-loop.opn_artifact.v1';
+const OPN_ARTIFACT_MAX_BYTES = 8 * 1024 * 1024;
+async function fileValue(name) {
+    const path = process.env[name]?.trim();
+    if (!path)
+        throw new Error(`${name}-required`);
+    return (await readFile(path, 'utf8')).trim();
+}
+async function config() {
+    const network_id = process.env.OPN_NETWORK_ID?.trim();
+    const node_id = process.env.OPN_NODE_ID?.trim();
+    const endpoint = process.env.OPN_ENDPOINT?.trim();
+    const artifact_store = process.env.OPN_ARTIFACT_STORE?.trim();
+    if (!network_id || !node_id || !endpoint || !artifact_store)
+        throw new Error('opn-gateway-not-configured');
+    return { network_id, node_id, endpoint, artifact_store, ca: await fileValue('OPN_CA_FILE'), cert: await fileValue('OPN_CERT_FILE'), key: await fileValue('OPN_KEY_FILE'), credential_token: await fileValue('OPN_CREDENTIAL_TOKEN_FILE') };
+}
+function blocked(error) {
+    return { status: 'blocked', reason: error instanceof Error ? error.message : 'opn-gateway-failed' };
+}
+async function putLocalArtifact(input) {
+    if (input.bytes.byteLength > OPN_ARTIFACT_MAX_BYTES)
+        throw new Error('opn-artifact-too-large');
+    const content_sha256 = `sha256:${createHash('sha256').update(input.bytes).digest('hex')}`;
+    const metadata = {
+        schema: OPN_ARTIFACT_SCHEMA,
+        artifact_id: content_sha256,
+        content_sha256,
+        size_bytes: input.bytes.byteLength,
+        file_name: input.file_name,
+        media_type: input.media_type,
+    };
+    await mkdir(input.root, { recursive: true });
+    const artifactPath = path.join(input.root, content_sha256.slice('sha256:'.length));
+    const metadataPath = `${artifactPath}.json`;
+    try {
+        await writeFile(artifactPath, input.bytes, { flag: 'wx' });
+        await writeFile(metadataPath, JSON.stringify(metadata), { flag: 'wx' });
+    }
+    catch (error) {
+        if (error.code !== 'EEXIST')
+            throw error;
+    }
+    return { metadata };
+}
+export async function opnInboxRead() {
+    try {
+        const value = await config();
+        const transport = createTlsTransportAdapter({ endpoint: value.endpoint, ca: value.ca, cert: value.cert, key: value.key, bearer_token: value.credential_token });
+        const session = await transport.openSession({ network_id: value.network_id, node_id: value.node_id });
+        try {
+            const envelope = await transport.receive({ session_id: session.session_id });
+            if (!envelope)
+                return { status: 'ok', value: { schema: 'zj-loop.opn_mcp_inbox.v1', status: 'empty', network_id: value.network_id, node_id: value.node_id } };
+            let message;
+            const firstArtifact = envelope.artifact_refs[0]?.artifact_id;
+            if (firstArtifact) {
+                try {
+                    const downloader = createTlsOpnArtifactDownloader({ endpoint: value.endpoint, ca: value.ca, cert: value.cert, key: value.key, bearer_token: value.credential_token });
+                    message = JSON.parse((await downloader.download(firstArtifact)).toString('utf8'));
+                }
+                catch {
+                    message = undefined;
+                }
+            }
+            return { status: 'ok', value: { schema: 'zj-loop.opn_mcp_inbox.v1', status: 'available', session_id: session.session_id, envelope, ...(message === undefined ? {} : { message }) } };
+        }
+        finally {
+            await transport.closeSession({ session_id: session.session_id });
+        }
+    }
+    catch (error) {
+        return blocked(error);
+    }
+}
+export async function opnMessageSend(input) {
+    try {
+        if (!input.target_node_id.trim() || !input.message.trim())
+            throw new Error('opn-message-target-and-content-required');
+        const value = await config();
+        const bytes = Buffer.from(JSON.stringify({ schema: 'zj-loop.opn_mcp_message.v1', message: input.message, sent_at: new Date().toISOString(), sender_node_id: value.node_id }));
+        const artifact = await putLocalArtifact({ root: value.artifact_store, bytes, file_name: `${input.message_id ?? `opn-message-${Date.now()}`}.json`, media_type: 'application/json' });
+        const publisher = createTlsOpnArtifactPublisher({ endpoint: value.endpoint, ca: value.ca, cert: value.cert, key: value.key, bearer_token: value.credential_token });
+        await publisher.publish({ bytes, metadata: artifact.metadata, transfer_id: `mcp:${input.message_id ?? Date.now()}`, target_node_id: input.target_node_id });
+        const transport = createTlsTransportAdapter({ endpoint: value.endpoint, ca: value.ca, cert: value.cert, key: value.key, bearer_token: value.credential_token });
+        const session = await transport.openSession({ network_id: value.network_id, node_id: value.node_id });
+        try {
+            const envelope = createTransportEnvelope({ message_id: input.message_id ?? `opn-message-${Date.now()}`, network_id: value.network_id, event_id: `opn-event-${Date.now()}`, plan_id: 'opn-mcp-gateway', plan_revision: 1, task_id: 'opn-mcp-message', from_node_id: value.node_id, target_node_id: input.target_node_id, notification_kind: input.notification_kind ?? 'mcp.message', state: 'available', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }], created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 50 * 60 * 1000).toISOString() });
+            const result = await transport.send({ session_id: session.session_id, envelope });
+            return { status: 'ok', value: { schema: 'zj-loop.opn_mcp_message_send.v1', status: result.status, message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, artifact_id: artifact.metadata.artifact_id, side_effects_executed: false } };
+        }
+        finally {
+            await transport.closeSession({ session_id: session.session_id });
+        }
+    }
+    catch (error) {
+        return blocked(error);
+    }
+}

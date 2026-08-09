@@ -21,6 +21,18 @@ node dist/index.js
 
 Set `LOOP_PROJECT_ROOT` to your target project (defaults to `cwd`).
 
+## OPN Gateway mode
+
+The same MCP server can expose the local OPN Gateway when these environment
+variables are configured: `OPN_NETWORK_ID`, `OPN_NODE_ID`, `OPN_ENDPOINT`,
+`OPN_CA_FILE`, `OPN_CERT_FILE`, `OPN_KEY_FILE`, `OPN_CREDENTIAL_TOKEN_FILE`,
+and `OPN_ARTIFACT_STORE`.
+
+It adds `opn_inbox_read` and `opn_message_send`. Credentials stay outside MCP
+tool arguments; the tools return structured blocked results when the gateway
+is not configured. OPN transport and artifact publication remain owned by
+`@jununfly/zj-loop-core`.
+
 ### Configure in Claude Code / Grok / any MCP client
 
 Add to your MCP config (`.mcp.json` or equivalent):
