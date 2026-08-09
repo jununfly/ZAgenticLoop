@@ -6,6 +6,7 @@ export type GatewayResult = {
     reason: string;
 };
 export declare function opnInboxRead(): Promise<GatewayResult>;
+export declare function opnGatewayStatus(): Promise<GatewayResult>;
 export declare function opnInboxAck(input: {
     message_id: string;
     envelope_digest: string;

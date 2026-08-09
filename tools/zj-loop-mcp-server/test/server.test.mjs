@@ -402,7 +402,7 @@ test('server lists all tools over stdio', async () => {
   try {
     const res = await callServer(root, [{ id: 1, method: 'tools/list', params: {} }]);
     const names = res.get(1).result.tools.map(t => t.name);
-    assert.equal(names.length, 13);
+    assert.equal(names.length, 14);
     assert.ok(names.includes('loop_list_patterns'));
     assert.ok(names.includes('loop_summarize_operational_context'));
     assert.ok(names.includes('loop_estimate_cost'));
@@ -410,6 +410,7 @@ test('server lists all tools over stdio', async () => {
     assert.ok(names.includes('opn_message_send'));
     assert.ok(names.includes('opn_inbox_ack'));
     assert.ok(names.includes('opn_agent_task_send'));
+    assert.ok(names.includes('opn_gateway_status'));
   } finally {
     await cleanup();
   }

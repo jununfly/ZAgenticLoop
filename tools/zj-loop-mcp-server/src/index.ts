@@ -24,7 +24,7 @@ import {
   loadRouteTable,
   summarizeOperationalContext,
 } from './resolver.js';
-import { opnAgentTaskSend, opnInboxAck, opnInboxRead, opnMessageSend } from './opn-gateway.js';
+import { opnAgentTaskSend, opnGatewayStatus, opnInboxAck, opnInboxRead, opnMessageSend } from './opn-gateway.js';
 
 const server = new McpServer({
   name: 'zagenticloop',
@@ -436,6 +436,16 @@ server.tool(
   {},
   async () => {
     const result = await opnInboxRead();
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
+  },
+);
+
+server.tool(
+  'opn_gateway_status',
+  'Check local OPN Gateway configuration and transport connectivity',
+  {},
+  async () => {
+    const result = await opnGatewayStatus();
     return { content: [{ type: 'text' as const, text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
   },
 );

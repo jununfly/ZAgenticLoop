@@ -85,6 +85,22 @@ export async function opnInboxRead() {
         return blocked(error);
     }
 }
+export async function opnGatewayStatus() {
+    try {
+        const value = await config();
+        const transport = createTlsTransportAdapter({ endpoint: value.endpoint, ca: value.ca, cert: value.cert, key: value.key, bearer_token: value.credential_token });
+        const session = await transport.openSession({ network_id: value.network_id, node_id: value.node_id });
+        try {
+            return { status: 'ok', value: { schema: 'zj-loop.opn_mcp_gateway_status.v1', status: 'connected', network_id: value.network_id, node_id: value.node_id, endpoint: value.endpoint, session_id: session.session_id } };
+        }
+        finally {
+            await transport.closeSession({ session_id: session.session_id });
+        }
+    }
+    catch (error) {
+        return blocked(error);
+    }
+}
 export async function opnInboxAck(input) {
     try {
         if (!input.message_id.trim() || !input.envelope_digest.trim())

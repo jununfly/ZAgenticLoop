@@ -36,7 +36,8 @@ omitted.
 `OPN_CREDENTIAL_TOKEN_FILE`, `OPN_ARTIFACT_STORE`, and `OPN_NODE_ID` variables
 remain supported as per-file compatibility overrides.
 
-It adds `opn_inbox_read`, `opn_inbox_ack`, `opn_message_send`, and `opn_agent_task_send`. Credentials stay outside MCP
+It adds `opn_gateway_status`, `opn_inbox_read`, `opn_inbox_ack`,
+`opn_message_send`, and `opn_agent_task_send`. Credentials stay outside MCP
 tool arguments; the tools return structured blocked results when the gateway
 is not configured. OPN transport and artifact publication remain owned by
 `@jununfly/zj-loop-core`.

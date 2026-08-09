@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { estimatePatternCost, getPatternProfile, listPatternSummaries, recommendPatterns, } from '@jununfly/zj-loop-core';
 import { resolveProjectRoot, loadRegistry, loadPatternDoc, listSkills, loadSkill, loadState, listStateFiles, loadLoopConfig, loadBudget, loadRunLog, loadSafetyDoc, loadRouteTable, summarizeOperationalContext, } from './resolver.js';
-import { opnAgentTaskSend, opnInboxAck, opnInboxRead, opnMessageSend } from './opn-gateway.js';
+import { opnAgentTaskSend, opnGatewayStatus, opnInboxAck, opnInboxRead, opnMessageSend } from './opn-gateway.js';
 const server = new McpServer({
     name: 'zagenticloop',
     version: '1.0.0',
@@ -292,6 +292,10 @@ server.tool('loop_estimate_cost', 'Estimate daily token cost for a pattern at a 
 });
 server.tool('opn_inbox_read', 'Read one pending OPN message through the local OPN Gateway without acknowledging it', {}, async () => {
     const result = await opnInboxRead();
+    return { content: [{ type: 'text', text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
+});
+server.tool('opn_gateway_status', 'Check local OPN Gateway configuration and transport connectivity', {}, async () => {
+    const result = await opnGatewayStatus();
     return { content: [{ type: 'text', text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
 });
 server.tool('opn_message_send', 'Publish a structured message artifact and send its OPN envelope through the local Gateway', {
