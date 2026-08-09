@@ -402,13 +402,32 @@ test('server lists all tools over stdio', async () => {
   try {
     const res = await callServer(root, [{ id: 1, method: 'tools/list', params: {} }]);
     const names = res.get(1).result.tools.map(t => t.name);
-    assert.equal(names.length, 11);
+    assert.equal(names.length, 12);
     assert.ok(names.includes('loop_list_patterns'));
     assert.ok(names.includes('loop_summarize_operational_context'));
     assert.ok(names.includes('loop_estimate_cost'));
     assert.ok(names.includes('opn_inbox_read'));
     assert.ok(names.includes('opn_message_send'));
+    assert.ok(names.includes('opn_inbox_ack'));
   } finally {
+    await cleanup();
+  }
+});
+
+test('OPN Gateway acknowledgement fails closed when local credentials are not configured', async () => {
+  const root = await setup();
+  const names = ['OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  try {
+    for (const name of names) delete process.env[name];
+    const res = await callServer(root, [{ id: 1, method: 'tools/call', params: { name: 'opn_inbox_ack', arguments: { messageId: 'message-1', envelopeDigest: 'sha256:' + '0'.repeat(64) } } }]);
+    const parsed = JSON.parse(res.get(1).result.content[0].text);
+    assert.deepEqual(parsed, { schema: 'zj-loop.opn_mcp_error.v1', status: 'blocked', reason: 'opn-gateway-not-configured' });
+  } finally {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
     await cleanup();
   }
 });

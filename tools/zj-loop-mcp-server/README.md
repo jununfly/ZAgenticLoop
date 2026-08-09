@@ -28,7 +28,7 @@ variables are configured: `OPN_NETWORK_ID`, `OPN_NODE_ID`, `OPN_ENDPOINT`,
 `OPN_CA_FILE`, `OPN_CERT_FILE`, `OPN_KEY_FILE`, `OPN_CREDENTIAL_TOKEN_FILE`,
 and `OPN_ARTIFACT_STORE`.
 
-It adds `opn_inbox_read` and `opn_message_send`. Credentials stay outside MCP
+It adds `opn_inbox_read`, `opn_inbox_ack`, and `opn_message_send`. Credentials stay outside MCP
 tool arguments; the tools return structured blocked results when the gateway
 is not configured. OPN transport and artifact publication remain owned by
 `@jununfly/zj-loop-core`.

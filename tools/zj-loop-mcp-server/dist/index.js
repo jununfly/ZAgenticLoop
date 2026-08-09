@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { estimatePatternCost, getPatternProfile, listPatternSummaries, recommendPatterns, } from '@jununfly/zj-loop-core';
 import { resolveProjectRoot, loadRegistry, loadPatternDoc, listSkills, loadSkill, loadState, listStateFiles, loadLoopConfig, loadBudget, loadRunLog, loadSafetyDoc, loadRouteTable, summarizeOperationalContext, } from './resolver.js';
-import { opnInboxRead, opnMessageSend } from './opn-gateway.js';
+import { opnInboxAck, opnInboxRead, opnMessageSend } from './opn-gateway.js';
 const server = new McpServer({
     name: 'zagenticloop',
     version: '1.0.0',
@@ -301,6 +301,13 @@ server.tool('opn_message_send', 'Publish a structured message artifact and send 
     notificationKind: z.string().optional(),
 }, async ({ targetNodeId, message, messageId, notificationKind }) => {
     const result = await opnMessageSend({ target_node_id: targetNodeId, message, message_id: messageId, notification_kind: notificationKind });
+    return { content: [{ type: 'text', text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
+});
+server.tool('opn_inbox_ack', 'Acknowledge a previously read OPN message through the local OPN Gateway', {
+    messageId: z.string().min(1),
+    envelopeDigest: z.string().min(1),
+}, async ({ messageId, envelopeDigest }) => {
+    const result = await opnInboxAck({ message_id: messageId, envelope_digest: envelopeDigest });
     return { content: [{ type: 'text', text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
 });
 // ── Start ──────────────────────────────────────────────────────────
