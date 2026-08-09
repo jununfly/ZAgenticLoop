@@ -7,6 +7,7 @@ const LAUNCH_REQUEST_SCHEMA = 'zj-loop.provider_launch_request.v1';
 const LAUNCH_RESPONSE_SCHEMA = 'zj-loop.provider_launch_response.v1';
 const RESULT_SCHEMA = 'zj-loop.provider_ipc_result.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
+export const PROVIDER_RUNTIME_IPC_TIMEOUT_MS = 120_000;
 export function createProviderRuntimeIpcProvider(input) {
     let launch_handle;
     return {
@@ -17,7 +18,7 @@ export function createProviderRuntimeIpcProvider(input) {
                 throw new Error('provider-runtime-ipc-provider-auth-ref-invalid');
             if (!DIGEST.test(input.auth_ref_digest) || !DIGEST.test(input.contract_digest) || !DIGEST.test(input.adapter_contract_digest))
                 throw new Error('provider-runtime-ipc-provider-contract-invalid');
-            const timeout = input.timeout_ms ?? 15_000;
+            const timeout = input.timeout_ms ?? PROVIDER_RUNTIME_IPC_TIMEOUT_MS;
             if (!Number.isInteger(timeout) || timeout < 1 || timeout > 120_000)
                 throw new Error('provider-runtime-ipc-provider-timeout-invalid');
             const correlation_id = input.correlation_id ?? `provider-${randomUUID()}`;

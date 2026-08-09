@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createProviderRuntimeIpcProvider as createProviderRuntimeIpcProviderImpl } from '../dist/provider-auth-ipc-provider-client.js';
+import { createProviderRuntimeIpcProvider as createProviderRuntimeIpcProviderImpl, PROVIDER_RUNTIME_IPC_TIMEOUT_MS } from '../dist/provider-auth-ipc-provider-client.js';
 import { createProviderAuthIpcFrame } from '../dist/provider-auth-ipc-protocol.js';
 import { createUnixProviderAuthIpcServer } from '../dist/provider-auth-ipc-unix.js';
 import { createInMemoryProviderAuthRuntime as createInMemoryProviderAuthRuntimeImpl } from '../dist/provider-auth-runtime.js';
@@ -41,4 +41,8 @@ test('Runtime IPC provider consumes only a bound launch handle and ordered resul
     assert.equal(result.launch_handle.handle_digest, launched.handle.handle_digest);
     assert.equal(provider.getLaunchHandle().handle_digest, launched.handle.handle_digest);
   } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('Runtime IPC provider default timeout matches the provider runtime invocation ceiling', () => {
+  assert.equal(PROVIDER_RUNTIME_IPC_TIMEOUT_MS, 120_000);
 });

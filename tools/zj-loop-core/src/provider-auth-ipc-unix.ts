@@ -3,6 +3,8 @@ import net, { type Socket } from 'node:net';
 import path from 'node:path';
 import { encodeProviderAuthIpcFrame, ProviderAuthIpcDecoder, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 
+export const PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS = 120_000;
+
 export type ProviderAuthIpcPeerVerifier = (socket: Socket) => Promise<boolean> | boolean;
 export type ProviderAuthIpcConnection = { send(frame: ProviderAuthIpcFrame): Promise<void>; close(): void };
 
@@ -66,7 +68,7 @@ export async function connectUnixProviderAuthIpc(input: { socket_path: string; c
   const socket = net.createConnection(input.socket_path);
   const decoder = new ProviderAuthIpcDecoder({ correlation_id: input.correlation_id });
   const timeout = input.timeout_ms ?? 5_000;
-  if (!Number.isInteger(timeout) || timeout < 1 || timeout > 60_000) { socket.destroy(); throw new Error('provider-auth-ipc-timeout-invalid'); }
+  if (!Number.isInteger(timeout) || timeout < 1 || timeout > PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS) { socket.destroy(); throw new Error('provider-auth-ipc-timeout-invalid'); }
   socket.on('data', async (chunk) => {
     const result = decoder.push(new Uint8Array(chunk));
     if (result.status === 'blocked') socket.destroy();

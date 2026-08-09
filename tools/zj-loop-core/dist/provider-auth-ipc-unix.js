@@ -2,6 +2,7 @@ import { chmod, mkdir, unlink } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
 import { encodeProviderAuthIpcFrame, ProviderAuthIpcDecoder } from './provider-auth-ipc-protocol.js';
+export const PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS = 120_000;
 async function removeSocket(socketPath) { try {
     await unlink(socketPath);
 }
@@ -96,7 +97,7 @@ export async function connectUnixProviderAuthIpc(input) {
     const socket = net.createConnection(input.socket_path);
     const decoder = new ProviderAuthIpcDecoder({ correlation_id: input.correlation_id });
     const timeout = input.timeout_ms ?? 5_000;
-    if (!Number.isInteger(timeout) || timeout < 1 || timeout > 60_000) {
+    if (!Number.isInteger(timeout) || timeout < 1 || timeout > PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS) {
         socket.destroy();
         throw new Error('provider-auth-ipc-timeout-invalid');
     }
