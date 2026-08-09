@@ -1,9 +1,9 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-09 13:20:24
+> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-09 13:22:38
 
-[x][X+] 1. OPN Multi-node Graph Atom E2E 下一里程碑
+[~][X+] 1. OPN Multi-node Graph Atom E2E 下一里程碑
 ├── [x][Y+] 1-1. Multi-node Graph Atom 场景与 Single-Agent baseline 增量
 ├── [x][Y+] 1-2. Human 中心责任单元与 Agent 节点组网
 │   ├── [x][Y+] 1-2-1. Coordinator StateStore 原生 Graph read model 与 Human acceptance UI wiring
@@ -16,9 +16,11 @@
 ├── [x][Y+] 1-7. 真实 Mac/Windows 三节点 Graph Atom dogfood 验收
 │   ├── [x][Y+] 1-7-1. 独立 OPN Graph dogfood CLI 与 phase CAS wiring
 │   └── [x][Y+] 1-7-2. Mac/Windows 真实 verification result 与 phase-native acceptance 验收
-└── [x][Y+] 1-8. 本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑
+└── [~][Y+] 1-8. 本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑
     ├── [x][Y+] 1-8-1. 创建绑定当前 Runtime 的 disposable Graph plan 与 worktrees
     ├── [x][Y+] 1-8-2. 初始化 execution 专属 ProviderAuthRef 与 TrustedRunner admission
     ├── [x][Y+] 1-8-3. 重新完成 Human approval 并 resume source execution
-    └── [x][Y+] 1-8-4. 完成跨设备 independent verification 与 Human acceptance
+    └── [~][Y+] 1-8-4. 完成跨设备 independent verification 与 Human acceptance
+
+### 当前施工：1-8-4-2. retry6 真实 OPN independent verification 与 Human acceptance
 <!-- ROADMAP_SECTION_END -->

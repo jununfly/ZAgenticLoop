@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Multi-node Graph Atom E2E 下一里程碑",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -1925,7 +1925,7 @@
     "1-8": {
       "id": "1-8",
       "label": "本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -1976,11 +1976,12 @@
     "1-8-4": {
       "id": "1-8-4",
       "label": "完成跨设备 independent verification 与 Human acceptance",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-8",
       "children": [
-        "1-8-4-1"
+        "1-8-4-1",
+        "1-8-4-2"
       ],
       "decisions": [
         {
@@ -2076,11 +2077,21 @@
         }
       ],
       "notes": "已完成真实 Mac endpoint -> Windows B gateway-task-send -> WorkBuddy bounded worker -> agent.result 闭环；Mac Outbox/Inbox 均显示结构化消息，Windows execution cross-device-execution-20260807-retry-2 达到 evidence-recorded，result artifact ref 已回到 Mac Inbox。"
+    },
+    "1-8-4-2": {
+      "id": "1-8-4-2",
+      "label": "retry6 真实 OPN independent verification 与 Human acceptance",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-8-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-09 13:20:24",
+    "updated": "2026-08-09 13:22:38",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
