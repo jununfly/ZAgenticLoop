@@ -44,7 +44,11 @@ export function createProviderAuthRuntimeIpcSidecar(input: {
   const consumedChallenges = new Set<string>();
   const connectionStartedAt = new WeakMap<object, number>();
   const error = async (connection: { send(frame: ProviderAuthIpcFrame): Promise<void> }, frame: ProviderAuthIpcFrame, code: string, sequence: number, launchHandleDigest?: string) => {
-    await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence, network_id: frame.network_id, node_id: frame.node_id, provider_runtime_id: frame.provider_runtime_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, kind: 'error', ...(launchHandleDigest ? { launch_handle_digest: launchHandleDigest } : {}), payload: { code } }));
+    try {
+      await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence, network_id: frame.network_id, node_id: frame.node_id, provider_runtime_id: frame.provider_runtime_id, provider_id: frame.provider_id, execution_id: frame.execution_id, attempt: frame.attempt, kind: 'error', ...(launchHandleDigest ? { launch_handle_digest: launchHandleDigest } : {}), payload: { code } }));
+    } catch {
+      // The peer may have timed out and closed before the diagnostic response arrived.
+    }
   };
   const server = createUnixProviderAuthIpcServer({ socket_path: input.socket_path, correlation_id: input.correlation_id, verify_peer: async (socket) => {
     const peer = await input.verify_peer({ socket, correlation_id: input.correlation_id, expected_identity_digest: input.expected_peer_identity_digest });
