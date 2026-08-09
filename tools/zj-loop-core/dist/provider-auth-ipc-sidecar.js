@@ -8,6 +8,30 @@ const LAUNCH_RESPONSE_SCHEMA = 'zj-loop.provider_launch_response.v1';
 const RESULT_SCHEMA = 'zj-loop.provider_ipc_result.v1';
 const CLEANUP_RESPONSE_SCHEMA = 'zj-loop.provider_cleanup_response.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
+// Leave room for the envelope when relaying verbose Provider JSONL output.
+export const PROVIDER_AUTH_IPC_OUTPUT_CHUNK_BYTES = 32 * 1024;
+export function splitProviderAuthIpcOutput(value, maxBytes = PROVIDER_AUTH_IPC_OUTPUT_CHUNK_BYTES) {
+    if (typeof value !== 'string' || !Number.isInteger(maxBytes) || maxBytes < 1)
+        throw new Error('provider-auth-ipc-output-chunk-invalid');
+    if (value === '')
+        return [''];
+    const chunks = [];
+    let current = '';
+    let currentBytes = 0;
+    for (const character of value) {
+        const characterBytes = new TextEncoder().encode(character).byteLength;
+        if (current && currentBytes + characterBytes > maxBytes) {
+            chunks.push(current);
+            current = '';
+            currentBytes = 0;
+        }
+        current += character;
+        currentBytes += characterBytes;
+    }
+    if (current)
+        chunks.push(current);
+    return chunks;
+}
 export function createProviderAuthRuntimeIpcSidecar(input) {
     const now = input.now ?? (() => new Date().toISOString());
     const challengeTtlMs = input.challenge_ttl_ms ?? 30_000;
@@ -83,8 +107,10 @@ export function createProviderAuthRuntimeIpcSidecar(input) {
                     const validation = validateProviderResult(result.provider_result);
                     if (validation.status === 'blocked' || validation.result.status !== result.status || validation.result.success !== result.success)
                         throw new Error('provider-auth-ipc-sidecar-provider-result-invalid');
-                    await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence: state.sequence++, network_id: handle.network_id, node_id: handle.node_id, provider_runtime_id: handle.provider_runtime_id, provider_id: handle.provider_id, execution_id: handle.execution_id, attempt: handle.attempt, kind: 'stdout', launch_handle_digest: handle.handle_digest, payload: result.stdout }));
-                    await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence: state.sequence++, network_id: handle.network_id, node_id: handle.node_id, provider_runtime_id: handle.provider_runtime_id, provider_id: handle.provider_id, execution_id: handle.execution_id, attempt: handle.attempt, kind: 'stderr', launch_handle_digest: handle.handle_digest, payload: result.stderr }));
+                    for (const payload of splitProviderAuthIpcOutput(result.stdout))
+                        await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence: state.sequence++, network_id: handle.network_id, node_id: handle.node_id, provider_runtime_id: handle.provider_runtime_id, provider_id: handle.provider_id, execution_id: handle.execution_id, attempt: handle.attempt, kind: 'stdout', launch_handle_digest: handle.handle_digest, payload }));
+                    for (const payload of splitProviderAuthIpcOutput(result.stderr))
+                        await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence: state.sequence++, network_id: handle.network_id, node_id: handle.node_id, provider_runtime_id: handle.provider_runtime_id, provider_id: handle.provider_id, execution_id: handle.execution_id, attempt: handle.attempt, kind: 'stderr', launch_handle_digest: handle.handle_digest, payload }));
                     await connection.send(createProviderAuthIpcFrame({ correlation_id: input.correlation_id, sequence: state.sequence++, network_id: handle.network_id, node_id: handle.node_id, provider_runtime_id: handle.provider_runtime_id, provider_id: handle.provider_id, execution_id: handle.execution_id, attempt: handle.attempt, kind: 'result', launch_handle_digest: handle.handle_digest, payload: { schema: RESULT_SCHEMA, status: result.status, success: result.success, pid: result.pid, exit_code: result.exit_code, signal: result.signal, provider_result: validation.result } }));
                 }
                 catch {

@@ -1,6 +1,8 @@
 import { type ProviderAuthRef, type ProviderAuthRuntime, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { type ProviderResult } from './provider-runtime-adapter.js';
 import { type TrustedRunnerPeerIdentityVerifier } from './trusted-runner-peer-identity.js';
+export declare const PROVIDER_AUTH_IPC_OUTPUT_CHUNK_BYTES: number;
+export declare function splitProviderAuthIpcOutput(value: string, maxBytes?: number): string[];
 export type ProviderRuntimeSidecarInvocation = {
     status: ProviderResult['status'];
     success: boolean;

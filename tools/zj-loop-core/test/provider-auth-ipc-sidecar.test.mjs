@@ -10,6 +10,8 @@ import { createInMemoryProviderAuthRuntime as createInMemoryProviderAuthRuntimeI
 import { createInMemoryTrustedRunnerPeerIdentityVerifier } from '../dist/trusted-runner-peer-identity.js';
 import { connectUnixProviderAuthIpc } from '../dist/provider-auth-ipc-unix.js';
 import { createProviderAuthIpcFrame as createProviderAuthIpcFrameImpl } from '../dist/provider-auth-ipc-protocol.js';
+import { PROVIDER_AUTH_IPC_MAX_FRAME_BYTES } from '../dist/provider-auth-ipc-protocol.js';
+import { splitProviderAuthIpcOutput } from '../dist/provider-auth-ipc-sidecar.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
 const runtimeBinding = { runtime_identity_fingerprint: digest('e'), runtime_manifest_digest: digest('f'), provider_capabilities_digest: digest('1') };
@@ -22,6 +24,17 @@ const createProviderRuntimeIpcProvider = (input) => createProviderRuntimeIpcProv
 const createProviderAuthIpcFrame = (input) => input.kind === 'challenge' && input.payload && typeof input.payload === 'object'
   ? createProviderAuthIpcFrameImpl({ ...input, payload: { ...input.payload, ...runtimeBinding } })
   : createProviderAuthIpcFrameImpl(input);
+
+test('Runtime sidecar output chunks preserve UTF-8 content within the IPC frame limit', () => {
+  const output = `${'x'.repeat(70_000)}终点`;
+  const chunks = splitProviderAuthIpcOutput(output);
+  assert.equal(chunks.join(''), output);
+  assert.ok(chunks.length > 1);
+  for (const chunk of chunks) {
+    const frame = createProviderAuthIpcFrame({ correlation_id: 'corr-chunk', sequence: 1, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'runtime-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, kind: 'stdout', launch_handle_digest: digest('a'), payload: chunk });
+    assert.ok(new TextEncoder().encode(JSON.stringify(frame)).byteLength < PROVIDER_AUTH_IPC_MAX_FRAME_BYTES);
+  }
+});
 
 test('Runtime sidecar owns launch, relays bounded provider result, and owns cleanup', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-sidecar-'));
