@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Multi-node Graph Atom E2E 下一里程碑",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -1925,7 +1925,7 @@
     "1-8": {
       "id": "1-8",
       "label": "本地开发 Provider Runtime 驱动的真实 Graph Atom 续跑",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -1976,7 +1976,7 @@
     "1-8-4": {
       "id": "1-8-4",
       "label": "完成跨设备 independent verification 与 Human acceptance",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-8",
       "children": [
@@ -2044,7 +2044,7 @@
     "1-8-4-1": {
       "id": "1-8-4-1",
       "label": "OPN gateway agent task/result 联调闭环",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-8-4",
       "children": [],
@@ -2075,12 +2075,12 @@
           "note": "新增 gateway-send CLI 入口，禁止把手工 curl/聊天转述作为主验收路径。"
         }
       ],
-      "notes": ""
+      "notes": "已完成真实 Mac endpoint -> Windows B gateway-task-send -> WorkBuddy bounded worker -> agent.result 闭环；Mac Outbox/Inbox 均显示结构化消息，Windows execution cross-device-execution-20260807-retry-2 达到 evidence-recorded，result artifact ref 已回到 Mac Inbox。"
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-09 10:52:53",
+    "updated": "2026-08-09 13:20:24",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }
