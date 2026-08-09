@@ -207,6 +207,27 @@ test('Human approval UI displays and signs a Human action decision through the C
   }
 });
 
+test('Human Approval UI exposes and signs Graph dogfood approval requests', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  let approved;
+  const requestValue = { dogfood_id: 'dogfood-ui-1', execution_id: 'execution-ui-1', attempt: 1, network_id: 'network-1', goal: 'Run bounded test', execution_mode: 'write-enabled', allowed_files: ['README.md'], worktree_path: '/tmp/source', summary_digest: `sha256:${'1'.repeat(64)}`, status: 'pending' };
+  const server = createHumanApprovalUiServer({ signer, network_id: 'network-1', human_device: { device_key_id: 'device-1', device_fingerprint: 'a'.repeat(64) }, bootstrap_token: 'dogfood-ui-bootstrap', upstream: { async list() { return { requests: [] }; } }, dogfoodApprovals: { async list() { return { requests: [requestValue] }; }, async approve(value) { approved = value; return { status: 'recorded' }; } } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const bootstrapped = await requestHttp({ address, path: '/ui/bootstrap?token=dogfood-ui-bootstrap' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    const listed = await requestHttp({ address, path: '/ui/dogfood-approvals', headers: { cookie } });
+    assert.equal(listed.status, 200);
+    assert.equal(listed.body.requests[0].dogfood_id, requestValue.dogfood_id);
+    const origin = `http://127.0.0.1:${address.port}`;
+    const result = await requestHttp({ address, path: `/ui/dogfood-approvals/${requestValue.dogfood_id}/approve`, method: 'POST', headers: { cookie, origin }, body: { request_digest: requestValue.summary_digest } });
+    assert.equal(result.status, 201);
+    assert.equal(approved.context.action, 'real-agent-dogfood.approve');
+    assert.equal(approved.context.network_id, 'network-1');
+  } finally { await new Promise((resolve) => server.close(resolve)); }
+});
+
 async function requestHttp(options) {
   return request(options);
 }

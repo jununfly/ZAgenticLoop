@@ -2085,13 +2085,19 @@
       "mode": "exploit",
       "parent": "1-8-4",
       "children": [],
-      "decisions": [],
+      "decisions": [
+        {
+          "q": "retry6 如何让 Graph lifecycle 与真实 OPN network/UI approval 对齐？",
+          "answer": "同意：real-agent-dogfood start 接受显式 --network-id 并将其写入 lifecycle、approval summary 和后续 Graph phase；Human Approval UI 读取同一 network 的 pending approval summary，通过现有 HumanSigner 签署 real-agent-dogfood.approve，并原子写入 resume 消费的 approval envelope。UI 支持固定本地端口、前台常驻和跨平台 --open。",
+          "note": "修复 retry6 真实 wiring 阻塞；未传 --network-id 时保留随机网络兼容行为。"
+        }
+      ],
       "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-04 00:34:14",
-    "updated": "2026-08-09 13:22:38",
+    "updated": "2026-08-09 13:40:59",
     "md_file": "docs/plans/opn-multi-node-graph-atom-next-milestone-roadmap.md"
   }
 }

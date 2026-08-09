@@ -264,6 +264,7 @@ export * from './real-agent-dogfood-evidence-integrity.js';
 export * from './real-agent-dogfood-replay.js';
 export * from './real-agent-dogfood-graph-review-read-model.js';
 export * from './real-agent-dogfood-graph-review-upstream.js';
+export * from './real-agent-dogfood-approval-ui-upstream.js';
 export * from './real-agent-dogfood-graph-human-acceptance-command.js';
 export * from './real-agent-dogfood-graph-human-acceptance-state-store-adapter.js';
 export * from './real-agent-dogfood-preflight.js';

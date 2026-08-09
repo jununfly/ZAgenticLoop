@@ -108,6 +108,21 @@ test('start persists an explicitly approved write-enabled execution mode in the 
   }
 });
 
+test('start binds the lifecycle to an explicitly supplied OPN network id', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-opn-network-'));
+  const repo = path.join(root, 'repo');
+  await mkdir(repo);
+  await initGitRepo(repo);
+  try {
+    const result = await invoke(['start', '--goal', 'bind OPN network', '--repo', repo, '--provider-id', 'provider-1', '--adapter', 'adapter-1', '--executable', '/usr/bin/true', '--network-policy', 'network-allowed', '--network-id', 'opn-dogfood-test', '--state-store', path.join(root, 'state.db'), '--evidence-store', path.join(root, 'evidence'), '--worktree-root', path.join(root, 'worktrees')]);
+    assert.equal(result.exitCode, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.network_id, 'opn-dogfood-test');
+    const summary = JSON.parse(await readFile(output.approval_summary_path, 'utf8'));
+    assert.equal(summary.network_id, 'opn-dogfood-test');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('Graph mode start reuses the exact prepared target and source worktrees', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-real-agent-graph-cli-'));
   const repo = path.join(root, 'repo');

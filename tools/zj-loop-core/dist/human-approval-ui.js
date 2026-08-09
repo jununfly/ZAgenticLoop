@@ -312,6 +312,84 @@ export function createHumanApprovalUiServer(input) {
             json(response, 201, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'recorded', request_id: requestId, decision: signed, result, side_effects_executed: true });
             return;
         }
+        if (request.method === 'GET' && url.pathname === '/ui/dogfood-approvals') {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.dogfoodApprovals) {
+                blocked(response, 503, 'dogfood-approval-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.dogfoodApprovals.list()), side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'dogfood-approval-read-model-unavailable');
+            }
+            return;
+        }
+        const dogfoodApprovalMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/dogfood-approvals\/([^/]+)\/approve$/) : null;
+        if (dogfoodApprovalMatch) {
+            if (!validSession(request, sessions, now)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (request.headers.origin !== `http://${request.headers.host}`) {
+                blocked(response, 403, 'ui-origin-invalid');
+                return;
+            }
+            if (!input.dogfoodApprovals || !input.human_device) {
+                blocked(response, 503, 'dogfood-approval-unavailable');
+                return;
+            }
+            let body;
+            try {
+                body = await readBody(request);
+            }
+            catch (error) {
+                blocked(response, 400, error instanceof Error ? error.message : 'ui-json-invalid');
+                return;
+            }
+            const dogfoodId = decodeURIComponent(dogfoodApprovalMatch[1]);
+            const requestDigest = typeof body.request_digest === 'string' ? body.request_digest : '';
+            if (!requestDigest) {
+                blocked(response, 400, 'dogfood-approval-input-invalid');
+                return;
+            }
+            let current;
+            try {
+                current = (await input.dogfoodApprovals.list()).requests.find((item) => item.dogfood_id === dogfoodId);
+            }
+            catch {
+                blocked(response, 503, 'dogfood-approval-read-model-unavailable');
+                return;
+            }
+            if (!current || current.network_id !== input.network_id || current.status !== 'pending' || current.summary_digest !== requestDigest) {
+                blocked(response, 409, 'dogfood-approval-state-conflict');
+                return;
+            }
+            const expiresAt = new Date(Date.parse(now()) + 50 * 60 * 1000).toISOString();
+            let context;
+            try {
+                context = await signApprovalContext({ signer: input.signer, network_id: input.network_id, human_device: input.human_device, action: 'real-agent-dogfood.approve', request_id: current.dogfood_id, request_digest: current.summary_digest, approved_capabilities: [], issued_at: now(), expires_at: expiresAt });
+            }
+            catch {
+                blocked(response, 400, 'dogfood-approval-signing-failed');
+                return;
+            }
+            try {
+                const signerIdentity = await Promise.resolve(input.signer.getPublicIdentity());
+                const identity = { ...signerIdentity, schema: context.schema };
+                const result = await input.dogfoodApprovals.approve({ request: current, context, identity });
+                const statusCode = result.status === 'recorded' ? 201 : result.status === 'duplicate' ? 200 : 409;
+                json(response, statusCode, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: result.status, dogfood_id: current.dogfood_id, result, side_effects_executed: result.status === 'recorded' });
+            }
+            catch (error) {
+                blocked(response, 503, error instanceof Error ? error.message : 'dogfood-approval-recording-failed');
+            }
+            return;
+        }
         if (request.method === 'GET' && url.pathname === '/ui/events') {
             if (!validSession(request, sessions, now)) {
                 blocked(response, 401, 'ui-session-required');

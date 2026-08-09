@@ -152,7 +152,10 @@ async function start(options) {
     const paths = await validateRuntimePaths({ repo: repoInput, stateStore: typeof options['state-store'] === 'string' ? options['state-store'] : defaults.state_store, evidenceStore: typeof options['evidence-store'] === 'string' ? options['evidence-store'] : defaults.evidence_store });
     await mkdir(path.dirname(paths.stateStore), { recursive: true });
     await mkdir(paths.evidenceStore, { recursive: true });
-    const networkId = `network-${randomUUID()}`;
+    const configuredNetworkId = typeof options['network-id'] === 'string' ? options['network-id'].trim() : '';
+    if (configuredNetworkId && !/^[A-Za-z0-9._:-]{1,128}$/.test(configuredNetworkId))
+        throw new Error('network-id-invalid');
+    const networkId = configuredNetworkId || `network-${randomUUID()}`;
     const dogfoodId = graphPlan?.dogfood_id ?? `dogfood-${randomUUID()}`;
     const executionId = graphPlan?.execution_id ?? `execution-${randomUUID()}`;
     const now = new Date().toISOString();

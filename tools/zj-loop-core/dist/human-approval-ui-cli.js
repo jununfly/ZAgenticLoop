@@ -9,6 +9,7 @@ import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createStateStoreGraphAtomUiUpstream } from './state-store-graph-atom-ui-upstream.js';
 import { createContentAddressedEvidenceStore } from './content-addressed-evidence-store.js';
 import { createRealAgentDogfoodGraphReviewUpstream } from './real-agent-dogfood-graph-review-upstream.js';
+import { createRealAgentDogfoodApprovalUiUpstream } from './real-agent-dogfood-approval-ui-upstream.js';
 const argv = process.argv.slice(2);
 process.exitCode = await runCli({
     name: 'zj-loop-human-approval-ui',
@@ -30,6 +31,7 @@ process.exitCode = await runCli({
         { name: 'graph-plan', flag: 'graph-plan', type: 'string', description: 'Optional real Graph plan JSON path for replay-backed Review UI' },
         { name: 'graph-evidence-store', flag: 'graph-evidence-store', type: 'string', description: 'EvidenceStore root for replay-backed Graph Review' },
         { name: 'open', type: 'boolean', description: 'Open the bootstrap URL in the default browser' },
+        { name: 'port', type: 'string', description: 'Local browser server port (0 chooses a free port)' },
     ],
     async handler({ io, options }) {
         if (String(options.command) !== 'start')
@@ -61,6 +63,7 @@ process.exitCode = await runCli({
         const stateStorePath = typeof options['state-store'] === 'string' ? options['state-store'].trim() : '';
         const stateStore = stateStorePath ? createSqliteStateStore({ filename: stateStorePath }) : undefined;
         let graph;
+        let dogfoodApprovals;
         const graphPlanPath = typeof options['graph-plan'] === 'string' ? options['graph-plan'].trim() : '';
         const graphEvidenceRoot = typeof options['graph-evidence-store'] === 'string' ? options['graph-evidence-store'].trim() : '';
         if (stateStore && graphPlanPath) {
@@ -69,20 +72,27 @@ process.exitCode = await runCli({
             const plan = JSON.parse(await readFile(graphPlanPath, 'utf8'));
             const evidenceStore = await createContentAddressedEvidenceStore({ root: graphEvidenceRoot });
             graph = createRealAgentDogfoodGraphReviewUpstream({ stateStore, evidenceStore, network_id: networkId, plans: [plan] });
+            dogfoodApprovals = createRealAgentDogfoodApprovalUiUpstream({ stateStore, evidenceRoot: graphEvidenceRoot, network_id: networkId, plans: [plan] });
         }
         else if (stateStore) {
             graph = createStateStoreGraphAtomUiUpstream({ stateStore, network_id: networkId });
         }
         const bootstrapToken = randomBytes(32).toString('base64url');
-        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, graph, bootstrap_token: bootstrapToken });
-        await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+        const server = createHumanApprovalUiServer({ signer, network_id: networkId, human_device: { device_key_id: deviceKeyId, device_fingerprint: deviceFingerprint }, upstream, graph, dogfoodApprovals, bootstrap_token: bootstrapToken });
+        const portValue = typeof options.port === 'string' && options.port.trim() !== '' ? Number(options.port) : 0;
+        if (!Number.isInteger(portValue) || portValue < 0 || portValue > 65535)
+            throw new Error('human-approval-ui-port-invalid');
+        const port = portValue;
+        await new Promise((resolve) => server.listen(port, '127.0.0.1', resolve));
         const address = server.address();
         if (!address || typeof address === 'string')
             throw new Error('human-approval-ui-address-unavailable');
         const url = `http://127.0.0.1:${address.port}/ui/bootstrap?token=${encodeURIComponent(bootstrapToken)}`;
         io.stdout(JSON.stringify({ schema: 'zj-loop.human_approval_ui_cli.v1', status: 'listening', url, network_id: networkId, side_effects_executed: false }));
-        if (options.open === true && process.platform === 'darwin')
-            spawn('open', [url], { stdio: 'ignore', detached: true }).unref();
+        if (options.open === true) {
+            const opener = process.platform === 'darwin' ? { command: 'open', args: [url] } : process.platform === 'win32' ? { command: 'cmd', args: ['/c', 'start', '', url] } : { command: 'xdg-open', args: [url] };
+            spawn(opener.command, opener.args, { stdio: 'ignore', detached: true, windowsHide: true }).unref();
+        }
         await new Promise((resolve) => {
             const close = () => { server.close(async () => { await stateStore?.close(); resolve(); }); };
             process.once('SIGINT', close);

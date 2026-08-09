@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-09 13:22:38
+> 数据文件: `opn-multi-node-graph-atom-next-milestone-roadmap.json` | 最后更新: 2026-08-09 13:40:59
 
 [~][X+] 1. OPN Multi-node Graph Atom E2E 下一里程碑
 ├── [x][Y+] 1-1. Multi-node Graph Atom 场景与 Single-Agent baseline 增量
@@ -23,4 +23,7 @@
     └── [~][Y+] 1-8-4. 完成跨设备 independent verification 与 Human acceptance
 
 ### 当前施工：1-8-4-2. retry6 真实 OPN independent verification 与 Human acceptance
+
+**决策：**
+- Q: retry6 如何让 Graph lifecycle 与真实 OPN network/UI approval 对齐？ → 同意：real-agent-dogfood start 接受显式 --network-id 并将其写入 lifecycle、approval summary 和后续 Graph phase；Human Approval UI 读取同一 network 的 pending approval summary，通过现有 HumanSigner 签署 real-agent-dogfood.approve，并原子写入 resume 消费的 approval envelope。UI 支持固定本地端口、前台常驻和跨平台 --open。 (修复 retry6 真实 wiring 阻塞；未传 --network-id 时保留随机网络兼容行为。)
 <!-- ROADMAP_SECTION_END -->

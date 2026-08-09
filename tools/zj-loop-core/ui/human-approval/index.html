@@ -24,6 +24,12 @@
       <div id="action-empty" class="empty-state" hidden>No pending Human actions.</div>
       <div id="action-error" class="error-state" hidden></div>
     </section>
+    <section class="workspace action-workspace" aria-label="Graph dogfood approvals">
+      <div class="section-heading"><div><p class="eyebrow">GRAPH DOGFOOD</p><h2>Approve local execution</h2></div><span id="dogfood-status">Loading</span></div>
+      <div id="dogfood-list" class="request-list" aria-live="polite"></div>
+      <div id="dogfood-empty" class="empty-state" hidden>No pending Graph dogfood approvals.</div>
+      <div id="dogfood-error" class="error-state" hidden></div>
+    </section>
     <section class="workspace" aria-label="Pairing requests">
       <div class="section-heading"><div><p class="eyebrow">PENDING REQUESTS</p><h2>Needs your decision</h2></div><button id="refresh" class="button button-secondary" type="button">Refresh</button></div>
       <div id="request-list" class="request-list" aria-live="polite"></div>

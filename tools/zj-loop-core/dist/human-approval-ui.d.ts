@@ -8,6 +8,7 @@ import type { TransportEnvelope } from './transport-contract.js';
 import type { OpnReadOnlyGraphUiReadModel } from './opn-readonly-graph-ui-read-model.js';
 import { type HumanApprovalContext } from './human-authority.js';
 import { createHumanActionDecision, type HumanActionRequest } from './human-action.js';
+import type { RealAgentDogfoodApprovalUiUpstream } from './real-agent-dogfood-approval-ui-upstream.js';
 export declare const HUMAN_APPROVAL_UI_SCHEMA: "zj-loop.human_approval_ui.v1";
 export type HumanApprovalUiUpstream = {
     list(input: {
@@ -101,6 +102,7 @@ export type HumanApprovalUiServerInput = {
         device_key_id: string;
         device_fingerprint: string;
     };
+    dogfoodApprovals?: RealAgentDogfoodApprovalUiUpstream;
 };
 export type PairingHttpUpstreamInput = {
     endpoint: string;
