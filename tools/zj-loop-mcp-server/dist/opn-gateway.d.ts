@@ -16,3 +16,11 @@ export declare function opnMessageSend(input: {
     message_id?: string;
     notification_kind?: string;
 }): Promise<GatewayResult>;
+export declare function opnAgentTaskSend(input: {
+    target_node_id: string;
+    task_json: string;
+    message_id?: string;
+    event_id?: string;
+    plan_id?: string;
+    plan_revision?: number;
+}): Promise<GatewayResult>;

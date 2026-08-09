@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { estimatePatternCost, getPatternProfile, listPatternSummaries, recommendPatterns, } from '@jununfly/zj-loop-core';
 import { resolveProjectRoot, loadRegistry, loadPatternDoc, listSkills, loadSkill, loadState, listStateFiles, loadLoopConfig, loadBudget, loadRunLog, loadSafetyDoc, loadRouteTable, summarizeOperationalContext, } from './resolver.js';
-import { opnInboxAck, opnInboxRead, opnMessageSend } from './opn-gateway.js';
+import { opnAgentTaskSend, opnInboxAck, opnInboxRead, opnMessageSend } from './opn-gateway.js';
 const server = new McpServer({
     name: 'zagenticloop',
     version: '1.0.0',
@@ -308,6 +308,17 @@ server.tool('opn_inbox_ack', 'Acknowledge a previously read OPN message through 
     envelopeDigest: z.string().min(1),
 }, async ({ messageId, envelopeDigest }) => {
     const result = await opnInboxAck({ message_id: messageId, envelope_digest: envelopeDigest });
+    return { content: [{ type: 'text', text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
+});
+server.tool('opn_agent_task_send', 'Send a validated bounded Agent task through the local OPN Gateway', {
+    targetNodeId: z.string().min(1),
+    taskJson: z.string().min(1),
+    messageId: z.string().optional(),
+    eventId: z.string().optional(),
+    planId: z.string().optional(),
+    planRevision: z.number().int().min(0).optional(),
+}, async ({ targetNodeId, taskJson, messageId, eventId, planId, planRevision }) => {
+    const result = await opnAgentTaskSend({ target_node_id: targetNodeId, task_json: taskJson, message_id: messageId, event_id: eventId, plan_id: planId, plan_revision: planRevision });
     return { content: [{ type: 'text', text: JSON.stringify(result.status === 'ok' ? result.value : { schema: 'zj-loop.opn_mcp_error.v1', status: result.status, reason: result.reason }, null, 2) }] };
 });
 // ── Start ──────────────────────────────────────────────────────────
