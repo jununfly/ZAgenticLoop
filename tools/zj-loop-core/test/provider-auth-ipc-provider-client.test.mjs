@@ -46,3 +46,14 @@ test('Runtime IPC provider consumes only a bound launch handle and ordered resul
 test('Runtime IPC provider default timeout matches the provider runtime invocation ceiling', () => {
   assert.equal(PROVIDER_RUNTIME_IPC_TIMEOUT_MS, 15 * 60 * 1000);
 });
+
+test('Runtime IPC provider rejects when the runtime closes the socket after connect', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-ipc-provider-close-'));
+  const socketPath = path.join(root, 'runtime.sock');
+  const server = createUnixProviderAuthIpcServer({ socket_path: socketPath, correlation_id: 'corr-provider-close', verify_peer: () => true, on_frames: (_frames, connection) => connection.close() });
+  try {
+    await server.start();
+    const provider = createProviderRuntimeIpcProvider({ socket_path: socketPath, correlation_id: 'corr-provider-close', network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'runtime-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, auth_ref_digest: digest('a'), contract_digest: digest('b'), adapter_contract_digest: digest('c') });
+    await assert.rejects(() => provider.run({ cwd: '/tmp/worktree', prompt: 'inspect the atom', executable: '/opt/provider' }), /provider-runtime-ipc-socket-closed/);
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});

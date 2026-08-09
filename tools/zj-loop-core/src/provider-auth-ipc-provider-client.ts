@@ -58,7 +58,7 @@ export function createProviderRuntimeIpcProvider(input: {
       let connection: Awaited<ReturnType<typeof connectUnixProviderAuthIpc>> | undefined;
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        connection = await connectUnixProviderAuthIpc({ socket_path: input.socket_path, correlation_id, timeout_ms: timeout, on_frames: (frames) => {
+        connection = await connectUnixProviderAuthIpc({ socket_path: input.socket_path, correlation_id, timeout_ms: timeout, on_close: () => rejectTerminal(new Error('provider-runtime-ipc-socket-closed')), on_frames: (frames) => {
           for (const frame of frames) {
             if (frame.network_id !== input.network_id || frame.node_id !== input.node_id || frame.provider_runtime_id !== input.provider_runtime_id || frame.provider_id !== input.provider_id || frame.execution_id !== input.execution_id || frame.attempt !== input.attempt) { rejectTerminal(new Error('provider-runtime-ipc-provider-binding-mismatch')); return; }
             if (frame.kind === 'launch-accepted' || frame.kind === 'stdout' || frame.kind === 'stderr' || frame.kind === 'result' || frame.kind === 'error' || frame.kind === 'exit') {

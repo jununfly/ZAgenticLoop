@@ -36,3 +36,18 @@ test('Unix ProviderAuth IPC transport bounds connection establishment', async ()
     await assert.rejects(() => connectUnixProviderAuthIpc({ socket_path: path.join(root, 'missing.sock'), correlation_id: 'corr-timeout', timeout_ms: 25, on_frames: () => {} }));
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('Unix ProviderAuth IPC transport reports post-connect socket closure', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-provider-auth-ipc-close-'));
+  const socketPath = path.join(root, 'runtime.sock');
+  const closed = [];
+  const server = createUnixProviderAuthIpcServer({ socket_path: socketPath, correlation_id: 'corr-close', verify_peer: () => true, on_frames: (_frames, connection) => connection.close() });
+  try {
+    await server.start();
+    const client = await connectUnixProviderAuthIpc({ socket_path: socketPath, correlation_id: 'corr-close', on_frames: () => {}, on_close: (error) => closed.push(error?.message) });
+    await client.send(createProviderAuthIpcFrame({ correlation_id: 'corr-close', sequence: 1, network_id: 'network-1', node_id: 'node-1', provider_runtime_id: 'runtime-1', provider_id: 'codex', execution_id: 'execution-1', attempt: 1, kind: 'challenge', nonce: 'nonce-close' }));
+    for (let i = 0; i < 20 && closed.length === 0; i++) await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.equal(closed[0], 'provider-auth-ipc-socket-closed');
+    client.close();
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+});
