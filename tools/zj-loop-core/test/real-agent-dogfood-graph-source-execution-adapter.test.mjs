@@ -7,6 +7,7 @@ import { createRealAgentDogfoodExecutionBindingDigest } from '../dist/real-agent
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition } from '../dist/real-agent-dogfood-lifecycle.js';
 import { createRealAgentDogfoodGraphPlan } from '../dist/real-agent-dogfood-graph-orchestrator.js';
 import { createRealAgentDogfoodGraphSourceExecutionAdapter } from '../dist/real-agent-dogfood-graph-source-execution-adapter.js';
+import { acquireRealAgentDogfoodWorkerLease } from '../dist/real-agent-dogfood-worker.js';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
 
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
@@ -27,7 +28,7 @@ async function fixture() {
   const awaiting = createRealAgentDogfoodTransition({ lifecycle: running.lifecycle, to: 'awaiting-human-approval', event_id: 'awaiting', occurred_at: '2026-08-06T00:00:02.000Z', fact_digest: digest('c'), next_action: 'human-approval' });
   const active = createRealAgentDogfoodTransition({ lifecycle: awaiting.lifecycle, to: 'running', event_id: 'running', occurred_at: '2026-08-06T00:00:03.000Z', approval_digest: digest('a'), next_action: 'provider-execution' });
   const evidenceStore = { put: async () => ({ digest: digest('x'), size: 1, path: '/tmp/x', kind: 'test' }), read: async () => Buffer.from(''), readOnly: async () => Buffer.from('') };
-  return { root, stateStore, state_store: stateStore, plan, executable, args, executionBindingDigest, lifecycle: active.lifecycle, evidenceStore, evidence_store: evidenceStore };
+  return { root, stateStore, state_store: stateStore, plan, executable, args, executionBindingDigest, lifecycle: active.lifecycle, lifecycleEvent: active.event, evidenceStore, evidence_store: evidenceStore };
 }
 
 function admission(plan) {
@@ -56,5 +57,20 @@ test('source adapter does not report passed when worker lease release is uncerta
     const result = await adapter();
     assert.equal(result.status, 'outcome-uncertain');
     assert.equal(result.reason, 'source-execution-worker-lease-release-uncertain');
+  } finally { await fixtureValue.stateStore.close(); await rm(fixtureValue.root, { recursive: true, force: true }); }
+});
+
+test('source adapter uses the current state revision when a reused lease predates the running lifecycle event', async () => {
+  const fixtureValue = await fixture();
+  try {
+    const lease = await acquireRealAgentDogfoodWorkerLease({ stateStore: fixtureValue.stateStore, network_id: 'network-source-adapter', execution_id: fixtureValue.plan.execution_id, worker_id: 'worker-source', execution_binding_digest: fixtureValue.executionBindingDigest });
+    assert.equal(lease.status, 'acquired');
+    const runningAppend = await fixtureValue.stateStore.appendEvent({ network_id: 'network-source-adapter', expected_revision: lease.revision, event: fixtureValue.lifecycleEvent });
+    assert.equal(runningAppend.status, 'recorded');
+    let workerInput;
+    const adapter = createRealAgentDogfoodGraphSourceExecutionAdapter({ ...fixtureValue, network_id: 'network-source-adapter', worker_id: 'worker-source', execution_binding_digest: fixtureValue.executionBindingDigest, admission_bound_execution: admission(fixtureValue.plan), goal: fixtureValue.plan.goal, provider: { run: async () => ({}) }, worker_runner: async (input) => { workerInput = input; return { status: 'verification-pending', stdout_digest: digest('s'), stderr_digest: digest('t'), stdout_size: 1, stderr_size: 1, provider_fact_digest: digest('f'), revision: input.expected_revision, reason_code: 'provider-completed', next_action: 'run-independent-verifier' }; } });
+    const result = await adapter();
+    assert.equal(result.status, 'passed');
+    assert.equal(workerInput.expected_revision, await fixtureValue.stateStore.getRevision('network-source-adapter') - 1);
   } finally { await fixtureValue.stateStore.close(); await rm(fixtureValue.root, { recursive: true, force: true }); }
 });
