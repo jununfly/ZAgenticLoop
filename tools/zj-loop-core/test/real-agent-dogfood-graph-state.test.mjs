@@ -57,6 +57,23 @@ test('Graph phase evidence rejects a stale StateStore revision', async () => {
   }
 });
 
+test('Graph retry projection ignores phase records from the previous execution', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-graph-state-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-state-retry', owner_id: 'human-local' });
+    const previousPlan = createRealAgentDogfoodGraphPlan({ ...plan, execution_id: 'execution-state-previous', attempt: 1 });
+    const previous = createRealAgentDogfoodGraphPhaseRecord({ plan: previousPlan, network_id: 'network-state-retry', phase: 'source_execution', status: 'outcome-uncertain', completed_phases: [], reason: 'provider-failed' });
+    assert.equal((await appendRealAgentDogfoodGraphPhaseRecord({ stateStore: store, plan: previousPlan, network_id: 'network-state-retry', record: previous, expected_revision: 1 })).status, 'recorded');
+    const retryPlan = createRealAgentDogfoodGraphPlan({ ...plan, execution_id: 'execution-state-retry', attempt: 2 });
+    const snapshot = await store.readEvents({ network_id: 'network-state-retry', aggregate_type: 'real-agent-dogfood-graph', aggregate_id: plan.dogfood_id });
+    assert.equal(projectRealAgentDogfoodGraphPhaseRecord({ plan: retryPlan, events: snapshot.events }), null);
+  } finally {
+    await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('Graph phase evidence records actor binding and rejects a phase actor mismatch', () => {
   const source = createRealAgentDogfoodGraphPhaseRecord({
     plan,

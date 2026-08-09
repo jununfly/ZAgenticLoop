@@ -98,6 +98,9 @@ export function projectRealAgentDogfoodGraphPhaseRecord(input: { plan: RealAgent
   for (const event of input.events) {
     if (event.aggregate_type !== REAL_AGENT_DOGFOOD_GRAPH_STATE_AGGREGATE || event.aggregate_id !== input.plan.dogfood_id || event.event_type !== REAL_AGENT_DOGFOOD_GRAPH_STATE_EVENT) continue;
     const record = event.payload as RealAgentDogfoodGraphPhaseRecord;
+    // Retries share the dogfood aggregate but start a fresh graph plan. Historical
+    // phase records belong to their original execution and must not poison retry projection.
+    if (record.execution_id !== input.plan.execution_id || record.plan_digest !== input.plan.plan_digest) continue;
     assertRecord(record, input.plan);
     if (current && record.status === 'passed' && record.completed_phases.length <= current.completed_phases.length) throw new Error('graph-state-phase-order-invalid');
     current = record;
