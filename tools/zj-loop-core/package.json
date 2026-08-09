@@ -51,6 +51,7 @@
     ,"zj-loop-opn-graph-verifier": "./dist/opn-graph-verifier-cli.js"
     ,"zj-loop-opn-graph-coordinator": "./dist/opn-graph-coordinator-cli.js"
     ,"zj-loop-opn-graph-dogfood": "./dist/opn-graph-dogfood-cli.js"
+    ,"zj-loop-opn-node-ui": "./dist/opn-node-ui-cli.js"
   },
   "exports": {
     ".": {
