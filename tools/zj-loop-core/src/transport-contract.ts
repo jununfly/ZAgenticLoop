@@ -36,8 +36,14 @@ export type TransportResult =
   | { status: 'duplicate'; message_id: string; envelope_digest: string; side_effects_executed: false }
   | { status: 'blocked'; message_id?: string; reason: string; side_effects_executed: false };
 
+export type TransportSession = {
+  session_id: string;
+  /** Remote sessions expose their expiry; local adapters may omit it. */
+  expires_at?: string;
+};
+
 export type TransportAdapter = {
-  openSession(input: { network_id: string; node_id: string }): Promise<{ session_id: string }>;
+  openSession(input: { network_id: string; node_id: string }): Promise<TransportSession>;
   send(input: { session_id: string; envelope: TransportEnvelope }): Promise<TransportResult>;
   receive(input: { session_id: string }): Promise<TransportEnvelope | null>;
   acknowledge(input: { session_id: string; message_id: string; envelope_digest: string }): Promise<TransportResult>;

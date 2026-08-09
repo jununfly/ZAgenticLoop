@@ -1,5 +1,5 @@
 import { request, type RequestOptions } from 'node:https';
-import type { TransportAdapter, TransportEnvelope, TransportResult } from './transport-contract.js';
+import type { TransportAdapter, TransportEnvelope, TransportResult, TransportSession } from './transport-contract.js';
 import { validateTransportEnvelope } from './transport-contract.js';
 
 export const TLS_TRANSPORT_PROTOCOL = 'transport.v1' as const;
@@ -107,7 +107,9 @@ export function createTlsTransportAdapter(input: TlsTransportAdapterInput): Tran
       const body = bodyObject(response.body, 'transport-session-response-invalid');
       const sessionBody = bodyObject(body.session, 'transport-session-response-invalid');
       requiredText(sessionBody.session_id, 'transport-session-id-invalid');
-      return { session_id: sessionBody.session_id };
+      requiredText(sessionBody.expires_at, 'transport-session-expiry-invalid');
+      if (!Number.isFinite(Date.parse(sessionBody.expires_at))) throw new Error('transport-session-expiry-invalid');
+      return { session_id: sessionBody.session_id, expires_at: sessionBody.expires_at } satisfies TransportSession;
     },
     async send(session) {
       requiredText(session.session_id, 'transport-session-id-required');

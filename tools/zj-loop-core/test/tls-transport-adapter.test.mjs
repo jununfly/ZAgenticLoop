@@ -41,7 +41,7 @@ test('TLS transport adapter completes a P-256 mTLS and bounded envelope lifecycl
     response.setHeader('content-type', 'application/json');
     if (request.url === '/v1/transport/sessions' && request.method === 'POST') {
       response.statusCode = 201;
-      response.end(JSON.stringify({ status: 'created', session: { session_id: 'session-1' }, side_effects_executed: false }));
+      response.end(JSON.stringify({ status: 'created', session: { session_id: 'session-1', expires_at: '2026-08-01T12:50:00.000Z' }, side_effects_executed: false }));
     } else if (request.url === '/v1/transport/sessions/session-1/envelopes' && request.method === 'POST') {
       const posted = JSON.parse(body);
       response.statusCode = 202;
@@ -64,6 +64,7 @@ test('TLS transport adapter completes a P-256 mTLS and bounded envelope lifecycl
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const adapter = createTlsTransportAdapter({ endpoint: `https://localhost:${server.address().port}`, ca: serverMaterial.cert, cert: clientMaterial.cert, key: clientMaterial.key, bearer_token: 'credential-1' });
   const session = await adapter.openSession({ network_id: 'network-1', node_id: 'node-1' });
+  assert.deepEqual(session, { session_id: 'session-1', expires_at: '2026-08-01T12:50:00.000Z' });
   const sent = await adapter.send({ session_id: session.session_id, envelope: received });
   assert.deepEqual(sent, { status: 'accepted', message_id: received.message_id, envelope_digest: received.envelope_digest, side_effects_executed: false });
   assert.deepEqual(await adapter.receive({ session_id: session.session_id }), received);

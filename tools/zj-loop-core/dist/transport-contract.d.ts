@@ -39,13 +39,16 @@ export type TransportResult = {
     reason: string;
     side_effects_executed: false;
 };
+export type TransportSession = {
+    session_id: string;
+    /** Remote sessions expose their expiry; local adapters may omit it. */
+    expires_at?: string;
+};
 export type TransportAdapter = {
     openSession(input: {
         network_id: string;
         node_id: string;
-    }): Promise<{
-        session_id: string;
-    }>;
+    }): Promise<TransportSession>;
     send(input: {
         session_id: string;
         envelope: TransportEnvelope;

@@ -44,6 +44,8 @@ test('real mTLS TransportAdapter send/receive/ack is backed by StateStore facts'
     const receiver = createTlsTransportAdapter({ endpoint: `https://localhost:${server.address().port}`, ca: serverMaterial.cert, cert: receiverMaterial.cert, key: receiverMaterial.key, bearer_token: 'credential-1' });
     const senderSession = await sender.openSession({ network_id: 'network-1', node_id: senderNodeId });
     const receiverSession = await receiver.openSession({ network_id: 'network-1', node_id: receiverNodeId });
+    assert.equal(senderSession.expires_at, '2026-08-07T12:51:00.000Z');
+    assert.equal(receiverSession.expires_at, '2026-08-07T12:51:00.000Z');
     const targetEnvelope = createTransportEnvelope({ message_id: 'message-1', network_id: 'network-1', event_id: 'event-1', plan_id: 'plan-1', plan_revision: 1, task_id: 'task-1', from_node_id: senderNodeId, target_node_id: receiverNodeId, notification_kind: 'evidence-available', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('b'), kind: 'evidence' }], created_at: '2026-08-07T12:01:00.000Z', expires_at: '2026-08-07T12:30:00.000Z' });
     assert.equal((await sender.send({ session_id: senderSession.session_id, envelope: targetEnvelope })).status, 'accepted');
     assert.deepEqual(await receiver.receive({ session_id: receiverSession.session_id }), targetEnvelope);
