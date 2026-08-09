@@ -44,3 +44,4 @@ Append one entry per run. Prune entries older than 30 days.
 {"run_id":"2026-07-17T09:55:24Z","pattern":"daily-triage","duration_s":6,"items_found":1,"actions_taken":1,"escalations":0,"tokens_estimate":52000,"readiness_score":100,"outcome":"report-only","workflow_run":"29571668312"}
 {"run_id":"2026-07-21T10:24:28Z","pattern":"daily-triage","duration_s":6,"items_found":1,"actions_taken":1,"escalations":0,"tokens_estimate":52000,"readiness_score":100,"outcome":"report-only","workflow_run":"29822087602"}
 {"run_id":"2026-07-22T10:23:52Z","pattern":"daily-triage","duration_s":8,"items_found":1,"actions_taken":1,"escalations":0,"tokens_estimate":52000,"readiness_score":100,"outcome":"report-only","workflow_run":"29911731161"}
+{"run_id":"2026-08-09T19:00:00+08:00","pattern":"1-8-4-2-provider-runtime-diagnosis","duration_s":900,"items_found":1,"actions_taken":1,"escalations":0,"tokens_estimate":9000,"outcome":"fix-proposed"}

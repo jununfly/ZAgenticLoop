@@ -1,7 +1,7 @@
 import { type ProviderAuthRef, type ProviderLaunchHandle, type ProviderRuntimeIdentityBinding } from './provider-auth-runtime.js';
 import { type ProviderResult } from './provider-runtime-adapter.js';
 import type { CodexExecutionMode } from './codex-agent-provider-adapter.js';
-export declare const PROVIDER_RUNTIME_IPC_TIMEOUT_MS = 120000;
+export declare const PROVIDER_RUNTIME_IPC_TIMEOUT_MS: number;
 export type ProviderRuntimeIpcRunResult = {
     status: ProviderResult['status'];
     success: boolean;

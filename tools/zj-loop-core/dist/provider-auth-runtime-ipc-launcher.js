@@ -41,9 +41,10 @@ export function createProviderAuthRuntimeIpcLauncher(input) {
         throw new Error('provider-runtime-ipc-auth-ref-resolver-required');
     const processAdapter = input.process_adapter ?? createLocalProcessAdapter();
     const provider = createCodexAgentProviderAdapter({ process_adapter: processAdapter, executable: input.provider_executable });
-    const timeoutMs = input.invocation_timeout_ms ?? 120_000;
+    // Match the Provider Registry's bounded execution window; shorter values remain configurable.
+    const timeoutMs = input.invocation_timeout_ms ?? 15 * 60 * 1000;
     const terminationGraceMs = input.termination_grace_ms ?? 2_000;
-    if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000)
+    if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15 * 60 * 1000)
         throw new Error('provider-runtime-ipc-invocation-timeout-invalid');
     if (!Number.isInteger(terminationGraceMs) || terminationGraceMs < 1 || terminationGraceMs > 60_000)
         throw new Error('provider-runtime-ipc-termination-grace-invalid');

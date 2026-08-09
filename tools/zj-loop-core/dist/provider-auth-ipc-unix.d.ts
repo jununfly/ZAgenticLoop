@@ -1,6 +1,6 @@
 import { type Socket } from 'node:net';
 import { type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
-export declare const PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS = 120000;
+export declare const PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS: number;
 export type ProviderAuthIpcPeerVerifier = (socket: Socket) => Promise<boolean> | boolean;
 export type ProviderAuthIpcConnection = {
     send(frame: ProviderAuthIpcFrame): Promise<void>;

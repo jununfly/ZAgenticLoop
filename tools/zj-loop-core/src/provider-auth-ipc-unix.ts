@@ -3,7 +3,8 @@ import net, { type Socket } from 'node:net';
 import path from 'node:path';
 import { encodeProviderAuthIpcFrame, ProviderAuthIpcDecoder, type ProviderAuthIpcFrame } from './provider-auth-ipc-protocol.js';
 
-export const PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS = 120_000;
+// Keep IPC open for the Provider Registry's bounded 15-minute execution window.
+export const PROVIDER_AUTH_IPC_TIMEOUT_MAX_MS = 15 * 60 * 1000;
 
 export type ProviderAuthIpcPeerVerifier = (socket: Socket) => Promise<boolean> | boolean;
 export type ProviderAuthIpcConnection = { send(frame: ProviderAuthIpcFrame): Promise<void>; close(): void };

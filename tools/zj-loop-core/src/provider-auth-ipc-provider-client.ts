@@ -9,7 +9,8 @@ const LAUNCH_REQUEST_SCHEMA = 'zj-loop.provider_launch_request.v1';
 const LAUNCH_RESPONSE_SCHEMA = 'zj-loop.provider_launch_response.v1';
 const RESULT_SCHEMA = 'zj-loop.provider_ipc_result.v1';
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
-export const PROVIDER_RUNTIME_IPC_TIMEOUT_MS = 120_000;
+// Must match the bounded timeout used by the real-agent Provider Registry.
+export const PROVIDER_RUNTIME_IPC_TIMEOUT_MS = 15 * 60 * 1000;
 
 export type ProviderRuntimeIpcRunResult = {
   status: ProviderResult['status'];
@@ -47,7 +48,7 @@ export function createProviderRuntimeIpcProvider(input: {
       if (input.auth_ref !== undefined && (validateProviderAuthRef(input.auth_ref).status === 'blocked' || input.auth_ref.ref_digest !== input.auth_ref_digest)) throw new Error('provider-runtime-ipc-provider-auth-ref-invalid');
       if (!DIGEST.test(input.auth_ref_digest) || !DIGEST.test(input.contract_digest) || !DIGEST.test(input.adapter_contract_digest)) throw new Error('provider-runtime-ipc-provider-contract-invalid');
       const timeout = input.timeout_ms ?? PROVIDER_RUNTIME_IPC_TIMEOUT_MS;
-      if (!Number.isInteger(timeout) || timeout < 1 || timeout > 120_000) throw new Error('provider-runtime-ipc-provider-timeout-invalid');
+      if (!Number.isInteger(timeout) || timeout < 1 || timeout > PROVIDER_RUNTIME_IPC_TIMEOUT_MS) throw new Error('provider-runtime-ipc-provider-timeout-invalid');
       const correlation_id = input.correlation_id ?? `provider-${randomUUID()}`;
       const stdout: string[] = [];
       const stderr: string[] = [];

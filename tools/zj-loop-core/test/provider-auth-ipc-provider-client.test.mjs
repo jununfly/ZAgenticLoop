@@ -44,5 +44,5 @@ test('Runtime IPC provider consumes only a bound launch handle and ordered resul
 });
 
 test('Runtime IPC provider default timeout matches the provider runtime invocation ceiling', () => {
-  assert.equal(PROVIDER_RUNTIME_IPC_TIMEOUT_MS, 120_000);
+  assert.equal(PROVIDER_RUNTIME_IPC_TIMEOUT_MS, 15 * 60 * 1000);
 });
