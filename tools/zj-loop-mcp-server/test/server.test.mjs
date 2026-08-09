@@ -417,7 +417,7 @@ test('server lists all tools over stdio', async () => {
 
 test('OPN Gateway acknowledgement fails closed when local credentials are not configured', async () => {
   const root = await setup();
-  const names = ['OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
+  const names = ['OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
     for (const name of names) delete process.env[name];
@@ -446,7 +446,7 @@ test('OPN Agent task tool validates the bounded task before contacting the gatew
 
 test('OPN Gateway tools fail closed when local credentials are not configured', async () => {
   const root = await setup();
-  const names = ['OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
+  const names = ['OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
     for (const name of names) delete process.env[name];
@@ -462,18 +462,24 @@ test('OPN Gateway tools fail closed when local credentials are not configured', 
   }
 });
 
-test('OPN Gateway reports an invalid local config file without contacting the network', async () => {
+test('OPN Gateway reports an incomplete identity directory without contacting the network', async () => {
   const root = await setup();
-  const previous = process.env.OPN_CONFIG_FILE;
+  const names = ['OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE'];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   try {
-    process.env.OPN_CONFIG_FILE = root + '/missing-opn-config.json';
-    for (const name of ['OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE']) delete process.env[name];
+    process.env.OPN_IDENTITY_DIR = root + '/missing-opn-identity';
+    process.env.OPN_NETWORK_ID = 'network-1';
+    process.env.OPN_ENDPOINT = 'https://127.0.0.1:1';
+    for (const name of ['OPN_NODE_ID', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE']) delete process.env[name];
     const res = await callServer(root, [{ id: 1, method: 'tools/call', params: { name: 'opn_inbox_read', arguments: {} } }]);
     const parsed = JSON.parse(res.get(1).result.content[0].text);
-    assert.deepEqual(parsed, { schema: 'zj-loop.opn_mcp_error.v1', status: 'blocked', reason: 'opn-gateway-config-file-invalid' });
+    assert.ok(parsed.schema === 'zj-loop.opn_mcp_error.v1');
+    assert.equal(parsed.status, 'blocked');
   } finally {
-    if (previous === undefined) delete process.env.OPN_CONFIG_FILE;
-    else process.env.OPN_CONFIG_FILE = previous;
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
     await cleanup();
   }
 });

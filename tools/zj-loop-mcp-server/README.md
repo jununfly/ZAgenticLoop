@@ -23,26 +23,17 @@ Set `LOOP_PROJECT_ROOT` to your target project (defaults to `cwd`).
 
 ## OPN Gateway mode
 
-The same MCP server can expose the local OPN Gateway when these environment
-variables are configured: `OPN_NETWORK_ID`, `OPN_NODE_ID`, `OPN_ENDPOINT`,
-`OPN_CA_FILE`, `OPN_CERT_FILE`, `OPN_KEY_FILE`, `OPN_CREDENTIAL_TOKEN_FILE`,
-and `OPN_ARTIFACT_STORE`.
+The same MCP server can expose the local OPN Gateway with one concentrated
+identity directory. Set `OPN_IDENTITY_DIR` to the directory containing
+`ca.cert.pem`, `agent.cert.pem`, `agent.key.pem`, and
+`join-session.json.credential-token`. The local artifact store defaults to an
+`artifacts` child in that directory. Also set `OPN_NETWORK_ID` and
+`OPN_ENDPOINT`; `OPN_NODE_ID` is derived from the agent certificate when it is
+omitted.
 
-For a stable per-machine setup, set only `OPN_CONFIG_FILE` to a local JSON file;
-individual environment variables override matching JSON fields:
-
-```json
-{
-  "network_id": "opn-dogfood-20260806",
-  "node_id": "<this-node-id>",
-  "endpoint": "https://100.119.216.26:43123",
-  "ca_file": "<local>/ca.cert.pem",
-  "cert_file": "<local>/agent.cert.pem",
-  "key_file": "<local>/agent.key.pem",
-  "credential_token_file": "<local>/join-session.json.credential-token",
-  "artifact_store": "<local>/artifacts"
-}
-```
+The older `OPN_CA_FILE`, `OPN_CERT_FILE`, `OPN_KEY_FILE`,
+`OPN_CREDENTIAL_TOKEN_FILE`, `OPN_ARTIFACT_STORE`, and `OPN_NODE_ID` variables
+remain supported as per-file compatibility overrides.
 
 It adds `opn_inbox_read`, `opn_inbox_ack`, `opn_message_send`, and `opn_agent_task_send`. Credentials stay outside MCP
 tool arguments; the tools return structured blocked results when the gateway

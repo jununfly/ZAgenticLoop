@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, X509Certificate } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
@@ -23,17 +23,6 @@ type GatewayConfig = {
   artifact_store: string;
 };
 
-type GatewayConfigFile = Partial<{
-  network_id: string;
-  node_id: string;
-  endpoint: string;
-  ca_file: string;
-  cert_file: string;
-  key_file: string;
-  credential_token_file: string;
-  artifact_store: string;
-}>;
-
 export type GatewayResult = { status: 'ok'; value: Record<string, unknown> } | { status: 'blocked'; reason: string };
 
 async function fileValue(name: string, filePath?: string): Promise<string> {
@@ -43,27 +32,20 @@ async function fileValue(name: string, filePath?: string): Promise<string> {
 }
 
 async function config(): Promise<GatewayConfig> {
-  let fileConfig: GatewayConfigFile = {};
-  const configPath = process.env.OPN_CONFIG_FILE?.trim();
-  if (configPath) {
-    try {
-      const parsed = JSON.parse(await readFile(configPath, 'utf8')) as unknown;
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('object-required');
-      fileConfig = parsed as GatewayConfigFile;
-    } catch { throw new Error('opn-gateway-config-file-invalid'); }
-  }
-  const value = (environmentName: string, fileName: keyof GatewayConfigFile): string | undefined => process.env[environmentName]?.trim() || fileConfig[fileName]?.trim();
-  const network_id = value('OPN_NETWORK_ID', 'network_id');
-  const node_id = value('OPN_NODE_ID', 'node_id');
-  const endpoint = value('OPN_ENDPOINT', 'endpoint');
-  const artifact_store = value('OPN_ARTIFACT_STORE', 'artifact_store');
-  if (!network_id || !node_id || !endpoint || !artifact_store) throw new Error('opn-gateway-not-configured');
-  const caPath = value('OPN_CA_FILE', 'ca_file');
-  const certPath = value('OPN_CERT_FILE', 'cert_file');
-  const keyPath = value('OPN_KEY_FILE', 'key_file');
-  const credentialTokenPath = value('OPN_CREDENTIAL_TOKEN_FILE', 'credential_token_file');
-  if (!caPath || !certPath || !keyPath || !credentialTokenPath) throw new Error('opn-gateway-not-configured');
-  return { network_id, node_id, endpoint, artifact_store, ca: await fileValue('OPN_CA_FILE', caPath), cert: await fileValue('OPN_CERT_FILE', certPath), key: await fileValue('OPN_KEY_FILE', keyPath), credential_token: await fileValue('OPN_CREDENTIAL_TOKEN_FILE', credentialTokenPath) };
+  const identityDir = process.env.OPN_IDENTITY_DIR?.trim();
+  const sibling = (name: string): string | undefined => identityDir ? path.join(identityDir, name) : undefined;
+  const pathValue = (environmentName: string, siblingName: string): string | undefined => process.env[environmentName]?.trim() || sibling(siblingName);
+  const network_id = process.env.OPN_NETWORK_ID?.trim();
+  const endpoint = process.env.OPN_ENDPOINT?.trim();
+  const artifact_store = process.env.OPN_ARTIFACT_STORE?.trim() || sibling('artifacts');
+  const caPath = pathValue('OPN_CA_FILE', 'ca.cert.pem');
+  const certPath = pathValue('OPN_CERT_FILE', 'agent.cert.pem');
+  const keyPath = pathValue('OPN_KEY_FILE', 'agent.key.pem');
+  const credentialTokenPath = pathValue('OPN_CREDENTIAL_TOKEN_FILE', 'join-session.json.credential-token');
+  if (!network_id || !endpoint || !artifact_store || !caPath || !certPath || !keyPath || !credentialTokenPath) throw new Error('opn-gateway-not-configured');
+  const cert = await fileValue('OPN_CERT_FILE', certPath);
+  const node_id = process.env.OPN_NODE_ID?.trim() || createHash('sha256').update(new X509Certificate(cert).raw).digest('hex');
+  return { network_id, node_id, endpoint, artifact_store, ca: await fileValue('OPN_CA_FILE', caPath), cert, key: await fileValue('OPN_KEY_FILE', keyPath), credential_token: await fileValue('OPN_CREDENTIAL_TOKEN_FILE', credentialTokenPath) };
 }
 
 function blocked(error: unknown): GatewayResult {
