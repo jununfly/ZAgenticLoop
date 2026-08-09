@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { realAgentDogfoodWorkerLeaseDigest } from './real-agent-dogfood-digests.js';
 export const REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA = 'zj-loop.real_agent_dogfood_worker_lease.v1';
 export const REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE = 'real-agent-dogfood-worker';
-// The provider runtime is bounded at 120 seconds; keep the worker lease alive through its termination grace period.
-export const REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS = 180_000;
+// Keep the worker lease alive through Provider execution, cleanup, proof collection, and slow local IPC.
+export const REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS = 600_000;
 const AGGREGATE = REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE;
 function expiry(now, ttl) {
     if (!Number.isFinite(Date.parse(now)) || !Number.isInteger(ttl) || ttl <= 0)

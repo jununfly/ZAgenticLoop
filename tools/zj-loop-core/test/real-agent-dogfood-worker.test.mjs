@@ -37,7 +37,7 @@ test('worker lease default TTL covers the bounded provider invocation', async ()
     await store.createNetwork({ network_id: 'network-default-ttl', owner_id: 'human-1', now: '2026-08-01T12:00:00.000Z' });
     const acquired = await acquireRealAgentDogfoodWorkerLease({ stateStore: store, network_id: 'network-default-ttl', execution_id: 'execution-default-ttl', worker_id: 'worker-default-ttl', execution_binding_digest: bindingDigest, now: '2026-08-01T12:00:00.000Z' });
     assert.equal(acquired.status, 'acquired');
-    assert.equal(acquired.expires_at, '2026-08-01T12:03:00.000Z');
+    assert.equal(acquired.expires_at, '2026-08-01T12:10:00.000Z');
   } finally {
     await store.close();
     await rm(root, { recursive: true, force: true });

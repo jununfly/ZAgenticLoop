@@ -4,8 +4,8 @@ import { realAgentDogfoodWorkerLeaseDigest } from './real-agent-dogfood-digests.
 
 export const REAL_AGENT_DOGFOOD_WORKER_LEASE_SCHEMA = 'zj-loop.real_agent_dogfood_worker_lease.v1' as const;
 export const REAL_AGENT_DOGFOOD_WORKER_AGGREGATE_TYPE = 'real-agent-dogfood-worker' as const;
-// The provider runtime is bounded at 120 seconds; keep the worker lease alive through its termination grace period.
-export const REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS = 180_000;
+// Keep the worker lease alive through Provider execution, cleanup, proof collection, and slow local IPC.
+export const REAL_AGENT_DOGFOOD_WORKER_DEFAULT_LEASE_TTL_MS = 600_000;
 
 export type RealAgentDogfoodWorkerLeaseResult =
   | { status: 'acquired'; lease_id: string; worker_id: string; expires_at: string; revision: number }
