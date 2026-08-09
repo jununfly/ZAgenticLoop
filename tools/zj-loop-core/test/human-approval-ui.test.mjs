@@ -10,6 +10,7 @@ import { createHumanActionRequest } from '../dist/human-action.js';
 import { createTransportEnvelope } from '../dist/transport-contract.js';
 import { createRealAgentDogfoodDraft, createRealAgentDogfoodTransition } from '../dist/real-agent-dogfood-lifecycle.js';
 import { createRealAgentDogfoodApprovalUiUpstream } from '../dist/real-agent-dogfood-approval-ui-upstream.js';
+import { readFile as readTextFile } from 'node:fs/promises';
 
 function request({ address, path, method = 'GET', body, headers = {} }) {
   const payload = body === undefined ? undefined : JSON.stringify(body);
@@ -34,6 +35,13 @@ function request({ address, path, method = 'GET', body, headers = {} }) {
   });
 }
 
+test('Human approval UI loads independent sections when one read model is unavailable', async () => {
+  const source = await readTextFile(new URL('../ui/human-approval/human-approval-ui.js', import.meta.url), 'utf8');
+  assert.match(source, /Promise\.allSettled/);
+  assert.match(source, /request-timeout/);
+  assert.match(source, /Partially connected/);
+});
+
 test('Human approval UI exchanges a one-time bootstrap token for a session and lists the configured network', async () => {
   const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
   const server = createHumanApprovalUiServer({
@@ -55,7 +63,7 @@ test('Human approval UI exchanges a one-time bootstrap token for a session and l
     const bootstrapped = await request({ address, path: '/ui/bootstrap?token=bootstrap-1' });
     assert.equal(bootstrapped.status, 302);
     assert.match(bootstrapped.headers['set-cookie'][0], /^zj_loop_ui_session=/);
-    assert.equal(bootstrapped.headers.location, '/');
+    assert.match(bootstrapped.headers.location, /^\/\?session=/);
     const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
     const session = await request({ address, path: '/ui/session', headers: { cookie } });
     assert.equal(session.status, 200);
@@ -115,10 +123,15 @@ test('Human approval UI self-bootstraps the stable loopback URL when no session 
   try {
     const address = server.address();
     const page = await request({ address, path: '/' });
-    assert.equal(page.status, 200);
+    assert.equal(page.status, 302);
+    assert.match(page.headers.location, /^\/\?session=/);
     assert.match(page.headers['set-cookie'][0], /^zj_loop_ui_session=/);
     const cookie = page.headers['set-cookie'][0].split(';', 1)[0];
     assert.equal((await request({ address, path: '/ui/session', headers: { cookie } })).status, 200);
+    const session = new URL(`http://127.0.0.1:${address.port}${page.headers.location}`).searchParams.get('session');
+    assert.ok(session);
+    assert.equal((await request({ address, path: '/ui/session', headers: { 'x-zj-loop-ui-session': session } })).status, 200);
+    assert.equal((await request({ address, path: `/ui/session?session=${encodeURIComponent(session)}` })).status, 200);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
@@ -232,15 +245,17 @@ test('Human approval UI serves a usable static shell and records structured reje
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   try {
     const address = server.address();
-    const page = await requestHttp({ address, path: '/' });
+    const bootstrapped = await requestHttp({ address, path: '/ui/bootstrap?token=bootstrap-3' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    const page = await requestHttp({ address, path: '/', headers: { cookie } });
+    assert.equal(bootstrapped.status, 302);
     assert.equal(page.status, 200);
     assert.match(page.body, /Human Approval/);
     assert.match(page.body, /human-approval-ui\.js/);
-    const bootstrapped = await requestHttp({ address, path: '/ui/bootstrap?token=bootstrap-3' });
-    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
     const assets = await requestHttp({ address, path: '/assets/human-approval-ui.js' });
     assert.equal(assets.status, 200);
     assert.match(assets.headers['content-type'], /javascript/);
+    assert.equal(assets.headers['cache-control'], 'no-store');
     const origin = `http://127.0.0.1:${address.port}`;
     const response = await requestHttp({ address, path: '/ui/pairing-requests/request-1/reject', method: 'POST', headers: { cookie, origin }, body: { request_digest: 'a'.repeat(64), reason: 'endpoint-unexpected' } });
     assert.equal(response.status, 201);

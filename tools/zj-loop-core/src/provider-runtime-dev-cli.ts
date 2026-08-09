@@ -20,6 +20,7 @@ export function runProviderRuntimeDevCli(argv: readonly string[] = process.argv.
       { name: 'provider_id', flag: 'provider-id', type: 'string', description: 'Provider identifier' },
       { name: 'node_id', flag: 'node-id', type: 'string', description: 'Local trusted runner node identifier' },
       { name: 'execution_id', flag: 'execution-id', type: 'string', description: 'Execution binding identifier' },
+      { name: 'attempt', type: 'string', description: 'Execution attempt binding' },
       { name: 'provider_executable', flag: 'provider-executable', type: 'string', description: 'Absolute provider executable' },
       { name: 'cwd', type: 'string', description: 'Absolute provider working directory' },
       { name: 'provider_secret_env', flag: 'provider-secret-env', type: 'string', description: 'Environment variable containing dev provider secret' },
@@ -37,6 +38,9 @@ export function runProviderRuntimeDevCli(argv: readonly string[] = process.argv.
       if (!secret) throw new Error(`provider-runtime-dev-secret-env-missing:${secretEnv}`);
       const providerExecutable = typeof options.provider_executable === 'string' && options.provider_executable.trim() !== '' ? options.provider_executable : '/opt/homebrew/bin/codex';
       const cwd = typeof options.cwd === 'string' && options.cwd.trim() !== '' ? options.cwd : process.cwd();
+      const attemptValue = typeof options.attempt === 'string' && options.attempt.trim() !== '' ? Number(options.attempt) : 1;
+      if (!Number.isInteger(attemptValue) || attemptValue < 1) throw new Error('provider-runtime-dev-attempt-invalid');
+      const attempt = attemptValue;
       await access(providerExecutable);
       const runtime = createDevelopmentProviderRuntime({
         profile: 'development-local',
@@ -45,7 +49,7 @@ export function runProviderRuntimeDevCli(argv: readonly string[] = process.argv.
         provider_id: typeof options.provider_id === 'string' ? options.provider_id : 'codex',
         node_id: typeof options.node_id === 'string' ? options.node_id : `local-node-${process.pid}`,
         execution_id: typeof options.execution_id === 'string' ? options.execution_id : `local-execution-${process.pid}`,
-        attempt: 1,
+        attempt,
         socket_path: path.join(runtimeDir, 'provider-runtime.sock'),
         binding_path: path.join(runtimeDir, 'provider-runtime-binding.json'),
         auth_ref_path: path.join(runtimeDir, 'provider-runtime-auth-ref.json'),

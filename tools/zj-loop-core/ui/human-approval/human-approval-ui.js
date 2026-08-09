@@ -7,8 +7,10 @@
   const error = $('error-state');
   const dialog = $('review-dialog');
   const message = $('dialog-message');
+  const sessionToken = new URLSearchParams(window.location.search).get('session') || '';
+  if (sessionToken) window.history.replaceState(null, '', window.location.pathname);
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-  const api = async (path, options) => { const response = await fetch(path, { credentials: 'same-origin', ...options }); const body = await response.json(); if (!response.ok) throw new Error(body.reason || 'request-failed'); return body; };
+  const api = async (path, options = {}) => { const target = new URL(path, window.location.href); if (sessionToken) target.searchParams.set('session', sessionToken); const headers = { ...(options.headers || {}), ...(sessionToken ? { 'x-zj-loop-ui-session': sessionToken } : {}) }; const controller = new AbortController(); const timeout = window.setTimeout(() => controller.abort(), 10000); try { const response = await fetch(`${target.pathname}${target.search}`, { credentials: 'same-origin', ...options, headers, signal: controller.signal }); const body = await response.json(); if (!response.ok) throw new Error(body.reason || 'request-failed'); return body; } catch (reason) { if (reason?.name === 'AbortError') throw new Error('request-timeout'); throw reason; } finally { window.clearTimeout(timeout); } };
   function setStatus(text, kind) { status.textContent = text; status.className = `status status-${kind}`; }
   function renderIdentity(identity) { $('human-card').innerHTML = `<strong>Human signer</strong><span>${escapeHtml(identity.human_id)} · ${escapeHtml(identity.algorithm)}</span><div class="fingerprint">${escapeHtml(identity.public_key_fingerprint)}</div>`; }
   function render() { list.innerHTML = ''; const pending = state.requests.filter((request) => request.status === 'pending'); empty.hidden = pending.length !== 0; pending.forEach((request) => { const card = document.createElement('article'); card.className = 'request-card'; card.innerHTML = `<h3>${escapeHtml(request.identity?.display_name || request.node_id)}</h3><div class="request-meta"><span>${escapeHtml(request.identity?.agent_kind || 'Agent')}</span><span>${escapeHtml(request.endpoint || 'endpoint unavailable')}</span><span>expires ${escapeHtml(request.expires_at)}</span></div><div>${request.requested_capabilities.map((capability) => `<span class="capability">${escapeHtml(capability)}</span>`).join('')}</div>`; card.addEventListener('click', () => openReview(request)); list.append(card); });
@@ -22,7 +24,34 @@
     $('dogfood-list').innerHTML = dogfoods.map((request) => `<article class="request-card action-card"><h3>${escapeHtml(request.goal)}</h3><p>Execution ${escapeHtml(request.execution_id)} · ${escapeHtml(request.execution_mode)}</p><div class="request-meta"><span>${escapeHtml(request.dogfood_id)}</span><span>${escapeHtml(request.network_id)}</span></div><p>Allowed file: ${escapeHtml(request.allowed_files.join(', '))}</p><button class="button button-primary dogfood-approve" data-dogfood-id="${escapeHtml(request.dogfood_id)}">Approve with Keychain</button></article>`).join('');
   }
   function openReview(request) { state.selected = request; $('dialog-title').textContent = request.identity?.display_name || request.node_id; $('dialog-summary').innerHTML = [['Node fingerprint', request.node_id], ['Agent kind', request.identity?.agent_kind || 'unknown'], ['Endpoint', request.endpoint || 'unknown'], ['Request digest', request.request_digest], ['Expires', request.expires_at]].map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join(''); $('capability-list').innerHTML = request.requested_capabilities.map((capability, index) => `<label class="check"><input type="checkbox" value="${escapeHtml(capability)}" checked> ${escapeHtml(capability)}</label>`).join(''); message.textContent = ''; dialog.showModal(); }
-  async function refresh() { try { const [session, requests, actions, dogfoods] = await Promise.all([api('/ui/session'), api('/ui/pairing-requests'), api('/ui/human-actions').catch(() => ({ requests: [] })), api('/ui/dogfood-approvals').catch(() => ({ requests: [] }))]); renderIdentity(session.human); state.requests = requests.requests; state.actions = actions.requests; state.dogfoods = dogfoods.requests; render(); setStatus('Ready', 'ok'); } catch (reason) { setStatus('Blocked', 'error'); $('human-card').textContent = 'Local Gateway session unavailable. Refresh to reconnect.'; error.hidden = false; error.textContent = reason.message; } }
+  async function refresh() {
+    error.hidden = true;
+    const [sessionResult, requestsResult, actionsResult, dogfoodsResult] = await Promise.allSettled([api('/ui/session'), api('/ui/pairing-requests'), api('/ui/human-actions'), api('/ui/dogfood-approvals')]);
+    if (sessionResult.status === 'rejected') {
+      setStatus('Blocked', 'error');
+      $('human-card').textContent = 'Local Gateway session unavailable. Refresh to reconnect.';
+      error.hidden = false;
+      error.textContent = sessionResult.reason?.message || 'session-unavailable';
+      return;
+    }
+    renderIdentity(sessionResult.value.human);
+    state.requests = requestsResult.status === 'fulfilled' ? requestsResult.value.requests : [];
+    state.actions = actionsResult.status === 'fulfilled' ? actionsResult.value.requests : [];
+    state.dogfoods = dogfoodsResult.status === 'fulfilled' ? dogfoodsResult.value.requests : [];
+    render();
+    const failures = [
+      ['Pairing requests', requestsResult],
+      ['Human actions', actionsResult],
+      ['Graph dogfood', dogfoodsResult],
+    ].filter(([, result]) => result.status === 'rejected');
+    if (failures.length > 0) {
+      setStatus('Partially connected', 'pending');
+      error.hidden = false;
+      error.textContent = failures.map(([label, result]) => `${label}: ${result.reason?.message || 'unavailable'}`).join(' · ');
+    } else {
+      setStatus('Ready', 'ok');
+    }
+  }
   $('refresh').addEventListener('click', refresh);
   $('approve').addEventListener('click', async () => { if (!state.selected) return; const approved = [...document.querySelectorAll('#capability-list input:checked')].map((input) => input.value); try { await api(`/ui/pairing-requests/${encodeURIComponent(state.selected.request_id)}/approve`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: state.selected.request_digest, approved_capabilities: approved }) }); dialog.close(); await refresh(); } catch (reason) { message.textContent = reason.message; } });
   $('reject').addEventListener('click', async () => { if (!state.selected) return; const reason = window.prompt('Choose rejection reason: identity-untrusted, capability-too-broad, endpoint-unexpected, request-not-needed, duplicate-node, human-review-deferred, other'); if (!reason) return; try { await api(`/ui/pairing-requests/${encodeURIComponent(state.selected.request_id)}/reject`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: state.selected.request_digest, reason }) }); dialog.close(); await refresh(); } catch (failure) { message.textContent = failure.message; } });

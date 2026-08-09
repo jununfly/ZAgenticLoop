@@ -22,7 +22,7 @@ export function createRealAgentDogfoodApprovalUiUpstream(input) {
         catch {
             return undefined;
         }
-        if (summary.schema !== 'zj-loop.real_agent_dogfood_approval_summary.v1' || summary.status !== lifecycle.status || summary.network_id !== input.network_id || summary.dogfood_id !== plan.dogfood_id || summary.execution_id !== plan.execution_id || summary.attempt !== plan.attempt || !text(summary.goal) || !text(summary.worktree_path) || !text(summary.execution_mode) || !Array.isArray(summary.allowed_files) || !digest(summary.summary_digest))
+        if (summary.schema !== 'zj-loop.real_agent_dogfood_approval_summary.v1' || summary.status !== lifecycle.status || summary.network_id !== input.network_id || summary.dogfood_id !== plan.dogfood_id || summary.execution_id !== plan.execution_id || summary.attempt !== plan.attempt || !text(summary.goal) || !text(summary.worktree_path) || !text(summary.execution_mode) || !Array.isArray(summary.allowed_files) || !digest(summary.summary_digest) || !digest(summary.admission_digest) || !summary.provider_auth_ref || !summary.runtime_binding)
             return undefined;
         return { dogfood_id: plan.dogfood_id, execution_id: plan.execution_id, attempt: plan.attempt, network_id: input.network_id, goal: summary.goal, execution_mode: summary.execution_mode, allowed_files: [...summary.allowed_files], worktree_path: summary.worktree_path, summary_digest: summary.summary_digest, status: 'pending' };
     }

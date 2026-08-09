@@ -79,7 +79,11 @@ function tokenHash(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
-function cookieValue(request: IncomingMessage): string | null {
+function sessionToken(request: IncomingMessage, url?: URL): string | null {
+  const query = url?.searchParams.get('session');
+  if (query) return query;
+  const header = request.headers['x-zj-loop-ui-session'];
+  if (typeof header === 'string' && header.trim() !== '') return header.trim();
   const cookie = request.headers.cookie ?? '';
   const match = cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith('zj_loop_ui_session='));
   return match ? decodeURIComponent(match.slice('zj_loop_ui_session='.length)) : null;
@@ -134,8 +138,8 @@ const UI_ASSETS: Record<string, { file: string; contentType: string }> = {
   '/assets/human-approval-ui.js': { file: 'human-approval-ui.js', contentType: 'text/javascript; charset=utf-8' },
 };
 
-function validSession(request: IncomingMessage, sessions: Map<string, UiSession>, now: () => string): boolean {
-  const token = cookieValue(request);
+function validSession(request: IncomingMessage, sessions: Map<string, UiSession>, now: () => string, url?: URL): boolean {
+  const token = sessionToken(request, url);
   if (!token) return false;
   const session = sessions.get(tokenHash(token));
   return Boolean(session && Date.parse(now()) < Date.parse(session.expires_at));
@@ -224,40 +228,45 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       bootstrapTokens.delete(hash);
       const token = await issueSession();
       response.statusCode = 302;
-      response.setHeader('location', '/');
+      response.setHeader('location', `/?session=${encodeURIComponent(token)}`);
       response.setHeader('set-cookie', sessionCookie(token));
       response.end();
       return;
     }
-    if (request.method === 'GET' && url.pathname === '/' && !validSession(request, sessions, now)) {
-      response.setHeader('set-cookie', sessionCookie(await issueSession()));
+    if (request.method === 'GET' && url.pathname === '/' && !validSession(request, sessions, now, url)) {
+      const token = await issueSession();
+      response.statusCode = 302;
+      response.setHeader('location', `/?session=${encodeURIComponent(token)}`);
+      response.setHeader('set-cookie', sessionCookie(token));
+      response.end();
+      return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/session') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       const identity = await Promise.resolve(input.signer.getPublicIdentity());
       json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', human: publicIdentity(identity), network_id: input.network_id, side_effects_executed: false });
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/connection') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.connection) { blocked(response, 503, 'connection-read-model-unavailable'); return; }
       try { json(response, 200, await input.upstream.connection()); } catch { blocked(response, 503, 'connection-read-model-unavailable'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/inbox') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.messages) { blocked(response, 503, 'inbox-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.messages()), side_effects_executed: false }); } catch { blocked(response, 503, 'inbox-read-model-unavailable'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/outbox') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.outbox) { blocked(response, 503, 'outbox-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.outbox()), side_effects_executed: false }); } catch { blocked(response, 503, 'outbox-read-model-unavailable'); }
       return;
     }
     if (request.method === 'POST' && url.pathname === '/ui/messages') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
       if (!input.upstream.sendMessage) { blocked(response, 503, 'message-send-unavailable'); return; }
       let body: Record<string, unknown>;
@@ -271,20 +280,20 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/graph-atoms') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.graphAtoms) { blocked(response, 503, 'graph-atom-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.graphAtoms()), side_effects_executed: false }); } catch { blocked(response, 503, 'graph-atom-read-model-unavailable'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/human-actions') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.humanActions) { blocked(response, 503, 'human-actions-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.humanActions()), side_effects_executed: false }); } catch { blocked(response, 503, 'human-actions-read-model-unavailable'); }
       return;
     }
     const actionDecisionMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/human-actions\/([^/]+)\/decision$/) : null;
     if (actionDecisionMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
       if (!input.upstream.humanActions || !input.upstream.decideHumanAction) { blocked(response, 503, 'human-action-decision-unavailable'); return; }
       let body: Record<string, unknown>;
@@ -306,14 +315,14 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/dogfood-approvals') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.dogfoodApprovals) { blocked(response, 503, 'dogfood-approval-read-model-unavailable'); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.dogfoodApprovals.list()), side_effects_executed: false }); } catch { blocked(response, 503, 'dogfood-approval-read-model-unavailable'); }
       return;
     }
     const dogfoodApprovalMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/dogfood-approvals\/([^/]+)\/approve$/) : null;
     if (dogfoodApprovalMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
       if (!input.dogfoodApprovals || !input.human_device) { blocked(response, 503, 'dogfood-approval-unavailable'); return; }
       let body: Record<string, unknown>;
@@ -337,7 +346,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/events') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
       try {
         const result = await input.graph.list();
@@ -348,7 +357,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     const graphAcceptMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/events\/([^/]+)\/accept$/) : null;
     if (graphAcceptMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
       if (!input.graph?.accept) { blocked(response, 503, 'graph-upstream-acceptance-unavailable'); return; }
       let body: Record<string, unknown>;
@@ -373,7 +382,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     const graphEventMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/events\/([^/]+)$/) : null;
     if (graphEventMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
       try {
         const result = await input.graph.get({ event_id: decodeURIComponent(graphEventMatch[1]) });
@@ -384,7 +393,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     const graphEvidenceMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/events\/([^/]+)\/evidence$/) : null;
     if (graphEvidenceMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
       try {
         const eventId = decodeURIComponent(graphEvidenceMatch[1]);
@@ -399,6 +408,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
         const content = await readFile(path.join(GRAPH_UI_ROOT, asset.file));
         response.statusCode = 200;
         response.setHeader('content-type', asset.contentType);
+        response.setHeader('cache-control', 'no-store');
         response.setHeader('content-length', content.byteLength);
         response.end(content);
       } catch { blocked(response, 503, 'graph-ui-assets-unavailable'); }
@@ -410,13 +420,14 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
         const content = await readFile(path.join(OPN_UI_ROOT, asset.file));
         response.statusCode = 200;
         response.setHeader('content-type', asset.contentType);
+        response.setHeader('cache-control', 'no-store');
         response.setHeader('content-length', content.byteLength);
         response.end(content);
       } catch { blocked(response, 503, 'ui-assets-unavailable'); }
       return;
     }
     if (request.method === 'GET' && url.pathname === '/ui/pairing-requests') {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       let result: { requests: PairingRequestProjection[] };
       try { result = await input.upstream.list({ network_id: input.network_id }); } catch { blocked(response, 503, 'pairing-upstream-unavailable'); return; }
       json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, requests: result.requests, side_effects_executed: false });
@@ -424,7 +435,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     const evidenceMatch = request.method === 'GET' ? url.pathname.match(/^\/ui\/evidence\/([^/]+)$/) : null;
     if (evidenceMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (!input.upstream.evidence) { blocked(response, 503, 'evidence-upstream-unavailable'); return; }
       try {
         const result = await input.upstream.evidence({ network_id: input.network_id, evidence_id: decodeURIComponent(evidenceMatch[1]) });
@@ -434,7 +445,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     const approveMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/pairing-requests\/([^/]+)\/approve$/) : null;
     if (approveMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
       if (!input.upstream.approve) { blocked(response, 503, 'pairing-upstream-approval-unavailable'); return; }
       let body: Record<string, unknown>;
@@ -458,7 +469,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     const rejectMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/pairing-requests\/([^/]+)\/reject$/) : null;
     if (rejectMatch) {
-      if (!validSession(request, sessions, now)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
       if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
       if (!input.upstream.reject) { blocked(response, 503, 'pairing-upstream-rejection-unavailable'); return; }
       let body: Record<string, unknown>;
@@ -485,6 +496,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
         const content = await readFile(path.join(UI_ROOT, asset.file));
         response.statusCode = 200;
         response.setHeader('content-type', asset.contentType);
+        response.setHeader('cache-control', 'no-store');
         response.setHeader('content-length', content.byteLength);
         response.end(content);
       } catch {
