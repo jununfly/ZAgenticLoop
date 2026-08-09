@@ -31,3 +31,10 @@ test('transport CLI exposes gateway-send as the message-first automation entrypo
   assert.match(source, /\/v1\/owner\/messages/);
   assert.match(source, /owner_token_file/);
 });
+
+test('transport CLI exposes gateway-task-send for artifact-backed Agent tasks', async () => {
+  const source = await readFile(new URL('../src/opn-transport-cli.ts', import.meta.url), 'utf8');
+  assert.match(source, /command === 'gateway-task-send'/);
+  assert.match(source, /notification_kind: 'agent.task'/);
+  assert.match(source, /recordLocalOpnArtifactTransfer/);
+});

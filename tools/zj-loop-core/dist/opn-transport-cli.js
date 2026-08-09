@@ -71,9 +71,9 @@ function messageEnvelope(options, from_node_id) {
 export const opnTransportCliSpec = {
     name: 'zj-loop-opn-transport',
     description: 'Send and receive provider-neutral OPN transport envelopes.',
-    usage: 'zj-loop-opn-transport [receive|send|local-send|gateway-send|artifact-send|artifact-download] ...',
+    usage: 'zj-loop-opn-transport [receive|send|local-send|gateway-send|gateway-task-send|artifact-send|artifact-download] ...',
     options: [
-        { name: 'command', type: 'positional', description: 'receive, send, local-send, or gateway-send', default: 'receive' },
+        { name: 'command', type: 'positional', description: 'receive, send, local-send, gateway-send, or gateway-task-send', default: 'receive' },
         { name: 'endpoint', type: 'string', description: 'Remote OPN HTTPS endpoint' },
         { name: 'network_id', flag: 'network-id', type: 'string', description: 'OPN network id' },
         { name: 'node_id', flag: 'node-id', type: 'string', description: 'Local Agent or center node id' },
@@ -204,6 +204,37 @@ export const opnTransportCliSpec = {
                 throw new Error(String(result.reason ?? 'opn-gateway-message-send-failed'));
             io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, gateway: endpoint, side_effects_executed: false }));
             return;
+        }
+        if (command === 'gateway-task-send') {
+            const endpoint = String(options.endpoint ?? '').trim();
+            const ca = await textFile(String(options.ca ?? ''), 'opn-gateway-ca-required');
+            const cert = await textFile(String(options.cert ?? ''), 'opn-gateway-client-cert-required');
+            const key = await textFile(String(options.key ?? ''), 'opn-gateway-client-key-required');
+            const ownerToken = (await textFile(String(options.owner_token_file ?? ''), 'opn-gateway-owner-token-required')).trim();
+            const stateStore = createSqliteStateStore({ filename: String(options.state_store ?? '') });
+            try {
+                const taskPath = String(options.task_file ?? '').trim();
+                const artifactRoot = String(options.artifact_store ?? '').trim();
+                if (!taskPath || !artifactRoot)
+                    throw new Error('opn-task-file-and-artifact-store-required');
+                const task = JSON.parse(await readFile(taskPath, 'utf8'));
+                const validation = validateBoundedLoopTask(task);
+                if (validation.status !== 'valid')
+                    throw new Error(validation.reason);
+                const bytes = await readFile(taskPath);
+                const artifact = await recordLocalOpnArtifactTransfer({ network_id, stateStore, artifactStore: createOpnArtifactStore({ root: artifactRoot }), bytes, file_name: `${task.task_id}.json`, media_type: 'application/json', transfer_id: `task-artifact:${String(options.message_id ?? `agent-task-${Date.now()}`)}`, sender_node_id: localNodeId, target_node_id: String(options.target_node_id ?? '') });
+                const now = new Date();
+                const envelope = createTransportEnvelope({ message_id: String(options.message_id ?? `agent-task-${Date.now()}`), network_id, event_id: String(options.event_id ?? `agent-event-${Date.now()}`), plan_id: String(options.plan_id ?? 'opn-agent-task'), plan_revision: Number(options.plan_revision ?? 1), task_id: task.task_id, from_node_id: localNodeId, target_node_id: String(options.target_node_id ?? ''), notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }, ...task.input_artifact_refs.map((artifact_id) => ({ artifact_id, content_sha256: artifact_id, kind: 'artifact' }))], created_at: now.toISOString(), expires_at: new Date(now.getTime() + 50 * 60 * 1000).toISOString() });
+                const response = await artifactRequest({ endpoint, ca, cert, key, bearer_token: ownerToken, method: 'POST', pathname: '/v1/owner/messages', body: Buffer.from(JSON.stringify({ network_id, envelope })), headers: { 'content-type': 'application/json' } });
+                const result = parsedArtifactResponse(response);
+                if (response.statusCode !== 200 && response.statusCode !== 202)
+                    throw new Error(String(result.reason ?? 'opn-gateway-message-send-failed'));
+                io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: envelope.message_id, task_id: task.task_id, task_artifact_id: artifact.metadata.artifact_id, target_node_id: envelope.target_node_id, side_effects_executed: false }));
+                return;
+            }
+            finally {
+                await stateStore.close();
+            }
         }
         const endpoint = String(options.endpoint ?? '').trim();
         const adapter = createTlsTransportAdapter({ endpoint, ca: await textFile(String(options.ca ?? ''), 'opn-transport-ca-required'), cert: await textFile(String(options.cert ?? ''), 'opn-transport-client-cert-required'), key: await textFile(String(options.key ?? ''), 'opn-transport-client-key-required'), bearer_token: (await textFile(String(options.credential_token_file ?? ''), 'opn-transport-credential-token-required')).trim() });
