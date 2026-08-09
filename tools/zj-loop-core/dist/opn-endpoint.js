@@ -94,7 +94,8 @@ export async function createOpnEndpointServer(input) {
                 }
             },
         },
-        transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
+        session_ttl_ms: input.session_ttl_ms,
+        transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier, session_ttl_ms: input.session_ttl_ms }) : null),
         artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
         readinessCheck: {
             check: async () => {

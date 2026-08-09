@@ -62,6 +62,18 @@ test('SQLite credential issuance rejects a historical v1 approval context', asyn
   await rm(root, { recursive: true, force: true });
 });
 
+test('SQLite pairing credential issuance respects the configured intent TTL', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-ttl-'));
+  const issuance = createSqliteCredentialIssuance({ filename: path.join(root, 'state.db'), now: () => '2026-07-30T01:00:00.000Z', pairing_intent_ttl_ms: 7 * 60 * 1000 });
+  try {
+    const result = await issuance.issuePairingIntent({ request_id: 'pairing-ttl-1', network_id: 'network-1', node_id: 'node-1', request_digest: 'sha256:' + 'a'.repeat(64), human_id: 'human-1', capabilities: ['event.consume'], issued_at: '2026-07-30T01:00:00.000Z', expires_at: '2026-07-30T02:00:00.000Z' });
+    assert.equal(result.intent_expires_at, '2026-07-30T01:07:00.000Z');
+  } finally {
+    await issuance.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('SQLite credential issuance rejects an approval bound to a different digest', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'zj-loop-issuance-'));
   const authority = createCredentialAuthority();

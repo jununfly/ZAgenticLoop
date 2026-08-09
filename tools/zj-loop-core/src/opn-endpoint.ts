@@ -43,6 +43,7 @@ export async function createOpnEndpointServer(input: {
   connectionReadModel?: PairingConnectionReadModelService | null;
   local_node?: { node_id: string; display_name: string; agent_kind: string; agent_version: string };
   credentialVerifier?: CredentialVerifier | null;
+  session_ttl_ms?: number;
   transport?: OpnTransportHttpService | null;
   artifact_store?: import('./opn-artifact-store.js').OpnArtifactStore | null;
 }): Promise<OpnEndpoint> {
@@ -111,7 +112,8 @@ export async function createOpnEndpointServer(input: {
         finally { await localTransport.closeSession({ session_id: session.session_id }); }
       },
     },
-    transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier }) : null),
+    session_ttl_ms: input.session_ttl_ms,
+    transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier, session_ttl_ms: input.session_ttl_ms }) : null),
     artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
     readinessCheck: {
       check: async () => {

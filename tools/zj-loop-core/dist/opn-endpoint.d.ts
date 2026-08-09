@@ -28,6 +28,7 @@ export declare function createOpnEndpointServer(input: {
         agent_version: string;
     };
     credentialVerifier?: CredentialVerifier | null;
+    session_ttl_ms?: number;
     transport?: OpnTransportHttpService | null;
     artifact_store?: import('./opn-artifact-store.js').OpnArtifactStore | null;
 }): Promise<OpnEndpoint>;

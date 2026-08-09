@@ -1,6 +1,7 @@
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { type HumanApprovalContext, type HumanPublicIdentity } from './human-authority.js';
 export declare const SQLITE_CREDENTIAL_ISSUANCE_SCHEMA: "zj-loop.sqlite_credential_issuance.v1";
+export declare const DEFAULT_PAIRING_INTENT_TTL_MS: number;
 export type CredentialIssuanceRequest = {
     request_id: string;
     network_id: string;
@@ -101,4 +102,5 @@ export declare function createSqliteCredentialIssuance(input: {
     filename: string;
     now?: () => string;
     stateStore?: SqliteStateStore;
+    pairing_intent_ttl_ms?: number;
 }): SqliteCredentialIssuance;

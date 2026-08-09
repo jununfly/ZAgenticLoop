@@ -6,6 +6,8 @@ import { createCredentialClaimEvent, createCredentialIssueIntentEvent, createCre
 import { verifyHumanApprovalContextDetailed, type HumanApprovalContext, type HumanPublicIdentity } from './human-authority.js';
 
 export const SQLITE_CREDENTIAL_ISSUANCE_SCHEMA = 'zj-loop.sqlite_credential_issuance.v1' as const;
+// FIXME: During development dogfood this intentionally defaults to 50 minutes; restore the production default before release.
+export const DEFAULT_PAIRING_INTENT_TTL_MS = 50 * 60 * 1000;
 
 export type CredentialIssuanceRequest = {
   request_id: string;
@@ -190,8 +192,10 @@ function legacyPairingCredentialIssuanceDigest(input: PairingCredentialIssuanceR
   return `sha256:${sha256CanonicalJson({ protocol: SQLITE_CREDENTIAL_ISSUANCE_SCHEMA, kind: 'pairing-approval', request_id: input.request_id, network_id: input.network_id, node_id: input.node_id, request_digest: input.request_digest, human_id: input.human_id, capabilities: [...new Set(input.capabilities)].sort(), issued_at: input.issued_at, expires_at: input.expires_at })}`;
 }
 
-export function createSqliteCredentialIssuance(input: { filename: string; now?: () => string; stateStore?: SqliteStateStore }): SqliteCredentialIssuance {
+export function createSqliteCredentialIssuance(input: { filename: string; now?: () => string; stateStore?: SqliteStateStore; pairing_intent_ttl_ms?: number }): SqliteCredentialIssuance {
   requireText(input.filename, 'credential-issuance-filename-required');
+  const pairingIntentTtl = input.pairing_intent_ttl_ms ?? DEFAULT_PAIRING_INTENT_TTL_MS;
+  if (!Number.isInteger(pairingIntentTtl) || pairingIntentTtl <= 0) throw new Error('credential-pairing-intent-ttl-invalid');
   const db = input.stateStore ? null : new Database(input.filename);
   try {
     if (db) bootstrap(db);
@@ -250,8 +254,7 @@ export function createSqliteCredentialIssuance(input: { filename: string; now?: 
       const issuanceDigest = pairingCredentialIssuanceDigest(request);
       const current = now();
       const currentTime = parseTime(current, 'credential-clock-invalid');
-      // FIXME: During development dogfood this is intentionally 50 minutes instead of 5; restore 5 minutes for the production release.
-      const intentExpiresAt = new Date(Math.min(expiresAt, currentTime + 50 * 60 * 1000)).toISOString();
+      const intentExpiresAt = new Date(Math.min(expiresAt, currentTime + pairingIntentTtl)).toISOString();
       const credentialId = `credential_${issuanceDigest.slice('sha256:'.length, 'sha256:'.length + 32)}`;
       return atomic((database, appendEvent) => {
         const existing = database.prepare('SELECT request_id, issuance_digest, credential_id, intent_expires_at, issued_at, claimed_at FROM credential_issue_intents WHERE request_id = ?').get(request.request_id) as { request_id: string; issuance_digest: string; credential_id: string; intent_expires_at: string; issued_at: string; claimed_at: string | null } | undefined;

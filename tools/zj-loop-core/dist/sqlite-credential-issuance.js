@@ -4,6 +4,8 @@ import { sha256CanonicalJson } from './sqlite-state-store.js';
 import { createCredentialClaimEvent, createCredentialIssueIntentEvent, createCredentialRevokeEvent } from './credential-issuance-events.js';
 import { verifyHumanApprovalContextDetailed } from './human-authority.js';
 export const SQLITE_CREDENTIAL_ISSUANCE_SCHEMA = 'zj-loop.sqlite_credential_issuance.v1';
+// FIXME: During development dogfood this intentionally defaults to 50 minutes; restore the production default before release.
+export const DEFAULT_PAIRING_INTENT_TTL_MS = 50 * 60 * 1000;
 export function parseHumanApprovalEnvelope(context) {
     requireText(context, 'human-context-required');
     let value;
@@ -120,6 +122,9 @@ function legacyPairingCredentialIssuanceDigest(input) {
 }
 export function createSqliteCredentialIssuance(input) {
     requireText(input.filename, 'credential-issuance-filename-required');
+    const pairingIntentTtl = input.pairing_intent_ttl_ms ?? DEFAULT_PAIRING_INTENT_TTL_MS;
+    if (!Number.isInteger(pairingIntentTtl) || pairingIntentTtl <= 0)
+        throw new Error('credential-pairing-intent-ttl-invalid');
     const db = input.stateStore ? null : new Database(input.filename);
     try {
         if (db)
@@ -195,8 +200,7 @@ export function createSqliteCredentialIssuance(input) {
             const issuanceDigest = pairingCredentialIssuanceDigest(request);
             const current = now();
             const currentTime = parseTime(current, 'credential-clock-invalid');
-            // FIXME: During development dogfood this is intentionally 50 minutes instead of 5; restore 5 minutes for the production release.
-            const intentExpiresAt = new Date(Math.min(expiresAt, currentTime + 50 * 60 * 1000)).toISOString();
+            const intentExpiresAt = new Date(Math.min(expiresAt, currentTime + pairingIntentTtl)).toISOString();
             const credentialId = `credential_${issuanceDigest.slice('sha256:'.length, 'sha256:'.length + 32)}`;
             return atomic((database, appendEvent) => {
                 const existing = database.prepare('SELECT request_id, issuance_digest, credential_id, intent_expires_at, issued_at, claimed_at FROM credential_issue_intents WHERE request_id = ?').get(request.request_id);

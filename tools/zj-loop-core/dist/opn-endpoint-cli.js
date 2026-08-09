@@ -21,14 +21,19 @@ const spec = {
         { name: 'owner_human_id', flag: 'owner-human-id', type: 'string', description: 'Development Human owner id' },
         { name: 'owner_public_key', flag: 'owner-public-key', type: 'string', description: 'Development Human authority public key PEM path', valueName: 'PATH' },
         { name: 'owner_token', flag: 'owner-token', type: 'string', description: 'Development owner authorization token' },
+        { name: 'session_ttl_minutes', flag: 'session-ttl-minutes', type: 'string', description: 'Maximum pairing and transport session lifetime in minutes (default: 50)' },
     ],
     async handler({ options, io }) {
         const bind = String(options.bind ?? '');
         const port = Number(options.port ?? '');
         const network_id = String(options.network_id ?? '');
+        const sessionTtlMinutes = Number(options.session_ttl_minutes ?? 50);
+        if (!Number.isInteger(sessionTtlMinutes) || sessionTtlMinutes <= 0 || sessionTtlMinutes > 24 * 60)
+            throw new Error('opn-endpoint-session-ttl-invalid');
+        const session_ttl_ms = sessionTtlMinutes * 60 * 1000;
         const tls = await loadOpnEndpointTls({ key_path: String(options.server_key ?? ''), cert_path: String(options.server_cert ?? ''), ca_path: String(options.client_ca ?? '') });
         const stateStore = createSqliteStateStore({ filename: String(options.state_store ?? '') });
-        const issuance = createSqliteCredentialIssuance({ filename: String(options.state_store ?? ''), stateStore });
+        const issuance = createSqliteCredentialIssuance({ filename: String(options.state_store ?? ''), stateStore, pairing_intent_ttl_ms: session_ttl_ms });
         const ownerValues = [options.owner_human_id, options.owner_public_key, options.owner_token].filter((value) => value !== undefined);
         if (ownerValues.length !== 0 && ownerValues.length !== 3)
             throw new Error('opn-endpoint-owner-config-incomplete');
@@ -37,14 +42,14 @@ const spec = {
             : undefined;
         let endpoint;
         try {
-            endpoint = await createOpnEndpointServer({ bind, port, network_id, stateStore, tls, ownerAuthenticator, artifact_store: createOpnArtifactStore({ root: String(options.artifact_store ?? `${String(options.state_store ?? '')}.artifacts`) }), credentialVerifier: { verify: (input) => issuance.verifyCredential({ token: input.token, node_id: input.node_id, network_id: input.network_id ?? network_id, required_capabilities: input.required_capabilities }) }, credentialClaim: { claim: (input) => issuance.claimForPairingSession(input) }, credentialIssue: { issue: async (input) => { const result = await issuance.issuePairingIntent({ ...input, expected_revision: await stateStore.getRevision(input.network_id) }); return { status: result.status, credential_id: result.credential_id }; } } });
+            endpoint = await createOpnEndpointServer({ bind, port, network_id, stateStore, tls, session_ttl_ms, ownerAuthenticator, artifact_store: createOpnArtifactStore({ root: String(options.artifact_store ?? `${String(options.state_store ?? '')}.artifacts`) }), credentialVerifier: { verify: (input) => issuance.verifyCredential({ token: input.token, node_id: input.node_id, network_id: input.network_id ?? network_id, required_capabilities: input.required_capabilities }) }, credentialClaim: { claim: (input) => issuance.claimForPairingSession(input) }, credentialIssue: { issue: async (input) => { const result = await issuance.issuePairingIntent({ ...input, expected_revision: await stateStore.getRevision(input.network_id) }); return { status: result.status, credential_id: result.credential_id }; } } });
         }
         catch (error) {
             await issuance.close();
             await stateStore.close();
             throw error;
         }
-        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_endpoint.v1', status: 'listening', bind: endpoint.address.address, port: endpoint.address.port, network_id, side_effects_executed: false }));
+        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_endpoint.v1', status: 'listening', bind: endpoint.address.address, port: endpoint.address.port, network_id, session_ttl_minutes: sessionTtlMinutes, side_effects_executed: false }));
         const shutdown = async () => { await endpoint.close(); await issuance.close(); await stateStore.close(); process.exit(0); };
         process.once('SIGINT', shutdown);
         process.once('SIGTERM', shutdown);
