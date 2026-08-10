@@ -41,6 +41,7 @@ export const opnAgentRunnerCliSpec = {
         { name: 'retry_failed', flag: 'retry-failed', type: 'boolean', description: 'Create a new execution attempt only after the persisted execution failed' },
         { name: 'max_iterations', flag: 'max-iterations', type: 'string', description: 'Bounded worker poll count for diagnostics/tests' },
         { name: 'idle_delay_ms', flag: 'idle-delay-ms', type: 'string', description: 'Worker delay after an empty poll in milliseconds' },
+        { name: 'session_refresh_margin_ms', flag: 'session-refresh-margin-ms', type: 'string', description: 'Reconnect this many milliseconds before remote session expiry (default: 60000)' },
     ],
     async handler({ options, io }) {
         const command = String(options.command ?? '');
@@ -100,10 +101,12 @@ export const opnAgentRunnerCliSpec = {
             if (command === 'worker') {
                 const maxIterationsValue = String(options.max_iterations ?? '').trim();
                 const idleDelayValue = String(options.idle_delay_ms ?? '').trim();
+                const sessionRefreshMarginValue = String(options.session_refresh_margin_ms ?? '').trim();
                 const worker = createOpnAgentWorker({
                     network_id,
                     node_id,
                     transport,
+                    ...(sessionRefreshMarginValue ? { session_refresh_margin_ms: Number(sessionRefreshMarginValue) } : {}),
                     on_error: (error) => io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', mode: 'worker', status: 'reconnecting', reason: error instanceof Error ? error.message : 'opn-agent-worker-transport-failed', side_effects_executed: false })),
                     processNext: async ({ session_id }) => {
                         const result = await adapter.processNext({ session_id, resolveTask });

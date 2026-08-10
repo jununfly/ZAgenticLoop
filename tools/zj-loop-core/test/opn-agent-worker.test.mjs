@@ -60,6 +60,40 @@ test('OPN Agent worker reconnects after a session processing failure', async () 
   ]);
 });
 
+test('OPN Agent worker refreshes a remote session before its expiry', async () => {
+  const calls = [];
+  let opened = 0;
+  const worker = createOpnAgentWorker({
+    network_id: 'network-1',
+    node_id: 'agent-1',
+    now: () => '2026-08-10T12:00:00.000Z',
+    session_refresh_margin_ms: 60_000,
+    transport: {
+      async openSession() {
+        opened += 1;
+        const session_id = `session-${opened}`;
+        calls.push(['open', session_id]);
+        return { session_id, expires_at: opened === 1 ? '2026-08-10T12:00:30.000Z' : '2026-08-10T15:00:00.000Z' };
+      },
+      async closeSession(input) { calls.push(['close', input.session_id]); },
+    },
+    processNext: async ({ session_id }) => { calls.push(['process', session_id]); return { status: 'empty', side_effects_executed: false }; },
+  });
+
+  await worker.runOnce();
+  await worker.runOnce();
+  await worker.stop();
+
+  assert.deepEqual(calls, [
+    ['open', 'session-1'],
+    ['process', 'session-1'],
+    ['close', 'session-1'],
+    ['open', 'session-2'],
+    ['process', 'session-2'],
+    ['close', 'session-2'],
+  ]);
+});
+
 test('OPN Agent worker closes its session when a bounded run ends', async () => {
   const calls = [];
   const worker = createOpnAgentWorker({

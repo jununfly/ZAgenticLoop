@@ -25,4 +25,6 @@ export declare function createOpnAgentWorker(input: {
         session_id: string;
     }): Promise<OpnAgentWorkerProcessResult>;
     on_error?: (error: unknown) => void;
+    now?: () => string;
+    session_refresh_margin_ms?: number;
 }): OpnAgentWorker;

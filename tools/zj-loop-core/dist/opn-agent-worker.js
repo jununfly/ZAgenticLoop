@@ -9,18 +9,35 @@ export function createOpnAgentWorker(input) {
     if (typeof input.processNext !== 'function')
         throw new Error('opn-agent-worker-processor-required');
     let session_id;
+    let session_expires_at;
     let stopped = false;
+    const now = input.now ?? (() => new Date().toISOString());
+    const refreshMargin = input.session_refresh_margin_ms ?? 60_000;
+    if (!Number.isInteger(refreshMargin) || refreshMargin < 0 || refreshMargin > 60 * 60 * 1000)
+        throw new Error('opn-agent-worker-session-refresh-margin-invalid');
     async function closeCurrentSession() {
         const current = session_id;
         session_id = undefined;
+        session_expires_at = undefined;
         if (current)
             await input.transport.closeSession({ session_id: current });
     }
     async function ensureSession() {
         if (stopped)
             throw new Error('opn-agent-worker-stopped');
-        if (!session_id)
-            session_id = (await input.transport.openSession({ network_id: input.network_id, node_id: input.node_id })).session_id;
+        if (session_id && session_expires_at) {
+            const expiry = Date.parse(session_expires_at);
+            const current = Date.parse(now());
+            if (!Number.isFinite(expiry) || !Number.isFinite(current))
+                throw new Error('opn-agent-worker-session-expiry-invalid');
+            if (expiry <= current + refreshMargin)
+                await closeCurrentSession();
+        }
+        if (!session_id) {
+            const opened = await input.transport.openSession({ network_id: input.network_id, node_id: input.node_id });
+            session_id = opened.session_id;
+            session_expires_at = opened.expires_at;
+        }
         if (!session_id || !session_id.trim())
             throw new Error('opn-agent-worker-session-invalid');
         return session_id;
