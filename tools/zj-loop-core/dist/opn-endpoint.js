@@ -9,6 +9,7 @@ import { projectOpnInbox, projectOpnOutbox } from './opn-transport-inbox.js';
 import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-http-server.js';
 import { projectOpnHumanActions } from './human-action-opn-projection.js';
 import { createTransportEnvelope } from './transport-contract.js';
+import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1';
 export function validateApprovedTransportTarget(input) {
     if (input.target_node_id === input.local_node_id)
@@ -49,7 +50,7 @@ export async function createOpnEndpointServer(input) {
         },
     };
     const server = createPairingHttpServer({
-        tls: input.tls,
+        tls: { ...input.tls, ecdhCurve: OPN_TLS_ECDH_CURVE },
         recordStore,
         ownerAuthenticator: input.ownerAuthenticator,
         credentialClaim: input.credentialClaim,

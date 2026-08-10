@@ -1,6 +1,7 @@
 import { request, type RequestOptions } from 'node:https';
 import type { TransportAdapter, TransportEnvelope, TransportResult, TransportSession } from './transport-contract.js';
 import { validateTransportEnvelope } from './transport-contract.js';
+import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
 
 export const TLS_TRANSPORT_PROTOCOL = 'transport.v1' as const;
 
@@ -72,7 +73,7 @@ export function createTlsTransportAdapter(input: TlsTransportAdapterInput): Tran
     const options: RequestOptions = {
       protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, method,
       path: `${endpoint.pathname.replace(/\/$/, '')}${pathname}`,
-      ca: input.ca, cert: input.cert, key: input.key, rejectUnauthorized: true, minVersion: 'TLSv1.3',
+      ca: input.ca, cert: input.cert, key: input.key, ecdhCurve: OPN_TLS_ECDH_CURVE, rejectUnauthorized: true, minVersion: 'TLSv1.3',
       timeout, headers: { authorization: `Bearer ${input.bearer_token}`, ...(payload === undefined ? {} : { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) }) },
     };
     return new Promise((resolve, reject) => {

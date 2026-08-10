@@ -9,6 +9,7 @@ import { createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
 import { validateBoundedLoopTask } from './agent-task.js';
 import { recordLocalOpnArtifactTransfer } from './opn-artifact-transfer-http-server.js';
 import { createTlsTransportAdapter } from './tls-transport-adapter.js';
+import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createTransportEnvelope } from './transport-contract.js';
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1';
@@ -22,7 +23,7 @@ async function textFile(path, error) {
 async function artifactRequest(input) {
     const endpoint = new URL(input.endpoint);
     const payload = input.body;
-    const options = { protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, method: input.method, path: `${endpoint.pathname.replace(/\/$/, '')}${input.pathname}`, ca: input.ca, cert: input.cert, key: input.key, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}`, ...(payload ? { 'content-length': payload.byteLength } : {}), ...input.headers } };
+    const options = { protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, method: input.method, path: `${endpoint.pathname.replace(/\/$/, '')}${input.pathname}`, ca: input.ca, cert: input.cert, key: input.key, ecdhCurve: OPN_TLS_ECDH_CURVE, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}`, ...(payload ? { 'content-length': payload.byteLength } : {}), ...input.headers } };
     return new Promise((resolve, reject) => {
         const req = httpsRequest(options, (response) => { const chunks = []; response.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))); response.on('end', () => resolve({ statusCode: response.statusCode ?? 0, headers: response.headers, body: Buffer.concat(chunks) })); });
         req.on('error', reject);

@@ -1,5 +1,6 @@
 import { request as httpsRequest } from 'node:https';
 import { buildNodeIdentity, createPairingRequest, createPairingRequestProof } from './node-enrollment.js';
+import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
 export const OPN_AGENT_JOIN_SCHEMA = 'zj-loop.opn_agent_join.v1';
 function requiredText(value, error) {
     if (typeof value !== 'string' || !value.trim())
@@ -29,7 +30,7 @@ function parseEndpoint(value) {
 function requestSessionEndpoint(input) {
     const endpoint = parseEndpoint(input.endpoint);
     const body = input.body ?? '';
-    const options = { protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, path: input.path, method: input.method, ca: input.ca, cert: input.cert, key: input.key, servername: input.server_name ?? endpoint.hostname, rejectUnauthorized: true, minVersion: 'TLSv1.3', timeout: input.timeout_ms ?? 10_000, headers: { authorization: `Bearer ${input.authorization}`, ...(body ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) } : {}) } };
+    const options = { protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, path: input.path, method: input.method, ca: input.ca, cert: input.cert, key: input.key, servername: input.server_name ?? endpoint.hostname, ecdhCurve: OPN_TLS_ECDH_CURVE, rejectUnauthorized: true, minVersion: 'TLSv1.3', timeout: input.timeout_ms ?? 10_000, headers: { authorization: `Bearer ${input.authorization}`, ...(body ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) } : {}) } };
     return new Promise((resolve, reject) => {
         const req = httpsRequest(options, (response) => { let text = ''; response.setEncoding('utf8'); response.on('data', (chunk) => { text += chunk; }); response.on('end', () => { try {
             resolve({ statusCode: response.statusCode ?? 0, body: text ? JSON.parse(text) : null });
@@ -63,6 +64,7 @@ export function submitOpnAgentJoinRequest(input) {
         cert: input.cert,
         key: input.key,
         servername: input.server_name ?? endpoint.hostname,
+        ecdhCurve: OPN_TLS_ECDH_CURVE,
         rejectUnauthorized: true,
         minVersion: 'TLSv1.3',
         timeout: input.timeout_ms ?? 10_000,

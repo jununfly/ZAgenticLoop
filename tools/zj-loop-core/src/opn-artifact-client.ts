@@ -1,11 +1,12 @@
 import { request, type RequestOptions } from 'node:https';
 import { createHash } from 'node:crypto';
 import type { OpnArtifactMetadata } from './opn-artifact-store.js';
+import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
 
 export function createTlsOpnArtifactPublisher(input: { endpoint: string; ca: string | Buffer; cert: string | Buffer; key: string | Buffer; bearer_token: string }) {
   const base = new URL(input.endpoint);
   const call = (method: string, pathname: string, body: Buffer, headers: Record<string, string>) => new Promise<{ statusCode: number; body: Buffer }>((resolve, reject) => {
-    const options: RequestOptions = { protocol: 'https:', hostname: base.hostname, port: base.port || 443, method, path: `${base.pathname.replace(/\/$/, '')}${pathname}`, ca: input.ca, cert: input.cert, key: input.key, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}`, 'content-length': body.byteLength, ...headers } };
+    const options: RequestOptions = { protocol: 'https:', hostname: base.hostname, port: base.port || 443, method, path: `${base.pathname.replace(/\/$/, '')}${pathname}`, ca: input.ca, cert: input.cert, key: input.key, ecdhCurve: OPN_TLS_ECDH_CURVE, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}`, 'content-length': body.byteLength, ...headers } };
     const req = request(options, (response) => { const chunks: Buffer[] = []; response.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))); response.on('end', () => resolve({ statusCode: response.statusCode ?? 0, body: Buffer.concat(chunks) })); });
     req.on('error', reject); req.write(body); req.end();
   });
@@ -23,7 +24,7 @@ export function createTlsOpnArtifactDownloader(input: { endpoint: string; ca: st
   const base = new URL(input.endpoint);
   return {
     async download(artifact_id: string): Promise<Buffer> {
-      const options: RequestOptions = { protocol: 'https:', hostname: base.hostname, port: base.port || 443, method: 'GET', path: `${base.pathname.replace(/\/$/, '')}/v1/artifacts/${encodeURIComponent(artifact_id)}`, ca: input.ca, cert: input.cert, key: input.key, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}` } };
+      const options: RequestOptions = { protocol: 'https:', hostname: base.hostname, port: base.port || 443, method: 'GET', path: `${base.pathname.replace(/\/$/, '')}/v1/artifacts/${encodeURIComponent(artifact_id)}`, ca: input.ca, cert: input.cert, key: input.key, ecdhCurve: OPN_TLS_ECDH_CURVE, rejectUnauthorized: true, minVersion: 'TLSv1.3', headers: { authorization: `Bearer ${input.bearer_token}` } };
       const body = await new Promise<{ statusCode: number; body: Buffer }>((resolve, reject) => {
         const req = request(options, (response) => { const chunks: Buffer[] = []; response.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))); response.on('end', () => resolve({ statusCode: response.statusCode ?? 0, body: Buffer.concat(chunks) })); });
         req.on('error', reject); req.end();
