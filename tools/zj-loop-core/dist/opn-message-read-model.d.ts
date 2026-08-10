@@ -16,7 +16,7 @@ export type OpnMessageReadModel = {
     artifact_refs: TransportEnvelope['artifact_refs'];
     created_at: string;
     expires_at: string;
-    next_action: 'inspect-artifact' | 'await-ack' | 'retry-delivery' | 'blocked' | 'none';
+    next_action: 'inspect-artifact' | 'await-ack' | 'retry-delivery' | 'blocked' | 'cancelled' | 'none';
     side_effects_executed: false;
 };
 export declare function createOpnMessageReadModel(input: {

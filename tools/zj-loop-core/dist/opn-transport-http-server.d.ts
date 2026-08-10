@@ -5,6 +5,7 @@ export declare const OPN_TRANSPORT_HTTP_SCHEMA: "zj-loop.opn_transport_http.v1";
 export declare const OPN_TRANSPORT_MESSAGE_AGGREGATE: "opn-transport-message";
 export declare const OPN_TRANSPORT_OFFERED_EVENT: "opn.transport.message.offered";
 export declare const OPN_TRANSPORT_ACKNOWLEDGED_EVENT: "opn.transport.message.acknowledged";
+export declare const OPN_TRANSPORT_CANCELLED_EVENT: "opn.transport.message.cancelled";
 export type OpnTransportHttpService = {
     handle(input: {
         request: IncomingMessage;

@@ -10,7 +10,7 @@ import { type TransportEnvelope } from './transport-contract.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
-        action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide' | 'message.send';
+        action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide' | 'message.send' | 'message.cancel';
         authorization: string | null;
         request_id?: string;
         request_digest?: string;
@@ -82,6 +82,14 @@ export type OwnerMessageCommandService = {
         envelope: TransportEnvelope;
     }): Promise<Record<string, unknown>>;
 };
+export type OwnerMessageCancelCommandService = {
+    cancel(input: {
+        network_id: string;
+        message_id: string;
+        envelope_digest: string;
+        reason: string;
+    }): Promise<Record<string, unknown>>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -105,6 +113,7 @@ export declare function createPairingHttpServer(input: {
     humanActionReadModel?: HumanActionReadModelService | null;
     humanActionCommand?: HumanActionCommandService | null;
     ownerMessageCommand?: OwnerMessageCommandService | null;
+    ownerMessageCancelCommand?: OwnerMessageCancelCommandService | null;
     transport?: OpnTransportHttpService | null;
     artifactTransfer?: OpnArtifactTransferHttpService | null;
 }): Server;

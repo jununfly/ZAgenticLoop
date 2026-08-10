@@ -106,10 +106,50 @@ export function createPairingHttpServer(input) {
         const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
         const ownerOutbox = request.method === 'GET' && url.pathname === '/v1/owner/outbox';
         const ownerMessage = request.method === 'POST' && url.pathname === '/v1/owner/messages';
+        const ownerMessageCancel = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/messages\/([^/]+)\/cancel$/);
         const ownerHumanActions = request.method === 'GET' && url.pathname === '/v1/owner/human-actions';
         const ownerHumanActionDecision = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/human-actions\/([^/]+)\/decision$/);
         const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);
         const ownerReject = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/reject$/);
+        if (ownerMessageCancel) {
+            if (!input.ownerAuthenticator) {
+                blocked(response, 'owner-authenticator-unavailable');
+                return;
+            }
+            if (!input.ownerMessageCancelCommand) {
+                blocked(response, 'owner-message-cancel-command-unavailable');
+                return;
+            }
+            let value;
+            try {
+                value = await readBody(request);
+            }
+            catch (error) {
+                blocked(response, error instanceof Error ? error.message : 'json-invalid');
+                return;
+            }
+            const networkId = typeof value.network_id === 'string' ? value.network_id : '';
+            const envelopeDigest = typeof value.envelope_digest === 'string' ? value.envelope_digest : '';
+            const reason = typeof value.reason === 'string' ? value.reason : '';
+            if (!networkId.trim() || !envelopeDigest.trim() || !reason.trim()) {
+                blocked(response, 'owner-message-cancel-invalid');
+                return;
+            }
+            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action: 'message.cancel', authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
+            if (auth.status !== 'allowed') {
+                blocked(response, auth.reason ?? 'owner-not-authorized');
+                return;
+            }
+            try {
+                const messageId = decodeURIComponent(ownerMessageCancel[1]);
+                const result = await input.ownerMessageCancelCommand.cancel({ network_id: networkId, message_id: messageId, envelope_digest: envelopeDigest, reason });
+                json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'accepted', network_id: networkId, message_id: messageId, envelope_digest: envelopeDigest, result, side_effects_executed: false });
+            }
+            catch (error) {
+                blocked(response, error instanceof Error ? error.message : 'owner-message-cancel-failed');
+            }
+            return;
+        }
         if (ownerMessage) {
             if (!input.ownerAuthenticator) {
                 blocked(response, 'owner-authenticator-unavailable');

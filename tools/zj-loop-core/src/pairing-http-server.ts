@@ -30,7 +30,7 @@ type PairingSession = {
 };
 
 export type PairingOwnerAuthenticator = {
-  authenticate(input: { action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide' | 'message.send'; authorization: string | null; request_id?: string; request_digest?: string; context?: HumanApprovalContext; require_v2?: boolean; peer_fingerprint?: string }): Promise<{ status: 'allowed' | 'blocked'; human_id?: string; reason?: string }> | { status: 'allowed' | 'blocked'; human_id?: string; reason?: string };
+  authenticate(input: { action: 'pairing.list' | 'pairing.inbox' | 'pairing.approve' | 'pairing.reject' | 'human.action.list' | 'human.action.decide' | 'message.send' | 'message.cancel'; authorization: string | null; request_id?: string; request_digest?: string; context?: HumanApprovalContext; require_v2?: boolean; peer_fingerprint?: string }): Promise<{ status: 'allowed' | 'blocked'; human_id?: string; reason?: string }> | { status: 'allowed' | 'blocked'; human_id?: string; reason?: string };
 };
 
 export type CredentialClaimService = {
@@ -57,6 +57,9 @@ export type HumanActionCommandService = {
 };
 export type OwnerMessageCommandService = {
   send(input: { network_id: string; envelope: TransportEnvelope }): Promise<Record<string, unknown>>;
+};
+export type OwnerMessageCancelCommandService = {
+  cancel(input: { network_id: string; message_id: string; envelope_digest: string; reason: string }): Promise<Record<string, unknown>>;
 };
 
 function json(response: import('node:http').ServerResponse, statusCode: number, body: Record<string, unknown>): void {
@@ -136,6 +139,7 @@ export function createPairingHttpServer(input: {
   humanActionReadModel?: HumanActionReadModelService | null;
   humanActionCommand?: HumanActionCommandService | null;
   ownerMessageCommand?: OwnerMessageCommandService | null;
+  ownerMessageCancelCommand?: OwnerMessageCancelCommandService | null;
   transport?: OpnTransportHttpService | null;
   artifactTransfer?: OpnArtifactTransferHttpService | null;
 }): Server {
@@ -158,10 +162,29 @@ export function createPairingHttpServer(input: {
     const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
     const ownerOutbox = request.method === 'GET' && url.pathname === '/v1/owner/outbox';
     const ownerMessage = request.method === 'POST' && url.pathname === '/v1/owner/messages';
+    const ownerMessageCancel = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/messages\/([^/]+)\/cancel$/);
     const ownerHumanActions = request.method === 'GET' && url.pathname === '/v1/owner/human-actions';
     const ownerHumanActionDecision = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/human-actions\/([^/]+)\/decision$/);
     const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);
     const ownerReject = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/reject$/);
+    if (ownerMessageCancel) {
+      if (!input.ownerAuthenticator) { blocked(response, 'owner-authenticator-unavailable'); return; }
+      if (!input.ownerMessageCancelCommand) { blocked(response, 'owner-message-cancel-command-unavailable'); return; }
+      let value: Record<string, unknown>;
+      try { value = await readBody(request) as Record<string, unknown>; } catch (error) { blocked(response, error instanceof Error ? error.message : 'json-invalid'); return; }
+      const networkId = typeof value.network_id === 'string' ? value.network_id : '';
+      const envelopeDigest = typeof value.envelope_digest === 'string' ? value.envelope_digest : '';
+      const reason = typeof value.reason === 'string' ? value.reason : '';
+      if (!networkId.trim() || !envelopeDigest.trim() || !reason.trim()) { blocked(response, 'owner-message-cancel-invalid'); return; }
+      const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action: 'message.cancel', authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
+      if (auth.status !== 'allowed') { blocked(response, auth.reason ?? 'owner-not-authorized'); return; }
+      try {
+        const messageId = decodeURIComponent(ownerMessageCancel[1]);
+        const result = await input.ownerMessageCancelCommand.cancel({ network_id: networkId, message_id: messageId, envelope_digest: envelopeDigest, reason });
+        json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'accepted', network_id: networkId, message_id: messageId, envelope_digest: envelopeDigest, result, side_effects_executed: false });
+      } catch (error) { blocked(response, error instanceof Error ? error.message : 'owner-message-cancel-failed'); }
+      return;
+    }
     if (ownerMessage) {
       if (!input.ownerAuthenticator) { blocked(response, 'owner-authenticator-unavailable'); return; }
       if (!input.ownerMessageCommand) { blocked(response, 'owner-message-command-unavailable'); return; }

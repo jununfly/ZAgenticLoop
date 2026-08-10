@@ -3,6 +3,7 @@ import { validateTransportEnvelope } from './transport-contract.js';
 export const OPN_INBOX_AGGREGATE_TYPE = 'opn-inbox';
 export const OPN_INBOX_RECEIVED_EVENT_TYPE = 'opn.inbox.message.received';
 export const OPN_INBOX_ACKNOWLEDGED_EVENT_TYPE = 'opn.inbox.message.acknowledged';
+export const OPN_INBOX_CANCELLED_EVENT_TYPE = 'opn.transport.message.cancelled';
 export const OPN_INBOX_EVENT_SCHEMA = 'zj-loop.opn_inbox_event.v1';
 function requiredText(value, error) {
     if (typeof value !== 'string' || !value.trim())
@@ -109,20 +110,24 @@ export async function projectOpnInbox(input) {
         if (!envelope || envelope.target_node_id !== input.node_id)
             continue;
         if (event.event_type === 'opn.transport.message.offered')
-            messages.set(envelope.message_id, { envelope, acknowledged: false });
+            messages.set(envelope.message_id, { envelope, acknowledged: false, cancelled: false });
         if (event.event_type === 'opn.transport.message.acknowledged' && messages.has(envelope.message_id))
             messages.get(envelope.message_id).acknowledged = true;
+        if (event.event_type === OPN_INBOX_CANCELLED_EVENT_TYPE && messages.has(envelope.message_id))
+            messages.get(envelope.message_id).cancelled = true;
     }
     for (const event of events) {
         const payload = payloadOf(event);
         if (!payload || payload.envelope.target_node_id !== input.node_id)
             continue;
         if (event.event_type === OPN_INBOX_RECEIVED_EVENT_TYPE)
-            messages.set(payload.message_id, { envelope: payload.envelope, acknowledged: false });
+            messages.set(payload.message_id, { envelope: payload.envelope, acknowledged: false, cancelled: false });
         if (event.event_type === OPN_INBOX_ACKNOWLEDGED_EVENT_TYPE && messages.has(payload.message_id))
             messages.get(payload.message_id).acknowledged = true;
+        if (event.event_type === OPN_INBOX_CANCELLED_EVENT_TYPE && messages.has(payload.message_id))
+            messages.get(payload.message_id).cancelled = true;
     }
-    return [...messages.values()].map((message) => createOpnMessageReadModel({ envelope: message.envelope, delivery_state: message.acknowledged ? 'acknowledged' : 'accepted' }));
+    return [...messages.values()].map((message) => createOpnMessageReadModel({ envelope: message.envelope, delivery_state: message.cancelled ? 'cancelled' : message.acknowledged ? 'acknowledged' : 'accepted' }));
 }
 export async function projectOpnOutbox(input) {
     const events = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: 'opn-transport-message' })).events;
@@ -133,7 +138,9 @@ export async function projectOpnOutbox(input) {
         if (!envelope || envelope.from_node_id !== input.node_id)
             continue;
         if (event.event_type === 'opn.transport.message.offered')
-            messages.set(envelope.message_id, envelope);
+            messages.set(envelope.message_id, { envelope, cancelled: false });
+        if (event.event_type === OPN_INBOX_CANCELLED_EVENT_TYPE && messages.has(envelope.message_id))
+            messages.get(envelope.message_id).cancelled = true;
     }
-    return [...messages.values()].map((envelope) => createOpnMessageReadModel({ envelope, delivery_state: 'accepted' }));
+    return [...messages.values()].map((message) => createOpnMessageReadModel({ envelope: message.envelope, delivery_state: message.cancelled ? 'cancelled' : 'accepted' }));
 }

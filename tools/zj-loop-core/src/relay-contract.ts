@@ -15,7 +15,7 @@ export type RelaySession = {
   intent_digest?: string;
 };
 
-export type DeliveryState = 'offered' | 'retry_scheduled' | 'accepted' | 'acknowledged' | 'blocked' | 'rejected';
+export type DeliveryState = 'offered' | 'retry_scheduled' | 'accepted' | 'acknowledged' | 'blocked' | 'rejected' | 'cancelled';
 
 export type RelayDelivery = {
   delivery_id: string;
@@ -66,6 +66,7 @@ export function transitionDelivery(delivery: RelayDelivery, next: { state: Deliv
     acknowledged: [],
     blocked: [],
     rejected: [],
+    cancelled: [],
   };
   if (delivery.state === next.state) return { ...delivery, reason: next.reason ?? delivery.reason };
   if (!allowed[delivery.state].includes(next.state)) throw new Error('delivery-state-conflict');

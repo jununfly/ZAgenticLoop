@@ -13,7 +13,7 @@ export type RelaySession = {
     dispatch_event_id?: string;
     intent_digest?: string;
 };
-export type DeliveryState = 'offered' | 'retry_scheduled' | 'accepted' | 'acknowledged' | 'blocked' | 'rejected';
+export type DeliveryState = 'offered' | 'retry_scheduled' | 'accepted' | 'acknowledged' | 'blocked' | 'rejected' | 'cancelled';
 export type RelayDelivery = {
     delivery_id: string;
     attempt_id: string;

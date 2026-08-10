@@ -137,6 +137,15 @@ export function createTlsTransportAdapter(input: TlsTransportAdapterInput): Tran
       if (![200, 201, 202, 409].includes(response.statusCode)) blocked(response);
       return result(response.body);
     },
+    async cancel(inputValue) {
+      requiredText(inputValue.session_id, 'transport-session-id-required');
+      requiredText(inputValue.message_id, 'transport-message-id-required');
+      requiredText(inputValue.envelope_digest, 'transport-envelope-digest-required');
+      requiredText(inputValue.reason, 'transport-cancel-reason-required');
+      const response = await call('POST', `/v1/transport/sessions/${pathSegment(inputValue.session_id, 'transport-session-id-required')}/cancel`, { message_id: inputValue.message_id, envelope_digest: inputValue.envelope_digest, reason: inputValue.reason });
+      if (![200, 201, 202, 409].includes(response.statusCode)) blocked(response);
+      return result(response.body);
+    },
     async closeSession(inputValue) {
       requiredText(inputValue.session_id, 'transport-session-id-required');
       const response = await call('DELETE', `/v1/transport/sessions/${pathSegment(inputValue.session_id, 'transport-session-id-required')}`);

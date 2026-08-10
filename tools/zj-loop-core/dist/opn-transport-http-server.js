@@ -4,6 +4,7 @@ export const OPN_TRANSPORT_HTTP_SCHEMA = 'zj-loop.opn_transport_http.v1';
 export const OPN_TRANSPORT_MESSAGE_AGGREGATE = 'opn-transport-message';
 export const OPN_TRANSPORT_OFFERED_EVENT = 'opn.transport.message.offered';
 export const OPN_TRANSPORT_ACKNOWLEDGED_EVENT = 'opn.transport.message.acknowledged';
+export const OPN_TRANSPORT_CANCELLED_EVENT = 'opn.transport.message.cancelled';
 function json(response, statusCode, body) {
     const encoded = JSON.stringify(body);
     response.statusCode = statusCode;
@@ -53,6 +54,9 @@ function offeredEventId(envelope) {
 function acknowledgedEventId(envelope) {
     return `${OPN_TRANSPORT_ACKNOWLEDGED_EVENT}:${envelope.message_id}:${envelope.envelope_digest}`;
 }
+function cancelledEventId(envelope) {
+    return `${OPN_TRANSPORT_CANCELLED_EVENT}:${envelope.message_id}:${envelope.envelope_digest}`;
+}
 function messagePayload(event) {
     const value = event.payload;
     return value.schema === OPN_TRANSPORT_HTTP_SCHEMA && value.envelope ? value : null;
@@ -90,11 +94,18 @@ export function createOpnTransportHttpService(input) {
             if (!payload)
                 continue;
             if (event.event_type === OPN_TRANSPORT_OFFERED_EVENT)
-                result.set(payload.envelope.message_id, { envelope: payload.envelope, acknowledged: false });
+                result.set(payload.envelope.message_id, { envelope: payload.envelope, acknowledged: false, cancelled: false });
             if (event.event_type === OPN_TRANSPORT_ACKNOWLEDGED_EVENT && result.has(payload.envelope.message_id))
                 result.get(payload.envelope.message_id).acknowledged = true;
+            if (event.event_type === OPN_TRANSPORT_CANCELLED_EVENT && result.has(payload.envelope.message_id))
+                result.get(payload.envelope.message_id).cancelled = true;
         }
         return result;
+    }
+    async function appendCancelled(envelope, reason) {
+        const current = await input.stateStore.getRevision(input.network_id);
+        const result = await input.stateStore.appendEvent({ network_id: input.network_id, expected_revision: current, now: now(), event: { event_id: cancelledEventId(envelope), aggregate_type: OPN_TRANSPORT_MESSAGE_AGGREGATE, aggregate_id: envelope.message_id, event_type: OPN_TRANSPORT_CANCELLED_EVENT, occurred_at: now(), payload: { schema: OPN_TRANSPORT_HTTP_SCHEMA, envelope, reason } } });
+        return result.status;
     }
     async function appendEnvelope(envelope) {
         const existing = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: OPN_TRANSPORT_MESSAGE_AGGREGATE, aggregate_id: envelope.message_id })).events.find((event) => event.event_type === OPN_TRANSPORT_OFFERED_EVENT);
@@ -199,13 +210,39 @@ export function createOpnTransportHttpService(input) {
                 return true;
             }
             if (request.method === 'GET' && action === 'envelopes') {
-                const pending = [...(await messages()).values()].find((message) => message.envelope.target_node_id === node_id && !message.acknowledged);
+                const pending = [...(await messages()).values()].find((message) => message.envelope.target_node_id === node_id && !message.acknowledged && !message.cancelled);
                 if (!pending) {
                     response.statusCode = 204;
                     response.end();
                     return true;
                 }
                 json(response, 200, pending.envelope);
+                return true;
+            }
+            if (request.method === 'POST' && action === 'cancel') {
+                let value;
+                try {
+                    value = await body(request);
+                }
+                catch (error) {
+                    blocked(response, 400, error instanceof Error ? error.message : 'json-invalid');
+                    return true;
+                }
+                if (Object.keys(value).sort().join(',') !== 'envelope_digest,message_id,reason' || typeof value.message_id !== 'string' || typeof value.envelope_digest !== 'string' || typeof value.reason !== 'string' || !value.reason.trim()) {
+                    blocked(response, 400, 'transport-cancel-request-invalid');
+                    return true;
+                }
+                const message = (await messages()).get(value.message_id);
+                if (!message || message.envelope.from_node_id !== node_id || message.envelope.envelope_digest !== value.envelope_digest) {
+                    blocked(response, 409, 'transport-cancel-message-mismatch');
+                    return true;
+                }
+                if (message.acknowledged) {
+                    blocked(response, 409, 'transport-cancel-after-ack');
+                    return true;
+                }
+                const cancelled = await appendCancelled(message.envelope, value.reason);
+                json(response, 200, { schema: OPN_TRANSPORT_HTTP_SCHEMA, status: cancelled === 'duplicate' ? 'duplicate' : 'accepted', message_id: message.envelope.message_id, envelope_digest: message.envelope.envelope_digest, reason: value.reason, side_effects_executed: false });
                 return true;
             }
             if (request.method === 'POST' && action === 'ack') {

@@ -38,6 +38,7 @@ export function transitionDelivery(delivery, next) {
         acknowledged: [],
         blocked: [],
         rejected: [],
+        cancelled: [],
     };
     if (delivery.state === next.state)
         return { ...delivery, reason: next.reason ?? delivery.reason };

@@ -73,9 +73,9 @@ function messageEnvelope(options, from_node_id) {
 export const opnTransportCliSpec = {
     name: 'zj-loop-opn-transport',
     description: 'Send and receive provider-neutral OPN transport envelopes.',
-    usage: 'zj-loop-opn-transport [receive|send|session-open|result-send|local-send|gateway-send|gateway-task-send|artifact-send|artifact-download] ...',
+    usage: 'zj-loop-opn-transport [receive|send|session-open|result-send|local-send|gateway-send|gateway-task-send|gateway-cancel|artifact-send|artifact-download] ...',
     options: [
-        { name: 'command', type: 'positional', description: 'receive, send, session-open, result-send, local-send, gateway-send, or gateway-task-send', default: 'receive' },
+        { name: 'command', type: 'positional', description: 'receive, send, session-open, result-send, local-send, gateway-send, gateway-task-send, or gateway-cancel', default: 'receive' },
         { name: 'endpoint', type: 'string', description: 'Remote OPN HTTPS endpoint' },
         { name: 'network_id', flag: 'network-id', type: 'string', description: 'OPN network id' },
         { name: 'node_id', flag: 'node-id', type: 'string', description: 'Local Agent or center node id' },
@@ -88,6 +88,7 @@ export const opnTransportCliSpec = {
         { name: 'session_file', flag: 'session-file', type: 'string', description: 'Join session file used to derive node id' },
         { name: 'state_store', flag: 'state-store', type: 'string', description: 'Local SQLite StateStore path for center commands' },
         { name: 'message_id', flag: 'message-id', type: 'string', description: 'Message id for send' },
+        { name: 'envelope_digest', flag: 'envelope-digest', type: 'string', description: 'Envelope digest for gateway-cancel' },
         { name: 'event_id', flag: 'event-id', type: 'string', description: 'Event id for send' },
         { name: 'plan_id', flag: 'plan-id', type: 'string', description: 'Plan id for send' },
         { name: 'plan_revision', flag: 'plan-revision', type: 'string', description: 'Plan revision for send' },
@@ -101,6 +102,7 @@ export const opnTransportCliSpec = {
         { name: 'task_file', flag: 'task-file', type: 'string', description: 'Bounded Loop task JSON for local-task-send' },
         { name: 'result_file', flag: 'result-file', type: 'string', description: 'Result evidence JSON file for result-send (published as agent.result)' },
         { name: 'result_status', flag: 'result-status', type: 'string', description: 'Result status for result-send: succeeded|blocked (default: succeeded)' },
+        { name: 'reason', type: 'string', description: 'Reason for cancelling an offered task message' },
     ],
     async handler({ options, io }) {
         const command = String(options.command ?? 'receive');
@@ -110,7 +112,7 @@ export const opnTransportCliSpec = {
         let sessionValue;
         if (typeof options.session_file === 'string' && options.session_file.trim())
             sessionValue = JSON.parse(await textFile(options.session_file, 'opn-transport-session-file-required'));
-        const localNodeId = nodeId(options, sessionValue);
+        const localNodeId = command === 'gateway-cancel' ? '' : nodeId(options, sessionValue);
         if (command === 'local-task-send') {
             const stateStore = createSqliteStateStore({ filename: String(options.state_store ?? '') });
             try {
@@ -239,6 +241,24 @@ export const opnTransportCliSpec = {
             finally {
                 await stateStore.close();
             }
+        }
+        if (command === 'gateway-cancel') {
+            const endpoint = String(options.endpoint ?? '').trim();
+            const ca = await textFile(String(options.ca ?? ''), 'opn-gateway-ca-required');
+            const cert = await textFile(String(options.cert ?? ''), 'opn-gateway-client-cert-required');
+            const key = await textFile(String(options.key ?? ''), 'opn-gateway-client-key-required');
+            const ownerToken = (await textFile(String(options.owner_token_file ?? ''), 'opn-gateway-owner-token-required')).trim();
+            const message_id = String(options.message_id ?? '').trim();
+            const envelope_digest = String(options.envelope_digest ?? '').trim();
+            const reason = String(options.reason ?? '').trim();
+            if (!message_id || !envelope_digest || !reason)
+                throw new Error('opn-gateway-cancel-fields-required');
+            const response = await artifactRequest({ endpoint, ca, cert, key, bearer_token: ownerToken, method: 'POST', pathname: `/v1/owner/messages/${encodeURIComponent(message_id)}/cancel`, body: Buffer.from(JSON.stringify({ network_id, envelope_digest, reason })), headers: { 'content-type': 'application/json' } });
+            const result = parsedArtifactResponse(response);
+            if (response.statusCode !== 200 && response.statusCode !== 202)
+                throw new Error(String(result.reason ?? 'opn-gateway-message-cancel-failed'));
+            io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status ?? 'accepted', message_id, envelope_digest, reason, side_effects_executed: false }));
+            return;
         }
         const endpoint = String(options.endpoint ?? '').trim();
         const adapter = createTlsTransportAdapter({ endpoint, ca: await textFile(String(options.ca ?? ''), 'opn-transport-ca-required'), cert: await textFile(String(options.cert ?? ''), 'opn-transport-client-cert-required'), key: await textFile(String(options.key ?? ''), 'opn-transport-client-key-required'), bearer_token: (await textFile(String(options.credential_token_file ?? ''), 'opn-transport-credential-token-required')).trim() });

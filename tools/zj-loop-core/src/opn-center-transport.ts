@@ -5,6 +5,7 @@ import { validateTransportEnvelope, type TransportAdapter, type TransportEnvelop
 const AGGREGATE_TYPE = 'opn-transport-message';
 const OFFERED_EVENT = 'opn.transport.message.offered';
 const ACKNOWLEDGED_EVENT = 'opn.transport.message.acknowledged';
+const CANCELLED_EVENT = 'opn.transport.message.cancelled';
 const PAYLOAD_SCHEMA = 'zj-loop.opn_transport_http.v1';
 
 type TransportPayload = { schema: typeof PAYLOAD_SCHEMA; envelope: TransportEnvelope };
@@ -42,14 +43,15 @@ export function createLocalOpnTransportAdapter(input: { stateStore: SqliteStateS
     return session;
   }
 
-  async function messages(): Promise<Map<string, { envelope: TransportEnvelope; acknowledged: boolean }>> {
+  async function messages(): Promise<Map<string, { envelope: TransportEnvelope; acknowledged: boolean; cancelled: boolean }>> {
     const events = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: AGGREGATE_TYPE })).events;
-    const resultMap = new Map<string, { envelope: TransportEnvelope; acknowledged: boolean }>();
+    const resultMap = new Map<string, { envelope: TransportEnvelope; acknowledged: boolean; cancelled: boolean }>();
     for (const event of events) {
       const envelope = payloadOf(event);
       if (!envelope) continue;
-      if (event.event_type === OFFERED_EVENT) resultMap.set(envelope.message_id, { envelope, acknowledged: false });
+      if (event.event_type === OFFERED_EVENT) resultMap.set(envelope.message_id, { envelope, acknowledged: false, cancelled: false });
       if (event.event_type === ACKNOWLEDGED_EVENT && resultMap.has(envelope.message_id)) resultMap.get(envelope.message_id)!.acknowledged = true;
+      if (event.event_type === CANCELLED_EVENT && resultMap.has(envelope.message_id)) resultMap.get(envelope.message_id)!.cancelled = true;
     }
     return resultMap;
   }
@@ -88,7 +90,7 @@ export function createLocalOpnTransportAdapter(input: { stateStore: SqliteStateS
     },
     async receive(sessionInput) {
       const session = await sessionFor(sessionInput.session_id);
-      const pending = [...(await messages()).values()].find((message) => message.envelope.target_node_id === session.node_id && !message.acknowledged);
+      const pending = [...(await messages()).values()].find((message) => message.envelope.target_node_id === session.node_id && !message.acknowledged && !message.cancelled);
       return pending?.envelope ?? null;
     },
     async acknowledge(sessionInput) {
@@ -98,6 +100,17 @@ export function createLocalOpnTransportAdapter(input: { stateStore: SqliteStateS
       const message = (await messages()).get(sessionInput.message_id);
       if (!message || message.envelope.target_node_id !== session.node_id || message.envelope.envelope_digest !== sessionInput.envelope_digest) throw new Error('transport-ack-message-mismatch');
       const appended = await appendFact(message.envelope, ACKNOWLEDGED_EVENT);
+      return result(appended === 'duplicate' ? 'duplicate' : 'accepted', message.envelope);
+    },
+    async cancel(sessionInput) {
+      const session = await sessionFor(sessionInput.session_id);
+      requiredText(sessionInput.message_id, 'transport-message-id-required');
+      requiredText(sessionInput.envelope_digest, 'transport-envelope-digest-required');
+      requiredText(sessionInput.reason, 'transport-cancel-reason-required');
+      const message = (await messages()).get(sessionInput.message_id);
+      if (!message || message.envelope.from_node_id !== session.node_id || message.envelope.envelope_digest !== sessionInput.envelope_digest) throw new Error('transport-cancel-message-mismatch');
+      if (message.acknowledged) throw new Error('transport-cancel-after-ack');
+      const appended = await appendFact(message.envelope, CANCELLED_EVENT);
       return result(appended === 'duplicate' ? 'duplicate' : 'accepted', message.envelope);
     },
     async closeSession(sessionInput) {

@@ -39,6 +39,12 @@ export type TransportResult = {
     reason: string;
     side_effects_executed: false;
 };
+export type TransportCancelInput = {
+    session_id: string;
+    message_id: string;
+    envelope_digest: string;
+    reason: string;
+};
 export type TransportSession = {
     session_id: string;
     /** Remote sessions expose their expiry; local adapters may omit it. */
@@ -61,6 +67,7 @@ export type TransportAdapter = {
         message_id: string;
         envelope_digest: string;
     }): Promise<TransportResult>;
+    cancel(input: TransportCancelInput): Promise<TransportResult>;
     closeSession(input: {
         session_id: string;
     }): Promise<void>;

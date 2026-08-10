@@ -39,6 +39,14 @@ test('transport CLI exposes gateway-task-send for artifact-backed Agent tasks', 
   assert.match(source, /recordLocalOpnArtifactTransfer/);
 });
 
+test('transport CLI exposes gateway-cancel with the envelope digest binding', async () => {
+  const source = await readFile(new URL('../src/opn-transport-cli.ts', import.meta.url), 'utf8');
+  assert.match(source, /command === 'gateway-cancel'/);
+  assert.match(source, /flag: 'envelope-digest'/);
+  assert.match(source, /command === 'gateway-cancel' \? '' : nodeId/);
+  assert.match(source, /\/v1\/owner\/messages\/\$\{encodeURIComponent\(message_id\)\}\/cancel/);
+});
+
 test('transport CLI exposes session-open and reports session expires_at', async () => {
   const source = await readFile(new URL('../src/opn-transport-cli.ts', import.meta.url), 'utf8');
   assert.match(source, /command === 'session-open'/);

@@ -4,6 +4,7 @@ import type { TransportAdapter } from './transport-contract.js';
 export declare const OPN_INBOX_AGGREGATE_TYPE: "opn-inbox";
 export declare const OPN_INBOX_RECEIVED_EVENT_TYPE: "opn.inbox.message.received";
 export declare const OPN_INBOX_ACKNOWLEDGED_EVENT_TYPE: "opn.inbox.message.acknowledged";
+export declare const OPN_INBOX_CANCELLED_EVENT_TYPE: "opn.transport.message.cancelled";
 export declare const OPN_INBOX_EVENT_SCHEMA: "zj-loop.opn_inbox_event.v1";
 type InboxStateStore = Pick<SqliteStateStore, 'appendEvent' | 'getRevision' | 'readEvents'> & Partial<Pick<SqliteStateStore, 'runAtomic'>>;
 export type OpnInboxResult = {

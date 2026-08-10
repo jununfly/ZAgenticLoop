@@ -83,6 +83,24 @@ test('center-local adapter can send a message through the same StateStore transp
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
 
+test('center-local adapter cancels an offered message and removes it from receive', async () => {
+  const { root, stateStore } = await fixture();
+  try {
+    const adapter = createLocalOpnTransportAdapter({ stateStore, network_id: 'network-1', node_id: centerNode });
+    const senderSession = await adapter.openSession({ network_id: 'network-1', node_id: centerNode });
+    const value = envelope({ message_id: 'center-to-agent-cancel', from_node_id: centerNode, target_node_id: 'agent-1' });
+    await adapter.send({ session_id: senderSession.session_id, envelope: value });
+    assert.deepEqual(await adapter.cancel({ session_id: senderSession.session_id, message_id: value.message_id, envelope_digest: value.envelope_digest, reason: 'operator-requested-stop' }), {
+      status: 'accepted', message_id: value.message_id, envelope_digest: value.envelope_digest, side_effects_executed: false,
+    });
+    const receiver = createLocalOpnTransportAdapter({ stateStore, network_id: 'network-1', node_id: 'agent-1' });
+    const receiverSession = await receiver.openSession({ network_id: 'network-1', node_id: 'agent-1' });
+    assert.equal(await receiver.receive({ session_id: receiverSession.session_id }), null);
+    const projection = await projectOpnOutbox({ stateStore, network_id: 'network-1', node_id: centerNode });
+    assert.equal(projection[0].delivery_state, 'cancelled');
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('outbox projection exposes locally sent messages for the sender Web UI', async () => {
   const { root, stateStore } = await fixture();
   try {

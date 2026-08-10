@@ -94,6 +94,17 @@ export async function createOpnEndpointServer(input) {
                 }
             },
         },
+        ownerMessageCancelCommand: {
+            async cancel({ network_id, message_id, envelope_digest, reason }) {
+                const session = await localTransport.openSession({ network_id, node_id: localNodeId });
+                try {
+                    return await localTransport.cancel({ session_id: session.session_id, message_id, envelope_digest, reason });
+                }
+                finally {
+                    await localTransport.closeSession({ session_id: session.session_id });
+                }
+            },
+        },
         session_ttl_ms: input.session_ttl_ms,
         transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier, session_ttl_ms: input.session_ttl_ms }) : null),
         artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,

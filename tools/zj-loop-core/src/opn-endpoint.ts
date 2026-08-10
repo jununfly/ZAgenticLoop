@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import type { ServerOptions } from 'node:https';
 import { createPairingHttpServer } from './pairing-http-server.js';
-import type { CredentialClaimService, CredentialIssueService, PairingConnectionReadModelService, PairingOwnerAuthenticator } from './pairing-http-server.js';
+import type { CredentialClaimService, CredentialIssueService, OwnerMessageCancelCommandService, PairingConnectionReadModelService, PairingOwnerAuthenticator } from './pairing-http-server.js';
 import { createSqlitePairingRecordStore } from './sqlite-pairing-record-store.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { projectPairingRequests } from './pairing-projection.js';
@@ -112,6 +112,13 @@ export async function createOpnEndpointServer(input: {
         finally { await localTransport.closeSession({ session_id: session.session_id }); }
       },
     },
+    ownerMessageCancelCommand: {
+      async cancel({ network_id, message_id, envelope_digest, reason }) {
+        const session = await localTransport.openSession({ network_id, node_id: localNodeId });
+        try { return await localTransport.cancel({ session_id: session.session_id, message_id, envelope_digest, reason }); }
+        finally { await localTransport.closeSession({ session_id: session.session_id }); }
+      },
+    } satisfies OwnerMessageCancelCommandService,
     session_ttl_ms: input.session_ttl_ms,
     transport: input.transport ?? (input.credentialVerifier ? createOpnTransportHttpService({ network_id: input.network_id, stateStore: input.stateStore, credentialVerifier: input.credentialVerifier, session_ttl_ms: input.session_ttl_ms }) : null),
     artifactTransfer: input.artifact_store && input.credentialVerifier ? createOpnArtifactTransferHttpService({ network_id: input.network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, credentialVerifier: input.credentialVerifier }) : null,
