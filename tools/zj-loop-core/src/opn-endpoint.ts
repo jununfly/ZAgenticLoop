@@ -6,6 +6,7 @@ import type { CredentialClaimService, CredentialIssueService, OwnerMessageCancel
 import { createSqlitePairingRecordStore } from './sqlite-pairing-record-store.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
 import { projectPairingRequests } from './pairing-projection.js';
+import type { PairingLifecycleRecord } from './pairing-projection.js';
 import { createOpnConnectionReadModel } from './opn-connection-read-model.js';
 import { createOpnTransportHttpService } from './opn-transport-http-server.js';
 import type { CredentialVerifier } from './sqlite-state-store-server.js';
@@ -25,6 +26,12 @@ export type OpnEndpoint = {
   localTransport: TransportAdapter;
   close(): Promise<void>;
 };
+
+export function validateApprovedTransportTarget(input: { network_id: string; local_node_id: string; target_node_id: string; records: PairingLifecycleRecord[]; now?: string }): { status: 'allowed' } | { status: 'blocked'; reason: 'transport-self-target-forbidden' | 'transport-target-node-not-enrolled' } {
+  if (input.target_node_id === input.local_node_id) return { status: 'blocked', reason: 'transport-self-target-forbidden' };
+  const target = projectPairingRequests({ network_id: input.network_id, records: input.records, ...(input.now ? { now: input.now } : {}) }).find((projection) => projection.node_id === input.target_node_id && projection.status === 'approved');
+  return target ? { status: 'allowed' } : { status: 'blocked', reason: 'transport-target-node-not-enrolled' };
+}
 
 function requireText(value: string, error: string): string {
   if (typeof value !== 'string' || !value.trim()) throw new Error(error);
@@ -107,6 +114,8 @@ export async function createOpnEndpointServer(input: {
     } : null,
     ownerMessageCommand: {
       async send({ network_id, envelope }) {
+        const targetValidation = validateApprovedTransportTarget({ network_id, local_node_id: localNodeId, target_node_id: envelope.target_node_id, records: await recordStore.list(network_id) });
+        if (targetValidation.status !== 'allowed') throw new Error(targetValidation.reason);
         const session = await localTransport.openSession({ network_id, node_id: localNodeId });
         try { return await localTransport.send({ session_id: session.session_id, envelope }); }
         finally { await localTransport.closeSession({ session_id: session.session_id }); }

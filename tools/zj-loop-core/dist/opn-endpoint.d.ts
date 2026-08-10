@@ -2,6 +2,7 @@ import type { AddressInfo } from 'node:net';
 import type { ServerOptions } from 'node:https';
 import type { CredentialClaimService, CredentialIssueService, PairingConnectionReadModelService, PairingOwnerAuthenticator } from './pairing-http-server.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
+import type { PairingLifecycleRecord } from './pairing-projection.js';
 import type { CredentialVerifier } from './sqlite-state-store-server.js';
 import type { OpnTransportHttpService } from './opn-transport-http-server.js';
 import type { TransportAdapter } from './transport-contract.js';
@@ -10,6 +11,18 @@ export type OpnEndpoint = {
     address: AddressInfo;
     localTransport: TransportAdapter;
     close(): Promise<void>;
+};
+export declare function validateApprovedTransportTarget(input: {
+    network_id: string;
+    local_node_id: string;
+    target_node_id: string;
+    records: PairingLifecycleRecord[];
+    now?: string;
+}): {
+    status: 'allowed';
+} | {
+    status: 'blocked';
+    reason: 'transport-self-target-forbidden' | 'transport-target-node-not-enrolled';
 };
 export declare function createOpnEndpointServer(input: {
     bind: string;

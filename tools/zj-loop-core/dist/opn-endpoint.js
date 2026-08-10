@@ -10,6 +10,12 @@ import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-ht
 import { projectOpnHumanActions } from './human-action-opn-projection.js';
 import { createTransportEnvelope } from './transport-contract.js';
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1';
+export function validateApprovedTransportTarget(input) {
+    if (input.target_node_id === input.local_node_id)
+        return { status: 'blocked', reason: 'transport-self-target-forbidden' };
+    const target = projectPairingRequests({ network_id: input.network_id, records: input.records, ...(input.now ? { now: input.now } : {}) }).find((projection) => projection.node_id === input.target_node_id && projection.status === 'approved');
+    return target ? { status: 'allowed' } : { status: 'blocked', reason: 'transport-target-node-not-enrolled' };
+}
 function requireText(value, error) {
     if (typeof value !== 'string' || !value.trim())
         throw new Error(error);
@@ -85,6 +91,9 @@ export async function createOpnEndpointServer(input) {
         } : null,
         ownerMessageCommand: {
             async send({ network_id, envelope }) {
+                const targetValidation = validateApprovedTransportTarget({ network_id, local_node_id: localNodeId, target_node_id: envelope.target_node_id, records: await recordStore.list(network_id) });
+                if (targetValidation.status !== 'allowed')
+                    throw new Error(targetValidation.reason);
                 const session = await localTransport.openSession({ network_id, node_id: localNodeId });
                 try {
                     return await localTransport.send({ session_id: session.session_id, envelope });
