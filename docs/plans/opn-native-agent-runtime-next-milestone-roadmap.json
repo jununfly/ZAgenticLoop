@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "OPN Native Agent Runtime 下一里程碑",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": null,
       "children": [
@@ -246,14 +246,15 @@
     "1-6": {
       "id": "1-6",
       "label": "OPN Agent 运行时可靠性加固",
-      "status": "completed",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1",
       "children": [
         "1-6-1",
         "1-6-2",
         "1-6-3",
-        "1-6-4"
+        "1-6-4",
+        "1-6-5"
       ],
       "decisions": [
         {
@@ -332,11 +333,134 @@
         }
       ],
       "notes": "TDD 已完成：目标匹配但未知 notification_kind 的消息先 ack，再返回 skipped 并结构化暴露 reason；agent.task 继续执行。target mismatch 保持 blocked。相关 23 项运行时/transport 测试通过。"
+    },
+    "1-6-5": {
+      "id": "1-6-5",
+      "label": "真实 Windows worker 队头阻塞回归验收",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [
+        "1-6-5-1",
+        "1-6-5-2"
+      ],
+      "decisions": [
+        {
+          "q": "验收场景",
+          "answer": "通过 OPN 依次投递 mcp.dogfood.smoke 与 agent.task，要求 Windows worker 在 82e8764a 上构建并回传两条消息的处理证据。",
+          "note": "验证真实 Transport、worker、ack 和后续 task 可达性。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-5-1": {
+      "id": "1-6-5-1",
+      "label": "OPN endpoint 常驻进程生命周期与可达性修复",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5",
+      "children": [
+        "1-6-5-1-1",
+        "1-6-5-1-2",
+        "1-6-5-1-3"
+      ],
+      "decisions": [
+        {
+          "q": "问题记录",
+          "answer": "当前 endpoint 依赖交互 PTY；执行环境结束或后台脱离失败会回收服务进程，Windows 侧表现为 endpoint 不可达。",
+          "note": "后续实现真正的常驻进程/服务托管与存活探针，当前先保留问题不展开。"
+        },
+        {
+          "q": "长期运行架构",
+          "answer": "endpoint server 仅负责 serve；由 portable supervisor 统一托管 start/status/stop/restart，生产环境接入 OS service manager，开发环境使用 supervisor fallback。",
+          "note": "用户已确认：长期运行优先 OS service，普通启动不自动安装服务。"
+        },
+        {
+          "q": "配置来源",
+          "answer": "配置文件与节点身份、证书集中放在 OPN_IDENTITY_DIR；CLI 参数仅作为开发调试覆盖。",
+          "note": "避免依赖当前工作目录和分散配置路径。"
+        },
+        {
+          "q": "运行状态判定",
+          "answer": "status 必须联合检查进程身份、PID/binding、配置摘要和 /healthz，并区分 running、starting、stale、unreachable、stopped。",
+          "note": "避免仅凭 PID 把僵尸进程误判为在线。"
+        }
+      ],
+      "notes": "OPN endpoint 已具备 identity-dir 配置、portable supervisor、单实例锁、healthz status 和显式 OS service 安装入口。"
+    },
+    "1-6-5-1-1": {
+      "id": "1-6-5-1-1",
+      "label": "Portable endpoint supervisor 核心与确定性生命周期状态机",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-1",
+      "children": [],
+      "decisions": [],
+      "notes": "已实现并测试 portable supervisor 核心：稳定 config digest、binding schema、原子写入、healthz 探针、状态分类、detached child 与 runtime log。"
+    },
+    "1-6-5-1-2": {
+      "id": "1-6-5-1-2",
+      "label": "统一 opn-endpoint-cli start/status/stop/restart 与内部 serve 入口",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-1",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成：支持 OPN_IDENTITY_DIR/opn-endpoint.json 配置加载与 CLI override；统一 start/status/stop/restart/serve；serve 持有单实例锁，runtime binding 与日志集中管理。"
+    },
+    "1-6-5-1-3": {
+      "id": "1-6-5-1-3",
+      "label": "macOS launchd 与 Windows service/Task Scheduler adapter",
+      "status": "completed",
+      "mode": "explore",
+      "parent": "1-6-5-1",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成 macOS launchd 与 Windows Task Scheduler adapter；install-service/uninstall-service 显式执行，普通 start 不修改 OS service 配置。"
+    },
+    "1-6-5-2": {
+      "id": "1-6-5-2",
+      "label": "Mac launchd 常驻 endpoint 真实安装与重启可达性验收",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-6-5",
+      "children": [
+        "1-6-5-2-1",
+        "1-6-5-2-2"
+      ],
+      "decisions": [
+        {
+          "q": "服务安装权限",
+          "answer": "macOS 使用当前用户级 LaunchAgent，不使用 system-wide LaunchDaemon 或 sudo。",
+          "note": "开发者单用户场景下配置、证书和运行日志保持在用户身份目录与 runtime 目录。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-5-2-1": {
+      "id": "1-6-5-2-1",
+      "label": "Mac endpoint launchd 安装后重启与 healthz 验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": "已完成真实验收：新 CA/server key/cert 写入 ~/.zj-loop/identity，server cert SAN 为 IP 100.119.216.26 与 DNS zagenticloop-opn-endpoint；用户级 LaunchAgent 启动后 status=running、healthz=ok，binding 自动登记。"
+    },
+    "1-6-5-2-2": {
+      "id": "1-6-5-2-2",
+      "label": "通过 OPN 完成 Windows 双向 message 与 Web UI 审计验收",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6-5-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Mac endpoint 已常驻并可达；Windows 双向 message/Web UI 验收待 Windows 更新共享 CA 并重新 enrollment 后执行。"
     }
   },
   "metadata": {
     "created": "2026-08-01 00:53:08",
-    "updated": "2026-08-10 12:51:43",
+    "updated": "2026-08-10 14:00:52",
     "md_file": "docs/plans/opn-native-agent-runtime-next-milestone-roadmap.md"
   }
 }
