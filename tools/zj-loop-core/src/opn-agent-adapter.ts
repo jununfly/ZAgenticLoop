@@ -26,14 +26,20 @@ export function createProviderBackedNativeAgentExecutor(input: { provider: { run
   };
 }
 
-export function createOpnAgentAdapter(input: { transport: TransportAdapter; runtime: Runtime; artifactStore: OpnArtifactStore; publishArtifact?: (input: { bytes: Buffer; metadata: OpnArtifactMetadata; transfer_id: string; target_node_id: string }) => Promise<void>; agent_id: string; now?: () => string }) {
+export function createOpnAgentAdapter(input: { transport: TransportAdapter; runtime: Runtime; artifactStore: OpnArtifactStore; publishArtifact?: (input: { bytes: Buffer; metadata: OpnArtifactMetadata; transfer_id: string; target_node_id: string }) => Promise<void>; on_non_task?: (input: { envelope: TransportEnvelope; reason: string }) => void; agent_id: string; now?: () => string }) {
   if (!input.transport || !input.runtime || !input.artifactStore || !input.agent_id.trim()) throw new Error('opn-agent-adapter-dependency-required');
   const now = input.now ?? (() => new Date().toISOString());
   return {
-    async processNext(args: { session_id: string; resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask }): Promise<{ status: 'empty' | 'processed' | 'blocked'; message_id?: string; result?: NativeAgentRuntimeResult; reason?: string; side_effects_executed: false }> {
+    async processNext(args: { session_id: string; resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask }): Promise<{ status: 'empty' | 'processed' | 'skipped' | 'blocked'; message_id?: string; result?: NativeAgentRuntimeResult; reason?: string; side_effects_executed: false }> {
       const envelope = await input.transport.receive({ session_id: args.session_id });
       if (!envelope) return { status: 'empty', side_effects_executed: false };
-      if (envelope.target_node_id !== input.agent_id || envelope.notification_kind !== 'agent.task') return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-task-envelope-invalid', side_effects_executed: false };
+      if (envelope.target_node_id !== input.agent_id) return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-target-node-mismatch', side_effects_executed: false };
+      if (envelope.notification_kind !== 'agent.task') {
+        await input.transport.acknowledge({ session_id: args.session_id, message_id: envelope.message_id, envelope_digest: envelope.envelope_digest });
+        const reason = 'opn-agent-non-task-envelope-acknowledged';
+        input.on_non_task?.({ envelope, reason });
+        return { status: 'skipped', message_id: envelope.message_id, reason, side_effects_executed: false };
+      }
       let task: BoundedLoopTask;
       try { task = await args.resolveTask(envelope); } catch { return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-task-unavailable', side_effects_executed: false }; }
       const result = await input.runtime.acceptEnvelope({ envelope, task, now: now() });

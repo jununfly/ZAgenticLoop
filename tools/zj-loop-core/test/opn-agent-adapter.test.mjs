@@ -39,3 +39,30 @@ test('OPN Agent adapter consumes a task, emits a structured result artifact, and
     assert.equal((await transport.receive({ session_id: agentSession.session_id })), null);
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('OPN Agent adapter acknowledges non-task traffic so it cannot starve the next agent task', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-opn-agent-adapter-head-of-line-'));
+  const agent = 'agent-1';
+  const task = createBoundedLoopTask({ task_id: 'task-2', execution_id: 'execution-2', attempt: 1, task_kind: 'loop.task', objective: 'read artifact', success_criteria: ['result exists'], input_artifact_refs: [digest('a')], dependency_refs: [], resource_isolation: { status: 'not-applicable', bindings: [] }, budget: { timeout_ms: 30000, max_iterations: 1 }, expected_evidence_kinds: ['result'], idempotency_key: 'task-2:execution-2:1', cancellation: { mode: 'cooperative', token: 'cancel:execution-2' } });
+  const unknown = createTransportEnvelope({ message_id: 'mcp-message-1', network_id: 'network-1', event_id: 'mcp-event-1', plan_id: 'opn-mcp-gateway', plan_revision: 1, task_id: 'opn-mcp-message', from_node_id: 'agent-2', target_node_id: agent, notification_kind: 'mcp.dogfood.smoke', state: 'available', artifact_refs: [{ artifact_id: digest('b'), content_sha256: digest('b'), kind: 'artifact' }], created_at: '2026-08-10T00:00:00.000Z', expires_at: '2026-08-10T01:00:00.000Z' });
+  const taskEnvelope = createTransportEnvelope({ message_id: 'task-message-2', network_id: 'network-1', event_id: 'task-event-2', plan_id: 'plan-1', plan_revision: 1, task_id: task.task_id, from_node_id: 'agent-2', target_node_id: agent, notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2026-08-10T00:00:01.000Z', expires_at: '2026-08-10T01:00:01.000Z' });
+  const queue = [unknown, taskEnvelope];
+  const acknowledgements = [];
+  try {
+    const transport = {
+      async receive() { return queue[0] ?? null; },
+      async acknowledge(input) { acknowledgements.push(input.message_id); queue.shift(); return { status: 'accepted', message_id: input.message_id, envelope_digest: input.envelope_digest, side_effects_executed: false }; },
+      async send() { return { status: 'accepted', message_id: 'agent-result:task-message-2', envelope_digest: digest('c'), side_effects_executed: false }; },
+    };
+    const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+    await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2026-08-10T00:00:00.000Z' });
+    const runtime = createNativeAgentRuntime({ stateStore, registration: createAgentRegistration({ agent_id: agent, display_name: 'Agent1', capabilities: ['task.execute'], accepted_task_kinds: ['loop.task'], evidence_kinds: ['result'], protocol_version: 'opn-agent-runtime.v1', identity_ref: 'identity:agent-1' }), executor: async () => ({ status: 'succeeded', evidence_refs: ['evidence:agent-1'] }) });
+    const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore: createOpnArtifactStore({ root: path.join(root, 'artifacts') }), agent_id: agent, now: () => '2026-08-10T00:00:02.000Z' });
+    const skipped = await adapter.processNext({ session_id: 'session-1', resolveTask: () => task });
+    assert.deepEqual(skipped, { status: 'skipped', message_id: 'mcp-message-1', reason: 'opn-agent-non-task-envelope-acknowledged', side_effects_executed: false });
+    assert.deepEqual(acknowledgements, ['mcp-message-1']);
+    const processed = await adapter.processNext({ session_id: 'session-1', resolveTask: () => task });
+    assert.equal(processed.status, 'processed');
+    await stateStore.close();
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

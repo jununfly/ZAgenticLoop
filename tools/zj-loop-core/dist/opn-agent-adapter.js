@@ -30,8 +30,14 @@ export function createOpnAgentAdapter(input) {
             const envelope = await input.transport.receive({ session_id: args.session_id });
             if (!envelope)
                 return { status: 'empty', side_effects_executed: false };
-            if (envelope.target_node_id !== input.agent_id || envelope.notification_kind !== 'agent.task')
-                return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-task-envelope-invalid', side_effects_executed: false };
+            if (envelope.target_node_id !== input.agent_id)
+                return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-target-node-mismatch', side_effects_executed: false };
+            if (envelope.notification_kind !== 'agent.task') {
+                await input.transport.acknowledge({ session_id: args.session_id, message_id: envelope.message_id, envelope_digest: envelope.envelope_digest });
+                const reason = 'opn-agent-non-task-envelope-acknowledged';
+                input.on_non_task?.({ envelope, reason });
+                return { status: 'skipped', message_id: envelope.message_id, reason, side_effects_executed: false };
+            }
             let task;
             try {
                 task = await args.resolveTask(envelope);

@@ -1,7 +1,7 @@
 import type { TransportAdapter } from './transport-contract.js';
 
 export type OpnAgentWorkerProcessResult = {
-  status: 'empty' | 'processed' | 'blocked';
+  status: 'empty' | 'processed' | 'skipped' | 'blocked';
   message_id?: string;
   reason?: string;
   side_effects_executed: false;

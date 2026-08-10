@@ -41,6 +41,10 @@ export declare function createOpnAgentAdapter(input: {
         transfer_id: string;
         target_node_id: string;
     }) => Promise<void>;
+    on_non_task?: (input: {
+        envelope: TransportEnvelope;
+        reason: string;
+    }) => void;
     agent_id: string;
     now?: () => string;
 }): {
@@ -48,7 +52,7 @@ export declare function createOpnAgentAdapter(input: {
         session_id: string;
         resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask;
     }): Promise<{
-        status: "empty" | "processed" | "blocked";
+        status: "empty" | "processed" | "skipped" | "blocked";
         message_id?: string;
         result?: NativeAgentRuntimeResult;
         reason?: string;

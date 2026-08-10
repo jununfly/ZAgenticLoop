@@ -14,7 +14,8 @@
         "1-2",
         "1-3",
         "1-4",
-        "1-5"
+        "1-5",
+        "1-6"
       ],
       "decisions": [
         {
@@ -241,11 +242,101 @@
       "children": [],
       "decisions": [],
       "notes": ""
+    },
+    "1-6": {
+      "id": "1-6",
+      "label": "OPN Agent 运行时可靠性加固",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-6-1",
+        "1-6-2",
+        "1-6-3",
+        "1-6-4"
+      ],
+      "decisions": [
+        {
+          "q": "近期跨设备 OPN 工作如何归档",
+          "answer": "以运行时可靠性加固作为主分支，Transport、Web UI、Human action、Provider runtime 等历史能力保留在各自已完成里程碑中；当前只推进 worker 消费可靠性。",
+          "note": "避免把已完成能力重新打开，保持当前施工边界清晰。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-1": {
+      "id": "1-6-1",
+      "label": "Session expiry-aware worker 验收与续连保障",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "session expiry-aware worker 验收结论",
+          "answer": "Windows 节点 5e555a... 已证明 846a358a 存在、build 成功、worker 以 60000ms refresh margin 运行。",
+          "note": "验收已通过，后续仅保留回归测试。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-2": {
+      "id": "1-6-2",
+      "label": "OPN task cancel API 与 append-only cancellation projection",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "task cancel 的事实模型",
+          "answer": "取消采用 owner gateway API 与 append-only cancellation fact；未 ack 消息不可再 receive。",
+          "note": "已在真实旧 Windows task 上验收。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-3": {
+      "id": "1-6-3",
+      "label": "Enrollment-backed transport target validation",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "发送目标校验策略",
+          "answer": "owner gateway 发送前必须匹配当前 network 中 approved enrollment 的完整 node_id；未知目标在写入 outbox 前拒绝。",
+          "note": "防止手工 node id typo 导致 accepted 但无人接收。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-4": {
+      "id": "1-6-4",
+      "label": "opn-agent-adapter.processNext 未知消息队头阻塞修复",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6",
+      "children": [],
+      "decisions": [
+        {
+          "q": "processNext 当前修复目标",
+          "answer": "未知 notification_kind 或 target mismatch 不得阻塞队头；应按确定性策略 ack 并结构化记录，或路由专用 handler。",
+          "note": "先用 TDD 锁定非 agent.task 消息不会阻塞后续 agent.task。"
+        },
+        {
+          "q": "未知消息的确定性处理",
+          "answer": "仅对目标节点匹配但 notification_kind 非 agent.task 的消息执行 ack + skipped；target mismatch 不伪造 ack，返回 blocked；ack 失败向 worker 抛出错误以触发 session reconnect。",
+          "note": "避免队头阻塞，同时不越权确认非本节点消息。"
+        }
+      ],
+      "notes": "TDD 已完成：目标匹配但未知 notification_kind 的消息先 ack，再返回 skipped 并结构化暴露 reason；agent.task 继续执行。target mismatch 保持 blocked。相关 23 项运行时/transport 测试通过。"
     }
   },
   "metadata": {
     "created": "2026-08-01 00:53:08",
-    "updated": "2026-08-01 02:03:44",
+    "updated": "2026-08-10 12:51:43",
     "md_file": "docs/plans/opn-native-agent-runtime-next-milestone-roadmap.md"
   }
 }
