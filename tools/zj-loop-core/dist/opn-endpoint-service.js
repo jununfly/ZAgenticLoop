@@ -20,6 +20,12 @@ export function createWindowsTaskSchedulerCommand(spec) {
         delete: ['schtasks.exe', '/Delete', '/TN', task, '/F'],
     };
 }
+function windowsWrapperCommand(spec) {
+    return [spec.executable, spec.script, ...spec.args].map((item) => `"${item.replaceAll('"', '\\"')}"`).join(' ');
+}
+function createWindowsWrapper(spec) {
+    return `@echo off\r\ncd /d "${spec.working_directory.replaceAll('"', '\\"')}"\r\n${windowsWrapperCommand(spec)}\r\n`;
+}
 export function opnEndpointServiceLabel(network_id) {
     return `ZAgenticLoop-OPN-${network_id}`;
 }
@@ -35,11 +41,13 @@ export async function installOpnEndpointService(spec, platform = process.platfor
         return { platform: 'darwin', path: pathname };
     }
     if (platform === 'win32') {
-        const command = createWindowsTaskSchedulerCommand(spec).create;
+        const wrapperPath = path.join(spec.runtime_dir, 'service.cmd');
+        await writeFile(wrapperPath, createWindowsWrapper(spec), { mode: 0o700 });
+        const command = ['schtasks.exe', '/Create', '/TN', spec.label, '/SC', 'ONLOGON', '/TR', `"${wrapperPath.replaceAll('"', '\\"')}"`, '/F'];
         const result = spawnSync(command[0], command.slice(1), { encoding: 'utf8', windowsHide: true });
         if (result.status !== 0)
             throw new Error(`opn-endpoint-task-install-failed:${(result.stderr || '').trim()}`);
-        return { platform: 'win32', command };
+        return { platform: 'win32', command, path: wrapperPath };
     }
     throw new Error('opn-endpoint-service-platform-unsupported');
 }

@@ -62,9 +62,10 @@ export const opnAgentRunnerCliSpec = {
             throw new Error(`opn-agent-provider-executable-unavailable:${JSON.stringify(discovery)}`);
         }
         const executable = discovery.executable;
+        const providerSessionId = String(options.session_id ?? '').trim() || (providerKind === 'workbuddy-code' ? `zj-opn-workbuddy-${node_id.slice(0, 32)}` : '');
         const provider = providerKind === 'codex'
             ? createCodexAgentProviderAdapter({ process_adapter: processAdapter, executable })
-            : createWorkBuddyCodeProviderAdapter({ process_adapter: processAdapter, executable, session_id: String(options.session_id ?? '').trim() });
+            : createWorkBuddyCodeProviderAdapter({ process_adapter: processAdapter, executable, session_id: providerSessionId });
         const stateStore = createSqliteStateStore({ filename: String(options.artifact_store ?? '').trim() + '.runner-state.db' });
         try {
             await stateStore.createNetwork({ network_id, owner_id: 'human-1' });

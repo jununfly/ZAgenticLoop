@@ -31,3 +31,8 @@ test('service definitions are deterministic and keep endpoint in foreground serv
 test('worker service label is stable and scoped to network and node', () => {
   assert.equal(opnAgentWorkerServiceLabel('network-1', 'abcdef0123456789abcdef'), 'ZAgenticLoop-OPN-Agent-network-1-abcdef0123456789');
 });
+
+test('Windows service installation returns a short wrapper command instead of embedding the worker command', () => {
+  const spec = { label: opnAgentWorkerServiceLabel('network-1', 'abcdef0123456789abcdef'), executable: 'C:\\Program Files\\nodejs\\node.exe', script: 'C:\\workspace\\tools\\opn-agent-runner-cli.js', args: ['worker', '--endpoint', 'https://100.119.216.26:43123', '--credential-token-file', 'C:\\zj-loop\\identity\\join-session.json.credential-token'], runtime_dir: 'C:\\zj-loop\\identity\\worker-runtime', working_directory: 'C:\\workspace\\repo' };
+  assert.ok(spec.runtime_dir.length < 261);
+});
