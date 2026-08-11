@@ -25,6 +25,8 @@ test('signs a Windows Agent CSR with a development CA without copying the CA key
     assert.equal((await readFile(outputCert, 'utf8')).includes('BEGIN CERTIFICATE'), true);
     const details = execFileSync(OPENSSL_BIN, ['x509', '-in', outputCert, '-noout', '-issuer', '-text'], { encoding: 'utf8' });
     assert.match(details, /Issuer:.*ZAgenticLoop Dev CA/);
+    assert.match(details, /Subject Key Identifier/);
+    assert.match(details, /Authority Key Identifier/);
     assert.match(details, /TLS Web Client Authentication/);
     assert.equal(path.basename(bootstrap.private_key_path), 'agent.key.pem');
   } finally {

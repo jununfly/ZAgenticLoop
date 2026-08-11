@@ -82,7 +82,7 @@ test('development pairing owner authenticator blocks invalid token, stale contex
     context,
     require_v2: true,
     peer_fingerprint: peerFingerprint,
-  }), { status: 'blocked', reason: 'owner-not-authorized' });
+  }), { status: 'blocked', reason: 'human-approval-context-invalid' });
   assert.deepEqual(await authenticator.authenticate({
     action: 'pairing.approve',
     authorization: 'Bearer dev-owner-token',
@@ -91,5 +91,5 @@ test('development pairing owner authenticator blocks invalid token, stale contex
     context,
     require_v2: true,
     peer_fingerprint: 'c'.repeat(64),
-  }), { status: 'blocked', reason: 'owner-not-authorized' });
+  }), { status: 'blocked', reason: 'human-device-binding-mismatch' });
 });

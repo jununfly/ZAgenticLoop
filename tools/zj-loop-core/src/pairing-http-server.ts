@@ -90,6 +90,27 @@ function peerNodeId(socket: TLSSocket): string | null {
   const peer = socket.getPeerCertificate();
   return peer.raw ? createHash('sha256').update(peer.raw).digest('hex') : null;
 }
+
+function peerCertificateTrusted(socket: TLSSocket, ca: ServerOptions['ca'], now: string): boolean {
+  const peer = socket.getPeerCertificate();
+  if (!peer.raw) return false;
+  if (socket.authorized) return true;
+  // Node can report UNSPECIFIED for older one-level ECC chains whose issuer and
+  // signature are valid but lack the extensions expected by its verifier. Keep
+  // the application gate fail-closed by validating that exact chain explicitly.
+  if (!ca || Array.isArray(ca)) return false;
+  try {
+    const leaf = new X509Certificate(peer.raw);
+    const issuer = new X509Certificate(ca);
+    const current = Date.parse(now);
+    const leafValid = current >= Date.parse(leaf.validFrom) && current <= Date.parse(leaf.validTo);
+    const issuerValid = current >= Date.parse(issuer.validFrom) && current <= Date.parse(issuer.validTo);
+    const clientAuth = leaf.keyUsage?.includes('1.3.6.1.5.5.7.3.2') === true;
+    return leaf.ca === false && issuer.ca === true && leaf.issuer === issuer.subject && leafValid && issuerValid && clientAuth && leaf.verify(issuer.publicKey);
+  } catch {
+    return false;
+  }
+}
 function errorStatus(reason: string): number {
   if (reason === 'client-certificate-required' || reason === 'pairing-session-invalid') return 401;
   if (reason === 'pairing-node-identity-mismatch' || reason === 'pairing-session-node-mismatch') return 403;
@@ -251,7 +272,7 @@ export function createPairingHttpServer(input: {
         try { body = await readBody(request); } catch (error) { blocked(response, error instanceof Error ? error.message : 'json-invalid'); return; }
       }
       const value = body as { network_id?: unknown; request_digest?: unknown; approved_capabilities?: unknown; reason?: unknown; context?: HumanApprovalContext };
-      const ownerMatch = typeof ownerApprove === 'object' ? ownerApprove : typeof ownerReject === 'object' ? ownerReject : null;
+      const ownerMatch = ownerApprove ?? ownerReject;
       const requestId = ownerMatch ? decodeURIComponent(ownerMatch[1]) : undefined;
       const networkId = typeof value?.network_id === 'string' ? value.network_id : url.searchParams.get('network_id');
       if (!networkId?.trim()) { blocked(response, 'network-id-required'); return; }
@@ -261,7 +282,7 @@ export function createPairingHttpServer(input: {
       if (ownerApprove) {
         const socket = request.socket as TLSSocket;
         const peer = socket.getPeerCertificate();
-        if (!socket.authorized || !peer.raw) { blocked(response, 'client-certificate-required'); return; }
+        if (!peerCertificateTrusted(socket, input.tls.ca, now()) || !peer.raw) { blocked(response, 'client-certificate-required'); return; }
         peerFingerprint = createHash('sha256').update(peer.raw).digest('hex');
         const binding = validateHumanAuthorityV2Binding({ context: value.context as HumanApprovalContext, network_id: networkId, peer_fingerprint: peerFingerprint, require_current_v2: true });
         if (binding.status !== 'allowed') { blocked(response, binding.reason); return; }
@@ -278,7 +299,11 @@ export function createPairingHttpServer(input: {
       const baseRecord = records.find((record) => record.type === 'pairing-requested' && record.request.request_id === requestId);
       if (!baseRecord || baseRecord.type !== 'pairing-requested') { blocked(response, 'pairing-request-not-found'); return; }
       if (projection.request_digest !== requestDigest) { blocked(response, 'pairing-request-digest-mismatch'); return; }
-      if (!value.context || value.context.request_id !== requestId || value.context.request_digest !== requestDigest || value.context.action !== action || value.context.human_id !== auth.human_id) { blocked(response, 'human-approval-context-invalid'); return; }
+      if (!value.context) { blocked(response, 'human-approval-context-missing'); return; }
+      if (value.context.request_id !== requestId) { blocked(response, 'human-approval-context-request-id-mismatch'); return; }
+      if (value.context.request_digest !== requestDigest) { blocked(response, 'human-approval-context-request-digest-mismatch'); return; }
+      if (value.context.action !== action) { blocked(response, 'human-approval-context-action-mismatch'); return; }
+      if (value.context.human_id !== auth.human_id) { blocked(response, 'human-approval-context-human-id-mismatch'); return; }
       try {
         let decision;
         if (ownerApprove) {
@@ -306,7 +331,7 @@ export function createPairingHttpServer(input: {
       return;
     }
     const socket = request.socket as TLSSocket;
-    if (!socket.authorized || !peerNodeId(socket)) {
+    if (!peerCertificateTrusted(socket, input.tls.ca, now()) || !peerNodeId(socket)) {
       blocked(response, 'client-certificate-required');
       return;
     }

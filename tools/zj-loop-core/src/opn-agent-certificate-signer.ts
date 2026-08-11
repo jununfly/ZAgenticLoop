@@ -42,7 +42,7 @@ export async function signOpnAgentCertificate(input: {
   const serialPath = path.resolve(input.serial_path?.trim() || `${caCertPath}.srl`);
   await mkdir(path.dirname(certificatePath), { recursive: true });
   const extensionPath = path.join(path.dirname(certificatePath), `.zj-loop-client-ext-${process.pid}-${Date.now()}.cnf`);
-  await writeFile(extensionPath, '[v3_client]\n basicConstraints=critical,CA:FALSE\n keyUsage=critical,digitalSignature,keyEncipherment\n extendedKeyUsage=clientAuth\n', { mode: 0o600 });
+  await writeFile(extensionPath, '[v3_client]\n basicConstraints=critical,CA:FALSE\n subjectKeyIdentifier=hash\n authorityKeyIdentifier=keyid,issuer\n keyUsage=critical,digitalSignature,keyEncipherment\n extendedKeyUsage=clientAuth\n', { mode: 0o600 });
   const openssl = input.openssl_bin?.trim() || process.env.OPENSSL_BIN || 'openssl';
   try {
     await execFile(openssl, ['x509', '-req', '-in', csrPath, '-CA', caCertPath, '-CAkey', caKeyPath, '-CAcreateserial', '-CAserial', serialPath, '-out', certificatePath, '-days', String(days), '-sha256', '-extfile', extensionPath, '-extensions', 'v3_client'], { windowsHide: true });

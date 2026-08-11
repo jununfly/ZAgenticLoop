@@ -281,3 +281,23 @@ test('Owner approval binds signed capabilities and is CAS-protected', async () =
   await rm(serverMaterial.root, { recursive: true, force: true });
   await rm(clientMaterial.root, { recursive: true, force: true });
 });
+
+test('Owner rejection binds the path request id and records a rejection', async () => {
+  const serverMaterial = await certificate('localhost');
+  const clientMaterial = await certificate('human-device');
+  const store = createInMemoryPairingRecordStore();
+  const record = { type: 'pairing-requested', event_id: 'pairing-requested:owner-reject-1', occurred_at: '2026-07-29T03:00:00.000Z', network_id: 'network-1', request_digest: 'c'.repeat(64), request: { request_id: 'owner-reject-1', network_id: 'network-1', node_id: 'node-1', endpoint: 'loopback://127.0.0.1:1', requested_capabilities: ['event.consume'], expires_at: '2026-07-29T04:00:00.000Z', identity: { certificate_sha256: 'd'.repeat(64) } } };
+  await store.append(record);
+  const peerFingerprint = createHash('sha256').update(new X509Certificate(clientMaterial.cert).raw).digest('hex');
+  const authority = createInMemoryHumanAuthorityProvider({ human_id: 'human-1', protocol_version: 'v2', network_id: 'network-1', device_key_id: 'human-device-key-1', device_fingerprint: peerFingerprint });
+  const server = createPairingHttpServer({ tls: { ...serverMaterial, ca: clientMaterial.cert }, recordStore: store, now: () => '2026-07-29T03:10:00.000Z', ownerAuthenticator: { authenticate: ({ action, request_id, request_digest, context }) => request_id === 'owner-reject-1' && request_digest === 'c'.repeat(64) && context?.action === action && context.request_id === request_id && context.request_digest === request_digest && verifyHumanApprovalContext({ identity: authority.getPublicIdentity(), context, now: '2026-07-29T03:10:00.000Z' }) ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const context = await authority.signApprovalContext({ action: 'pairing.reject', request_id: 'owner-reject-1', request_digest: 'c'.repeat(64), approved_capabilities: [], issued_at: '2026-07-29T03:10:00.000Z', expires_at: '2026-07-29T03:20:00.000Z' });
+  const response = await request({ address: server.address(), server: serverMaterial, client: clientMaterial, path: '/v1/owner/pairing-requests/owner-reject-1/reject', method: 'POST', body: { network_id: 'network-1', request_digest: 'c'.repeat(64), reason: 'duplicate-request', context } });
+  assert.equal(response.statusCode, 201, JSON.stringify(response.body));
+  assert.equal(response.body.lifecycle.type, 'pairing-rejected');
+  assert.equal(response.body.lifecycle.reason, 'duplicate-request');
+  await new Promise((resolve) => server.close(resolve));
+  await rm(serverMaterial.root, { recursive: true, force: true });
+  await rm(clientMaterial.root, { recursive: true, force: true });
+});

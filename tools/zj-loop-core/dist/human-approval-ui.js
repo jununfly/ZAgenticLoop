@@ -53,6 +53,30 @@ async function signApprovalContext(input) {
 function blocked(response, statusCode, reason) {
     json(response, statusCode, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'blocked', reason, side_effects_executed: false });
 }
+const SAFE_PAIRING_UPSTREAM_REASONS = new Set([
+    'client-certificate-required',
+    'pairing-session-invalid',
+    'pairing-session-expired',
+    'pairing-request-expired',
+    'pairing-request-not-found',
+    'pairing-request-digest-mismatch',
+    'pairing-state-conflict',
+    'human-approval-context-invalid',
+    'human-approval-context-missing',
+    'human-approval-context-request-id-mismatch',
+    'human-approval-context-request-digest-mismatch',
+    'human-approval-context-action-mismatch',
+    'human-approval-context-human-id-mismatch',
+    'human-authority-v2-required',
+    'human-device-binding-mismatch',
+    'human-device-binding-invalid',
+    'owner-authentication-required',
+    'owner-not-authorized',
+]);
+function pairingUpstreamReason(error, fallback = 'pairing-upstream-unavailable') {
+    const reason = error instanceof Error ? error.message : '';
+    return SAFE_PAIRING_UPSTREAM_REASONS.has(reason) ? reason : fallback;
+}
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/human-approval');
 const GRAPH_UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/graph-review');
 const OPN_UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/opn');
@@ -715,8 +739,8 @@ export function createHumanApprovalUiServer(input) {
             try {
                 result = await input.upstream.approve({ network_id: input.network_id, request_id: requestId, request_digest: requestDigest, approved_capabilities: capabilities, context });
             }
-            catch {
-                blocked(response, 503, 'pairing-upstream-unavailable');
+            catch (error) {
+                blocked(response, 503, pairingUpstreamReason(error));
                 return;
             }
             json(response, 201, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'recorded', request_id: requestId, result, side_effects_executed: true });
@@ -747,7 +771,7 @@ export function createHumanApprovalUiServer(input) {
             const requestId = decodeURIComponent(rejectMatch[1]);
             const requestDigest = typeof body.request_digest === 'string' ? body.request_digest : '';
             const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
-            const allowedReasons = new Set(['identity-untrusted', 'capability-too-broad', 'endpoint-unexpected', 'request-not-needed', 'duplicate-node', 'human-review-deferred', 'other']);
+            const allowedReasons = new Set(['identity-untrusted', 'capability-too-broad', 'endpoint-unexpected', 'request-not-needed', 'duplicate-node', 'duplicate-request', 'human-review-deferred', 'other']);
             if (!requestDigest || !reason || !allowedReasons.has(reason)) {
                 blocked(response, 400, 'ui-rejection-input-invalid');
                 return;
@@ -769,13 +793,13 @@ export function createHumanApprovalUiServer(input) {
                 return;
             }
             const expiresAt = new Date(Math.min(Date.parse(current.expires_at), Date.parse(now()) + 5 * 60 * 1000)).toISOString();
-            const context = await signApprovalContext({ signer: input.signer, action: 'pairing.reject', request_id: requestId, request_digest: requestDigest, approved_capabilities: [], issued_at: now(), expires_at: expiresAt });
+            const context = await signApprovalContext({ signer: input.signer, network_id: input.network_id, human_device: input.human_device, action: 'pairing.reject', request_id: requestId, request_digest: requestDigest, approved_capabilities: [], issued_at: now(), expires_at: expiresAt });
             let result;
             try {
                 result = await input.upstream.reject({ network_id: input.network_id, request_id: requestId, request_digest: requestDigest, reason, context });
             }
-            catch {
-                blocked(response, 503, 'pairing-upstream-unavailable');
+            catch (error) {
+                blocked(response, 503, pairingUpstreamReason(error));
                 return;
             }
             json(response, 201, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'recorded', request_id: requestId, result, side_effects_executed: true });

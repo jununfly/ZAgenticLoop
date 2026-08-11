@@ -2,7 +2,7 @@ import { createHash, createPublicKey, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { verifyHumanApprovalContext, type HumanApprovalContext, type HumanPublicIdentity } from './human-authority.js';
 import type { PairingOwnerAuthenticator } from './pairing-http-server.js';
-import { HUMAN_AUTHORITY_V2_SCHEMA } from './human-authority.js';
+import { HUMAN_AUTHORITY_SCHEMA, HUMAN_AUTHORITY_V2_SCHEMA } from './human-authority.js';
 
 export const PAIRING_OWNER_AUTHENTICATOR_SCHEMA = 'zj-loop.pairing_owner_authenticator.v1' as const;
 
@@ -18,8 +18,8 @@ function bearerMatches(authorization: string | null, expected: string): boolean 
   return received.length === token.length && timingSafeEqual(received, token);
 }
 
-function blocked(): { status: 'blocked'; reason: 'owner-not-authorized' } {
-  return { status: 'blocked', reason: 'owner-not-authorized' };
+function blocked(reason: string = 'owner-not-authorized'): { status: 'blocked'; reason: string } {
+  return { status: 'blocked', reason };
 }
 
 export function createPairingOwnerAuthenticator(input: {
@@ -35,10 +35,18 @@ export function createPairingOwnerAuthenticator(input: {
       if (!bearerMatches(request.authorization, input.owner_token)) return blocked();
       if (request.action === 'pairing.list' || request.action === 'pairing.inbox' || request.action === 'human.action.list' || request.action === 'human.action.decide' || request.action === 'message.send' || request.action === 'message.cancel') return { status: 'allowed', human_id: input.identity.human_id };
       const context = request.context;
-      if (!context || !request.request_id || !request.request_digest || context.action !== request.action || context.request_id !== request.request_id || context.request_digest !== request.request_digest) return blocked();
+      if (!context) return blocked('human-approval-context-missing');
+      if (!request.request_id || context.request_id !== request.request_id) return blocked('human-approval-context-request-id-mismatch');
+      if (!request.request_digest || context.request_digest !== request.request_digest) return blocked('human-approval-context-request-digest-mismatch');
+      if (context.action !== request.action) return blocked('human-approval-context-action-mismatch');
       if (request.action === 'pairing.approve' && request.require_v2 !== true) return blocked();
-      if (request.action === 'pairing.approve' && (!request.peer_fingerprint || context.device_fingerprint !== request.peer_fingerprint)) return blocked();
-      if (!verifyHumanApprovalContext({ identity: input.identity, context: context as HumanApprovalContext, now: now(), require_v2: request.action === 'pairing.approve' })) return blocked();
+      if (request.action === 'pairing.approve' && context.schema !== HUMAN_AUTHORITY_V2_SCHEMA) return blocked('human-approval-context-invalid');
+      if (request.action === 'pairing.reject' && context.schema !== HUMAN_AUTHORITY_SCHEMA && context.schema !== HUMAN_AUTHORITY_V2_SCHEMA) return blocked('human-approval-context-invalid');
+      if (request.action === 'pairing.approve' && (!request.peer_fingerprint || context.device_fingerprint !== request.peer_fingerprint)) return blocked('human-device-binding-mismatch');
+      const verificationIdentity = context.schema === HUMAN_AUTHORITY_SCHEMA ? { ...input.identity, schema: HUMAN_AUTHORITY_SCHEMA } : input.identity;
+      const verificationNow = now();
+      const verified = verifyHumanApprovalContext({ identity: verificationIdentity, context: context as HumanApprovalContext, now: verificationNow, require_v2: request.action === 'pairing.approve' });
+      if (!verified) return blocked('human-approval-context-invalid');
       return { status: 'allowed', human_id: input.identity.human_id };
     },
   };

@@ -43,6 +43,30 @@ function peerNodeId(socket) {
     const peer = socket.getPeerCertificate();
     return peer.raw ? createHash('sha256').update(peer.raw).digest('hex') : null;
 }
+function peerCertificateTrusted(socket, ca, now) {
+    const peer = socket.getPeerCertificate();
+    if (!peer.raw)
+        return false;
+    if (socket.authorized)
+        return true;
+    // Node can report UNSPECIFIED for older one-level ECC chains whose issuer and
+    // signature are valid but lack the extensions expected by its verifier. Keep
+    // the application gate fail-closed by validating that exact chain explicitly.
+    if (!ca || Array.isArray(ca))
+        return false;
+    try {
+        const leaf = new X509Certificate(peer.raw);
+        const issuer = new X509Certificate(ca);
+        const current = Date.parse(now);
+        const leafValid = current >= Date.parse(leaf.validFrom) && current <= Date.parse(leaf.validTo);
+        const issuerValid = current >= Date.parse(issuer.validFrom) && current <= Date.parse(issuer.validTo);
+        const clientAuth = leaf.keyUsage?.includes('1.3.6.1.5.5.7.3.2') === true;
+        return leaf.ca === false && issuer.ca === true && leaf.issuer === issuer.subject && leafValid && issuerValid && clientAuth && leaf.verify(issuer.publicKey);
+    }
+    catch {
+        return false;
+    }
+}
 function errorStatus(reason) {
     if (reason === 'client-certificate-required' || reason === 'pairing-session-invalid')
         return 401;
@@ -299,7 +323,7 @@ export function createPairingHttpServer(input) {
                 }
             }
             const value = body;
-            const ownerMatch = typeof ownerApprove === 'object' ? ownerApprove : typeof ownerReject === 'object' ? ownerReject : null;
+            const ownerMatch = ownerApprove ?? ownerReject;
             const requestId = ownerMatch ? decodeURIComponent(ownerMatch[1]) : undefined;
             const networkId = typeof value?.network_id === 'string' ? value.network_id : url.searchParams.get('network_id');
             if (!networkId?.trim()) {
@@ -312,7 +336,7 @@ export function createPairingHttpServer(input) {
             if (ownerApprove) {
                 const socket = request.socket;
                 const peer = socket.getPeerCertificate();
-                if (!socket.authorized || !peer.raw) {
+                if (!peerCertificateTrusted(socket, input.tls.ca, now()) || !peer.raw) {
                     blocked(response, 'client-certificate-required');
                     return;
                 }
@@ -347,8 +371,24 @@ export function createPairingHttpServer(input) {
                 blocked(response, 'pairing-request-digest-mismatch');
                 return;
             }
-            if (!value.context || value.context.request_id !== requestId || value.context.request_digest !== requestDigest || value.context.action !== action || value.context.human_id !== auth.human_id) {
-                blocked(response, 'human-approval-context-invalid');
+            if (!value.context) {
+                blocked(response, 'human-approval-context-missing');
+                return;
+            }
+            if (value.context.request_id !== requestId) {
+                blocked(response, 'human-approval-context-request-id-mismatch');
+                return;
+            }
+            if (value.context.request_digest !== requestDigest) {
+                blocked(response, 'human-approval-context-request-digest-mismatch');
+                return;
+            }
+            if (value.context.action !== action) {
+                blocked(response, 'human-approval-context-action-mismatch');
+                return;
+            }
+            if (value.context.human_id !== auth.human_id) {
+                blocked(response, 'human-approval-context-human-id-mismatch');
                 return;
             }
             try {
@@ -384,7 +424,7 @@ export function createPairingHttpServer(input) {
             return;
         }
         const socket = request.socket;
-        if (!socket.authorized || !peerNodeId(socket)) {
+        if (!peerCertificateTrusted(socket, input.tls.ca, now()) || !peerNodeId(socket)) {
             blocked(response, 'client-certificate-required');
             return;
         }

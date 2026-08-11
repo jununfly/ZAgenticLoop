@@ -231,10 +231,12 @@ test('Human approval UI signs and forwards one approval only after same-origin a
 
 test('Human approval UI serves a usable static shell and records structured rejection', async () => {
   const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  const identity = await signer.getPublicIdentity();
   const rejected = [];
   const server = createHumanApprovalUiServer({
     signer,
     network_id: 'network-1',
+    human_device: { device_key_id: 'device-key-1', device_fingerprint: 'd'.repeat(64) },
     bootstrap_token: 'bootstrap-3',
     upstream: {
       async list() { return { requests: [{ request_id: 'request-1', status: 'pending', request_digest: 'a'.repeat(64), node_id: 'node-1', requested_capabilities: ['event.consume'], expires_at: '2026-07-30T01:00:00.000Z' }] }; },
@@ -260,8 +262,64 @@ test('Human approval UI serves a usable static shell and records structured reje
     const response = await requestHttp({ address, path: '/ui/pairing-requests/request-1/reject', method: 'POST', headers: { cookie, origin }, body: { request_digest: 'a'.repeat(64), reason: 'endpoint-unexpected' } });
     assert.equal(response.status, 201);
     assert.equal(rejected[0].reason, 'endpoint-unexpected');
+    assert.equal(rejected[0].context.schema, 'zj-loop.human_authority.v2');
+    assert.equal(rejected[0].context.network_id, 'network-1');
+    assert.equal(rejected[0].context.device_key_id, 'device-key-1');
+    assert.equal(rejected[0].context.device_fingerprint, 'd'.repeat(64));
+    assert.equal(verifyHumanApprovalContext({ identity: { ...identity, schema: 'zj-loop.human_authority.v2' }, context: rejected[0].context, now: '2026-07-30T00:01:00.000Z', require_v2: true }), true);
   } finally {
     await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('Human approval UI accepts duplicate-request and preserves deterministic upstream errors', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
+  const request = { request_id: 'request-duplicate', status: 'pending', request_digest: 'b'.repeat(64), node_id: 'node-1', requested_capabilities: ['event.consume'], expires_at: '2026-07-30T01:00:00.000Z' };
+  const rejected = [];
+  const server = createHumanApprovalUiServer({
+    signer,
+    network_id: 'network-1',
+    bootstrap_token: 'bootstrap-duplicate',
+    upstream: {
+      async list() { return { requests: [request] }; },
+      async reject(input) { rejected.push(input); return { status: 'recorded' }; },
+    },
+    now: () => '2026-07-30T00:00:00.000Z',
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const bootstrapped = await requestHttp({ address, path: '/ui/bootstrap?token=bootstrap-duplicate' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    const origin = `http://127.0.0.1:${address.port}`;
+    const response = await requestHttp({ address, path: `/ui/pairing-requests/${request.request_id}/reject`, method: 'POST', headers: { cookie, origin }, body: { request_digest: request.request_digest, reason: 'duplicate-request' } });
+    assert.equal(response.status, 201);
+    assert.equal(rejected[0].reason, 'duplicate-request');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+
+  const failingServer = createHumanApprovalUiServer({
+    signer,
+    network_id: 'network-1',
+    bootstrap_token: 'bootstrap-error',
+    upstream: {
+      async list() { return { requests: [request] }; },
+      async reject() { throw new Error('client-certificate-required'); },
+    },
+    now: () => '2026-07-30T00:00:00.000Z',
+  });
+  await new Promise((resolve) => failingServer.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = failingServer.address();
+    const bootstrapped = await requestHttp({ address, path: '/ui/bootstrap?token=bootstrap-error' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    const origin = `http://127.0.0.1:${address.port}`;
+    const response = await requestHttp({ address, path: `/ui/pairing-requests/${request.request_id}/reject`, method: 'POST', headers: { cookie, origin }, body: { request_digest: request.request_digest, reason: 'duplicate-request' } });
+    assert.equal(response.status, 503);
+    assert.equal(response.body.reason, 'client-certificate-required');
+  } finally {
+    await new Promise((resolve) => failingServer.close(resolve));
   }
 });
 
