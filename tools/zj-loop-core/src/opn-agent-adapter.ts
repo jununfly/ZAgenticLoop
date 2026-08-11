@@ -2,6 +2,7 @@ import { createTransportEnvelope, type TransportAdapter, type TransportEnvelope 
 import type { BoundedLoopTask } from './agent-task.js';
 import type { OpnArtifactMetadata, OpnArtifactStore } from './opn-artifact-store.js';
 import type { NativeAgentRuntimeResult } from './native-agent-runtime.js';
+import type { OpnAgentWorkerSessionEvidence } from './opn-agent-worker.js';
 
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1' as const;
 
@@ -30,7 +31,7 @@ export function createOpnAgentAdapter(input: { transport: TransportAdapter; runt
   if (!input.transport || !input.runtime || !input.artifactStore || !input.agent_id.trim()) throw new Error('opn-agent-adapter-dependency-required');
   const now = input.now ?? (() => new Date().toISOString());
   return {
-    async processNext(args: { session_id: string; receive_wait_ms?: number; resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask }): Promise<{ status: 'empty' | 'processed' | 'skipped' | 'blocked'; message_id?: string; result?: NativeAgentRuntimeResult; reason?: string; side_effects_executed: false }> {
+    async processNext(args: { session_id: string; receive_wait_ms?: number; session_evidence?: OpnAgentWorkerSessionEvidence; resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask }): Promise<{ status: 'empty' | 'processed' | 'skipped' | 'blocked'; message_id?: string; result?: NativeAgentRuntimeResult; reason?: string; side_effects_executed: false }> {
       const envelope = await input.transport.receive({ session_id: args.session_id, ...(args.receive_wait_ms === undefined ? {} : { wait_ms: args.receive_wait_ms }) });
       if (!envelope) return { status: 'empty', side_effects_executed: false };
       if (envelope.target_node_id !== input.agent_id) return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-target-node-mismatch', side_effects_executed: false };
@@ -44,7 +45,7 @@ export function createOpnAgentAdapter(input: { transport: TransportAdapter; runt
       try { task = await args.resolveTask(envelope); } catch { return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-task-unavailable', side_effects_executed: false }; }
       const result = await input.runtime.acceptEnvelope({ envelope, task, now: now() });
       if (result.status === 'blocked') return { status: 'blocked', message_id: envelope.message_id, result, reason: result.reason, side_effects_executed: false };
-      const bytes = Buffer.from(JSON.stringify({ schema: OPN_AGENT_RESULT_SCHEMA, message_id: envelope.message_id, execution: result.execution, side_effects_executed: false }));
+      const bytes = Buffer.from(JSON.stringify({ schema: OPN_AGENT_RESULT_SCHEMA, message_id: envelope.message_id, execution: result.execution, ...(args.session_evidence ? { session_evidence: args.session_evidence } : {}), side_effects_executed: false }));
       const artifact = await input.artifactStore.put({ bytes, file_name: `${envelope.task_id}.agent-result.json`, media_type: 'application/json' });
       if (input.publishArtifact) await input.publishArtifact({ bytes, metadata: artifact.metadata, transfer_id: `result-artifact:${envelope.message_id}`, target_node_id: envelope.from_node_id });
       const response = createTransportEnvelope({ message_id: `agent-result:${envelope.message_id}`, network_id: envelope.network_id, event_id: envelope.event_id, plan_id: envelope.plan_id, plan_revision: envelope.plan_revision, task_id: envelope.task_id, from_node_id: input.agent_id, target_node_id: envelope.from_node_id, notification_kind: 'agent.result', state: result.execution.status === 'evidence-recorded' ? 'available' : 'blocked', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }], created_at: now(), expires_at: envelope.expires_at });

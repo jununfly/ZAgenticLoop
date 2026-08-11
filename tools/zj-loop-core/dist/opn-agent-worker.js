@@ -10,6 +10,8 @@ export function createOpnAgentWorker(input) {
         throw new Error('opn-agent-worker-processor-required');
     let session_id;
     let session_expires_at;
+    let refresh_count = 0;
+    let refreshed_for_next_poll = false;
     let stopped = false;
     const now = input.now ?? (() => new Date().toISOString());
     const refreshMargin = input.session_refresh_margin_ms ?? 60_000;
@@ -33,8 +35,11 @@ export function createOpnAgentWorker(input) {
             const current = Date.parse(now());
             if (!Number.isFinite(expiry) || !Number.isFinite(current))
                 throw new Error('opn-agent-worker-session-expiry-invalid');
-            if (expiry <= current + refreshMargin)
+            if (expiry <= current + refreshMargin) {
                 await closeCurrentSession();
+                refresh_count += 1;
+                refreshed_for_next_poll = true;
+            }
         }
         if (!session_id) {
             const opened = await input.transport.openSession({ network_id: input.network_id, node_id: input.node_id });
@@ -48,12 +53,16 @@ export function createOpnAgentWorker(input) {
     const worker = {
         async runOnce() {
             const current = await ensureSession();
+            const sessionEvidence = { session_id: current, expires_at: session_expires_at, refreshed: refreshed_for_next_poll, refresh_count };
             try {
-                return await input.processNext({ session_id: current, receive_wait_ms: receiveWait });
+                return await input.processNext({ session_id: current, receive_wait_ms: receiveWait, ...(session_expires_at ? { session_evidence: sessionEvidence } : {}) });
             }
             catch (error) {
                 await closeCurrentSession();
                 throw error;
+            }
+            finally {
+                refreshed_for_next_poll = false;
             }
         },
         async run(options = {}) {

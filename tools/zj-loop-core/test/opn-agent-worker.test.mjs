@@ -62,6 +62,7 @@ test('OPN Agent worker reconnects after a session processing failure', async () 
 
 test('OPN Agent worker refreshes a remote session before its expiry', async () => {
   const calls = [];
+  const evidence = [];
   let opened = 0;
   const worker = createOpnAgentWorker({
     network_id: 'network-1',
@@ -77,7 +78,7 @@ test('OPN Agent worker refreshes a remote session before its expiry', async () =
       },
       async closeSession(input) { calls.push(['close', input.session_id]); },
     },
-    processNext: async ({ session_id }) => { calls.push(['process', session_id]); return { status: 'empty', side_effects_executed: false }; },
+    processNext: async ({ session_id, session_evidence }) => { calls.push(['process', session_id]); evidence.push(session_evidence); return { status: 'empty', side_effects_executed: false }; },
   });
 
   await worker.runOnce();
@@ -91,6 +92,10 @@ test('OPN Agent worker refreshes a remote session before its expiry', async () =
     ['open', 'session-2'],
     ['process', 'session-2'],
     ['close', 'session-2'],
+  ]);
+  assert.deepEqual(evidence, [
+    { session_id: 'session-1', expires_at: '2026-08-10T12:00:30.000Z', refreshed: false, refresh_count: 0 },
+    { session_id: 'session-2', expires_at: '2026-08-10T15:00:00.000Z', refreshed: true, refresh_count: 1 },
   ]);
 });
 

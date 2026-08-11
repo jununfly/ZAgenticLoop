@@ -5,6 +5,12 @@ export type OpnAgentWorkerProcessResult = {
     reason?: string;
     side_effects_executed: false;
 };
+export type OpnAgentWorkerSessionEvidence = {
+    session_id: string;
+    expires_at?: string;
+    refreshed: boolean;
+    refresh_count: number;
+};
 export type OpnAgentWorker = {
     runOnce(): Promise<OpnAgentWorkerProcessResult>;
     run(input?: {
@@ -24,6 +30,7 @@ export declare function createOpnAgentWorker(input: {
     processNext(input: {
         session_id: string;
         receive_wait_ms?: number;
+        session_evidence?: OpnAgentWorkerSessionEvidence;
     }): Promise<OpnAgentWorkerProcessResult>;
     on_error?: (error: unknown) => void;
     now?: () => string;

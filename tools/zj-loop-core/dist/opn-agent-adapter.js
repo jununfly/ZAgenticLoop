@@ -48,7 +48,7 @@ export function createOpnAgentAdapter(input) {
             const result = await input.runtime.acceptEnvelope({ envelope, task, now: now() });
             if (result.status === 'blocked')
                 return { status: 'blocked', message_id: envelope.message_id, result, reason: result.reason, side_effects_executed: false };
-            const bytes = Buffer.from(JSON.stringify({ schema: OPN_AGENT_RESULT_SCHEMA, message_id: envelope.message_id, execution: result.execution, side_effects_executed: false }));
+            const bytes = Buffer.from(JSON.stringify({ schema: OPN_AGENT_RESULT_SCHEMA, message_id: envelope.message_id, execution: result.execution, ...(args.session_evidence ? { session_evidence: args.session_evidence } : {}), side_effects_executed: false }));
             const artifact = await input.artifactStore.put({ bytes, file_name: `${envelope.task_id}.agent-result.json`, media_type: 'application/json' });
             if (input.publishArtifact)
                 await input.publishArtifact({ bytes, metadata: artifact.metadata, transfer_id: `result-artifact:${envelope.message_id}`, target_node_id: envelope.from_node_id });

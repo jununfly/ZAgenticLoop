@@ -66,3 +66,22 @@ test('OPN Agent adapter acknowledges non-task traffic so it cannot starve the ne
     await stateStore.close();
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('OPN Agent adapter persists worker session evidence in the result artifact', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opn-agent-session-evidence-'));
+  const store = createOpnArtifactStore({ root });
+  const task = createBoundedLoopTask({ task_id: 'task-session-evidence', execution_id: 'execution-session-evidence', attempt: 1, task_kind: 'loop.task', objective: 'read artifact', success_criteria: ['result exists'], input_artifact_refs: [digest('a')], dependency_refs: [], resource_isolation: { status: 'not-applicable', bindings: [] }, budget: { timeout_ms: 30000, max_iterations: 1 }, expected_evidence_kinds: ['result'], idempotency_key: 'task-session-evidence:execution-session-evidence:1', cancellation: { mode: 'cooperative', token: 'cancel:execution-session-evidence' } });
+  const envelope = createTransportEnvelope({ message_id: 'task-session-evidence-message', network_id: 'network-1', event_id: 'event-session-evidence', plan_id: 'plan-1', plan_revision: 1, task_id: task.task_id, from_node_id: 'center', target_node_id: 'agent-1', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2026-08-07T12:01:00.000Z', expires_at: '2026-08-07T13:01:00.000Z' });
+  const sent = [];
+  const adapter = createOpnAgentAdapter({
+    transport: { async receive() { return envelope; }, async send(input) { sent.push(input); return { status: 'accepted', message_id: input.envelope.message_id, envelope_digest: input.envelope.envelope_digest, side_effects_executed: false }; }, async acknowledge() { return { status: 'accepted', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, side_effects_executed: false }; } },
+    runtime: { async acceptEnvelope() { return { status: 'accepted', execution: { schema: 'zj-loop.native_agent_execution.v1', execution_id: task.execution_id, task_id: task.task_id, attempt: 1, agent_id: 'agent-1', task_digest: task.task_digest, registration_digest: digest('r'), started_at: '2026-08-07T12:01:00.000Z', status: 'evidence-recorded', evidence_refs: ['provider-result'], transitions: [] }, side_effects_executed: false }; } },
+    artifactStore: store,
+    agent_id: 'agent-1',
+    now: () => '2026-08-07T12:01:01.000Z',
+  });
+  await adapter.processNext({ session_id: 'session-2', session_evidence: { session_id: 'session-2', expires_at: '2026-08-10T15:00:00.000Z', refreshed: true, refresh_count: 1 }, resolveTask: () => task });
+  const artifact = sent[0].envelope.artifact_refs[0].artifact_id;
+  const stored = await store.read(artifact);
+  assert.deepEqual(JSON.parse(stored.bytes.toString('utf8')).session_evidence, { session_id: 'session-2', expires_at: '2026-08-10T15:00:00.000Z', refreshed: true, refresh_count: 1 });
+});
