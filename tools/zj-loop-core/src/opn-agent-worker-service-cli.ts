@@ -25,6 +25,9 @@ const spec: CliSpec = {
     { name: 'credential_token_file', flag: 'credential-token-file', type: 'string', description: 'Credential token file path' },
     { name: 'artifact_store', flag: 'artifact-store', type: 'string', description: 'Artifact store directory' },
     { name: 'runner_script', flag: 'runner-script', type: 'string', description: 'opn-agent-runner-cli.js path' },
+    { name: 'provider', type: 'string', description: 'codex or workbuddy-code' },
+    { name: 'executable', type: 'string', description: 'Provider executable path (optional)' },
+    { name: 'session_id', flag: 'session-id', type: 'string', description: 'Provider session id (optional)' },
     { name: 'working_directory', flag: 'cwd', type: 'string', description: 'Worker working directory' },
     { name: 'runtime_dir', flag: 'runtime-dir', type: 'string', description: 'Service log/runtime directory' },
     { name: 'identity_dir', flag: 'identity-dir', type: 'string', description: 'Identity directory used for default paths' },
@@ -51,7 +54,13 @@ const spec: CliSpec = {
     const artifact_store = required(options, 'artifact_store');
     const runner_script = required(options, 'runner_script');
     const working_directory = required(options, 'working_directory');
-    const args = ['worker', '--endpoint', endpoint, '--network-id', network_id, '--node-id', node_id, '--ca', ca, '--cert', cert, '--key', key, '--credential-token-file', credential_token_file, '--artifact-store', artifact_store, '--cwd', working_directory];
+    const provider = required(options, 'provider');
+    if (provider !== 'codex' && provider !== 'workbuddy-code') throw new Error('opn-agent-worker-provider-invalid');
+    const args = ['worker', '--endpoint', endpoint, '--network-id', network_id, '--node-id', node_id, '--ca', ca, '--cert', cert, '--key', key, '--credential-token-file', credential_token_file, '--artifact-store', artifact_store, '--provider', provider, '--cwd', working_directory];
+    const executable = String(options.executable ?? '').trim();
+    const session_id = String(options.session_id ?? '').trim();
+    if (executable) args.push('--executable', executable);
+    if (session_id) args.push('--session-id', session_id);
     const receive_wait_ms = String(options.receive_wait_ms ?? '').trim();
     const session_refresh_margin_ms = String(options.session_refresh_margin_ms ?? '').trim();
     if (receive_wait_ms) args.push('--receive-wait-ms', receive_wait_ms);
