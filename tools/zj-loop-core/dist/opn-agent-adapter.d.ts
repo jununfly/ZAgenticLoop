@@ -50,6 +50,7 @@ export declare function createOpnAgentAdapter(input: {
 }): {
     processNext(args: {
         session_id: string;
+        receive_wait_ms?: number;
         resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask;
     }): Promise<{
         status: "empty" | "processed" | "skipped" | "blocked";

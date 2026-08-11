@@ -23,8 +23,10 @@ export declare function createOpnAgentWorker(input: {
     transport: Pick<TransportAdapter, 'openSession' | 'closeSession'>;
     processNext(input: {
         session_id: string;
+        receive_wait_ms?: number;
     }): Promise<OpnAgentWorkerProcessResult>;
     on_error?: (error: unknown) => void;
     now?: () => string;
     session_refresh_margin_ms?: number;
+    receive_wait_ms?: number;
 }): OpnAgentWorker;

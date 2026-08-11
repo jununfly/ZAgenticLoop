@@ -21,10 +21,11 @@ export function createOpnAgentWorker(input: {
   network_id: string;
   node_id: string;
   transport: Pick<TransportAdapter, 'openSession' | 'closeSession'>;
-  processNext(input: { session_id: string }): Promise<OpnAgentWorkerProcessResult>;
+  processNext(input: { session_id: string; receive_wait_ms?: number }): Promise<OpnAgentWorkerProcessResult>;
   on_error?: (error: unknown) => void;
   now?: () => string;
   session_refresh_margin_ms?: number;
+  receive_wait_ms?: number;
 }): OpnAgentWorker {
   if (!input.network_id.trim() || !input.node_id.trim()) throw new Error('opn-agent-worker-identity-required');
   if (!input.transport || typeof input.transport.openSession !== 'function' || typeof input.transport.closeSession !== 'function') throw new Error('opn-agent-worker-transport-required');
@@ -35,7 +36,9 @@ export function createOpnAgentWorker(input: {
   let stopped = false;
   const now = input.now ?? (() => new Date().toISOString());
   const refreshMargin = input.session_refresh_margin_ms ?? 60_000;
+  const receiveWait = input.receive_wait_ms ?? 25_000;
   if (!Number.isInteger(refreshMargin) || refreshMargin < 0 || refreshMargin > 60 * 60 * 1000) throw new Error('opn-agent-worker-session-refresh-margin-invalid');
+  if (!Number.isInteger(receiveWait) || receiveWait < 0 || receiveWait > 30_000) throw new Error('opn-agent-worker-receive-wait-invalid');
 
   async function closeCurrentSession(): Promise<void> {
     const current = session_id;
@@ -65,7 +68,7 @@ export function createOpnAgentWorker(input: {
     async runOnce() {
       const current = await ensureSession();
       try {
-        return await input.processNext({ session_id: current });
+        return await input.processNext({ session_id: current, receive_wait_ms: receiveWait });
       } catch (error) {
         await closeCurrentSession();
         throw error;
@@ -74,7 +77,7 @@ export function createOpnAgentWorker(input: {
     async run(options = {}) {
       const maxIterations = options.max_iterations;
       if (maxIterations !== undefined && (!Number.isInteger(maxIterations) || maxIterations < 1)) throw new Error('opn-agent-worker-iterations-invalid');
-      const idleDelay = options.idle_delay_ms ?? 1_000;
+      const idleDelay = options.idle_delay_ms ?? 0;
       if (!Number.isInteger(idleDelay) || idleDelay < 0 || idleDelay > 60_000) throw new Error('opn-agent-worker-idle-delay-invalid');
       let iterations = 0;
       try {

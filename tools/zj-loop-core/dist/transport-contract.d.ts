@@ -61,6 +61,7 @@ export type TransportAdapter = {
     }): Promise<TransportResult>;
     receive(input: {
         session_id: string;
+        wait_ms?: number;
     }): Promise<TransportEnvelope | null>;
     acknowledge(input: {
         session_id: string;

@@ -30,8 +30,8 @@ export function createOpnAgentAdapter(input: { transport: TransportAdapter; runt
   if (!input.transport || !input.runtime || !input.artifactStore || !input.agent_id.trim()) throw new Error('opn-agent-adapter-dependency-required');
   const now = input.now ?? (() => new Date().toISOString());
   return {
-    async processNext(args: { session_id: string; resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask }): Promise<{ status: 'empty' | 'processed' | 'skipped' | 'blocked'; message_id?: string; result?: NativeAgentRuntimeResult; reason?: string; side_effects_executed: false }> {
-      const envelope = await input.transport.receive({ session_id: args.session_id });
+    async processNext(args: { session_id: string; receive_wait_ms?: number; resolveTask(envelope: TransportEnvelope): Promise<BoundedLoopTask> | BoundedLoopTask }): Promise<{ status: 'empty' | 'processed' | 'skipped' | 'blocked'; message_id?: string; result?: NativeAgentRuntimeResult; reason?: string; side_effects_executed: false }> {
+      const envelope = await input.transport.receive({ session_id: args.session_id, ...(args.receive_wait_ms === undefined ? {} : { wait_ms: args.receive_wait_ms }) });
       if (!envelope) return { status: 'empty', side_effects_executed: false };
       if (envelope.target_node_id !== input.agent_id) return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-target-node-mismatch', side_effects_executed: false };
       if (envelope.notification_kind !== 'agent.task') {

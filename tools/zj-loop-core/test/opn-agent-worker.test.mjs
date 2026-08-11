@@ -22,8 +22,8 @@ test('OPN Agent worker keeps one session across polls and closes it on stop', as
   assert.equal(processed, 2);
   assert.deepEqual(calls, [
     ['open', { network_id: 'network-1', node_id: 'agent-1' }],
-    ['process', { session_id: 'session-1' }],
-    ['process', { session_id: 'session-1' }],
+    ['process', { session_id: 'session-1', receive_wait_ms: 25_000 }],
+    ['process', { session_id: 'session-1', receive_wait_ms: 25_000 }],
     ['close', { session_id: 'session-1' }],
   ]);
 });

@@ -5,6 +5,8 @@ export const OPN_TRANSPORT_MESSAGE_AGGREGATE = 'opn-transport-message';
 export const OPN_TRANSPORT_OFFERED_EVENT = 'opn.transport.message.offered';
 export const OPN_TRANSPORT_ACKNOWLEDGED_EVENT = 'opn.transport.message.acknowledged';
 export const OPN_TRANSPORT_CANCELLED_EVENT = 'opn.transport.message.cancelled';
+const MAX_RECEIVE_WAIT_MS = 30_000;
+const RECEIVE_RECHECK_MS = 250;
 function json(response, statusCode, body) {
     const encoded = JSON.stringify(body);
     response.statusCode = statusCode;
@@ -125,6 +127,21 @@ export function createOpnTransportHttpService(input) {
         const result = await input.stateStore.appendEvent({ network_id: input.network_id, expected_revision: current, now: now(), event: { event_id: acknowledgedEventId(envelope), aggregate_type: OPN_TRANSPORT_MESSAGE_AGGREGATE, aggregate_id: envelope.message_id, event_type: OPN_TRANSPORT_ACKNOWLEDGED_EVENT, occurred_at: now(), payload: { schema: OPN_TRANSPORT_HTTP_SCHEMA, envelope } } });
         return result.status;
     }
+    async function waitForPending(node_id, wait_ms, request, expires_at) {
+        const expiry = Date.parse(expires_at);
+        const clock = () => Date.parse(now());
+        const deadline = Math.min(Date.now() + wait_ms, Date.now() + Math.max(0, expiry - clock()));
+        while (true) {
+            const pending = [...(await messages()).values()].find((message) => message.envelope.target_node_id === node_id && !message.acknowledged && !message.cancelled);
+            if (pending)
+                return { envelope: pending.envelope };
+            if (clock() >= expiry)
+                return { expired: true };
+            if (wait_ms === 0 || Date.now() >= deadline || request.aborted || request.destroyed)
+                return null;
+            await new Promise((resolve) => setTimeout(resolve, Math.min(RECEIVE_RECHECK_MS, Math.max(1, deadline - Date.now()))));
+        }
+    }
     return {
         async handle({ request, response, node_id }) {
             const url = new URL(request.url ?? '/', 'https://opn-transport.local');
@@ -210,7 +227,17 @@ export function createOpnTransportHttpService(input) {
                 return true;
             }
             if (request.method === 'GET' && action === 'envelopes') {
-                const pending = [...(await messages()).values()].find((message) => message.envelope.target_node_id === node_id && !message.acknowledged && !message.cancelled);
+                const rawWait = url.searchParams.get('wait_ms');
+                const waitMs = rawWait === null ? 0 : Number(rawWait);
+                if (!Number.isInteger(waitMs) || waitMs < 0 || waitMs > MAX_RECEIVE_WAIT_MS) {
+                    blocked(response, 400, 'transport-receive-wait-invalid');
+                    return true;
+                }
+                const pending = await waitForPending(node_id, waitMs, request, session.expires_at);
+                if (pending && 'expired' in pending) {
+                    blocked(response, 410, 'transport-session-expired');
+                    return true;
+                }
                 if (!pending) {
                     response.statusCode = 204;
                     response.end();

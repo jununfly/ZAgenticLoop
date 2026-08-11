@@ -123,7 +123,11 @@ export function createTlsTransportAdapter(input) {
         },
         async receive(session) {
             requiredText(session.session_id, 'transport-session-id-required');
-            const response = await call('GET', `/v1/transport/sessions/${pathSegment(session.session_id, 'transport-session-id-required')}/envelopes`);
+            const waitMs = session.wait_ms === undefined ? 0 : session.wait_ms;
+            if (!Number.isInteger(waitMs) || waitMs < 0 || waitMs > 30_000)
+                throw new Error('transport-receive-wait-invalid');
+            const suffix = waitMs > 0 ? `?wait_ms=${waitMs}` : '';
+            const response = await call('GET', `/v1/transport/sessions/${pathSegment(session.session_id, 'transport-session-id-required')}/envelopes${suffix}`);
             if (response.statusCode === 204)
                 return null;
             if (response.statusCode !== 200)

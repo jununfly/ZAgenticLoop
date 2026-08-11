@@ -52,7 +52,7 @@ export type TransportSession = {
 export type TransportAdapter = {
   openSession(input: { network_id: string; node_id: string }): Promise<TransportSession>;
   send(input: { session_id: string; envelope: TransportEnvelope }): Promise<TransportResult>;
-  receive(input: { session_id: string }): Promise<TransportEnvelope | null>;
+  receive(input: { session_id: string; wait_ms?: number }): Promise<TransportEnvelope | null>;
   acknowledge(input: { session_id: string; message_id: string; envelope_digest: string }): Promise<TransportResult>;
   cancel(input: TransportCancelInput): Promise<TransportResult>;
   closeSession(input: { session_id: string }): Promise<void>;

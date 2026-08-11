@@ -27,7 +27,7 @@ export function createOpnAgentAdapter(input) {
     const now = input.now ?? (() => new Date().toISOString());
     return {
         async processNext(args) {
-            const envelope = await input.transport.receive({ session_id: args.session_id });
+            const envelope = await input.transport.receive({ session_id: args.session_id, ...(args.receive_wait_ms === undefined ? {} : { wait_ms: args.receive_wait_ms }) });
             if (!envelope)
                 return { status: 'empty', side_effects_executed: false };
             if (envelope.target_node_id !== input.agent_id)
