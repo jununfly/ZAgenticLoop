@@ -83,6 +83,7 @@ test('OPN Agent worker refreshes a remote session before its expiry', async () =
 
   await worker.runOnce();
   await worker.runOnce();
+  await worker.runOnce();
   await worker.stop();
 
   assert.deepEqual(calls, [
@@ -91,10 +92,12 @@ test('OPN Agent worker refreshes a remote session before its expiry', async () =
     ['close', 'session-1'],
     ['open', 'session-2'],
     ['process', 'session-2'],
+    ['process', 'session-2'],
     ['close', 'session-2'],
   ]);
   assert.deepEqual(evidence, [
     { session_id: 'session-1', expires_at: '2026-08-10T12:00:30.000Z', refreshed: false, refresh_count: 0 },
+    { session_id: 'session-2', expires_at: '2026-08-10T15:00:00.000Z', refreshed: true, refresh_count: 1 },
     { session_id: 'session-2', expires_at: '2026-08-10T15:00:00.000Z', refreshed: true, refresh_count: 1 },
   ]);
 });
