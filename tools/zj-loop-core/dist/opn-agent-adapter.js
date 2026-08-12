@@ -1,4 +1,5 @@
 import { createTransportEnvelope } from './transport-contract.js';
+import { evaluateOpnTaskAdmission } from './opn-task-admission.js';
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1';
 export function createProviderBackedNativeAgentExecutor(input) {
     if (!input.provider || typeof input.provider.run !== 'function')
@@ -44,6 +45,11 @@ export function createOpnAgentAdapter(input) {
             }
             catch {
                 return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-task-unavailable', side_effects_executed: false };
+            }
+            if (input.registration && input.supervision_mode) {
+                const admission = evaluateOpnTaskAdmission({ task, registration: input.registration, target_node_id: envelope.target_node_id, supervision_mode: input.supervision_mode });
+                if (admission.status !== 'admitted')
+                    return { status: 'blocked', message_id: envelope.message_id, reason: admission.reason, side_effects_executed: false };
             }
             const result = await input.runtime.acceptEnvelope({ envelope, task, now: now() });
             if (result.status === 'blocked')

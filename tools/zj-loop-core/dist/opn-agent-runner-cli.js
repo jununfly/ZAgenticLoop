@@ -43,6 +43,7 @@ export const opnAgentRunnerCliSpec = {
         { name: 'idle_delay_ms', flag: 'idle-delay-ms', type: 'string', description: 'Worker delay after an empty poll in milliseconds' },
         { name: 'session_refresh_margin_ms', flag: 'session-refresh-margin-ms', type: 'string', description: 'Reconnect this many milliseconds before remote session expiry (default: 60000)' },
         { name: 'receive_wait_ms', flag: 'receive-wait-ms', type: 'string', description: 'Long-poll duration for an empty OPN receive in milliseconds (default: 25000)' },
+        { name: 'supervision_mode', flag: 'supervision-mode', type: 'string', description: 'Target admission policy: supervised or unattended (default: unattended)' },
     ],
     async handler({ options, io }) {
         const command = String(options.command ?? '');
@@ -86,9 +87,13 @@ export const opnAgentRunnerCliSpec = {
             const publisher = createTlsOpnArtifactPublisher({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const downloader = createTlsOpnArtifactDownloader({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const executor = createProviderBackedNativeAgentExecutor({ provider_kind: providerKind, provider, cwd: String(options.cwd ?? ''), prompt: (value) => value.objective });
-            const runtime = createNativeAgentRuntime({ stateStore, registration: createAgentRegistration({ agent_id: node_id, display_name: providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task?.task_kind ?? 'agent.task'], evidence_kinds: task?.expected_evidence_kinds ?? ['agent.result'], protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` }), executor });
+            const registration = createAgentRegistration({ agent_id: node_id, display_name: providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task?.task_kind ?? 'agent.task'], evidence_kinds: task?.expected_evidence_kinds ?? ['agent.result'], protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` });
+            const runtime = createNativeAgentRuntime({ stateStore, registration, executor });
             const artifactStore = createOpnArtifactStore({ root: String(options.artifact_store ?? '') });
-            const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore, publishArtifact: publisher.publish, agent_id: node_id });
+            const supervisionMode = String(options.supervision_mode ?? 'unattended').trim();
+            if (supervisionMode !== 'supervised' && supervisionMode !== 'unattended')
+                throw new Error('opn-agent-supervision-mode-invalid');
+            const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore, publishArtifact: publisher.publish, agent_id: node_id, registration, supervision_mode: supervisionMode });
             const resolveTask = async (envelope) => {
                 const taskRef = envelope.artifact_refs[0];
                 if (!taskRef)

@@ -3,6 +3,8 @@ import type { BoundedLoopTask } from './agent-task.js';
 import type { OpnArtifactMetadata, OpnArtifactStore } from './opn-artifact-store.js';
 import type { NativeAgentRuntimeResult } from './native-agent-runtime.js';
 import type { OpnAgentWorkerSessionEvidence } from './opn-agent-worker.js';
+import { type SupervisionMode } from './opn-task-admission.js';
+import type { AgentRegistration } from './agent-registration.js';
 export declare const OPN_AGENT_RESULT_SCHEMA: "zj-loop.opn_agent_result.v1";
 type Runtime = {
     acceptEnvelope(input: {
@@ -47,6 +49,8 @@ export declare function createOpnAgentAdapter(input: {
         reason: string;
     }) => void;
     agent_id: string;
+    registration?: AgentRegistration;
+    supervision_mode?: SupervisionMode;
     now?: () => string;
 }): {
     processNext(args: {
