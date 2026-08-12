@@ -131,6 +131,66 @@ export function createPairingHttpServer(input) {
         const ownerOutbox = request.method === 'GET' && url.pathname === '/v1/owner/outbox';
         const ownerMessage = request.method === 'POST' && url.pathname === '/v1/owner/messages';
         const ownerMessageCancel = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/messages\/([^/]+)\/cancel$/);
+        const ownerOutboundTaskList = request.method === 'GET' && url.pathname === '/v1/owner/outbound-task-approvals';
+        const ownerOutboundTaskRequest = request.method === 'POST' && url.pathname === '/v1/owner/outbound-task-approvals';
+        const ownerOutboundTaskDecision = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/outbound-task-approvals\/([^/]+)\/decision$/);
+        if (ownerOutboundTaskList || ownerOutboundTaskRequest || ownerOutboundTaskDecision) {
+            if (!input.ownerAuthenticator) {
+                blocked(response, 'owner-authenticator-unavailable');
+                return;
+            }
+            if (!input.ownerOutboundTaskApproval) {
+                blocked(response, 'outbound-task-approval-unavailable');
+                return;
+            }
+            let value = {};
+            if (!ownerOutboundTaskList) {
+                try {
+                    value = await readBody(request);
+                }
+                catch (error) {
+                    blocked(response, error instanceof Error ? error.message : 'json-invalid');
+                    return;
+                }
+            }
+            const networkId = typeof value.network_id === 'string' ? value.network_id : url.searchParams.get('network_id');
+            if (!networkId?.trim()) {
+                blocked(response, 'network-id-required');
+                return;
+            }
+            const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action: ownerOutboundTaskList ? 'pairing.inbox' : 'message.send', authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
+            if (auth.status !== 'allowed') {
+                blocked(response, auth.reason ?? 'owner-not-authorized');
+                return;
+            }
+            try {
+                if (ownerOutboundTaskList) {
+                    json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, ...(await input.ownerOutboundTaskApproval.list({ network_id: networkId })), side_effects_executed: false });
+                    return;
+                }
+                const approval = value.approval;
+                if (!approval || typeof approval !== 'object' || approval.network_id !== networkId) {
+                    blocked(response, 'outbound-task-approval-invalid');
+                    return;
+                }
+                if (ownerOutboundTaskRequest) {
+                    const result = await input.ownerOutboundTaskApproval.request({ network_id: networkId, approval });
+                    json(response, 201, { schema: PAIRING_HTTP_SCHEMA, status: 'pending', network_id: networkId, ...result, side_effects_executed: false });
+                    return;
+                }
+                const requestId = ownerOutboundTaskDecision ? decodeURIComponent(ownerOutboundTaskDecision[1]) : '';
+                if (approval.approval_id !== requestId || (value.decision !== 'approved' && value.decision !== 'rejected') || typeof value.human_note !== 'string' || !value.human_note.trim()) {
+                    blocked(response, 'outbound-task-decision-invalid');
+                    return;
+                }
+                const result = await input.ownerOutboundTaskApproval.decide({ network_id: networkId, approval, decision: value.decision, human_id: auth.human_id ?? 'unknown', human_note: value.human_note.trim() });
+                json(response, 201, { schema: PAIRING_HTTP_SCHEMA, status: value.decision, network_id: networkId, ...result, side_effects_executed: value.decision === 'approved' });
+            }
+            catch (error) {
+                blocked(response, error instanceof Error ? error.message : 'outbound-task-approval-failed');
+            }
+            return;
+        }
         const ownerHumanActions = request.method === 'GET' && url.pathname === '/v1/owner/human-actions';
         const ownerHumanActionDecision = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/human-actions\/([^/]+)\/decision$/);
         const ownerApprove = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/pairing-requests\/([^/]+)\/approve$/);

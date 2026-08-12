@@ -402,7 +402,7 @@ test('server lists all tools over stdio', async () => {
   try {
     const res = await callServer(root, [{ id: 1, method: 'tools/list', params: {} }]);
     const names = res.get(1).result.tools.map(t => t.name);
-    assert.equal(names.length, 14);
+    assert.equal(names.length, 15);
     assert.ok(names.includes('loop_list_patterns'));
     assert.ok(names.includes('loop_summarize_operational_context'));
     assert.ok(names.includes('loop_estimate_cost'));
@@ -410,6 +410,7 @@ test('server lists all tools over stdio', async () => {
     assert.ok(names.includes('opn_message_send'));
     assert.ok(names.includes('opn_inbox_ack'));
     assert.ok(names.includes('opn_agent_task_send'));
+    assert.ok(names.includes('opn_task_draft_list'));
     assert.ok(names.includes('opn_gateway_status'));
   } finally {
     await cleanup();
@@ -441,6 +442,24 @@ test('OPN Agent task tool validates the bounded task before contacting the gatew
     const parsed = JSON.parse(res.get(1).result.content[0].text);
     assert.deepEqual(parsed, { schema: 'zj-loop.opn_mcp_error.v1', status: 'blocked', reason: 'bounded-loop-task-identity-invalid' });
   } finally {
+    await cleanup();
+  }
+});
+
+test('OPN Agent task tool requires the owner gateway path after bounded validation', async () => {
+  const root = await setup();
+  const names = ['OPN_NODE_DIR', 'OPN_IDENTITY_DIR', 'OPN_NETWORK_ID', 'OPN_NODE_ID', 'OPN_ENDPOINT', 'OPN_ARTIFACT_STORE', 'OPN_CA_FILE', 'OPN_CERT_FILE', 'OPN_KEY_FILE', 'OPN_CREDENTIAL_TOKEN_FILE', 'OPN_OWNER_TOKEN', 'OPN_OWNER_TOKEN_FILE'];
+  const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+  try {
+    for (const name of names) delete process.env[name];
+    const res = await callServer(root, [{ id: 1, method: 'tools/call', params: { name: 'opn_task_draft_list', arguments: {} } }]);
+    const parsed = JSON.parse(res.get(1).result.content[0].text);
+    assert.deepEqual(parsed, { schema: 'zj-loop.opn_mcp_error.v1', status: 'blocked', reason: 'opn-gateway-not-configured' });
+  } finally {
+    for (const name of names) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
     await cleanup();
   }
 });

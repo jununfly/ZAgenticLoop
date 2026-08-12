@@ -12,6 +12,7 @@ import { createTlsTransportAdapter } from './tls-transport-adapter.js';
 import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { createTransportEnvelope } from './transport-contract.js';
+import { createOutboundTaskApproval } from './opn-outbound-task-approval.js';
 
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1' as const;
 
@@ -214,10 +215,11 @@ export const opnTransportCliSpec: CliSpec = {
         const artifact = await recordLocalOpnArtifactTransfer({ network_id, stateStore, artifactStore: createOpnArtifactStore({ root: artifactRoot }), bytes, file_name: `${task.task_id}.json`, media_type: 'application/json', transfer_id: `task-artifact:${String(options.message_id ?? `agent-task-${Date.now()}`)}`, sender_node_id: localNodeId, target_node_id: String(options.target_node_id ?? '') });
         const now = new Date();
         const envelope = createTransportEnvelope({ message_id: String(options.message_id ?? `agent-task-${Date.now()}`), network_id, event_id: String(options.event_id ?? `agent-event-${Date.now()}`), plan_id: String(options.plan_id ?? 'opn-agent-task'), plan_revision: Number(options.plan_revision ?? 1), task_id: task.task_id, from_node_id: localNodeId, target_node_id: String(options.target_node_id ?? ''), notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }, ...task.input_artifact_refs.map((artifact_id) => ({ artifact_id, content_sha256: artifact_id, kind: 'artifact' as const }))], created_at: now.toISOString(), expires_at: new Date(now.getTime() + 50 * 60 * 1000).toISOString() });
-        const response = await artifactRequest({ endpoint, ca, cert, key, bearer_token: ownerToken, method: 'POST', pathname: '/v1/owner/messages', body: Buffer.from(JSON.stringify({ network_id, envelope })), headers: { 'content-type': 'application/json' } });
+        const approval = createOutboundTaskApproval({ network_id, envelope, task_artifact_id: artifact.metadata.artifact_id });
+        const response = await artifactRequest({ endpoint, ca, cert, key, bearer_token: ownerToken, method: 'POST', pathname: '/v1/owner/outbound-task-approvals', body: Buffer.from(JSON.stringify({ network_id, approval })), headers: { 'content-type': 'application/json' } });
         const result = parsedArtifactResponse(response);
-        if (response.statusCode !== 200 && response.statusCode !== 202) throw new Error(String(result.reason ?? 'opn-gateway-message-send-failed'));
-        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'sent', message_id: envelope.message_id, task_id: task.task_id, task_artifact_id: artifact.metadata.artifact_id, target_node_id: envelope.target_node_id, side_effects_executed: false }));
+        if (response.statusCode !== 200 && response.statusCode !== 201) throw new Error(String(result.reason ?? 'opn-gateway-task-approval-request-failed'));
+        io.stdout(JSON.stringify({ schema: 'zj-loop.opn_transport_cli.v1', status: result.status === 'duplicate' ? 'duplicate' : 'pending-approval', approval_id: approval.approval_id, message_id: envelope.message_id, task_id: task.task_id, task_artifact_id: artifact.metadata.artifact_id, target_node_id: envelope.target_node_id, side_effects_executed: false }));
         return;
       } finally { await stateStore.close(); }
     }

@@ -25,3 +25,4 @@ export declare function opnAgentTaskSend(input: {
     plan_id?: string;
     plan_revision?: number;
 }): Promise<GatewayResult>;
+export declare function opnTaskDraftList(): Promise<GatewayResult>;

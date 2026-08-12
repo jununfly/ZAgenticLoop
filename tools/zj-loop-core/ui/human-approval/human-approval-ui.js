@@ -40,7 +40,7 @@
   function openReview(request) { state.selected = request; $('dialog-title').textContent = request.identity?.display_name || request.node_id; $('dialog-summary').innerHTML = [['Request ID', request.request_id], ['Node fingerprint', request.node_id], ['Agent kind', request.identity?.agent_kind || 'unknown'], ['Endpoint', request.endpoint || 'unknown'], ['Capabilities', request.requested_capabilities.join(', ')], ['Request digest', request.request_digest], ['Expires', request.expires_at]].map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join(''); $('capability-list').innerHTML = request.requested_capabilities.map((capability) => `<label class="check"><input type="checkbox" value="${escapeHtml(capability)}" checked> ${escapeHtml(capability)}</label>`).join(''); message.textContent = ''; dialog.showModal(); }
   async function refresh() {
     error.hidden = true;
-    const [sessionResult, requestsResult, actionsResult, dogfoodsResult] = await Promise.allSettled([api('/ui/session'), api('/ui/pairing-requests'), api('/ui/human-actions'), api('/ui/dogfood-approvals')]);
+    const [sessionResult, requestsResult, actionsResult, dogfoodsResult, outboundTasksResult] = await Promise.allSettled([api('/ui/session'), api('/ui/pairing-requests'), api('/ui/human-actions'), api('/ui/dogfood-approvals'), api('/ui/outbound-task-approvals')]);
     if (sessionResult.status === 'rejected') {
       setStatus('Blocked', 'error');
       $('human-card').textContent = 'Local Gateway session unavailable. Refresh to reconnect.';
@@ -52,11 +52,13 @@
     state.requests = requestsResult.status === 'fulfilled' ? requestsResult.value.requests : [];
     state.actions = actionsResult.status === 'fulfilled' ? actionsResult.value.requests : [];
     state.dogfoods = dogfoodsResult.status === 'fulfilled' ? dogfoodsResult.value.requests : [];
+    state.outboundTasks = outboundTasksResult.status === 'fulfilled' ? outboundTasksResult.value.requests : [];
     render();
     const failures = [
       ['Pairing requests', requestsResult],
       ['Human actions', actionsResult],
       ['Graph dogfood', dogfoodsResult],
+      ['Outbound Agent tasks', outboundTasksResult],
     ].filter(([, result]) => result.status === 'rejected');
     if (failures.length > 0) {
       setStatus('Partially connected', 'pending');
@@ -66,10 +68,25 @@
       setStatus('Ready', 'ok');
     }
   }
+  state.outboundTasks = [];
+  const renderOutboundTasks = () => {
+    const pending = state.outboundTasks.filter((item) => item.status === 'pending');
+    $('outbound-task-status').textContent = `${pending.length} pending`;
+    $('outbound-task-empty').hidden = pending.length !== 0;
+    $('outbound-task-error').hidden = true;
+    $('outbound-task-list').innerHTML = pending.map((item) => {
+      const task = item.envelope || {};
+      const refs = (task.artifact_refs || []).map((ref) => ref.artifact_id).join(', ');
+      return `<article class="request-card action-card"><h3>${escapeHtml(task.task_id || item.approval_id)}</h3><p>${escapeHtml(task.notification_kind || 'agent.task')} · target <code>${escapeHtml(task.target_node_id)}</code></p><dl class="action-context"><div><dt>Message</dt><dd>${escapeHtml(task.message_id)}</dd></div><div><dt>Artifact</dt><dd><code>${escapeHtml(refs || 'none')}</code></dd></div><div><dt>Expires</dt><dd>${escapeHtml(item.expires_at)}</dd></div><div><dt>Digest</dt><dd><code>${escapeHtml(item.envelope_digest)}</code></dd></div></dl><textarea class="outbound-note" data-approval-id="${escapeHtml(item.approval_id)}" rows="2" placeholder="Human review note (required)"></textarea><div class="dialog-actions"><button class="button button-danger outbound-reject" data-approval-id="${escapeHtml(item.approval_id)}">Reject</button><button class="button button-primary outbound-approve" data-approval-id="${escapeHtml(item.approval_id)}">Approve and publish</button></div></article>`;
+    }).join('');
+  };
+  const originalRender = render;
+  render = () => { originalRender(); renderOutboundTasks(); };
   $('refresh').addEventListener('click', refresh);
   $('approve').addEventListener('click', async () => { if (!state.selected) return; const approved = [...document.querySelectorAll('#capability-list input:checked')].map((input) => input.value); try { await api(`/ui/pairing-requests/${encodeURIComponent(state.selected.request_id)}/approve`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: state.selected.request_digest, approved_capabilities: approved }) }); dialog.close(); await refresh(); } catch (reason) { message.textContent = reason.message; } });
   $('reject').addEventListener('click', async () => { if (!state.selected) return; const reason = window.prompt('Choose rejection reason: identity-untrusted, capability-too-broad, endpoint-unexpected, request-not-needed, duplicate-node, duplicate-request, human-review-deferred, other'); if (!reason) return; try { await api(`/ui/pairing-requests/${encodeURIComponent(state.selected.request_id)}/reject`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: state.selected.request_digest, reason }) }); dialog.close(); await refresh(); } catch (failure) { message.textContent = failure.message; } });
   $('action-list').addEventListener('click', async (event) => { const button = event.target.closest('button[data-request-id]'); if (!button) return; const action = state.actions.find((item) => item.request_id === button.dataset.requestId); if (!action) return; const decision = button.classList.contains('action-approve') ? 'approved' : 'rejected'; const reason = decision === 'approved' ? 'Reviewed the request and evidence.' : window.prompt('Reason for rejection'); if (!reason) return; button.disabled = true; try { await api(`/ui/human-actions/${encodeURIComponent(action.request_id)}/decision`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: action.request_digest, decision, reason }) }); await refresh(); } catch (failure) { $('action-error').hidden = false; $('action-error').textContent = failure.message; button.disabled = false; } });
   $('dogfood-list').addEventListener('click', async (event) => { const button = event.target.closest('.dogfood-approve'); if (!button) return; const request = state.dogfoods.find((item) => item.dogfood_id === button.dataset.dogfoodId); if (!request) return; button.disabled = true; $('dogfood-error').hidden = true; $('dogfood-success').hidden = true; try { await api(`/ui/dogfood-approvals/${encodeURIComponent(request.dogfood_id)}/approve`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: request.summary_digest }) }); await refresh(); $('dogfood-success').hidden = false; $('dogfood-success').textContent = `Approval recorded for ${request.dogfood_id}.`; } catch (failure) { $('dogfood-error').hidden = false; $('dogfood-error').textContent = failure.message; button.disabled = false; } });
+  $('outbound-task-list').addEventListener('click', async (event) => { const button = event.target.closest('button[data-approval-id]'); if (!button) return; const approval = state.outboundTasks.find((item) => item.approval_id === button.dataset.approvalId); const note = document.querySelector(`textarea[data-approval-id="${CSS.escape(button.dataset.approvalId)}"]`)?.value.trim(); if (!approval || !note) { $('outbound-task-error').hidden = false; $('outbound-task-error').textContent = 'Human review note is required.'; return; } button.disabled = true; try { await api(`/ui/outbound-task-approvals/${encodeURIComponent(approval.approval_id)}/decision`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ decision: button.classList.contains('outbound-approve') ? 'approved' : 'rejected', human_note: note }) }); await refresh(); } catch (failure) { $('outbound-task-error').hidden = false; $('outbound-task-error').textContent = failure.message; button.disabled = false; } });
   refresh();
 })();

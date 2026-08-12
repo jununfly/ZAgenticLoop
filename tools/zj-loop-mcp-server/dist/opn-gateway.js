@@ -1,7 +1,8 @@
 import { createHash, X509Certificate } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { request as httpsRequest } from 'node:https';
 import path from 'node:path';
-import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher, createTlsTransportAdapter, createTransportEnvelope, validateBoundedLoopTask, } from '@jununfly/zj-loop-core';
+import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher, createTlsTransportAdapter, createTransportEnvelope, validateBoundedLoopTask, createOutboundTaskApproval, } from '@jununfly/zj-loop-core';
 const OPN_ARTIFACT_SCHEMA = 'zj-loop.opn_artifact.v1';
 const OPN_ARTIFACT_MAX_BYTES = 8 * 1024 * 1024;
 async function fileValue(name, filePath) {
@@ -21,14 +22,39 @@ async function config() {
     const certPath = pathValue('OPN_CERT_FILE', 'agent.cert.pem');
     const keyPath = pathValue('OPN_KEY_FILE', 'agent.key.pem');
     const credentialTokenPath = pathValue('OPN_CREDENTIAL_TOKEN_FILE', 'join-session.json.credential-token');
+    const ownerTokenPath = pathValue('OPN_OWNER_TOKEN_FILE', 'owner-token');
     if (!network_id || !endpoint || !artifact_store || !caPath || !certPath || !keyPath || !credentialTokenPath)
         throw new Error('opn-gateway-not-configured');
     const cert = await fileValue('OPN_CERT_FILE', certPath);
     const node_id = process.env.OPN_NODE_ID?.trim() || createHash('sha256').update(new X509Certificate(cert).raw).digest('hex');
-    return { network_id, node_id, endpoint, artifact_store, ca: await fileValue('OPN_CA_FILE', caPath), cert, key: await fileValue('OPN_KEY_FILE', keyPath), credential_token: await fileValue('OPN_CREDENTIAL_TOKEN_FILE', credentialTokenPath) };
+    const owner_token = process.env.OPN_OWNER_TOKEN?.trim() || (ownerTokenPath ? await fileValue('OPN_OWNER_TOKEN_FILE', ownerTokenPath).catch(() => undefined) : undefined);
+    return { network_id, node_id, endpoint, artifact_store, ca: await fileValue('OPN_CA_FILE', caPath), cert, key: await fileValue('OPN_KEY_FILE', keyPath), credential_token: await fileValue('OPN_CREDENTIAL_TOKEN_FILE', credentialTokenPath), ...(owner_token ? { owner_token } : {}) };
 }
 function blocked(error) {
     return { status: 'blocked', reason: error instanceof Error ? error.message : 'opn-gateway-failed' };
+}
+async function ownerRequest(input) {
+    if (!input.value.owner_token)
+        throw new Error('opn-owner-token-required');
+    const endpoint = new URL(input.value.endpoint);
+    const payload = input.body === undefined ? undefined : Buffer.from(JSON.stringify(input.body));
+    const options = { protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, path: input.pathname, method: input.method, ca: input.value.ca, cert: input.value.cert, key: input.value.key, rejectUnauthorized: true, headers: { authorization: `Bearer ${input.value.owner_token}`, ...(payload ? { 'content-type': 'application/json', 'content-length': payload.byteLength } : {}) } };
+    return await new Promise((resolve, reject) => {
+        const req = httpsRequest(options, (response) => { const chunks = []; response.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))); response.on('end', () => { let body; try {
+            body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        }
+        catch {
+            reject(new Error(`opn-owner-http-${response.statusCode}`));
+            return;
+        } if ((response.statusCode ?? 500) >= 400) {
+            reject(new Error(String(body.reason ?? `opn-owner-http-${response.statusCode}`)));
+            return;
+        } resolve(body); }); });
+        req.on('error', reject);
+        if (payload)
+            req.write(payload);
+        req.end();
+    });
 }
 async function putLocalArtifact(input) {
     if (input.bytes.byteLength > OPN_ARTIFACT_MAX_BYTES)
@@ -161,20 +187,22 @@ export async function opnAgentTaskSend(input) {
         const value = await config();
         const bytes = Buffer.from(input.task_json);
         const artifact = await putLocalArtifact({ root: value.artifact_store, bytes, file_name: `${task.task_id}.json`, media_type: 'application/json' });
-        const publisher = createTlsOpnArtifactPublisher({ endpoint: value.endpoint, ca: value.ca, cert: value.cert, key: value.key, bearer_token: value.credential_token });
         const messageId = input.message_id ?? `agent-task-${Date.now()}`;
-        await publisher.publish({ bytes, metadata: artifact.metadata, transfer_id: `task-artifact:${messageId}`, target_node_id: input.target_node_id });
-        const transport = createTlsTransportAdapter({ endpoint: value.endpoint, ca: value.ca, cert: value.cert, key: value.key, bearer_token: value.credential_token });
-        const session = await transport.openSession({ network_id: value.network_id, node_id: value.node_id });
-        try {
-            const now = new Date();
-            const envelope = createTransportEnvelope({ message_id: messageId, network_id: value.network_id, event_id: input.event_id ?? `agent-event-${Date.now()}`, plan_id: input.plan_id ?? 'opn-agent-task', plan_revision: input.plan_revision ?? 1, task_id: String(task.task_id), from_node_id: value.node_id, target_node_id: input.target_node_id, notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }, ...(Array.isArray(task.input_artifact_refs) ? task.input_artifact_refs.map((artifact_id) => ({ artifact_id: String(artifact_id), content_sha256: String(artifact_id), kind: 'artifact' })) : [])], created_at: now.toISOString(), expires_at: new Date(now.getTime() + 50 * 60 * 1000).toISOString() });
-            const result = await transport.send({ session_id: session.session_id, envelope });
-            return { status: 'ok', value: { schema: 'zj-loop.opn_mcp_agent_task_send.v1', status: result.status, message_id: envelope.message_id, task_id: envelope.task_id, task_artifact_id: artifact.metadata.artifact_id, envelope_digest: envelope.envelope_digest, side_effects_executed: false } };
-        }
-        finally {
-            await transport.closeSession({ session_id: session.session_id });
-        }
+        const now = new Date();
+        const envelope = createTransportEnvelope({ message_id: messageId, network_id: value.network_id, event_id: input.event_id ?? `agent-event-${Date.now()}`, plan_id: input.plan_id ?? 'opn-agent-task', plan_revision: input.plan_revision ?? 1, task_id: String(task.task_id), from_node_id: value.node_id, target_node_id: input.target_node_id, notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }, ...(Array.isArray(task.input_artifact_refs) ? task.input_artifact_refs.map((artifact_id) => ({ artifact_id: String(artifact_id), content_sha256: String(artifact_id), kind: 'artifact' })) : [])], created_at: now.toISOString(), expires_at: new Date(now.getTime() + 50 * 60 * 1000).toISOString() });
+        const approval = createOutboundTaskApproval({ network_id: value.network_id, envelope, task_artifact_id: artifact.metadata.artifact_id });
+        const result = await ownerRequest({ value, method: 'POST', pathname: '/v1/owner/outbound-task-approvals', body: { network_id: value.network_id, approval } });
+        return { status: 'ok', value: { schema: 'zj-loop.opn_mcp_agent_task_draft.v1', status: result.status === 'duplicate' ? 'duplicate' : 'pending-approval', approval_id: approval.approval_id, message_id: envelope.message_id, task_id: envelope.task_id, task_artifact_id: artifact.metadata.artifact_id, envelope_digest: envelope.envelope_digest, side_effects_executed: false } };
+    }
+    catch (error) {
+        return blocked(error);
+    }
+}
+export async function opnTaskDraftList() {
+    try {
+        const value = await config();
+        const result = await ownerRequest({ value, method: 'GET', pathname: `/v1/owner/outbound-task-approvals?network_id=${encodeURIComponent(value.network_id)}` });
+        return { status: 'ok', value: { schema: 'zj-loop.opn_mcp_task_draft_list.v1', status: 'ok', network_id: value.network_id, requests: result.requests ?? [], side_effects_executed: false } };
     }
     catch (error) {
         return blocked(error);

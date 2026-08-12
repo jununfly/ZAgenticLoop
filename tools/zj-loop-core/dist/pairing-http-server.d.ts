@@ -7,6 +7,7 @@ import type { OpnArtifactTransferHttpService } from './opn-artifact-transfer-htt
 import type { HumanActionReadModel } from './human-action-opn-projection.js';
 import type { HumanActionDecision, HumanActionRequest } from './human-action.js';
 import { type TransportEnvelope } from './transport-contract.js';
+import type { OutboundTaskApproval } from './opn-outbound-task-approval.js';
 export declare const PAIRING_HTTP_SCHEMA: "zj-loop.pairing_http.v1";
 export type PairingOwnerAuthenticator = {
     authenticate(input: {
@@ -90,6 +91,24 @@ export type OwnerMessageCancelCommandService = {
         reason: string;
     }): Promise<Record<string, unknown>>;
 };
+export type OwnerOutboundTaskApprovalService = {
+    list(input: {
+        network_id: string;
+    }): Promise<{
+        requests: OutboundTaskApproval[];
+    }>;
+    request(input: {
+        network_id: string;
+        approval: OutboundTaskApproval;
+    }): Promise<Record<string, unknown>>;
+    decide(input: {
+        network_id: string;
+        approval: OutboundTaskApproval;
+        decision: 'approved' | 'rejected';
+        human_id: string;
+        human_note: string;
+    }): Promise<Record<string, unknown>>;
+};
 export declare function createPairingHttpServer(input: {
     tls: ServerOptions;
     recordStore: PairingRecordStore;
@@ -114,6 +133,7 @@ export declare function createPairingHttpServer(input: {
     humanActionCommand?: HumanActionCommandService | null;
     ownerMessageCommand?: OwnerMessageCommandService | null;
     ownerMessageCancelCommand?: OwnerMessageCancelCommandService | null;
+    ownerOutboundTaskApproval?: OwnerOutboundTaskApprovalService | null;
     transport?: OpnTransportHttpService | null;
     artifactTransfer?: OpnArtifactTransferHttpService | null;
 }): Server;

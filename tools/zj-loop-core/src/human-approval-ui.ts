@@ -29,6 +29,8 @@ export type HumanApprovalUiUpstream = {
   evidence?(input: { network_id: string; evidence_id: string }): Promise<Record<string, unknown>>;
   humanActions?(): Promise<{ requests: Array<HumanActionRequest & { status?: string; decision?: Record<string, unknown> }> }>;
   decideHumanAction?(input: { network_id: string; request: HumanActionRequest; decision: Awaited<ReturnType<typeof createHumanActionDecision>> }): Promise<Record<string, unknown>>;
+  outboundTasks?(): Promise<{ requests: import('./opn-outbound-task-approval.js').OutboundTaskApproval[] }>;
+  decideOutboundTask?(input: { network_id: string; approval: import('./opn-outbound-task-approval.js').OutboundTaskApproval; decision: 'approved' | 'rejected'; human_id: string; human_note: string }): Promise<Record<string, unknown>>;
 };
 
 export type HumanApprovalUiGraphUpstream = {
@@ -346,6 +348,33 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.dogfoodApprovals.list()), side_effects_executed: false }); } catch { blocked(response, 503, 'dogfood-approval-read-model-unavailable'); }
       return;
     }
+    if (request.method === 'GET' && url.pathname === '/ui/outbound-task-approvals') {
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (!input.upstream.outboundTasks) { blocked(response, 503, 'outbound-task-approval-read-model-unavailable'); return; }
+      try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.outboundTasks()), side_effects_executed: false }); } catch { blocked(response, 503, 'outbound-task-approval-read-model-unavailable'); }
+      return;
+    }
+    const outboundTaskDecisionMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/outbound-task-approvals\/([^/]+)\/decision$/) : null;
+    if (outboundTaskDecisionMatch) {
+      if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
+      if (request.headers.origin !== `http://${request.headers.host}`) { blocked(response, 403, 'ui-origin-invalid'); return; }
+      if (!input.upstream.outboundTasks || !input.upstream.decideOutboundTask) { blocked(response, 503, 'outbound-task-approval-unavailable'); return; }
+      let body: Record<string, unknown>;
+      try { body = await readBody(request); } catch (error) { blocked(response, 400, error instanceof Error ? error.message : 'ui-json-invalid'); return; }
+      const approvalId = decodeURIComponent(outboundTaskDecisionMatch[1]);
+      const decision = body.decision === 'approved' || body.decision === 'rejected' ? body.decision : null;
+      const humanNote = typeof body.human_note === 'string' ? body.human_note.trim() : '';
+      if (!decision || !humanNote) { blocked(response, 400, 'outbound-task-decision-input-invalid'); return; }
+      let current;
+      try { current = (await input.upstream.outboundTasks()).requests.find((item) => item.approval_id === approvalId); } catch { blocked(response, 503, 'outbound-task-approval-read-model-unavailable'); return; }
+      if (!current || current.status !== 'pending') { blocked(response, 409, 'outbound-task-approval-state-conflict'); return; }
+      const identity = await Promise.resolve(input.signer.getPublicIdentity());
+      try {
+        const result = await input.upstream.decideOutboundTask({ network_id: input.network_id, approval: current, decision, human_id: identity.human_id, human_note: humanNote });
+        json(response, 201, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: decision, approval_id: approvalId, result, side_effects_executed: decision === 'approved' });
+      } catch (error) { blocked(response, 503, error instanceof Error ? error.message : 'outbound-task-decision-failed'); }
+      return;
+    }
     const dogfoodApprovalMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/dogfood-approvals\/([^/]+)\/approve$/) : null;
     if (dogfoodApprovalMatch) {
       if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
@@ -598,6 +627,13 @@ export function createPairingHttpUpstream(input: PairingHttpUpstreamInput): Huma
     },
     async reject(value) {
       return requestPairingApi(input, pathFor(`/v1/owner/pairing-requests/${encodeURIComponent(value.request_id)}/reject`), 'POST', { network_id: value.network_id, request_digest: value.request_digest, reason: value.reason, context: value.context });
+    },
+    async outboundTasks() {
+      const result = await requestPairingApi(input, `${pathFor('/v1/owner/outbound-task-approvals')}?network_id=${encodeURIComponent(input.network_id ?? '')}`, 'GET');
+      return { requests: (result.requests ?? []) as import('./opn-outbound-task-approval.js').OutboundTaskApproval[] };
+    },
+    async decideOutboundTask(value) {
+      return requestPairingApi(input, pathFor(`/v1/owner/outbound-task-approvals/${encodeURIComponent(value.approval.approval_id)}/decision`), 'POST', { network_id: value.network_id, approval: value.approval, decision: value.decision, human_id: value.human_id, human_note: value.human_note });
     },
   };
 }

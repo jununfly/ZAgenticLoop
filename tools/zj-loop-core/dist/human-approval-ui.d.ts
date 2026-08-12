@@ -59,6 +59,16 @@ export type HumanApprovalUiUpstream = {
         request: HumanActionRequest;
         decision: Awaited<ReturnType<typeof createHumanActionDecision>>;
     }): Promise<Record<string, unknown>>;
+    outboundTasks?(): Promise<{
+        requests: import('./opn-outbound-task-approval.js').OutboundTaskApproval[];
+    }>;
+    decideOutboundTask?(input: {
+        network_id: string;
+        approval: import('./opn-outbound-task-approval.js').OutboundTaskApproval;
+        decision: 'approved' | 'rejected';
+        human_id: string;
+        human_note: string;
+    }): Promise<Record<string, unknown>>;
 };
 export type HumanApprovalUiGraphUpstream = {
     list(): Promise<{

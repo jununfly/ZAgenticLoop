@@ -10,6 +10,8 @@ import { createOpnArtifactTransferHttpService } from './opn-artifact-transfer-ht
 import { projectOpnHumanActions } from './human-action-opn-projection.js';
 import { createTransportEnvelope } from './transport-contract.js';
 import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
+import { recordLocalOpnArtifactTransfer } from './opn-artifact-transfer-http-server.js';
+import { appendOutboundTaskApprovalDecision, appendOutboundTaskPublished, listOutboundTaskApprovals, recordOutboundTaskApproval } from './opn-outbound-task-approval.js';
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1';
 export function validateApprovedTransportTarget(input) {
     if (input.target_node_id === input.local_node_id)
@@ -109,6 +111,37 @@ export async function createOpnEndpointServer(input) {
                 const session = await localTransport.openSession({ network_id, node_id: localNodeId });
                 try {
                     return await localTransport.cancel({ session_id: session.session_id, message_id, envelope_digest, reason });
+                }
+                finally {
+                    await localTransport.closeSession({ session_id: session.session_id });
+                }
+            },
+        },
+        ownerOutboundTaskApproval: {
+            async list({ network_id }) {
+                return { requests: await listOutboundTaskApprovals({ stateStore: input.stateStore, network_id }) };
+            },
+            async request({ network_id, approval }) {
+                const result = await recordOutboundTaskApproval({ stateStore: input.stateStore, approval });
+                return { status: result.status, approval: result.approval };
+            },
+            async decide({ network_id, approval, decision, human_id, human_note }) {
+                const result = await appendOutboundTaskApprovalDecision({ stateStore: input.stateStore, approval, decision, human_id, human_note });
+                if (decision === 'rejected' || result.status === 'duplicate')
+                    return { status: result.status, approval: result.approval };
+                if (result.approval.status !== 'approved')
+                    return { status: result.status, approval: result.approval };
+                if (result.approval.task_artifact_id) {
+                    const taskArtifact = await input.artifact_store?.read(result.approval.task_artifact_id);
+                    if (!taskArtifact)
+                        throw new Error('outbound-task-artifact-store-unavailable');
+                    await recordLocalOpnArtifactTransfer({ network_id, stateStore: input.stateStore, artifactStore: input.artifact_store, bytes: taskArtifact.bytes, file_name: taskArtifact.metadata.file_name, media_type: taskArtifact.metadata.media_type, transfer_id: `task-artifact:${result.approval.envelope.message_id}`, sender_node_id: localNodeId, target_node_id: result.approval.envelope.target_node_id });
+                }
+                const session = await localTransport.openSession({ network_id, node_id: localNodeId });
+                try {
+                    const sent = await localTransport.send({ session_id: session.session_id, envelope: result.approval.envelope });
+                    const published = await appendOutboundTaskPublished({ stateStore: input.stateStore, approval: result.approval, message_id: result.approval.envelope.message_id });
+                    return { status: published.status, approval: published.approval, transport: sent };
                 }
                 finally {
                     await localTransport.closeSession({ session_id: session.session_id });

@@ -31,6 +31,12 @@
       <div id="dogfood-success" class="success-state" hidden>Graph dogfood approval recorded.</div>
       <div id="dogfood-error" class="error-state" hidden></div>
     </section>
+    <section class="workspace action-workspace" aria-label="Outbound Agent task approvals">
+      <div class="section-heading"><div><p class="eyebrow">OUTBOUND AGENT TASKS</p><h2>Review before publishing</h2></div><span id="outbound-task-status">Loading</span></div>
+      <div id="outbound-task-list" class="request-list" aria-live="polite"></div>
+      <div id="outbound-task-empty" class="empty-state" hidden>No pending outbound Agent tasks.</div>
+      <div id="outbound-task-error" class="error-state" hidden></div>
+    </section>
     <section class="workspace" aria-label="Pairing requests">
       <div class="section-heading"><div><p class="eyebrow">PENDING REQUESTS</p><h2>Needs your decision</h2></div><button id="refresh" class="button button-secondary" type="button">Refresh</button></div>
       <div id="request-list" class="request-list" aria-live="polite"></div>
