@@ -109,8 +109,8 @@ export const opnAgentRunnerCliSpec: CliSpec = {
           ...(sessionRefreshMarginValue ? { session_refresh_margin_ms: Number(sessionRefreshMarginValue) } : {}),
           ...(receiveWaitValue ? { receive_wait_ms: Number(receiveWaitValue) } : {}),
           on_error: (error) => io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', mode: 'worker', status: 'reconnecting', reason: error instanceof Error ? error.message : 'opn-agent-worker-transport-failed', side_effects_executed: false })),
-          processNext: async ({ session_id, receive_wait_ms }) => {
-            const result = await adapter.processNext({ session_id, receive_wait_ms, resolveTask });
+          processNext: async ({ session_id, receive_wait_ms, session_evidence }) => {
+            const result = await adapter.processNext({ session_id, receive_wait_ms, session_evidence, resolveTask });
             io.stdout(JSON.stringify({ schema: 'zj-loop.opn_agent_runner.v1', mode: 'worker', ...result }));
             return result;
           },
