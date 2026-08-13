@@ -119,6 +119,20 @@ test('Owner Inbox route returns the injected projection without transport side e
   await close(value);
 });
 
+test('Owner Agent task chain route is authenticated and returns the deterministic projection', { skip: !supportsP256Certificates }, async () => {
+  const model = { schema: 'zj-loop.opn_agent_task_chain_read_model.v1', network_id: 'network-1', tasks: [{ task_id: 'task-1', status: 'succeeded' }], side_effects_executed: false };
+  const value = await fixture({
+    ownerAuthenticator: { authenticate: ({ action, authorization }) => action === 'pairing.inbox' && authorization === 'Bearer owner-token' ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } },
+    agentTaskReadModel: { read: async ({ network_id }) => network_id === 'network-1' ? model : { ...model, tasks: [] } },
+  });
+  const response = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/agent-task-chains?network_id=network-1', headers: { authorization: 'Bearer owner-token' } });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.tasks[0].status, 'succeeded');
+  const blocked = await request({ address: value.address, server: value.serverMaterial, path: '/v1/owner/agent-task-chains?network_id=network-1', headers: { authorization: 'Bearer wrong' } });
+  assert.equal(blocked.statusCode, 403);
+  await close(value);
+});
+
 test('Owner message gateway validates and sends a structured envelope', { skip: !supportsP256Certificates }, async () => {
   const value = await fixture({
     ownerAuthenticator: { authenticate: ({ action, authorization }) => action === 'message.send' && authorization === 'Bearer owner-token' ? { status: 'allowed', human_id: 'human-1' } : { status: 'blocked', reason: 'owner-not-authorized' } },
