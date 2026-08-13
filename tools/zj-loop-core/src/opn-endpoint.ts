@@ -21,6 +21,7 @@ import { createTransportEnvelope } from './transport-contract.js';
 import { OPN_TLS_ECDH_CURVE } from './opn-tls-profile.js';
 import { recordLocalOpnArtifactTransfer } from './opn-artifact-transfer-http-server.js';
 import { appendOutboundTaskApprovalDecision, appendOutboundTaskPublished, createOutboundTaskApproval, listOutboundTaskApprovals, recordOutboundTaskApproval, type OutboundTaskApproval } from './opn-outbound-task-approval.js';
+import { projectOpnAgentTaskChains } from './opn-agent-task-read-model.js';
 
 export const OPN_ENDPOINT_SCHEMA = 'zj-loop.opn_endpoint.v1' as const;
 
@@ -98,6 +99,11 @@ export async function createOpnEndpointServer(input: {
         return projectOpnOutbox({ stateStore: input.stateStore, network_id, node_id: localNodeId });
       },
     },
+    agentTaskReadModel: input.artifact_store ? {
+      async read({ network_id }) {
+        return projectOpnAgentTaskChains({ stateStore: input.stateStore, artifactStore: input.artifact_store!, network_id, node_id: localNodeId });
+      },
+    } : null,
     humanActionReadModel: input.artifact_store ? {
       async read({ network_id, node_id }) {
         return projectOpnHumanActions({ stateStore: input.stateStore, artifactStore: input.artifact_store!, network_id, node_id });

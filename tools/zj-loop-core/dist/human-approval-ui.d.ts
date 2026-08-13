@@ -69,6 +69,7 @@ export type HumanApprovalUiUpstream = {
         human_id: string;
         human_note: string;
     }): Promise<Record<string, unknown>>;
+    agentTaskChains?(): Promise<Record<string, unknown>>;
 };
 export type HumanApprovalUiGraphUpstream = {
     list(): Promise<{

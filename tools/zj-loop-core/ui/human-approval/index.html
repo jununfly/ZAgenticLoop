@@ -37,6 +37,11 @@
       <div id="outbound-task-empty" class="empty-state" hidden>No pending outbound Agent tasks.</div>
       <div id="outbound-task-error" class="error-state" hidden></div>
     </section>
+    <section class="workspace action-workspace" aria-label="Agent task results">
+      <div class="section-heading"><div><p class="eyebrow">AGENT TASK RESULTS</p><h2>Execution audit trail</h2></div><span id="agent-task-status">Loading</span></div>
+      <div id="agent-task-list" class="request-list" aria-live="polite"></div>
+      <div id="agent-task-empty" class="empty-state" hidden>No Agent task results.</div>
+    </section>
     <section class="workspace" aria-label="Pairing requests">
       <div class="section-heading"><div><p class="eyebrow">PENDING REQUESTS</p><h2>Needs your decision</h2></div><button id="refresh" class="button button-secondary" type="button">Refresh</button></div>
       <div id="request-list" class="request-list" aria-live="polite"></div>

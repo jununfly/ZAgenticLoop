@@ -49,6 +49,9 @@ export type PairingConnectionReadModelService = {
 export type PairingInboxReadModelService = {
   read(input: { network_id: string }): Promise<OpnMessageReadModel[]>;
 };
+export type PairingAgentTaskReadModelService = {
+  read(input: { network_id: string }): Promise<Record<string, unknown>>;
+};
 
 export type HumanActionReadModelService = {
   read(input: { network_id: string; node_id: string }): Promise<HumanActionReadModel>;
@@ -162,6 +165,7 @@ export function createPairingHttpServer(input: {
   credentialIssue?: CredentialIssueService | null;
   connectionReadModel?: PairingConnectionReadModelService | null;
   inboxReadModel?: PairingInboxReadModelService | null;
+  agentTaskReadModel?: PairingAgentTaskReadModelService | null;
   outboxReadModel?: PairingInboxReadModelService | null;
   humanActionReadModel?: HumanActionReadModelService | null;
   humanActionCommand?: HumanActionCommandService | null;
@@ -189,6 +193,7 @@ export function createPairingHttpServer(input: {
     const ownerList = request.method === 'GET' && url.pathname === '/v1/owner/pairing-requests';
     const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
     const ownerOutbox = request.method === 'GET' && url.pathname === '/v1/owner/outbox';
+    const ownerAgentTasks = request.method === 'GET' && url.pathname === '/v1/owner/agent-task-chains';
     const ownerMessage = request.method === 'POST' && url.pathname === '/v1/owner/messages';
     const ownerMessageCancel = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/messages\/([^/]+)\/cancel$/);
     const ownerOutboundTaskList = request.method === 'GET' && url.pathname === '/v1/owner/outbound-task-approvals';
@@ -261,15 +266,18 @@ export function createPairingHttpServer(input: {
       } catch (error) { blocked(response, error instanceof Error ? error.message : 'owner-message-send-failed'); }
       return;
     }
-    if (ownerInbox || ownerOutbox) {
+    if (ownerInbox || ownerOutbox || ownerAgentTasks) {
       if (!input.ownerAuthenticator) { blocked(response, 'owner-authenticator-unavailable'); return; }
       const networkId = url.searchParams.get('network_id');
       if (!networkId?.trim()) { blocked(response, 'network-id-required'); return; }
       const auth = await Promise.resolve(input.ownerAuthenticator.authenticate({ action: 'pairing.inbox', authorization: typeof request.headers.authorization === 'string' ? request.headers.authorization : null }));
       if (auth.status !== 'allowed') { blocked(response, auth.reason ?? 'owner-not-authorized'); return; }
-      const model = ownerOutbox ? input.outboxReadModel : input.inboxReadModel;
-      if (!model) { blocked(response, ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable'); return; }
-      try { json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, messages: await model.read({ network_id: networkId }), side_effects_executed: false }); } catch { blocked(response, ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable'); }
+      const model = ownerAgentTasks ? input.agentTaskReadModel : ownerOutbox ? input.outboxReadModel : input.inboxReadModel;
+      if (!model) { blocked(response, ownerAgentTasks ? 'agent-task-read-model-unavailable' : ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable'); return; }
+      try {
+        const value = await model.read({ network_id: networkId });
+        json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, ...(ownerAgentTasks ? value : { messages: value }), side_effects_executed: false });
+      } catch { blocked(response, ownerAgentTasks ? 'agent-task-read-model-unavailable' : ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable'); }
       return;
     }
     if (ownerHumanActions || ownerHumanActionDecision) {

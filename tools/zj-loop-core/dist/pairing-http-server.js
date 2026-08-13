@@ -129,6 +129,7 @@ export function createPairingHttpServer(input) {
         const ownerList = request.method === 'GET' && url.pathname === '/v1/owner/pairing-requests';
         const ownerInbox = request.method === 'GET' && url.pathname === '/v1/owner/inbox';
         const ownerOutbox = request.method === 'GET' && url.pathname === '/v1/owner/outbox';
+        const ownerAgentTasks = request.method === 'GET' && url.pathname === '/v1/owner/agent-task-chains';
         const ownerMessage = request.method === 'POST' && url.pathname === '/v1/owner/messages';
         const ownerMessageCancel = request.method === 'POST' && url.pathname.match(/^\/v1\/owner\/messages\/([^/]+)\/cancel$/);
         const ownerOutboundTaskList = request.method === 'GET' && url.pathname === '/v1/owner/outbound-task-approvals';
@@ -276,7 +277,7 @@ export function createPairingHttpServer(input) {
             }
             return;
         }
-        if (ownerInbox || ownerOutbox) {
+        if (ownerInbox || ownerOutbox || ownerAgentTasks) {
             if (!input.ownerAuthenticator) {
                 blocked(response, 'owner-authenticator-unavailable');
                 return;
@@ -291,16 +292,17 @@ export function createPairingHttpServer(input) {
                 blocked(response, auth.reason ?? 'owner-not-authorized');
                 return;
             }
-            const model = ownerOutbox ? input.outboxReadModel : input.inboxReadModel;
+            const model = ownerAgentTasks ? input.agentTaskReadModel : ownerOutbox ? input.outboxReadModel : input.inboxReadModel;
             if (!model) {
-                blocked(response, ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable');
+                blocked(response, ownerAgentTasks ? 'agent-task-read-model-unavailable' : ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable');
                 return;
             }
             try {
-                json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, messages: await model.read({ network_id: networkId }), side_effects_executed: false });
+                const value = await model.read({ network_id: networkId });
+                json(response, 200, { schema: PAIRING_HTTP_SCHEMA, status: 'ok', network_id: networkId, ...(ownerAgentTasks ? value : { messages: value }), side_effects_executed: false });
             }
             catch {
-                blocked(response, ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable');
+                blocked(response, ownerAgentTasks ? 'agent-task-read-model-unavailable' : ownerOutbox ? 'outbox-read-model-unavailable' : 'inbox-read-model-unavailable');
             }
             return;
         }

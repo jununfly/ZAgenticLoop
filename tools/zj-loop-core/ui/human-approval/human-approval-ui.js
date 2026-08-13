@@ -1,5 +1,5 @@
 (() => {
-  const state = { requests: [], actions: [], dogfoods: [], selected: null };
+  const state = { requests: [], actions: [], dogfoods: [], outboundTasks: [], agentTasks: [], selected: null };
   const $ = (id) => document.getElementById(id);
   const status = $('connection-status');
   const list = $('request-list');
@@ -40,7 +40,7 @@
   function openReview(request) { state.selected = request; $('dialog-title').textContent = request.identity?.display_name || request.node_id; $('dialog-summary').innerHTML = [['Request ID', request.request_id], ['Node fingerprint', request.node_id], ['Agent kind', request.identity?.agent_kind || 'unknown'], ['Endpoint', request.endpoint || 'unknown'], ['Capabilities', request.requested_capabilities.join(', ')], ['Request digest', request.request_digest], ['Expires', request.expires_at]].map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join(''); $('capability-list').innerHTML = request.requested_capabilities.map((capability) => `<label class="check"><input type="checkbox" value="${escapeHtml(capability)}" checked> ${escapeHtml(capability)}</label>`).join(''); message.textContent = ''; dialog.showModal(); }
   async function refresh() {
     error.hidden = true;
-    const [sessionResult, requestsResult, actionsResult, dogfoodsResult, outboundTasksResult] = await Promise.allSettled([api('/ui/session'), api('/ui/pairing-requests'), api('/ui/human-actions'), api('/ui/dogfood-approvals'), api('/ui/outbound-task-approvals')]);
+    const [sessionResult, requestsResult, actionsResult, dogfoodsResult, outboundTasksResult, agentTasksResult] = await Promise.allSettled([api('/ui/session'), api('/ui/pairing-requests'), api('/ui/human-actions'), api('/ui/dogfood-approvals'), api('/ui/outbound-task-approvals'), api('/ui/agent-task-chains')]);
     if (sessionResult.status === 'rejected') {
       setStatus('Blocked', 'error');
       $('human-card').textContent = 'Local Gateway session unavailable. Refresh to reconnect.';
@@ -53,12 +53,14 @@
     state.actions = actionsResult.status === 'fulfilled' ? actionsResult.value.requests : [];
     state.dogfoods = dogfoodsResult.status === 'fulfilled' ? dogfoodsResult.value.requests : [];
     state.outboundTasks = outboundTasksResult.status === 'fulfilled' ? outboundTasksResult.value.requests : [];
+    state.agentTasks = agentTasksResult.status === 'fulfilled' ? agentTasksResult.value.tasks : [];
     render();
     const failures = [
       ['Pairing requests', requestsResult],
       ['Human actions', actionsResult],
       ['Graph dogfood', dogfoodsResult],
       ['Outbound Agent tasks', outboundTasksResult],
+      ['Agent task results', agentTasksResult],
     ].filter(([, result]) => result.status === 'rejected');
     if (failures.length > 0) {
       setStatus('Partially connected', 'pending');
@@ -80,8 +82,9 @@
       return `<article class="request-card action-card"><h3>${escapeHtml(task.task_id || item.approval_id)}</h3><p>${escapeHtml(task.notification_kind || 'agent.task')} · target <code>${escapeHtml(task.target_node_id)}</code></p><dl class="action-context"><div><dt>Message</dt><dd>${escapeHtml(task.message_id)}</dd></div><div><dt>Artifact</dt><dd><code>${escapeHtml(refs || 'none')}</code></dd></div><div><dt>Expires</dt><dd>${escapeHtml(item.expires_at)}</dd></div><div><dt>Digest</dt><dd><code>${escapeHtml(item.envelope_digest)}</code></dd></div></dl><textarea class="outbound-note" data-approval-id="${escapeHtml(item.approval_id)}" rows="2" placeholder="Human review note (required)"></textarea><div class="dialog-actions"><button class="button button-danger outbound-reject" data-approval-id="${escapeHtml(item.approval_id)}">Reject</button><button class="button button-primary outbound-approve" data-approval-id="${escapeHtml(item.approval_id)}">Approve and publish</button></div></article>`;
     }).join('');
   };
+  const renderAgentTasks = () => { const tasks = state.agentTasks || []; $('agent-task-status').textContent = `${tasks.length} task(s)`; $('agent-task-empty').hidden = tasks.length !== 0; $('agent-task-list').innerHTML = tasks.map((item) => `<article class="request-card action-card"><h3>${escapeHtml(item.task_id)}</h3><p>${escapeHtml(item.status)} · network ${escapeHtml(item.network_id)}</p><dl class="action-context"><div><dt>Target</dt><dd>${escapeHtml(item.task_message?.target_node_id || 'unknown')}</dd></div><div><dt>Result</dt><dd>${escapeHtml(item.result_message?.message_id || 'pending')}</dd></div><div><dt>Execution</dt><dd>${escapeHtml(item.execution?.status || 'not started')}</dd></div><div><dt>Evidence</dt><dd>${escapeHtml((item.evidence_refs || []).join(', ') || 'none')}</dd></div></dl></article>`).join(''); };
   const originalRender = render;
-  render = () => { originalRender(); renderOutboundTasks(); };
+  render = () => { originalRender(); renderOutboundTasks(); renderAgentTasks(); };
   $('refresh').addEventListener('click', refresh);
   $('approve').addEventListener('click', async () => { if (!state.selected) return; const approved = [...document.querySelectorAll('#capability-list input:checked')].map((input) => input.value); try { await api(`/ui/pairing-requests/${encodeURIComponent(state.selected.request_id)}/approve`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: state.selected.request_digest, approved_capabilities: approved }) }); dialog.close(); await refresh(); } catch (reason) { message.textContent = reason.message; } });
   $('reject').addEventListener('click', async () => { if (!state.selected) return; const reason = window.prompt('Choose rejection reason: identity-untrusted, capability-too-broad, endpoint-unexpected, request-not-needed, duplicate-node, duplicate-request, human-review-deferred, other'); if (!reason) return; try { await api(`/ui/pairing-requests/${encodeURIComponent(state.selected.request_id)}/reject`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ request_digest: state.selected.request_digest, reason }) }); dialog.close(); await refresh(); } catch (failure) { message.textContent = failure.message; } });

@@ -107,6 +107,7 @@ export * from './opn-transport-cli.js';
 export * from './opn-outbound-task-approval.js';
 export * from './opn-task-admission.js';
 export * from './opn-inbound-task.js';
+export * from './opn-agent-task-read-model.js';
 export * from './sqlite-credential-issuance.js';
 export * from './credential-issuance-events.js';
 export * from './protocol-registry.js';

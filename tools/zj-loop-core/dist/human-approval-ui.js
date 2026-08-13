@@ -442,6 +442,23 @@ export function createHumanApprovalUiServer(input) {
             }
             return;
         }
+        if (request.method === 'GET' && url.pathname === '/ui/agent-task-chains') {
+            if (!validSession(request, sessions, now, url)) {
+                blocked(response, 401, 'ui-session-required');
+                return;
+            }
+            if (!input.upstream.agentTaskChains) {
+                blocked(response, 503, 'agent-task-read-model-unavailable');
+                return;
+            }
+            try {
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.agentTaskChains()), side_effects_executed: false });
+            }
+            catch {
+                blocked(response, 503, 'agent-task-read-model-unavailable');
+            }
+            return;
+        }
         const outboundTaskDecisionMatch = request.method === 'POST' ? url.pathname.match(/^\/ui\/outbound-task-approvals\/([^/]+)\/decision$/) : null;
         if (outboundTaskDecisionMatch) {
             if (!validSession(request, sessions, now, url)) {
@@ -982,6 +999,10 @@ export function createPairingHttpUpstream(input) {
         },
         async decideOutboundTask(value) {
             return requestPairingApi(input, pathFor(`/v1/owner/outbound-task-approvals/${encodeURIComponent(value.approval.approval_id)}/decision`), 'POST', { network_id: value.network_id, approval: value.approval, decision: value.decision, human_id: value.human_id, human_note: value.human_note });
+        },
+        async agentTaskChains() {
+            const result = await requestPairingApi(input, `${pathFor('/v1/owner/agent-task-chains')}?network_id=${encodeURIComponent(input.network_id ?? '')}`, 'GET');
+            return result;
         },
     };
 }

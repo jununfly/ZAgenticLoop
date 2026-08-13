@@ -64,6 +64,11 @@ export type PairingInboxReadModelService = {
         network_id: string;
     }): Promise<OpnMessageReadModel[]>;
 };
+export type PairingAgentTaskReadModelService = {
+    read(input: {
+        network_id: string;
+    }): Promise<Record<string, unknown>>;
+};
 export type HumanActionReadModelService = {
     read(input: {
         network_id: string;
@@ -128,6 +133,7 @@ export declare function createPairingHttpServer(input: {
     credentialIssue?: CredentialIssueService | null;
     connectionReadModel?: PairingConnectionReadModelService | null;
     inboxReadModel?: PairingInboxReadModelService | null;
+    agentTaskReadModel?: PairingAgentTaskReadModelService | null;
     outboxReadModel?: PairingInboxReadModelService | null;
     humanActionReadModel?: HumanActionReadModelService | null;
     humanActionCommand?: HumanActionCommandService | null;
