@@ -40,6 +40,8 @@ test('Human approval UI loads independent sections when one read model is unavai
   assert.match(source, /Promise\.allSettled/);
   assert.match(source, /request-timeout/);
   assert.match(source, /Partially connected/);
+  assert.match(source, /agent-task-chains/);
+  assert.match(source, /Agent task results/);
 });
 
 test('Human approval UI exchanges a one-time bootstrap token for a session and lists the configured network', async () => {
