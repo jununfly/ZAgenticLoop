@@ -7,9 +7,14 @@ test('OPN node UI exposes the read-only inbound task projection', async () => {
   const page = await readFile(new URL('../ui/opn/index.html', import.meta.url), 'utf8');
   const script = await readFile(new URL('../ui/opn/opn-ui.js', import.meta.url), 'utf8');
   assert.match(source, /\/ui\/inbound-tasks/);
+  assert.match(source, /inboundDecision/);
+  assert.match(source, /inbound-tasks/);
+  assert.match(source, /appendInboundTaskDecision/);
   assert.match(source, /listInboundTasks/);
   assert.match(source, /--state-store|state_store/);
   assert.match(page, /待人工批准的入站任务/);
   assert.match(script, /api\('\/ui\/inbound-tasks'\)/);
   assert.match(script, /inbound\.tasks/);
+  assert.match(script, /data-inbound-decision/);
+  assert.match(script, /\/ui\/inbound-tasks\//);
 });

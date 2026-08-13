@@ -9,7 +9,7 @@ import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher } from '.
 import { createTlsTransportAdapter } from './tls-transport-adapter.js';
 import { createTransportEnvelope } from './transport-contract.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
-import { listInboundTasks } from './opn-inbound-task.js';
+import { appendInboundTaskDecision, listInboundTasks } from './opn-inbound-task.js';
 import { runCli } from './cli.js';
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/opn');
 function json(response, status, value) {
@@ -106,6 +106,26 @@ function createNodeUiServer(input) {
                     return json(response, 503, { schema: 'zj-loop.opn_node_ui.v1', status: 'blocked', reason: 'inbound-task-read-model-unavailable', side_effects_executed: false });
                 const tasks = await listInboundTasks({ stateStore: input.stateStore, network_id: input.config.network_id });
                 return json(response, 200, { schema: 'zj-loop.opn_node_ui_inbound_tasks.v1', network_id: input.config.network_id, tasks, side_effects_executed: false });
+            }
+            const inboundDecision = request.method === 'POST' ? url.pathname.match(/^\/ui\/inbound-tasks\/([^/]+)\/decision$/) : null;
+            if (inboundDecision) {
+                if (!input.stateStore)
+                    return json(response, 503, { schema: 'zj-loop.opn_node_ui.v1', status: 'blocked', reason: 'inbound-task-decision-unavailable', side_effects_executed: false });
+                const value = await body(request);
+                const inboundId = decodeURIComponent(inboundDecision[1]);
+                const tasks = await listInboundTasks({ stateStore: input.stateStore, network_id: input.config.network_id });
+                const inbound = tasks.find((task) => task.inbound_id === inboundId);
+                const requestDigest = String(value.envelope_digest ?? '').trim();
+                const decision = value.decision === 'approved' || value.decision === 'rejected' ? value.decision : '';
+                const humanId = String(value.human_id ?? '').trim();
+                const humanNote = String(value.human_note ?? '').trim();
+                const selectedAgentId = String(value.selected_agent_id ?? '').trim();
+                if (!inbound || inbound.envelope.envelope_digest !== requestDigest)
+                    return json(response, 409, { schema: 'zj-loop.opn_node_ui.v1', status: 'blocked', reason: 'inbound-task-state-conflict', side_effects_executed: false });
+                if (!decision || !humanId || !humanNote || (decision === 'approved' && !selectedAgentId))
+                    return json(response, 400, { schema: 'zj-loop.opn_node_ui.v1', status: 'blocked', reason: 'inbound-task-decision-input-invalid', side_effects_executed: false });
+                const result = await appendInboundTaskDecision({ stateStore: input.stateStore, inbound, decision, human_id: humanId, human_note: humanNote, ...(selectedAgentId ? { selected_agent_id: selectedAgentId } : {}) });
+                return json(response, 201, { schema: 'zj-loop.opn_node_ui_inbound_task_decision.v1', status: result.status, inbound: result.inbound, side_effects_executed: false });
             }
             if (request.method === 'GET' && url.pathname === '/ui/outbox')
                 return json(response, 200, { schema: 'zj-loop.opn_node_ui_outbox.v1', network_id: input.config.network_id, messages: await readOutbox(), side_effects_executed: false });
