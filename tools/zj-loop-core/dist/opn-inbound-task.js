@@ -23,7 +23,8 @@ export async function listInboundTasks(input) {
     const grouped = new Map();
     for (const event of events)
         grouped.set(event.aggregate_id, [...(grouped.get(event.aggregate_id) ?? []), event]);
-    return [...grouped.values()].map(latest).filter((item) => item !== null).map((item) => item.status === 'pending-human-approval' && Date.parse(item.envelope.expires_at) <= Date.now() ? { ...item, status: 'expired' } : item);
+    const now = Date.parse(input.now ?? new Date().toISOString());
+    return [...grouped.values()].map(latest).filter((item) => item !== null).map((item) => item.status === 'pending-human-approval' && Date.parse(item.envelope.expires_at) <= now ? { ...item, status: 'expired' } : item);
 }
 export async function persistInboundTask(input) {
     const existing = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.inbound.network_id })).find((item) => item.inbound_id === input.inbound.inbound_id);
@@ -36,4 +37,23 @@ export async function persistInboundTask(input) {
     const revision = await input.stateStore.getRevision(input.inbound.network_id);
     const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(input.inbound.inbound_id, 'pending-human-approval'), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: input.inbound.inbound_id, event_type: 'opn.inbound.task.pending-human-approval', occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound: input.inbound } } });
     return { status: result.status, inbound: input.inbound };
+}
+export async function appendInboundTaskDecision(input) {
+    if (!input.human_id.trim() || !input.human_note.trim())
+        throw new Error('inbound-task-human-decision-input-invalid');
+    if (input.decision === 'approved' && !input.selected_agent_id?.trim())
+        throw new Error('inbound-task-selected-agent-required');
+    const now = input.decided_at ?? new Date().toISOString();
+    const existing = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.inbound.network_id, now })).find((value) => value.inbound_id === input.inbound.inbound_id);
+    if (!existing || existing.envelope.envelope_digest !== input.inbound.envelope.envelope_digest)
+        throw new Error('inbound-task-not-found');
+    const nextStatus = input.decision === 'approved' ? 'admitted' : 'blocked';
+    if (existing.status === nextStatus)
+        return { status: 'duplicate', inbound: existing };
+    if (existing.status !== 'pending-human-approval')
+        throw new Error('inbound-task-state-conflict');
+    const inbound = { ...existing, status: nextStatus, human_id: input.human_id.trim(), human_note: input.human_note.trim(), decided_at: now, ...(input.selected_agent_id ? { selected_agent_id: input.selected_agent_id.trim() } : {}), ...(input.decision === 'rejected' ? { admission_reason: 'human-rejected' } : {}) };
+    const revision = await input.stateStore.getRevision(input.inbound.network_id);
+    const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(existing.inbound_id, input.decision), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: existing.inbound_id, event_type: `opn.inbound.task.${input.decision}`, occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound } } });
+    return { status: result.status, inbound };
 }

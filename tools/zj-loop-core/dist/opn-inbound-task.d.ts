@@ -11,6 +11,8 @@ export type InboundTask = {
     status: InboundTaskStatus;
     received_at: string;
     human_note?: string;
+    human_id?: string;
+    decided_at?: string;
     selected_agent_id?: string;
     admission_reason?: string;
 };
@@ -22,11 +24,24 @@ export declare function createInboundTask(input: {
 export declare function listInboundTasks(input: {
     stateStore: Pick<SqliteStateStore, 'readEvents'>;
     network_id: string;
+    now?: string;
 }): Promise<InboundTask[]>;
 export declare function persistInboundTask(input: {
     stateStore: SqliteStateStore;
     inbound: InboundTask;
     now?: string;
+}): Promise<{
+    status: 'recorded' | 'duplicate' | 'conflict';
+    inbound: InboundTask;
+}>;
+export declare function appendInboundTaskDecision(input: {
+    stateStore: SqliteStateStore;
+    inbound: InboundTask;
+    decision: 'approved' | 'rejected';
+    human_id: string;
+    human_note: string;
+    selected_agent_id?: string;
+    decided_at?: string;
 }): Promise<{
     status: 'recorded' | 'duplicate' | 'conflict';
     inbound: InboundTask;

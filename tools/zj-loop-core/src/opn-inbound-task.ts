@@ -5,7 +5,7 @@ import { validateTransportEnvelope } from './transport-contract.js';
 export const OPN_INBOUND_TASK_SCHEMA = 'zj-loop.opn_inbound_task.v1' as const;
 export const OPN_INBOUND_TASK_AGGREGATE = 'opn-inbound-task' as const;
 export type InboundTaskStatus = 'pending-human-approval' | 'admitted' | 'blocked' | 'expired' | 'cancelled';
-export type InboundTask = { schema: typeof OPN_INBOUND_TASK_SCHEMA; inbound_id: string; network_id: string; envelope: TransportEnvelope; status: InboundTaskStatus; received_at: string; human_note?: string; selected_agent_id?: string; admission_reason?: string };
+export type InboundTask = { schema: typeof OPN_INBOUND_TASK_SCHEMA; inbound_id: string; network_id: string; envelope: TransportEnvelope; status: InboundTaskStatus; received_at: string; human_note?: string; human_id?: string; decided_at?: string; selected_agent_id?: string; admission_reason?: string };
 type Payload = { schema: typeof OPN_INBOUND_TASK_SCHEMA; inbound: InboundTask };
 
 function payloadOf(event: StateEvent): Payload | null {
@@ -21,11 +21,12 @@ export function createInboundTask(input: { network_id: string; envelope: Transpo
   return { schema: OPN_INBOUND_TASK_SCHEMA, inbound_id: `inbound-task:${input.envelope.message_id}`, network_id: input.network_id, envelope: input.envelope, status: 'pending-human-approval', received_at: input.received_at ?? new Date().toISOString() };
 }
 
-export async function listInboundTasks(input: { stateStore: Pick<SqliteStateStore, 'readEvents'>; network_id: string }): Promise<InboundTask[]> {
+export async function listInboundTasks(input: { stateStore: Pick<SqliteStateStore, 'readEvents'>; network_id: string; now?: string }): Promise<InboundTask[]> {
   const events = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: OPN_INBOUND_TASK_AGGREGATE })).events;
   const grouped = new Map<string, StateEvent[]>();
   for (const event of events) grouped.set(event.aggregate_id, [...(grouped.get(event.aggregate_id) ?? []), event]);
-  return [...grouped.values()].map(latest).filter((item): item is InboundTask => item !== null).map((item) => item.status === 'pending-human-approval' && Date.parse(item.envelope.expires_at) <= Date.now() ? { ...item, status: 'expired' } : item);
+  const now = Date.parse(input.now ?? new Date().toISOString());
+  return [...grouped.values()].map(latest).filter((item): item is InboundTask => item !== null).map((item) => item.status === 'pending-human-approval' && Date.parse(item.envelope.expires_at) <= now ? { ...item, status: 'expired' } : item);
 }
 
 export async function persistInboundTask(input: { stateStore: SqliteStateStore; inbound: InboundTask; now?: string }): Promise<{ status: 'recorded' | 'duplicate' | 'conflict'; inbound: InboundTask }> {
@@ -38,4 +39,19 @@ export async function persistInboundTask(input: { stateStore: SqliteStateStore; 
   const revision = await input.stateStore.getRevision(input.inbound.network_id);
   const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(input.inbound.inbound_id, 'pending-human-approval'), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: input.inbound.inbound_id, event_type: 'opn.inbound.task.pending-human-approval', occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound: input.inbound } satisfies Payload } });
   return { status: result.status, inbound: input.inbound };
+}
+
+export async function appendInboundTaskDecision(input: { stateStore: SqliteStateStore; inbound: InboundTask; decision: 'approved' | 'rejected'; human_id: string; human_note: string; selected_agent_id?: string; decided_at?: string }): Promise<{ status: 'recorded' | 'duplicate' | 'conflict'; inbound: InboundTask }> {
+  if (!input.human_id.trim() || !input.human_note.trim()) throw new Error('inbound-task-human-decision-input-invalid');
+  if (input.decision === 'approved' && !input.selected_agent_id?.trim()) throw new Error('inbound-task-selected-agent-required');
+  const now = input.decided_at ?? new Date().toISOString();
+  const existing = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.inbound.network_id, now })).find((value) => value.inbound_id === input.inbound.inbound_id);
+  if (!existing || existing.envelope.envelope_digest !== input.inbound.envelope.envelope_digest) throw new Error('inbound-task-not-found');
+  const nextStatus: InboundTaskStatus = input.decision === 'approved' ? 'admitted' : 'blocked';
+  if (existing.status === nextStatus) return { status: 'duplicate', inbound: existing };
+  if (existing.status !== 'pending-human-approval') throw new Error('inbound-task-state-conflict');
+  const inbound: InboundTask = { ...existing, status: nextStatus, human_id: input.human_id.trim(), human_note: input.human_note.trim(), decided_at: now, ...(input.selected_agent_id ? { selected_agent_id: input.selected_agent_id.trim() } : {}), ...(input.decision === 'rejected' ? { admission_reason: 'human-rejected' } : {}) };
+  const revision = await input.stateStore.getRevision(input.inbound.network_id);
+  const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(existing.inbound_id, input.decision), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: existing.inbound_id, event_type: `opn.inbound.task.${input.decision}`, occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound } satisfies Payload } });
+  return { status: result.status, inbound };
 }
