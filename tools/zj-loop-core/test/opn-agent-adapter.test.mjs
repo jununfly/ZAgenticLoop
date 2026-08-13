@@ -156,3 +156,23 @@ test('OPN Agent adapter records provider failure and does not leave admitted wor
     assert.equal((await inboundModule.listInboundTasks({ stateStore, network_id: 'network-failed', now: '2099-08-13T00:00:04.000Z' }))[0].status, 'failed');
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('OPN Agent adapter claims admitted work with CAS so concurrent workers execute once', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opn-admitted-concurrent-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  const task = createBoundedLoopTask({ task_id: 'task-concurrent', execution_id: 'execution-concurrent', attempt: 1, task_kind: 'loop.task', objective: 'execute once', success_criteria: ['result exists'], input_artifact_refs: [digest('a')], dependency_refs: [], resource_isolation: { status: 'not-applicable', bindings: [] }, budget: { timeout_ms: 30000, max_iterations: 1 }, expected_evidence_kinds: ['result'], idempotency_key: 'task-concurrent:1', cancellation: { mode: 'cooperative', token: 'cancel:concurrent' } });
+  const envelope = createTransportEnvelope({ message_id: 'task-concurrent-message', network_id: 'network-concurrent', event_id: 'event-concurrent', plan_id: 'plan-1', plan_revision: 1, task_id: task.task_id, from_node_id: 'center', target_node_id: 'agent-concurrent', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2099-08-13T00:00:00.000Z', expires_at: '2099-08-13T01:00:00.000Z' });
+  const inboundModule = await import('../dist/opn-inbound-task.js');
+  const inbound = inboundModule.createInboundTask({ network_id: 'network-concurrent', envelope, received_at: '2099-08-13T00:00:01.000Z' });
+  try {
+    await stateStore.createNetwork({ network_id: 'network-concurrent', owner_id: 'human-1', now: '2099-08-13T00:00:00.000Z' });
+    await inboundModule.persistInboundTask({ stateStore, inbound });
+    await inboundModule.appendInboundTaskDecision({ stateStore, inbound, decision: 'approved', human_id: 'human-1', human_note: 'approved once', selected_agent_id: 'agent-concurrent', decided_at: '2099-08-13T00:00:02.000Z' });
+    let executions = 0;
+    const makeAdapter = () => createOpnAgentAdapter({ network_id: 'network-concurrent', stateStore, transport: { async receive() { throw new Error('must-not-receive'); }, async send() { return { status: 'accepted', message_id: 'result', envelope_digest: digest('c'), side_effects_executed: false }; }, async acknowledge() { throw new Error('must-not-ack'); } }, runtime: { async acceptEnvelope() { executions += 1; await new Promise((resolve) => setTimeout(resolve, 5)); return { status: 'accepted', execution: { schema: 'zj-loop.native_agent_execution.v1', execution_id: task.execution_id, task_id: task.task_id, attempt: 1, agent_id: 'agent-concurrent', task_digest: task.task_digest, registration_digest: digest('r'), started_at: '2099-08-13T00:00:03.000Z', status: 'evidence-recorded', evidence_refs: ['provider-result'], transitions: [] }, side_effects_executed: false }; } }, artifactStore: createOpnArtifactStore({ root: path.join(root, 'artifacts') }), agent_id: 'agent-concurrent', now: () => '2099-08-13T00:00:03.000Z' });
+    const results = await Promise.all([makeAdapter().processNext({ session_id: 'one', resolveTask: () => task }), makeAdapter().processNext({ session_id: 'two', resolveTask: () => task })]);
+    assert.equal(executions, 1);
+    assert.equal(results.filter((result) => result.status === 'processed').length, 1);
+    assert.equal(results.filter((result) => result.reason === 'inbound-task-already-processing').length, 1);
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});

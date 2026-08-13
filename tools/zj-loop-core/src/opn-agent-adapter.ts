@@ -66,7 +66,10 @@ export function createOpnAgentAdapter(input: { transport: TransportAdapter; runt
           return { status: 'blocked', message_id: envelope.message_id, reason: admission.reason, side_effects_executed: false };
         }
       }
-      if (inbound && input.stateStore) await appendInboundTaskLifecycle({ stateStore: input.stateStore, inbound, status: 'processing', now: now() });
+      if (inbound && input.stateStore) {
+        const claimed = await appendInboundTaskLifecycle({ stateStore: input.stateStore, inbound, status: 'processing', now: now() });
+        if (claimed.status !== 'recorded') return { status: 'blocked', message_id: envelope.message_id, reason: 'inbound-task-already-processing', side_effects_executed: false };
+      }
       try {
         const result = await input.runtime.acceptEnvelope({ envelope, task, now: now() });
         if (result.status === 'blocked') throw new Error(result.reason);
