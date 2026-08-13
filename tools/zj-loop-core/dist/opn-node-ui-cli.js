@@ -9,7 +9,7 @@ import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher } from '.
 import { createTlsTransportAdapter } from './tls-transport-adapter.js';
 import { createTransportEnvelope } from './transport-contract.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
-import { appendInboundTaskDecision, listInboundTasks } from './opn-inbound-task.js';
+import { appendInboundTaskDecision, expireInboundTasks, listInboundTasks } from './opn-inbound-task.js';
 import { runCli } from './cli.js';
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/opn');
 function json(response, status, value) {
@@ -104,6 +104,7 @@ function createNodeUiServer(input) {
             if (request.method === 'GET' && url.pathname === '/ui/inbound-tasks') {
                 if (!input.stateStore)
                     return json(response, 503, { schema: 'zj-loop.opn_node_ui.v1', status: 'blocked', reason: 'inbound-task-read-model-unavailable', side_effects_executed: false });
+                await expireInboundTasks({ stateStore: input.stateStore, network_id: input.config.network_id });
                 const tasks = await listInboundTasks({ stateStore: input.stateStore, network_id: input.config.network_id });
                 return json(response, 200, { schema: 'zj-loop.opn_node_ui_inbound_tasks.v1', network_id: input.config.network_id, tasks, side_effects_executed: false });
             }
@@ -113,6 +114,7 @@ function createNodeUiServer(input) {
                     return json(response, 503, { schema: 'zj-loop.opn_node_ui.v1', status: 'blocked', reason: 'inbound-task-decision-unavailable', side_effects_executed: false });
                 const value = await body(request);
                 const inboundId = decodeURIComponent(inboundDecision[1]);
+                await expireInboundTasks({ stateStore: input.stateStore, network_id: input.config.network_id });
                 const tasks = await listInboundTasks({ stateStore: input.stateStore, network_id: input.config.network_id });
                 const inbound = tasks.find((task) => task.inbound_id === inboundId);
                 const requestDigest = String(value.envelope_digest ?? '').trim();

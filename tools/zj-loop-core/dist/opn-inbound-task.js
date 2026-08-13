@@ -26,6 +26,21 @@ export async function listInboundTasks(input) {
     const now = Date.parse(input.now ?? new Date().toISOString());
     return [...grouped.values()].map(latest).filter((item) => item !== null).map((item) => item.status === 'pending-human-approval' && Date.parse(item.envelope.expires_at) <= now ? { ...item, status: 'expired' } : item);
 }
+export async function expireInboundTasks(input) {
+    const now = input.now ?? new Date().toISOString();
+    const pending = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now })).filter((item) => item.status === 'expired');
+    let expired = 0;
+    for (const inbound of pending) {
+        const current = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: inbound.inbound_id })).events.at(-1);
+        if (!current)
+            continue;
+        const revision = await input.stateStore.getRevision(input.network_id);
+        const result = await input.stateStore.appendEvent({ network_id: input.network_id, expected_revision: revision, now, event: { event_id: eventId(inbound.inbound_id, 'expired'), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: inbound.inbound_id, event_type: 'opn.inbound.task.expired', occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound: { ...inbound, status: 'expired' } } } });
+        if (result.status === 'recorded')
+            expired += 1;
+    }
+    return { expired };
+}
 export async function persistInboundTask(input) {
     const existing = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.inbound.network_id })).find((item) => item.inbound_id === input.inbound.inbound_id);
     if (existing) {

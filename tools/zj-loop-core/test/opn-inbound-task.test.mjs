@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
-import { appendInboundTaskDecision, createInboundTask, listInboundTasks, persistInboundTask } from '../dist/opn-inbound-task.js';
+import { appendInboundTaskDecision, createInboundTask, expireInboundTasks, listInboundTasks, persistInboundTask } from '../dist/opn-inbound-task.js';
 import { createTransportEnvelope } from '../dist/transport-contract.js';
 
 const digest = (value) => `sha256:${value.repeat(64)}`;
@@ -38,5 +38,19 @@ test('expired inbound task cannot be approved', async () => {
     const expired = createInboundTask({ network_id: 'network-1', envelope: createTransportEnvelope({ message_id: 'expired-message-1', network_id: value.network_id, event_id: 'expired-event-1', plan_id: value.plan_id, plan_revision: value.plan_revision, task_id: value.task_id, from_node_id: value.from_node_id, target_node_id: value.target_node_id, notification_kind: value.notification_kind, state: value.state, artifact_refs: value.artifact_refs, created_at: value.created_at, expires_at: '2099-08-13T01:00:00.000Z' }), received_at: '2099-08-13T00:00:01.000Z' });
     await persistInboundTask({ stateStore: store, inbound: expired });
     await assert.rejects(() => appendInboundTaskDecision({ stateStore: store, inbound: expired, decision: 'approved', human_id: 'human-1', human_note: 'too late', selected_agent_id: 'agent-1', decided_at: '2099-08-13T02:00:00.000Z' }), /state-conflict/);
+  } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('inbound expiry is recorded as an append-only fact and is idempotent', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-inbound-task-expiry-fact-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2099-08-13T00:00:00.000Z' });
+    const value = createInboundTask({ network_id: 'network-1', envelope: createTransportEnvelope({ message_id: 'expiry-fact-message', network_id: 'network-1', event_id: 'expiry-fact-event', plan_id: 'opn-task', plan_revision: 1, task_id: 'expiry-fact-task', from_node_id: 'center', target_node_id: 'agent-1', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2099-08-13T00:00:00.000Z', expires_at: '2099-08-13T01:00:00.000Z' }), received_at: '2099-08-13T00:00:01.000Z' });
+    await persistInboundTask({ stateStore: store, inbound: value });
+    assert.deepEqual(await expireInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T02:00:00.000Z' }), { expired: 1 });
+    assert.deepEqual(await expireInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T02:00:01.000Z' }), { expired: 0 });
+    assert.equal((await listInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T02:00:02.000Z' }))[0].status, 'expired');
+    assert.deepEqual((await store.readEvents({ network_id: 'network-1', aggregate_type: 'opn-inbound-task' })).events.map((event) => event.event_type), ['opn.inbound.task.pending-human-approval', 'opn.inbound.task.expired']);
   } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
 });

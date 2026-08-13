@@ -26,6 +26,13 @@ export declare function listInboundTasks(input: {
     network_id: string;
     now?: string;
 }): Promise<InboundTask[]>;
+export declare function expireInboundTasks(input: {
+    stateStore: SqliteStateStore;
+    network_id: string;
+    now?: string;
+}): Promise<{
+    expired: number;
+}>;
 export declare function persistInboundTask(input: {
     stateStore: SqliteStateStore;
     inbound: InboundTask;
