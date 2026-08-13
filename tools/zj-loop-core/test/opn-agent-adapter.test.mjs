@@ -176,3 +176,24 @@ test('OPN Agent adapter claims admitted work with CAS so concurrent workers exec
     assert.equal(results.filter((result) => result.reason === 'inbound-task-already-processing').length, 1);
   } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('OPN Agent adapter recovers an expired processing claim after worker restart', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opn-admitted-restart-recovery-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  const task = createBoundedLoopTask({ task_id: 'task-restart-recovery', execution_id: 'execution-restart-recovery', attempt: 1, task_kind: 'loop.task', objective: 'recover after restart', success_criteria: ['result exists'], input_artifact_refs: [digest('a')], dependency_refs: [], resource_isolation: { status: 'not-applicable', bindings: [] }, budget: { timeout_ms: 30000, max_iterations: 1 }, expected_evidence_kinds: ['result'], idempotency_key: 'task-restart-recovery:1', cancellation: { mode: 'cooperative', token: 'cancel:restart-recovery' } });
+  const envelope = createTransportEnvelope({ message_id: 'task-restart-recovery-message', network_id: 'network-restart-recovery', event_id: 'event-restart-recovery', plan_id: 'plan-1', plan_revision: 1, task_id: task.task_id, from_node_id: 'center', target_node_id: 'agent-restart-recovery', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2099-08-13T00:00:00.000Z', expires_at: '2099-08-13T01:00:00.000Z' });
+  const inboundModule = await import('../dist/opn-inbound-task.js');
+  const inbound = inboundModule.createInboundTask({ network_id: 'network-restart-recovery', envelope, received_at: '2099-08-13T00:00:01.000Z' });
+  try {
+    await stateStore.createNetwork({ network_id: 'network-restart-recovery', owner_id: 'human-1', now: '2099-08-13T00:00:00.000Z' });
+    await inboundModule.persistInboundTask({ stateStore, inbound });
+    const approved = await inboundModule.appendInboundTaskDecision({ stateStore, inbound, decision: 'approved', human_id: 'human-1', human_note: 'restart recovery', selected_agent_id: 'agent-restart-recovery', decided_at: '2099-08-13T00:00:02.000Z' });
+    await inboundModule.appendInboundTaskLifecycle({ stateStore, inbound: approved.inbound, status: 'processing', now: '2099-08-13T00:00:03.000Z', processing_lease_ms: 1_000 });
+    let executed = 0;
+    const adapter = createOpnAgentAdapter({ network_id: 'network-restart-recovery', stateStore, transport: { async receive() { throw new Error('must-not-receive'); }, async send() { return { status: 'accepted', message_id: 'result', envelope_digest: digest('c'), side_effects_executed: false }; }, async acknowledge() { throw new Error('must-not-ack'); } }, runtime: { async acceptEnvelope() { executed += 1; return { status: 'accepted', execution: { schema: 'zj-loop.native_agent_execution.v1', execution_id: task.execution_id, task_id: task.task_id, attempt: 1, agent_id: 'agent-restart-recovery', task_digest: task.task_digest, registration_digest: digest('r'), started_at: '2099-08-13T00:01:05.000Z', status: 'evidence-recorded', evidence_refs: ['provider-result'], transitions: [] }, side_effects_executed: false }; } }, artifactStore: createOpnArtifactStore({ root: path.join(root, 'artifacts') }), agent_id: 'agent-restart-recovery', now: () => '2099-08-13T00:01:05.000Z' });
+    const result = await adapter.processNext({ session_id: 'session-after-restart', resolveTask: () => task });
+    assert.equal(result.status, 'processed', JSON.stringify(result));
+    assert.equal(executed, 1);
+    assert.equal((await inboundModule.listInboundTasks({ stateStore, network_id: 'network-restart-recovery', now: '2099-08-13T00:01:06.000Z' }))[0].status, 'completed');
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});

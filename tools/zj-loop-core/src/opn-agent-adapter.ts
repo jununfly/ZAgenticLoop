@@ -6,7 +6,7 @@ import type { OpnAgentWorkerSessionEvidence } from './opn-agent-worker.js';
 import { evaluateOpnTaskAdmission, type SupervisionMode } from './opn-task-admission.js';
 import type { AgentRegistration } from './agent-registration.js';
 import type { SqliteStateStore } from './sqlite-state-store.js';
-import { appendInboundTaskLifecycle, createInboundTask, listInboundTasks, persistInboundTask, type InboundTask } from './opn-inbound-task.js';
+import { appendInboundTaskLifecycle, createInboundTask, listInboundTasks, persistInboundTask, recoverExpiredInboundTasks, type InboundTask } from './opn-inbound-task.js';
 
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1' as const;
 
@@ -39,7 +39,10 @@ export function createOpnAgentAdapter(input: { transport: TransportAdapter; runt
       let inbound: InboundTask | undefined;
       let envelope: TransportEnvelope | null = null;
       if (input.stateStore) {
-        if (input.network_id) inbound = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now: now() })).find((task) => task.status === 'admitted' && task.selected_agent_id === input.agent_id);
+        if (input.network_id) {
+          await recoverExpiredInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now: now() });
+          inbound = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now: now() })).find((task) => task.status === 'admitted' && task.selected_agent_id === input.agent_id);
+        }
       }
       if (inbound) envelope = inbound.envelope;
       else envelope = await input.transport.receive({ session_id: args.session_id, ...(args.receive_wait_ms === undefined ? {} : { wait_ms: args.receive_wait_ms }) });

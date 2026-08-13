@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { createSqliteStateStore } from '../dist/sqlite-state-store.js';
-import { appendInboundTaskDecision, createInboundTask, expireInboundTasks, listInboundTasks, persistInboundTask } from '../dist/opn-inbound-task.js';
+import { appendInboundTaskDecision, appendInboundTaskLifecycle, createInboundTask, expireInboundTasks, listInboundTasks, persistInboundTask, recoverExpiredInboundTasks } from '../dist/opn-inbound-task.js';
 import { createTransportEnvelope } from '../dist/transport-contract.js';
 
 const digest = (value) => `sha256:${value.repeat(64)}`;
@@ -52,5 +52,43 @@ test('inbound expiry is recorded as an append-only fact and is idempotent', asyn
     assert.deepEqual(await expireInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T02:00:01.000Z' }), { expired: 0 });
     assert.equal((await listInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T02:00:02.000Z' }))[0].status, 'expired');
     assert.deepEqual((await store.readEvents({ network_id: 'network-1', aggregate_type: 'opn-inbound-task' })).events.map((event) => event.event_type), ['opn.inbound.task.pending-human-approval', 'opn.inbound.task.expired']);
+  } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('processing lease is recorded and does not recover before expiry', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-inbound-task-lease-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2099-08-13T00:00:00.000Z' });
+    const inbound = createInboundTask({ network_id: 'network-1', envelope: envelope(), received_at: '2099-08-13T00:00:01.000Z' });
+    await persistInboundTask({ stateStore: store, inbound });
+    const approved = await appendInboundTaskDecision({ stateStore: store, inbound, decision: 'approved', human_id: 'human-1', human_note: 'lease test', selected_agent_id: 'agent-1', decided_at: '2099-08-13T00:00:02.000Z' });
+    const processing = await appendInboundTaskLifecycle({ stateStore: store, inbound: approved.inbound, status: 'processing', now: '2099-08-13T00:00:03.000Z', processing_lease_ms: 60_000 });
+    assert.equal(processing.status, 'recorded');
+    assert.equal(processing.inbound.processing_started_at, '2099-08-13T00:00:03.000Z');
+    assert.equal(processing.inbound.processing_lease_expires_at, '2099-08-13T00:01:03.000Z');
+    assert.deepEqual(await recoverExpiredInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T00:01:02.000Z' }), { recovered: 0 });
+    assert.equal((await listInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T00:01:02.000Z' }))[0].status, 'processing');
+  } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('expired processing lease recovers to admitted without changing the task attempt', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-inbound-task-recovery-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2099-08-13T00:00:00.000Z' });
+    const inbound = createInboundTask({ network_id: 'network-1', envelope: envelope(), received_at: '2099-08-13T00:00:01.000Z' });
+    await persistInboundTask({ stateStore: store, inbound });
+    const approved = await appendInboundTaskDecision({ stateStore: store, inbound, decision: 'approved', human_id: 'human-1', human_note: 'recovery test', selected_agent_id: 'agent-1', decided_at: '2099-08-13T00:00:02.000Z' });
+    await appendInboundTaskLifecycle({ stateStore: store, inbound: approved.inbound, status: 'processing', now: '2099-08-13T00:00:03.000Z', processing_lease_ms: 60_000 });
+    assert.deepEqual(await recoverExpiredInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T00:01:03.000Z' }), { recovered: 1 });
+    const recovered = (await listInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T00:01:04.000Z' }))[0];
+    assert.equal(recovered.status, 'admitted');
+    assert.equal(recovered.admission_reason, 'processing-lease-expired');
+    assert.equal(recovered.envelope.task_id, 'inbound-task-1');
+    assert.equal(recovered.processing_started_at, '2099-08-13T00:00:03.000Z');
+    assert.equal(recovered.processing_lease_expires_at, undefined);
+    assert.deepEqual(await recoverExpiredInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T00:02:00.000Z' }), { recovered: 0 });
+    assert.deepEqual((await store.readEvents({ network_id: 'network-1', aggregate_type: 'opn-inbound-task' })).events.map((event) => event.event_type), ['opn.inbound.task.pending-human-approval', 'opn.inbound.task.approved', 'opn.inbound.task.processing', 'opn.inbound.task.admitted']);
   } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
 });

@@ -2,6 +2,7 @@ import type { SqliteStateStore } from './sqlite-state-store.js';
 import type { TransportEnvelope } from './transport-contract.js';
 export declare const OPN_INBOUND_TASK_SCHEMA: "zj-loop.opn_inbound_task.v1";
 export declare const OPN_INBOUND_TASK_AGGREGATE: "opn-inbound-task";
+export declare const DEFAULT_INBOUND_PROCESSING_LEASE_MS: number;
 export type InboundTaskStatus = 'pending-human-approval' | 'admitted' | 'processing' | 'completed' | 'failed' | 'blocked' | 'expired' | 'cancelled';
 export type InboundTask = {
     schema: typeof OPN_INBOUND_TASK_SCHEMA;
@@ -15,6 +16,8 @@ export type InboundTask = {
     decided_at?: string;
     selected_agent_id?: string;
     admission_reason?: string;
+    processing_started_at?: string;
+    processing_lease_expires_at?: string;
 };
 export declare function createInboundTask(input: {
     network_id: string;
@@ -56,10 +59,18 @@ export declare function appendInboundTaskDecision(input: {
 export declare function appendInboundTaskLifecycle(input: {
     stateStore: SqliteStateStore;
     inbound: InboundTask;
-    status: 'processing' | 'completed' | 'failed';
+    status: 'admitted' | 'processing' | 'completed' | 'failed';
     reason?: string;
     now?: string;
+    processing_lease_ms?: number;
 }): Promise<{
     status: 'recorded' | 'duplicate' | 'conflict';
     inbound: InboundTask;
+}>;
+export declare function recoverExpiredInboundTasks(input: {
+    stateStore: SqliteStateStore;
+    network_id: string;
+    now?: string;
+}): Promise<{
+    recovered: number;
 }>;

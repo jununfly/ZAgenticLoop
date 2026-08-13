@@ -1,6 +1,6 @@
 import { createTransportEnvelope } from './transport-contract.js';
 import { evaluateOpnTaskAdmission } from './opn-task-admission.js';
-import { appendInboundTaskLifecycle, createInboundTask, listInboundTasks, persistInboundTask } from './opn-inbound-task.js';
+import { appendInboundTaskLifecycle, createInboundTask, listInboundTasks, persistInboundTask, recoverExpiredInboundTasks } from './opn-inbound-task.js';
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1';
 export function createProviderBackedNativeAgentExecutor(input) {
     if (!input.provider || typeof input.provider.run !== 'function')
@@ -32,8 +32,10 @@ export function createOpnAgentAdapter(input) {
             let inbound;
             let envelope = null;
             if (input.stateStore) {
-                if (input.network_id)
+                if (input.network_id) {
+                    await recoverExpiredInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now: now() });
                     inbound = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now: now() })).find((task) => task.status === 'admitted' && task.selected_agent_id === input.agent_id);
+                }
             }
             if (inbound)
                 envelope = inbound.envelope;

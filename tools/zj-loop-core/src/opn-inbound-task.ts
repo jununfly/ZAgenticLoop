@@ -4,8 +4,9 @@ import { validateTransportEnvelope } from './transport-contract.js';
 
 export const OPN_INBOUND_TASK_SCHEMA = 'zj-loop.opn_inbound_task.v1' as const;
 export const OPN_INBOUND_TASK_AGGREGATE = 'opn-inbound-task' as const;
+export const DEFAULT_INBOUND_PROCESSING_LEASE_MS = 15 * 60 * 1000;
 export type InboundTaskStatus = 'pending-human-approval' | 'admitted' | 'processing' | 'completed' | 'failed' | 'blocked' | 'expired' | 'cancelled';
-export type InboundTask = { schema: typeof OPN_INBOUND_TASK_SCHEMA; inbound_id: string; network_id: string; envelope: TransportEnvelope; status: InboundTaskStatus; received_at: string; human_note?: string; human_id?: string; decided_at?: string; selected_agent_id?: string; admission_reason?: string };
+export type InboundTask = { schema: typeof OPN_INBOUND_TASK_SCHEMA; inbound_id: string; network_id: string; envelope: TransportEnvelope; status: InboundTaskStatus; received_at: string; human_note?: string; human_id?: string; decided_at?: string; selected_agent_id?: string; admission_reason?: string; processing_started_at?: string; processing_lease_expires_at?: string };
 type Payload = { schema: typeof OPN_INBOUND_TASK_SCHEMA; inbound: InboundTask };
 
 function payloadOf(event: StateEvent): Payload | null {
@@ -70,15 +71,37 @@ export async function appendInboundTaskDecision(input: { stateStore: SqliteState
   return { status: result.status, inbound };
 }
 
-export async function appendInboundTaskLifecycle(input: { stateStore: SqliteStateStore; inbound: InboundTask; status: 'processing' | 'completed' | 'failed'; reason?: string; now?: string }): Promise<{ status: 'recorded' | 'duplicate' | 'conflict'; inbound: InboundTask }> {
+export async function appendInboundTaskLifecycle(input: { stateStore: SqliteStateStore; inbound: InboundTask; status: 'admitted' | 'processing' | 'completed' | 'failed'; reason?: string; now?: string; processing_lease_ms?: number }): Promise<{ status: 'recorded' | 'duplicate' | 'conflict'; inbound: InboundTask }> {
   const now = input.now ?? new Date().toISOString();
   const existing = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.inbound.network_id, now })).find((value) => value.inbound_id === input.inbound.inbound_id);
   if (!existing || existing.envelope.envelope_digest !== input.inbound.envelope.envelope_digest) throw new Error('inbound-task-not-found');
   if (existing.status === input.status) return { status: 'duplicate', inbound: existing };
   if (input.status === 'processing' && existing.status !== 'admitted') throw new Error('inbound-task-state-conflict');
+  if (input.status === 'admitted' && (existing.status !== 'processing' || input.reason !== 'processing-lease-expired' || Date.parse(existing.processing_lease_expires_at ?? '') > Date.parse(now))) throw new Error('inbound-task-state-conflict');
   if ((input.status === 'completed' || input.status === 'failed') && existing.status !== 'processing') throw new Error('inbound-task-state-conflict');
   const inbound: InboundTask = { ...existing, status: input.status, ...(input.reason ? { admission_reason: input.reason } : {}) };
+  if (input.status === 'processing') {
+    inbound.processing_started_at = now;
+    inbound.processing_lease_expires_at = new Date(Date.parse(now) + (input.processing_lease_ms ?? DEFAULT_INBOUND_PROCESSING_LEASE_MS)).toISOString();
+  } else if (input.status === 'admitted' || input.status === 'completed' || input.status === 'failed') {
+    delete inbound.processing_lease_expires_at;
+  }
   const revision = await input.stateStore.getRevision(input.inbound.network_id);
-  const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(existing.inbound_id, input.status), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: existing.inbound_id, event_type: `opn.inbound.task.${input.status}`, occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound } satisfies Payload } });
+  const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(existing.inbound_id, `${input.status}:${now}`), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: existing.inbound_id, event_type: `opn.inbound.task.${input.status}`, occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound } satisfies Payload } });
   return { status: result.status, inbound };
+}
+
+export async function recoverExpiredInboundTasks(input: { stateStore: SqliteStateStore; network_id: string; now?: string }): Promise<{ recovered: number }> {
+  const now = input.now ?? new Date().toISOString();
+  const candidates = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now })).filter((item) => item.status === 'processing' && Date.parse(item.processing_lease_expires_at ?? '') <= Date.parse(now));
+  let recovered = 0;
+  for (const inbound of candidates) {
+    try {
+      const result = await appendInboundTaskLifecycle({ stateStore: input.stateStore, inbound, status: 'admitted', reason: 'processing-lease-expired', now });
+      if (result.status === 'recorded') recovered += 1;
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== 'inbound-task-state-conflict') throw error;
+    }
+  }
+  return { recovered };
 }
