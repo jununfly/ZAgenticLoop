@@ -57,3 +57,19 @@ export async function appendInboundTaskDecision(input) {
     const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(existing.inbound_id, input.decision), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: existing.inbound_id, event_type: `opn.inbound.task.${input.decision}`, occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound } } });
     return { status: result.status, inbound };
 }
+export async function appendInboundTaskLifecycle(input) {
+    const now = input.now ?? new Date().toISOString();
+    const existing = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.inbound.network_id, now })).find((value) => value.inbound_id === input.inbound.inbound_id);
+    if (!existing || existing.envelope.envelope_digest !== input.inbound.envelope.envelope_digest)
+        throw new Error('inbound-task-not-found');
+    if (existing.status === input.status)
+        return { status: 'duplicate', inbound: existing };
+    if (input.status === 'processing' && existing.status !== 'admitted')
+        throw new Error('inbound-task-state-conflict');
+    if ((input.status === 'completed' || input.status === 'failed') && existing.status !== 'processing')
+        throw new Error('inbound-task-state-conflict');
+    const inbound = { ...existing, status: input.status, ...(input.reason ? { admission_reason: input.reason } : {}) };
+    const revision = await input.stateStore.getRevision(input.inbound.network_id);
+    const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(existing.inbound_id, input.status), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: existing.inbound_id, event_type: `opn.inbound.task.${input.status}`, occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound } } });
+    return { status: result.status, inbound };
+}

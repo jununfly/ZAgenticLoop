@@ -121,3 +121,20 @@ test('OPN Agent adapter does not execute or acknowledge supervised work before H
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('OPN Agent adapter consumes an admitted local inbound task without remote re-delivery', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opn-admitted-inbound-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  const task = createBoundedLoopTask({ task_id: 'task-admitted', execution_id: 'execution-admitted', attempt: 1, task_kind: 'loop.task', objective: 'execute admitted task', success_criteria: ['result exists'], input_artifact_refs: [digest('a')], dependency_refs: [], resource_isolation: { status: 'not-applicable', bindings: [] }, budget: { timeout_ms: 30000, max_iterations: 1 }, expected_evidence_kinds: ['result'], idempotency_key: 'task-admitted:1', cancellation: { mode: 'cooperative', token: 'cancel:admitted' } });
+  const envelope = createTransportEnvelope({ message_id: 'task-admitted-message', network_id: 'network-admitted', event_id: 'event-admitted', plan_id: 'plan-1', plan_revision: 1, task_id: task.task_id, from_node_id: 'center', target_node_id: 'agent-admitted', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2099-08-13T00:00:00.000Z', expires_at: '2099-08-13T01:00:00.000Z' });
+  const inbound = (await import('../dist/opn-inbound-task.js')).createInboundTask({ network_id: 'network-admitted', envelope, received_at: '2099-08-13T00:00:01.000Z' });
+  try {
+    await stateStore.createNetwork({ network_id: 'network-admitted', owner_id: 'human-1', now: '2099-08-13T00:00:00.000Z' });
+    await (await import('../dist/opn-inbound-task.js')).persistInboundTask({ stateStore, inbound });
+    await (await import('../dist/opn-inbound-task.js')).appendInboundTaskDecision({ stateStore, inbound, decision: 'approved', human_id: 'human-1', human_note: 'approved for local Agent', selected_agent_id: 'agent-admitted', decided_at: '2099-08-13T00:00:02.000Z' });
+    let received = false; let acknowledged = false; let executed = false;
+    const adapter = createOpnAgentAdapter({ network_id: 'network-admitted', stateStore, transport: { async receive() { received = true; return null; }, async send() { return { status: 'accepted', message_id: 'result', envelope_digest: digest('c'), side_effects_executed: false }; }, async acknowledge() { acknowledged = true; return { status: 'accepted', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, side_effects_executed: false }; } }, runtime: { async acceptEnvelope() { executed = true; return { status: 'accepted', execution: { schema: 'zj-loop.native_agent_execution.v1', execution_id: task.execution_id, task_id: task.task_id, attempt: 1, agent_id: 'agent-admitted', task_digest: task.task_digest, registration_digest: digest('r'), started_at: '2099-08-13T00:00:03.000Z', status: 'evidence-recorded', evidence_refs: ['provider-result'], transitions: [] }, side_effects_executed: false }; } }, artifactStore: createOpnArtifactStore({ root: path.join(root, 'artifacts') }), agent_id: 'agent-admitted', now: () => '2099-08-13T00:00:03.000Z' });
+    const result = await adapter.processNext({ session_id: 'session', resolveTask: () => task });
+    assert.equal(result.status, 'processed'); assert.equal(received, false); assert.equal(acknowledged, false); assert.equal(executed, true);
+  } finally { await stateStore.close(); await rm(root, { recursive: true, force: true }); }
+});

@@ -1,6 +1,6 @@
 import { createTransportEnvelope } from './transport-contract.js';
 import { evaluateOpnTaskAdmission } from './opn-task-admission.js';
-import { createInboundTask, persistInboundTask } from './opn-inbound-task.js';
+import { appendInboundTaskLifecycle, createInboundTask, listInboundTasks, persistInboundTask } from './opn-inbound-task.js';
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1';
 export function createProviderBackedNativeAgentExecutor(input) {
     if (!input.provider || typeof input.provider.run !== 'function')
@@ -29,7 +29,16 @@ export function createOpnAgentAdapter(input) {
     const now = input.now ?? (() => new Date().toISOString());
     return {
         async processNext(args) {
-            const envelope = await input.transport.receive({ session_id: args.session_id, ...(args.receive_wait_ms === undefined ? {} : { wait_ms: args.receive_wait_ms }) });
+            let inbound;
+            let envelope = null;
+            if (input.stateStore) {
+                if (input.network_id)
+                    inbound = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.network_id, now: now() })).find((task) => task.status === 'admitted' && task.selected_agent_id === input.agent_id);
+            }
+            if (inbound)
+                envelope = inbound.envelope;
+            else
+                envelope = await input.transport.receive({ session_id: args.session_id, ...(args.receive_wait_ms === undefined ? {} : { wait_ms: args.receive_wait_ms }) });
             if (!envelope)
                 return { status: 'empty', side_effects_executed: false };
             if (envelope.target_node_id !== input.agent_id)
@@ -47,6 +56,8 @@ export function createOpnAgentAdapter(input) {
             catch {
                 return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-task-unavailable', side_effects_executed: false };
             }
+            if (inbound && input.stateStore)
+                await appendInboundTaskLifecycle({ stateStore: input.stateStore, inbound, status: 'processing', now: now() });
             if (input.registration && input.supervision_mode) {
                 const admission = evaluateOpnTaskAdmission({ task, registration: input.registration, target_node_id: envelope.target_node_id, supervision_mode: input.supervision_mode });
                 if (admission.status !== 'admitted') {
@@ -60,15 +71,21 @@ export function createOpnAgentAdapter(input) {
                 }
             }
             const result = await input.runtime.acceptEnvelope({ envelope, task, now: now() });
-            if (result.status === 'blocked')
+            if (result.status === 'blocked') {
+                if (inbound && input.stateStore)
+                    await appendInboundTaskLifecycle({ stateStore: input.stateStore, inbound: { ...inbound, status: 'processing' }, status: 'failed', reason: result.reason, now: now() });
                 return { status: 'blocked', message_id: envelope.message_id, result, reason: result.reason, side_effects_executed: false };
+            }
             const bytes = Buffer.from(JSON.stringify({ schema: OPN_AGENT_RESULT_SCHEMA, message_id: envelope.message_id, execution: result.execution, ...(args.session_evidence ? { session_evidence: args.session_evidence } : {}), side_effects_executed: false }));
             const artifact = await input.artifactStore.put({ bytes, file_name: `${envelope.task_id}.agent-result.json`, media_type: 'application/json' });
             if (input.publishArtifact)
                 await input.publishArtifact({ bytes, metadata: artifact.metadata, transfer_id: `result-artifact:${envelope.message_id}`, target_node_id: envelope.from_node_id });
             const response = createTransportEnvelope({ message_id: `agent-result:${envelope.message_id}`, network_id: envelope.network_id, event_id: envelope.event_id, plan_id: envelope.plan_id, plan_revision: envelope.plan_revision, task_id: envelope.task_id, from_node_id: input.agent_id, target_node_id: envelope.from_node_id, notification_kind: 'agent.result', state: result.execution.status === 'evidence-recorded' ? 'available' : 'blocked', artifact_refs: [{ artifact_id: artifact.metadata.artifact_id, content_sha256: artifact.metadata.content_sha256, kind: 'artifact' }], created_at: now(), expires_at: envelope.expires_at });
             await input.transport.send({ session_id: args.session_id, envelope: response });
-            await input.transport.acknowledge({ session_id: args.session_id, message_id: envelope.message_id, envelope_digest: envelope.envelope_digest });
+            if (inbound && input.stateStore)
+                await appendInboundTaskLifecycle({ stateStore: input.stateStore, inbound: { ...inbound, status: 'processing' }, status: 'completed', now: now() });
+            else
+                await input.transport.acknowledge({ session_id: args.session_id, message_id: envelope.message_id, envelope_digest: envelope.envelope_digest });
             return { status: 'processed', message_id: envelope.message_id, result, side_effects_executed: false };
         },
     };

@@ -40,6 +40,7 @@ export declare function createOpnAgentAdapter(input: {
     runtime: Runtime;
     artifactStore: OpnArtifactStore;
     stateStore?: SqliteStateStore;
+    network_id?: string;
     publishArtifact?: (input: {
         bytes: Buffer;
         metadata: OpnArtifactMetadata;

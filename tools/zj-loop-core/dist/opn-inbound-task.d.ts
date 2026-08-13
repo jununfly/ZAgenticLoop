@@ -2,7 +2,7 @@ import type { SqliteStateStore } from './sqlite-state-store.js';
 import type { TransportEnvelope } from './transport-contract.js';
 export declare const OPN_INBOUND_TASK_SCHEMA: "zj-loop.opn_inbound_task.v1";
 export declare const OPN_INBOUND_TASK_AGGREGATE: "opn-inbound-task";
-export type InboundTaskStatus = 'pending-human-approval' | 'admitted' | 'blocked' | 'expired' | 'cancelled';
+export type InboundTaskStatus = 'pending-human-approval' | 'admitted' | 'processing' | 'completed' | 'failed' | 'blocked' | 'expired' | 'cancelled';
 export type InboundTask = {
     schema: typeof OPN_INBOUND_TASK_SCHEMA;
     inbound_id: string;
@@ -42,6 +42,16 @@ export declare function appendInboundTaskDecision(input: {
     human_note: string;
     selected_agent_id?: string;
     decided_at?: string;
+}): Promise<{
+    status: 'recorded' | 'duplicate' | 'conflict';
+    inbound: InboundTask;
+}>;
+export declare function appendInboundTaskLifecycle(input: {
+    stateStore: SqliteStateStore;
+    inbound: InboundTask;
+    status: 'processing' | 'completed' | 'failed';
+    reason?: string;
+    now?: string;
 }): Promise<{
     status: 'recorded' | 'duplicate' | 'conflict';
     inbound: InboundTask;
