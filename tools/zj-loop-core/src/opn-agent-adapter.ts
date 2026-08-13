@@ -5,6 +5,8 @@ import type { NativeAgentRuntimeResult } from './native-agent-runtime.js';
 import type { OpnAgentWorkerSessionEvidence } from './opn-agent-worker.js';
 import { evaluateOpnTaskAdmission, type SupervisionMode } from './opn-task-admission.js';
 import type { AgentRegistration } from './agent-registration.js';
+import type { SqliteStateStore } from './sqlite-state-store.js';
+import { createInboundTask, persistInboundTask } from './opn-inbound-task.js';
 
 export const OPN_AGENT_RESULT_SCHEMA = 'zj-loop.opn_agent_result.v1' as const;
 
@@ -29,7 +31,7 @@ export function createProviderBackedNativeAgentExecutor(input: { provider: { run
   };
 }
 
-export function createOpnAgentAdapter(input: { transport: TransportAdapter; runtime: Runtime; artifactStore: OpnArtifactStore; publishArtifact?: (input: { bytes: Buffer; metadata: OpnArtifactMetadata; transfer_id: string; target_node_id: string }) => Promise<void>; on_non_task?: (input: { envelope: TransportEnvelope; reason: string }) => void; agent_id: string; registration?: AgentRegistration; supervision_mode?: SupervisionMode; now?: () => string }) {
+export function createOpnAgentAdapter(input: { transport: TransportAdapter; runtime: Runtime; artifactStore: OpnArtifactStore; stateStore?: SqliteStateStore; publishArtifact?: (input: { bytes: Buffer; metadata: OpnArtifactMetadata; transfer_id: string; target_node_id: string }) => Promise<void>; on_non_task?: (input: { envelope: TransportEnvelope; reason: string }) => void; agent_id: string; registration?: AgentRegistration; supervision_mode?: SupervisionMode; now?: () => string }) {
   if (!input.transport || !input.runtime || !input.artifactStore || !input.agent_id.trim()) throw new Error('opn-agent-adapter-dependency-required');
   const now = input.now ?? (() => new Date().toISOString());
   return {
@@ -47,7 +49,15 @@ export function createOpnAgentAdapter(input: { transport: TransportAdapter; runt
       try { task = await args.resolveTask(envelope); } catch { return { status: 'blocked', message_id: envelope.message_id, reason: 'opn-agent-task-unavailable', side_effects_executed: false }; }
       if (input.registration && input.supervision_mode) {
         const admission = evaluateOpnTaskAdmission({ task, registration: input.registration, target_node_id: envelope.target_node_id, supervision_mode: input.supervision_mode });
-        if (admission.status !== 'admitted') return { status: 'blocked', message_id: envelope.message_id, reason: admission.reason, side_effects_executed: false };
+        if (admission.status !== 'admitted') {
+          if (admission.status === 'pending-human-approval' && input.stateStore) {
+            const inbound = createInboundTask({ network_id: envelope.network_id, envelope, received_at: now() });
+            await persistInboundTask({ stateStore: input.stateStore, inbound, now: now() });
+            await input.transport.acknowledge({ session_id: args.session_id, message_id: envelope.message_id, envelope_digest: envelope.envelope_digest });
+            return { status: 'blocked', message_id: envelope.message_id, reason: 'pending-human-approval', side_effects_executed: false };
+          }
+          return { status: 'blocked', message_id: envelope.message_id, reason: admission.reason, side_effects_executed: false };
+        }
       }
       const result = await input.runtime.acceptEnvelope({ envelope, task, now: now() });
       if (result.status === 'blocked') return { status: 'blocked', message_id: envelope.message_id, result, reason: result.reason, side_effects_executed: false };

@@ -93,7 +93,7 @@ export const opnAgentRunnerCliSpec = {
             const supervisionMode = String(options.supervision_mode ?? 'unattended').trim();
             if (supervisionMode !== 'supervised' && supervisionMode !== 'unattended')
                 throw new Error('opn-agent-supervision-mode-invalid');
-            const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore, publishArtifact: publisher.publish, agent_id: node_id, registration, supervision_mode: supervisionMode });
+            const adapter = createOpnAgentAdapter({ transport, runtime, artifactStore, stateStore, publishArtifact: publisher.publish, agent_id: node_id, registration, supervision_mode: supervisionMode });
             const resolveTask = async (envelope) => {
                 const taskRef = envelope.artifact_refs[0];
                 if (!taskRef)

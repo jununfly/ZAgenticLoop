@@ -5,6 +5,7 @@ import type { NativeAgentRuntimeResult } from './native-agent-runtime.js';
 import type { OpnAgentWorkerSessionEvidence } from './opn-agent-worker.js';
 import { type SupervisionMode } from './opn-task-admission.js';
 import type { AgentRegistration } from './agent-registration.js';
+import type { SqliteStateStore } from './sqlite-state-store.js';
 export declare const OPN_AGENT_RESULT_SCHEMA: "zj-loop.opn_agent_result.v1";
 type Runtime = {
     acceptEnvelope(input: {
@@ -38,6 +39,7 @@ export declare function createOpnAgentAdapter(input: {
     transport: TransportAdapter;
     runtime: Runtime;
     artifactStore: OpnArtifactStore;
+    stateStore?: SqliteStateStore;
     publishArtifact?: (input: {
         bytes: Buffer;
         metadata: OpnArtifactMetadata;

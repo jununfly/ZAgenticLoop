@@ -87,21 +87,37 @@ test('OPN Agent adapter persists worker session evidence in the result artifact'
 });
 
 test('OPN Agent adapter does not execute or acknowledge supervised work before Human approval', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'opn-supervised-inbound-'));
+  const stateStore = createSqliteStateStore({ filename: path.join(root, 'state.db') });
   const task = createBoundedLoopTask({ task_id: 'task-supervised', execution_id: 'execution-supervised', attempt: 1, task_kind: 'loop.task', objective: 'inspect input', success_criteria: ['result exists'], input_artifact_refs: [digest('a')], dependency_refs: [], resource_isolation: { status: 'not-applicable', bindings: [] }, budget: { timeout_ms: 30000, max_iterations: 1 }, expected_evidence_kinds: ['result'], idempotency_key: 'task-supervised:1', cancellation: { mode: 'cooperative', token: 'cancel:supervised' } });
   const envelope = createTransportEnvelope({ message_id: 'task-supervised-message', network_id: 'network-1', event_id: 'event-supervised', plan_id: 'plan-1', plan_revision: 1, task_id: task.task_id, from_node_id: 'center', target_node_id: 'agent-1', notification_kind: 'agent.task', state: 'available', artifact_refs: [{ artifact_id: digest('a'), content_sha256: digest('a'), kind: 'artifact' }], created_at: '2099-08-07T12:01:00.000Z', expires_at: '2099-08-07T13:01:00.000Z' });
   let executed = false;
-  let acknowledged = false;
+  const acknowledgements = [];
   const adapter = createOpnAgentAdapter({
-    transport: { async receive() { return envelope; }, async send() { throw new Error('must-not-send'); }, async acknowledge() { acknowledged = true; return { status: 'accepted', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, side_effects_executed: false }; } },
+    transport: { async receive() { return envelope; }, async send() { throw new Error('must-not-send'); }, async acknowledge(input) { acknowledgements.push(input.message_id); return { status: 'accepted', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, side_effects_executed: false }; } },
     runtime: { async acceptEnvelope() { executed = true; throw new Error('must-not-execute'); } },
     artifactStore: createOpnArtifactStore({ root: await mkdtemp(path.join(os.tmpdir(), 'opn-supervised-artifact-')) }),
+    stateStore,
     agent_id: 'agent-1',
     registration: createAgentRegistration({ agent_id: 'agent-1', display_name: 'Agent1', capabilities: ['task.execute'], accepted_task_kinds: ['agent.task'], evidence_kinds: ['result'], protocol_version: 'opn-agent-runtime.v1', identity_ref: 'identity:agent-1' }),
     supervision_mode: 'supervised',
     now: () => '2099-08-07T12:01:01.000Z',
   });
-  const result = await adapter.processNext({ session_id: 'session-supervised', resolveTask: () => task });
-  assert.deepEqual(result, { status: 'blocked', message_id: envelope.message_id, reason: 'human-approval-required', side_effects_executed: false });
-  assert.equal(executed, false);
-  assert.equal(acknowledged, false);
+  try {
+    await stateStore.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2099-08-07T12:00:00.000Z' });
+    const result = await adapter.processNext({ session_id: 'session-supervised', resolveTask: () => task });
+    assert.deepEqual(result, { status: 'blocked', message_id: envelope.message_id, reason: 'pending-human-approval', side_effects_executed: false });
+    assert.equal(executed, false);
+    assert.deepEqual(acknowledgements, [envelope.message_id]);
+    const events = await stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'opn-inbound-task' });
+    assert.equal(events.events.length, 1);
+    assert.equal(events.events[0].payload.inbound.inbound_id, `inbound-task:${envelope.message_id}`);
+    const duplicate = await adapter.processNext({ session_id: 'session-supervised', resolveTask: () => task });
+    assert.deepEqual(duplicate, { status: 'blocked', message_id: envelope.message_id, reason: 'pending-human-approval', side_effects_executed: false });
+    assert.deepEqual(acknowledgements, [envelope.message_id, envelope.message_id]);
+    assert.equal((await stateStore.readEvents({ network_id: 'network-1', aggregate_type: 'opn-inbound-task' })).events.length, 1);
+  } finally {
+    await stateStore.close();
+    await rm(root, { recursive: true, force: true });
+  }
 });

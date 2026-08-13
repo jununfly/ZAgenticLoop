@@ -1,0 +1,39 @@
+import { validateTransportEnvelope } from './transport-contract.js';
+export const OPN_INBOUND_TASK_SCHEMA = 'zj-loop.opn_inbound_task.v1';
+export const OPN_INBOUND_TASK_AGGREGATE = 'opn-inbound-task';
+function payloadOf(event) {
+    const value = event.payload;
+    return value.schema === OPN_INBOUND_TASK_SCHEMA && value.inbound ? value : null;
+}
+function eventId(id, status) { return `inbound-task:${id}:${status}`; }
+function latest(events) { let result = null; for (const event of events) {
+    const value = payloadOf(event);
+    if (value)
+        result = { ...value.inbound };
+} return result; }
+export function createInboundTask(input) {
+    if (validateTransportEnvelope(input.envelope).status !== 'valid')
+        throw new Error('inbound-task-envelope-invalid');
+    if (input.envelope.network_id !== input.network_id || input.envelope.notification_kind !== 'agent.task')
+        throw new Error('inbound-task-envelope-scope-invalid');
+    return { schema: OPN_INBOUND_TASK_SCHEMA, inbound_id: `inbound-task:${input.envelope.message_id}`, network_id: input.network_id, envelope: input.envelope, status: 'pending-human-approval', received_at: input.received_at ?? new Date().toISOString() };
+}
+export async function listInboundTasks(input) {
+    const events = (await input.stateStore.readEvents({ network_id: input.network_id, aggregate_type: OPN_INBOUND_TASK_AGGREGATE })).events;
+    const grouped = new Map();
+    for (const event of events)
+        grouped.set(event.aggregate_id, [...(grouped.get(event.aggregate_id) ?? []), event]);
+    return [...grouped.values()].map(latest).filter((item) => item !== null).map((item) => item.status === 'pending-human-approval' && Date.parse(item.envelope.expires_at) <= Date.now() ? { ...item, status: 'expired' } : item);
+}
+export async function persistInboundTask(input) {
+    const existing = (await listInboundTasks({ stateStore: input.stateStore, network_id: input.inbound.network_id })).find((item) => item.inbound_id === input.inbound.inbound_id);
+    if (existing) {
+        if (existing.envelope.envelope_digest !== input.inbound.envelope.envelope_digest)
+            throw new Error('inbound-task-id-conflict');
+        return { status: 'duplicate', inbound: existing };
+    }
+    const now = input.now ?? input.inbound.received_at;
+    const revision = await input.stateStore.getRevision(input.inbound.network_id);
+    const result = await input.stateStore.appendEvent({ network_id: input.inbound.network_id, expected_revision: revision, now, event: { event_id: eventId(input.inbound.inbound_id, 'pending-human-approval'), aggregate_type: OPN_INBOUND_TASK_AGGREGATE, aggregate_id: input.inbound.inbound_id, event_type: 'opn.inbound.task.pending-human-approval', occurred_at: now, payload: { schema: OPN_INBOUND_TASK_SCHEMA, inbound: input.inbound } } });
+    return { status: result.status, inbound: input.inbound };
+}
