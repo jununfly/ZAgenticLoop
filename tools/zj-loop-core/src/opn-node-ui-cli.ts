@@ -8,9 +8,11 @@ import { createOpnArtifactStore, type OpnArtifactStore } from './opn-artifact-st
 import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
 import { createTlsTransportAdapter } from './tls-transport-adapter.js';
 import { createTransportEnvelope, type TransportAdapter } from './transport-contract.js';
+import { createSqliteStateStore, type SqliteStateStore } from './sqlite-state-store.js';
+import { listInboundTasks } from './opn-inbound-task.js';
 import { runCli } from './cli.js';
 
-type NodeUiConfig = { network_id: string; node_id: string; endpoint: string; ca: string; cert: string; key: string; token: string; artifact_store: string };
+type NodeUiConfig = { network_id: string; node_id: string; endpoint: string; ca: string; cert: string; key: string; token: string; artifact_store: string; state_store: string };
 type OutboxEntry = Record<string, unknown>;
 
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/opn');
@@ -49,10 +51,11 @@ async function loadConfig(options: Record<string, unknown>): Promise<NodeUiConfi
     key: await readSibling('agent.key.pem'),
     token: (await readSibling('join-session.json.credential-token')).trim(),
     artifact_store: String(options.artifact_store ?? path.join(nodeDir, 'artifacts')).trim(),
+    state_store: String(options.state_store ?? path.join(nodeDir, 'state.db')).trim(),
   };
 }
 
-function createNodeUiServer(input: { config: NodeUiConfig; transport: TransportAdapter; downloader: ReturnType<typeof createTlsOpnArtifactDownloader>; publisher: ReturnType<typeof createTlsOpnArtifactPublisher>; artifacts: OpnArtifactStore; outbox_path: string }) {
+function createNodeUiServer(input: { config: NodeUiConfig; transport: TransportAdapter; downloader: ReturnType<typeof createTlsOpnArtifactDownloader>; publisher: ReturnType<typeof createTlsOpnArtifactPublisher>; artifacts: OpnArtifactStore; stateStore?: Pick<SqliteStateStore, 'readEvents'>; outbox_path: string }) {
   const readOutbox = async (): Promise<OutboxEntry[]> => { try { return JSON.parse(await readFile(input.outbox_path, 'utf8')) as OutboxEntry[]; } catch { return []; } };
   const writeOutbox = async (entry: OutboxEntry): Promise<void> => { const entries = await readOutbox(); entries.push(entry); await writeFile(input.outbox_path, JSON.stringify(entries), { mode: 0o600 }); };
   const withSession = async <T>(fn: (session_id: string) => Promise<T>): Promise<T> => { const session = await input.transport.openSession({ network_id: input.config.network_id, node_id: input.config.node_id }); try { return await fn(session.session_id); } finally { await input.transport.closeSession({ session_id: session.session_id }); } };
@@ -82,6 +85,11 @@ function createNodeUiServer(input: { config: NodeUiConfig; transport: TransportA
           try { messages[0].message = JSON.parse((await input.downloader.download(envelope.artifact_refs[0].artifact_id)).toString('utf8')); } catch { messages[0].message = null; }
         }
         return json(response, 200, { schema: 'zj-loop.opn_node_ui_inbox.v1', network_id: input.config.network_id, messages, side_effects_executed: false });
+      }
+      if (request.method === 'GET' && url.pathname === '/ui/inbound-tasks') {
+        if (!input.stateStore) return json(response, 503, { schema: 'zj-loop.opn_node_ui.v1', status: 'blocked', reason: 'inbound-task-read-model-unavailable', side_effects_executed: false });
+        const tasks = await listInboundTasks({ stateStore: input.stateStore, network_id: input.config.network_id });
+        return json(response, 200, { schema: 'zj-loop.opn_node_ui_inbound_tasks.v1', network_id: input.config.network_id, tasks, side_effects_executed: false });
       }
       if (request.method === 'GET' && url.pathname === '/ui/outbox') return json(response, 200, { schema: 'zj-loop.opn_node_ui_outbox.v1', network_id: input.config.network_id, messages: await readOutbox(), side_effects_executed: false });
       if (request.method === 'POST' && url.pathname === '/ui/messages') {
@@ -113,6 +121,7 @@ process.exitCode = await runCli({
     { name: 'endpoint', type: 'string', description: 'OPN HTTPS endpoint' },
     { name: 'node_id', flag: 'node-id', type: 'string', description: 'Optional node id derived from certificate when omitted' },
     { name: 'artifact_store', flag: 'artifact-store', type: 'string', description: 'Local artifact store' },
+    { name: 'state_store', flag: 'state-store', type: 'string', description: 'Local StateStore database for read-only inbound task projection' },
     { name: 'port', type: 'string', description: 'Local browser port' },
   ],
   async handler({ options, io }) {
@@ -122,12 +131,13 @@ process.exitCode = await runCli({
     const downloader = createTlsOpnArtifactDownloader({ endpoint: config.endpoint, ca: config.ca, cert: config.cert, key: config.key, bearer_token: config.token });
     const publisher = createTlsOpnArtifactPublisher({ endpoint: config.endpoint, ca: config.ca, cert: config.cert, key: config.key, bearer_token: config.token });
     const artifacts = createOpnArtifactStore({ root: config.artifact_store });
-    const server = createNodeUiServer({ config, transport, downloader, publisher, artifacts, outbox_path: path.join(String(options.node_dir), 'outbox.json') });
+    const stateStore = createSqliteStateStore({ filename: config.state_store });
+    const server = createNodeUiServer({ config, transport, downloader, publisher, artifacts, stateStore, outbox_path: path.join(String(options.node_dir), 'outbox.json') });
     const port = Number(options.port ?? 0);
     await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('opn-node-ui-address-unavailable');
     io.stdout(JSON.stringify({ schema: 'zj-loop.opn_node_ui.v1', status: 'listening', url: `http://127.0.0.1:${address.port}/`, network_id: config.network_id, node_id: config.node_id, side_effects_executed: false }));
-    await new Promise<void>((resolve) => { const close = () => { server.close(() => resolve()); }; process.once('SIGINT', close); process.once('SIGTERM', close); });
+    await new Promise<void>((resolve) => { const close = () => { server.close(() => { void stateStore.close().then(resolve); }); }; process.once('SIGINT', close); process.once('SIGTERM', close); });
   },
 });
