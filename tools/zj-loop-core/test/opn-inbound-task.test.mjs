@@ -92,3 +92,21 @@ test('expired processing lease recovers to admitted without changing the task at
     assert.deepEqual((await store.readEvents({ network_id: 'network-1', aggregate_type: 'opn-inbound-task' })).events.map((event) => event.event_type), ['opn.inbound.task.pending-human-approval', 'opn.inbound.task.approved', 'opn.inbound.task.processing', 'opn.inbound.task.admitted']);
   } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('concurrent inbound recovery records only one admission fact', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'zj-inbound-task-concurrent-recovery-'));
+  const store = createSqliteStateStore({ filename: path.join(root, 'state.db') });
+  try {
+    await store.createNetwork({ network_id: 'network-1', owner_id: 'human-1', now: '2099-08-13T00:00:00.000Z' });
+    const inbound = createInboundTask({ network_id: 'network-1', envelope: envelope(), received_at: '2099-08-13T00:00:01.000Z' });
+    await persistInboundTask({ stateStore: store, inbound });
+    const approved = await appendInboundTaskDecision({ stateStore: store, inbound, decision: 'approved', human_id: 'human-1', human_note: 'concurrent recovery test', selected_agent_id: 'agent-1', decided_at: '2099-08-13T00:00:02.000Z' });
+    await appendInboundTaskLifecycle({ stateStore: store, inbound: approved.inbound, status: 'processing', now: '2099-08-13T00:00:03.000Z', processing_lease_ms: 1_000 });
+    const results = await Promise.all([
+      recoverExpiredInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T00:01:03.000Z' }),
+      recoverExpiredInboundTasks({ stateStore: store, network_id: 'network-1', now: '2099-08-13T00:01:03.000Z' }),
+    ]);
+    assert.deepEqual(results.map((result) => result.recovered).sort(), [0, 1]);
+    assert.equal((await store.readEvents({ network_id: 'network-1', aggregate_type: 'opn-inbound-task' })).events.filter((event) => event.event_type === 'opn.inbound.task.admitted').length, 1);
+  } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
+});
