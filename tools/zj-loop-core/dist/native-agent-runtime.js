@@ -66,7 +66,7 @@ export function createNativeAgentRuntime(input) {
             executions.set(execution.execution_id, execution);
             await persist(args.envelope.network_id, execution, 'evidence-recorded', args.now);
         }
-        return { status: 'accepted', execution, side_effects_executed: false };
+        return { status: 'accepted', execution, ...(result.evidence === undefined ? {} : { evidence: result.evidence }), side_effects_executed: false };
     }
     return { schema: NATIVE_AGENT_RUNTIME_SCHEMA, acceptEnvelope };
 }

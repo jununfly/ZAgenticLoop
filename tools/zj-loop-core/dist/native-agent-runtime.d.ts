@@ -8,11 +8,13 @@ export type NativeAgentExecutorResult = {
     status: 'succeeded' | 'failed' | 'blocked';
     evidence_refs?: string[];
     reason?: string;
+    evidence?: unknown;
 };
 export type NativeAgentExecutor = (task: BoundedLoopTask) => Promise<NativeAgentExecutorResult>;
 export type NativeAgentRuntimeResult = {
     status: 'accepted';
     execution: NativeAgentExecution;
+    evidence?: unknown;
     side_effects_executed: false;
 } | {
     status: 'duplicate';

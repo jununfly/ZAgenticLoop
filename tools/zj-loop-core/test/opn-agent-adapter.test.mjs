@@ -75,7 +75,7 @@ test('OPN Agent adapter persists worker session evidence in the result artifact'
   const sent = [];
   const adapter = createOpnAgentAdapter({
     transport: { async receive() { return envelope; }, async send(input) { sent.push(input); return { status: 'accepted', message_id: input.envelope.message_id, envelope_digest: input.envelope.envelope_digest, side_effects_executed: false }; }, async acknowledge() { return { status: 'accepted', message_id: envelope.message_id, envelope_digest: envelope.envelope_digest, side_effects_executed: false }; } },
-    runtime: { async acceptEnvelope() { return { status: 'accepted', execution: { schema: 'zj-loop.native_agent_execution.v1', execution_id: task.execution_id, task_id: task.task_id, attempt: 1, agent_id: 'agent-1', task_digest: task.task_digest, registration_digest: digest('r'), started_at: '2026-08-07T12:01:00.000Z', status: 'evidence-recorded', evidence_refs: ['provider-result'], transitions: [] }, side_effects_executed: false }; } },
+    runtime: { async acceptEnvelope() { return { status: 'accepted', execution: { schema: 'zj-loop.native_agent_execution.v1', execution_id: task.execution_id, task_id: task.task_id, attempt: 1, agent_id: 'agent-1', task_digest: task.task_digest, registration_digest: digest('r'), started_at: '2026-08-07T12:01:00.000Z', status: 'evidence-recorded', evidence_refs: ['provider-result'], transitions: [] }, evidence: { schema: 'zj-loop.opn_node_ui_service_diagnostic.v1', status: 'passed', healthz: { status: 'passed' } }, side_effects_executed: false }; } },
     artifactStore: store,
     agent_id: 'agent-1',
     now: () => '2026-08-07T12:01:01.000Z',
@@ -83,6 +83,7 @@ test('OPN Agent adapter persists worker session evidence in the result artifact'
   await adapter.processNext({ session_id: 'session-2', session_evidence: { session_id: 'session-2', expires_at: '2026-08-10T15:00:00.000Z', refreshed: true, refresh_count: 1 }, resolveTask: () => task });
   const artifact = sent[0].envelope.artifact_refs[0].artifact_id;
   const stored = await store.read(artifact);
+  assert.deepEqual(JSON.parse(stored.bytes.toString('utf8')).evidence, { schema: 'zj-loop.opn_node_ui_service_diagnostic.v1', status: 'passed', healthz: { status: 'passed' } });
   assert.deepEqual(JSON.parse(stored.bytes.toString('utf8')).session_evidence, { session_id: 'session-2', expires_at: '2026-08-10T15:00:00.000Z', refreshed: true, refresh_count: 1 });
 });
 

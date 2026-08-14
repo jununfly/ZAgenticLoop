@@ -15,6 +15,7 @@ import { createOpnAgentWorker } from './opn-agent-worker.js';
 import { createTlsOpnArtifactDownloader, createTlsOpnArtifactPublisher } from './opn-artifact-client.js';
 import { discoverProviderExecutable } from './provider-executable-discovery.js';
 import { createBoundedLoopTask } from './agent-task.js';
+import { createOpnNodeUiServiceDiagnosticExecutor, OPN_NODE_UI_SERVICE_TASK_KIND } from './opn-node-ui-service-diagnostic.js';
 export function createRetryBoundedLoopTask(task) {
     const { schema: _schema, task_digest: _task_digest, execution_id: _execution_id, attempt: _attempt, idempotency_key: _idempotency_key, ...definition } = task;
     return createBoundedLoopTask({ ...definition, execution_id: `retry-${randomUUID()}`, attempt: task.attempt + 1, idempotency_key: `${task.idempotency_key}:retry:${randomUUID()}` });
@@ -55,18 +56,20 @@ export const opnAgentRunnerCliSpec = {
         const node_id = String(options.node_id ?? '').trim();
         let task = command === 'run' ? JSON.parse(await read('task_file', 'opn-agent-runner-task-required')) : undefined;
         const providerKind = String(options.provider ?? '').trim();
-        if (providerKind !== 'codex' && providerKind !== 'workbuddy-code')
+        const diagnosticTask = task?.task_kind === OPN_NODE_UI_SERVICE_TASK_KIND;
+        if (!diagnosticTask && providerKind !== 'codex' && providerKind !== 'workbuddy-code')
             throw new Error('opn-agent-runner-provider-invalid');
-        const processAdapter = createLocalProcessAdapter();
-        const discovery = await discoverProviderExecutable({ provider: providerKind, explicit: String(options.executable ?? '') });
-        if (discovery.status !== 'found' || !discovery.executable) {
-            throw new Error(`opn-agent-provider-executable-unavailable:${JSON.stringify(discovery)}`);
+        let provider;
+        if (!diagnosticTask) {
+            const processAdapter = createLocalProcessAdapter();
+            const discovery = await discoverProviderExecutable({ provider: providerKind, explicit: String(options.executable ?? '') });
+            if (discovery.status !== 'found' || !discovery.executable)
+                throw new Error(`opn-agent-provider-executable-unavailable:${JSON.stringify(discovery)}`);
+            const providerSessionId = String(options.session_id ?? '').trim() || (providerKind === 'workbuddy-code' ? `zj-opn-workbuddy-${node_id.slice(0, 32)}` : '');
+            provider = providerKind === 'codex'
+                ? createCodexAgentProviderAdapter({ process_adapter: processAdapter, executable: discovery.executable })
+                : createWorkBuddyCodeProviderAdapter({ process_adapter: processAdapter, executable: discovery.executable, session_id: providerSessionId });
         }
-        const executable = discovery.executable;
-        const providerSessionId = String(options.session_id ?? '').trim() || (providerKind === 'workbuddy-code' ? `zj-opn-workbuddy-${node_id.slice(0, 32)}` : '');
-        const provider = providerKind === 'codex'
-            ? createCodexAgentProviderAdapter({ process_adapter: processAdapter, executable })
-            : createWorkBuddyCodeProviderAdapter({ process_adapter: processAdapter, executable, session_id: providerSessionId });
         const stateStore = createSqliteStateStore({ filename: String(options.artifact_store ?? '').trim() + '.runner-state.db' });
         try {
             await stateStore.createNetwork({ network_id, owner_id: 'human-1' });
@@ -86,8 +89,12 @@ export const opnAgentRunnerCliSpec = {
             const transport = createTlsTransportAdapter({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const publisher = createTlsOpnArtifactPublisher({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
             const downloader = createTlsOpnArtifactDownloader({ endpoint: String(options.endpoint ?? ''), ca, cert, key, bearer_token });
-            const executor = createProviderBackedNativeAgentExecutor({ provider_kind: providerKind, provider, cwd: String(options.cwd ?? ''), prompt: (value) => value.objective });
-            const registration = createAgentRegistration({ agent_id: node_id, display_name: providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task?.task_kind ?? 'agent.task'], evidence_kinds: task?.expected_evidence_kinds ?? ['agent.result'], protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` });
+            const diagnosticExecutor = createOpnNodeUiServiceDiagnosticExecutor({ network_id, node_id });
+            const providerExecutor = provider ? createProviderBackedNativeAgentExecutor({ provider_kind: providerKind, provider, cwd: String(options.cwd ?? ''), prompt: (value) => value.objective }) : undefined;
+            const executor = async (value) => value.task_kind === OPN_NODE_UI_SERVICE_TASK_KIND
+                ? diagnosticExecutor(value)
+                : providerExecutor ? providerExecutor(value) : { status: 'blocked', reason: 'opn-agent-provider-unavailable' };
+            const registration = createAgentRegistration({ agent_id: node_id, display_name: diagnosticTask ? 'opn-node-ui-diagnostic' : providerKind, capabilities: ['task.execute'], accepted_task_kinds: [task?.task_kind ?? 'agent.task'], evidence_kinds: task?.expected_evidence_kinds ?? ['agent.result'], protocol_version: 'opn-agent-runtime.v1', identity_ref: `identity:${node_id}` });
             const runtime = createNativeAgentRuntime({ stateStore, registration, executor });
             const artifactStore = createOpnArtifactStore({ root: String(options.artifact_store ?? '') });
             const supervisionMode = String(options.supervision_mode ?? 'unattended').trim();

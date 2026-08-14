@@ -5,10 +5,10 @@ import { validateTransportEnvelope, type TransportEnvelope } from './transport-c
 import type { SqliteStateStore } from './sqlite-state-store.js';
 
 export const NATIVE_AGENT_RUNTIME_SCHEMA = 'zj-loop.native_agent_runtime.v1' as const;
-export type NativeAgentExecutorResult = { status: 'succeeded' | 'failed' | 'blocked'; evidence_refs?: string[]; reason?: string };
+export type NativeAgentExecutorResult = { status: 'succeeded' | 'failed' | 'blocked'; evidence_refs?: string[]; reason?: string; evidence?: unknown };
 export type NativeAgentExecutor = (task: BoundedLoopTask) => Promise<NativeAgentExecutorResult>;
 export type NativeAgentRuntimeResult =
-  | { status: 'accepted'; execution: NativeAgentExecution; side_effects_executed: false }
+  | { status: 'accepted'; execution: NativeAgentExecution; evidence?: unknown; side_effects_executed: false }
   | { status: 'duplicate'; execution: NativeAgentExecution; side_effects_executed: false }
   | { status: 'blocked'; reason: string; side_effects_executed: false };
 
@@ -62,7 +62,7 @@ export function createNativeAgentRuntime(input: { stateStore: SqliteStateStore; 
       executions.set(execution.execution_id, execution);
       await persist(args.envelope.network_id, execution, 'evidence-recorded', args.now);
     }
-    return { status: 'accepted', execution, side_effects_executed: false };
+    return { status: 'accepted', execution, ...(result.evidence === undefined ? {} : { evidence: result.evidence }), side_effects_executed: false };
   }
 
   return { schema: NATIVE_AGENT_RUNTIME_SCHEMA, acceptEnvelope };
