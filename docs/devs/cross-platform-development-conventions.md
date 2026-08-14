@@ -259,6 +259,11 @@ the only configuration root:
   keep binding, logs, runtime state, and referenced configuration under that
   directory.
 
+Worker-node gateways use `opn-node-ui-cli install-service` and the stable label
+`ZAgenticLoop-OPN-NodeUI-<network_id>-<node_id_prefix16>`. A service install
+requires an explicit fixed loopback port; an ephemeral port is only for manual
+development runs.
+
 macOS Human approval uses the Keychain helper. A non-macOS development gateway
 may use an explicit P-256 `signer_key` in `opn-web-ui.json`; this is a
 development portability adapter, not a replacement for production CNG,

@@ -625,17 +625,17 @@
     "1-6-5-2-2-6-4": {
       "id": "1-6-5-2-2-6-4",
       "label": "OPN WebUI 跨平台自动化与真实 dogfood 证据归档",
-      "status": "pending",
+      "status": "in_progress",
       "mode": "exploit",
       "parent": "1-6-5-2-2-6",
       "children": [],
       "decisions": [],
-      "notes": ""
+      "notes": "补齐无人值守 Worker 节点的 opn-node-ui service-managed 生命周期：稳定 network + node 前缀 label、macOS launchd/Windows Task Scheduler 共用包装脚本、固定 loopback port 要求；Human Approval UI 与 Worker Node UI 均可脱离交互 shell 常驻。当前已通过 build 与 13 个 focused tests，真实 Mac/Windows 常驻 dogfood 与证据归档待执行。"
     }
   },
   "metadata": {
     "created": "2026-08-01 00:53:08",
-    "updated": "2026-08-14 18:52:40",
+    "updated": "2026-08-14 19:00:58",
     "md_file": "docs/plans/opn-native-agent-runtime-next-milestone-roadmap.md"
   }
 }

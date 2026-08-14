@@ -6,6 +6,7 @@ import os from 'node:os';
 import { loadOpnEndpointConfig, opnEndpointConfigPath, writeOpnEndpointConfig } from '../dist/opn-endpoint-config.js';
 import { createMacOsLaunchdPlist, createWindowsTaskSchedulerCommand, createWindowsWrapper, opnEndpointServiceLabel, opnWebUiServiceLabel } from '../dist/opn-endpoint-service.js';
 import { opnAgentWorkerServiceLabel } from '../dist/opn-agent-worker-service.js';
+import { opnNodeUiServiceLabel } from '../dist/opn-node-ui-service.js';
 
 const config = (root) => ({ bind: '100.119.216.26', port: 43123, network_id: 'network-1', state_store: path.join(root, 'state.db'), server_key: path.join(root, 'server.key'), server_cert: path.join(root, 'server.cert'), client_ca: path.join(root, 'ca.cert'), session_ttl_minutes: 50 });
 
@@ -46,4 +47,8 @@ test('WebUI service label and launchd logs are stable and network-scoped', () =>
   const plist = createMacOsLaunchdPlist(spec);
   assert.match(plist, /human-approval-ui\.log/);
   assert.match(plist, /ZAgenticLoop-OPN-WebUI-network-1/);
+});
+
+test('Node WebUI service label is stable and uses the first 16 node-id characters', () => {
+  assert.equal(opnNodeUiServiceLabel('network-1', 'abcdef0123456789abcdef'), 'ZAgenticLoop-OPN-NodeUI-network-1-abcdef0123456789');
 });

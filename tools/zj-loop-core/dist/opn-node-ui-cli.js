@@ -11,6 +11,7 @@ import { createTransportEnvelope } from './transport-contract.js';
 import { createSqliteStateStore } from './sqlite-state-store.js';
 import { appendInboundTaskDecision, expireInboundTasks, listInboundTasks } from './opn-inbound-task.js';
 import { runCli } from './cli.js';
+import { installOpnNodeUiService, opnNodeUiServiceLabel, uninstallOpnNodeUiService } from './opn-node-ui-service.js';
 const UI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/opn');
 function json(response, status, value) {
     const body = JSON.stringify(value);
@@ -155,7 +156,7 @@ function createNodeUiServer(input) {
     });
 }
 process.exitCode = await runCli({
-    name: 'zj-loop-opn-node-ui', description: 'Run a cross-platform local OPN node Web Gateway.', usage: 'zj-loop-opn-node-ui start ...',
+    name: 'zj-loop-opn-node-ui', description: 'Run a cross-platform local OPN node Web Gateway.', usage: 'zj-loop-opn-node-ui [start|install-service|uninstall-service] ...',
     options: [
         { name: 'command', type: 'positional', description: 'start', default: 'start' },
         { name: 'node_dir', flag: 'node-dir', type: 'string', description: 'OPN node directory' },
@@ -165,9 +166,35 @@ process.exitCode = await runCli({
         { name: 'artifact_store', flag: 'artifact-store', type: 'string', description: 'Local artifact store' },
         { name: 'state_store', flag: 'state-store', type: 'string', description: 'Local StateStore database for read-only inbound task projection' },
         { name: 'port', type: 'string', description: 'Local browser port' },
+        { name: 'runtime_dir', flag: 'runtime-dir', type: 'string', description: 'Service runtime/log directory' },
     ],
     async handler({ options, io }) {
-        if (String(options.command ?? 'start') !== 'start')
+        const command = String(options.command ?? 'start');
+        const nodeDir = String(options.node_dir ?? '').trim();
+        const networkId = String(options.network_id ?? '').trim();
+        const nodeId = String(options.node_id ?? '').trim();
+        if (command === 'uninstall-service') {
+            if (!networkId || !nodeId)
+                throw new Error('opn-node-ui-service-network-id-node-id-required');
+            const label = opnNodeUiServiceLabel(networkId, nodeId);
+            const result = await uninstallOpnNodeUiService(label);
+            io.stdout(JSON.stringify({ schema: 'zj-loop.opn_node_ui_service.v1', status: 'uninstalled', label, ...result, side_effects_executed: true }));
+            return;
+        }
+        if (command === 'install-service') {
+            if (!nodeDir || !networkId)
+                throw new Error('opn-node-ui-service-node-dir-network-id-required');
+            const config = await loadConfig(options);
+            const label = opnNodeUiServiceLabel(config.network_id, config.node_id);
+            const port = Number(options.port ?? 0);
+            if (!Number.isInteger(port) || port <= 0 || port > 65535)
+                throw new Error('opn-node-ui-service-port-required');
+            const args = ['start', '--node-dir', nodeDir, '--network-id', config.network_id, '--endpoint', config.endpoint, '--node-id', config.node_id, '--artifact-store', config.artifact_store, '--state-store', config.state_store, '--port', String(port)];
+            const result = await installOpnNodeUiService({ label, executable: process.execPath, script: process.argv[1], args, runtime_dir: String(options.runtime_dir ?? path.join(nodeDir, 'node-ui-runtime')), working_directory: process.cwd() });
+            io.stdout(JSON.stringify({ schema: 'zj-loop.opn_node_ui_service.v1', status: 'installed', label, ...result, node_dir: nodeDir, port, side_effects_executed: true }));
+            return;
+        }
+        if (command !== 'start')
             throw new Error('unsupported-opn-node-ui-command');
         const config = await loadConfig(options);
         const transport = createTlsTransportAdapter({ endpoint: config.endpoint, ca: config.ca, cert: config.cert, key: config.key, bearer_token: config.token });
