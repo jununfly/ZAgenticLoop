@@ -58,13 +58,13 @@ export function createTlsTransportAdapter(input) {
     const timeout = input.request_timeout_ms ?? 10_000;
     if (!Number.isInteger(timeout) || timeout <= 0)
         throw new Error('transport-timeout-invalid');
-    async function call(method, pathname, body) {
+    async function call(method, pathname, body, request_timeout_ms = timeout) {
         const payload = body === undefined ? undefined : JSON.stringify(body);
         const options = {
             protocol: 'https:', hostname: endpoint.hostname, port: endpoint.port || 443, method,
             path: `${endpoint.pathname.replace(/\/$/, '')}${pathname}`,
             ca: input.ca, cert: input.cert, key: input.key, ecdhCurve: OPN_TLS_ECDH_CURVE, rejectUnauthorized: true, minVersion: 'TLSv1.3',
-            timeout, headers: { authorization: `Bearer ${input.bearer_token}`, ...(payload === undefined ? {} : { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) }) },
+            timeout: request_timeout_ms, headers: { authorization: `Bearer ${input.bearer_token}`, ...(payload === undefined ? {} : { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) }) },
         };
         return new Promise((resolve, reject) => {
             const req = request(options, (response) => {
@@ -127,7 +127,7 @@ export function createTlsTransportAdapter(input) {
             if (!Number.isInteger(waitMs) || waitMs < 0 || waitMs > 30_000)
                 throw new Error('transport-receive-wait-invalid');
             const suffix = waitMs > 0 ? `?wait_ms=${waitMs}` : '';
-            const response = await call('GET', `/v1/transport/sessions/${pathSegment(session.session_id, 'transport-session-id-required')}/envelopes${suffix}`);
+            const response = await call('GET', `/v1/transport/sessions/${pathSegment(session.session_id, 'transport-session-id-required')}/envelopes${suffix}`, undefined, Math.max(timeout, waitMs + 5_000));
             if (response.statusCode === 204)
                 return null;
             if (response.statusCode !== 200)

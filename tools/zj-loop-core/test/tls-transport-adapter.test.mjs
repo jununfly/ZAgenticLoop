@@ -81,3 +81,32 @@ test('TLS transport adapter rejects invalid envelope before network I/O', async 
   await assert.rejects(adapter.send({ session_id: 'session-1', envelope: { payload: 'forbidden' } }), { message: 'transport-envelope-field-invalid' });
   assert.throws(() => createTlsTransportAdapter({ endpoint: 'http://127.0.0.1:1', ca: 'ca', cert: 'cert', key: 'key', bearer_token: 'credential-1' }), { message: 'transport-endpoint-https-required' });
 });
+
+test('TLS transport adapter gives long-poll receive its full wait window', async () => {
+  const serverMaterial = await certificate('localhost', 'DNS:localhost,IP:127.0.0.1');
+  const clientMaterial = await certificate('node-1', 'DNS:node-1');
+  const server = createServer({ key: serverMaterial.key, cert: serverMaterial.cert, ca: clientMaterial.cert, requestCert: true, rejectUnauthorized: true, minVersion: 'TLSv1.3' }, (request, response) => {
+    response.setHeader('content-type', 'application/json');
+    if (request.url === '/v1/transport/sessions' && request.method === 'POST') {
+      response.statusCode = 201;
+      response.end(JSON.stringify({ status: 'created', session: { session_id: 'session-long-poll', expires_at: '2099-08-01T12:50:00.000Z' }, side_effects_executed: false }));
+      return;
+    }
+    if (request.url?.startsWith('/v1/transport/sessions/session-long-poll/envelopes') && request.method === 'GET') {
+      setTimeout(() => { response.statusCode = 204; response.end(); }, 100);
+      return;
+    }
+    response.statusCode = 404;
+    response.end(JSON.stringify({ status: 'blocked', reason: 'route-not-found', side_effects_executed: false }));
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const adapter = createTlsTransportAdapter({ endpoint: `https://localhost:${server.address().port}`, ca: serverMaterial.cert, cert: clientMaterial.cert, key: clientMaterial.key, bearer_token: 'credential-1', request_timeout_ms: 10 });
+  try {
+    const session = await adapter.openSession({ network_id: 'network-1', node_id: 'node-1' });
+    assert.equal(await adapter.receive({ session_id: session.session_id, wait_ms: 20 }), null);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(serverMaterial.root, { recursive: true, force: true });
+    await rm(clientMaterial.root, { recursive: true, force: true });
+  }
+});
