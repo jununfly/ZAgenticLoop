@@ -52,6 +52,7 @@ export type HumanApprovalUiServerInput = {
   now?: () => string;
   human_device?: { device_key_id: string; device_fingerprint: string };
   dogfoodApprovals?: RealAgentDogfoodApprovalUiUpstream;
+  graphFeatureStatus?: { status: 'ready' | 'not-configured' | 'invalid-config'; reason?: string };
   control_token?: string;
   on_shutdown?: () => Promise<void> | void;
 };
@@ -222,6 +223,11 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     return token;
   };
   const sessionCookie = (token: string): string => `zj_loop_ui_session=${encodeURIComponent(token)}; Max-Age=${Math.max(1, Math.ceil(sessionTtlMs / 1000))}; HttpOnly; SameSite=Strict; Path=/`;
+  const optionalGraphStatus = (): { status: 'not-configured' | 'invalid-config'; reason?: string } => {
+    if (input.graphFeatureStatus?.status === 'invalid-config') return { status: 'invalid-config', ...(input.graphFeatureStatus.reason ? { reason: input.graphFeatureStatus.reason } : {}) };
+    if (input.graphFeatureStatus?.status === 'not-configured') return { status: 'not-configured', ...(input.graphFeatureStatus.reason ? { reason: input.graphFeatureStatus.reason } : {}) };
+    return { status: 'not-configured' };
+  };
 
   return createServer(async (request, response) => {
     await sessionsReady;
@@ -310,7 +316,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     if (request.method === 'GET' && url.pathname === '/ui/graph-atoms') {
       if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
-      if (!input.upstream.graphAtoms) { blocked(response, 503, 'graph-atom-read-model-unavailable'); return; }
+      if (!input.upstream.graphAtoms) { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...optionalGraphStatus(), network_id: input.network_id, graphs: [], side_effects_executed: false }); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.upstream.graphAtoms()), side_effects_executed: false }); } catch { blocked(response, 503, 'graph-atom-read-model-unavailable'); }
       return;
     }
@@ -345,7 +351,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     if (request.method === 'GET' && url.pathname === '/ui/dogfood-approvals') {
       if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
-      if (!input.dogfoodApprovals) { blocked(response, 503, 'dogfood-approval-read-model-unavailable'); return; }
+      if (!input.dogfoodApprovals) { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...optionalGraphStatus(), network_id: input.network_id, requests: [], side_effects_executed: false }); return; }
       try { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, status: 'ok', network_id: input.network_id, ...(await input.dogfoodApprovals.list()), side_effects_executed: false }); } catch { blocked(response, 503, 'dogfood-approval-read-model-unavailable'); }
       return;
     }
@@ -409,7 +415,7 @@ export function createHumanApprovalUiServer(input: HumanApprovalUiServerInput): 
     }
     if (request.method === 'GET' && url.pathname === '/ui/events') {
       if (!validSession(request, sessions, now, url)) { blocked(response, 401, 'ui-session-required'); return; }
-      if (!input.graph) { blocked(response, 503, 'graph-upstream-unavailable'); return; }
+      if (!input.graph) { json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...optionalGraphStatus(), network_id: input.network_id, events: [], side_effects_executed: false }); return; }
       try {
         const result = await input.graph.list();
         const events = result.events.map((event) => ({ event_id: event.event.event_id, title: event.event.title, ...('created_at' in event.event ? { created_at: event.event.created_at } : {}), status: event.status, network_id: event.network_id, plan: event.plan, next_action: event.next_action, blocking_reasons: event.blocking_reasons }));

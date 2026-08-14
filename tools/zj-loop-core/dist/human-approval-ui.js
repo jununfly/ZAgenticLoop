@@ -161,6 +161,13 @@ export function createHumanApprovalUiServer(input) {
         return token;
     };
     const sessionCookie = (token) => `zj_loop_ui_session=${encodeURIComponent(token)}; Max-Age=${Math.max(1, Math.ceil(sessionTtlMs / 1000))}; HttpOnly; SameSite=Strict; Path=/`;
+    const optionalGraphStatus = () => {
+        if (input.graphFeatureStatus?.status === 'invalid-config')
+            return { status: 'invalid-config', ...(input.graphFeatureStatus.reason ? { reason: input.graphFeatureStatus.reason } : {}) };
+        if (input.graphFeatureStatus?.status === 'not-configured')
+            return { status: 'not-configured', ...(input.graphFeatureStatus.reason ? { reason: input.graphFeatureStatus.reason } : {}) };
+        return { status: 'not-configured' };
+    };
     return createServer(async (request, response) => {
         await sessionsReady;
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
@@ -315,7 +322,7 @@ export function createHumanApprovalUiServer(input) {
                 return;
             }
             if (!input.upstream.graphAtoms) {
-                blocked(response, 503, 'graph-atom-read-model-unavailable');
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...optionalGraphStatus(), network_id: input.network_id, graphs: [], side_effects_executed: false });
                 return;
             }
             try {
@@ -414,7 +421,7 @@ export function createHumanApprovalUiServer(input) {
                 return;
             }
             if (!input.dogfoodApprovals) {
-                blocked(response, 503, 'dogfood-approval-read-model-unavailable');
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...optionalGraphStatus(), network_id: input.network_id, requests: [], side_effects_executed: false });
                 return;
             }
             try {
@@ -577,7 +584,7 @@ export function createHumanApprovalUiServer(input) {
                 return;
             }
             if (!input.graph) {
-                blocked(response, 503, 'graph-upstream-unavailable');
+                json(response, 200, { schema: HUMAN_APPROVAL_UI_SCHEMA, ...optionalGraphStatus(), network_id: input.network_id, events: [], side_effects_executed: false });
                 return;
             }
             try {

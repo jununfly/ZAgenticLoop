@@ -245,6 +245,26 @@ decision.
 The matrix describes adapter boundaries, not implemented support. Never report
 a platform as supported solely because the provider-neutral interface exists.
 
+### Resident OPN WebUI
+
+The OPN WebUI is a local gateway and must be started by the platform service
+adapter, not by an Agent's interactive shell. Use the identity directory as
+the only configuration root:
+
+- macOS: launchd label `ZAgenticLoop-OPN-WebUI-<network_id>` with `KeepAlive`;
+- Windows: Task Scheduler label with the same network-scoped name and an
+  identity-directory `service.cmd` wrapper. Do not put the full Node command in
+  `schtasks /TR`; Windows limits that value to 261 characters;
+- both platforms: run `human-approval-ui-cli start --identity-dir <dir>` and
+  keep binding, logs, runtime state, and referenced configuration under that
+  directory.
+
+macOS Human approval uses the Keychain helper. A non-macOS development gateway
+may use an explicit P-256 `signer_key` in `opn-web-ui.json`; this is a
+development portability adapter, not a replacement for production CNG,
+DPAPI, PKCS#11, TPM2, or another OS-backed non-exportable signer. Never put a
+private key or owner token directly in `opn-web-ui.json`.
+
 ## Definition of Done for Cross-Platform Work
 
 A cross-platform change is ready for review when:

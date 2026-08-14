@@ -7,7 +7,7 @@ function xml(value) {
 }
 export function createMacOsLaunchdPlist(spec) {
     const args = [spec.executable, spec.script, ...spec.args].map((item) => `    <string>${xml(item)}</string>`).join('\n');
-    const log = path.join(spec.runtime_dir, 'endpoint.log');
+    const log = path.join(spec.runtime_dir, spec.log_name ?? 'endpoint.log');
     return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n  <key>Label</key><string>${xml(spec.label)}</string>\n  <key>ProgramArguments</key>\n  <array>\n${args}\n  </array>\n  <key>WorkingDirectory</key><string>${xml(spec.working_directory)}</string>\n  <key>RunAtLoad</key><true/>\n  <key>KeepAlive</key><true/>\n  <key>StandardOutPath</key><string>${xml(log)}</string>\n  <key>StandardErrorPath</key><string>${xml(log)}</string>\n</dict>\n</plist>\n`;
 }
 export function createWindowsTaskSchedulerCommand(spec) {
@@ -23,11 +23,17 @@ export function createWindowsTaskSchedulerCommand(spec) {
 function windowsWrapperCommand(spec) {
     return [spec.executable, spec.script, ...spec.args].map((item) => `"${item.replaceAll('"', '\\"')}"`).join(' ');
 }
-function createWindowsWrapper(spec) {
+export function createWindowsWrapper(spec) {
     return `@echo off\r\ncd /d "${spec.working_directory.replaceAll('"', '\\"')}"\r\n${windowsWrapperCommand(spec)}\r\n`;
 }
 export function opnEndpointServiceLabel(network_id) {
     return `ZAgenticLoop-OPN-${network_id}`;
+}
+export function opnWebUiServiceLabel(network_id) {
+    const network = network_id.trim();
+    if (!network)
+        throw new Error('opn-web-ui-service-network-required');
+    return `ZAgenticLoop-OPN-WebUI-${network}`;
 }
 export async function installOpnEndpointService(spec, platform = process.platform) {
     await mkdir(spec.runtime_dir, { recursive: true });
@@ -35,7 +41,11 @@ export async function installOpnEndpointService(spec, platform = process.platfor
         const pathname = path.join(os.homedir(), 'Library', 'LaunchAgents', `${spec.label}.plist`);
         await mkdir(path.dirname(pathname), { recursive: true });
         await writeFile(pathname, createMacOsLaunchdPlist(spec), { mode: 0o600 });
-        const result = spawnSync('launchctl', ['bootstrap', `gui/${process.getuid?.() ?? 0}`, pathname], { encoding: 'utf8' });
+        const domain = `gui/${process.getuid?.() ?? 0}`;
+        const previous = spawnSync('launchctl', ['bootout', `${domain}/${spec.label}`], { encoding: 'utf8' });
+        if (previous.status !== 0 && !/Could not find service|No such process/i.test(previous.stderr || ''))
+            throw new Error(`opn-endpoint-launchd-replace-failed:${(previous.stderr || '').trim()}`);
+        const result = spawnSync('launchctl', ['bootstrap', domain, pathname], { encoding: 'utf8' });
         if (result.status !== 0)
             throw new Error(`opn-endpoint-launchd-install-failed:${(result.stderr || '').trim()}`);
         return { platform: 'darwin', path: pathname };
@@ -47,6 +57,9 @@ export async function installOpnEndpointService(spec, platform = process.platfor
         const result = spawnSync(command[0], command.slice(1), { encoding: 'utf8', windowsHide: true });
         if (result.status !== 0)
             throw new Error(`opn-endpoint-task-install-failed:${(result.stderr || '').trim()}`);
+        const started = spawnSync('schtasks.exe', ['/Run', '/TN', spec.label], { encoding: 'utf8', windowsHide: true });
+        if (started.status !== 0)
+            throw new Error(`opn-endpoint-task-start-failed:${(started.stderr || '').trim()}`);
         return { platform: 'win32', command, path: wrapperPath };
     }
     throw new Error('opn-endpoint-service-platform-unsupported');

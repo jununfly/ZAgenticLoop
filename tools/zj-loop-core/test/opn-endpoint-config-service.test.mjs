@@ -4,7 +4,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { loadOpnEndpointConfig, opnEndpointConfigPath, writeOpnEndpointConfig } from '../dist/opn-endpoint-config.js';
-import { createMacOsLaunchdPlist, createWindowsTaskSchedulerCommand, opnEndpointServiceLabel } from '../dist/opn-endpoint-service.js';
+import { createMacOsLaunchdPlist, createWindowsTaskSchedulerCommand, createWindowsWrapper, opnEndpointServiceLabel, opnWebUiServiceLabel } from '../dist/opn-endpoint-service.js';
 import { opnAgentWorkerServiceLabel } from '../dist/opn-agent-worker-service.js';
 
 const config = (root) => ({ bind: '100.119.216.26', port: 43123, network_id: 'network-1', state_store: path.join(root, 'state.db'), server_key: path.join(root, 'server.key'), server_cert: path.join(root, 'server.cert'), client_ca: path.join(root, 'ca.cert'), session_ttl_minutes: 50 });
@@ -35,4 +35,15 @@ test('worker service label is stable and scoped to network and node', () => {
 test('Windows service installation returns a short wrapper command instead of embedding the worker command', () => {
   const spec = { label: opnAgentWorkerServiceLabel('network-1', 'abcdef0123456789abcdef'), executable: 'C:\\Program Files\\nodejs\\node.exe', script: 'C:\\workspace\\tools\\opn-agent-runner-cli.js', args: ['worker', '--endpoint', 'https://100.119.216.26:43123', '--credential-token-file', 'C:\\zj-loop\\identity\\join-session.json.credential-token'], runtime_dir: 'C:\\zj-loop\\identity\\worker-runtime', working_directory: 'C:\\workspace\\repo' };
   assert.ok(spec.runtime_dir.length < 261);
+  const wrapper = createWindowsWrapper(spec);
+  assert.match(wrapper, /cd \/d/);
+  assert.match(wrapper, /opn-agent-runner-cli\.js/);
+});
+
+test('WebUI service label and launchd logs are stable and network-scoped', () => {
+  assert.equal(opnWebUiServiceLabel('network-1'), 'ZAgenticLoop-OPN-WebUI-network-1');
+  const spec = { label: opnWebUiServiceLabel('network-1'), executable: '/usr/local/bin/node', script: '/opt/human-approval-ui-cli.js', args: ['start', '--identity-dir', '/Users/me/.zj-loop/identity'], runtime_dir: '/tmp/opn-web-ui-runtime', working_directory: '/opt', log_name: 'human-approval-ui.log' };
+  const plist = createMacOsLaunchdPlist(spec);
+  assert.match(plist, /human-approval-ui\.log/);
+  assert.match(plist, /ZAgenticLoop-OPN-WebUI-network-1/);
 });

@@ -445,7 +445,7 @@
       "parent": "1-6-5-2",
       "children": [],
       "decisions": [],
-      "notes": "已完成真实验收：新 CA/server key/cert 写入 ~/.zj-loop/identity，server cert SAN 为 IP 100.119.216.26 与 DNS zagenticloop-opn-endpoint；用户级 LaunchAgent 启动后 status=running、healthz=ok，binding 自动登记。"
+      "notes": "补充完成 TLS 兼容性修复：改用 openssl ecparam -name prime256v1 -genkey -noout 生成 named-curve CA/server key；Node 22 mTLS /healthz 返回 200。最终 CA 下重新签发 winrog agent cert 与 human-device cert。"
     },
     "1-6-5-2-2": {
       "id": "1-6-5-2-2",
@@ -453,14 +453,189 @@
       "status": "pending",
       "mode": "exploit",
       "parent": "1-6-5-2",
+      "children": [
+        "1-6-5-2-2-1",
+        "1-6-5-2-2-2",
+        "1-6-5-2-2-3",
+        "1-6-5-2-2-4",
+        "1-6-5-2-2-5",
+        "1-6-5-2-2-6"
+      ],
+      "decisions": [
+        {
+          "q": "E2E 验收如何拆分与协同？",
+          "answer": "按 Mac 基线、Windows session、常驻 worker、双向消息、故障恢复、证据归档六个可独立验收节点推进；Mac 端由 Agent 执行，Windows 端由 Human 执行并回传结构化输出。",
+          "note": "每一步设置通过标准，出现 TLS、credential、endpoint 或 UI 阻塞时停在当前节点，不跨层猜测。"
+        }
+      ],
+      "notes": "Mac endpoint 已常驻并可达；Windows 双向 message/Web UI 验收待 Windows 更新共享 CA 并重新 enrollment 后执行。"
+    },
+    "1-6-5-2-2-1": {
+      "id": "1-6-5-2-2-1",
+      "label": "Mac OPN endpoint 与 Web UI 基线可达性验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2",
       "children": [],
       "decisions": [],
-      "notes": "Mac endpoint 已常驻并可达；Windows 双向 message/Web UI 验收待 Windows 更新共享 CA 并重新 enrollment 后执行。"
+      "notes": "Mac commit a94022bf；launchd endpoint running PID 26998，100.119.216.26:43123 healthz=ok；Human Approval UI running on 127.0.0.1:55615；zj-loop-core build passed。"
+    },
+    "1-6-5-2-2-2": {
+      "id": "1-6-5-2-2-2",
+      "label": "Windows 共享 CA、credential 与 transport session 验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2",
+      "children": [],
+      "decisions": [],
+      "notes": "Windows session-open 成功；session_id=ots_490a38d15fb947208044c94683b6a906；expires_at=2026-08-11T09:45:55.000Z；reconnected=true。新 CA、agent credential、node id 与 Mac endpoint 链路验证通过。"
+    },
+    "1-6-5-2-2-3": {
+      "id": "1-6-5-2-2-3",
+      "label": "Windows Node 常驻 worker 服务安装与启动验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2",
+      "children": [],
+      "decisions": [],
+      "notes": "真实 OPN task windows-resident-worker-e2e-20260811-004 已由 resident worker 消费并执行；agent.result artifact sha256:3947b291eff623c1591d65b2730ab1d6f8fbe37c7fb7698beedc42a366ffd4cc；execution_id=windows-resident-worker-e2e-execution-20260811-004；agent_id=0dc9a2cc7c783edda6149dea892df341dfa9ab56f4d902c3f20c08e61d6650e；status=evidence-recorded。"
+    },
+    "1-6-5-2-2-4": {
+      "id": "1-6-5-2-2-4",
+      "label": "Mac 到 Windows task 与 Windows 到 Mac result 双向消息验收",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2",
+      "children": [],
+      "decisions": [],
+      "notes": "真实双向协作 task 已完成：Mac -> Windows agent.task windows-cross-device-co-design-message-20260811-001；Windows agent_id=0dc9a2cc7c783edda6149dea892df3411dfa9ab56f4d902c3f20c08e61d6650e 返回 agent.result，execution_id=windows-cross-device-co-design-execution-20260811-001，status=evidence-recorded，result_artifact_id=sha256:a5522b1b0ffd562788d306e7dcc2afa29549622c3e0c6f19fbe67cc8f96c9ee2。"
+    },
+    "1-6-5-2-2-5": {
+      "id": "1-6-5-2-2-5",
+      "label": "Worker 重启、断网重连与 session expiry refresh 验收",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2",
+      "children": [],
+      "decisions": [
+        {
+          "q": "Session refresh 验收标准",
+          "answer": "必须观察到 refreshed=true 且 refresh_count>=1 后才能完成该验收节点",
+          "note": "当前结果只证明 worker 正常执行，尚未证明主动续期。"
+        }
+      ],
+      "notes": "Endpoint reconnect验收已通过：Mac launchd endpoint kickstart restart 后 healthz=ok；task windows-endpoint-reconnect-e2e-20260811-001 被 Windows agent_id=0dc9a2cc7c783edda6149dea892df3411dfa9ab56f4d902c3f20c08e61d6650e 消费并返回 evidence-recorded；execution_id=windows-endpoint-reconnect-execution-20260811-001；result_artifact_id=sha256:7da8707370b31b27c2f234c0fb5171443738dbe1b57472a8b54346c460717a62。剩余 session expiry refresh。"
+    },
+    "1-6-5-2-2-6": {
+      "id": "1-6-5-2-2-6",
+      "label": "OPN Transport 与 Web UI 审计证据归档及路线图收口",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2",
+      "children": [
+        "1-6-5-2-2-6-1",
+        "1-6-5-2-2-6-2",
+        "1-6-5-2-2-6-3",
+        "1-6-5-2-2-6-4"
+      ],
+      "decisions": [
+        {
+          "q": "WebUI Graph approval 配置来源",
+          "answer": "Graph plan 与 read-model 配置纳入 OPN_IDENTITY_DIR 下的持久化运行配置",
+          "note": "常驻 WebUI 不依赖 /tmp 或一次性启动参数；未配置时显示明确的未配置状态。"
+        },
+        {
+          "q": "Refresh 后的下一实现切片",
+          "answer": "优先实现常驻 WebUI 的 Graph approval/read-model 配置持久化与明确状态，再进入 Controller MCP 和多 Agent admission",
+          "note": "先消除 WebUI 审计入口的不确定性。"
+        },
+        {
+          "q": "WebUI 配置文件组织",
+          "answer": "在同一 OPN_IDENTITY_DIR 下新增独立的 opn-web-ui.json",
+          "note": "endpoint 与 WebUI 生命周期配置职责不同，但设备文件集中管理。"
+        },
+        {
+          "q": "Graph plan 配置来源",
+          "answer": "只允许加载 OPN_IDENTITY_DIR 下配置声明的 plan，并记录 plan digest",
+          "note": "拒绝任意临时路径，避免常驻服务重启后配置漂移。"
+        },
+        {
+          "q": "Graph plan 缺失时的 UI 行为",
+          "answer": "返回 HTTP 200 且 status=not-configured，页面显示明确状态，其他功能继续可用",
+          "note": "不把可选 Graph 功能缺失误报成整个 WebUI upstream 故障。"
+        },
+        {
+          "q": "配置实现顺序",
+          "answer": "配置契约 → CLI 加载 → 常驻服务适配 → 状态展示 → 回归测试，再进入 Controller MCP",
+          "note": "确定性配置加载和状态转换由代码实现。"
+        },
+        {
+          "q": "opn-web-ui.json 字段范围",
+          "answer": "包含 network_id、pairing_endpoint、证书路径、Human signer 配置、监听端口、runtime 目录、Graph plan 路径和 evidence store 路径；owner token 只通过同目录受权限保护的 token 文件引用",
+          "note": "配置集中在 OPN_IDENTITY_DIR，秘密不进入 JSON。"
+        },
+        {
+          "q": "WebUI 常驻启动方式",
+          "answer": "采用与 endpoint 相同的 service-managed 模式，由 macOS launchd 和 Windows service adapter 自动启动；开发环境保留手动生命周期 CLI",
+          "note": "常驻运行脱离当前执行环境。"
+        },
+        {
+          "q": "CLI 与配置文件冲突规则",
+          "answer": "开发 CLI 允许显式参数覆盖；service-managed 启动只读 JSON；同一启动命令出现冲突值时返回 config-conflict",
+          "note": "禁止静默合并配置。"
+        },
+        {
+          "q": "Graph plan digest 无效时的服务行为",
+          "answer": "WebUI 保持常驻，Graph 区域返回 invalid-config 并显示原因；仅核心身份、TLS 或 endpoint 配置无效时阻止 gateway 启动",
+          "note": "可选 Graph 功能故障不影响消息审计。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-6-5-2-2-6-1": {
+      "id": "1-6-5-2-2-6-1",
+      "label": "OPN WebUI 配置 schema 与 identity-dir loader",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2-6",
+      "children": [],
+      "decisions": [],
+      "notes": "新增 zj-loop.opn_web_ui_config.v1 loader；严格字段校验、HTTPS endpoint 校验、identity-dir 内路径约束、Graph plan/evidence 成对校验、原子配置读写均已实现。opn-web-ui-config.test.mjs 4/4 通过。"
+    },
+    "1-6-5-2-2-6-2": {
+      "id": "1-6-5-2-2-6-2",
+      "label": "Graph plan digest 与 not-configured invalid-config 状态",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2-6",
+      "children": [],
+      "decisions": [],
+      "notes": "Human Approval UI Graph sections now return HTTP 200 status=not-configured or invalid-config instead of collapsing optional Graph capability into 503; core gateway remains usable. human-approval-ui.test.mjs 14/14 passed."
+    },
+    "1-6-5-2-2-6-3": {
+      "id": "1-6-5-2-2-6-3",
+      "label": "WebUI launchd 与 Windows service-managed lifecycle adapter",
+      "status": "completed",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2-6",
+      "children": [],
+      "decisions": [],
+      "notes": "WebUI service-managed lifecycle 已完成：新增稳定的 ZAgenticLoop-OPN-WebUI-<network_id> label；macOS launchd plist 使用 identity-dir 启动、KeepAlive 与独立日志；Windows 使用 identity-dir 内 service.cmd 包装脚本规避 schtasks /TR 261 字符限制；CLI 增加 install-service/uninstall-service。新增跨平台 PEM P-256 HumanSigner 配置，Windows 不再误走 macOS Keychain。构建与 focused tests 25/25 通过。真实多设备常驻 dogfood 归入 1-6-5-2-2-6-4。"
+    },
+    "1-6-5-2-2-6-4": {
+      "id": "1-6-5-2-2-6-4",
+      "label": "OPN WebUI 跨平台自动化与真实 dogfood 证据归档",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-6-5-2-2-6",
+      "children": [],
+      "decisions": [],
+      "notes": ""
     }
   },
   "metadata": {
     "created": "2026-08-01 00:53:08",
-    "updated": "2026-08-10 14:00:52",
+    "updated": "2026-08-14 18:52:40",
     "md_file": "docs/plans/opn-native-agent-runtime-next-milestone-roadmap.md"
   }
 }

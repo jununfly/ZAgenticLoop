@@ -1,7 +1,7 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-native-agent-runtime-next-milestone-roadmap.json` | 最后更新: 2026-08-10 14:00:52
+> 数据文件: `opn-native-agent-runtime-next-milestone-roadmap.json` | 最后更新: 2026-08-14 18:52:40
 
 [~][Y+] 1. OPN Native Agent Runtime 下一里程碑
 ├── [x][Y+] 1-1. Agent 节点注册与 capability contract
@@ -24,12 +24,10 @@
     ├── [x][Y+] 1-6-4. opn-agent-adapter.processNext 未知消息队头阻塞修复
     └── [~][Y+] 1-6-5. 真实 Windows worker 队头阻塞回归验收
 
-### 当前施工：1-6-5-2. Mac launchd 常驻 endpoint 真实安装与重启可达性验收
+### 当前施工：1-6-5-2-2-5. Worker 重启、断网重连与 session expiry refresh 验收
+
+Endpoint reconnect验收已通过：Mac launchd endpoint kickstart restart 后 healthz=ok；task windows-endpoint-reconnect-e2e-20260811-001 被 Windows agent_id=0dc9a2cc7c783edda6149dea892df3411dfa9ab56f4d902c3f20c08e61d6650e 消费并返回 evidence-recorded；execution_id=windows-endpoint-reconnect-execution-20260811-001；result_artifact_id=sha256:7da8707370b31b27c2f234c0fb5171443738dbe1b57472a8b54346c460717a62。剩余 session expiry refresh。
 
 **决策：**
-- Q: 服务安装权限 → macOS 使用当前用户级 LaunchAgent，不使用 system-wide LaunchDaemon 或 sudo。 (开发者单用户场景下配置、证书和运行日志保持在用户身份目录与 runtime 目录。)
-
-**当前子树：**
-├── [x][Y+] 1-6-5-2-1. Mac endpoint launchd 安装后重启与 healthz 验收
-└── [ ][Y+] 1-6-5-2-2. 通过 OPN 完成 Windows 双向 message 与 Web UI 审计验收
+- Q: Session refresh 验收标准 → 必须观察到 refreshed=true 且 refresh_count>=1 后才能完成该验收节点 (当前结果只证明 worker 正常执行，尚未证明主动续期。)
 <!-- ROADMAP_SECTION_END -->

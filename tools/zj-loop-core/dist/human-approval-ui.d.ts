@@ -115,6 +115,10 @@ export type HumanApprovalUiServerInput = {
         device_fingerprint: string;
     };
     dogfoodApprovals?: RealAgentDogfoodApprovalUiUpstream;
+    graphFeatureStatus?: {
+        status: 'ready' | 'not-configured' | 'invalid-config';
+        reason?: string;
+    };
     control_token?: string;
     on_shutdown?: () => Promise<void> | void;
 };

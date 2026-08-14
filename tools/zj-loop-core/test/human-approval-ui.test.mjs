@@ -44,6 +44,38 @@ test('Human approval UI loads independent sections when one read model is unavai
   assert.match(source, /Agent task results/);
 });
 
+test('Human approval UI keeps optional Graph sections available when Graph is not configured', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-graph-optional' });
+  const server = createHumanApprovalUiServer({ signer, network_id: 'network-graph-optional', bootstrap_token: 'graph-optional-bootstrap', upstream: { async list() { return { requests: [] }; } } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const bootstrapped = await request({ address, path: '/ui/bootstrap?token=graph-optional-bootstrap' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    for (const endpoint of ['/ui/dogfood-approvals', '/ui/events', '/ui/graph-atoms']) {
+      const response = await request({ address, path: endpoint, headers: { cookie } });
+      assert.equal(response.status, 200);
+      assert.equal(response.body.status, 'not-configured');
+    }
+  } finally { await new Promise((resolve) => server.close(resolve)); }
+});
+
+test('Human approval UI exposes invalid Graph configuration without taking down core gateway', async () => {
+  const signer = createInMemoryHumanSigner({ human_id: 'human-graph-invalid' });
+  const server = createHumanApprovalUiServer({ signer, network_id: 'network-graph-invalid', bootstrap_token: 'graph-invalid-bootstrap', graphFeatureStatus: { status: 'invalid-config', reason: 'graph-plan-digest-mismatch' }, upstream: { async list() { return { requests: [] }; } } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    const bootstrapped = await request({ address, path: '/ui/bootstrap?token=graph-invalid-bootstrap' });
+    const cookie = bootstrapped.headers['set-cookie'][0].split(';', 1)[0];
+    const graph = await request({ address, path: '/ui/dogfood-approvals', headers: { cookie } });
+    assert.equal(graph.status, 200);
+    assert.deepEqual(graph.body, { schema: 'zj-loop.human_approval_ui.v1', status: 'invalid-config', reason: 'graph-plan-digest-mismatch', network_id: 'network-graph-invalid', requests: [], side_effects_executed: false });
+    const session = await request({ address, path: '/ui/session', headers: { cookie } });
+    assert.equal(session.status, 200);
+  } finally { await new Promise((resolve) => server.close(resolve)); }
+});
+
 test('Human approval UI exchanges a one-time bootstrap token for a session and lists the configured network', async () => {
   const signer = createInMemoryHumanSigner({ human_id: 'human-1' });
   const server = createHumanApprovalUiServer({
