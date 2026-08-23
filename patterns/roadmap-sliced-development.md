@@ -71,8 +71,10 @@ That rhythm is the scheduler.
 
 - `zj-grill-me` — interrogates assumptions one branch at a time. It asks only
   when repo exploration cannot answer the question.
-- `zj-roadmap-driven` — keeps the shared map in JSON, renders a lightweight
-  Markdown view, and records decisions at the node where they matter.
+- `zj-roadmap-driven` — keeps the shared map in its selected canonical carrier
+  (single JSON for ordinary routes or a sharded bundle for large routes),
+  renders a lightweight Markdown view, and records decisions at the node where
+  they matter.
 - `zj-grill-with-docs` — used near closeout when process notes need to be
   consolidated into stable domain or architecture docs.
 - Repo-local `AGENTS.md` / domain docs — provide build commands, review norms,
@@ -90,8 +92,8 @@ State is layered rather than singular:
 
 | State surface | Purpose |
 | --- | --- |
-| Roadmap JSON | Source of truth for task tree, status, and decisions during the initiative. |
-| Roadmap Markdown | Human-readable progress window; generated from JSON. |
+| Roadmap carrier | Source of truth for task tree, status, and decisions during the initiative: single JSON for ordinary routes or a roadmap bundle for large routes. |
+| Roadmap Markdown | Human-readable progress window; generated from the selected roadmap carrier. |
 | Git commits | Durable checkpoints after each completed slice. |
 | Durable docs | Final resting place for decisions after closeout. |
 | `zj-loop/STATE.md` / `zj-loop/zj-loop-run-log.md` | Background repo operations evidence, not the main active-development state. |
@@ -195,9 +197,16 @@ require human review before creating or consuming another request.
 
 ## Roadmap Write Safety
 
-Roadmap JSON is the source of truth. Markdown is a generated view. Product
-surfaces that write roadmap state should treat writes as serialized critical
-sections:
+The selected roadmap carrier is the source of truth. Ordinary routes use a
+single JSON file; large routes may use an explicit sharded roadmap bundle.
+Markdown is a generated view. Product surfaces that write roadmap state should
+treat writes as serialized critical sections:
+
+In bundle mode, the manifest, current node and decision shards, and append-only
+history are canonical. Indexes and generated views are derived artifacts; do
+not edit them directly. Use the roadmap CLI for reads and writes, and use
+`recommend-storage` as a read-only advisory before choosing or changing the
+carrier.
 
 - every write command obtains a per-roadmap lock
 - read commands can proceed without mutating the lock
@@ -224,8 +233,8 @@ Use this mapping to keep roadmap language tied to concrete development systems:
 | Roadmap | PRD / plan | One bounded git branch, usually one PR at closeout. |
 | Parent node | Plan section / major slice | A reviewable workstream inside the branch; may map to an issue/epic when tracker hierarchy is useful. |
 | Leaf node | Slice / issue | One issue-tracker item or one commit-sized task. |
-| Decision | Product/architecture decision | Roadmap JSON decision plus durable doc/ADR entry when it survives closeout. |
-| Rendered roadmap Markdown | Human progress view | PR progress summary or planning appendix. |
+| Decision | Product/architecture decision | Roadmap-carrier decision record plus durable doc/ADR entry when it survives closeout. |
+| Rendered roadmap Markdown | Human progress view | PR progress summary or planning appendix generated from the carrier. |
 | Closeout | Plan completion | PR opened with branch merge request, verification notes, and durable-doc updates. |
 
 PR rule:
@@ -475,8 +484,8 @@ Each initiative should have predictable artifacts:
 
 | Artifact | Required | Purpose |
 | --- | --- | --- |
-| `docs/plans/<initiative>-roadmap.json` | Yes | Source of truth for nodes, modes, status, and decisions. |
-| `docs/plans/<initiative>-roadmap.md` | Yes | Lightweight human progress window rendered from JSON. |
+| `docs/plans/<initiative>-roadmap.json` or `docs/plans/<initiative>-roadmap.bundle/` | Yes | Canonical process state for nodes, modes, status, and decisions. Use a single JSON for ordinary routes and choose a bundle explicitly with `recommend-storage` when the artifact is large; do not maintain both as active sources. |
+| `docs/plans/<initiative>-roadmap.md` | Yes | Lightweight human progress window rendered from the selected JSON or bundle carrier. |
 | Durable design doc or ADR | Usually | Final home for decisions that should survive closeout. |
 | Commit series | Yes | Durable run log for completed slices. |
 | Verification notes | Yes | Evidence that each slice passed the right gate. |
@@ -485,9 +494,9 @@ Each initiative should have predictable artifacts:
 The roadmap files are process state. Durable docs and commits are the lasting
 knowledge.
 
-Roadmap JSON should usually enter the PR as reviewable process evidence. Before
-merge, closeout decides whether it is deleted as process state or promoted into
-a durable PRD/plan artifact.
+The roadmap carrier should usually enter the PR as reviewable process evidence.
+Before merge, closeout decides whether it is deleted as process state or
+promoted into a durable PRD/plan artifact.
 
 ## Closeout Contract
 
@@ -550,8 +559,8 @@ Roadmap retention rule:
 - Keep a roadmap only when it is intentionally promoted into a durable PRD/plan.
 - A durable roadmap should live with durable docs, not in the temporary process
   path.
-- It is normal for roadmap JSON/Markdown to appear in the PR for review and then
-  disappear before merge.
+- It is normal for the roadmap carrier and generated Markdown to appear in the
+  PR for review and then disappear before merge.
 
 ## PR Contract
 
@@ -603,8 +612,8 @@ Deterministic PR body handoff:
 
 Roadmap evidence policy:
 
-- Include roadmap JSON/Markdown in the PR when it helps reviewers inspect the
-  process and decisions.
+- Include the roadmap carrier and generated Markdown in the PR when they help
+  reviewers inspect the process and decisions.
 - Before merge, delete process roadmap files or move them into durable docs.
 - `main` should not retain process roadmaps by default unless the PR explicitly
   says they are promoted durable PRD/plan artifacts.
