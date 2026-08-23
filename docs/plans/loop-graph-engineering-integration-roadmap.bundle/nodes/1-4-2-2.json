@@ -1,0 +1,9 @@
+{
+  "id": "1-4-2-2",
+  "label": "结构化 conformance Evidence 与 Review Handoff",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4-2",
+  "children": [],
+  "notes": "已实现dual-agent-enrollment-conformance Evidence构造器和测试：两个协议节点可达到enrolled-active，bootstrap credential仅绑定enrollment状态读取，credential-issued与enrolled-active追加到同一StateStore event log；Evidence内容写入临时content-addressed ArtifactStore，StateStore保存evidence metadata引用与digest，禁止session token/private key等敏感信息。自动化测试默认清理临时资源，验收模式可显式保留Evidence。"
+}

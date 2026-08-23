@@ -1,0 +1,55 @@
+{
+  "node_id": "1-3",
+  "decisions": [
+    {
+      "q": "成熟框架应如何被ZAgenticLoop采用？",
+      "answer": "不把LangGraph、AutoGen、CrewAI或LlamaIndex Workflows直接作为Graph/OPN协议核心；自定义provider-neutral Graph/OPN协议层、StateStore和责任边界，成熟框架作为可插拔Loop执行器适配器。优先评估LangGraph作为第一个执行器适配器，但不让其成为产品协议或StateStore真相源。",
+      "note": "复用成熟执行技术，保留ZAgenticLoop在组网、身份、授权、责任、跨设备状态和恢复上的产品主权。"
+    },
+    {
+      "q": "成熟框架中的哪些技术点适合复用？",
+      "answer": "采用稳定技术点优先、适配器隔离、能力矩阵评估：复用checkpoint、interrupt、typed event、local runtime、retry、timeout、cancellation和tracing等执行技术；先定义Execution Adapter Contract，优先评估LangGraph checkpoint/interrupt/resume，再评估LlamaIndex Workflows typed event/并发控制，AutoGen Core作为Agent Runtime候选，CrewAI作为高层Loop DSL候选。第三方框架不进入Graph/OPN核心。",
+      "note": "避免完整框架反向定义ZAgenticLoop的身份、权限、责任、StateStore和完成语义。"
+    },
+    {
+      "q": "Execution Adapter Contract的最小输入输出是什么？",
+      "answer": "输入为MessageEvent、ExecutionContext、CapabilityGrant和可选ResumeContext；输出为ExecutionStarted/Progress/Interrupted、Evidence、StopSignal、ExecutionCompleted和ReviewHandoff。适配器不得修改Network/Node/Authority关系、签发或扩大CapabilityGrant、改写StateStore历史、代表Human接受结果，也不得把框架内部完成直接映射为产品完成。",
+      "note": "适配器只负责被授权的一次Loop执行及其证据转换，不成为第二套业务状态系统。"
+    },
+    {
+      "q": "Execution Adapter应该部署在哪里？",
+      "answer": "适配器运行在已注册的执行节点内部；Node Runtime加载框架适配器并执行Loop，Relay只负责投递/唤醒/重试/连接管理，StateStore只保存canonical facts/生命周期/权限/审计，ArtifactStore只保存验证产物，Center Node只负责目标、委托协调和Review Handoff。不同节点可使用不同框架，但对外遵守同一OPN事件、能力、证据和恢复协议。",
+      "note": "让执行框架成为节点内部实现选择，避免Relay、StateStore或中心节点演化成框架绑定的执行平台。"
+    },
+    {
+      "q": "第三方框架在Node Runtime内如何受到CapabilityGrant限制？",
+      "answer": "适配器不能直接拿到节点全部工具、凭据或文件系统权限；Node Runtime为本次执行构造受限ToolContext或CapabilityContext，只暴露CapabilityGrant允许的工具和资源。所有外部访问经过capability-aware gateway并记录授权检查与副作用结果；未授权访问返回结构化blocked，换框架、换工具名或重试不能扩大权限，高风险副作用仍需Human Gate。",
+      "note": "把框架自由度限制在执行实现内部，确保权限边界由ZAgenticLoop协议掌握。"
+    },
+    {
+      "q": "框架checkpoint、memory、thread state与OPN StateStore如何分工？",
+      "answer": "OPN StateStore保存跨节点、可审计且与责任相关的canonical facts；框架checkpoint保存节点内部执行所需的opaque runtime state。checkpoint需要持久化时通过ArtifactStore引用和hash管理，StateStore只保存metadata、版本、归属和授权范围。恢复先由OPN StateStore判断权限和生命周期，再将合法checkpoint交给适配器；checkpoint不可用时进入blocked/recovery，不把从头重跑默认为等价恢复。",
+      "note": "保持网络事实与执行器细节分离，使框架可替换且不会通过checkpoint改变权限或Human decision。"
+    },
+    {
+      "q": "更换执行框架时如何处理旧checkpoint？",
+      "answer": "框架替换必须保持OPN canonical facts兼容，但不要求不同框架直接兼容opaque checkpoint。旧框架checkpoint可由旧适配器继续恢复；新框架只有在显式迁移器通过hash/schema/权限校验时才能消费。无法迁移时不能静默丢弃并继续同一Execution，须由Human或中心确认后创建新Execution并标记retry-from-canonical-state；旧checkpoint按retention policy保留或删除。",
+      "note": "区分协议事实兼容与执行器私有状态兼容，保证替换框架时审计和责任语义不丢失。"
+    },
+    {
+      "q": "如何判断成熟框架的技术点适合采用？",
+      "answer": "建立Framework Capability Matrix，评估Loop能力、协议适配性、权限隔离、恢复语义、观测能力、Provider中立性、可运维性和工程风险。协议适配、权限隔离、恢复语义、许可证或供应链风险为硬门槛；功能丰富但无法证明责任和恢复边界的框架不进入核心路径。",
+      "note": "避免按框架声量或Demo功能选型，把产品责任和长期维护风险纳入技术选择。"
+    },
+    {
+      "q": "Graph Engineering实践完成后必须留下哪些成果物？",
+      "answer": "必须留下可复用的Graph Engineering Evidence Set：OrchestrationPlan、协议生成的Graph projections、任务分配与依赖、资源隔离决策、Node claim与Execution、中间Artifact、确定性gate、独立语义审查、Human Grill决策、blocked/recovery路径和最终Review Handoff。每个证据项说明所证明的事实和作用域，不能只留下日志倾倒或无范围的最终结果。",
+      "note": "把Graph Engineering从一次执行过程沉淀成可审计、可复现、可比较的产品能力证据。"
+    },
+    {
+      "q": "Graph Engineering实践完成后必须留下哪些成果物？",
+      "answer": "必须留下可复用的Graph Engineering Evidence Set：OrchestrationPlan、协议生成的Graph projections、任务分配与依赖、资源隔离决策、Node claim与Execution、中间Artifact、确定性gate、独立语义审查、Human Grill决策、blocked/recovery路径和最终Review Handoff。每个证据项说明所证明的事实和作用域，不能只留下日志倾倒或无范围的最终结果。",
+      "note": "把Graph Engineering从一次执行过程沉淀成可审计、可复现、可比较的产品能力证据。"
+    }
+  ]
+}

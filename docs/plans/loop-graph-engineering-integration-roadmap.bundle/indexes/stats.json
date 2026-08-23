@@ -1,0 +1,11 @@
+{
+  "total_nodes": 23,
+  "status_counts": {
+    "completed": 23,
+    "pending": 0,
+    "blocked": 0,
+    "in_progress": 0
+  },
+  "total_decisions": 694,
+  "max_depth": 4
+}

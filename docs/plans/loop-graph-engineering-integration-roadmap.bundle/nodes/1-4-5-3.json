@@ -1,0 +1,9 @@
+{
+  "id": "1-4-5-3",
+  "label": "Provider-neutral DispatchIntent contract及确定性validator",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4-5",
+  "children": [],
+  "notes": "已完成provider-neutral DispatchIntent contract、确定性validator与Capability/Risk Registry：绑定network、plan/revision/digest、task、Graph node、assigned Agent、grant digest、claim/dispatch event、authorized_by与session TTL；闭合schema、scope、时间窗口、intent digest drift；内置artifact.read=low、artifact.write=review-required、credential.issue/network.create=human-approval-required，未知capability fail-closed，registry纳入protocol profile hash。已完成DispatchIntent/Risk Registry测试；真实外部Provider adapter尚未接入。"
+}

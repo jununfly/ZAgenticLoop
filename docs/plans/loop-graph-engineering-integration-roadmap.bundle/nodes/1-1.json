@@ -1,0 +1,9 @@
+{
+  "id": "1-1",
+  "label": "Loop Engineering与Graph Engineering统一心智模型",
+  "status": "completed",
+  "mode": "explore",
+  "parent": "1",
+  "children": [],
+  "notes": "统一心智模型已锁定：ZAgenticLoop用Graph Engineering组织Human负责的OPN，用Loop Engineering让每个被编排节点完成可验证、可恢复的目标闭环；Graph负责组合，Loop负责闭环，Human负责最终责任。已确认核心对象链、中心责任单元与Agent执行节点边界、Plan/Fact/Projection/Artifact分层、网络级StateStore/ArtifactStore、事件生命周期、权限不可越权、未知即停止、Review Handoff、组网模式、产品边界、内核+Extension和产品演进阶梯。当前节点不再扩展新事项，下一步转入长期文档沉淀、实现边界盘点和下一里程碑规划。"
+}

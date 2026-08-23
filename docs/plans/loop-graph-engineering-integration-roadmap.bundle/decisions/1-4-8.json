@@ -1,0 +1,10 @@
+{
+  "node_id": "1-4-8",
+  "decisions": [
+    {
+      "q": "deterministic gate如何绑定独立语义审查与Review Handoff？",
+      "answer": "采用纯读、provider-neutral gate：低风险 capability 在 claim、runtime revalidation、scope、grant digest、plan revision/digest 与有效期一致时进入 dispatch-ready；review-required capability 必须同时绑定已持久化 Aggregation、独立 Verification、accepted Review Handoff 和独立语义审查报告；任何漂移、过期、自证或未知 capability fail-closed。",
+      "note": "gate 不写 StateStore，不写 task.completed/event.completed；task.dispatched 仍由 CAS-backed fact writer 在 gate 通过后单独记录。"
+    }
+  ]
+}

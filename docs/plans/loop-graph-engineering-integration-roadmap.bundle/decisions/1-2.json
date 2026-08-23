@@ -1,0 +1,85 @@
+{
+  "node_id": "1-2",
+  "decisions": [
+    {
+      "q": "用户体验应先进入Graph还是Loop？",
+      "answer": "采用Loop-first、Graph按需渐进展开：用户从目标和任务开始，单节点任务几乎只感知Loop；需要跨设备或Agent时展示参与节点、能力、权限和责任边界；复杂协同再进入网络视图调整关系、路由、委托和恢复策略。所有Graph变化都必须能回到当前任务并解释其必要性。",
+      "note": "保持提出目标并推进完成的直觉入口，避免让用户先学习网络拓扑。"
+    },
+    {
+      "q": "Codex与Workbuddy的有向图如何建模？",
+      "answer": "采用Network Graph + Event-scoped Directed Task Graph双层模型：Network Graph描述持久的节点、身份、能力、权限和关系；Directed Task Graph是单个MessageEvent的执行投影，节点是分配给具体OPN节点的有界工作单元，边表达控制、数据、验证或恢复依赖，不直接授予权限。每个任务声明task_id、assigned_node、输入输出Artifact、前置依赖、读写集、CapabilityGrant、验证条件、超时重试失败策略和并行性。",
+      "note": "让Codex既能作为event center又能参与任务，Workbuddy作为consumer；同时分离永久组网关系与单次任务编排。"
+    },
+    {
+      "q": "外部资源（如目标代码库）的读写竞态是否由ZAgenticLoop直接解决？",
+      "answer": "不直接实现通用外部资源锁；任务编排时由中心节点选择并记录资源特定的隔离策略。以同一Git repo开发任务为例，Codex可创建branch A并让Codex/Workbuddy在隔离工作区完成各自任务、提交commit，再由Codex先合并后验收总体结果。中心节点知道可行策略时自行决策；不知道时必须grill Human并在确认前阻塞，不共享写入或自行发明未验证的锁。",
+      "note": "ZAgenticLoop负责编排隔离策略的选择、记录、验证和升级，不替外部系统实现普适锁；资源适配细节由任务执行环境或provider处理。"
+    },
+    {
+      "q": "中心节点的责任主体如何定义？",
+      "answer": "中心责任单元必须由Human承担：可以是Human单独承担，也可以是Human与Agent组成协作单元。Agent不能独立成为中心节点；Codex、Workbuddy等Agent统一定义为被编排执行节点，Codex只有在Human身边作为Center Agent collaborator时参与中心工作。任务编排前必须完成orchestration-and-isolation preflight：Human或Human+Agent中心责任单元选择并记录资源隔离策略；无法证明可行时必须grill Human并阻塞。",
+      "note": "修正此前Agent可独立承担event center的表述；中心的责任主体和资源隔离决策权始终在Human，Agent只提供受控协作或执行。"
+    },
+    {
+      "q": "任务编排前是否强制执行orchestration-and-isolation preflight？",
+      "answer": "强制生成可审计OrchestrationPlan，包含Directed Task Graph、任务负责人/依赖/输入输出/验证、外部资源清单、每项资源隔离策略及理由、读写范围、并行串行决策、合并或副作用责任人、风险和未知点，以及preflight_status=ready/blocked/needs-human-grill。只有ready才能分派执行节点；blocked或needs-human-grill时Codex可继续分析，但不能派发可能造成竞态或副作用的任务。",
+      "note": "把资源隔离决策前置为中心责任单元的硬门槛，而不是执行节点运行时才发现冲突。"
+    },
+    {
+      "q": "Codex在中心协作与执行任务之间如何避免角色混淆？",
+      "answer": "Codex可以同时参与中心协作和被分派的执行任务，但两者必须在Directed Task Graph中拆成显式节点：Center Coordination节点负责分析、编排、preflight和Review Handoff；Codex Execution节点只在已确认CapabilityGrant和资源隔离策略下执行具体工作。执行节点不能隐式修改OrchestrationPlan、扩大权限或自我验收；需要验证时由独立后继任务或Human完成。",
+      "note": "允许Human+Codex高效协作，同时避免Codex自己编排、自己修改、自己验收形成不可审计的闭环。"
+    },
+    {
+      "q": "Codex在中心协作与执行任务之间如何避免角色混淆？",
+      "answer": "Codex可以同时参与中心协作和被分派的执行任务，但两者必须在Directed Task Graph中拆成显式节点：Center Coordination节点负责分析、编排、preflight和Review Handoff；Codex Execution节点只在已确认CapabilityGrant和资源隔离策略下执行具体工作。执行节点不能隐式修改OrchestrationPlan、扩大权限或自我验收；需要验证时由独立后继任务或Human完成。",
+      "note": "允许Human+Codex高效协作，同时避免Codex自己编排、自己修改、自己验收形成不可审计的闭环。"
+    },
+    {
+      "q": "隔离写入验证是否同时覆盖成功和阻止路径？",
+      "answer": "采用两个fixture case：成功case中Codex与Workbuddy修改不同文件，各自使用独立branch/worktree，preflight=ready并可并行，Codex显式合并和验收；阻止case中两个任务声明写入同一文件且没有可靠隔离方案，preflight必须为blocked或needs-human-grill，不得分派两个写任务，Human需选择串行化、重新拆分或明确合并策略，并验证无未授权写入。",
+      "note": "同时证明中心节点知道方案时能推进、不知道或方案不成立时会停下。"
+    },
+    {
+      "q": "needs-human-grill的交互协议如何定义？",
+      "answer": "Codex输出结构化Human Grill：问题、已知事实、冲突资源或未知点、候选隔离策略、推荐方案、权衡和风险、需要Human选择的选项。Human选择形成不可变决策记录并回写OrchestrationPlan；只有重新通过preflight后任务才能分派。",
+      "note": "把不确定性升级从自然语言追问变成可审计的决策协议，防止未记录的Human override或跳过重新检查。"
+    },
+    {
+      "q": "Multi-node Graph Atom中Codex如何同时参与中心协作和执行？",
+      "answer": "Codex可作为Human+Agent中心责任单元的协作者，也可作为一个执行节点，但必须在Directed Task Graph中拆成独立节点并使用独立CapabilityGrant与Evidence：Center Coordination节点负责目标分析、OrchestrationPlan、preflight、分派和Review Handoff；Codex Execution节点只执行自己的任务；后继Aggregation/Verification节点评估Codex与Workbuddy的合并结果，避免Codex隐式自我验收。",
+      "note": "允许Human+Codex高效承担中心工作，同时保持角色、权限、证据和验证边界可审计。"
+    },
+    {
+      "q": "首个Multi-node Graph Atom采用什么任务分工？",
+      "answer": "采用并行分工+聚合验证：Human审批OrchestrationPlan后，Human+Codex Center Coordination节点分派Codex Execution（架构/实现边界分析）与Workbuddy Execution（行为/验证证据分析），两者产出独立Evidence并行进行；Aggregation/Verification检查结论一致性、冲突解释和证据完整性，再生成Review Handoff。隔离写入段两Agent分别在独立branch/worktree修改不同文件，Codex执行显式merge task，独立验证合并结果；不推送、不创建真实MR。",
+      "note": "同时证明并行独立工作、依赖聚合、外部资源隔离和总体验收。"
+    },
+    {
+      "q": "首个Multi-node Graph Atom采用什么任务分工？",
+      "answer": "采用并行分工+聚合验证：Human审批OrchestrationPlan后，Human+Codex Center Coordination节点分派Codex Execution（架构/实现边界分析）与Workbuddy Execution（行为/验证证据分析），两者产出独立Evidence并行进行；Aggregation/Verification检查结论一致性、冲突解释和证据完整性，再生成Review Handoff。隔离写入段两Agent分别在独立branch/worktree修改不同文件，Codex执行显式merge task，独立验证合并结果；不推送、不创建真实MR。",
+      "note": "同时证明并行独立工作、依赖聚合、外部资源隔离和总体验收。"
+    },
+    {
+      "q": "Codex合并后谁负责独立验证？",
+      "answer": "Codex可以执行显式merge task，但合并后的验证必须是Directed Task Graph中的独立后继节点，拥有独立Evidence。验证可由确定性项目gate、Workbuddy或Human完成；Codex的merge结果不能直接作为聚合结果已验收的证明。",
+      "note": "保留Codex作为Human+Codex中心协作单元的高效合并者，同时避免自己合并、自己证明成功。"
+    },
+    {
+      "q": "Codex合并后谁负责独立验证？",
+      "answer": "Codex可以执行显式merge task，但合并后的验证必须是Directed Task Graph中的独立后继节点，拥有独立Evidence。验证可由确定性项目gate、Workbuddy或Human完成；Codex的merge结果不能直接作为聚合结果已验收的证明。",
+      "note": "保留Codex作为Human+Codex中心协作单元的高效合并者，同时避免自己合并、自己证明成功。"
+    },
+    {
+      "q": "第一阶段独立验收采用什么组合？",
+      "answer": "采用三层验收：Codex merge后先运行确定性gate检查分支来源、commit可达性、worktree隔离、目标文件变化、测试/构建和git diff --check；再由Workbuddy独立审查合并后的语义结果、子任务整合和Evidence充分性；最后Human通过Review Handoff处理风险/歧义并作最终责任决策。任一层失败都不能标记Graph Atom完成。",
+      "note": "将机械事实、独立语义审查和Human责任判断分层，避免单一Agent或单一日志自证完成。"
+    },
+    {
+      "q": "Graph Engineering的默认产品视图如何保持简单？",
+      "answer": "采用三层渐进披露：默认Loop Timeline展示目标、进展、阻塞/风险、结果和Human决策；展开Task Graph展示Codex/Workbuddy职责、依赖、并行性、状态和Evidence；审计层展示身份、CapabilityGrant、OrchestrationPlan、资源隔离、branch/worktree/commit、claim/lease/recovery、Human Grill、确定性gate和独立验证。默认先回答工作是否推进，需要时再解释网络如何协同和协议如何证明。",
+      "note": "保持Loop-first体验，Graph作为按需解释与控制面，UI只渲染协议投影。"
+    }
+  ]
+}

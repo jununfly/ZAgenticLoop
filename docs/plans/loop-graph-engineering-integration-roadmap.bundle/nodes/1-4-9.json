@@ -1,0 +1,9 @@
+{
+  "id": "1-4-9",
+  "label": "Graph Engineering Evidence Set与最终conformance验收",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4",
+  "children": [],
+  "notes": "已实现 Native OPN Tracer Evidence Set v1：以 conformance report、独立 semantic review、Evidence 引用和 Relay 收敛诊断组成可重放验收产物；同一 network/event/plan/revision/digest scope 才能通过，Relay duplicate/conflict/out-of-order、scope 漂移、未闭合 conformance 或 semantic review 均 fail-closed。Evidence Set 仅为报告层组合，不成为新的业务事实源，不执行副作用。核心包 384/384 测试通过。"
+}

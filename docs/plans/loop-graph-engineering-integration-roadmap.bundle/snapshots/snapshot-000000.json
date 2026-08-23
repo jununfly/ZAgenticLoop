@@ -1,0 +1,19 @@
+{
+  "schema": "zj-roadmap-bundle-snapshot/v1",
+  "snapshotId": "snapshot-000000",
+  "sequence": 0,
+  "nodeCount": 23,
+  "stats": {
+    "total_nodes": 23,
+    "status_counts": {
+      "completed": 23,
+      "pending": 0,
+      "blocked": 0,
+      "in_progress": 0
+    },
+    "total_decisions": 694,
+    "max_depth": 4
+  },
+  "materialized": true,
+  "created": "2026-08-23 18:51:04"
+}

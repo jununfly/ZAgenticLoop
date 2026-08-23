@@ -1,0 +1,9 @@
+{
+  "id": "1-4-3",
+  "label": "SQLite StateStore、ArtifactStore与loopback Relay",
+  "status": "completed",
+  "mode": "explore",
+  "parent": "1-4",
+  "children": [],
+  "notes": "MVP完成：SQLite StateStore、ArtifactStore、loopback Relay及真实Human approval→issue intent→pairing claim→Relay credential wiring均已验证；组合回归66 tests passed。生产复制、跨设备同步、自动HA与复杂投递调度后置。"
+}

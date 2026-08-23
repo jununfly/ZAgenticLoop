@@ -1,0 +1,10 @@
+{
+  "node_id": "1-4-9",
+  "decisions": [
+    {
+      "q": "最终 Graph Engineering conformance 的完成标准是什么？",
+      "answer": "采用同一 Graph scope 的全链路最小闭环：Human 中心责任单元、Plan/Preflight、Agent1/Agent2 Execution、Relay 引用传输、Aggregation、独立 Verification、Semantic Review、accepted Review Handoff 和 conformance Evidence Set 必须全部闭合；scope/digest 漂移、阶段缺失、重复冲突、Relay 乱序/重复、执行节点自证和未解决风险必须 fail-closed。",
+      "note": "只做协议级 provider-neutral fixture，不启动真实 Codex/Workbuddy 进程，不扩展当前路线图之外的产品事项。"
+    }
+  ]
+}

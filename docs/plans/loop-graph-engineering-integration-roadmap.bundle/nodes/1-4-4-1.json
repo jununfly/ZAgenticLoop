@@ -1,0 +1,9 @@
+{
+  "id": "1-4-4-1",
+  "label": "OrchestrationPlan与DirectedTaskGraph typed contract及确定性validator",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4-4",
+  "children": [],
+  "notes": "已完成provider-neutral OrchestrationPlan与DirectedTaskGraph typed contract、immutable protocol-registry、JCS profile hash、确定性plan digest、严格闭合schema、资源隔离策略枚举、任务初始状态、DAG/可达性、cycle、edge引用、Aggregation fan-in与结构化错误validator。新增最小Graph Atom fixture 3项测试；验证 npm test 380/380、npm run build、git diff --check。首版不接入Agent执行、Relay或外部资源锁。"
+}

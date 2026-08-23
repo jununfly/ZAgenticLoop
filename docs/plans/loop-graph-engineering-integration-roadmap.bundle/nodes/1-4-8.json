@@ -1,0 +1,9 @@
+{
+  "id": "1-4-8",
+  "label": "deterministic gate、独立语义审查与Review Handoff",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4",
+  "children": [],
+  "notes": "已实现 deterministic Dispatch Gate 与 provider-neutral Dispatch Semantic Review。Gate 校验 intent 有效期、claim/revalidation 的 network/plan/revision/task/node/grant 绑定；review-required 必须有独立 verifier、aggregation/verification/review-handoff digest、accepted handoff 与 passed semantic review；未知 capability、scope/digest 漂移、过期和自证 fail-closed。Semantic Review 仅组合已持久化 Aggregation、Verification 和 Review Handoff，不成为事实源，不写 task.completed/event.completed。dispatch fact 继续通过 StateStore CAS 幂等记录。"
+}

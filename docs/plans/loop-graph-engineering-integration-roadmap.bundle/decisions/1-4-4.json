@@ -1,0 +1,10 @@
+{
+  "node_id": "1-4-4",
+  "decisions": [
+    {
+      "q": "Directed Task Graph与OrchestrationPlan的第一条实现纵切采用什么边界？",
+      "answer": "先实现provider-neutral、不可变的OrchestrationPlan与DirectedTaskGraph类型及确定性validator；通过validator后再作为canonical StateStore facts持久化。第一条纵切只验证图结构、依赖合法性、任务分派和计划完整性，不执行Agent任务、不接Relay、不处理外部资源。",
+      "note": "先钉住Graph Engineering的最小原子协议，再叠加StateStore projection与Native OPN runtime。"
+    }
+  ]
+}

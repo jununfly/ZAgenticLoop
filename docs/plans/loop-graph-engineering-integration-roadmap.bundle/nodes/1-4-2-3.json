@@ -1,0 +1,9 @@
+{
+  "id": "1-4-2-3",
+  "label": "静态 Web UI Human approval 入口",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4-2",
+  "children": [],
+  "notes": "已完成本机Human Approval Adapter与无框架静态Web UI：单network、一次性bootstrap token、HttpOnly SameSite=Strict session、loopback-only、严格Origin校验、窄UI API、request digest/CAS前置校验、capability ceiling、signed HumanApprovalContext、结构化reject、Evidence摘要接口、严格HTTPS远端Pairing client，以及foreground CLI。自动fixture UI conformance 3/3通过；agent-local回归112 tests中111 passed、0 failed、1 skipped；npm test 380 tests中380 passed；真实macOS Keychain signer UI signing path 1 passed、0 failed。真实路径使用Swift Keychain helper与SecKey P-256签名，浏览器/adapter均不接触私钥。"
+}

@@ -1,0 +1,20 @@
+{
+  "node_id": "1-4-2-1",
+  "decisions": [
+    {
+      "q": "Workbuddy被撤销后conformance是否必须验证重新enrollment？",
+      "answer": "必须验证，但重新enrollment必须是显式新流程：旧request不能再次批准，旧credential不能续期或复活，revoked Node Identity不能通过重连自动恢复；Workbuddy创建新的pairing request，Human重新确认身份、能力和有效期，推荐生成新的Node Identity key并形成新的append-only审计链，旧生命周期和Evidence不迁移覆盖。",
+      "note": "Human确认撤销是终态，恢复必须重新建立信任。"
+    },
+    {
+      "q": "conformance是否必须真实并发执行同一pairing request的两次approval？",
+      "answer": "必须真实并发执行。两个approval使用同一request_id、request_digest和expected lifecycle state；结果必须恰好一个canonical approval，另一个返回同一幂等结果或明确CAS conflict，不产生两个有效credential或两个enrolled-active生命周期，SQLite revision只按实际canonical append递增一次。",
+      "note": "Human确认CAS需要真实竞态验证而非只做静态单测。"
+    },
+    {
+      "q": "Pairing lifecycle records应存入独立SQLite还是复用同一个StateStore canonical event log？",
+      "answer": "复用同一个SQLite StateStore canonical event log，不建立第二个持久化真相。network、revision、CAS、pairing-requested/approved/rejected/expired、enrollment、credential-issued、revoked和Evidence metadata references共享同一StateStore；PairingRecordStore只做provider-neutral映射，内存实现继续用于纯协议测试。",
+      "note": "Human确认所有权限生命周期共享一个canonical revision与CAS边界。"
+    }
+  ]
+}

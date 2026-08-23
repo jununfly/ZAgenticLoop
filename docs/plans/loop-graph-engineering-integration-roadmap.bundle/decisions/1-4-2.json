@@ -1,0 +1,400 @@
+{
+  "node_id": "1-4-2",
+  "decisions": [
+    {
+      "q": "本机Codex与Workbuddy是否应始终拥有独立的Node Identity，即使运行在同一台设备上？",
+      "answer": "是。同机不等于同一节点；Codex与Workbuddy分别enrollment、分别授权、分别审计、分别撤销，不能共享隐含身份或权限。",
+      "note": "Human confirmed independent node identity on the same device."
+    },
+    {
+      "q": "本机enrollment的信任根是什么？",
+      "answer": "采用Human-controlled local pairing：Codex与Workbuddy分别生成Node Identity，Human分别确认节点名称、能力和授权范围，StateStore保存enrollment record，运行时使用短期scoped credential；未经Human批准不能领取事件或读取Artifact，撤销按Node Identity单独生效。",
+      "note": "Human confirmed explicit local pairing as the trust root."
+    },
+    {
+      "q": "enrollment record是否采用append-only生命周期？",
+      "answer": "采用。identity-generated、pairing-requested、human-approved、capability-granted、credential-issued、revoked、re-enrolled均作为不可变事件记录；当前节点状态由事件投影得到，撤销不删除历史或覆盖旧record。",
+      "note": "Human confirmed append-only enrollment lifecycle."
+    },
+    {
+      "q": "撤销Node Identity后正在执行的任务如何处理？",
+      "answer": "立即禁止节点领取新事件、读取新Artifact和写入新StateStore记录；已开始执行允许运行到安全检查点，任何新副作用前重新检查credential与revoke状态；无法安全暂停或验证则blocked返回Human；不默认强杀进程。",
+      "note": "Human confirmed checkpoint-based revocation semantics."
+    },
+    {
+      "q": "CapabilityGrant如何设计？",
+      "answer": "采用两层授权：enrollment capability ceiling规定Human授予的能力上限；每个MessageEvent再通过event-scoped CapabilityGrant授予更窄的能力、资源范围、有效期和预算；实际权限取两者交集。Agent不能扩大ceiling或grant，grant绑定node_identity、event_id和task_id并留下审计记录。",
+      "note": "Human confirmed intersected enrollment and event-scoped grants."
+    },
+    {
+      "q": "Node Identity与配对协议采用什么方案？",
+      "answer": "采用Syncthing-like pairing UX + 自签名Ed25519 X.509 certificate + SHA-256 fingerprint作为Node ID + mTLS双向认证；StateStore保存证书和enrollment生命周期，Relay只转发连接，CapabilityGrant由ZAgenticLoop应用层独立控制。Noise、libp2p和Tailscale作为未来扩展。",
+      "note": "Human accepted the Syncthing-inspired UX and certificate identity split."
+    },
+    {
+      "q": "MVP的pairing入口采用什么方式？",
+      "answer": "采用loopback-first、跨设备可扩展：Codex与Workbuddy先通过本机loopback pairing endpoint完成mTLS enrollment，后续可增加QR、局域网发现或Relay，不改变Node Identity与CapabilityGrant协议。",
+      "note": "Human accepted loopback-first pairing."
+    },
+    {
+      "q": "Human在pairing时至少确认哪些信息？",
+      "answer": "至少展示并确认节点显示名、Node ID/certificate fingerprint、Agent类型与版本、目标network、enrollment capability ceiling、设备或loopback endpoint、credential有效期以及Artifact读写和事件领取权限；短码只降低输入成本，不能替代fingerprint与能力审查。",
+      "note": "Human accepted explicit identity, capability, endpoint, and expiry confirmation."
+    },
+    {
+      "q": "Node Identity证书轮换与运行时credential续期如何区分？",
+      "answer": "区分处理：短期credential续期不改变Node ID；证书或key轮换视为高风险身份变更，有旧私钥时由旧identity签名确认continuity，无旧私钥时重新Human pairing；旧identity先撤销再启用新identity，历史Evidence绑定旧Node ID不迁移覆盖。",
+      "note": "Human accepted separate credential renewal and identity rotation semantics."
+    },
+    {
+      "q": "短期credential由谁签发？",
+      "answer": "由StateStore或Network Authority签发；Human批准enrollment后，中心节点只能提交具体事件的窄化CapabilityGrant请求，StateStore校验节点状态、事件范围和预算后签发短期credential。中心节点不因拥有事件协调权而自动拥有credential签发权。",
+      "note": "Human confirmed StateStore-issued scoped credentials."
+    },
+    {
+      "q": "StateStore暂时不可用时已签发credential如何处理？",
+      "answer": "禁止签发新credential和新CapabilityGrant，禁止领取新事件；已签发credential在有效期内可完成当前安全步骤，但每次新外部副作用前必须检查credential有效期和revoke notice；无法确认安全状态则blocked，不允许无限期离线运行或自动延长权限。",
+      "note": "Human accepted bounded degraded mode for StateStore outage."
+    },
+    {
+      "q": "节点被revoke后是否允许自动恢复enrollment？",
+      "answer": "不允许。临时StateStore或Relay故障允许有限次数、带退避的幂等重试；明确revoked后停止领取事件和读取新Artifact，不能通过credential renewal、重连或重试自动恢复；恢复必须由Human发起新的pairing或明确批准re-enrollment，并留下新的append-only事件。",
+      "note": "Human accepted no automatic recovery after revocation."
+    },
+    {
+      "q": "已enrollment节点的capability ceiling需要扩大时谁能批准？",
+      "answer": "只能由Human批准并采用追加式变更：中心节点只能提出capability change request，Human审查新增能力、资源范围、风险和有效期，StateStore写入新的capability-ceiling-granted事件；旧ceiling保留历史，新ceiling只影响后续credential和grant；缩权可立即生效，扩权需显式Human approval。",
+      "note": "Human confirmed append-only Human-approved capability ceiling changes."
+    },
+    {
+      "q": "Node Identity与中心角色是否应分离？",
+      "answer": "必须分离。Node Identity只表示节点身份；Center Role是Network或Event scope内由Human授权的临时角色，enrollment不自动授予中心权力。Human或Human+Agent才是中心责任单元，Codex的event_center协作角色需显式授权，执行节点不能自行升级为中心。",
+      "note": "Human confirmed identity-role separation."
+    },
+    {
+      "q": "Codex同时承担中心协作与执行任务时是否拆成两个逻辑节点？",
+      "answer": "需要拆分逻辑节点但不生成两个物理Node Identity：同一Codex identity分别承担Center Coordination与Codex Execution，使用独立CapabilityGrant、task scope和Evidence；Execution不能修改OrchestrationPlan或自我验收，后继Verification节点或Human独立验收。",
+      "note": "Human confirmed explicit dual logical roles for Codex."
+    },
+    {
+      "q": "Codex与Workbuddy的默认capability profile是否相同？",
+      "answer": "协议相同但默认权限不同且都从最小权限开始：Codex默认只读网络协调、计划分析和Evidence汇总；Workbuddy默认只读事件消费、任务执行和Evidence返回；代码写入、外部API和Artifact读取等高风险能力默认关闭，新增能力需Human-approved enrollment ceiling与event-scoped grant共同开启。",
+      "note": "Human confirmed differentiated least-privilege defaults."
+    },
+    {
+      "q": "一个OPN network是否只允许一个Human owner？",
+      "answer": "MVP只允许一个Human owner：Human是Network Owner与最终责任中心，Agent可多节点但不能成为owner，其他Human不加入同一network的责任决策链；未来多人协作再引入co-owner、reviewer或delegated-human角色。",
+      "note": "Human confirmed single-owner MVP boundary."
+    },
+    {
+      "q": "Human owner丢失设备或迁移到新设备时是否允许直接转移owner？",
+      "answer": "MVP不允许静默转移：owner identity与network root key绑定，新设备迁移需旧设备Human明确批准；旧设备不可用则进入network-recovery-blocked，通过预先保存的recovery material或重新建立新network恢复；Agent、StateStore和Relay不能自行替换owner，迁移留下append-only审计记录。",
+      "note": "Human confirmed explicit owner migration and recovery boundary."
+    },
+    {
+      "q": "recovery material应由谁持有？",
+      "answer": "只由Human持有，StateStore不保存可直接恢复owner的完整秘密：Human离线保存recovery key或phrase，StateStore只保存public identifier或hash，使用一次后立即轮换；Agent、Relay和普通credential不能充当recovery material，丢失时只能新建network。",
+      "note": "Human confirmed Human-held offline recovery material."
+    },
+    {
+      "q": "MVP是否需要threshold recovery（如2-of-3 recovery keys）？",
+      "answer": "不需要。MVP采用单一Human owner与一份离线recovery material，使用后立即轮换；多份或门限恢复作为未来多人owner或高价值network扩展，当前先验证单人OPN的身份、撤销和恢复边界。",
+      "note": "Human confirmed single-material recovery for MVP."
+    },
+    {
+      "q": "1-4-2的最小enrollment conformance fixture包含哪些行为？",
+      "answer": "固定为单机双独立节点、无真实业务副作用：Human创建Network Owner；Codex与Workbuddy分别生成X.509/Node Identity；通过loopback pairing；Human确认fingerprint、capability ceiling和endpoint；StateStore写append-only enrollment records；分别签发短期credential；验证mTLS与event-scoped CapabilityGrant；revoke Workbuddy并验证其不能领取新事件或读取新Artifact；验证Codex仍可独立工作；re-enrollment生成新审计链；不连接真实GitLab、不修改目标代码库、不引入跨设备发现。",
+      "note": "Human accepted the bounded local dual-node enrollment fixture."
+    },
+    {
+      "q": "Human pairing request与approval contract的最小边界是什么？",
+      "answer": "先实现纯协议契约：PairingRequest绑定network、Node Identity、endpoint、requested capability ceiling和过期时间；HumanApproval绑定request、Human owner、approved capabilities与批准时间，并强制网络/节点一致、批准能力不得超出请求、过期请求不能批准。该契约不直接持久化、不签发运行时credential，后续由StateStore adapter消费并追加记录。",
+      "note": "Human accepted the pairing contract as the next bounded TDD slice."
+    },
+    {
+      "q": "StateStore enrollment adapter的MVP边界是什么？",
+      "answer": "采用provider-neutral异步EnrollmentRecordStore接口；记录按node_id和event_id append-only保存，重复写入同一不可变record幂等返回，冲突内容fail-closed；读取只返回记录副本，再由协议投影生成当前enrollment状态。内存实现仅作无副作用conformance fixture，不代表生产存储。",
+      "note": "Human accepted the provider-neutral append-only adapter boundary."
+    },
+    {
+      "q": "短期scoped credential的最小签发契约是什么？",
+      "answer": "由StateStore/Network Authority语义签发的credential必须绑定network、node、event、task和approved capability子集；issued_at不晚于expires_at，expires_at不得超过Human批准的pairing有效期；中心节点不能自行扩大能力或签发范围。本切片只实现provider-neutral纯函数，真实签名、密钥托管和续期由后续provider/runtime切片实现。",
+      "note": "Human accepted the bounded scoped credential contract."
+    },
+    {
+      "q": "Pairing service的第一版部署边界是什么？",
+      "answer": "采用独立本机进程，通过loopback HTTPS提供pairing API；只负责配对请求、Human approval和enrollment record写入，不负责任务执行、Relay投递、Graph编排或目标代码库访问。",
+      "note": "Human confirmed the pairing service boundary."
+    },
+    {
+      "q": "Human approval的MVP交互入口采用什么形式？",
+      "answer": "采用本机Web UI作为主要Human approval入口，降低使用和分析门槛；UI展示pairing request的节点指纹、能力上限、endpoint、有效期和请求摘要，并调用不变的approval contract。CLI/API保留为调试和自动化辅助入口。",
+      "note": "Human chose Web UI for usability; CLI/API remain secondary."
+    },
+    {
+      "q": "Pairing Web UI的访问边界是什么？",
+      "answer": "仅监听127.0.0.1并通过HTTPS提供；不允许局域网或公网访问。UI不持有长期私钥、不直接写SQLite，只调用pairing service受控API；所有批准由服务端校验并追加审计记录。",
+      "note": "Human confirmed local-only Web UI boundary."
+    },
+    {
+      "q": "Human如何登录或解锁本机Pairing Web UI？",
+      "answer": "采用短期、一次性的本机UI session；Pairing service生成高熵session secret，通过终端或系统打开浏览器传递给UI；session绑定本机浏览器、短时过期、一次性使用，不能替代Human approval，也不作为Agent credential。",
+      "note": "Human confirmed short-lived one-time local UI session."
+    },
+    {
+      "q": "Web UI中如何防止Human看错节点或能力范围？",
+      "answer": "批准页必须展示节点信息、证书fingerprint、Agent类型/version、endpoint、network、capability ceiling、有效期和请求摘要；Human必须显式点击批准并再次确认fingerprint关键片段；禁止默认、静默或仅凭显示名批准。",
+      "note": "Human confirmed explicit identity and capability review before approval."
+    },
+    {
+      "q": "Pairing request的待处理状态由谁持久化？",
+      "answer": "由StateStore作为唯一canonical source，通过现有provider-neutral EnrollmentRecordStore追加pairing-requested、human-approved、rejected等不可变记录；Pairing service和Web UI只读取投影、提交受控命令，不维护第二份持久化真相。",
+      "note": "Human confirmed StateStore-backed pairing request persistence."
+    },
+    {
+      "q": "Human拒绝或忽略Pairing request时如何处理？",
+      "answer": "拒绝追加不可变pairing-rejected审计记录，不能删除或覆盖原请求；拒绝后同一request不得再次批准；未处理请求到期自动进入pairing-expired，Agent必须重新发起新request，不能通过重试复活旧request。",
+      "note": "Human confirmed explicit rejection and expiry semantics."
+    },
+    {
+      "q": "如何避免两个浏览器标签页或两个进程同时批准同一个request？",
+      "answer": "批准命令携带request_id、request digest和预期生命周期状态；StateStore通过network-level CAS原子追加approval。重复批准返回幂等结果，状态已拒绝、过期或已批准则fail-closed，不生成第二条有效approval。",
+      "note": "Human approved CAS-protected idempotent approval."
+    },
+    {
+      "q": "Pairing request如何证明由该Agent持有对应私钥发起？",
+      "answer": "Agent使用新生成的Node Identity私钥对canonical PairingRequest摘要签名，并附带自签名X.509 certificate；Pairing service验证证书公钥与签名匹配，再将fingerprint固化进request。Human approval只批准已验证request，不能接受Agent自报Node ID。",
+      "note": "Human confirmed proof-of-possession for pairing requests."
+    },
+    {
+      "q": "Pairing request中的endpoint如何处理，避免误当可信连接地址？",
+      "answer": "endpoint仅作为Human可见连接提示和后续transport配置，不作为Node Identity或授权依据；Pairing service不主动连接该地址、不执行网络探测、不因endpoint可达而批准。身份依据仍是证书fingerprint、私钥持有证明和Human approval。",
+      "note": "Human confirmed endpoint is advisory, not trust-bearing."
+    },
+    {
+      "q": "Human批准后Agent如何获得enrollment结果？",
+      "answer": "Agent通过原有pairing session轮询或长轮询获取结果；服务端返回绑定request_id、Node Identity fingerprint、network、approved capability ceiling、有效期和enrollment record摘要的结果。结果通过已验证的Pairing service TLS服务身份返回，Agent校验绑定后才启用节点。",
+      "note": "Human confirmed bound enrollment result delivery."
+    },
+    {
+      "q": "Agent如何信任Pairing service而不被本机伪造服务劫持？",
+      "answer": "Pairing service使用独立pinned X.509 service certificate；Agent固定service fingerprint并只连接匹配的HTTPS服务。证书轮换必须由Human显式批准并更新pin，服务端证书不与Codex或Workbuddy的Node Identity共用。",
+      "note": "Human confirmed independent pinned Pairing service identity."
+    },
+    {
+      "q": "Web UI的批准请求如何证明来自Human而非伪造UI请求？",
+      "answer": "UI session只降低本机操作门槛，不能直接代表Human authority；批准API必须由Pairing service生成并验证独立Human approval context，绑定human_id、request_id、request digest、approved capabilities、时间窗和操作类型；请求体中的human_id等字段不可信。",
+      "note": "Human confirmed UI session is not Human authority."
+    },
+    {
+      "q": "Human approval context的签名密钥由谁持有？",
+      "answer": "由Human控制的本机OS Keychain持有Human signing key；Pairing service只能调用受保护的签名操作，不能读取私钥明文，Web UI也不接触私钥。MVP可先用本机受保护的Human-authority broker，后续再接硬件密钥或多Human门限方案。",
+      "note": "Human confirmed OS-Keychain-backed Human authority."
+    },
+    {
+      "q": "human_id如何确定，避免由UI或Agent自报？",
+      "answer": "human_id从Human signing key的公钥fingerprint派生；Pairing service从已验证Human-authority context取得它，不信任请求体或浏览器提交的human_id。Network owner创建时绑定该fingerprint，后续approval必须匹配同一owner。",
+      "note": "Human confirmed key-derived Human identity binding."
+    },
+    {
+      "q": "如何防止本机Web UI的session被CSRF、URL泄漏或重放？",
+      "answer": "bootstrap secret只使用一次并放在URL fragment，不发送给服务器；服务端换发短期HttpOnly、SameSite=Strict session cookie和独立CSRF token；mutation要求严格Origin校验、CSRF token、request digest和一次性nonce；长期token不得进入URL、日志或Referer。",
+      "note": "Human confirmed local UI session anti-replay protections."
+    },
+    {
+      "q": "Pairing service在批准写入过程中崩溃或网络中断时如何恢复？",
+      "answer": "批准采用StateStore单事务append与CAS；成功写入后重复请求返回同一幂等结果，未写入则保持pending。Pairing service重启后从StateStore重建投影，不依赖本地临时状态，也不重复签发enrollment或credential。",
+      "note": "Human confirmed crash-safe approval recovery."
+    },
+    {
+      "q": "Human approval完成后Pairing service是否立即签发运行时credential？",
+      "answer": "不立即签发。Pairing service只追加enrollment approval与capability ceiling记录；短期scoped credential由StateStore/Network Authority在Agent请求具体event/task时按批准范围签发。Pairing service不拥有权限扩张能力。",
+      "note": "Human confirmed separation of enrollment approval and runtime credential issuance."
+    },
+    {
+      "q": "Agent何时被视为已enrollment并允许进入运行态？",
+      "answer": "仅当Human approval已由StateStore canonical记录、Node Identity fingerprint与request/approval一致、capability ceiling有效、Agent已验证approval结果且随后获得具体event/task scoped credential时进入enrolled-active。获得credential前只能读取自身enrollment状态，不能领取事件、读取Artifact或写业务事实。",
+      "note": "Human confirmed explicit enrolled-active activation gates."
+    },
+    {
+      "q": "Web UI中哪些Human才能查看和批准pending pairing requests？",
+      "answer": "只有当前Network Owner对应的Human-authority context才能查看和批准；Agent、普通本机进程和未绑定owner的UI session只能看到最小无权结果。跨network查询、按fingerprint猜测request和越权批准均拒绝，并留下安全审计记录。",
+      "note": "Human confirmed owner-only pairing administration."
+    },
+    {
+      "q": "Pairing审计记录中允许保存哪些信息？",
+      "answer": "只保存结构化追责元数据：request_id、network_id、human_id、Node fingerprint、Agent类型/version、requested/approved capability、endpoint摘要、request digest、结果、原因、时间、协议版本和service version。禁止保存私钥、Human approval secret、Bearer token、完整session secret或不必要业务payload。",
+      "note": "Human confirmed metadata-only pairing audit."
+    },
+    {
+      "q": "第一次使用时Human signing key如何初始化？",
+      "answer": "Pairing service提供显式初始化流程：本机Web UI显示创建Human Owner身份，调用OS Keychain生成不可导出的signing key并展示public fingerprint；Human确认后才创建Network Owner绑定。提供离线备份/恢复提示，但不上传私钥或写入StateStore。",
+      "note": "Human confirmed explicit OS-Keychain owner initialization."
+    },
+    {
+      "q": "Human owner的离线恢复材料如何在Web UI中处理？",
+      "answer": "首次创建owner时由本机受保护broker生成一次性recovery material；Web UI引导Human离线保存并要求确认已保存。StateStore只保存recovery material的public identifier/hash，绝不保存可直接恢复owner的秘密；使用后立即轮换。",
+      "note": "Human confirmed Human-controlled offline recovery UX."
+    },
+    {
+      "q": "OS Keychain或Human-authority broker不可用时Pairing service如何处理？",
+      "answer": "进入human-authority-unavailable阻塞状态：不能创建Network、批准Pairing、扩大capability ceiling或签发credential。Web UI显示恢复原因，不降级为普通session、环境变量secret或Agent代签。已有enrollment只读审计可继续，新的权限变化等待Human authority恢复。",
+      "note": "Human confirmed fail-closed Human authority availability."
+    },
+    {
+      "q": "Pairing service的MVP Web/API最小接口包含哪些端点？",
+      "answer": "采用GET /healthz、GET /readyz、POST /v1/pairing-requests、GET /v1/pairing-requests/:id/status、GET /v1/owner/pairing-requests、POST /v1/owner/pairing-requests/:id/approve和POST /v1/owner/pairing-requests/:id/reject；不提供任意enrollment写入、credential签发、Graph编排或Relay投递接口。",
+      "note": "Human confirmed the minimal pairing API surface."
+    },
+    {
+      "q": "Pairing API的幂等与错误协议如何统一？",
+      "answer": "所有mutation使用客户端request_id/operation_id和request digest；重复请求返回原结果，不重复追加记录。错误统一为zj-loop.pairing_http.v1，区分400请求或签名无效、401/403认证或owner不合法、404不存在、409状态/CAS冲突、410过期、503依赖不可用；不返回私钥、token、完整session secret或业务payload。",
+      "note": "Human confirmed idempotent pairing mutations and structured errors."
+    },
+    {
+      "q": "Pairing Web UI的实现形态采用什么？",
+      "answer": "由Pairing service直接提供轻量静态Web UI（HTML/CSS/原生JS），不新增前端框架和独立构建链。UI只负责展示状态、校验摘要和提交Human操作；业务校验、权限、签名和StateStore写入全部在服务端完成。复杂控制台另行演进。",
+      "note": "Human confirmed a service-served lightweight Web UI."
+    },
+    {
+      "q": "Pairing service的监听地址、端口和证书配置如何管理？",
+      "answer": "启动时显式配置127.0.0.1、端口、service key/certificate、Agent trust material和Human-authority broker；端口占用直接失败，不自动换端口。证书与trust pin变更需显式重启，并留下service version/config digest审计事实。",
+      "note": "Human confirmed explicit local service configuration."
+    },
+    {
+      "q": "Pairing service重启或优雅停机时pending request和浏览器session如何处理？",
+      "answer": "停机先将readyz置为not-ready，拒绝新request和approval；已有StateStore记录不受影响。重启后从StateStore重建pending projection，未过期request可继续处理，过期request进入pairing-expired；浏览器session全部失效，Human重新打开一次性UI session。",
+      "note": "Human confirmed restart and drain semantics."
+    },
+    {
+      "q": "OS Keychain与Human-authority broker如何保持跨平台可替换？",
+      "answer": "核心只依赖provider-neutral HumanAuthorityProvider：getPublicIdentity、signApprovalContext、createRecoveryMaterial、rotateRecoveryMaterial。MVP先提供macOS Keychain adapter和无副作用测试fixture；其他平台、硬件密钥或远程Human authority替换adapter，不改变Pairing contract和StateStore事件协议。",
+      "note": "Human confirmed provider-neutral Human authority boundary."
+    },
+    {
+      "q": "如何验收Pairing Web UI与enrollment service？",
+      "answer": "最小conformance fixture覆盖Human owner初始化与public fingerprint绑定、Agent证书proof-of-possession、Web UI展示pending request、Human显式批准并追加canonical approval、Agent验证结果进入enrolled-active、重复批准幂等、过期/拒绝/CAS冲突fail-closed、非owner与伪造身份阻断、Keychain/broker不可用阻塞、service重启恢复pending projection；全程无真实GitLab、目标代码库或业务副作用。",
+      "note": "Human accepted the Pairing Web UI enrollment conformance matrix."
+    },
+    {
+      "q": "Pairing service第一版如何接入StateStore？",
+      "answer": "Pairing service只依赖注入的provider-neutral PairingRecordStore/EnrollmentRecordStore，不直接依赖SQLite、SQL或StateStore文件；先用内存fixture验证HTTP/UI行为，再接StateStore HTTP/SQLite adapter。所有request/approval/rejection最终映射为StateStore canonical append-only enrollment records。",
+      "note": "Human confirmed provider-neutral Pairing service persistence boundary."
+    },
+    {
+      "q": "Pending Pairing request应如何投影？",
+      "answer": "新增独立PairingRequestProjection，按network_id + request_id从append-only records重建，保留request摘要、当前状态pending/approved/rejected/expired、request digest、Human decision和时间信息；不把pending列表塞进EnrollmentProjection，避免混淆请求生命周期与节点enrollment生命周期。",
+      "note": "Human confirmed a separate PairingRequestProjection."
+    },
+    {
+      "q": "PairingRequestProjection遇到事件缺失、重复或非法状态迁移时如何处理？",
+      "answer": "严格fail-closed：缺少pairing-requested不展示为pending；重复或内容不一致进入projection-conflict；approved后rejected、过期后批准等非法迁移进入projection-conflict；未知event type不改变状态但保留审计读取；Web UI只显示需要恢复，不允许批准或自动修复。",
+      "note": "Human confirmed fail-closed pairing projection."
+    },
+    {
+      "q": "Agent如何获取Human approval结果，MVP采用轮询还是长轮询？",
+      "answer": "MVP采用有界轮询：Agent每次查询GET /v1/pairing-requests/:id/status并携带短期pairing session；服务端返回pending/approved/rejected/expired/conflict。不在首版引入长连接，后续可增加long-poll adapter而不改变canonical状态。",
+      "note": "Human confirmed bounded polling for pairing status."
+    },
+    {
+      "q": "未enrollment的Agent如何提交Pairing request？",
+      "answer": "Pairing service仍要求TLS client certificate但不要求已enrollment；从证书提取Node Identity fingerprint，并验证X.509有效、request identity与证书一致、Ed25519 proof-of-possession有效、request未过期且network合法。未enrollment只可创建和查询自己的pairing request，不能访问Owner API、领取事件、读取Artifact或写业务StateStore事实。",
+      "note": "Human confirmed pre-enrollment proof and least privilege."
+    },
+    {
+      "q": "Pairing session如何绑定Agent，避免其他节点轮询request？",
+      "answer": "创建request时服务端生成短期opaque pairing session，绑定request_id、node_id和certificate fingerprint，仅通过该Agent的mTLS连接使用；状态查询同时匹配session、客户端证书和request。session过期、撤销或request进入终态后立即失效，不复用运行时scoped credential。",
+      "note": "Human confirmed request-scoped session binding."
+    },
+    {
+      "q": "Pairing request与Web UI的输入大小和速率边界如何定义？",
+      "answer": "HTTP body上限64 KiB；identity/certificate、endpoint和capability列表有明确长度上限；capability去重并拒绝空值；每个Node Identity同时最多一个pending request；重复提交幂等；UI mutation和Agent request有限速率；超限返回结构化413或429，不截断、不排队、不写入StateStore。",
+      "note": "Human confirmed bounded pairing inputs and rate limits."
+    },
+    {
+      "q": "Pairing service的实现顺序如何安排？",
+      "answer": "先实现provider-neutral PairingRequestProjection与record lifecycle；再实现loopback HTTPS API和mTLS/session绑定；再接Human authority context与CAS approval/rejection；最后提供静态Web UI；每一步先有纯协议/服务测试，再组合成双Agent conformance fixture。",
+      "note": "Human confirmed the incremental Pairing service implementation order."
+    },
+    {
+      "q": "HumanSigner provider-neutral接口如何定义，平台密钥后端如何接入？",
+      "answer": "先实现provider-neutral HumanSigner接口与Ed25519内存测试fixture；协议统一public identity、fingerprint、签名和验证，平台adapter分别接macOS Keychain/Secure Enclave、Windows CNG/TPM、Linux PKCS#11/TPM2。缺少可靠安全后端时fail-closed，不退化为文件私钥、环境变量或普通配置项。",
+      "note": "Human confirmed portable signer abstraction before platform-specific adapters."
+    },
+    {
+      "q": "Human authority生产基线采用什么签名算法？",
+      "answer": "直接统一改为ECDSA P-256：HumanSigner与HumanAuthorityProvider使用P-256公钥、SHA-256签名和稳定fingerprint；Node Identity的Agent mTLS协议仍保留Ed25519，不与Human authority算法混淆。Ed25519不再作为Human authority生产基线。",
+      "note": "Human chose a clean P-256 ECDSA Human authority baseline."
+    },
+    {
+      "q": "macOS P-256 HumanSigner adapter采用什么实现形态？",
+      "answer": "采用独立Swift Security helper + TypeScript HumanSigner adapter：Swift helper负责Keychain内生成/读取P-256私钥与SecKey签名，只输出公钥SPKI、fingerprint和签名；TypeScript负责进程协议与HumanSigner契约映射。测试helper使用唯一tag并在结束时删除，生产helper由显式编译产物提供。",
+      "note": "Human confirmed the native helper boundary."
+    },
+    {
+      "q": "Windows CNG/TPM与Linux PKCS#11/TPM2适配器是否纳入本阶段完成条件？",
+      "answer": "暂不纳入。本阶段以macOS Keychain真实后端完成本机双Agent Human-controlled enrollment与Node Identity核心闭环；provider-neutral HumanSigner contract与内存fixture作为跨平台替换边界。Windows CNG/TPM与Linux PKCS#11/TPM2作为后续平台扩展，不阻塞本阶段双Agent conformance。",
+      "note": "Human确认平台扩展不阻塞当前核心里程碑。"
+    },
+    {
+      "q": "本机双Agent conformance fixture是否需要启动真实Codex与Workbuddy进程？",
+      "answer": "不需要。当前fixture使用两个独立的协议测试节点，分别以codex和workbuddy作为节点类型标识，验证Node Identity、mTLS、Human pairing、capability ceiling、append-only enrollment、scoped credential和撤销阻断；不依赖真实Agent安装、模型调用、CLI环境或目标代码库。真实runtime集成留到1-4-7 Native OPN Tracer。",
+      "note": "Human确认协议正确性与Agent runtime集成分开验收。"
+    },
+    {
+      "q": "本机双Agent conformance fixture的canonical StateStore采用内存还是SQLite？",
+      "answer": "采用临时SQLite StateStore作为canonical存储；内存实现仅用于纯协议单元测试。fixture验证Human-owned network、双节点append-only enrollment、CAS/幂等、重启恢复和独立撤销，测试结束清理临时SQLite文件，不连接真实GitLab、目标代码库或真实Agent进程。",
+      "note": "Human确认conformance必须覆盖持久化与重启语义。"
+    },
+    {
+      "q": "双Agent conformance是否应通过真实loopback HTTPS Pairing service完成？",
+      "answer": "应通过真实loopback HTTPS Pairing service完成，并使用SQLite StateStore作为canonical存储；Human authority使用无副作用的内存HumanSigner fixture。验证mTLS、PairingRequest、session binding、CAS、持久化和重启恢复；macOS Keychain真实签名由独立conformance覆盖，不引入Web UI、真实Agent进程、GitLab或目标代码库。",
+      "note": "Human确认conformance覆盖产品协议边界，同时保持环境可重复。"
+    },
+    {
+      "q": "静态Web UI是否作为双Agent enrollment conformance的硬性条件？",
+      "answer": "不作为协议conformance fixture的硬性条件，但作为1-4-2的后续产品实现子任务。先完成loopback HTTPS、SQLite和双协议节点conformance，再接入静态Web UI；UI只改变交互入口，不改变身份、授权、StateStore或审计协议。UI完成前CLI/API仅用于开发验证，不能视为最终用户体验完成。",
+      "note": "Human确认协议验收与用户体验验收分阶段推进。"
+    },
+    {
+      "q": "双Agent conformance是否必须同时验证成功路径和关键阻断路径？",
+      "answer": "必须同时验证。最小矩阵包括Codex与Workbuddy独立成功enrollment、SQLite重启恢复、撤销Workbuddy而Codex继续可用、伪造或不匹配Node Identity阻断、超出Human approval的capability阻断、重复approval幂等、CAS冲突fail-closed和过期pairing request拒绝。",
+      "note": "Human确认不能以happy path代表责任与权限边界成立。"
+    },
+    {
+      "q": "双Agent conformance是否需要生成机器可读Evidence？",
+      "answer": "需要。fixture除测试通过/失败外生成结构化Evidence，包含schema与fixture版本、Codex/Workbuddy身份摘要、pairing/approval/credential/revoke/restart场景结果、SQLite revision与append-only record摘要、阻断reason/code、side_effects_executed=false、commit/时间/环境摘要和Evidence SHA-256，供Review Handoff、Web UI和后续Graph Engineering验收复用。",
+      "note": "Human确认Evidence是产品协议的一等产物。"
+    },
+    {
+      "q": "双Agent conformance Evidence是否允许保存完整证书、session token或Human signing信息？",
+      "answer": "不允许。Evidence仅保存Node Identity与public-key fingerprint摘要、证书摘要或哈希、capability范围、StateStore revision/record ID/digest、结构化状态与reason/code、时间和版本；禁止私钥、Human approval secret、bearer/session token、完整证书链、可重放签名材料和不必要业务payload。",
+      "note": "Human确认Evidence metadata-only，不能成为凭据或身份恢复材料。"
+    },
+    {
+      "q": "双Agent conformance的成功终点是Human approval还是enrolled-active？",
+      "answer": "必须到达enrolled-active：PairingRequest经Human approval后追加append-only enrollment record，StateStore/Network Authority按network、node、event、task与approved capability交集签发scoped credential，Agent验证credential后才进入enrolled-active。Pairing service不拥有任意credential签发权；Codex与Workbuddy分别获得credential，撤销后不能续期或领取新事件。",
+      "note": "Human确认批准不是运行资格，credential验证是激活门槛。"
+    },
+    {
+      "q": "Human approval后credential签发或Agent激活中途崩溃时如何恢复？",
+      "answer": "保留approved/pending-activation，不自动标记enrolled-active。已写approval但无credential时保持待激活；credential已写但Agent未确认时允许通过绑定的幂等请求重新获取并验证；只有Agent成功验证credential后才追加enrolled-active。重复请求返回同一结果，状态证据缺失或冲突则blocked，不能因approval存在自动放行事件或Artifact访问。",
+      "note": "Human确认激活状态必须有完整证据链。"
+    },
+    {
+      "q": "达到enrolled-active是否要求本阶段实现StateStore credential issuance HTTP接口？",
+      "answer": "暂不要求。本阶段使用已有provider-neutral/SQLite credential issuer，通过受控注入验证credential绑定network、node、event、task、approved capability交集、approval有效期、revoke阻断和幂等签发；真正的StateStore credential issuance HTTP API留在1-4-3独立子任务，避免扩大本阶段改动边界。",
+      "note": "Human确认enrollment conformance与StateStore HTTP扩展解耦。"
+    },
+    {
+      "q": "初次enrollment激活时scoped credential的event_id和task_id绑定什么？",
+      "answer": "绑定明确的无业务副作用enrollment bootstrap scope，例如event_id=enrollment-bootstrap:<request_id>、task_id=enrollment-activation:<node_id>。该scope只允许查询自身enrollment状态、获取激活确认和验证capability ceiling，不允许领取业务事件、读取Artifact、写业务StateStore、访问目标代码库或执行外部副作用。真实业务credential必须由后续MessageEvent单独签发。",
+      "note": "Human确认enrollment资格与业务执行权限严格分离。"
+    },
+    {
+      "q": "Codex与Workbuddy的enrollment顺序如何定义？",
+      "answer": "两个节点可以并发提交独立pairing request，但Human approval按request独立处理，不建立Codex到Workbuddy的隐含依赖。批准Codex不自动批准Workbuddy，反之亦然；两个request的CAS、session、credential和审计记录彼此独立，同一request的并发批准由CAS保证单一结果。",
+      "note": "Human确认同机不等于同节点，节点激活彼此解耦。"
+    }
+  ]
+}

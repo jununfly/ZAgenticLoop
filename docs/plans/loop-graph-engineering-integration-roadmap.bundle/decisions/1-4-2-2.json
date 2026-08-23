@@ -1,0 +1,20 @@
+{
+  "node_id": "1-4-2-2",
+  "decisions": [
+    {
+      "q": "结构化conformance Evidence的canonical存储位置是什么？",
+      "answer": "Evidence JSON内容进入content-addressed ArtifactStore，StateStore只保存evidence_id、artifact_id、execution_id、status、digest、created_at等不可变引用与审计元数据。Review Handoff先读取StateStore元数据，再按授权读取Artifact；fixture使用临时ArtifactStore和SQLite StateStore，不把Evidence只写日志或普通本地文件。",
+      "note": "Human确认Evidence内容与网络级事实分层存储。"
+    },
+    {
+      "q": "谁可以读取双Agent conformance Evidence？",
+      "answer": "Human可以读取完整Evidence并作最终Review Handoff决策；Human+Codex Center Coordination仅在Human授权的evidence.read范围内读取和汇总；Codex/Workbuddy执行节点默认只能读取自己产生或明确授权的Evidence摘要，不能默认读取另一节点完整结果；pairing bootstrap credential不能读取Evidence；Relay只传递引用和受限元数据，不读取或修改内容。",
+      "note": "Human确认Evidence读取按责任角色和CapabilityGrant隔离。"
+    },
+    {
+      "q": "双Agent conformance运行结束后Evidence默认保留还是清理？",
+      "answer": "分两种模式：普通自动化测试使用临时ArtifactStore并在结束时清理；验收或Review Handoff模式显式指定输出目录或Evidence destination，保留结构化Evidence与SHA-256供Human review、CI artifact或状态记录使用。禁止默认写入仓库、目标代码库或不可控用户目录；StateStore和ArtifactStore始终隔离。",
+      "note": "Human确认测试清洁性与验收证据保留分离。"
+    }
+  ]
+}

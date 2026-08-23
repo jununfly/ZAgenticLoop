@@ -1,0 +1,160 @@
+{
+  "node_id": "1-4",
+  "decisions": [
+    {
+      "q": "第一阶段是否适配成熟框架？",
+      "answer": "先全都不适配；LangGraph、AutoGen、CrewAI和LlamaIndex Workflows只作为未来Extension候选。第一阶段先用ZAgenticLoop自己的native实现走通并验证OPN产品、Loop Engineering和Graph Engineering实践，外部框架未来接入时不得改变canonical产品模型。",
+      "note": "先证明自己的产品和方法论，不让框架选型掩盖核心协议、责任、权限和体验问题。"
+    },
+    {
+      "q": "第一条Native OPN实践采用什么最小场景？",
+      "answer": "采用单台设备上的双Agent Native OPN Tracer：Human-owned local network enrolls两个独立Agent节点（本机Codex与Workbuddy），一个发布或协调只读目标事件，另一个消费并执行原生Loop，StateStore记录Graph和Loop生命周期，ArtifactStore保存验证产物，Review Handoff返回责任中心，并覆盖一条blocked或recovery路径。两Agent必须拥有独立identity、权限和审计记录，不能退化成同一进程的普通调用。",
+      "note": "先排除跨设备连通、部署和Provider变量，专注验证OPN、Loop Engineering和Graph Engineering的核心实践；后续再扩展到多设备。"
+    },
+    {
+      "q": "双Agent Native OPN Tracer如何分配角色？",
+      "answer": "Human是Network Owner和最终责任中心；Codex是被Human显式委托的event_center，负责发布或协调目标事件；Workbuddy是Agent consumer，负责领取事件、执行原生Loop、验证并返回Evidence；Review Handoff经Codex返回Human，由Human执行accept、request-revision、recover或reject。",
+      "note": "验证Human→Codex Center Delegation、Codex→Workbuddy MessageEvent、Workbuddy执行证据和Human最终决策，同时保持责任不对称。"
+    },
+    {
+      "q": "Native OPN Tracer是否加入受控写入验证段？",
+      "answer": "采用两段式tracer：阶段A为只读能力审查，验证目标澄清、Codex编排、Workbuddy消费、Loop执行、Evidence、Review Handoff和blocked路径；阶段B为本地测试仓库或fixture中的隔离开发任务，由Codex建立集成分支和独立Worktree，Workbuddy使用独立任务分支和Worktree，双方完成极小修改并提交，Codex执行显式merge task，独立验证节点检查合并结果、分支来源、commit可达性和隔离证据。不推送、不创建真实MR、不触碰生产仓库。",
+      "note": "只读阶段证明协议和体验，隔离写入阶段证明Graph Engineering对外部资源的编排能力，二者都保持零生产副作用。"
+    },
+    {
+      "q": "两阶段Native OPN Tracer何时算完成？",
+      "answer": "必须同时满足：Human或Human+Codex中心责任单元成立且Agent不能独立为中心；Codex与Workbuddy拥有独立身份/权限/执行记录；目标事件生成合法Directed Task Graph；所有任务通过OrchestrationPlan和资源隔离preflight；只读阶段完成审查、证据和Review Handoff；隔离写入成功case完成独立branch/worktree、提交、显式合并和总体验收；阻止case在preflight停下且无未授权写入；至少一次结构化Human Grill并重新preflight；至少一次blocked/recovery；StateStore/ArtifactStore记录完整生命周期；不引入四个第三方框架为核心依赖，不推送、不创建真实MR、不修改生产仓库；能证明Loop Engineering和Graph Engineering都被实际使用。",
+      "note": "以行为闭环证明产品与方法论，不以脚本运行或Agent通信作为完成标准。"
+    },
+    {
+      "q": "下一实现阶段是否只实现Native OPN Tracer？",
+      "answer": "采用：下一阶段唯一实现目标是两阶段Native OPN Tracer。排除第三方框架适配、完整Control Console、P2P、多Human owner、真实代码库推送/MR/生产副作用、通用外部资源锁和全面Provider实现。允许实现Native Node Runtime、Network/Node/MessageEvent/DirectedTaskGraph、OrchestrationPlan与资源隔离preflight、Human Grill/blocked/recovery、本地StateStore/ArtifactStore/Relay最小闭环，以及Codex/Workbuddy本机fixture的Git branch/worktree/merge隔离验证。",
+      "note": "先证明自有OPN、Loop Engineering和Graph Engineering产品闭环，再独立规划扩展和生产化。"
+    },
+    {
+      "q": "本机双Agent Native Tracer采用什么StateStore形态？",
+      "answer": "采用本地SQLite-compatible StateStore adapter，启用WAL、事务、CAS revision、幂等dedupe和append-only audit records；本地ArtifactStore采用content-addressed文件目录；Relay可先采用本机service/IPC或loopback HTTP，但仍遵守provider-neutral relay contract。SQLite只作为开发/测试provider，canonical contract保持与未来managed PostgreSQL-compatible StateStore一致。",
+      "note": "验证重启、恢复、审计和并发语义，同时避免把生产部署复杂度提前带入本机tracer。"
+    },
+    {
+      "q": "本机Codex与Workbuddy如何通过Relay通信？",
+      "answer": "采用独立的本机loopback Relay service（优先HTTP，必要时可替换为IPC）作为两个Agent进程之间的provider-neutral传输边界；Relay负责认证、投递、唤醒、重试和连接管理，不直接共享工作区或执行任务。两个Agent通过独立Node Identity和scoped session credential连接，StateStore仍是canonical facts来源。",
+      "note": "保持两个Agent是真实独立节点，验证协议投递和幂等，同时避免用共享文件或进程内调用伪造组网。"
+    },
+    {
+      "q": "本机Codex与Workbuddy如何通过Relay通信？",
+      "answer": "采用独立的本机loopback Relay service（优先HTTP，必要时可替换为IPC）作为两个Agent进程之间的provider-neutral传输边界；Relay负责认证、投递、唤醒、重试和连接管理，不直接共享工作区或执行任务。两个Agent通过独立Node Identity和scoped session credential连接，StateStore仍是canonical facts来源。",
+      "note": "保持两个Agent是真实独立节点，验证协议投递和幂等，同时避免用共享文件或进程内调用伪造组网。"
+    },
+    {
+      "q": "本机双Agent如何完成Human-controlled enrollment和撤销？",
+      "answer": "即使同一设备也不默认进程可信：Human通过一次本地pairing流程分别批准Codex和Workbuddy加入Network，每个Agent生成独立非对称Node Identity，Relay或StateStore只接受Human批准的enrollment record；运行时使用短期scoped session credential。撤销按Node Identity单独生效，撤销后不能领取新事件或获取新Artifact，所有enrollment、授权和撤销动作留下审计记录。",
+      "note": "验证Graph Engineering的身份与责任边界，而不是把同机部署简化成共享token。"
+    },
+    {
+      "q": "本机双Agent如何完成Human-controlled enrollment和撤销？",
+      "answer": "即使同一设备也不默认进程可信：Human通过一次本地pairing流程分别批准Codex和Workbuddy加入Network，每个Agent生成独立非对称Node Identity，Relay或StateStore只接受Human批准的enrollment record；运行时使用短期scoped session credential。撤销按Node Identity单独生效，撤销后不能领取新事件或获取新Artifact，所有enrollment、授权和撤销动作留下审计记录。",
+      "note": "验证Graph Engineering的身份与责任边界，而不是把同机部署简化成共享token。"
+    },
+    {
+      "q": "1-4 完成后是否继续向当前路线图追加实现事项？",
+      "answer": "冻结 1-4，进入里程碑收口与整体审查；不再向当前路线图追加实现事项。后续只处理结果整理、长期文档沉淀、已实现/未实现边界复核、产品体验与技术架构优化，以及下一里程碑规划。",
+      "note": "当前 1-4 的 Graph Engineering 最小闭环已完成并通过 384/384 核心包测试。"
+    },
+    {
+      "q": "里程碑收口需要哪些产物？",
+      "answer": "采用三类产物：已实现边界与验证证据总览、未实现边界/风险/技术债清单、下一里程碑候选地图与优先级。",
+      "note": "收口阶段不新增当前 1-4 的实现事项，只沉淀结果并为下一路线图做准备。"
+    },
+    {
+      "q": "下一里程碑优先做什么？",
+      "answer": "优先做 Graph Atom Web UI：让 Human 直观看懂并操作 Goal → Graph → Agent Execution → Evidence → Review Handoff，再引入跨设备传输和真实 Agent 适配。",
+      "note": "优先验证产品体验闭环，避免先扩展传输或 Provider 复杂度。当前 1-4 保持冻结。"
+    },
+    {
+      "q": "Graph Atom Web UI 采用什么前端实现策略？",
+      "answer": "采用现有静态 HTML/CSS/JS Human Approval UI 逐步扩展：先增加 Graph、任务状态、Evidence、Verification、Review Handoff 与 blocked/recovery 视图，不把前端框架作为下一里程碑前提；待真实交互复杂度验证后再评估框架化。",
+      "note": "保持 MVP 低依赖、易运行、易验证，优先验证产品心智模型与 Human 工作流。"
+    },
+    {
+      "q": "Graph Atom Web UI 首屏主流程是什么？",
+      "answer": "以当前 MessageEvent / Graph Review 为中心：选择事件、查看 DirectedTaskGraph、查看节点状态与依赖、查看 Evidence/Verification，并执行接受、要求修订、恢复或停止。Pairing/Enrollment 作为前置入口，不占据主屏。",
+      "note": "首屏直接验证 OPN 核心价值：Human 能看懂网络如何协同，并知道下一步该做什么。"
+    },
+    {
+      "q": "Graph Review 首版采用什么图形呈现方式？",
+      "answer": "采用结构化任务列表 + 依赖关系视图 + 选中节点详情，不先做自由拖拽画布。首屏展示任务状态、上下游依赖、阻塞点和下一动作；详情展示 Agent、权限、资源隔离、Evidence、Verification 与 Review Handoff。",
+      "note": "优先可读性、扫描和审查效率，避免图形布局复杂度遮蔽产品心智模型。"
+    },
+    {
+      "q": "Human 的 Graph Review 决策粒度是什么？",
+      "answer": "采用节点级审查、事件级最终接受：Human 可逐节点查看并要求修订/恢复/停止；只有整个 MessageEvent 的 Review Handoff 才能最终接受。UI 明确区分节点执行成功、Verification 通过和 Human 接受整体结果。",
+      "note": "保持 Human 的最终责任边界，避免单个 Agent 节点完成被误认为整体目标完成。"
+    },
+    {
+      "q": "Graph Atom Web UI 首版采用什么数据来源？",
+      "answer": "采用 fixture-first + provider-neutral StateStore adapter：先用可重放协议 fixture 驱动体验，同时定义读取适配边界，后续接入 SQLite StateStore/ArtifactStore 不改变 UI 心智模型。页面不直接读取任意本地文件或散落 JSON。",
+      "note": "优先保证体验可重放、验证稳定和存储实现可替换。"
+    },
+    {
+      "q": "Graph Atom UI 是否复用现有 Human Approval UI server？",
+      "answer": "复用现有 server、bootstrap token、session cookie、CORS 校验和 Human authority boundary；增加 Graph Review 的只读路由，最终接受/修订/恢复/停止继续复用同一 Human session 和签名入口，不创建第二套认证。",
+      "note": "避免出现两套 Human authority 协议，保持安全边界和实现路径一致。"
+    },
+    {
+      "q": "Graph Atom UI 的实现顺序是什么？",
+      "answer": "采用只读先行、决策动作后接入：第一条纵切只实现 fixture、Graph Review read adapter、任务/依赖/Evidence/Verification 展示；Human 能正确理解状态后，再接入接受、修订、恢复、停止，并复用既有签名与 authority boundary。",
+      "note": "避免 UI 展示模型和决策写入同时变化，降低验证难度和副作用风险。"
+    },
+    {
+      "q": "Graph Atom UI fixture 如何与现有事实链绑定？",
+      "answer": "UI fixture 只组合现有 OrchestrationPlan、Execution、Relay Receipt、Aggregation、Verification、Semantic Review、Review Handoff 与 Evidence Set，作为 read-model projection；不新增业务状态源，不复制事实，每个展示对象保留原始 scope、digest 和 Evidence 引用。",
+      "note": "保证 UI 与 canonical StateStore/ArtifactStore 语义一致，并支持从页面追溯证据。"
+    },
+    {
+      "q": "Graph Atom UI 首版必须覆盖哪些状态？",
+      "answer": "至少覆盖 review-ready、blocked、scope-drift/evidence-invalid 三类状态：成功路径等待 Human 最终接受；blocked 展示阻塞阶段、原因、责任边界和下一步；scope/digest 失败明确禁止接受。",
+      "note": "验证产品最重要的 stop-and-explain 能力，而不是只展示 happy path。"
+    },
+    {
+      "q": "Graph Atom UI 依赖关系视图采用什么实现？",
+      "answer": "保持零运行时依赖，用 HTML/CSS 结构化呈现：任务列表显示上下游节点，状态标记和连接线表达依赖，选中态展示详情；Mermaid 只用于长期文档和静态导出，不作为 UI runtime 依赖。",
+      "note": "避免把布局引擎复杂度引入首版产品验证，并保持现有静态 UI 可直接运行。"
+    },
+    {
+      "q": "Graph Atom UI fixture/read adapter 的代码边界是什么？",
+      "answer": "采用分层放置：src/graph-atom-ui-read-model.ts 负责 provider-neutral read model 与 fixture 组合；ui/graph-review/ 负责 HTML/CSS/JS 静态资源；test/graph-atom-ui-read-model.test.mjs 负责 projection、状态、scope 与 digest 测试；Human Approval server 负责路由和 session，页面不直接读取本地文件。",
+      "note": "保持协议组合、展示资源和服务端边界清晰分离。"
+    },
+    {
+      "q": "Graph Atom UI 的 URL/API 路由如何命名？",
+      "answer": "沿用现有 /ui/* 边界：页面 GET /ui/graph-review，事件列表 GET /ui/events，事件详情 GET /ui/events/:event_id，Evidence GET /ui/events/:event_id/evidence；全部受现有 bootstrap/session 保护，首版只读。",
+      "note": "不创建第二套认证、签名或写入协议。"
+    },
+    {
+      "q": "Graph Atom UI 首屏如何选择 MessageEvent？",
+      "answer": "采用事件列表 + 默认选中最近的 review-ready 事件；列表只展示当前 Human 有权查看的事件，按状态和更新时间排序；没有 review-ready 时展示最近的 blocked 事件及原因。首版不做跨网络全局 dashboard，不自动替 Human 选择或接受事件。",
+      "note": "保持首屏聚焦当前责任范围和下一动作。"
+    },
+    {
+      "q": "Graph Atom UI fixture 如何覆盖多状态？",
+      "answer": "采用一个 canonical Graph fixture 派生 review-ready、blocked、scope-drift 三份只读状态变体；共享同一对象结构和渲染代码，不为每种状态维护独立页面。",
+      "note": "保证状态差异来自事实与诊断，不来自多套 UI 实现。"
+    },
+    {
+      "q": "Graph Atom UI 的默认语言和术语策略是什么？",
+      "answer": "默认 zh-CN，面向 Human 的状态、动作和阻塞原因使用中文；plan_digest、verification_digest 等协议字段保留英文 canonical 名称，并提供中文解释。",
+      "note": "兼顾 Human 可读性、产品心智统一和技术证据可追溯性。"
+    },
+    {
+      "q": "Graph Atom UI 首版的可用性底线是什么？",
+      "answer": "桌面端和移动端都可读、可操作，并支持键盘导航与语义化状态：窄屏不横向溢出，状态不只依赖颜色，节点选择/Evidence/阻塞原因可键盘完成，并覆盖 loading、empty、error、blocked 状态。",
+      "note": "Human Review 页面必须具备真实可用性，不能只做静态展示截图。"
+    },
+    {
+      "q": "Graph Atom Web UI 第一条实现纵切的范围是什么？",
+      "answer": "只实现只读 Graph Review vertical slice：新建下一里程碑路线图；实现 graph-atom-ui-read-model 与 canonical fixture；接入现有 Human Approval server 的只读 Graph 路由；新增 ui/graph-review 中文响应式页面；覆盖 review-ready、blocked、scope-drift、loading/empty/error；通过 read-model、server route、页面资源和静态检查测试。暂不实现最终接受、修订、恢复、停止等写入动作。",
+      "note": "先验证 Human 能理解 Graph 和 Evidence，再接入决策副作用。"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "1-4-5-1",
+  "label": "Provider-neutral orchestration-and-isolation preflight contract及确定性校验",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4-5",
+  "children": [],
+  "notes": "已完成provider-neutral Preflight contract、Graph专用orchestration.plan.approve.v1签名绑定、不可变资源隔离descriptor registry、纯函数blocked/execution-ready校验与显式持久化adapter。完整context写入ArtifactStore，StateStore追加orchestration.preflight.completed/blocked轻量CAS事实，grant_digest和registry descriptor hash均确定性校验；未接入Runtime dispatch或真实provider adapter。验证聚焦Graph测试9/9、npm test 380/380、npm run build、git diff --check。"
+}

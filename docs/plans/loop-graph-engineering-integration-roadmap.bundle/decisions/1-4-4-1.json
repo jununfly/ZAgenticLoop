@@ -1,0 +1,120 @@
+{
+  "node_id": "1-4-4-1",
+  "decisions": [
+    {
+      "q": "中心责任单元、执行节点与验证节点是否都必须是显式Graph node？",
+      "answer": "是。Human或Human+Codex中心责任单元、Codex/Workbuddy执行节点、Aggregation/Verification与Review Handoff均显式建模；Agent identity、CapabilityGrant、执行任务和验证任务保持独立作用域。",
+      "note": "显式节点保证责任、依赖、证据和Review Handoff可审计，禁止Codex隐式自我验收。"
+    },
+    {
+      "q": "Graph edge是否采用有类型依赖边而不是统一depends_on？",
+      "answer": "是。采用control、data、verification、recovery四类edge；首版validator只接受合法DAG，禁止普通任务成环，校验引用、data输入输出和verification目标；recovery只描述备用路径，不自动执行恢复。",
+      "note": "保留顺序、数据、验收和恢复语义，避免所有关系退化成同一种depends_on。"
+    },
+    {
+      "q": "Task node是否采用显式生命周期状态机？",
+      "answer": "是。采用planned、ready、claimed、running、blocked、failed、succeeded、verified、cancelled等显式状态；依赖满足后才能ready，ready后才能claim，Agent不能置verified，blocked不自动重试，状态转换写入StateStore canonical facts。",
+      "note": "状态机保证Loop Engineering的反复执行与Graph Engineering的责任边界可审计。"
+    },
+    {
+      "q": "OrchestrationPlan是否必须为每个任务声明资源隔离方案？",
+      "answer": "必须。每个任务声明resource_id、access_mode、isolation_strategy、strategy_reason、merge_owner与unknowns；ZAgenticLoop只要求中心责任单元做分派前决策，不实现外部资源锁；未知隔离方案时进入needs-human-grill并禁止分派，隔离决策进入Evidence与Review Handoff。",
+      "note": "明确产品边界：编排资源隔离决策，不接管目标代码库等外部资源的竞态细节。"
+    },
+    {
+      "q": "Human批准后的OrchestrationPlan是否必须不可变？",
+      "answer": "是。Plan拥有plan_revision与plan_digest，Human批准绑定完整digest；任务、依赖、资源隔离、CapabilityGrant或验证条件变化都生成新revision并重新preflight；旧revision保留，已claim/running任务不得静默改派。",
+      "note": "防止批准后改变执行路径，保持责任、权限和证据的一致性。"
+    },
+    {
+      "q": "OrchestrationPlan是否直接复用Human approval的canonicalization profile？",
+      "answer": "不直接复用。采用独立orchestration-plan.v1 canonicalization profile，复用provider-neutral基础；digest覆盖完整Plan，Human approval只签署Plan digest，Plan profile与approval profile分离，禁止两类digest混用。",
+      "note": "保持计划事实与批准事实的协议独立，同时共享确定性字节基础。"
+    },
+    {
+      "q": "validator发现多个问题时是否一次返回完整错误集合？",
+      "answer": "是。返回按path、code稳定排序的完整结构化错误集合，每项包含code、path、message、severity、blocking；不执行任何副作用，blocking错误禁止Plan进入ready，needs-human-grill为结构化结果。",
+      "note": "完整确定性错误集合便于Human grill、UI展示、自动测试和Evidence复用。"
+    },
+    {
+      "q": "第一版Graph validator是否同时负责权限与资源可行性检查？",
+      "answer": "不同时负责。Graph validator只负责schema、引用、DAG、edge语义、生命周期初始状态、输入输出闭合与资源隔离字段完整性；orchestration-and-isolation preflight负责CapabilityGrant、Human approval、外部资源策略可执行性、风险/成本/歧义与Human Grill。",
+      "note": "保持Graph contract纯结构可测试，运行时责任判断集中在preflight。"
+    },
+    {
+      "q": "首个Multi-node Graph Atom是否固定为Center→Codex/Workbuddy并行→Aggregation→Independent Verification→Review Handoff拓扑？",
+      "answer": "是。固定该最小可证明拓扑：Codex与Workbuddy独立执行且有真实依赖或互补输入；写资源必须隔离；Aggregation结构化合并Evidence；Verification为独立后继节点；Review Handoff由中心责任单元接收，Agent不能自行宣布完成。",
+      "note": "该Atom用于证明Graph Engineering新增任务分工、依赖、隔离、聚合与复核能力。"
+    },
+    {
+      "q": "资源隔离策略是否必须来自固定版本化策略注册表？",
+      "answer": "必须。首版策略包括read-only-snapshot、git-branch-worktree、isolated-copy、serialized-owner、human-defined、not-applicable与needs-human-grill；每项定义适用access mode、必需字段、可证明事实、阻断reason和merge/副作用owner；registry版本参与Plan digest，禁止不可验证自由文本。",
+      "note": "把资源隔离判断变成可验证协议，而不是Agent的口头承诺。"
+    },
+    {
+      "q": "资源隔离策略registry是否内置在zj-loop-core并只通过代码版本变更？",
+      "answer": "是。放入provider-neutral protocol-registry模块，使用不可变descriptor；不从环境变量、普通配置、远程服务或Agent输入加载；策略绑定strategy_id、registry version与hash，新策略新增版本并Human review，禁止原地修改旧策略。",
+      "note": "阻断Agent通过自定义策略绕过资源隔离门槛，并保证历史Plan可重放解释。"
+    },
+    {
+      "q": "OrchestrationPlan是否必须Human批准后才能进入preflight-ready与dispatch阶段？",
+      "answer": "必须。Center只能创建或修改draft/proposed；Human或Human+Codex中心责任单元显式批准后才可preflight-ready/dispatchable；Agent不能批准自己的Plan；任何Plan revision、registry hash、CapabilityGrant、资源策略或依赖变化都回退到proposed。",
+      "note": "把结构正确与责任授权分开，未经Human批准的Plan只能分析不能claim、dispatch或产生外部副作用。"
+    },
+    {
+      "q": "Plan approval是否复用Human Authority v2并绑定完整Plan digest？",
+      "answer": "是。使用独立action orchestration.plan.approve，approval context绑定network_id、plan_id、plan_revision、plan_digest、request_id、human_id、设备身份、有效期和canonicalization profile/hash；request_digest必须等于Plan digest，不能只批准task子集冒充全Plan批准。",
+      "note": "Plan digest、approval digest与task execution digest分离保存，过期或设备绑定不匹配即不能dispatch。"
+    },
+    {
+      "q": "CapabilityGrant是否必须按task独立签发和验证？",
+      "answer": "必须。每个执行task拥有独立grant，绑定network、plan、revision、event、task、assigned_node、capabilities、resource_scope、有效期和grant_digest；grant取enrollment ceiling、Human approval与task scope交集；任何任务、节点、资源或能力变化都生成新grant并重新preflight。",
+      "note": "隔离Center、Codex、Workbuddy、Aggregation与Verification的权限，防止Agent横向借权。"
+    },
+    {
+      "q": "Aggregation节点是否只做确定性结构化合并而不直接生成最终业务结论？",
+      "answer": "是。Aggregation只收集并校验Codex/Workbuddy输出、task/plan/revision/digest绑定与Evidence完整性，标记冲突/缺失/重复并生成canonical aggregation artifact；不替Human做最终责任决策，不强行压平冲突，不得标记verified。",
+      "note": "最终结论由独立Verification与Human Review Handoff共同完成。"
+    },
+    {
+      "q": "Independent Verification的独立性是否至少包含逻辑职责、权限和输入证据范围三层？",
+      "answer": "是。Verification是独立Graph node，拥有独立task_id、CapabilityGrant与Evidence；不可修改原始output，只能读取Plan、Aggregation artifact、指定Evidence与确定性gate；同一Codex进程也必须不同逻辑节点、grant和evidence scope，不得自我批准；失败产生blocked或failed。",
+      "note": "首版验证逻辑边界，物理进程隔离留给Native OPN Tracer。"
+    },
+    {
+      "q": "Review Handoff是否必须是Graph的显式终点Artifact而不是最终文本？",
+      "answer": "必须。Review Handoff为结构化不可变Artifact，包含handoff/network/event/plan revision与digest、Graph状态、Aggregation与Verification Evidence引用、成功/失败/阻塞/风险、资源隔离摘要、side_effects_executed、Human待决问题、推荐下一步、生成者身份与artifact digest；只交回Human，不自动触发下一轮执行。",
+      "note": "使Graph结果可复用、可审计、可Review，而不是依赖对话文本。"
+    },
+    {
+      "q": "Graph facts是否必须进入StateStore append-only canonical event log？",
+      "answer": "必须。plan.created、plan.revised、plan.approved、task生命周期与review.handoff等事实进入StateStore；projection重建当前Graph；不以可覆盖的Graph JSON作为唯一真相；Plan digest、revision、task state与Evidence引用必须可重放；contract validator与persistence分层。",
+      "note": "保持Graph状态可重放、可审计，并复用1-4-3已验证的StateStore CAS事实模型。"
+    },
+    {
+      "q": "Plan revision并发提交是否统一采用StateStore network-level CAS？",
+      "answer": "是。创建、修订、批准Plan都携带expected_revision；事务内校验network revision、plan revision与当前digest；只有中心责任单元可提交Plan事实；冲突返回plan-revision-conflict，不自动重试/覆盖/合并；Agent只能提交自身task lifecycle facts。",
+      "note": "避免多个编排路径同时修改同一执行计划，冲突交回Human+Codex重新决策。"
+    },
+    {
+      "q": "首版Graph validator是否允许并行task？",
+      "answer": "允许，但必须可证明安全：无未声明控制/数据依赖；共享读安全；写资源必须不同、隔离或由serialized-owner与后继merge串行化；未有隔离证据的并行写入为blocking error；并行决策进入Plan digest与Evidence，首版不承诺runtime并发调度。",
+      "note": "区分Graph计划中的并行意图与后续Relay/Runtime的调度能力。"
+    },
+    {
+      "q": "Graph validator是否要求所有node从Center可达并最终到达Review Handoff或明确terminal？",
+      "answer": "是。Center为唯一root；每个执行task从Center可达；每个分支最终到Aggregation、Verification或明确blocked/recovery terminal；正常完成路径唯一业务终点为Review Handoff；recovery不得绕过Human；孤立或无终点node使Plan blocked。",
+      "note": "保证任务有责任来源、依赖闭环和验收去向，防止声明任务却没有执行/Review路径。"
+    },
+    {
+      "q": "fan-out与fan-in是否必须显式建模？",
+      "answer": "必须。fan-out由显式control edges表达；fan-in显式汇入Aggregation node；Aggregation声明预期task、Evidence类型、冲突策略、缺失策略和输出Artifact schema；缺少输入只能blocked/incomplete，不能隐式合并或伪装完整；拓扑进入Plan digest。",
+      "note": "让并行分工与聚合责任可验证、可审计。"
+    },
+    {
+      "q": "OrchestrationPlan、Graph node与edge是否采用严格闭合schema？",
+      "answer": "是。采用严格闭合schema，未知/缺失字段、null替代缺失、非法ID/时间/digest/状态/枚举均拒绝；输入解析复用parseBoundedJson，validator输出null-prototype结构；node、edge、task、resource、grant各自定义字段。",
+      "note": "让Graph contract可安全解析、可重放、可测试，并避免Graph层重复实现JSON parser。"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "1-4-5-4",
+  "label": "Provider-neutral task.dispatched gate及风险证据校验",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4-5",
+  "children": [],
+  "notes": "已完成provider-neutral task.dispatched gate、风险证据校验与CAS事实记录：低风险要求claim+Runtime revalidation，review-required要求同Plan digest/revision的Verification与accepted Review Handoff，human-approval-required要求匹配Human Approval，未知capability fail-closed；gate只返回dispatch-ready/blocked，通过后由确定性dispatch_event_id在StateStore CAS事务追加task.dispatched，重复返回duplicate。Relay首个Provider session边界已接入：支持带dispatch_event_id、intent_digest、session_request_id的请求，首次创建201，完全相同重试返回duplicate且复用同一会话，绑定冲突返回409；旧{network_id,protocol_version}请求保持兼容。已验证Relay定向测试16项及全量npm test 380项，git diff --check通过。尚未实现真实外部Provider adapter副作用。"
+}

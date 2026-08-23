@@ -1,0 +1,9 @@
+{
+  "id": "1-4-7",
+  "label": "Codex与Workbuddy两阶段Native OPN Tracer",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4",
+  "children": [],
+  "notes": "范围采用抽象Agent1、Agent2，不将Codex/Workbuddy写入协议角色；验证Human或Human+Agent中心责任单元编排双Agent Native OPN Tracer，并覆盖跨设备网络协议边界与最小可验证传输。具体包括双阶段任务分工、资源隔离、独立Execution、Evidence、聚合、Review Handoff和Human决策；不推送、不创建真实MR。"
+}

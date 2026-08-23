@@ -1,0 +1,9 @@
+{
+  "id": "1-3",
+  "label": "OPN产品能力与技术架构融合边界",
+  "status": "completed",
+  "mode": "explore",
+  "parent": "1",
+  "children": [],
+  "notes": "provider-neutral OPN/Graph协议内核、Execution Adapter边界、StateStore与框架checkpoint分层、CapabilityGrant限制和Graph Evidence Set原则已完成决策，并已沉淀至长期产品/架构文档；第三方框架仍为未来Extension。"
+}

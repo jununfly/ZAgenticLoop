@@ -1,0 +1,9 @@
+{
+  "id": "1-4-1",
+  "label": "single-agent-opn-atom.v1 baseline fixture",
+  "status": "completed",
+  "mode": "explore",
+  "parent": "1-4",
+  "children": [],
+  "notes": "Human已接受baseline。已提供Human可读Mermaid视图 docs/testing/agent-context-capability-review.md；机器报告human_decision=accept，review_handoff=ready。"
+}

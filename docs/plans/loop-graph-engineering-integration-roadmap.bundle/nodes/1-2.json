@@ -1,0 +1,9 @@
+{
+  "id": "1-2",
+  "label": "Loop与Graph协同的端到端用户体验路径",
+  "status": "completed",
+  "mode": "explore",
+  "parent": "1",
+  "children": [],
+  "notes": "Loop-first、Graph按需渐进展开、Network Graph与Event-scoped Directed Task Graph双层模型、资源隔离前置和Human Grill协议已完成决策，并已沉淀至OPN产品蓝图与架构状态总览；后续实现沿1-4执行。"
+}

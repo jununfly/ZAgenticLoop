@@ -1,0 +1,45 @@
+{
+  "node_id": "1-4-1",
+  "decisions": [
+    {
+      "q": "single-agent-opn-atom.v1首个conformance fixture执行什么任务？",
+      "answer": "固定为只读模块能力与边界审查：Human提出明确目标，单个独立enrolled Agent对指定模块或目录执行只读扫描，输出结构化报告（现有能力、缺口、证据位置、风险、验证结果和建议下一步），Human通过Review Handoff做最终决策。Fixture固定只读权限、结构化报告schema、至少一条验证命令、可复查证据引用和blocked/recovery路径；不修改目标代码库，业务目标可替换但OPN原子协议不变。",
+      "note": "证明最小产品原子产生有价值且可验证的Agent杠杆，而不是只验证协议消息能流通。"
+    },
+    {
+      "q": "首个single-agent-opn-atom.v1使用哪个目标模块？",
+      "answer": "优先选择ZAgenticLoop自身的tools/zj-loop-core作为dogfood目标，限定为只读审查其一个边界清晰的模块或CLI路径；这样能验证产品用自身Loop/Graph方法审查自身实现，同时不修改目标仓库。若该目标过大，则先选更小的单一CLI或契约模块，必须保留结构化报告、证据引用、验证命令和blocked/recovery语义。",
+      "note": "先用自身核心代码做闭环dogfood，但严格限制范围，避免baseline fixture变成全仓库架构审查。"
+    },
+    {
+      "q": "首个single-agent-opn-atom.v1的dogfood目标模块是什么？",
+      "answer": "选择tools/zj-loop-core/src/agent-context.ts，范围限定为从受保护状态事实重建可执行上下文、读取activation snapshot ref、校验state-head稳定性，以及在activation ref缺失或state不稳定时给出可解释blocked结果。利用已有B1语义做自我dogfood，不扩展为全Core审查。",
+      "note": "目标边界清晰且直接连接已完成B1能力，能验证baseline fixture的证据和停止语义。"
+    },
+    {
+      "q": "agent-context.ts baseline报告的最小schema是什么？",
+      "answer": "采用可复用的agent-context-capability-review.v1报告：target（path、scope、commit）、goal、capability_status（implemented/guarded/not-implemented）、observed_flow、contracts_and_invariants、evidence_refs（path/hash/command）、failure_or_blocked_cases、risks_and_unknowns、verification_results、recommended_next_action、review_handoff和human_decision。报告必须区分代码事实、推断和未验证项，禁止把测试通过等同于产品能力完成。",
+      "note": "让Single-Agent OPN Atom的产出可被Human审查、后续Graph聚合，并保留证据边界。"
+    },
+    {
+      "q": "baseline fixture如何验证agent-context.ts？",
+      "answer": "复用现有tools/zj-loop-core的npm run test:agent-local作为第一道确定性gate，不重造重复测试；在其上生成agent-context-capability-review.v1报告。报告必须引用agent-context.test.mjs、activation-snapshot-ref.test.mjs、execution-context.test.mjs及实际命令/commit等证据，并把activation-ref-missing、state-head-changed、绑定不一致等阻止路径纳入failure_or_blocked_cases。",
+      "note": "让baseline直接吸收已有B1验证资产，同时把测试事实提升为Human可审查的产品能力报告。"
+    },
+    {
+      "q": "baseline报告由谁生成、如何避免自证？",
+      "answer": "采用Agent生成、确定性gate和Human审查三段式：Agent负责只读分析agent-context.ts并填充agent-context-capability-review.v1；npm run test:agent-local及引用的测试命令提供机械事实；Human通过Review Handoff审查事实/推断/未验证项并作最终decision。Agent不能把自己生成的报告直接标记为Human接受，报告hash和证据引用必须可复查。",
+      "note": "让Single-Agent OPN Atom同时验证Agent杠杆和责任边界，避免Agent自写报告、自证结论。"
+    },
+    {
+      "q": "baseline报告由谁生成、如何避免自证？",
+      "answer": "采用Agent生成、确定性gate和Human审查三段式：Agent负责只读分析agent-context.ts并填充agent-context-capability-review.v1；npm run test:agent-local及引用的测试命令提供机械事实；Human通过Review Handoff审查事实/推断/未验证项并作最终decision。Agent不能把自己生成的报告直接标记为Human接受，报告hash和证据引用必须可复查。",
+      "note": "让Single-Agent OPN Atom同时验证Agent杠杆和责任边界，避免Agent自写报告、自证结论。"
+    },
+    {
+      "q": "Human是否接受agent-context-capability-review.v1作为Single-Agent OPN Atom baseline conformance fixture？",
+      "answer": "接受。接受范围包括只读能力审查、结构化Evidence、blocked/recovery语义、verification manifest、pinned commit可重放和Human Review Handoff；不代表双Agent组网、StateStore、Directed Task Graph或资源隔离已完成。",
+      "note": "Human review accepted the baseline; product scope remains bounded."
+    }
+  ]
+}

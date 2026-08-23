@@ -1,0 +1,9 @@
+{
+  "id": "1-4-5-2",
+  "label": "Runtime claim/dispatch revalidation boundary",
+  "status": "completed",
+  "mode": "exploit",
+  "parent": "1-4-5",
+  "children": [],
+  "notes": "已完成Runtime claim/dispatch revalidation boundary首版：读取并校验持久化Preflight Artifact、execution-ready、network/plan/revision/digest、expires_at、task级grant digest、Graph node与assigned Agent identity、enrollment状态与capability ceiling；通过后在同一StateStore CAS事务追加确定性task.claimed事实，重试返回duplicate，阻塞不产生副作用。已完成真实SQLite CAS测试；dispatch gate及Relay session边界分别由1-4-5-4承载，真实外部Provider副作用尚未接入。"
+}

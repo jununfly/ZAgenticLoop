@@ -1,0 +1,17 @@
+{
+  "schema": "zj-roadmap-bundle-manifest/v1",
+  "kind": "roadmap-bundle",
+  "version": 1,
+  "title": "Loop Engineering与Graph Engineering产品融合",
+  "description": "独立于已完成的automation-first路线图和当前OPN收口路线图，全面理解并吸收Loop Engineering与Graph Engineering的方法论，将二者融汇进ZAgenticLoop的产品能力、体验路径与技术架构。先完成统一心智模型和产品边界，再进入下一阶段细节实现。",
+  "roadmapVersion": 1,
+  "metadata": {
+    "md_file": "/Users/bilibili/Documents/workspace/github/jununfly/ZAgenticLoop/docs/plans/loop-graph-engineering-integration-roadmap.md"
+  },
+  "snapshotInterval": 100,
+  "historySequence": 0,
+  "currentPointer": "current.json",
+  "currentSnapshot": "snapshots/snapshot-000000.json",
+  "created": "2026-08-23 18:51:04",
+  "updated": "2026-08-23 18:51:41"
+}
