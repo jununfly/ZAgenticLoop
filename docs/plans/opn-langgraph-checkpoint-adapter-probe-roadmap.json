@@ -1,0 +1,217 @@
+{
+  "title": "LangGraph checkpoint/resume 单能力探针",
+  "description": "在 ZAgenticLoop native Graph/OPN core 保持 authority 的前提下，通过 provider-neutral adapter 验证 LangGraph checkpoint/resume 的可组合性、恢复语义、Evidence 绑定、Human acceptance 与可移除性。",
+  "version": 1,
+  "nodes": {
+    "1": {
+      "id": "1",
+      "label": "LangGraph checkpoint/resume 单能力探针",
+      "status": "in_progress",
+      "mode": "explore",
+      "parent": null,
+      "children": [
+        "1-1",
+        "1-2",
+        "1-3",
+        "1-4",
+        "1-5"
+      ],
+      "decisions": [
+        {
+          "q": "A33 是否以 LangGraph checkpoint/resume 作为第一条真实能力验证 slice？",
+          "answer": "是。先验证 durable-state/checkpoint 单能力，不把 LangGraph 变成 Graph/OPN、Evidence、Human acceptance、security 或 lifecycle 的 authority。",
+          "note": "AutoGen 与 CrewAI 延后；本路线图只覆盖 LangGraph adapter probe。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-1": {
+      "id": "1-1",
+      "label": "Native baseline 与 conformance fixture",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-1-1",
+        "1-1-2"
+      ],
+      "decisions": [
+        {
+          "q": "native baseline 是否作为 conformance oracle，而不是用 LangGraph 行为定义产品语义？",
+          "answer": "是。fixture 先固定 native work item、resume identity、duplicate 语义、Evidence 绑定、Human acceptance 和 removal 后 native path。",
+          "note": "任何 adapter 结果都必须映射回 native facts，并接受 Core-owned verification。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-2": {
+      "id": "1-2",
+      "label": "Provider-neutral checkpoint adapter contract",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-2-1",
+        "1-2-2"
+      ],
+      "decisions": [
+        {
+          "q": "checkpoint adapter 是否必须绑定 input/output、source revision、state digest 与 native execution identity？",
+          "answer": "是。adapter contract 使用 provider-neutral envelope，并拒绝无法重建、跨 execution 或无法验证 digest 的 checkpoint。",
+          "note": "版本漂移、状态翻译和退出责任必须由 adapter owner 承担。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-3": {
+      "id": "1-3",
+      "label": "LangGraph checkpoint/resume probe",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-3-1",
+        "1-3-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4": {
+      "id": "1-4",
+      "label": "Authority、Evidence 与 failure-gate conformance",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-4-1",
+        "1-4-2"
+      ],
+      "decisions": [
+        {
+          "q": "哪些条件直接阻断 A33 的继续结论？",
+          "answer": "authority bypass、duplicate 产生第二 execution authority、resume 改写 native identity、Evidence digest 不一致、Human acceptance 被绕过，或 removal 后 native fixture 不再通过。",
+          "note": "这些是 hard stop，不以平均通过率抵消。"
+        }
+      ],
+      "notes": ""
+    },
+    "1-5": {
+      "id": "1-5",
+      "label": "Adapter removal and decision closeout",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1",
+      "children": [
+        "1-5-1",
+        "1-5-2"
+      ],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-1-1": {
+      "id": "1-1-1",
+      "label": "Define native checkpoint fixture and resume oracle",
+      "status": "in_progress",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": "A33 handoff focus：先固定 native baseline、resume oracle 与 conformance fixture；完成后再进入 adapter contract。"
+    },
+    "1-1-2": {
+      "id": "1-1-2",
+      "label": "Record authority and Evidence invariants",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-1",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-1": {
+      "id": "1-2-1",
+      "label": "Define adapter input/output and digest binding",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-2-2": {
+      "id": "1-2-2",
+      "label": "Define dependency, version-skew, and exit boundary",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-2",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-1": {
+      "id": "1-3-1",
+      "label": "Implement isolated LangGraph checkpoint bridge",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-3-2": {
+      "id": "1-3-2",
+      "label": "Exercise checkpoint, resume, duplicate, namespace, and metadata cases",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-3",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-1": {
+      "id": "1-4-1",
+      "label": "Run crash, timeout, retry, approval, and authority negative cases",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-4-2": {
+      "id": "1-4-2",
+      "label": "Run Evidence digest and Human acceptance checks",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-4",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-1": {
+      "id": "1-5-1",
+      "label": "Remove the adapter and rerun the native fixture",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    },
+    "1-5-2": {
+      "id": "1-5-2",
+      "label": "Record continue, defer, or stop decision",
+      "status": "pending",
+      "mode": "exploit",
+      "parent": "1-5",
+      "children": [],
+      "decisions": [],
+      "notes": ""
+    }
+  },
+  "metadata": {
+    "created": "2026-08-23 23:59:25",
+    "updated": "2026-08-24 00:00:34",
+    "md_file": "docs/plans/opn-langgraph-checkpoint-adapter-probe-roadmap.md"
+  }
+}
