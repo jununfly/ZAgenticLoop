@@ -1,15 +1,15 @@
 <!-- ROADMAP_SECTION_START -->
 ## ZJ Roadmap
 
-> 数据文件: `opn-langgraph-checkpoint-adapter-probe-roadmap.json` | 最后更新: 2026-08-24 00:00:34
+> 数据文件: `opn-langgraph-checkpoint-adapter-probe-roadmap.json` | 最后更新: 2026-08-24 15:32:14
 
 [~][X+] 1. LangGraph checkpoint/resume 单能力探针
-├── [~][Y+] 1-1. Native baseline 与 conformance fixture
-│   ├── [~][Y+] 1-1-1. Define native checkpoint fixture and resume oracle
-│   └── [ ][Y+] 1-1-2. Record authority and Evidence invariants
-├── [ ][Y+] 1-2. Provider-neutral checkpoint adapter contract
-│   ├── [ ][Y+] 1-2-1. Define adapter input/output and digest binding
-│   └── [ ][Y+] 1-2-2. Define dependency, version-skew, and exit boundary
+├── [x][Y+] 1-1. Native baseline 与 conformance fixture
+│   ├── [x][Y+] 1-1-1. Define native checkpoint fixture and resume oracle
+│   └── [x][Y+] 1-1-2. Record authority and Evidence invariants
+├── [x][Y+] 1-2. Provider-neutral checkpoint adapter contract
+│   ├── [x][Y+] 1-2-1. Define adapter input/output and digest binding
+│   └── [x][Y+] 1-2-2. Define dependency, version-skew, and exit boundary
 ├── [ ][Y+] 1-3. LangGraph checkpoint/resume probe
 │   ├── [ ][Y+] 1-3-1. Implement isolated LangGraph checkpoint bridge
 │   └── [ ][Y+] 1-3-2. Exercise checkpoint, resume, duplicate, namespace, and metadata cases
@@ -19,8 +19,4 @@
 └── [ ][Y+] 1-5. Adapter removal and decision closeout
     ├── [ ][Y+] 1-5-1. Remove the adapter and rerun the native fixture
     └── [ ][Y+] 1-5-2. Record continue, defer, or stop decision
-
-### 当前施工：1-1-1. Define native checkpoint fixture and resume oracle
-
-A33 handoff focus：先固定 native baseline、resume oracle 与 conformance fixture；完成后再进入 adapter contract。
 <!-- ROADMAP_SECTION_END -->

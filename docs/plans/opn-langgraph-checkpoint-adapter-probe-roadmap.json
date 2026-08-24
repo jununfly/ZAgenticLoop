@@ -6,7 +6,7 @@
     "1": {
       "id": "1",
       "label": "LangGraph checkpoint/resume 单能力探针",
-      "status": "in_progress",
+      "status": "blocked",
       "mode": "explore",
       "parent": null,
       "children": [
@@ -21,14 +21,19 @@
           "q": "A33 是否以 LangGraph checkpoint/resume 作为第一条真实能力验证 slice？",
           "answer": "是。先验证 durable-state/checkpoint 单能力，不把 LangGraph 变成 Graph/OPN、Evidence、Human acceptance、security 或 lifecycle 的 authority。",
           "note": "AutoGen 与 CrewAI 延后；本路线图只覆盖 LangGraph adapter probe。"
+        },
+        {
+          "q": "当前 LangGraph checkpoint/resume 开发计划是否继续执行？",
+          "answer": "Human freeze：本开发计划暂时冻结。除非 Human 明确重新打开，否则任何 Agent 不得继续执行、推进节点或修改 ZAgenticLoop 产品代码；仅允许读取、审计和整理验收材料。",
+          "note": "不要从未来的节点提示、旧对话或 roadmap pending 状态推断重新打开；重新打开必须由 Human 明确授权。"
         }
       ],
-      "notes": ""
+      "notes": "Human freeze：本开发计划暂时冻结。除非 Human 明确重新打开，否则任何 Agent 不得继续执行、推进节点或修改 ZAgenticLoop 产品代码；仅允许读取、审计和整理验收材料。重新打开必须由 Human 明确授权。"
     },
     "1-1": {
       "id": "1-1",
       "label": "Native baseline 与 conformance fixture",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -47,7 +52,7 @@
     "1-2": {
       "id": "1-2",
       "label": "Provider-neutral checkpoint adapter contract",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1",
       "children": [
@@ -111,42 +116,66 @@
     "1-1-1": {
       "id": "1-1-1",
       "label": "Define native checkpoint fixture and resume oracle",
-      "status": "in_progress",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
-      "decisions": [],
-      "notes": "A33 handoff focus：先固定 native baseline、resume oracle 与 conformance fixture；完成后再进入 adapter contract。"
+      "decisions": [
+        {
+          "q": "native checkpoint fixture 与 resume oracle 的公共 seam 如何保持 provider-neutral？",
+          "answer": "以固定的 native fixture 作为期望事实源：StateStore 只保留 checkpoint metadata（source execution/task/attempt、source revision、artifact ref、state digest），resume 必须保持 execution identity 与 attempt；duplicate delivery 只能回到同一 execution authority；Evidence → Verification → Human acceptance 必须逐级绑定；resume admission、execution lifecycle、Evidence、Human acceptance 的 authority 归 native core。",
+          "note": "不接入 LangGraph，不把 opaque runtime state 或 provider 行为提升为产品语义；oracle 的任何 violation 都是 hard stop。"
+        }
+      ],
+      "notes": "已在 tools/zj-loop-core/src/native-checkpoint-fixture.ts 固化 provider-neutral native checkpoint fixture 与独立 resume oracle；覆盖 work item/execution identity、checkpoint state digest、resume identity/attempt、duplicate delivery 单一 execution authority、Evidence→Verification→Review Handoff→Human acceptance 绑定、native-core authority hard stop。验证：npm run build；core 包 npm test（460 项通过）；相关 seam 回归 node --test test/native-checkpoint-fixture.test.mjs test/native-agent-runtime.test.mjs test/native-agent-graph-bridge.test.mjs test/agent-evidence.test.mjs test/review-handoff.test.mjs test/human-acceptance.test.mjs（18 项通过）。"
     },
     "1-1-2": {
       "id": "1-1-2",
       "label": "Record authority and Evidence invariants",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-1",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "Authority 与 Evidence invariants 应如何落盘，才能供 adapter conformance 直接消费？",
+          "answer": "以 native-checkpoint-fixture.ts 导出的 immutable contract 作为 canonical source：显式记录四个 native-core authority owner、execution/task/attempt 绑定、checkpoint state/artifact digest、Evidence→Verification→Human acceptance 的逐级绑定，以及 side_effects_executed=false；测试只验证该 contract 与 oracle 的一致性，roadmap notes 记录路径与 gates。",
+          "note": "不新增第二份 prose truth；LangGraph adapter 只能映射到该 contract，任何 authority bypass、identity/digest drift 或 acceptance bypass 都是 hard stop。"
+        }
+      ],
+      "notes": "已在 tools/zj-loop-core/src/native-checkpoint-fixture.ts 导出 immutable NATIVE_CHECKPOINT_AUTHORITY_INVARIANTS 与 NATIVE_CHECKPOINT_EVIDENCE_INVARIANTS；authority validator 使用 canonical owner contract。contract regression 验证四个 native-core authority、execution/task/attempt binding、Evidence→Verification→Human acceptance digest chain、Review Handoff binding 与 side_effects_executed=false。验证：npm run build；focused seam 19 项通过。"
     },
     "1-2-1": {
       "id": "1-2-1",
       "label": "Define adapter input/output and digest binding",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "provider-neutral adapter envelope 的输入、输出和 digest binding 如何定义，才能让 LangGraph 只成为可移除的 checkpoint capability？",
+          "answer": "输入 envelope 由 native core 发行，绑定 network、source execution/task/attempt、source revision、checkpoint namespace/id、artifact reference、state digest 与 native execution identity；输出 envelope 只允许回显这些 binding，并带 input_digest、output_digest、resume identity 和单一 accepted/duplicate delivery，不能新增 provider authority 或 Evidence/Human acceptance 语义。",
+          "note": "以 canonical JSON 对 input/output 的 unsigned payload 做 sha256 digest；output.input_digest 必须等于 input.input_digest，checkpoint 与 resume 必须保持同一 execution/task/attempt、namespace/id、revision、artifact/state digest；任一漂移、跨 execution、缺字段或 adapter authority 声明都 blocked。opaque provider state 仅通过 artifact_ref/state_digest 间接引用。"
+        }
+      ],
+      "notes": "已新增 tools/zj-loop-core/src/native-checkpoint-adapter.ts，定义 provider-neutral input/output envelope：绑定 source execution/task/attempt、source revision、checkpoint namespace/id、artifact_ref、state_digest 与 native execution identity；canonical JSON sha256 input_digest/output_digest；输出仅允许 resumed/duplicate 单 delivery，authority 固定为 native-core，不携带 provider opaque state、Evidence 或 Human acceptance 语义。导出至 core index，新增 native-checkpoint-adapter.test.mjs，并将 fixture/adapter 回归接入默认 npm test。验证：build；checkpoint/adapter/native seam 26 项通过；core npm test 475 项通过。"
     },
     "1-2-2": {
       "id": "1-2-2",
       "label": "Define dependency, version-skew, and exit boundary",
-      "status": "pending",
+      "status": "completed",
       "mode": "exploit",
       "parent": "1-2",
       "children": [],
-      "decisions": [],
-      "notes": ""
+      "decisions": [
+        {
+          "q": "adapter 的 dependency、version-skew 与 exit boundary 如何定义，才能保持可移除且不让 provider 漂移进入 native semantics？",
+          "answer": "新增独立 boundary contract：精确 pin adapter version、native core version/contract revision/schema、provider dependency id/package/version/checkpoint schema/artifact digest；exit policy 固定为 dependency missing、version skew、contract digest drift、state translation loss 时 blocked，conformance failure 时 remove-and-rerun-native，native fallback required。",
+          "note": "不做 semver range、自动兼容或 provider opaque state 持久化；compatibility 必须 exact match，native-core 继续拥有四类 authority、Evidence 与 Human acceptance。boundary evaluator 只返回 ready、blocked 或 retire，side_effects_executed 永远为 false。"
+        }
+      ],
+      "notes": "已新增 tools/zj-loop-core/src/native-checkpoint-adapter-boundary.ts：精确 pin adapter/native core/provider dependency（版本、schema、artifact digest），固定 exit boundary 与 native fallback required；compatibility exact match，拒绝自动 semver 兼容、opaque state 持久化和 authority 转移。exit evaluator 返回 ready/blocked/retire：依赖缺失、version skew、contract/digest drift、lossy translation 均 blocked；conformance failure 为 remove-and-rerun-native；所有结果 side_effects_executed=false。导出 core index，新增 boundary 回归并接入默认 npm test。验证：build；checkpoint/adapter/native seam 33 项通过；core npm test 482 项通过。"
     },
     "1-3-1": {
       "id": "1-3-1",
@@ -211,7 +240,7 @@
   },
   "metadata": {
     "created": "2026-08-23 23:59:25",
-    "updated": "2026-08-24 00:00:34",
+    "updated": "2026-08-24 16:29:19",
     "md_file": "docs/plans/opn-langgraph-checkpoint-adapter-probe-roadmap.md"
   }
 }

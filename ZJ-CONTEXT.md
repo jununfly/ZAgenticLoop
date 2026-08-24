@@ -24,6 +24,56 @@ _Avoid_: Script, prompt, agent
 The durable context a loop preserves across separate runs. Memory is the broad category that includes current state, run history, and operating constraints.
 _Avoid_: State file
 
+**Checkpoint Metadata**:
+The provider-neutral, content-addressed metadata that identifies an opaque
+runtime checkpoint without making that runtime state a canonical StateStore
+fact. It includes the source execution identity, source revision, artifact
+reference, and state digest.
+_Avoid_: Canonical execution state, raw checkpoint in StateStore
+
+**Resume Oracle**:
+The native-core evaluator that compares a provider's checkpoint/resume
+observation with the fixed native fixture. It proves identity preservation,
+idempotent duplicate delivery, authority ownership, Evidence binding, and
+Human acceptance binding; it does not adopt provider behavior as product
+semantics.
+_Avoid_: Provider result, framework-specific validator
+
+**Native Checkpoint Invariants**:
+The executable contract that keeps resume admission, execution lifecycle,
+Evidence, and Human acceptance owned by native-core, and binds Evidence to the
+same execution identity, verification digest, review handoff, and no-side-effect
+acceptance boundary. Adapters consume this contract; they do not redefine it.
+_Avoid_: Adapter authority, provider-defined semantics
+
+**Checkpoint Adapter Envelope**:
+The provider-neutral record exchanged across a checkpoint adapter seam. It
+binds source execution/task/attempt, source revision, checkpoint namespace and
+identifier, artifact reference, state digest, and native execution identity;
+it carries metadata rather than provider runtime state or product authority.
+_Avoid_: Provider checkpoint payload, canonical execution state
+
+**Adapter Digest Binding**:
+The rule that an adapter output must retain the exact input digest and the
+same checkpoint and native execution bindings before Core can use the
+observation. A digest mismatch is a blocked observation, not a successful
+resume with a warning.
+_Avoid_: Response checksum, advisory hash
+
+**Adapter Dependency Pin**:
+The exact identity of the native checkpoint contract and external checkpoint
+capability an adapter may consume, including contract revisions, package
+versions, checkpoint schema, and artifact digest. A pin mismatch blocks the
+adapter instead of invoking an unverified compatibility path.
+_Avoid_: Best-effort dependency, semver guess
+
+**Checkpoint Adapter Exit Boundary**:
+The rule that missing dependencies, version skew, contract or digest drift,
+lossy state translation, or failed conformance stops adapter use while the
+native path remains required. A conformance failure retires the adapter and
+runs the native fixture again.
+_Avoid_: Provider fallback, warning-only deprecation
+
 **State**:
 The current working facts for a loop: what it is watching, what it tried last, and what is waiting for a human. State is not an append-only history.
 _Avoid_: Run log, history, memory
@@ -159,3 +209,9 @@ _Avoid_: Tool package when discussing release obligations
 **Release-ready Gate**:
 The stricter pre-tag validation boundary that rejects blockers tolerated by local development, especially local package dependencies that public npm consumers cannot resolve.
 _Avoid_: Normal test gate
+
+## Retros
+
+- 开始 roadmap 节点前，先确认这是产品实现还是 legacy roadmap 的技能验收；范围未确认前不要引入项目依赖或推进项目开发。 — docs/zj-retros/2026-08-24-retro.md#16:10
+- 开始 `1-3-1` 时先消费现有 boundary contract，再把 LangGraph bridge 限定在隔离的 provider capability seam 内。 — docs/zj-retros/2026-08-24-retro.md#15:35
+- 继续保持 adapter 不持久化 provider opaque state，且不生成 Evidence、Verification 或 Human acceptance 语义。 — docs/zj-retros/2026-08-24-retro.md#15:35
